@@ -674,7 +674,38 @@ public class TrackerService extends Service {
     private void sampleAndWriteToDb() {
         if (DEBUG) Log.d(TAG, "sampleAndWriteToDb()");
 
+        if (mBanalService == null) return;
+
+        // 1. Always capture Total Time (SCRUM-97: needs to update during pause)
+        SensorData<Integer> totalTimeData = mBanalService.getBestSensorData(SensorType.TIME_TOTAL);
+        if (totalTimeData != null && totalTimeData.getValue() != null) {
+            mTimeTotal_s = totalTimeData.getValue();
+        }
+
         if (TrainingApplication.isPaused()) {
+            final long workoutId = mWorkoutID;
+            final int timeTotal = mTimeTotal_s;
+            
+            mDbExecutor.submit(() -> {
+                WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(TrackerService.this);
+                SQLiteDatabase summariesDb = summariesManager.getDatabase();
+                
+                ContentValues pausedValues = new ContentValues();
+                pausedValues.put(WorkoutSummaries.TIME_TOTAL_s, timeTotal);
+                
+                summariesDb.beginTransaction();
+                try {
+                    summariesDb.update(WorkoutSummaries.TABLE, pausedValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
+                    summariesDb.setTransactionSuccessful();
+                } catch (Exception e) {
+                    Log.e(TAG, "Error updating total time during pause", e);
+                } finally {
+                    summariesDb.endTransaction();
+                }
+                
+                // Notify UI to refresh the card
+                LocalBroadcastManager.getInstance(TrackerService.this).sendBroadcast(new Intent(WORKOUT_UPDATED_INTENT).putExtra("WORKOUT_ID", workoutId));
+            });
             return;
         }
 

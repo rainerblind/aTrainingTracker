@@ -44,11 +44,18 @@ import com.google.maps.android.compose.TileOverlay
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.heatmaps.HeatmapTileProvider
 
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import androidx.compose.ui.platform.LocalContext
+import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
+import androidx.compose.ui.graphics.Color
+
 @OptIn(MapsComposeExperimentalApi::class)
 @Composable
 fun InteractivePeriodMap(
     // Map of WorkoutID to its Polyline String
     workouts: Map<Long, String>,
+    extremaMarkers: List<PeriodPeakMarker> = emptyList(),
     periodType: PeriodType,
     isHeatmapEnabled: Boolean = true,
     onWorkoutClick: (Long) -> Unit,
@@ -57,6 +64,7 @@ fun InteractivePeriodMap(
     shouldTakeSnapshot: Boolean = false, // Trigger a snapshot
     onSnapshotReady: (Bitmap) -> Unit = {}
 ) {
+    val context = LocalContext.current
     val allPaths = remember(workouts) {
         workouts.mapValues { PolyUtil.decode(it.value) }
     }
@@ -127,6 +135,24 @@ fun InteractivePeriodMap(
                 endCap = RoundCap(),
                 jointType = JointType.ROUND,
                 onClick = { onWorkoutClick(workoutId) }
+            )
+        }
+
+        // 3. Extrema Markers
+        val primaryColor = MaterialTheme.colorScheme.primary
+        extremaMarkers.forEach { marker ->
+            val icon = remember(marker.iconResId, primaryColor) {
+                createSensorMarker(context, marker.iconResId, primaryColor, Color.White)
+            }
+            Marker(
+                state = remember(marker.pos) { MarkerState(position = marker.pos) },
+                title = marker.title,
+                alpha = visuals.polylineAlpha,
+                icon = icon,
+                onClick = {
+                    onWorkoutClick(marker.workoutId)
+                    true // return true to indicate we handled the click
+                }
             )
         }
 

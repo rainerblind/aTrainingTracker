@@ -39,6 +39,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-TRK-006** | Support sport-specific search triggers. | Sensors ready when user changes activity. | `TrainingApplication.java` | `TST-MAN-001` | Verified |
 | **REQ-TRK-007** | Deterministic 1Hz sampling rate during recording. | Consistent time-base for analysis and export. | `TrackerService.java` | `TST-REG-001` | Verified |
 | **REQ-TRK-008** | Align session averages with core summary metrics. | Ensure background tracking focus matches optimized UI summary for consistency and performance. | `TrackerService.java` | `TST-STR-004` | Verified |
+| **REQ-TRK-009** | Total Time Persistence. | The `TrackerService` SHALL continue to update the `TIME_TOTAL_s` field in the `WorkoutSummaries` database table even when the recording is in a PAUSED state. | `TrackerService.java` | `TST-REG-007` | Verified |
 
 ## 4. Advanced Metrics & User Profiles
 
@@ -105,6 +106,11 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-UI-025** | Decoupled Control Positioning. | The visibility switch shall be positioned as an overlay in the bottom-right of the header area to decouple its technical height from the metrics layout, enabling maximum vertical density. | `RouteSummaryHeader.kt` | `TST-UI-035` | Verified |
 | **REQ-UI-028** | Hierarchical Detailed Metrics. | To establish a clear visual hierarchy in Period Summaries, secondary detailed stats (sub-sports and specific highlights) must be rendered using a reduced scale (14dp icons and bodySmall typography) while maintaining legibility. | `PeriodSummaryCard.kt`, `MetricItem.kt` | `TST-UI-038` | Verified |
 | **REQ-UI-026** | Consistent Branding Scaling. | Official third-party logos (e.g., Strava) must be scaled to subordinate heights (10dp-24dp) when used as source metadata or list headers to prevent visual dominance over primary athletic data. | `SegmentList.kt`, `SegmentDetails.kt` | `TST-UI-036` | Verified |
+| **REQ-UI-033** | Period Peak Markers. | The `PeriodMapScreen` SHALL display interactive markers for the Maximum Altitude and Maximum Line Distance of each workout in the period. | `InteractivePeriodMap.kt`, `PeriodsViewModel.kt` | `TST-UI-041` | Verified |
+| **REQ-UI-035** | Peak Marker Alpha Sync. | Technical markers in the Period Map SHALL use the same Alpha (opacity) as the workout's polyline (defined by the period type) to ensure visual consistency. | `InteractivePeriodMap.kt`, `PeriodMapUtils.kt` | `TST-UI-041` | Verified |
+| **REQ-UI-036** | Peak Marker Interactivity. | Tapping a technical marker SHALL select the associated workout and open its details in the BottomSheet. | `InteractivePeriodMap.kt`, `PeriodMapScreen.kt` | `TST-UI-041` | Verified |
+| **REQ-UI-037** | Peak Marker Styling. | Period Map markers SHALL use the unified `createSensorMarker` visual style (pin with icon) to ensure visual consistency with individual workout views. | `InteractivePeriodMap.kt` | `TST-UI-041` | Verified |
+| **REQ-UI-038** | Live Pause Updates. | The user interface SHALL reflect real-time updates to the Total Duration of an active workout session while paused, ensuring accurate visibility into the overall elapsed time. | `WorkoutDetails.kt`, `TrackerService.java` | `TST-REG-007` | Verified |
 | **REQ-EXP-005** | Exponential backoff for Strava uploads. | Robust sync even with API issues. | `StravaUploader.kt` | `TST-STR-001` | Verified |
 
 ## 9. External API Compliance
@@ -143,6 +149,17 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-PRO-003** | Prevent distance accumulation while paused. | Ensure workout statistics only reflect active movement. | `MyAccumulatorSensor.java`, `ANTBikeSpeedDevice.java`, `BTLEBikeDevice.java` | `TST-UNT-008`, `TST-REG-004` | Verified |
 | **REQ-PRO-004** | Prevent track and profile accumulation while paused. | Visual track and elevation profile must strictly reflect active periods to avoid artifacts from movement during pause. | `BANALServiceRepository.kt` | `TST-UI-039` | Verified |
 | **REQ-PRO-005** | Database Schema Integrity. | The database initialization and migration logic must ensure that all required columns (e.g., ShowElevationProfile) exist for both fresh installations and upgrades. | `TrackingViewsDatabaseManager.java` | `TST-UNT-011` | Verified |
+
+## 13. High-Fidelity Navigation (SCRUM-131)
+
+| ID | Description | Rationale | Implementation File(s) | Verification ID | Status |
+|:---|:---|:---|:---|:---|:---|
+| **REQ-FIL-007** | EKF Sensor Fusion. | The system SHALL implement an Extended Kalman Filter to fuse GPS, IMU (Accel/Mag), and Hardware Speed Sensors for high-precision state estimation. | TBD | `TST-FUSION-001` | Backlog |
+| **REQ-FIL-008** | Body-to-World Frame Transformation. | The system SHALL rotate raw phone MEMS data into the geographic East-North-Up (ENU) frame using a 3x3 Rotation Matrix or Quaternions. | TBD | `TST-FUSION-001` | Backlog |
+| **REQ-FIL-009** | Dead Reckoning Navigation. | In GPS-denied environments, the system SHALL maintain location and speed predictions using integrated IMU and wheel speed data. | TBD | `TST-FUSION-002` | Backlog |
+| **REQ-FIL-010** | Speed Sensor Auto-Calibration. | The system SHALL dynamically solve for the "Wheel Scale Factor" within the EKF state vector to automate circumference calibration. | TBD | `TST-FUSION-003` | Backlog |
+| **REQ-NFR-001** | Deterministic EKF Timing. | The estimation loop SHALL use hardware event timestamps and dynamic Delta-T calculation to ensure mathematical robustness against Android CPU jitter. | TBD | `TST-STR-010` | Backlog |
+| **REQ-NFR-002** | Stationary Pinning. | The system SHALL detect "Not Moving" events via IMU variance and coordinate clustering to prevent stationary "Drunkard's Walk" artifacts. | TBD | `TST-FUSION-004` | Backlog |
 
 | **REQ-STP-001** | Multilingual Store Presence. | Increase global reach and accessibility by providing localized App Titles, Short Descriptions, and Full Descriptions for the Google Play Store. | `docs/store_presence/` | `TST-STP-001` | Verified |
 

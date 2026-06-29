@@ -36,6 +36,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-INT-005** | **UI Layout** | `REQ-UI-010` | Open the Tab Configuration on a narrow device or split-screen. | Checkboxes wrap into multiple rows instead of overlapping. Labels remain fully visible. |
 | **TST-INT-006** | **UI Layout** | `REQ-UI-010` | Audit the checkbox sequence in the tab configuration header. | Checkboxes appear in the exact order: Map, Elevation Profile, Live Segments, Lap Button. |
 | **TST-REG-005** | **Map Context** | `REQ-MAP-008` | Open detail map. Verify active item is primary. Verify background items of same sport are muted (0.3). Verify background items of different sport are highly muted (0.1). | Full tiered spatial context is maintained. |
+| **TST-REG-007** | **Pause Time Sync** | `REQ-TRK-009`, `REQ-UI-038` | 1. Start workout. 2. Pause after 10s. 3. Wait 20s while paused. 4. Verify Active Time is 10s and Total Time is ~30s in the UI and DB. | Verified |
 | **TST-UI-001** | **UI Design** | `REQ-UI-011` | Inspect the workout summary extrema table on various device themes. | The table has distinct headers, clear alignment, and high-quality typography matching the Material 3 standards. | Verified |
 | **TST-UI-011** | **Formatting** | `REQ-UI-011` | Verify that units in data rows are surrounded by square brackets (e.g., `[km/h]`). | Verified |
 | **TST-UI-012** | **Hierarchy** | `REQ-UI-011` | Verify that the Sensor Name and the Numeric Values share the same visual weight, while the unit is micro-scaled. | Verified |
@@ -65,6 +66,12 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-UI-036** | **Branding Audit** | `REQ-UI-026` | 1. Open Segment List. 2. Verify top logo height (e.g., 24dp). 3. Inspect individual Segment Items (if enabled). | Verified |
 | **TST-UI-038** | **Detailed Metric Scale** | `REQ-UI-028` | 1. Open Periods screen. 2. Inspect sub-sport rows and \"Longest Workout\" highlight. Verify icons are 14dp and text is bodySmall. | Verified |
 | **TST-UI-039** | **Pause Movement Isolation** | `REQ-PRO-004` | 1. Start workout. 2. Move to create track. 3. **Pause**. 4. Move 50m. 5. Observe map. | Verified |
+| **TST-UI-041** | **Period Peak Markers** | `REQ-UI-033`, `REQ-UI-035`, `REQ-UI-036`, `REQ-UI-037` | 1. Open a \"Yearly\" summary. 2. Enter map. 3. Verify Max Alt and Max Dist markers are visible with reduced alpha and size. 4. Tap a marker and verify workout \"Peek\" opens. | Verified |
+
+| **TST-FUSION-001** | **Dynamic Accuracy** | `REQ-FIL-007`, `REQ-FIL-008` | Audit live track during sharp turns and rapid acceleration. Verify no "overshoot" or "lag" in position relative to visual map markers. | Backlog |
+| **TST-FUSION-002** | **Dead Reckoning** | `REQ-FIL-009` | 1. Enter tunnel (GPS loss). 2. Continue moving. 3. Verify map track continues along road based on speed sensor. | Backlog |
+| **TST-FUSION-003** | **Auto-Calibration Audit** | `REQ-FIL-010` | Compare EKF Wheel Scale Factor against a manually measured circumference after a 10km ride. | Backlog |
+| **TST-FUSION-004** | **Stationary Audit** | `REQ-NFR-002` | Stop physically for 2 minutes. Verify location dot remains perfectly fixed with zero "webbing" artifacts on the map. | Backlog |
 
 ## 3. Structural & Compliance Checks
 

@@ -97,14 +97,19 @@ fun PeriodMapScreen(
 
     // Track multiple selected sports
     var selectedSports by rememberSaveable { mutableStateOf(setOf<BSportType>()) }
-    val filteredWorkouts = remember(summary, selectedSports) {
+    val (filteredWorkouts, filteredMarkers) = remember(summary, selectedSports) {
         if (selectedSports.isEmpty()) {
-            summary.workoutIdToPolylineMap
+            Pair(summary.workoutIdToPolylineMap, summary.extremaMarkers)
         } else {
-            summary.workoutIdToPolylineMap.filter { (id, _) ->
+            val filteredMap = summary.workoutIdToPolylineMap.filter { (id, _) ->
                 val sport = summary.workoutIdToSportMap[id]
                 selectedSports.contains(sport)
             }
+            val filteredMarkersList = summary.extremaMarkers.filter { marker ->
+                val sport = summary.workoutIdToSportMap[marker.workoutId]
+                selectedSports.contains(sport)
+            }
+            Pair(filteredMap, filteredMarkersList)
         }
     }
 
@@ -282,6 +287,7 @@ fun PeriodMapScreen(
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 InteractivePeriodMap(
                     workouts = filteredWorkouts,
+                    extremaMarkers = filteredMarkers,
                     periodType = summary.periodType,
                     isHeatmapEnabled = isHeatmapEnabled,
                     onWorkoutClick = onWorkoutClick,

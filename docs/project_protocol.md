@@ -10,6 +10,11 @@ Any AI assistant working on this project **must** follow these steps for every t
 1.  **Requirement Synchronization**:
     *   Before writing any code or plans, read `docs/requirements.md`.
     *   Add a new Requirement ID (e.g., `REQ-XXX-###`) or update an existing one to reflect the user's request.
+    *   **Phasing Standards**: Requirements must be written with the precision of a professional requirements engineer:
+        *   **SHALL**: For mandatory functional behavior (e.g., "The system SHALL...").
+        *   **MUST**: For strict technical constraints or quality attributes (e.g., "The database MUST...").
+        *   **Atomic & Unambiguous**: One requirement per entry; avoid vague terms like "easy", "improved", or "better".
+        *   **System-Centric**: Describe system behavior, not user desires. (Avoid "The user wants...", "I would like...").
     *   Define the **Rationale** (the "Why") clearly.
     *   Map the requirement to the relevant **Implementation File(s)**.
 
@@ -26,10 +31,10 @@ Any AI assistant working on this project **must** follow these steps for every t
         *   **Android System**: Battery usage, WakeLock durations, Background execution rules.
         *   **Component Interfaces**: Will a change in `BANALService` break the `MutableStateFlow` used by the UI?
         *   **Data Integrity**: Will a schema change affect backward compatibility of existing workout files?
-    *   Document these risks in the `implementation_plan.artifact.md`.
+    *   Document these risks in the implementation plan.
 
 4.  **Jira Ticket Management (Agile Phase)**:
-    *   **Automation**: Use the local utility `./tools/jira_util.py` for Jira interactions (list, comment).
+    *   **Automation**: Use the local utility `./tools/jira_util.py` for Jira interactions (list, show, comment, download).
     *   **Syntax**: All Jira comments must use **Jira Wiki Markup** (e.g., `h1.`, `{code}`, `*bold*`).
     *   **Credentials**: Authentication details are stored in `.env.jira` (not tracked in Git).
     *   **State Control**: The agent **MUST NOT** transition tickets between states (e.g., move to "In Progress" or "Done") unless explicitly instructed by the user. The user maintains sole control over the workflow state.
@@ -38,8 +43,8 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   **Documentation**: For any ticket in progress, the agent must:
         *   **Identity Disclaimer**: Every comment posted by the agent MUST start with a clear disclaimer: *"[Automated comment by AI Agent]"*.
         *   **Initial Analysis**: Immediately after moving to "In Progress", post a comment containing the **Root Cause Analysis (RCA)** (for bugs), the **Implementation Strategy**, the **Impact Analysis**, and the **Agreed Verification Criteria (Test IDs)**.
-        *   **Design Documentation**: Post the full text of the `implementation_plan.artifact.md` as a comment on the ticket.
-        *   **Verification & Closure**: When moving to "In Überprüfung", post the full text of the `walkthrough.artifact.md` as a comment. This provides a permanent record of the implemented changes and verification evidence.
+        *   **Design Documentation**: Post the full text of the implementation plan as a comment on the ticket.
+        *   **Verification & Closure**: When moving to "In Überprüfung", post the full text of the walkthrough as a comment. This provides a permanent record of the implemented changes and verification evidence.
 
 5.  **Architectural Integrity (SWE.2 Phase)**:
     *   Identify which core components are affected (e.g., `BANALService`, `TrackerService`, `Repository`).
@@ -47,7 +52,7 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   Ensure that new code does not violate the established architecture (e.g., maintain clear separation between background services and UI layers).
 
 6.  **Implementation Planning (SWE.3 Phase - The Implementation Hard Stop)**:
-    *   Create an `implementation_plan.artifact.md`.
+    *   **Plan Artifact**: Create an implementation plan at `docs/engineering/plans/SCRUM-XXX_plan.md` (where XXX is the ticket number).
     *   Every proposed change **must** explicitly reference the Requirement ID, the Component affected, and the corresponding Test ID it fulfills.
     *   **MANDATORY HARD STOP**: The agent MUST present the full implementation plan to the user and ask for formal approval.
     *   **Iterative Refinement**: If the user provides feedback or asks for changes to the plan, the agent **MUST** update the plan and ask for approval again.
@@ -67,12 +72,13 @@ Any AI assistant working on this project **must** follow these steps for every t
         > * **Scope**: SWE.4 Unit Verification
         > * **Artifact**: [Link to log/screenshot]
     *   Update the `Status` in `docs/requirements.md` to `Verified`.
-    *   Update the `walkthrough.artifact.md` with a summary of the fulfilled requirements.
+    *   **Walkthrough Artifact**: Create a summary of the fulfilled requirements at `docs/engineering/walkthroughs/SCRUM-XXX_walkthrough.md`.
     *   **Git Commit Message**: Provide a clear, comprehensive commit message for the changes, following the Conventional Commits standard. Use the `*` symbol for bullet points within the commit body (avoiding dots or dashes) to ensure clean formatting and copy-paste compatibility.
 
 9.  **Post-Implementation Review**:
     *   **MANDATORY FINAL STEP**: Before concluding the task, the agent MUST review the newly implemented logic against the requirements and tests defined in Steps 1 and 2.
-    *   **Sync Discovery**: If the implementation revealed new constraints or changed the understanding of the requirement, the agent MUST update `docs/requirements.md` and `docs/tests.md` to reflect the *actual* final state.
+    *   **Technical Debt Discovery**: If the implementation revealed new constraints, legacy "code smells", or architectural weaknesses outside the current scope, the agent **MUST** document these as new Requirement entries in `docs/requirements.md` with status `Backlog`.
+    *   **Sync Discovery**: Update `docs/requirements.md` and `docs/tests.md` to reflect the *actual* final state of the implemented feature.
     *   **Truth Verification**: Ensure the documentation remains a "Single Source of Truth" that accurately describes the code as it exists after implementation.
 
 ## New Version / Release Workflow
