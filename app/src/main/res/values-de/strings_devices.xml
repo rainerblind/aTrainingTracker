@@ -33,6 +33,7 @@
     <string name="devices_tab_known">Bekannt</string>
 
     <string name="devices_available">verbunden</string>
+    <string name="devices_not_connected">nicht verbunden</string>
 
     <!-- tab title -->
     <string name="devices_available_devices_format">Verbundene %1$s Sensoren</string>
@@ -105,9 +106,9 @@
     <string name="devices_equipment_none" />
 
     <!-- smartphone devices -->
-    <string name="devices_location_GPS">GPS</string>
-    <string name="devices_location_Network">Netzwerk</string>
-    <string name="devices_location_GoogleFused">Google Fused</string>
+    <string name="devices_location_GPS">Smartphone GPS (Satellit)</string>
+    <string name="devices_location_Network">Smartphone Standort (Mobilfunk/WLAN)</string>
+    <string name="devices_location_GoogleFused">Google Standort (Fused)</string>
     <string name="devices_altitude_from_pressure">Luftdruck</string>
 
     <!-- live sensor data -->

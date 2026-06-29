@@ -31,6 +31,7 @@
     <string name="devices_tab_paired">ペアリング済み</string>
     <string name="devices_tab_known">登録済み</string>
     <string name="devices_available">接続済み</string>
+    <string name="devices_not_connected">未接続</string>
 
     <string name="devices_available_devices_format">接続済み %1$s デバイス</string>
     <string name="devices_paired_devices_format">ペアリング済み %1$s デバイス</string>
@@ -86,9 +87,9 @@
     <string name="devices_select_wheel_size_prompt">タイヤサイズを選択…</string>
     <string name="devices_last_seen_never">未検出</string>
 
-    <string name="devices_location_GPS">GPS</string>
-    <string name="devices_location_Network">ネットワーク</string>
-    <string name="devices_location_GoogleFused">Google Fused</string>
+    <string name="devices_location_GPS">端末 GPS (衛星)</string>
+    <string name="devices_location_Network">端末位置情報 (ネットワーク/WiFi)</string>
+    <string name="devices_location_GoogleFused">Google 位置情報 (Fused)</string>
     <string name="devices_altitude_from_pressure">気圧</string>
 
     <string name="devices_live_sensor_data_header">センサーデータ</string>

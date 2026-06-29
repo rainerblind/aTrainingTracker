@@ -31,6 +31,7 @@
     <string name="devices_tab_paired">Sparowane</string>
     <string name="devices_tab_known">Znane</string>
     <string name="devices_available">połączony</string>
+    <string name="devices_not_connected">niepołączony</string>
 
     <string name="devices_available_devices_format">połączone urządzenia %1$s</string>
     <string name="devices_paired_devices_format">sparowane urządzenia %1$s</string>
@@ -86,9 +87,9 @@
     <string name="devices_select_wheel_size_prompt">Wybierz rozmiar koła…</string>
     <string name="devices_last_seen_never">jeszcze nie</string>
 
-    <string name="devices_location_GPS">GPS</string>
-    <string name="devices_location_Network">Sieć</string>
-    <string name="devices_location_GoogleFused">Google Fused</string>
+    <string name="devices_location_GPS">Telefon GPS (Satelita)</string>
+    <string name="devices_location_Network">Lokalizacja telefonu (Sieć/WiFi)</string>
+    <string name="devices_location_GoogleFused">Lokalizacja Google (Fused)</string>
     <string name="devices_altitude_from_pressure">Ciśnienie pow.</string>
 
     <string name="devices_live_sensor_data_header">Dane czujników</string>

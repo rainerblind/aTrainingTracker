@@ -67,8 +67,11 @@ fun DeviceItem(
                     Icon(
                         painter = painterResource(id = device.deviceTypeIconRes),
                         contentDescription = null,
-                        modifier = Modifier.size(54.dp),
-                        tint = Color.Unspecified
+                        modifier = Modifier.size(if (device.protocol == Protocol.SMARTPHONE) 42.dp else 54.dp),
+                        tint = if (device.protocol == Protocol.SMARTPHONE) 
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                        else 
+                            Color.Unspecified
                     )
                     
                     Spacer(modifier = Modifier.width(12.dp))
@@ -91,7 +94,7 @@ fun DeviceItem(
                             if (device.isConnected) {
                                 Text(
                                     text = device.mainValue ?: "--",
-                                    style = MaterialTheme.typography.titleLarge,
+                                    style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     textAlign = TextAlign.End
@@ -109,7 +112,7 @@ fun DeviceItem(
                         // Row 2: Manufacturer
                         Text(
                             text = device.manufacturer,
-                            style = MaterialTheme.typography.labelMedium,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -117,44 +120,51 @@ fun DeviceItem(
                     }
                 }
 
-                // Row 3: Status Line (Availability and Battery) - Starts below icon
+                // Row 3: Battery Info - Starts on the far left
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 2.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = device.batteryStatusIconRes),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = Color.Unspecified // Original Color
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(
+                        text = if (device.batteryPercentage >= 0) "${device.batteryPercentage}%" else stringResource(R.string.devices_unknown),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
+
+                // Row 4: Status Line (Availability) - Starts on the far left
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 0.dp)
                 ) {
                     // 1. Availability Icon
                     val statusIcon = if (device.isConnected) R.drawable.ic_device_available else R.drawable.ic_device_not_available
                     Icon(
                         painter = painterResource(id = statusIcon),
                         contentDescription = null,
-                        modifier = Modifier.size(14.dp),
+                        modifier = Modifier.size(16.dp),
                         tint = Color.Unspecified // Original Color
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     
                     // 2. Status Text
+                    val relativeTime = getRelativeLastSeen(device.lastSeen)
                     Text(
                         text = if (device.isConnected) {
                             stringResource(R.string.devices_available)
+                        } else if (relativeTime.isNotEmpty()) {
+                            "${stringResource(R.string.devices_lastSeenText)} $relativeTime"
                         } else {
-                            "${stringResource(R.string.devices_lastSeenText)} ${device.lastSeen?.split(" ")?.firstOrNull() ?: ""}"
+                            stringResource(R.string.devices_not_connected)
                         },
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
-
-                    // 3. Battery Info
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Icon(
-                        painter = painterResource(id = device.batteryStatusIconRes),
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = Color.Unspecified // Original Color
-                    )
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        text = "${device.batteryPercentage}%",
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
                 }
@@ -167,7 +177,7 @@ fun DeviceItem(
                             R.string.devices_on_short_format,
                             device.linkedEquipment.joinToString(", ")
                         ),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.Start,
@@ -185,6 +195,29 @@ fun DeviceItem(
                     .scale(0.8f) 
             )
         }
+    }
+}
+
+@Composable
+private fun getRelativeLastSeen(lastSeen: String?): String {
+    if (lastSeen == null) return ""
+    
+    return try {
+        // Attempt to parse using the default date/time instance (matching how it's written in DevicesDatabaseManager)
+        val date = java.text.DateFormat.getDateTimeInstance().parse(lastSeen)
+        if (date != null) {
+            android.text.format.DateUtils.getRelativeTimeSpanString(
+                date.time,
+                System.currentTimeMillis(),
+                android.text.format.DateUtils.DAY_IN_MILLIS,
+                android.text.format.DateUtils.FORMAT_ABBREV_RELATIVE
+            ).toString()
+        } else {
+            ""
+        }
+    } catch (e: Exception) {
+        // If it's already a short special string like "Now" or "Jetzt", return as is
+        if (lastSeen.length < 10) lastSeen else lastSeen.split(" ").firstOrNull() ?: ""
     }
 }
 

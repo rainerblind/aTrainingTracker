@@ -262,6 +262,14 @@ fun getIconId(deviceType: DeviceType, protocol: Protocol): Int {
             DeviceType.RUN_SPEED -> R.drawable.bt_run
             else -> protocol.iconId
         }
+
+        Protocol.SMARTPHONE -> when (deviceType) {
+            DeviceType.SPEED_AND_LOCATION_GPS -> R.drawable.ic_location
+            DeviceType.SPEED_AND_LOCATION_NETWORK -> R.drawable.ic_cell_5_bar
+            DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED -> R.drawable.ic_navigation_arrow
+            else -> protocol.iconId
+        }
+
         else -> protocol.iconId
     }
 }

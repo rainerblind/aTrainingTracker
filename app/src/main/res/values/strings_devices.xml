@@ -36,6 +36,7 @@
     <string name="devices_tab_paired">Paired</string>
     <string name="devices_tab_known">Known</string>
     <string name="devices_available">connected</string>
+    <string name="devices_not_connected">not connected</string>
 
     <!-- tab title -->
     <string name="devices_available_devices_format">Connected %1$s devices</string>
@@ -126,9 +127,9 @@
     <string name="devices_equipment_none" />
 
     <!-- smartphone devices -->
-    <string name="devices_location_GPS">GPS</string>
-    <string name="devices_location_Network">Network</string>
-    <string name="devices_location_GoogleFused">Google Fused</string>
+    <string name="devices_location_GPS">Phone GPS (Satellite)</string>
+    <string name="devices_location_Network">Phone Location (Cell/WiFi)</string>
+    <string name="devices_location_GoogleFused">Google Location (Fused)</string>
     <string name="devices_altitude_from_pressure">Air Pressure</string>
 
     <!-- live sensor data -->

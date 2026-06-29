@@ -31,6 +31,7 @@
     <string name="devices_tab_paired">Emparelhados</string>
     <string name="devices_tab_known">Conhecidos</string>
     <string name="devices_available">conectado</string>
+    <string name="devices_not_connected">não conectado</string>
 
     <string name="devices_available_devices_format">dispositivos %1$s conectados</string>
     <string name="devices_paired_devices_format">dispositivos %1$s emparelhados</string>
@@ -86,9 +87,9 @@
     <string name="devices_select_wheel_size_prompt">Escolher tamanho da roda…</string>
     <string name="devices_last_seen_never">ainda não</string>
 
-    <string name="devices_location_GPS">GPS</string>
-    <string name="devices_location_Network">Rede</string>
-    <string name="devices_location_GoogleFused">Google Fused</string>
+    <string name="devices_location_GPS">GPS do telefone (Satélite)</string>
+    <string name="devices_location_Network">Localização do telefone (Rede/WiFi)</string>
+    <string name="devices_location_GoogleFused">Localização Google (Fused)</string>
     <string name="devices_altitude_from_pressure">Pressão do Ar</string>
 
     <string name="devices_live_sensor_data_header">Dados dos Sensores</string>
