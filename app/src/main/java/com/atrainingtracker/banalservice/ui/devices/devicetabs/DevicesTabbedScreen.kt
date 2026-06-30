@@ -18,22 +18,17 @@
 
 package com.atrainingtracker.banalservice.ui.devices.devicetabs
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -74,13 +69,6 @@ fun DevicesTabbedScreen(
 
     Surface(modifier = modifier.fillMaxSize()) {
         when (val state = uiState) {
-            is UiState.AwaitingDeviceTypeSelection -> {
-                DeviceTypeSelectionDialog(
-                    protocol = protocol,
-                    onSelected = { tabViewModel.onDeviceTypeSelected(it) },
-                    onDismiss = { /* Handle back if needed */ }
-                )
-            }
             is UiState.DisplayingTabs -> {
                 val deviceType = state.deviceType
                 val tabs = remember(protocol, deviceType) {
@@ -169,7 +157,12 @@ fun DevicesTabbedScreen(
                     onDispose { tabViewModel.stopSearching() }
                 }
             }
-            else -> {}
+            else -> {
+                // Should not happen if started from Control Screen
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
         }
     }
 
@@ -213,47 +206,4 @@ private fun getTabTitle(spec: DeviceFilterSpec): String {
         DeviceFilterType.PAIRED -> stringResource(R.string.devices_tab_paired)
         DeviceFilterType.ALL_KNOWN -> stringResource(R.string.devices_tab_known)
     }
-}
-
-@Composable
-private fun DeviceTypeSelectionDialog(
-    protocol: Protocol,
-    onSelected: (DeviceType) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val deviceTypeList = remember(protocol) { DeviceType.getRemoteDeviceTypes(protocol).toList() }
-    
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.select_device_type)) },
-        text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                deviceTypeList.forEach { type ->
-                    ListItem(
-                        headlineContent = { 
-                            Text(
-                                text = stringResource(UIHelper.getNameId(type)),
-                                style = MaterialTheme.typography.bodyLarge
-                            ) 
-                        },
-                        leadingContent = {
-                            Icon(
-                                painter = painterResource(id = com.atrainingtracker.banalservice.ui.devices.devicedata.getIconId(type, protocol)),
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = Color.Unspecified
-                            )
-                        },
-                        modifier = Modifier.clickable { onSelected(type) }
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onSelected(DeviceType.ALL) }) {
-                Text(stringResource(R.string.devices_all))
-            }
-        },
-        containerColor = MaterialTheme.colorScheme.surface
-    )
 }

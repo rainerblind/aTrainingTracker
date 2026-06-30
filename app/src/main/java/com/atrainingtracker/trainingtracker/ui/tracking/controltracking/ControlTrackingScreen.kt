@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,6 +48,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.banalservice.ui.devices.DeviceTypeSelectionDialog
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
@@ -66,6 +68,9 @@ fun ControlTrackingScreen(
     onResume: () -> Unit,
     onStop: () -> Unit,
     onPairingClicked: (Protocol) -> Unit,
+    selectingProtocol: Protocol?,
+    onDeviceTypeSelected: (DeviceType) -> Unit,
+    onCancelDeviceTypeSelection: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -163,6 +168,15 @@ fun ControlTrackingScreen(
             onPairingClicked = onPairingClicked
         )
     }
+
+    // Device Type Selection Dialog
+    selectingProtocol?.let { protocol ->
+        DeviceTypeSelectionDialog(
+            protocol = protocol,
+            onSelected = onDeviceTypeSelected,
+            onDismiss = onCancelDeviceTypeSelection
+        )
+    }
 }
 
 // --- Previews ---
@@ -185,7 +199,8 @@ fun PreviewControlTrackingScreenSearching() {
                 isAntSupported = true,
                 isBluetoothSupported = true,
                 onSearch = {}, onDeviceClick = {}, onSportSelected = {},
-                onStart = {}, onPause = {}, onResume = {}, onStop = {}, onPairingClicked = {}
+                onStart = {}, onPause = {}, onResume = {}, onStop = {}, onPairingClicked = {},
+                selectingProtocol = null, onDeviceTypeSelected = {}, onCancelDeviceTypeSelection = {}
             )
         }
     }
@@ -209,7 +224,8 @@ fun PreviewControlTrackingScreen() {
                 isAntSupported = true,
                 isBluetoothSupported = true,
                 onSearch = {}, onDeviceClick = {}, onSportSelected = {},
-                onStart = {}, onPause = {}, onResume = {}, onStop = {}, onPairingClicked = {}
+                onStart = {}, onPause = {}, onResume = {}, onStop = {}, onPairingClicked = {},
+                selectingProtocol = null, onDeviceTypeSelected = {}, onCancelDeviceTypeSelection = {}
             )
         }
     }
