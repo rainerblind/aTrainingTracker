@@ -26,7 +26,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
@@ -48,8 +48,8 @@ fun EditDeviceDialog(
     onDismiss: () -> Unit,
     viewModel: EditDeviceViewModel = viewModel()
 ) {
-    val snapshot by viewModel.deviceSnapshot.observeAsState()
-    val liveData by viewModel.deviceLiveData.observeAsState()
+    val snapshot by viewModel.deviceSnapshot.collectAsStateWithLifecycle()
+    val liveData by viewModel.deviceLiveData.collectAsStateWithLifecycle(initialValue = null)
 
     // Initialize data only once
     LaunchedEffect(deviceId) {

@@ -66,6 +66,18 @@ data class LapEvent(
 
 
 /**
+ * Represents the real-time telemetry state of a device.
+ * Using data classes ensures that StateFlow correctly detects value changes.
+ */
+data class DeviceTelemetry(
+    val deviceId: Long,
+    val mainValue: com.atrainingtracker.banalservice.devices.SimpleSensorData?,
+    val allValues: List<com.atrainingtracker.banalservice.devices.SimpleSensorData>,
+    val version: Long = System.nanoTime() // Guaranteed uniqueness for StateFlow
+)
+
+
+/**
  * A singleton repository that acts as the single source of truth for all tracking-related data from the sensors.
  * It connects to the BANALService to provide a clean data source for all ViewModels.
  */
@@ -108,9 +120,9 @@ class BANALServiceRepository private constructor(context: Context) {
     private val _activeSensors = MutableStateFlow<Set<SensorType>>(emptySet())
     val activeSensors: StateFlow<Set<SensorType>> = _activeSensors.asStateFlow()
 
-    // all active devices (including the smartphones speed and location devices)
-    private val _allActiveDevices = MutableLiveData<List<MyDevice>>(emptyList())
-    val allActiveDevices: LiveData<List<MyDevice>> = _allActiveDevices
+    // all active devices telemetry (synchronized every second)
+    private val _allActiveDevicesTelemetry = MutableStateFlow<List<DeviceTelemetry>>(emptyList())
+    val allActiveDevicesTelemetry: StateFlow<List<DeviceTelemetry>> = _allActiveDevicesTelemetry.asStateFlow()
 
     // StateFlow for the current location
     private val _currentLocation = MutableStateFlow<LatLng?>(null)
@@ -280,7 +292,14 @@ class BANALServiceRepository private constructor(context: Context) {
                         _newlyFoundDevicesIds.value = binder.getIdsOfNewlyFoundDevices()
                         _activeSensors.value = binder.availableSensorTypeSet?.toSet() ?: emptySet()
 
-                        _allActiveDevices.postValue(binder.activeDevicesIncludingSpeedAndLocationDevices ?: emptyList())
+                        _allActiveDevicesTelemetry.value = binder.activeDevicesIncludingSpeedAndLocationDevices?.map { device ->
+                            DeviceTelemetry(
+                                deviceId = device.deviceId,
+                                mainValue = device.mainSensorData,
+                                allValues = device.allSensorData ?: emptyList(),
+                                version = System.nanoTime()
+                            )
+                        } ?: emptyList()
 
                         // --- LOCATION AND NAVIGATION ---
                         val latData = binder.getBestSensorData(SensorType.LATITUDE)

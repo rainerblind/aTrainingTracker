@@ -95,8 +95,8 @@ class ControlTrackingViewModel(
     /*
      * Remote devices
      */
-    // 1. Convert the Repository LiveData (Single Source of Truth) to a Flow
-    private val allDevicesFromDb = devicesRepository.allDevices.asFlow()
+    // 1. Repository StateFlow (Single Source of Truth)
+    private val allDevicesFromDb = devicesRepository.allDevices
 
     // 2. Combine the IDs from the BANALService with the Data from the Database
     val remoteDevices: StateFlow<List<RemoteDeviceUIData>> = banalServiceRepository.activeRemoteDevicesIds
@@ -110,7 +110,7 @@ class ControlTrackingViewModel(
                     RemoteDeviceUIData(
                         id = dbDevice.id,
                         deviceType = dbDevice.deviceType,
-                        name = dbDevice.deviceName ?: "Unknown Sensor",
+                        name = dbDevice.deviceName,
                         iconRes = UIHelper.getIconId(dbDevice.deviceType, dbDevice.protocol)
                     )
                 } else {

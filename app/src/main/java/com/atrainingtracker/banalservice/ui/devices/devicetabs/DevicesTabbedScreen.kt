@@ -87,7 +87,8 @@ fun DevicesTabbedScreen(
                         state = pagerState,
                         modifier = Modifier.fillMaxSize(),
                         userScrollEnabled = true,
-                        verticalAlignment = Alignment.Top
+                        verticalAlignment = Alignment.Top,
+                        beyondViewportPageCount = 2
                     ) { page ->
                         val scrollState = when (page) {
                             0 -> availableListState

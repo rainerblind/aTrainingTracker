@@ -27,8 +27,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -53,7 +53,7 @@ fun DeviceListScreen(
     appBarOffsetPx: Int = 0,
     headerHeightPx: Float = 0f
 ) {
-    val devices by viewModel.getFilteredDevices(filterSpec).observeAsState(emptyList())
+    val devices by viewModel.getFilteredDevices(filterSpec).collectAsState(initial = emptyList())
     val density = LocalDensity.current
     val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
 

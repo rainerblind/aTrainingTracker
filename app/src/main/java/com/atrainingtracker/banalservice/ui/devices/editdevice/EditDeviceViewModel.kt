@@ -20,9 +20,7 @@ package com.atrainingtracker.banalservice.ui.devices.editdevice
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.switchMap
+import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ui.devices.GetMergedDevicesUseCase
@@ -31,6 +29,13 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataReposit
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.devicedata.PowerFeatureDisplay
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -53,17 +58,19 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
     )
 
     // The ID of the device currently being edited.
-    private val _editingId = MutableLiveData<Long?>()
+    private val _editingId = MutableStateFlow<Long?>(null)
 
     // The device data with the data of its sensors.
-    val deviceLiveData: LiveData<DeviceUiData?> = _editingId.switchMap { id ->
-        if (id == null) MutableLiveData(null)
-        else useCase.getMergedDeviceById(id)
-    }
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val deviceLiveData: Flow<DeviceUiData?> = _editingId
+        .flatMapLatest { id ->
+            if (id == null) flowOf(null)
+            else useCase.getMergedDeviceById(id)
+        }
 
     // The single source of truth for the UI. This holds the CURRENT state of the device being edited.
-    private val _deviceSnapshot = MutableLiveData<DeviceUiData?>()
-    val deviceSnapshot: LiveData<DeviceUiData?> = _deviceSnapshot
+    private val _deviceSnapshot = MutableStateFlow<DeviceUiData?>(null)
+    val deviceSnapshot: StateFlow<DeviceUiData?> = _deviceSnapshot.asStateFlow()
 
 
     /**
@@ -292,14 +299,11 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
      * It ensures we always work with a non-null state and posts the result.
      */
     private fun updateState(updateAction: (currentState: DeviceUiData) -> DeviceUiData) {
-        val currentState = _deviceSnapshot.value
-        if (currentState != null) {
-            val newState = updateAction(currentState)
-
-            // Only update the LiveData if the new state is actually different from the old one.
-            // This avoids/breaks an infinite loop at its source.
-            if (newState != currentState) {
-                _deviceSnapshot.value = newState
+        _deviceSnapshot.update { currentState ->
+            if (currentState != null) {
+                updateAction(currentState)
+            } else {
+                null
             }
         }
     }
