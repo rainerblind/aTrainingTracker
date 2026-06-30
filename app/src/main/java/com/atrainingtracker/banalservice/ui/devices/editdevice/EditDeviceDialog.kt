@@ -64,7 +64,7 @@ fun EditDeviceDialog(
                     Image(
                         painter = painterResource(id = data.deviceTypeIconRes),
                         contentDescription = null,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(48.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(stringResource(R.string.edit_device))
