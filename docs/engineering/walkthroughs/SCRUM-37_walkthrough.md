@@ -5,7 +5,7 @@ Migrated the entire device management stack from legacy XML/RecyclerView/Fragmen
 ## 1. Requirements Fulfilled
 - **REQ-UI-041**: Replaced `DevicesTabbedContainerFragment` and its associated components with `DevicesTabbedScreen` and `DeviceListScreen`.
 - **REQ-UI-042**: Implemented `DeviceItem` using the `MappableListItem` foundation. The layout follows a high-density pattern with a technical 5-row structure: Identity/Value, Manufacturer, Battery, Connection Status, and Equipment.
-- **REQ-UI-043**: Created a unified Composable `EditDeviceDialog` that handles configuration for all device types (ANT+, BLE, GPS).
+- **REQ-UI-043**: Created a unified Composable `EditDeviceDialog` and a refined `DeviceTypeSelectionDialog` with integrated icons (32dp) and high-density labels, ensuring a cohesive technical identity from selection to configuration.
 
 ## 2. Verification Results
 - **TST-UI-043**: **PASS**
