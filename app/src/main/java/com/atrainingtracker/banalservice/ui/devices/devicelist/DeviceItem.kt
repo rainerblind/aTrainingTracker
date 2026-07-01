@@ -66,11 +66,13 @@ fun DeviceItem(
             ) {
                 // Identity Row: Icon + Name/Value + Manufacturer
                 Row(verticalAlignment = Alignment.Top) {
-                    // Device Type Icon
+                    // Device Type Icon (Padding normalized for protocol-specific asset whitespace)
                     Icon(
                         painter = painterResource(id = device.deviceTypeIconRes),
                         contentDescription = null,
-                        modifier = Modifier.size(if (device.protocol == Protocol.SMARTPHONE) 42.dp else 54.dp),
+                        modifier = Modifier
+                            .size(if (device.protocol == Protocol.SMARTPHONE) 42.dp else 54.dp)
+                            .padding(if (device.protocol == Protocol.ANT_PLUS) 2.dp else 0.dp),
                         tint = if (device.protocol == Protocol.SMARTPHONE) 
                             MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                         else 

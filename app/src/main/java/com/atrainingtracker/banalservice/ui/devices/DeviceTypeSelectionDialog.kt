@@ -61,7 +61,9 @@ fun DeviceTypeSelectionDialog(
                             Icon(
                                 painter = painterResource(id = getIconId(type, protocol)),
                                 contentDescription = null,
-                                modifier = Modifier.size(48.dp),
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .padding(if (protocol == Protocol.ANT_PLUS) 2.dp else 0.dp),
                                 tint = if (protocol == Protocol.SMARTPHONE) 
                                     MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) 
                                 else 
