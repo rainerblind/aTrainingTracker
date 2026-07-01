@@ -120,50 +120,34 @@ fun DeviceItem(
                     }
                 }
 
-                // Row 3: Battery Info - Starts on the far left
+                // Row 3: Technical Status (Battery + Last Seen/Connected)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 2.dp)
                 ) {
+                    // 1. Battery Identity
                     Icon(
                         painter = painterResource(id = device.batteryStatusIconRes),
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
-                        tint = Color.Unspecified // Original Color
-                    )
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        text = if (device.batteryPercentage >= 0) "${device.batteryPercentage}%" else stringResource(R.string.devices_unknown),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
-                }
-
-                // Row 4: Status Line (Availability) - Starts on the far left
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 0.dp)
-                ) {
-                    // 1. Availability Icon
-                    val statusIcon = if (device.isConnected) R.drawable.ic_device_available else R.drawable.ic_device_not_available
-                    Icon(
-                        painter = painterResource(id = statusIcon),
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = Color.Unspecified // Original Color
+                        tint = Color.Unspecified
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     
-                    // 2. Status Text
+                    val batteryText = if (device.batteryPercentage >= 0) "${device.batteryPercentage}%" else stringResource(R.string.devices_unknown)
+                    
+                    // 2. State Information in Brackets
                     val relativeTime = getRelativeLastSeen(device.lastSeen)
+                    val stateText = if (device.isConnected) {
+                        stringResource(R.string.devices_available)
+                    } else if (relativeTime.isNotEmpty()) {
+                        relativeTime
+                    } else {
+                        stringResource(R.string.devices_not_connected)
+                    }
+
                     Text(
-                        text = if (device.isConnected) {
-                            stringResource(R.string.devices_available)
-                        } else if (relativeTime.isNotEmpty()) {
-                            "${stringResource(R.string.devices_lastSeenText)} $relativeTime"
-                        } else {
-                            stringResource(R.string.devices_not_connected)
-                        },
+                        text = "$batteryText ($stateText)",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
