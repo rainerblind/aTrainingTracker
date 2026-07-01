@@ -56,6 +56,9 @@ fun DeviceListScreen(
     val devices by viewModel.getFilteredDevices(filterSpec).collectAsState(initial = emptyList())
     val density = LocalDensity.current
     val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
+    
+    // Dynamically calculate bottom padding to clear the system navigation bar
+    val navigationBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     Column(modifier = modifier.fillMaxSize()) {
         if (devices.isEmpty()) {
@@ -65,7 +68,9 @@ fun DeviceListScreen(
                 DeviceFilterType.ALL_KNOWN -> stringResource(R.string.devices_no_known_devices)
             }
             EmptyStatePlaceholder(
-                modifier = Modifier.padding(top = topPadding),
+                modifier = Modifier
+                    .padding(top = topPadding)
+                    .navigationBarsPadding(),
                 icon = Icons.Default.Devices,
                 message = emptyMessage,
                 hint = if (searchingFor != null) stringResource(R.string.devices_searchingForDevice, 
@@ -79,7 +84,7 @@ fun DeviceListScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
                     top = topPadding + 8.dp,
-                    bottom = 16.dp,
+                    bottom = navigationBarBottom + 16.dp,
                     start = 8.dp,
                     end = 8.dp
                 ),

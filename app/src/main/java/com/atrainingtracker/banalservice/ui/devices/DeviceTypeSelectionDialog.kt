@@ -48,7 +48,11 @@ fun DeviceTypeSelectionDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.select_device_type)) },
         text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .navigationBarsPadding() // Ensure items don't hide under nav bar if the list is long
+            ) {
                 deviceTypeList.forEach { type ->
                     ListItem(
                         headlineContent = { 
