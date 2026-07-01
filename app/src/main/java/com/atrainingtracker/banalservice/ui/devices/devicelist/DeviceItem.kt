@@ -55,10 +55,12 @@ fun DeviceItem(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp)
+                .height(IntrinsicSize.Min)
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 // Identity Row: Icon + Name/Value + Manufacturer
@@ -171,12 +173,15 @@ fun DeviceItem(
             }
 
             // Control (Bottom Right): Pairing Switch
+            // Scaled components keep their layout bounds, so we use negative offsets 
+            // to push the visual switch closer to the card edges.
             Switch(
                 checked = device.isPaired,
                 onCheckedChange = { onPairClick() },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .scale(0.8f) 
+                    .offset(x = (-4).dp, y = (4).dp)
+                    .scale(0.8f)
             )
         }
     }
