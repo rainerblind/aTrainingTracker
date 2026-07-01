@@ -91,6 +91,8 @@ class BANALServiceRepository private constructor(context: Context) {
     private var isBoundToBanalService = false
     // Guard to prevent multiple simultaneous bind attempts during app startup
     private var isBinding = false
+    // Reference count to manage multiple ViewModels binding/unbinding
+    private var bindReferenceCount = 0
 
 
     // --- Reactive Data Streams (StateFlows for UI) ---
@@ -214,8 +216,8 @@ class BANALServiceRepository private constructor(context: Context) {
     // Handles the low-level Android Service Connection
     private val banalServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            if (DEBUG) Log.i(TAG, "onServiceConnected")
             val binder = service as? BANALService.BANALServiceComm
+            if (DEBUG) Log.i(TAG, "onServiceConnected - binder=$binder")
             _serviceBinder.value = binder // This "wakes up" the observation loop
             isBoundToBanalService = true
             isBinding = false
@@ -234,7 +236,8 @@ class BANALServiceRepository private constructor(context: Context) {
      * Uses startService first to ensure the service remains alive even if the Activity unbinds.
      */
     fun bindToBANALService() {
-        if (DEBUG) Log.i(TAG, "bindToBANALService()")
+        bindReferenceCount++
+        if (DEBUG) Log.i(TAG, "bindToBANALService() - count=$bindReferenceCount, isBound=$isBoundToBanalService")
         if (!isBoundToBanalService && !isBinding) {
             isBinding = true
             val intent = Intent(appContext, BANALService::class.java)
@@ -247,8 +250,10 @@ class BANALServiceRepository private constructor(context: Context) {
      * Unbinds from the service. The observation loop will automatically stop.
      */
     fun unbindFromBANALService() {
-        if (DEBUG) Log.i(TAG, "unbindFromBANALService()")
-        if (isBoundToBanalService) {
+        if (bindReferenceCount > 0) bindReferenceCount--
+        if (DEBUG) Log.i(TAG, "unbindFromBANALService() - count=$bindReferenceCount")
+        
+        if (bindReferenceCount == 0 && isBoundToBanalService) {
             try {
                 _serviceBinder.value = null
                 appContext.unbindService(banalServiceConnection)
@@ -333,7 +338,7 @@ class BANALServiceRepository private constructor(context: Context) {
                             _currentPathPoints.value = _currentPathPoints.value + newPathPoint
                         }
 
-                        if (DEBUG) Log.i(TAG, "BANALService update:\n _searchingForDevice: ${_searchingForDevice.value},\n _bSportType: ${_bSportType.value},\n _foundDeviceIds: ${_activeRemoteDevicesIds.value},\n _activeSensors: ${_activeSensors.value}")
+                        if (DEBUG) Log.i(TAG, "BANALService update loop - binder=$binder")
 
                         delay(1000) // Pulse every second
                     }

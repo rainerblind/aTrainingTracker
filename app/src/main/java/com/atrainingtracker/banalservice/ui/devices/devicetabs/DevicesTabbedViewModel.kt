@@ -97,6 +97,8 @@ class DevicesTabbedViewModel(
             // Otherwise, we need to ask the user
             _uiState.value = UiState.AwaitingDeviceTypeSelection
         }
+
+        banalServiceRepository.bindToBANALService()
     }
 
     /**
@@ -131,5 +133,15 @@ class DevicesTabbedViewModel(
         banalServiceRepository.stopSearchingForNewDevices()
 
         isSearching = false
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        banalServiceRepository.unbindFromBANALService()
+        try {
+            getApplication<Application>().unregisterReceiver(deviceDiscoveryReceiver)
+        } catch (e: Exception) {
+            // Receiver might not be registered
+        }
     }
 }
