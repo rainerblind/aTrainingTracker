@@ -19,6 +19,7 @@
 package com.atrainingtracker.banalservice.ui.devices.devicelist
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -81,17 +82,31 @@ fun DeviceItem(
                     Column(modifier = Modifier.weight(1f)) {
                         // Row 1: Name (left) and Value (right)
                         Row(
-                            verticalAlignment = Alignment.Top,
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(
-                                text = device.deviceName,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.weight(1f)
-                            )
+                            ) {
+                                // Technical Status LED
+                                Surface(
+                                    modifier = Modifier.size(10.dp),
+                                    shape = CircleShape,
+                                    color = if (device.isConnected) Color(0xFF4CAF50) else Color.LightGray,
+                                    tonalElevation = 2.dp
+                                ) {}
+                                
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                Text(
+                                    text = device.deviceName,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                             
                             if (device.isConnected) {
                                 Text(
