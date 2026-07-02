@@ -77,17 +77,17 @@ fun EditDeviceDialog(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // 1. Basic Info
+                    // 1. Manufacturer
+                    ReadOnlyField(
+                        label = stringResource(R.string.devices_manufacturerText),
+                        value = data.manufacturer
+                    )
+                     // Device name
                     OutlinedTextField(
                         value = data.deviceName,
                         onValueChange = { viewModel.onDeviceNameChanged(it) },
                         label = { Text(stringResource(R.string.devices_deviceNameText)) },
                         modifier = Modifier.fillMaxWidth()
-                    )
-
-                    ReadOnlyField(
-                        label = stringResource(R.string.devices_manufacturerText),
-                        value = data.manufacturer
                     )
 
                     // 2. Equipment Linking
