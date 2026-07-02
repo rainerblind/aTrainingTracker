@@ -198,7 +198,7 @@ fun WorkoutTabsScreen(
                     }
                     PrimaryScrollableTabRow(
                         selectedTabIndex = pagerState.currentPage,
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                         divider = {}
                     ) {
                         tabs.forEachIndexed { index, title ->

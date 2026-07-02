@@ -112,8 +112,7 @@ fun RouteItem(
         // Context Menu for deletion
         DropdownMenu(
             expanded = showContextMenu,
-            onDismissRequest = { showContextMenu = false },
-            containerColor = MaterialTheme.colorScheme.surface
+            onDismissRequest = { showContextMenu = false }
         ) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.delete)) },

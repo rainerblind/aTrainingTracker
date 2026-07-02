@@ -178,8 +178,7 @@ fun DevicesTabbedScreen(
                                         }
                                         DropdownMenu(
                                             expanded = menuExpanded,
-                                            onDismissRequest = { menuExpanded = false },
-                                            containerColor = MaterialTheme.colorScheme.surface
+                                            onDismissRequest = { menuExpanded = false }
                                         ) {
                                             DropdownMenuItem(
                                                 text = { Text(stringResource(R.string.check_ANT_installation)) },
@@ -194,7 +193,7 @@ fun DevicesTabbedScreen(
                             }
                             PrimaryScrollableTabRow(
                                 selectedTabIndex = pagerState.currentPage,
-                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                                 divider = {}
                             ) {
                                 tabs.forEachIndexed { index, spec ->
@@ -244,8 +243,7 @@ fun DevicesTabbedScreen(
                 TextButton(onClick = { showDeleteConfirmFor = null }) {
                     Text(stringResource(R.string.cancel))
                 }
-            },
-            containerColor = MaterialTheme.colorScheme.surface
+            }
         )
     }
 

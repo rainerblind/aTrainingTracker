@@ -28,6 +28,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -54,19 +55,20 @@ private val DarkColorScheme = darkColorScheme(
     onBackground = DarkOnBackground,
     surface = DarkSurface,
     onSurface = DarkOnSurface,
-    surfaceVariant = DarkSurfaceVariant,
+    surfaceVariant = DarkSurface,
     onSurfaceVariant = DarkOnSurfaceVariant,
     outline = DarkOutline,
     inverseOnSurface = DarkInverseOnSurface,
     inverseSurface = DarkInverseSurface,
     inversePrimary = DarkPrimaryInverse,
-    surfaceDim = surfaceDimDark,
-    surfaceBright = surfaceBrightDark,
-    surfaceContainerLowest = surfaceContainerLowestDark,
-    surfaceContainerLow = surfaceContainerLowDark,
-    surfaceContainer = surfaceContainerDark,
-    surfaceContainerHigh = surfaceContainerHighDark,
-    surfaceContainerHighest = surfaceContainerHighestDark
+    surfaceDim = DarkSurface,
+    surfaceBright = DarkSurface,
+    surfaceContainerLowest = DarkSurface,
+    surfaceContainerLow = DarkSurface,
+    surfaceContainer = DarkSurface,
+    surfaceContainerHigh = DarkSurface,
+    surfaceContainerHighest = surfaceContainerLowDark, // Used for tab backgrounds
+    surfaceTint = Color.Transparent
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -90,19 +92,20 @@ private val LightColorScheme = lightColorScheme(
     onBackground = LightOnBackground,
     surface = LightSurface,
     onSurface = LightOnSurface,
-    surfaceVariant = LightSurfaceVariant,
+    surfaceVariant = LightSurface,
     onSurfaceVariant = LightOnSurfaceVariant,
     outline = LightOutline,
     inverseOnSurface = LightInverseOnSurface,
     inverseSurface = LightInverseSurface,
     inversePrimary = LightPrimaryInverse,
-    surfaceDim = surfaceDimLight,
-    surfaceBright = surfaceBrightLight,
-    surfaceContainerLowest = surfaceContainerLowestLight,
-    surfaceContainerLow = surfaceContainerLowLight,
-    surfaceContainer = surfaceContainerLight,
-    surfaceContainerHigh = surfaceContainerHighLight,
-    surfaceContainerHighest = surfaceContainerHighestLight
+    surfaceDim = LightSurface,
+    surfaceBright = LightSurface,
+    surfaceContainerLowest = LightSurface,
+    surfaceContainerLow = LightSurface,
+    surfaceContainer = LightSurface,
+    surfaceContainerHigh = LightSurface,
+    surfaceContainerHighest = surfaceContainerLowLight, // Used for tab backgrounds
+    surfaceTint = Color.Transparent
 )
 
 @Composable

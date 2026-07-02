@@ -212,7 +212,6 @@ fun SportStatsRow(
 ) {
     Surface(
         onClick = onClick,
-        color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(12.dp),
         border = androidx.compose.foundation.BorderStroke(
             1.dp,

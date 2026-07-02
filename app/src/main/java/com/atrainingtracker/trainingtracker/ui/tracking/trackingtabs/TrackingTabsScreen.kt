@@ -206,10 +206,8 @@ fun TrackingTabsScreen(
 
             Column {
 
-                // 1. DYNAMIC HEADER (Config Mode or Tab Title)
                 Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    tonalElevation = 3.dp
+                    color = MaterialTheme.colorScheme.primaryContainer
                 ) {
                     Column(
                         modifier = Modifier
@@ -259,7 +257,7 @@ fun TrackingTabsScreen(
                         // TAB ROW
                         PrimaryScrollableTabRow(
                             selectedTabIndex = pagerState.currentPage,
-                            containerColor = MaterialTheme.colorScheme.surface,
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                             edgePadding = 8.dp,
                             divider = {}
                         ) {

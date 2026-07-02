@@ -155,8 +155,7 @@ fun EditDeviceDialog(
                 TextButton(onClick = onDismiss) {
                     Text(stringResource(R.string.cancel))
                 }
-            },
-            containerColor = MaterialTheme.colorScheme.surface
+            }
         )
     }
 }
@@ -254,8 +253,7 @@ private fun EquipmentSection(data: DeviceUiData, viewModel: EditDeviceViewModel)
                 }) {
                     Text(stringResource(R.string.OK))
                 }
-            },
-            containerColor = MaterialTheme.colorScheme.surface
+            }
         )
     }
 }
@@ -314,8 +312,7 @@ private fun WheelCircumferenceSelector(data: DeviceUiData, viewModel: EditDevice
                 )
                 ExposedDropdownMenu(
                     expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                    containerColor = MaterialTheme.colorScheme.surface
+                    onDismissRequest = { expanded = false }
                 ) {
                     viewModel.wheelSizeNames.forEachIndexed { index, name ->
                         DropdownMenuItem(
@@ -468,8 +465,7 @@ private fun CorrectCalibrationDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.cancel))
             }
-        },
-        containerColor = MaterialTheme.colorScheme.surface
+        }
     )
 }
 

@@ -43,7 +43,7 @@ fun StravaConnectionHeader(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(

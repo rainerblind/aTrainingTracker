@@ -173,7 +173,7 @@ fun ZoneSettingsScreen(
 
                     PrimaryScrollableTabRow(
                         selectedTabIndex = pagerState.currentPage,
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                         divider = {}
                     ) {
                         profileNameResIds.forEachIndexed { index, titleResId ->
@@ -355,7 +355,7 @@ fun ZoneRow(
     onMaxChange: (Int) -> Unit,
     minEnabled: Boolean = true,
     maxEnabled: Boolean = true,
-    containerColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surfaceVariant
+    containerColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surface
 ) {
     Card(
         // We use the containerColor with low alpha for the card body

@@ -46,9 +46,6 @@ fun MappableListItem(
             .fillMaxWidth()
             .graphicsLayer { this.alpha = alpha },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
     ) {
         Column(

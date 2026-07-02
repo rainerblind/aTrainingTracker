@@ -186,20 +186,18 @@ fun SensorFieldView(
                 }
             ),
         shape = RectangleShape,
-        // elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (fieldState.zoneColor == MaterialTheme.colorScheme.surfaceVariant) {
-                fieldState.zoneColor // Keep default if no zone is active
+            containerColor = if (fieldState.zoneColor == Color.Transparent) {
+                MaterialTheme.colorScheme.surface
             } else {
                 fieldState.zoneColor.copy(alpha = 0.12f)
             }
         ),
-        // colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             // 1. Vertical Indicator Strip
-            if (fieldState.zoneColor != MaterialTheme.colorScheme.surfaceVariant) {
+            if (fieldState.zoneColor != Color.Transparent) {
                 Spacer(
                     modifier = Modifier
                         .width(6.dp)
@@ -300,7 +298,7 @@ private fun SensorFieldViewPreview(
         filterDescription = "GPS: 5 s avg",
         value = "5:32",
         units = "/km",
-        zoneColor = MaterialTheme.colorScheme.surfaceVariant
+        zoneColor = Color.Transparent
     )
 
     MaterialTheme {
@@ -325,7 +323,7 @@ private fun SensorFieldViewConfigPreview() {
         filterDescription = "GPS: 5 s avg",
         value = "5:32",
         units = "/km",
-        zoneColor = MaterialTheme.colorScheme.surfaceVariant
+        zoneColor = Color.Transparent
     )
 
     MaterialTheme {
