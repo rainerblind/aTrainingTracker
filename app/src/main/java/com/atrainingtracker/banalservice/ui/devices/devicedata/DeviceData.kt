@@ -43,7 +43,8 @@ data class DeviceRawData(
     val calibrationValue: Double?,
     val linkedEquipment: List<String>,
     val availableEquipment: List<String>,
-    val powerFeaturesFlags: Int?
+    val powerFeaturesFlags: Int?,
+    val linkedSportTypes: List<String> = emptyList()
 )
 
 /**
@@ -62,6 +63,7 @@ data class DeviceUiData(
     val availableEquipment: List<String>,
     val powerFeaturesFlags: Int?,
     val batteryPercentage: Int,
+    val linkedSportTypes: List<String> = emptyList(),
 
     // derived from the raw data
     val deviceTypeIconRes: Int,
@@ -137,7 +139,8 @@ fun raw2UiDeviceData(rawData: DeviceRawData, context: Context): DeviceUiData {
         // set by observing the devices
         isConnected = false,
         mainValue = null,
-        allValues = null
+        allValues = null,
+        linkedSportTypes = rawData.linkedSportTypes
         )
 }
 

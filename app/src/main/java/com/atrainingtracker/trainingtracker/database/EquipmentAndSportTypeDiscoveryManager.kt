@@ -179,6 +179,13 @@ class EquipmentAndSportTypeDiscoveryManager private constructor(context: Context
         }.toSet()
     }
 
+    /**
+     * Returns the names of all SportTypes linked to a list of equipment names.
+     */
+    fun getSportNamesForEquipmentList(equipmentNames: List<String>): List<String> {
+        return equipmentNames.flatMap { getSportNamesForEquipment(it) }.distinct()
+    }
+
 
     /**
      * Resolves the "Best" SportType ID by cross-referencing sensors and speed.

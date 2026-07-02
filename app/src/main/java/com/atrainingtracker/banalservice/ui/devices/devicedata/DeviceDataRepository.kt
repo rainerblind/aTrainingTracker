@@ -36,6 +36,7 @@ import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.RawDeviceDataProvider
 import com.atrainingtracker.trainingtracker.MyHelper
+import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -79,7 +80,8 @@ class DeviceDataRepository private constructor(private val application: Applicat
     // access to the databases
     private val devicesDatabaseManager by lazy { DevicesDatabaseManager.getInstance(application) }
     private val equipmentDbHelper by lazy { EquipmentDbHelper(application) }
-    private val mapper by lazy { RawDeviceDataProvider(devicesDatabaseManager, equipmentDbHelper) }
+    private val discoveryManager by lazy { EquipmentAndSportTypeDiscoveryManager.getInstance(application) }
+    private val mapper by lazy { RawDeviceDataProvider(devicesDatabaseManager, equipmentDbHelper, discoveryManager) }
 
     private val _allDevices = MutableStateFlow<List<DeviceUiData>>(emptyList())
     val allDevices: StateFlow<List<DeviceUiData>> = _allDevices.asStateFlow()

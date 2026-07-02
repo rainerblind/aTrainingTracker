@@ -162,6 +162,17 @@ fun DeviceItem(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+
+                // Row 5: Predicted Sport Types (Technical mapping)
+                if (device.linkedSportTypes.isNotEmpty()) {
+                    Text(
+                        text = "→ ${device.linkedSportTypes.joinToString(", ")}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Start,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
 
             // Control (Bottom Right): Pairing Switch

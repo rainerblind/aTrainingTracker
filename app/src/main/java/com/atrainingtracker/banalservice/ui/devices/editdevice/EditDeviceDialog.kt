@@ -195,6 +195,16 @@ private fun EquipmentSection(data: DeviceUiData, viewModel: EditDeviceViewModel)
                 textAlign = androidx.compose.ui.text.style.TextAlign.Start
             )
         }
+
+        // Predicted Sport Types (Reactive technical mapping)
+        if (data.linkedSportTypes.isNotEmpty()) {
+            Text(
+                text = "→ ${data.linkedSportTypes.joinToString(", ")}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                modifier = Modifier.padding(start = 12.dp) // Align slightly with text inside button
+            )
+        }
     }
 
     if (showDialog) {

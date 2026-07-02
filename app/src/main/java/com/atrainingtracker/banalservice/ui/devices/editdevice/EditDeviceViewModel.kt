@@ -28,6 +28,7 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.BikePowerFeatures
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.devicedata.PowerFeatureDisplay
+import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,6 +51,7 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
 
     private val devicesRepository = DeviceDataRepository.Companion.getInstance(application)
     private val banalServiceRepository = BANALServiceRepository.Companion.getInstance(application)
+    private val discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(application)
 
     private val useCase = GetMergedDevicesUseCase(
         devicesRepository,
@@ -273,7 +275,12 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
     }
 
     fun onEquipmentChanged(newEquipment: List<String>) {
-        updateState { it.copy(linkedEquipment = newEquipment) }
+        updateState { 
+            it.copy(
+                linkedEquipment = newEquipment,
+                linkedSportTypes = discoveryManager.getSportNamesForEquipmentList(newEquipment)
+            ) 
+        }
     }
 
 

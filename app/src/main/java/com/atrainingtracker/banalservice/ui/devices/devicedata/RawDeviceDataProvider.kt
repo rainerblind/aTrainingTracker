@@ -22,9 +22,14 @@ import android.database.Cursor
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 
-class RawDeviceDataProvider(val devicesDatabaseManager: DevicesDatabaseManager, val equipmentDbHelper: EquipmentDbHelper) {
+class RawDeviceDataProvider(
+    val devicesDatabaseManager: DevicesDatabaseManager,
+    val equipmentDbHelper: EquipmentDbHelper,
+    val discoveryManager: EquipmentAndSportTypeDiscoveryManager
+) {
     fun getDeviceData(cursor: Cursor): DeviceRawData {
         val id = cursor.getLong(cursor.getColumnIndex(DevicesDatabaseManager.DevicesDbHelper.C_ID))
         val deviceType = DeviceType.valueOf(cursor.getString(cursor.getColumnIndex(
@@ -42,6 +47,8 @@ class RawDeviceDataProvider(val devicesDatabaseManager: DevicesDatabaseManager, 
         val linkedEquipment = equipmentDbHelper.getLinkedEquipmentFromDeviceId(id)
         val availableEquipment = equipmentDbHelper.getEquipment(deviceType.sportType)
 
+        // Predict linked sport types based on equipment mapping
+        val linkedSportTypes = discoveryManager.getLinkedSportTypeNames(setOf(id)).toList()
 
         return DeviceRawData(
             id = id,
@@ -55,7 +62,8 @@ class RawDeviceDataProvider(val devicesDatabaseManager: DevicesDatabaseManager, 
             calibrationValue = calibrationValue,
             linkedEquipment = linkedEquipment,
             availableEquipment = availableEquipment,
-            powerFeaturesFlags = powerFeaturesFlags
+            powerFeaturesFlags = powerFeaturesFlags,
+            linkedSportTypes = linkedSportTypes
         )
     }
 }
