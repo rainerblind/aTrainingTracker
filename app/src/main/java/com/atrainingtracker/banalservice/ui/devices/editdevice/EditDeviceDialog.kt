@@ -468,31 +468,22 @@ private fun PowerMeterSection(data: DeviceUiData, viewModel: EditDeviceViewModel
 
 @Composable
 private fun LivePreviewSection(data: DeviceUiData) {
-    if (data.isConnected) {
-        Column(
-            modifier = Modifier.padding(top = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
+    Column(
+        modifier = Modifier.padding(top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.devices_live_sensor_data_header),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        if (data.isConnected) {
             Text(
-                text = stringResource(R.string.devices_live_sensor_data_header),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                text = data.mainValue ?: "--",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
             )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_device_available),
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = Color.Unspecified
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = data.mainValue ?: "--",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-            }
             data.allValues?.forEach { valStr ->
                 Text(
                     text = valStr,
@@ -500,6 +491,12 @@ private fun LivePreviewSection(data: DeviceUiData) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        } else {
+            Text(
+                text = stringResource(R.string.devices_not_connected),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
