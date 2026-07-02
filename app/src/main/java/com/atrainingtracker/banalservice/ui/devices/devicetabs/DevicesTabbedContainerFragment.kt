@@ -52,7 +52,10 @@ class DevicesTabbedContainerFragment : Fragment() {
                 ATrainingTrackerTheme {
                     DevicesTabbedScreen(
                         tabViewModel = viewModel,
-                        initialTab = arguments?.getInt(STARTING_TAB, 0) ?: 0
+                        initialTab = arguments?.getInt(STARTING_TAB, 0) ?: 0,
+                        onCheckAntInstallation = {
+                            InstallANTShitDialog().show(parentFragmentManager, InstallANTShitDialog.TAG)
+                        }
                     )
                 }
             }
@@ -61,26 +64,6 @@ class DevicesTabbedContainerFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        // The options menu is only for ANT+
-        if (viewModel.protocol == Protocol.ANT_PLUS) {
-            setHasOptionsMenu(true)
-        }
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        super.onCreateOptionsMenu(menu, inflater)
-        inflater.inflate(R.menu.remote_devices, menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.itemCheckANTInstallation -> {
-                InstallANTShitDialog().show(parentFragmentManager, InstallANTShitDialog.TAG)
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
     }
 
     companion object {

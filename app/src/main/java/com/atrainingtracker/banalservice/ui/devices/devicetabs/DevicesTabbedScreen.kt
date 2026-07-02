@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -48,6 +50,7 @@ fun DevicesTabbedScreen(
     tabViewModel: DevicesTabbedViewModel,
     listViewModel: DeviceListViewModel = viewModel(),
     initialTab: Int = 0,
+    onCheckAntInstallation: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val uiState by tabViewModel.uiState.observeAsState()
@@ -56,6 +59,7 @@ fun DevicesTabbedScreen(
     val protocol = tabViewModel.protocol
     var showDeleteConfirmFor by remember { mutableStateOf<DeviceUiData?>(null) }
     var editingDeviceId by remember { mutableStateOf<Long?>(null) }
+    var menuExpanded by remember { mutableStateOf(false) }
 
     val density = LocalDensity.current
     val appBarMaxHeightPx = with(density) { 135.dp.roundToPx() }
@@ -131,6 +135,30 @@ fun DevicesTabbedScreen(
                                         style = MaterialTheme.typography.headlineSmall,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                                     )
+
+                                    // Modern Options Menu
+                                    Box {
+                                        IconButton(onClick = { menuExpanded = true }) {
+                                            Icon(
+                                                imageVector = Icons.Default.MoreVert,
+                                                contentDescription = stringResource(R.string.devices_settings_header),
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                            )
+                                        }
+                                        DropdownMenu(
+                                            expanded = menuExpanded,
+                                            onDismissRequest = { menuExpanded = false },
+                                            containerColor = MaterialTheme.colorScheme.surface
+                                        ) {
+                                            DropdownMenuItem(
+                                                text = { Text(stringResource(R.string.check_ANT_installation)) },
+                                                onClick = {
+                                                    menuExpanded = false
+                                                    onCheckAntInstallation()
+                                                }
+                                            )
+                                        }
+                                    }
                                 }
                             }
                             PrimaryScrollableTabRow(
