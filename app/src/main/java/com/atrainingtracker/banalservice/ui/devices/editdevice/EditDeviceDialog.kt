@@ -43,6 +43,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.ui.devices.DeviceStatusRow
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.ui.theme.ConnectionStatusGreen
 
@@ -99,6 +100,16 @@ fun EditDeviceDialog(
                         label = stringResource(R.string.devices_manufacturerText),
                         value = data.manufacturer
                     )
+
+                    // Battery + Last Seen status (Reusable technical row)
+                    DeviceStatusRow(
+                        device = data,
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        iconSize = 20.dp,
+                        textStyle = MaterialTheme.typography.bodyLarge,
+                        alpha = 0.8f
+                    )
+
                      // Device name
                     OutlinedTextField(
                         value = data.deviceName,

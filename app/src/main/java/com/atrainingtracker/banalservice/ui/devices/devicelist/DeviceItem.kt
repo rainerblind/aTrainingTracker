@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.ui.devices.DeviceStatusRow
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.ui.theme.ConnectionStatusGreen
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
@@ -141,37 +142,10 @@ fun DeviceItem(
                 }
 
                 // Row 3: Technical Status (Battery + Last Seen/Connected)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                DeviceStatusRow(
+                    device = device,
                     modifier = Modifier.padding(top = 2.dp)
-                ) {
-                    // 1. Battery Identity
-                    Icon(
-                        painter = painterResource(id = device.batteryStatusIconRes),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = Color.Unspecified
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    
-                    val batteryText = if (device.batteryPercentage >= 0) "${device.batteryPercentage}%" else stringResource(R.string.devices_unknown)
-                    
-                    // 2. State Information in Brackets
-                    val relativeTime = getRelativeLastSeen(device.lastSeen)
-                    val stateText = if (device.isConnected) {
-                        stringResource(R.string.devices_available)
-                    } else if (relativeTime.isNotEmpty()) {
-                        relativeTime
-                    } else {
-                        stringResource(R.string.devices_not_connected)
-                    }
-
-                    Text(
-                        text = "$batteryText ($stateText)",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
-                }
+                )
 
                 // Row 4: Linked Equipment
                 if (device.linkedEquipment.isNotEmpty()) {
@@ -202,29 +176,6 @@ fun DeviceItem(
                     .scale(0.8f)
             )
         }
-    }
-}
-
-@Composable
-private fun getRelativeLastSeen(lastSeen: String?): String {
-    if (lastSeen == null) return ""
-    
-    return try {
-        // Attempt to parse using the default date/time instance (matching how it's written in DevicesDatabaseManager)
-        val date = java.text.DateFormat.getDateTimeInstance().parse(lastSeen)
-        if (date != null) {
-            android.text.format.DateUtils.getRelativeTimeSpanString(
-                date.time,
-                System.currentTimeMillis(),
-                android.text.format.DateUtils.DAY_IN_MILLIS,
-                android.text.format.DateUtils.FORMAT_ABBREV_RELATIVE
-            ).toString()
-        } else {
-            ""
-        }
-    } catch (e: Exception) {
-        // If it's already a short special string like "Now" or "Jetzt", return as is
-        if (lastSeen.length < 10) lastSeen else lastSeen.split(" ").firstOrNull() ?: ""
     }
 }
 
