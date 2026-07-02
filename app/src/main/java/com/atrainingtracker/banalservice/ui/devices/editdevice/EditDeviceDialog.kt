@@ -44,6 +44,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
+import com.atrainingtracker.trainingtracker.ui.theme.ConnectionStatusGreen
 
 @Composable
 fun EditDeviceDialog(
@@ -75,7 +76,7 @@ fun EditDeviceDialog(
                     Surface(
                         modifier = Modifier.size(12.dp),
                         shape = CircleShape,
-                        color = if (isConnected) Color(0xFF4CAF50) else Color.LightGray,
+                        color = if (isConnected) ConnectionStatusGreen else Color.LightGray,
                         tonalElevation = 2.dp
                     ) {}
                     Spacer(modifier = Modifier.width(12.dp))

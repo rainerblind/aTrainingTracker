@@ -38,6 +38,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
+import com.atrainingtracker.trainingtracker.ui.theme.ConnectionStatusGreen
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 
 @Composable
@@ -95,7 +96,7 @@ fun DeviceItem(
                                 Surface(
                                     modifier = Modifier.size(10.dp),
                                     shape = CircleShape,
-                                    color = if (device.isConnected) Color(0xFF4CAF50) else Color.LightGray,
+                                    color = if (device.isConnected) ConnectionStatusGreen else Color.LightGray,
                                     tonalElevation = 2.dp
                                 ) {}
                                 
