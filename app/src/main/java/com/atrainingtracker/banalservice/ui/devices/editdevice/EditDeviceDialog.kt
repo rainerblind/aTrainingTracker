@@ -19,6 +19,7 @@
 package com.atrainingtracker.banalservice.ui.devices.editdevice
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -175,20 +176,26 @@ private fun EquipmentSection(data: DeviceUiData, viewModel: EditDeviceViewModel)
             onDismissRequest = { showDialog = false },
             title = { Text(stringResource(data.onEquipmentResId)) },
             text = {
-                Column {
-                    data.availableEquipment.forEach { equipment ->
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    data.availableEquipment.filter { it.isNotBlank() }.forEach { equipment ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    if (selectedItems.contains(equipment)) selectedItems.remove(equipment)
+                                    else selectedItems.add(equipment)
+                                }
                         ) {
                             Checkbox(
                                 checked = selectedItems.contains(equipment),
-                                onCheckedChange = { checked ->
-                                    if (checked) selectedItems.add(equipment)
-                                    else selectedItems.remove(equipment)
-                                }
+                                onCheckedChange = null // Handled by row click
                             )
-                            Text(equipment)
+                            Text(
+                                text = equipment,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
                         }
                     }
                 }
