@@ -22,6 +22,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
@@ -35,6 +36,7 @@ import java.util.Locale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -68,7 +70,20 @@ fun EditDeviceDialog(
                         modifier = Modifier.size(48.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(stringResource(R.string.edit_device))
+                    // Technical Status LED (Using liveData for real-time state transitions)
+                    val isConnected = liveData?.isConnected ?: data.isConnected
+                    Surface(
+                        modifier = Modifier.size(12.dp),
+                        shape = CircleShape,
+                        color = if (isConnected) Color(0xFF4CAF50) else Color.LightGray,
+                        tonalElevation = 2.dp
+                    ) {}
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = data.deviceName,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             },
             text = {
