@@ -72,7 +72,7 @@ public class BANALService
 
     public static final double DEFAULT_BIKE_CALIBRATION_FACTOR = 2.1;
     public static final double MIN_SPEED = 0.001;
-    public static final int MAX_PACE = 1000000000;
+    public static final int MAX_PACE = 10;
 
     // TODO: reorganize: All Strings/Intents that are used globally, must be moved to TrainingApplication.
     // TODO: only those, that are only used within BANALService stay here
