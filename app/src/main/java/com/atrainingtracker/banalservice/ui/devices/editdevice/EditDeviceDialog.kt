@@ -111,12 +111,20 @@ fun EditDeviceDialog(
                     )
 
                      // Device name
-                    OutlinedTextField(
-                        value = data.deviceName,
-                        onValueChange = { viewModel.onDeviceNameChanged(it) },
-                        label = { Text(stringResource(R.string.devices_deviceNameText)) },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = stringResource(R.string.devices_deviceNameText),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        OutlinedTextField(
+                            value = data.deviceName,
+                            onValueChange = { viewModel.onDeviceNameChanged(it) },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text(stringResource(R.string.devices_deviceNameText)) }
+                        )
+                    }
 
                     // 2. Equipment Linking
                     EquipmentSection(data, viewModel)
@@ -158,7 +166,8 @@ private fun ReadOnlyField(label: String, value: String) {
     Column {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
@@ -176,7 +185,8 @@ private fun EquipmentSection(data: DeviceUiData, viewModel: EditDeviceViewModel)
     Column {
         Text(
             text = stringResource(data.onEquipmentResId),
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         TextButton(
@@ -200,7 +210,7 @@ private fun EquipmentSection(data: DeviceUiData, viewModel: EditDeviceViewModel)
         if (data.linkedSportTypes.isNotEmpty()) {
             Text(
                 text = "→ ${data.linkedSportTypes.joinToString(", ")}",
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 modifier = Modifier.padding(start = 12.dp) // Align slightly with text inside button
             )
@@ -280,7 +290,8 @@ private fun WheelCircumferenceSelector(data: DeviceUiData, viewModel: EditDevice
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = stringResource(R.string.devices_wheel_circumference),
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         
@@ -353,7 +364,8 @@ private fun RunCalibrationFactorSelector(data: DeviceUiData, viewModel: EditDevi
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = stringResource(R.string.devices_calibration_factor),
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         
@@ -468,7 +480,8 @@ private fun PowerMeterSection(data: DeviceUiData, viewModel: EditDeviceViewModel
             Text(
                 text = stringResource(R.string.bike_power__features),
                 style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
             // List of supported features
@@ -522,7 +535,7 @@ private fun LivePreviewSection(data: DeviceUiData) {
             text = stringResource(R.string.devices_live_sensor_data_header),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         if (data.isConnected) {
             Text(
