@@ -28,7 +28,7 @@ import kotlinx.parcelize.Parcelize
  * An enum to define which subset of devices to display.
  */
 enum class DeviceFilterType {
-    AVAILABLE,   // Devices currently visible
+    CONNECTED,   // Devices currently visible and transmitting
     PAIRED,      // Paired devices
     ALL_KNOWN    // All devices in the database, regardless of pairing status
 }

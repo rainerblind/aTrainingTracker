@@ -26,18 +26,28 @@
     <string name="devices_unknown_device">senza nome</string>
 
     <string name="devices_all">Tutti</string>
+    <string name="devices_all_sensors">Tutti i sensori</string>
+    <string name="devices_tab_available">Connessi</string>
+    <string name="devices_tab_paired">Associati</string>
+    <string name="devices_tab_known">Conosciuti</string>
+    <string name="devices_sensors_title">Sensori</string>
+    <string name="devices_available">connesso</string>
+    <string name="devices_not_connected">non connesso</string>
 
-    <string name="devices_available_devices_format">dispositivi %1$s disponibili</string>
+    <string name="devices_available_devices_format">dispositivi %1$s connessi</string>
     <string name="devices_paired_devices_format">dispositivi %1$s associati</string>
-    <string name="devices_known_devices_format">dispositivi %1$s noti</string>
-    <string name="devices_all_available_devices">tutti i disp. disponibili</string>
+    <string name="devices_known_devices_format">dispositivi %1$s conosciuti</string>
+    <string name="devices_all_available_devices">tutti i disp. connessi</string>
     <string name="devices_all_paired_devices">tutti i disp. associati</string>
-    <string name="devices_all_known_devices">tutti i disp. noti</string>
+    <string name="devices_all_known_devices">tutti i disp. conosciuti</string>
+
+    <string name="devices_no_devices_available">Nessun dispositivo connesso</string>
+    <string name="devices_no_paired_devices">Nessun dispositivo associato trovato</string>
+    <string name="devices_no_known_devices">Nessun dispositivo conosciuto nel database</string>
 
     <string name="devices_myRemoteDevices">Dispositivi</string>
     <string name="devices_newDevices">Nuovi dispositivi</string>
     <string name="devices_searchingForDevice">ricerca disp. %1$s %2$s</string>
-    <string name="devicessearchingForRemoteDevice">ricerca cardio ANT+</string>
 
     <string name="devices_lastSeenText">visto il</string>
     <string name="devices_now">ora</string>
@@ -77,9 +87,9 @@
     <string name="devices_select_wheel_size_prompt">Scegli dimensione ruota…</string>
     <string name="devices_last_seen_never">ancora no</string>
 
-    <string name="devices_location_GPS">GPS</string>
-    <string name="devices_location_Network">Rete</string>
-    <string name="devices_location_GoogleFused">Google Fused</string>
+    <string name="devices_location_GPS">GPS del telefono (Satellite)</string>
+    <string name="devices_location_Network">Posizione del telefono (Rete/WiFi)</string>
+    <string name="devices_location_GoogleFused">Posizione Google (Fused)</string>
     <string name="devices_altitude_from_pressure">Pressione Aria</string>
 
     <string name="devices_live_sensor_data_header">Dati Sensori</string>

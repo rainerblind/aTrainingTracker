@@ -556,6 +556,15 @@ public class BANALService
             cDeviceManager.stopSearchForNewRemoteDevices();
         }
 
+        public boolean isSearchingForNewRemoteDevices() {
+            return cDeviceManager.isSearchingForNewRemoteDevices();
+        }
+
+        @Nullable
+        public DeviceType getNewRemoteDeviceTypeCurrentlySearchingFor() {
+            return cDeviceManager.getNewRemoteDeviceTypeCurrentlySearchingFor();
+        }
+
 
         public Set<SensorType> getAvailableSensorTypeSet() {
             return BANALService.this.getAvailableSensorTypeSet();

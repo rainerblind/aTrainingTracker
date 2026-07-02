@@ -100,6 +100,7 @@ val Zone5 = Color(0xFF9400D3) // Dark Violet
 
 // some special colors
 val StravaOrange = Color(0xFFFC4C02)
+val ConnectionStatusGreen = Color(0xFF4CAF50)
 
 // routes
 val RouteColorSelected = Color(0xFF228B22) // ForestGreen

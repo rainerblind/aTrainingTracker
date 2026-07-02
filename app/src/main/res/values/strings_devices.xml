@@ -31,12 +31,19 @@
     <string name="devices_unknown_device">No name</string>
 
     <string name="devices_all">All</string>
+    <string name="devices_all_sensors">All Sensors</string>
+    <string name="devices_tab_available">Connected</string>
+    <string name="devices_tab_paired">Paired</string>
+    <string name="devices_tab_known">Known</string>
+    <string name="devices_sensors_title">Sensors</string>
+    <string name="devices_available">connected</string>
+    <string name="devices_not_connected">not connected</string>
 
     <!-- tab title -->
-    <string name="devices_available_devices_format">Available %1$s devices</string>
+    <string name="devices_available_devices_format">Connected %1$s devices</string>
     <string name="devices_paired_devices_format">Paired %1$s devices</string>
     <string name="devices_known_devices_format">Known %1$s devices</string>
-    <string name="devices_all_available_devices">All available devices</string>
+    <string name="devices_all_available_devices">All connected devices</string>
     <string name="devices_all_paired_devices">All paired devices</string>
     <string name="devices_all_known_devices">All known devices</string>
 
@@ -47,12 +54,15 @@
     <string name="devices_no_main_value" translatable="false">--</string>
     <string name="DeviceListRowEquipmentText" translatable="false" />
 
+    <string name="devices_no_devices_available">No devices connected</string>
+    <string name="devices_no_paired_devices">No paired devices found</string>
+    <string name="devices_no_known_devices">No known devices in database</string>
+
     <!-- device_list -->
     <string name="devices_myRemoteDevices">Devices</string>
     <!-- <string name="knownDevices">known devices</string> -->
     <string name="devices_newDevices">New Devices</string>
     <string name="devices_searchingForDevice">Searching for %1$s %2$s devices</string>
-    <string name="devicessearchingForRemoteDevice">Searching for ANT+ Heart Rate devices</string>
 
     <string name="devices_lastSeenText">Last seen</string>
     <string name="devices_lastSeenDefaultValue" translatable="false">2014-10-18 09:10:11</string>
@@ -117,9 +127,9 @@
     <string name="devices_equipment_none" />
 
     <!-- smartphone devices -->
-    <string name="devices_location_GPS">GPS</string>
-    <string name="devices_location_Network">Network</string>
-    <string name="devices_location_GoogleFused">Google Fused</string>
+    <string name="devices_location_GPS">Phone GPS (Satellite)</string>
+    <string name="devices_location_Network">Phone Location (Cell/WiFi)</string>
+    <string name="devices_location_GoogleFused">Google Location (Fused)</string>
     <string name="devices_altitude_from_pressure">Air Pressure</string>
 
     <!-- live sensor data -->

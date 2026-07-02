@@ -102,6 +102,7 @@ fun TrackingTabsScreen(
     val devices by controlViewModel.remoteDevices.collectAsState()
     val activeSensors by controlViewModel.activeSensors.collectAsState()
     val bSportType by controlViewModel.bSportType.collectAsState()
+    val selectingProtocol by controlViewModel.selectingProtocol.collectAsState()
 
 
     // Page count: Control Tab + Sensor Tabs
@@ -308,7 +309,8 @@ fun TrackingTabsScreen(
                                 when (navigation) {
                                     is ControlNavigation.ToPairing -> {
                                         (context as? MainActivityWithNavigation)?.startPairing(
-                                            navigation.protocol
+                                            navigation.protocol,
+                                            navigation.deviceType
                                         )
                                     }
 
@@ -342,6 +344,9 @@ fun TrackingTabsScreen(
                             onResume = { controlViewModel.onResumeTracking() },
                             onStop = { controlViewModel.onStopTracking() },
                             onPairingClicked = { controlViewModel.onPairingClicked(it) },
+                            selectingProtocol = selectingProtocol,
+                            onDeviceTypeSelected = { controlViewModel.onDeviceTypeSelected(it) },
+                            onCancelDeviceTypeSelection = { controlViewModel.onCancelDeviceTypeSelection() }
                         )
                     } else {
                         val viewIndex =

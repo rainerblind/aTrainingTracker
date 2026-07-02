@@ -19,15 +19,14 @@
 package com.atrainingtracker.banalservice.ui.devices
 
 import android.app.Application
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MediatorLiveData
-import androidx.lifecycle.asLiveData
-import androidx.lifecycle.map
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 
 class GetMergedDevicesUseCase(
     private val dbRepo: DeviceDataRepository,
@@ -35,47 +34,55 @@ class GetMergedDevicesUseCase(
     private val application: Application
 ) {
     // The single source of truth for the UI (List and Edit)
-    val mergedDevices: LiveData<List<DeviceUiData>> = MediatorLiveData<List<DeviceUiData>>().apply {
-        addSource(dbRepo.allDevices) { update() }
-        addSource(serviceRepo.allActiveDevices) { update() }
-        addSource(serviceRepo.newlyFoundDevicesIds.asLiveData()) { update() }
+    val mergedDevices: Flow<List<DeviceUiData>> = combine(
+        dbRepo.allDevices,
+        serviceRepo.allActiveDevicesTelemetry,
+        serviceRepo.newlyFoundDevicesIds
+    ) { dbList, activeTelemetry, foundIds ->
+        dbList.map { knownDevice ->
+            val telemetry = activeTelemetry.find { it.deviceId == knownDevice.id }
+            val isFound = foundIds.contains(knownDevice.id)
+
+            when {
+                telemetry != null -> {
+                    val mainSensorData = telemetry.mainValue
+                    if (mainSensorData != null) {
+                        val unitId = MyHelper.getUnitsId(mainSensorData.sensor)
+                        val unit = if (unitId > 0) application.getString(unitId) else ""
+                        knownDevice.copy(
+                            isConnected = true,
+                            lastSeen = application.getString(R.string.devices_now),
+                            mainValue = "${mainSensorData.value} $unit".trim(),
+                            allValues = telemetry.allValues.map {
+                                "${it.sensor.getShortName(application)}: ${it.value}"
+                            }
+                        )
+                    } else {
+                        knownDevice.copy(
+                            isConnected = true,
+                            lastSeen = application.getString(R.string.devices_now),
+                            mainValue = null,
+                            allValues = telemetry.allValues.map {
+                                "${it.sensor.getShortName(application)}: ${it.value}"
+                            }
+                        )
+                    }
+                }
+
+                isFound -> knownDevice.copy(
+                    isConnected = true,
+                    lastSeen = application.getString(R.string.devices_now)
+                )
+
+                else -> knownDevice.copy(isConnected = false, mainValue = null)
+            }
+        }
     }
 
     /**
      * Provides a live, merged object for the Edit View.
      */
-    fun getMergedDeviceById(id: Long): LiveData<DeviceUiData?> {
+    fun getMergedDeviceById(id: Long): Flow<DeviceUiData?> {
         return mergedDevices.map { list -> list.find { it.id == id } }
-    }
-
-    private fun MediatorLiveData<List<DeviceUiData>>.update() {
-        val dbList = dbRepo.allDevices.value ?: return
-        val activeList = serviceRepo.allActiveDevices.value ?: emptyList()
-        val foundIds = serviceRepo.newlyFoundDevicesIds.value
-
-        value = dbList.map { knownDevice ->
-            val activeDevice = activeList.find { it.deviceId == knownDevice.id }
-            val isFound = foundIds.contains(knownDevice.id)
-
-            when {
-                activeDevice != null -> {
-                    val mainSensorData = activeDevice.mainSensorData
-                    val unit = application.getString(MyHelper.getUnitsId(mainSensorData.sensor))
-                    knownDevice.copy(
-                        isAvailable = true,
-                        lastSeen = application.getString(R.string.devices_now),
-                        mainValue = "${mainSensorData.value} $unit",
-                        allValues = activeDevice.allSensorData.map {
-                            "${it.sensor.getFullName(application)}: ${it.value}"
-                        }
-                    )
-                }
-                isFound -> knownDevice.copy(
-                    isAvailable = true,
-                    lastSeen = application.getString(R.string.devices_now)
-                )
-                else -> knownDevice.copy(isAvailable = false, mainValue = null)
-            }
-        }
     }
 }

@@ -20,8 +20,7 @@ package com.atrainingtracker.banalservice.ui.devices.editdevice
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ui.devices.GetMergedDevicesUseCase
@@ -29,7 +28,15 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.BikePowerFeatures
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.devicedata.PowerFeatureDisplay
+import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -44,6 +51,7 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
 
     private val devicesRepository = DeviceDataRepository.Companion.getInstance(application)
     private val banalServiceRepository = BANALServiceRepository.Companion.getInstance(application)
+    private val discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(application)
 
     private val useCase = GetMergedDevicesUseCase(
         devicesRepository,
@@ -51,13 +59,20 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
         application
     )
 
-    // the device data with the data of its sensors.
-    // This must not used for editing the device since it would be updated every second with the value of the database.
-    lateinit var deviceLiveData : LiveData<DeviceUiData?>
+    // The ID of the device currently being edited.
+    private val _editingId = MutableStateFlow<Long?>(null)
+
+    // The device data with the data of its sensors.
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val deviceLiveData: Flow<DeviceUiData?> = _editingId
+        .flatMapLatest { id ->
+            if (id == null) flowOf(null)
+            else useCase.getMergedDeviceById(id)
+        }
 
     // The single source of truth for the UI. This holds the CURRENT state of the device being edited.
-    private val _deviceSnapshot = MutableLiveData<DeviceUiData?>()
-    val deviceSnapshot: LiveData<DeviceUiData?> = _deviceSnapshot
+    private val _deviceSnapshot = MutableStateFlow<DeviceUiData?>(null)
+    val deviceSnapshot: StateFlow<DeviceUiData?> = _deviceSnapshot.asStateFlow()
 
 
     /**
@@ -65,10 +80,11 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
      * This should be called once when the edit dialog is created.
      */
     fun loadInitialDeviceData(deviceId: Long) {
-        // No launch block is needed for this synchronous, main-safe call.
+        // Only reload if the ID changed or we don't have data yet
+        if (_editingId.value == deviceId && _deviceSnapshot.value != null) return
+
         _deviceSnapshot.value = devicesRepository.getDeviceSnapshotById(deviceId)
-        // _uiState.value = useCase.getMergedDeviceById(deviceId).value
-        deviceLiveData = useCase.getMergedDeviceById(deviceId)
+        _editingId.value = deviceId
     }
 
     //--- dealing with wheel sizes
@@ -259,7 +275,12 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
     }
 
     fun onEquipmentChanged(newEquipment: List<String>) {
-        updateState { it.copy(linkedEquipment = newEquipment) }
+        updateState { 
+            it.copy(
+                linkedEquipment = newEquipment,
+                linkedSportTypes = discoveryManager.getSportNamesForEquipmentList(newEquipment)
+            ) 
+        }
     }
 
 
@@ -273,11 +294,11 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
     }
 
     fun onDoublePowerBalanceValuesChanged(isDouble: Boolean) {
-        updateState { it.copy(powerFeatures = it.powerFeatures!!.copy(doublePowerBalanceValues = isDouble)) }
+        updateState { it.copy(powerFeatures = it.powerFeatures?.copy(doublePowerBalanceValues = isDouble)) }
     }
 
     fun onInvertPowerBalanceValuesChanged(isInverted: Boolean) {
-        updateState { it.copy(powerFeatures = it.powerFeatures!!.copy(invertPowerBalanceValues = isInverted)) }
+        updateState { it.copy(powerFeatures = it.powerFeatures?.copy(invertPowerBalanceValues = isInverted)) }
     }
 
     /**
@@ -285,14 +306,11 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
      * It ensures we always work with a non-null state and posts the result.
      */
     private fun updateState(updateAction: (currentState: DeviceUiData) -> DeviceUiData) {
-        val currentState = _deviceSnapshot.value
-        if (currentState != null) {
-            val newState = updateAction(currentState)
-
-            // Only update the LiveData if the new state is actually different from the old one.
-            // This avoids/breaks an infinite loop at its source.
-            if (newState != currentState) {
-                _deviceSnapshot.value = newState
+        _deviceSnapshot.update { currentState ->
+            if (currentState != null) {
+                updateAction(currentState)
+            } else {
+                null
             }
         }
     }

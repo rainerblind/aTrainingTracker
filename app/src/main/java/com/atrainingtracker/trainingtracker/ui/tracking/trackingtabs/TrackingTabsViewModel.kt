@@ -107,6 +107,9 @@ class TrackingTabsViewModel(
     val navigateToTrackingTab = SingleLiveEvent<Unit>()
 
     init {
+        // ensure the repository is bound to the BANALService
+        banalServiceRepository.bindToBANALService()
+
         // Observe the tracking mode from the repository
         viewModelScope.launch {
             banalServiceRepository.trackingMode.asFlow().collect { mode ->
@@ -116,6 +119,12 @@ class TrackingTabsViewModel(
                 }
             }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Trigger the unbind logic in the repository
+        banalServiceRepository.unbindFromBANALService()
     }
 
     // Method for the Fragment to set the explicit ActivityType

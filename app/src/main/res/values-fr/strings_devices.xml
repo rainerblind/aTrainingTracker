@@ -26,18 +26,28 @@
     <string name="devices_unknown_device">sans nom</string>
 
     <string name="devices_all">Tous</string>
+    <string name="devices_all_sensors">Tous les capteurs</string>
+    <string name="devices_tab_available">Connectés</string>
+    <string name="devices_tab_paired">Appairés</string>
+    <string name="devices_tab_known">Connus</string>
+    <string name="devices_sensors_title">Capteurs</string>
+    <string name="devices_available">connecté</string>
+    <string name="devices_not_connected">non connecté</string>
 
-    <string name="devices_available_devices_format">appareils %1$s disponibles</string>
+    <string name="devices_available_devices_format">appareils %1$s connectés</string>
     <string name="devices_paired_devices_format">appareils %1$s appairés</string>
     <string name="devices_known_devices_format">appareils %1$s connus</string>
-    <string name="devices_all_available_devices">tous les appareils disponibles</string>
+    <string name="devices_all_available_devices">tous les appareils connectés</string>
     <string name="devices_all_paired_devices">tous les appareils appairés</string>
     <string name="devices_all_known_devices">tous les appareils connus</string>
+
+    <string name="devices_no_devices_available">Aucun appareil connecté</string>
+    <string name="devices_no_paired_devices">Aucun appareil appairé trouvé</string>
+    <string name="devices_no_known_devices">Aucun appareil connu dans la base de données</string>
 
     <string name="devices_myRemoteDevices">Appareils</string>
     <string name="devices_newDevices">Nouveaux appareils</string>
     <string name="devices_searchingForDevice">recherche d\'appareils %1$s %2$s</string>
-    <string name="devicessearchingForRemoteDevice">recherche FC ANT+</string>
 
     <string name="devices_lastSeenText">vu le</string>
     <string name="devices_now">maintenant</string>
@@ -77,9 +87,9 @@
     <string name="devices_select_wheel_size_prompt">Choisir taille roue…</string>
     <string name="devices_last_seen_never">jamais</string>
 
-    <string name="devices_location_GPS">GPS</string>
-    <string name="devices_location_Network">Réseau</string>
-    <string name="devices_location_GoogleFused">Google Fused</string>
+    <string name="devices_location_GPS">GPS du téléphone (Satellite)</string>
+    <string name="devices_location_Network">Localisation du téléphone (Réseau/WiFi)</string>
+    <string name="devices_location_GoogleFused">Localisation Google (Fused)</string>
     <string name="devices_altitude_from_pressure">Pression Air</string>
 
     <string name="devices_live_sensor_data_header">Données Capteurs</string>

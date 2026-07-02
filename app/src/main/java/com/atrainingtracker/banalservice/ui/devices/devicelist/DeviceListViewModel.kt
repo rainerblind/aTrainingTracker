@@ -20,9 +20,6 @@ package com.atrainingtracker.banalservice.ui.devices.devicelist
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
@@ -30,11 +27,9 @@ import com.atrainingtracker.banalservice.ui.devices.GetMergedDevicesUseCase
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
-import com.atrainingtracker.trainingtracker.ui.util.Event
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-
-data class EditDeviceNavigationEvent(val deviceId: Long, val deviceType: DeviceType)
-
 
 class DeviceListViewModel(private val application: Application) : AndroidViewModel(application) {
 
@@ -50,28 +45,18 @@ class DeviceListViewModel(private val application: Application) : AndroidViewMod
     // the single source of truth: the merged devices
     private val allDevices = useCase.mergedDevices
 
-    private val _navigateToEditDevice = MutableLiveData<Event<EditDeviceNavigationEvent>>()
-    val navigateToEditDevice: LiveData<Event<EditDeviceNavigationEvent>> = _navigateToEditDevice
-
-    fun onDeviceSelected(deviceId: Long) {
-        val deviceType = devicesDBRepository.getDeviceType(deviceId)
-        if (deviceType != null) {
-            _navigateToEditDevice.postValue(Event(EditDeviceNavigationEvent(deviceId, deviceType)))
-        }
-    }
-
     /**
      * This is the key public method.
-     * Fragments will call this to get a LiveData stream tailored to their specific needs.
+     * Fragments will call this to get a Flow stream tailored to their specific needs.
      */
-    fun getFilteredDevices(spec: DeviceFilterSpec): LiveData<List<DeviceUiData>> {
+    fun getFilteredDevices(spec: DeviceFilterSpec): Flow<List<DeviceUiData>> {
         // We apply another .map transformation to our already-transformed list.
-        // This returns a new LiveData stream that will re-filter whenever allListDevices changes.
+        // This returns a new Flow stream that will re-filter whenever allListDevices changes.
         return allDevices.map { devices ->
             // First, apply the main filter based on the filter type.
             val primaryFiltered = when (spec.filterType) {
                 DeviceFilterType.PAIRED -> devices.filter { it.isPaired }
-                DeviceFilterType.AVAILABLE -> devices.filter { it.isAvailable }
+                DeviceFilterType.CONNECTED -> devices.filter { it.isConnected }
                 DeviceFilterType.ALL_KNOWN -> devices // No primary filter, return the whole list
             }
 

@@ -36,12 +36,14 @@ import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.RawDeviceDataProvider
 import com.atrainingtracker.trainingtracker.MyHelper
+import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -78,10 +80,11 @@ class DeviceDataRepository private constructor(private val application: Applicat
     // access to the databases
     private val devicesDatabaseManager by lazy { DevicesDatabaseManager.getInstance(application) }
     private val equipmentDbHelper by lazy { EquipmentDbHelper(application) }
-    private val mapper by lazy { RawDeviceDataProvider(devicesDatabaseManager, equipmentDbHelper) }
+    private val discoveryManager by lazy { EquipmentAndSportTypeDiscoveryManager.getInstance(application) }
+    private val mapper by lazy { RawDeviceDataProvider(devicesDatabaseManager, equipmentDbHelper, discoveryManager) }
 
-    private val _allDevices = MutableLiveData<List<DeviceUiData>>()
-    val allDevices: LiveData<List<DeviceUiData>> = _allDevices
+    private val _allDevices = MutableStateFlow<List<DeviceUiData>>(emptyList())
+    val allDevices: StateFlow<List<DeviceUiData>> = _allDevices.asStateFlow()
 
     init {
         // Automatically load all devices when the repository is first created
@@ -90,10 +93,8 @@ class DeviceDataRepository private constructor(private val application: Applicat
         }
     }
 
-    fun getDeviceById(id: Long): LiveData<DeviceUiData?> {
-        return allDevices.map { list ->
-            list.find {it.id == id}
-        }
+    fun getDeviceById(id: Long): DeviceUiData? {
+        return allDevices.value.find { it.id == id }
     }
 
     /**
@@ -123,10 +124,10 @@ class DeviceDataRepository private constructor(private val application: Applicat
             }
 
             if (refreshedRawDeviceData != null) {
-                val currentList = _allDevices.value ?: emptyList()
+                val currentList = _allDevices.value
                 val refreshedUiDeviceData = raw2UiDeviceData(refreshedRawDeviceData, application)
                 val updatedList = currentList.map { if (it.id == id) refreshedUiDeviceData else it }
-                _allDevices.postValue(updatedList)
+                _allDevices.value = updatedList
             }
         }
     }
@@ -145,7 +146,7 @@ class DeviceDataRepository private constructor(private val application: Applicat
                     } while (c.moveToNext())
                 }
             }
-            _allDevices.postValue(uiDeviceDataList)
+            _allDevices.value = uiDeviceDataList
         }
     }
 
@@ -224,9 +225,9 @@ class DeviceDataRepository private constructor(private val application: Applicat
             }
 
             // Update the local LiveData to immediately reflect the change in the UI
-            val currentList = _allDevices.value ?: emptyList()
+            val currentList = _allDevices.value
             val updatedList = currentList.map { if (it.id == finalState.id) finalState else it }
-            _allDevices.postValue(updatedList)
+            _allDevices.value = updatedList
 
             // send broadcasts
             if (originalState.wheelCircumference != finalState.wheelCircumference) {

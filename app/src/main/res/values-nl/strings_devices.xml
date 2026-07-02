@@ -26,18 +26,28 @@
     <string name="devices_unknown_device">geen naam</string>
 
     <string name="devices_all">Alle</string>
+    <string name="devices_all_sensors">Alle sensoren</string>
+    <string name="devices_tab_available">Verbonden</string>
+    <string name="devices_tab_paired">Gekoppeld</string>
+    <string name="devices_tab_known">Bekend</string>
+    <string name="devices_sensors_title">Sensoren</string>
+    <string name="devices_available">verbonden</string>
+    <string name="devices_not_connected">niet verbonden</string>
 
-    <string name="devices_available_devices_format">beschikbare %1$s apparaten</string>
+    <string name="devices_available_devices_format">verbonden %1$s apparaten</string>
     <string name="devices_paired_devices_format">gekoppelde %1$s apparaten</string>
     <string name="devices_known_devices_format">bekende %1$s apparaten</string>
-    <string name="devices_all_available_devices">alle beschikbare apparaten</string>
+    <string name="devices_all_available_devices">alle verbonden apparaten</string>
     <string name="devices_all_paired_devices">alle gekoppelde apparaten</string>
     <string name="devices_all_known_devices">alle bekende apparaten</string>
+
+    <string name="devices_no_devices_available">Geen apparaten verbonden</string>
+    <string name="devices_no_paired_devices">Geen gekoppelde apparaten gevonden</string>
+    <string name="devices_no_known_devices">Geen bekende apparaten in database</string>
 
     <string name="devices_myRemoteDevices">Apparaten</string>
     <string name="devices_newDevices">Nieuwe apparaten</string>
     <string name="devices_searchingForDevice">zoeken naar %1$s %2$s apparaten</string>
-    <string name="devicessearchingForRemoteDevice">zoeken naar ANT+ hartslagmeters</string>
 
     <string name="devices_lastSeenText">laatst gezien</string>
     <string name="devices_now">nu</string>
@@ -77,9 +87,9 @@
     <string name="devices_select_wheel_size_prompt">Selecteer wielmaat…</string>
     <string name="devices_last_seen_never">nog niet</string>
 
-    <string name="devices_location_GPS">GPS</string>
-    <string name="devices_location_Network">Netwerk</string>
-    <string name="devices_location_GoogleFused">Google Fused</string>
+    <string name="devices_location_GPS">Telefoon GPS (Satelliet)</string>
+    <string name="devices_location_Network">Telefoonlocatie (Netwerk/WiFi)</string>
+    <string name="devices_location_GoogleFused">Google Locatie (Fused)</string>
     <string name="devices_altitude_from_pressure">Luchtdruk</string>
 
     <string name="devices_live_sensor_data_header">Sensorgegevens</string>

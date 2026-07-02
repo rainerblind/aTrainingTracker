@@ -35,9 +35,11 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataReposit
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -53,7 +55,7 @@ data class RemoteDeviceUIData(
 
 // Sealed class for navigation destinations
 sealed class ControlNavigation {
-    data class ToPairing(val protocol: Protocol) : ControlNavigation()
+    data class ToPairing(val protocol: Protocol, val deviceType: DeviceType? = null) : ControlNavigation()
     data class ToEditDevice(val deviceId: Long, val deviceType: DeviceType) : ControlNavigation()
 }
 
@@ -73,6 +75,9 @@ class ControlTrackingViewModel(
     private val _navigationEvent = MutableSharedFlow<ControlNavigation>(replay = 0)
     val navigationEvent = _navigationEvent.asSharedFlow()
 
+    private val _selectingProtocol = MutableStateFlow<Protocol?>(null)
+    val selectingProtocol: StateFlow<Protocol?> = _selectingProtocol.asStateFlow()
+
     val devicesDatabaseManager = DevicesDatabaseManager.getInstance(application)
 
     val trackingMode = banalServiceRepository.trackingMode
@@ -90,8 +95,8 @@ class ControlTrackingViewModel(
     /*
      * Remote devices
      */
-    // 1. Convert the Repository LiveData (Single Source of Truth) to a Flow
-    private val allDevicesFromDb = devicesRepository.allDevices.asFlow()
+    // 1. Repository StateFlow (Single Source of Truth)
+    private val allDevicesFromDb = devicesRepository.allDevices
 
     // 2. Combine the IDs from the BANALService with the Data from the Database
     val remoteDevices: StateFlow<List<RemoteDeviceUIData>> = banalServiceRepository.activeRemoteDevicesIds
@@ -105,7 +110,7 @@ class ControlTrackingViewModel(
                     RemoteDeviceUIData(
                         id = dbDevice.id,
                         deviceType = dbDevice.deviceType,
-                        name = dbDevice.deviceName ?: "Unknown Sensor",
+                        name = dbDevice.deviceName,
                         iconRes = UIHelper.getIconId(dbDevice.deviceType, dbDevice.protocol)
                     )
                 } else {
@@ -151,10 +156,19 @@ class ControlTrackingViewModel(
     }
 
     fun onPairingClicked(protocol: Protocol) {
+        _selectingProtocol.value = protocol
+    }
+
+    fun onDeviceTypeSelected(deviceType: DeviceType) {
+        val protocol = _selectingProtocol.value ?: return
+        _selectingProtocol.value = null
         viewModelScope.launch {
-            if (DEBUG) Log.i(TAG, "onPairingClicked")
-            _navigationEvent.emit(ControlNavigation.ToPairing(protocol))
+            _navigationEvent.emit(ControlNavigation.ToPairing(protocol, deviceType))
         }
+    }
+
+    fun onCancelDeviceTypeSelection() {
+        _selectingProtocol.value = null
     }
 
 
