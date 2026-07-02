@@ -65,6 +65,7 @@ class DevicesTabbedViewModel(
 
     private val banalServiceRepository: BANALServiceRepository = BANALServiceRepository.getInstance(application)
     val searchingFor: StateFlow<String?> = banalServiceRepository.searchingForDevice
+    val isSearchingForNewDevices: StateFlow<Boolean> = banalServiceRepository.isSearchingForNewDevices
 
     private val _uiState = MutableLiveData<UiState>()
     val uiState: LiveData<UiState> = _uiState

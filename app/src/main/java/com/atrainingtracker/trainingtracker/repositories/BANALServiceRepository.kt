@@ -109,6 +109,10 @@ class BANALServiceRepository private constructor(context: Context) {
     private val _searchingForDevice = MutableStateFlow<String?>(null)
     val searchingForDevice: StateFlow<String?> = _searchingForDevice.asStateFlow()
 
+    // Status whether the service is actively searching for NEW devices
+    private val _isSearchingForNewDevices = MutableStateFlow(false)
+    val isSearchingForNewDevices: StateFlow<Boolean> = _isSearchingForNewDevices.asStateFlow()
+
     private val _bSportType = MutableStateFlow<BSportType>(BSportType.UNKNOWN)
     val bSportType: StateFlow<BSportType> = _bSportType.asStateFlow()
 
@@ -292,6 +296,7 @@ class BANALServiceRepository private constructor(context: Context) {
 
                         // --- DEVICE AND SENSOR STATUS ---
                         _searchingForDevice.value = binder.nameOfSearchingDevice
+                        _isSearchingForNewDevices.value = binder.isSearchingForNewRemoteDevices()
                         _bSportType.value = binder.bSportType
                         _activeRemoteDevicesIds.value = binder.databaseIdsOfActiveRemoteDevices
                         _newlyFoundDevicesIds.value = binder.getIdsOfNewlyFoundDevices()

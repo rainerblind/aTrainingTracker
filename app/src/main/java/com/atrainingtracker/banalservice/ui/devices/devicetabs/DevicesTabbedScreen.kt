@@ -29,9 +29,12 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -54,7 +57,7 @@ fun DevicesTabbedScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by tabViewModel.uiState.observeAsState()
-    val searchingFor by tabViewModel.searchingFor.collectAsState()
+    val isSearchingForNewDevices by tabViewModel.isSearchingForNewDevices.collectAsState()
     
     val protocol = tabViewModel.protocol
     var showDeleteConfirmFor by remember { mutableStateOf<DeviceUiData?>(null) }
@@ -102,7 +105,7 @@ fun DevicesTabbedScreen(
                         DeviceListScreen(
                             viewModel = listViewModel,
                             filterSpec = tabs[page],
-                            searchingFor = if (page == 0) searchingFor else null,
+                            isSearchingForNewDevices = if (page == 0) isSearchingForNewDevices else false,
                             onDeviceSelected = { editingDeviceId = it },
                             onDeleteDevice = { showDeleteConfirmFor = it },
                             scrollState = scrollState,
@@ -125,16 +128,44 @@ fun DevicesTabbedScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    val title = if (deviceType == DeviceType.ALL) {
-                                        stringResource(R.string.devices_all_sensors)
-                                    } else {
-                                        "${stringResource(UIHelper.getNameId(protocol))} ${stringResource(UIHelper.getNameId(deviceType))}"
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        // 1. Icon (Protocol or Device Type)
+                                        val headerIcon = when {
+                                            deviceType != DeviceType.ALL -> com.atrainingtracker.banalservice.ui.devices.devicedata.getIconId(deviceType, protocol)
+                                            protocol != Protocol.ALL -> protocol.iconId
+                                            else -> null
+                                        }
+
+                                        if (headerIcon != null) {
+                                            val headerIconSize = if (protocol == Protocol.ANT_PLUS) 38.dp else 42.dp
+                                            Icon(
+                                                painter = painterResource(id = headerIcon),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(headerIconSize),
+                                                tint = Color.Unspecified
+                                            )
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                        }
+
+                                        // 2. Title Logic
+                                        val title = when {
+                                            deviceType != DeviceType.ALL -> {
+                                                stringResource(R.string.devices_sensors_title)
+                                            }
+                                            else -> stringResource(R.string.devices_all_sensors)
+                                        }
+
+                                        Text(
+                                            text = title,
+                                            style = MaterialTheme.typography.headlineSmall,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
                                     }
-                                    Text(
-                                        text = title,
-                                        style = MaterialTheme.typography.headlineSmall,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    )
 
                                     // Modern Options Menu
                                     Box {

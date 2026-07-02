@@ -45,7 +45,7 @@ import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
 fun DeviceListScreen(
     viewModel: DeviceListViewModel,
     filterSpec: DeviceFilterSpec,
-    searchingFor: String?,
+    isSearchingForNewDevices: Boolean,
     onDeviceSelected: (Long) -> Unit,
     onDeleteDevice: (DeviceUiData) -> Unit,
     modifier: Modifier = Modifier,
@@ -60,47 +60,49 @@ fun DeviceListScreen(
     // Dynamically calculate bottom padding to clear the system navigation bar
     val navigationBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .navigationBarsPadding() // Ensure entire content area stays above system navigation
+    ) {
+        // Prominent Searching Header - Shown always when searching for NEW devices in the Available tab
+        val isSearching = filterSpec.filterType == DeviceFilterType.CONNECTED && isSearchingForNewDevices
+        if (isSearching) {
+            SearchingHeader(
+                protocolName = stringResource(UIHelper.getNameId(filterSpec.protocol)),
+                deviceTypeName = stringResource(UIHelper.getNameId(filterSpec.deviceType)),
+                modifier = Modifier.padding(top = topPadding, start = 8.dp, end = 8.dp)
+            )
+        }
+
         if (devices.isEmpty()) {
             val emptyMessage = when (filterSpec.filterType) {
                 DeviceFilterType.CONNECTED -> stringResource(R.string.devices_no_devices_available)
                 DeviceFilterType.PAIRED -> stringResource(R.string.devices_no_paired_devices)
                 DeviceFilterType.ALL_KNOWN -> stringResource(R.string.devices_no_known_devices)
             }
+            val placeholderPadding = if (isSearching) 8.dp else topPadding
             EmptyStatePlaceholder(
                 modifier = Modifier
-                    .padding(top = topPadding)
-                    .navigationBarsPadding(),
+                    .padding(top = placeholderPadding)
+                    .navigationBarsPadding()
+                    .weight(1f),
                 icon = Icons.Default.Devices,
                 message = emptyMessage,
-                hint = if (searchingFor != null) stringResource(R.string.devices_searchingForDevice, 
-                    stringResource(UIHelper.getNameId(filterSpec.protocol)), 
-                    stringResource(UIHelper.getNameId(filterSpec.deviceType))) 
-                else ""
+                hint = "" // Information is now prominently in the header
             )
         } else {
             LazyColumn(
                 state = scrollState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
-                    top = topPadding + 8.dp,
+                    top = if (isSearching) 8.dp else topPadding + 8.dp,
                     bottom = navigationBarBottom + 16.dp,
                     start = 8.dp,
                     end = 8.dp
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // If searching, show the searching indicator as the first item or header
-                if (filterSpec.deviceType != DeviceType.ALL && filterSpec.filterType == DeviceFilterType.CONNECTED && searchingFor != null) {
-                    item {
-                        SearchingHeader(
-                            protocolName = stringResource(UIHelper.getNameId(filterSpec.protocol)),
-                            deviceTypeName = stringResource(UIHelper.getNameId(filterSpec.deviceType)),
-                            isSearching = true
-                        )
-                    }
-                }
-
                 items(devices, key = { it.id }) { device ->
                     DeviceItem(
                         device = device,
@@ -118,26 +120,24 @@ fun DeviceListScreen(
 private fun SearchingHeader(
     protocolName: String,
     deviceTypeName: String,
-    isSearching: Boolean
+    modifier: Modifier = Modifier
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically // Centering ensures indicator is safe from edge clipping
         ) {
-            if (isSearching) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-            }
-            
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+
             Text(
                 text = stringResource(
                     R.string.devices_searchingForDevice,

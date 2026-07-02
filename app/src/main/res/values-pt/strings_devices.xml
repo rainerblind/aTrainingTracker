@@ -30,6 +30,7 @@
     <string name="devices_tab_available">Conectados</string>
     <string name="devices_tab_paired">Emparelhados</string>
     <string name="devices_tab_known">Conhecidos</string>
+    <string name="devices_sensors_title">Sensores</string>
     <string name="devices_available">conectado</string>
     <string name="devices_not_connected">não conectado</string>
 
@@ -47,7 +48,6 @@
     <string name="devices_myRemoteDevices">Dispositivos</string>
     <string name="devices_newDevices">Novos dispositivos</string>
     <string name="devices_searchingForDevice">buscando dispositivos %1$s %2$s</string>
-    <string name="devicessearchingForRemoteDevice">buscando dispositivos de ritmo cardíaco ANT+</string>
 
     <string name="devices_lastSeenText">visto pela última vez</string>
     <string name="devices_now">agora</string>

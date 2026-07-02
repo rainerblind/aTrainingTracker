@@ -30,6 +30,7 @@
     <string name="devices_tab_available">Verbonden</string>
     <string name="devices_tab_paired">Gekoppeld</string>
     <string name="devices_tab_known">Bekend</string>
+    <string name="devices_sensors_title">Sensoren</string>
     <string name="devices_available">verbonden</string>
     <string name="devices_not_connected">niet verbonden</string>
 
@@ -47,7 +48,6 @@
     <string name="devices_myRemoteDevices">Apparaten</string>
     <string name="devices_newDevices">Nieuwe apparaten</string>
     <string name="devices_searchingForDevice">zoeken naar %1$s %2$s apparaten</string>
-    <string name="devicessearchingForRemoteDevice">zoeken naar ANT+ hartslagmeters</string>
 
     <string name="devices_lastSeenText">laatst gezien</string>
     <string name="devices_now">nu</string>

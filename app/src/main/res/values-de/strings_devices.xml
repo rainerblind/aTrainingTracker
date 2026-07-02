@@ -31,6 +31,7 @@
     <string name="devices_tab_available">Verbunden</string>
     <string name="devices_tab_paired">Gekoppelt</string>
     <string name="devices_tab_known">Bekannt</string>
+    <string name="devices_sensors_title">Sensoren</string>
 
     <string name="devices_available">verbunden</string>
     <string name="devices_not_connected">nicht verbunden</string>
@@ -52,7 +53,6 @@
     <!-- <string name="knownDevices">known devices</string> -->
     <string name="devices_newDevices">Neue Sensoren</string>
     <string name="devices_searchingForDevice">Suche nach %1$s %2$s Sensoren</string>
-    <string name="devicessearchingForRemoteDevice">Suche nach ANT+ Herzfrequenz-Sensoren</string>
 
     <string name="devices_lastSeenText">Zuletzt gesehen</string>
     <string name="devices_now">Jetzt</string>

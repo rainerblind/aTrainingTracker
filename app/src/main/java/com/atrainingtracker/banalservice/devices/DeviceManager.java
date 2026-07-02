@@ -307,6 +307,20 @@ public class DeviceManager {
         return cMyRemoteDeviceCurrentlySearchingFor != null;
     }
 
+    public boolean isSearchingForNewRemoteDevices() {
+        return mAntAsyncSearchEngine != null || mBTSearchForNewDevicesEngine != null;
+    }
+
+    public DeviceType getNewRemoteDeviceTypeCurrentlySearchingFor() {
+        if (mAntAsyncSearchEngine != null) {
+            return mAntAsyncSearchEngine.getDeviceType();
+        }
+        if (mBTSearchForNewDevicesEngine != null) {
+            return mBTSearchForNewDevicesEngine.getDeviceType();
+        }
+        return null;
+    }
+
     public void shutDown() {
         if (DEBUG) Log.d(TAG, "shutDown()");
 
@@ -831,6 +845,8 @@ public class DeviceManager {
 
     public void startSearchForNewRemoteDevices(Protocol protocol, DeviceType deviceType) {
         if (DEBUG) Log.i(TAG, "startSearchForNewRemoteDevices");
+
+        if (deviceType == DeviceType.ALL) return;
 
         mNewlyFoundDevices.clear();
 

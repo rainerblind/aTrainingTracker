@@ -30,6 +30,7 @@
     <string name="devices_tab_available">Connectés</string>
     <string name="devices_tab_paired">Appairés</string>
     <string name="devices_tab_known">Connus</string>
+    <string name="devices_sensors_title">Capteurs</string>
     <string name="devices_available">connecté</string>
     <string name="devices_not_connected">non connecté</string>
 
@@ -47,7 +48,6 @@
     <string name="devices_myRemoteDevices">Appareils</string>
     <string name="devices_newDevices">Nouveaux appareils</string>
     <string name="devices_searchingForDevice">recherche d\'appareils %1$s %2$s</string>
-    <string name="devicessearchingForRemoteDevice">recherche FC ANT+</string>
 
     <string name="devices_lastSeenText">vu le</string>
     <string name="devices_now">maintenant</string>

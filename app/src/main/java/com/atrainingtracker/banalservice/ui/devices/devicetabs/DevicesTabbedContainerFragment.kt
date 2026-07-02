@@ -49,10 +49,16 @@ class DevicesTabbedContainerFragment : Fragment() {
     ): View {
         return ComposeView(requireContext()).apply {
             setContent {
+                val startTab = arguments?.getInt(STARTING_TAB, 0) ?: 0
+                val deviceType = arguments?.getString(BANALService.DEVICE_TYPE)?.let { DeviceType.valueOf(it) } ?: DeviceType.ALL
+                
+                // If only a protocol is specified (all device types), default to the "Known" tab (index 2)
+                val finalInitialTab = if (deviceType == DeviceType.ALL && startTab == 0) 2 else startTab
+
                 ATrainingTrackerTheme {
                     DevicesTabbedScreen(
                         tabViewModel = viewModel,
-                        initialTab = arguments?.getInt(STARTING_TAB, 0) ?: 0,
+                        initialTab = finalInitialTab,
                         onCheckAntInstallation = {
                             InstallANTShitDialog().show(parentFragmentManager, InstallANTShitDialog.TAG)
                         }

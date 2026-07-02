@@ -47,7 +47,6 @@
     <string name="devices_myRemoteDevices">Dispositivos</string>
     <string name="devices_newDevices">Nuevos dispositivos</string>
     <string name="devices_searchingForDevice">buscando dispositivos %1$s %2$s</string>
-    <string name="devicessearchingForRemoteDevice">buscando dispositivos de ritmo cardíaco ANT+</string>
 
     <string name="devices_lastSeenText">última vez visto</string>
     <string name="devices_now">ahora</string>

@@ -35,6 +35,7 @@
     <string name="devices_tab_available">Connected</string>
     <string name="devices_tab_paired">Paired</string>
     <string name="devices_tab_known">Known</string>
+    <string name="devices_sensors_title">Sensors</string>
     <string name="devices_available">connected</string>
     <string name="devices_not_connected">not connected</string>
 
@@ -62,7 +63,6 @@
     <!-- <string name="knownDevices">known devices</string> -->
     <string name="devices_newDevices">New Devices</string>
     <string name="devices_searchingForDevice">Searching for %1$s %2$s devices</string>
-    <string name="devicessearchingForRemoteDevice">Searching for ANT+ Heart Rate devices</string>
 
     <string name="devices_lastSeenText">Last seen</string>
     <string name="devices_lastSeenDefaultValue" translatable="false">2014-10-18 09:10:11</string>
