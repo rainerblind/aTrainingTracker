@@ -261,6 +261,7 @@ private fun CalibrationSection(data: DeviceUiData, viewModel: EditDeviceViewMode
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WheelCircumferenceSelector(data: DeviceUiData, viewModel: EditDeviceViewModel) {
     var showCorrectDialog by remember { mutableStateOf(false) }
@@ -274,20 +275,27 @@ private fun WheelCircumferenceSelector(data: DeviceUiData, viewModel: EditDevice
         )
         
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.weight(1f)) {
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = it },
+                modifier = Modifier.weight(1f)
+            ) {
                 OutlinedTextField(
                     value = (data.wheelCircumference ?: 0).toString(),
                     onValueChange = { 
                         it.toIntOrNull()?.let { valInt -> viewModel.onWheelCircumferenceChanged(valInt) }
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.menuAnchor().fillMaxWidth(),
                     trailingIcon = {
-                        IconButton(onClick = { expanded = true }) {
-                            Icon(painter = painterResource(id = R.drawable.ic_baseline_more_vert_24), contentDescription = null)
-                        }
-                    }
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                    },
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
                 )
-                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    containerColor = MaterialTheme.colorScheme.surface
+                ) {
                     viewModel.wheelSizeNames.forEachIndexed { index, name ->
                         DropdownMenuItem(
                             text = { Text("$name (${viewModel.wheelSizeValues[index]} mm)") },
@@ -296,7 +304,8 @@ private fun WheelCircumferenceSelector(data: DeviceUiData, viewModel: EditDevice
                                     viewModel.onWheelCircumferenceChanged(it)
                                 }
                                 expanded = false
-                            }
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                         )
                     }
                 }
