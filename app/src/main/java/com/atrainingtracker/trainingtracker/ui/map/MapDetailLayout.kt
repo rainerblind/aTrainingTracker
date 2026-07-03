@@ -69,7 +69,11 @@ fun MapDetailLayout(
     var selectedDistance by remember { mutableStateOf<Double?>(null) }
     val noLocation = remember { MutableStateFlow<LatLng?>(null) }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(
+        modifier = modifier.then(
+            if (showMap) Modifier.fillMaxSize() else Modifier.wrapContentHeight()
+        )
+    ) {
         // DRAG HANDLE (For sheets)
         if (!useStatusBarsPadding) {
             MinimumDragHandle()
