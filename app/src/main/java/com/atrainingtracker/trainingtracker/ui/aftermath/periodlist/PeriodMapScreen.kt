@@ -152,22 +152,15 @@ fun PeriodMapScreen(
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
         sheetPeekHeight = if (peekedWorkoutDataWithTrack != null) 200.dp else 0.dp,
-        sheetDragHandle = {
-            Surface(
-                modifier = Modifier.statusBarsPadding(),
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                shape = CircleShape
-            ) {
-                Box(Modifier.size(width = 32.dp, height = 3.dp))
-            }
-        },
+        sheetDragHandle = null,
         sheetContent = {
             peekedWorkoutDataWithTrack?.workoutData?.let { workoutData ->
                 // Here we show the TrackOnMapScreen for the specific workout
                 TrackOnMapScreen(
                     workoutData = workoutData,
                     tracks = peekedTracks,
-                    modifier = Modifier
+                    modifier = Modifier,
+                    useStatusBarsPadding = false
                 )
             }
         }

@@ -109,18 +109,7 @@ class MapFragmentWithTrack : Fragment() {
                         sheetPeekHeight = if (selectedSegmentId != null) { 225.dp
                         } else if (selectedRouteId != null) { 175.dp
                         } else 0.dp,
-                        sheetDragHandle = {
-                            // Subtle small drag handle
-                            Surface(
-                                modifier = Modifier.statusBarsPadding(),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                shape = CircleShape
-                            ) {
-                                Box(
-                                    Modifier.size(width = 32.dp, height = 3.dp)
-                                )
-                            }
-                        },
+                        sheetDragHandle = null,
                         sheetContent = {
                             when {
                                 selectedSegmentId != null -> {
@@ -131,7 +120,8 @@ class MapFragmentWithTrack : Fragment() {
                                     SegmentOnMapScreen(
                                         segmentSummary = liveSegments.find { it.summary.stravaId == selectedSegmentId }?.summary,
                                         segment = selectedSegment,
-                                        modifier = Modifier
+                                        modifier = Modifier,
+                                        useStatusBarsPadding = false
                                     )
                                 }
                                 selectedRouteId != null -> {
@@ -146,6 +136,7 @@ class MapFragmentWithTrack : Fragment() {
                                             selected = it
                                         ) },
                                         modifier = Modifier,
+                                        useStatusBarsPadding = false
                                     )
                                 }
                             }
