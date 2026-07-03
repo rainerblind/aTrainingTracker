@@ -73,7 +73,7 @@ Any AI assistant working on this project **must** follow these steps for every t
         > * **Artifact**: [Link to log/screenshot]
     *   Update the `Status` in `docs/requirements.md` to `Verified`.
     *   **Walkthrough Artifact**: Create a summary of the fulfilled requirements at `docs/engineering/walkthroughs/SCRUM-XXX_walkthrough.md`.
-    *   **Git Commit Message**: Provide a clear, comprehensive commit message for the changes, following the Conventional Commits standard. Use the `*` symbol for bullet points within the commit body (avoiding dots or dashes) to ensure clean formatting and copy-paste compatibility.
+    *   **Git Commit Message**: Provide a clear, comprehensive commit message covering all changes for the **entire ticket**, following the Conventional Commits standard. The agent SHALL use the `*` symbol for bullet points within the commit body (avoiding dots or dashes). The commit message **MUST** be presented inside a literal markdown code block to ensure formatting characters are preserved for copy-paste compatibility.
 
 9.  **Post-Implementation Review**:
     *   **MANDATORY FINAL STEP**: Before concluding the task, the agent MUST review the newly implemented logic against the requirements and tests defined in Steps 1 and 2.
