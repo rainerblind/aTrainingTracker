@@ -83,7 +83,7 @@ fun SensorStatus(
                     .padding(horizontal = 6.dp)
                     .size(24.dp)
                     .alpha(if (isAvailable) 1f else 0.15f)
-                    .clickable(enabled = isAvailable) {
+                    .clickable {
                         selectedSensor = type
                     },
                 tint = if (isAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
@@ -95,12 +95,12 @@ fun SensorStatus(
     selectedSensor?.let { sensor ->
         val sourceId = sourceMapping[sensor] ?: -1
         val sourceDevice = allDevices.find { it.id == sourceId }
-        val telemetry = allTelemetry.find { it.deviceId == sourceId }
 
         SensorSourceDialog(
             sensorType = sensor,
             sourceDevice = sourceDevice,
-            telemetry = telemetry,
+            allTelemetry = allTelemetry,
+            allDevices = allDevices,
             onDismiss = { selectedSensor = null }
         )
     }

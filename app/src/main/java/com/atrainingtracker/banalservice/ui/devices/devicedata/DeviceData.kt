@@ -252,7 +252,7 @@ fun getIconId(deviceType: DeviceType, protocol: Protocol): Int {
                 DeviceType.BIKE_POWER -> R.drawable.bike_pwr
                 DeviceType.RUN_SPEED -> R.drawable.run_spd
                 DeviceType.ENVIRONMENT -> R.drawable.temp
-                else -> -protocol.iconId
+                else -> protocol.iconId
             }
         }
 

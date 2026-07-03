@@ -1178,6 +1178,8 @@
     <string name="strava_overall_rank_description">Overall Rank #%1$d</string>
     <string name="no_workouts_available">No workouts available</string>
     <string name="source_device">Source Device</string>
+    <string name="source_active_backups">Active Backups</string>
+    <string name="source_not_connected">Not connected devices</string>
     <string name="source_internal">Internal Smartphone Sensors</string>
     <string name="current_value">Current Value</string>
     <string name="battery_level">Battery Level</string>

@@ -94,6 +94,12 @@ class TrackingTabsViewModel(
 
     val screenMode: StateFlow<ScreenMode> = trackingViewsRepository.screenMode
 
+    fun onResume() {
+        viewModelScope.launch {
+            devicesRepository.loadAllDevices()
+        }
+    }
+
     private val _navigationEvent = MutableSharedFlow<TabNavigationEvent>()
     val navigationEvent = _navigationEvent.asSharedFlow()
 
