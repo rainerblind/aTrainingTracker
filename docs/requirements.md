@@ -74,6 +74,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-MAP-007** | Lazy coordinate projection for path rendering. | Optimize performance for long tracks and multiple layers. | `MapModels.kt` | `TST-UNT-009` | Verified |
 | **REQ-MAP-008** | Global Path Context. | In any detail map view, show all loaded Segments and Routes in the background. Use tiered alpha levels: same sport type = muted (0.3), different sport type = highly muted (0.1). | `MapDetailLayout.kt`, `*OnMapScreen.kt` | `TST-REG-005` | In Progress |
 | **REQ-MAP-009** | Reactive Map Layer Redraw. | The map SHALL immediately redraw and re-style polylines (Route, Segment, Track) when their underlying selection or visibility state changes in the UI. | `ATrainingTrackerMap.kt`, `MapContentScope.kt` | `TST-UI-045` | Verified |
+| **REQ-MAP-010** | Toggleable Grade Legend. | The Elevation Profile SHALL provide a toggleable legend that explains the grade color mapping (e.g., < 2%, 2-5%, etc.) via a dedicated info icon. | `ElevationProfile.kt` | `TST-UI-051` | Verified |
 
 ## 7. Live Segment Tracking
 
