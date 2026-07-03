@@ -30,7 +30,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
@@ -54,7 +53,6 @@ fun SensorStatus(
             SensorType.POWER to R.drawable.ic_power
         )
     }
-    val context = LocalContext.current // Get the context within the loop or at the top of the composable
 
     Row(
         modifier = modifier
@@ -67,30 +65,15 @@ fun SensorStatus(
         sensorDefinitions.forEach { (type, iconRes) ->
             val isAvailable = activeSensors.contains(type)
 
-            Column(
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = type.name,
                 modifier = Modifier
-                    .padding(horizontal = 4.dp)
+                    .padding(horizontal = 6.dp)
+                    .size(24.dp)
                     .alpha(if (isAvailable) 1f else 0.15f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    painter = painterResource(id = iconRes),
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp), // Slightly smaller to accommodate text
-                    tint = if (isAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
-                )
-
-                Text(
-                    text = type.getShortName(context),
-                    style = MaterialTheme.typography.bodySmall,
-                    fontSize = 10.sp,
-                    modifier = Modifier.padding(top = 1.dp),
-                    maxLines = 1,
-                    softWrap = false,
-                    color = if (isAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
-                )
-            }
+                tint = if (isAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
+            )
         }
     }
 }
