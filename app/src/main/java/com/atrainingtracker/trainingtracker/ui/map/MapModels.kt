@@ -19,6 +19,8 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import androidx.annotation.DrawableRes
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import com.atrainingtracker.banalservice.BSportType
@@ -127,6 +129,7 @@ data class PathPoint(
 /**
  * Base interface for anything that can be drawn as a path on the map.
  */
+@Stable
 interface MappablePath {
     val id: Long
     val bSportType: BSportType
@@ -142,6 +145,7 @@ interface MappablePath {
 /**
  * Encapsulates a single track polyline with its metadata.
  */
+@Immutable
 data class MapTrack(
     override val id: Long,
     val type: TrackType,
@@ -160,6 +164,7 @@ data class MapTrack(
         get() = listOf(com.google.android.gms.maps.model.Dot(), com.google.android.gms.maps.model.Gap(MapVisualization.TRACK_DOT_GAP))
 }
 
+@Immutable
 data class MapSegment(
     val stravaId: Long,
     val name: String,
@@ -176,6 +181,7 @@ data class MapSegment(
     override val pattern: List<com.google.android.gms.maps.model.PatternItem>? get() = null
 }
 
+@Immutable
 data class MapRoute(
     override val id: Long,
     val name: String,

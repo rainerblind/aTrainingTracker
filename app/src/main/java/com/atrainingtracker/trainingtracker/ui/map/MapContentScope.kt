@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateListOf
 import com.google.android.gms.maps.model.LatLng
 
 /**
@@ -65,14 +66,14 @@ internal class MapContentScopeImpl(
     private val bSportType: com.atrainingtracker.banalservice.BSportType
 ) : MapContentScope {
 
-    private val composables = mutableListOf<@Composable () -> Unit>()
+    private val composables = mutableStateListOf<@Composable () -> Unit>()
     
     // Collected data for Bounds fitting
-    val tracks = mutableListOf<MapTrack>()
-    val segments = mutableListOf<MapSegment>()
-    val routes = mutableListOf<MapRoute>()
-    val markers = mutableListOf<LocationMarker>()
-    val currentTracks = mutableListOf<List<LatLng>>()
+    val tracks = mutableStateListOf<MapTrack>()
+    val segments = mutableStateListOf<MapSegment>()
+    val routes = mutableStateListOf<MapRoute>()
+    val markers = mutableStateListOf<LocationMarker>()
+    val currentTracks = mutableStateListOf<List<LatLng>>()
 
     fun collect(block: MapContentScope.() -> Unit) {
         composables.clear()

@@ -110,7 +110,7 @@ fun ATrainingTrackerMap(
     }
 
     // 3. Behavioral Controllers
-    val scope = remember(zoomFocus, cameraPositionState.position.zoom, primaryColor, context, directionIcons, bSportType) {
+    val scope = remember(content, zoomFocus, cameraPositionState.position.zoom, primaryColor, context, directionIcons, bSportType) {
         MapContentScopeImpl(zoomFocus, cameraPositionState.position.zoom, primaryColor, context, directionIcons, bSportType)
     }
     scope.collect(content)
