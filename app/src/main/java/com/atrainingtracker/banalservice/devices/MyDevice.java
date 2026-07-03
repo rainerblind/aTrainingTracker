@@ -53,6 +53,7 @@ public abstract class MyDevice {
 
     protected final DevicesDatabaseManager mDevicesDatabaseManager;
     protected long mDeviceId = -1;  // the id of the device within the database
+    protected int mBatteryPercentage = -1;
 
     private final BroadcastReceiver resetAccumulatorsReceiver = new BroadcastReceiver() {
         @Override
@@ -83,7 +84,12 @@ public abstract class MyDevice {
     }
 
     protected void setBatteryPercentage(int percentage) {
+        mBatteryPercentage = percentage;
         mDevicesDatabaseManager.setBatteryPercentage(mDeviceId, percentage);
+    }
+
+    public int getBatteryPercentage() {
+        return mBatteryPercentage;
     }
 
     public long getDeviceId() {

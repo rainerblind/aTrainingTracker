@@ -218,12 +218,23 @@ fun TrackingTabsScreen(
                         // TAB HEADER
                         when (screenMode) {
                             ScreenMode.TRACKING -> {
+                                // Collect source info
+                                val activeSensors by trackingTabsViewModel.activeSensors.collectAsState()
+                                val sensorSourceMapping by trackingTabsViewModel.sensorSourceMapping.collectAsState()
+                                val allTelemetry by trackingTabsViewModel.allTelemetry.collectAsState()
+                                val allDevices by trackingTabsViewModel.allDevices.collectAsState()
+
                                 // Show the available Sensors
                                 Surface(
                                     modifier = Modifier.padding(4.dp),
                                     color = Color.Transparent
                                 ) {
-                                    SensorStatus(activeSensors = activeSensors)
+                                    SensorStatus(
+                                        activeSensors = activeSensors,
+                                        sourceMapping = sensorSourceMapping,
+                                        allTelemetry = allTelemetry,
+                                        allDevices = allDevices
+                                    )
                                 }
                             }
 

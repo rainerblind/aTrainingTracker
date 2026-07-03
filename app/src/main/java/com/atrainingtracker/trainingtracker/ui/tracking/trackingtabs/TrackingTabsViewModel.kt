@@ -29,6 +29,8 @@ import androidx.lifecycle.asFlow
 
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.ActivityType
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.LapEvent
@@ -57,7 +59,8 @@ sealed class TabNavigationEvent {
 class TrackingTabsViewModel(
     application: Application,
     private val trackingViewsRepository: TrackingViewsRepository,
-    private val banalServiceRepository: BANALServiceRepository
+    private val banalServiceRepository: BANALServiceRepository,
+    private val devicesRepository: DeviceDataRepository = DeviceDataRepository.getInstance(application)
 ) : AndroidViewModel(application) {
 
     // State to hold the explicitly selected ActivityType
@@ -81,6 +84,11 @@ class TrackingTabsViewModel(
         )
 
     val trackingMode: LiveData<TrackingMode> = banalServiceRepository.trackingMode
+    val activeSensors = banalServiceRepository.activeSensors
+    val sensorSourceMapping = banalServiceRepository.sensorSourceDeviceIds
+    val allTelemetry = banalServiceRepository.allActiveDevicesTelemetry
+    val allDevices = devicesRepository.allDevices
+
     val lapEvent: LiveData<LapEvent?> = banalServiceRepository.lapEvent
     fun clearLapEvent() = banalServiceRepository.clearLapEvent()
 

@@ -18,7 +18,6 @@
 
 package com.atrainingtracker.banalservice.ui.devices.editdevice
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -32,7 +31,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import java.util.Locale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -65,26 +63,51 @@ fun EditDeviceDialog(
         AlertDialog(
             onDismissRequest = onDismiss,
             title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Image(
-                        painter = painterResource(id = data.deviceTypeIconRes),
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    // Technical Status LED (Using liveData for real-time state transitions)
-                    val isConnected = liveData?.isConnected ?: data.isConnected
-                    Surface(
-                        modifier = Modifier.size(12.dp),
-                        shape = CircleShape,
-                        color = if (isConnected) ConnectionStatusGreen else Color.LightGray,
-                        tonalElevation = 2.dp
-                    ) {}
-                    Spacer(modifier = Modifier.width(12.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            painter = painterResource(id = data.deviceTypeIconRes),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .padding(if (data.protocol == Protocol.ANT_PLUS) 2.dp else 0.dp),
+                            tint = if (data.protocol == Protocol.SMARTPHONE) 
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            else 
+                                Color.Unspecified
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                // Technical Status LED
+                                val isConnected = liveData?.isConnected ?: data.isConnected
+                                Surface(
+                                    modifier = Modifier.size(12.dp),
+                                    shape = CircleShape,
+                                    color = if (isConnected) ConnectionStatusGreen else Color.LightGray,
+                                    tonalElevation = 2.dp
+                                ) {}
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = data.deviceName,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            DeviceStatusRow(
+                                device = data,
+                                alpha = 0.8f,
+                                textStyle = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
                     Text(
-                        text = data.deviceName,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        text = data.manufacturer,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(start = 0.dp)
                     )
                 }
             },
@@ -95,22 +118,9 @@ fun EditDeviceDialog(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // 1. Manufacturer
-                    ReadOnlyField(
-                        label = stringResource(R.string.devices_manufacturerText),
-                        value = data.manufacturer
-                    )
+                    HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 
-                    // Battery + Last Seen status (Reusable technical row)
-                    DeviceStatusRow(
-                        device = data,
-                        modifier = Modifier.padding(vertical = 4.dp),
-                        iconSize = 20.dp,
-                        textStyle = MaterialTheme.typography.bodyLarge,
-                        alpha = 0.8f
-                    )
-
-                     // Device name
+                    // Device name editor
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
                             text = stringResource(R.string.devices_deviceNameText),
