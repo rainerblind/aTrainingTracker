@@ -39,7 +39,7 @@ fun MinimumDragHandle(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 8.dp, bottom = 0.dp), // Minimal top padding, no bottom padding
+            .padding(top = 16.dp, bottom = 4.dp), // Increased top padding for better visual spacing
         contentAlignment = Alignment.Center
     ) {
         Surface(
