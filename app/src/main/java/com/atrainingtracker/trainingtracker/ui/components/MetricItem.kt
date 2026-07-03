@@ -45,7 +45,7 @@ enum class MetricLayout {
  */
 @Composable
 fun MetricItem(
-    iconRes: Int,
+    @androidx.annotation.DrawableRes iconRes: Int?,
     value: String,
     modifier: Modifier = Modifier,
     label: String? = null,
@@ -73,13 +73,15 @@ fun MetricItem(
                 modifier = modifier,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    painter = painterResource(id = iconRes),
-                    contentDescription = null,
-                    modifier = Modifier.size(iconSize),
-                    tint = iconColor
-                )
-                Spacer(modifier = Modifier.width(4.dp))
+                if (iconRes != null && iconRes != 0) {
+                    Icon(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = null,
+                        modifier = Modifier.size(iconSize),
+                        tint = iconColor
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
                 Text(
                     text = value,
                     style = finalValueStyle,
@@ -91,13 +93,15 @@ fun MetricItem(
         MetricLayout.VERTICAL -> {
             Column(modifier = modifier) {
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Icon(
-                        painter = painterResource(id = iconRes),
-                        contentDescription = null,
-                        modifier = Modifier.size(iconSize),
-                        tint = iconColor
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    if (iconRes != null && iconRes != 0) {
+                        Icon(
+                            painter = painterResource(id = iconRes),
+                            contentDescription = null,
+                            modifier = Modifier.size(iconSize),
+                            tint = iconColor
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
                     Column {
                         if (label != null) {
                             Text(

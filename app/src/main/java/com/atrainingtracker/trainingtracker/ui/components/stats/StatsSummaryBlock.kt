@@ -32,11 +32,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.components.MetricItem
+import com.atrainingtracker.trainingtracker.ui.components.MetricLayout
 
 @Composable
 fun StatsSummaryBlock(
@@ -54,58 +56,51 @@ fun StatsSummaryBlock(
             )
             .padding(vertical = 4.dp) // Add slight padding for touch target
     ) {
-        // Section Title (e.g., "All Time Stats")
+        // Section Title (e.g., "All Time (42 workouts)")
         Text(
-            text = stats.secondaryTitle,
+            text = "${stats.secondaryTitle} (${pluralStringResource(R.plurals.workout_periods__workouts, stats.totalWorkouts, stats.totalWorkouts)})",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Main Metrics Row
+        // Main Metrics Row: Time, Distance, Ascent
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            StatItem(
-                label = stringResource(R.string.stats_workouts),
-                value = "${stats.totalWorkouts}"
-            )
-            StatItem(
-                label = stringResource(R.string.stats_distance),
-                value = stats.totalDistanceWithUnits
-            )
-            StatItem(
+            MetricItem(
+                iconRes = null,
                 label = stringResource(R.string.stats_time),
-                value = stats.timeWithUnits
+                value = stats.timeWithUnits,
+                layout = MetricLayout.VERTICAL,
+                isPrimary = false,
+                modifier = Modifier.weight(1f)
             )
-            StatItem(
+            MetricItem(
+                iconRes = null,
+                label = stringResource(R.string.stats_distance),
+                value = stats.totalDistanceWithUnits,
+                layout = MetricLayout.VERTICAL,
+                isPrimary = false,
+                modifier = Modifier.weight(1.1f) // Slightly more weight for potentially long distance strings
+            )
+            MetricItem(
+                iconRes = null,
                 label = stringResource(R.string.stats_ascent),
-                value = stats.totalAscentWithUnits
+                value = stats.totalAscentWithUnits,
+                layout = MetricLayout.VERTICAL,
+                isPrimary = false,
+                modifier = Modifier.weight(0.9f)
             )
         }
     }
 }
 
 @Composable
-fun StatItem(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleMedium
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.outline
-        )
-    }
-}
-
-@Composable
 fun UsageItem(label: String, date: String, alignEnd: Boolean = false) {
-    Column(horizontalAlignment = if (alignEnd) Alignment.End else Alignment.Start) {
+    Column(horizontalAlignment = if (alignEnd) androidx.compose.ui.Alignment.End else androidx.compose.ui.Alignment.Start) {
         Text(
             text = date,
             style = MaterialTheme.typography.bodyMedium,
