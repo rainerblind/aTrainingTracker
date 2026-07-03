@@ -190,8 +190,9 @@ fun RouteTabbedScreen(
                                 // --- SELECT ALL SWITCH ---
                                 if (routesInCurrentTab.isNotEmpty()) {
                                     Switch(
-                                        // modifier = Modifier.scale(0.7f), // Make it slightly smaller
-                                        modifier = Modifier.padding(end = 8.dp),
+                                        modifier = Modifier
+                                            .scale(0.75f) // Make it smaller
+                                            .padding(end = 8.dp),
                                         checked = isAllSelected,
                                         onCheckedChange = { checked ->
                                             routesInCurrentTab.forEach {
