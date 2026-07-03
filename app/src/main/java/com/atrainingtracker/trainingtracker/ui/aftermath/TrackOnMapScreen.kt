@@ -71,7 +71,9 @@ fun TrackOnMapScreen(
     tracks: List<MapTrack> = emptyList(),
     segments: List<MapSegment> = emptyList(),
     routes: List<MapRoute> = emptyList(),
-    markers: List<LocationMarker> = emptyList()
+    markers: List<LocationMarker> = emptyList(),
+    useStatusBarsPadding: Boolean = true,
+    showMap: Boolean = true
 ) {
     MapDetailLayout(
         bSportType = workoutData.bSportType,
@@ -79,6 +81,8 @@ fun TrackOnMapScreen(
         activeScrubPath = tracks.firstOrNull()?.path,
         minAltitudeOverride = workoutData.minAltitude,
         maxAltitudeOverride = workoutData.maxAltitude,
+        useStatusBarsPadding = useStatusBarsPadding,
+        showMap = showMap,
         header = {
             WorkoutHeader(
                 modifier = modifier,

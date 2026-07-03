@@ -26,61 +26,47 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
-import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
-import com.atrainingtracker.trainingtracker.ui.segments.SegmentHeader
-import com.atrainingtracker.trainingtracker.ui.segments.SegmentLiveDetails
+import com.atrainingtracker.trainingtracker.ui.map.MapDetailLayout
+import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
+import com.atrainingtracker.banalservice.BSportType
 
 
 @Composable
 fun LiveSegmentSheet(
     liveSegment: LiveSegment
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            //.fillMaxHeight(0.5f)
-            .background(MaterialTheme.colorScheme.surface)
-    ) {
-        // --- Drag Handle (The horizontal line) ---
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Surface(
-                modifier = Modifier.size(width = 32.dp, height = 4.dp),
-                color = MaterialTheme.colorScheme.outlineVariant,
-                shape = MaterialTheme.shapes.extraLarge
-            ) {}
+    MapDetailLayout(
+        bSportType = liveSegment.staticData.summary.bSportType,
+        zoomFocus = MapZoomFocus.FIT_PRIMARY,
+        activeScrubPath = liveSegment.staticData.path,
+        useStatusBarsPadding = false,
+        showMap = false,
+        header = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
+                // --- Header with live data ---
+                SegmentHeader(
+                    summary = liveSegment.staticData.summary,
+                    liveSegmentStatus = liveSegment.liveData.segmentStatus,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+
+                SegmentLiveDetails(
+                    liveSegmentData = liveSegment.liveData,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+            }
         }
-
-        // --- Header with live data ---
-        SegmentHeader(
-            summary = liveSegment.staticData.summary,
-            liveSegmentStatus = liveSegment.liveData.segmentStatus,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
-
-        HorizontalDivider(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            thickness = 0.5.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-        )
-
-        SegmentLiveDetails(
-            liveSegmentData = liveSegment.liveData,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
-
-        // --- Elevation Profile ---
-        ElevationProfile(
-            pathPoints = liveSegment.staticData.path,
-            // Pass the raw distance double to the profile for the progress marker
-            currentDistance = liveSegment.liveData.distanceOnSegment_raw,
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
+    )
 }

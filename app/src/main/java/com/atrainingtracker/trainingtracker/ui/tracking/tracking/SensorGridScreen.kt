@@ -23,10 +23,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -97,11 +101,12 @@ fun SensorGridScreen(
         )
     )
 
+    val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
-        sheetDragHandle = null, // Removes the large top spacer entirely
-        // Only show sheet if we are in tracking mode and have an active segment
-        sheetPeekHeight = if (showLiveSegments && screenMode == ScreenMode.TRACKING) 170.dp else 0.dp,
+        sheetDragHandle = null,
+        sheetPeekHeight = if (showLiveSegments && screenMode == ScreenMode.TRACKING) 140.dp + navBarHeight else 0.dp,
         sheetSwipeEnabled = showLiveSegments,
         sheetContent = {
             if (showLiveSegments) {

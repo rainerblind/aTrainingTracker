@@ -55,7 +55,9 @@ fun RouteOnMapScreen(
     routeSummary: RouteSummary?,
     backgroundPaths: List<MappablePath> = emptyList(),
     onToggleSelection: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    useStatusBarsPadding: Boolean = true,
+    showMap: Boolean = true
 ) {
     val bSportType = route?.bSportType ?: routeSummary?.bSportType ?: BSportType.UNKNOWN
 
@@ -63,6 +65,8 @@ fun RouteOnMapScreen(
         bSportType = bSportType,
         zoomFocus = MapZoomFocus.FIT_PRIMARY,
         activeScrubPath = route?.path,
+        useStatusBarsPadding = useStatusBarsPadding,
+        showMap = showMap,
         header = {
             routeSummary?.let {
                 RouteSummaryHeader(
