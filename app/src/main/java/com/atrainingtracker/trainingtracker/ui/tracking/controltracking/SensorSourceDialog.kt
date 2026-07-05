@@ -47,8 +47,8 @@ import com.atrainingtracker.trainingtracker.ui.components.MetricLayout
 fun SensorSourceDialog(
     sensorType: SensorType,
     sourceDevice: DeviceUiData?,
-    allTelemetry: List<DeviceTelemetry>,
-    allDevices: List<DeviceUiData>,
+    allTelemetry: List<DeviceTelemetry>,  // telemetry of all active devices
+    allDevices: List<DeviceUiData>,       // all devices found in the database
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -65,7 +65,7 @@ fun SensorSourceDialog(
     }
     
     val notConnected = remember(allDevices, activeDeviceIds, potentialTypes) {
-        allDevices.filter { it.isPaired && potentialTypes.contains(it.deviceType) && !activeDeviceIds.contains(it.id) }
+        allDevices.filter { potentialTypes.contains(it.deviceType) && !activeDeviceIds.contains(it.id) }
     }
 
     val unitRes = MyHelper.getUnitsId(sensorType)
