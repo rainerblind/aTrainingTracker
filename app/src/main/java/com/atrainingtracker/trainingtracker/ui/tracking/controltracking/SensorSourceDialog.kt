@@ -114,11 +114,6 @@ fun SensorSourceDialog(
                             isConnected = true, 
                             valueWithUnit = if (value != "--") "$value $unit" else value
                         )
-                        Text(
-                            text = sourceDevice.manufacturer,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
                     }
                 }
 
@@ -142,11 +137,6 @@ fun SensorSourceDialog(
                                         isConnected = true,
                                         valueWithUnit = if (value != "--") "$value $unit" else value
                                     )
-                                    Text(
-                                        text = device.manufacturer,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                                    )
                                 }
                             }
                         }
@@ -164,14 +154,7 @@ fun SensorSourceDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         notConnected.forEach { device ->
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                DeviceIdentityBlock(device = device, isConnected = false)
-                                Text(
-                                    text = device.manufacturer,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                                )
-                            }
+                            DeviceIdentityBlock(device = device, isConnected = false)
                         }
                     }
                 }
