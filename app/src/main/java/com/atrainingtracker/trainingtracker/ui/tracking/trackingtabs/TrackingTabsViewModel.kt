@@ -51,6 +51,7 @@ import kotlinx.coroutines.launch
 // helper class to navigate the fragment container after adding or deletion of a tab
 sealed class TabNavigationEvent {
     data class NavigateTo(val index: Int) : TabNavigationEvent()
+    data class EditDevice(val deviceId: Long) : TabNavigationEvent()
 }
 
 /**
@@ -97,6 +98,12 @@ class TrackingTabsViewModel(
     fun onResume() {
         viewModelScope.launch {
             devicesRepository.loadAllDevices()
+        }
+    }
+
+    fun onEditDevice(deviceId: Long) {
+        viewModelScope.launch {
+            _navigationEvent.emit(TabNavigationEvent.EditDevice(deviceId))
         }
     }
 

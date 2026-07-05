@@ -47,6 +47,7 @@ fun SensorStatus(
     sourceMapping: Map<SensorType, Long> = emptyMap(),
     allTelemetry: List<DeviceTelemetry> = emptyList(),
     allDevices: List<DeviceUiData> = emptyList(),
+    onDeviceClick: (Long) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var selectedSensor by remember { mutableStateOf<SensorType?>(null) }
@@ -101,6 +102,7 @@ fun SensorStatus(
             sourceDevice = sourceDevice,
             allTelemetry = allTelemetry,
             allDevices = allDevices,
+            onDeviceClick = onDeviceClick,
             onDismiss = { selectedSensor = null }
         )
     }

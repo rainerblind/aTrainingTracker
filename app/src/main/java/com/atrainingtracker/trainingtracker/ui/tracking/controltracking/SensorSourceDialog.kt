@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -51,6 +52,7 @@ fun SensorSourceDialog(
     sourceDevice: DeviceUiData?,
     allTelemetry: List<DeviceTelemetry>,  // telemetry of all active devices
     allDevices: List<DeviceUiData>,       // all devices found in the database
+    onDeviceClick: (Long) -> Unit,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -112,7 +114,10 @@ fun SensorSourceDialog(
                         DeviceIdentityBlock(
                             device = sourceDevice, 
                             isConnected = true, 
-                            valueWithUnit = if (value != "--") "$value $unit" else value
+                            valueWithUnit = if (value != "--") "$value $unit" else value,
+                            modifier = Modifier.clickable { 
+                                onDeviceClick(sourceDevice.id)
+                            }
                         )
                     }
                 }
@@ -135,7 +140,10 @@ fun SensorSourceDialog(
                                     DeviceIdentityBlock(
                                         device = device, 
                                         isConnected = true,
-                                        valueWithUnit = if (value != "--") "$value $unit" else value
+                                        valueWithUnit = if (value != "--") "$value $unit" else value,
+                                        modifier = Modifier.clickable {
+                                            onDeviceClick(device.id)
+                                        }
                                     )
                                 }
                             }
@@ -154,7 +162,13 @@ fun SensorSourceDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         notConnected.forEach { device ->
-                            DeviceIdentityBlock(device = device, isConnected = false)
+                            DeviceIdentityBlock(
+                                device = device, 
+                                isConnected = false,
+                                modifier = Modifier.clickable {
+                                    onDeviceClick(device.id)
+                                }
+                            )
                         }
                     }
                 }
@@ -197,9 +211,13 @@ fun SensorSourceDialog(
 private fun DeviceIdentityBlock(
     device: DeviceUiData, 
     isConnected: Boolean,
-    valueWithUnit: String? = null
+    valueWithUnit: String? = null,
+    modifier: Modifier = Modifier
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+    ) {
         Icon(
             painter = painterResource(id = device.deviceTypeIconRes),
             contentDescription = null,

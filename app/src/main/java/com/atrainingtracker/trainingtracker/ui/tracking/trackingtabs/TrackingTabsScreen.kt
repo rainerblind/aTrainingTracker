@@ -178,6 +178,16 @@ fun TrackingTabsScreen(
                         }
                     }
                 }
+                is TabNavigationEvent.EditDevice -> {
+                    val editDeviceDialog = EditDeviceFragmentFactory.create(
+                        deviceId = tabNavigationEvent.deviceId,
+                        deviceType = com.atrainingtracker.banalservice.devices.DeviceType.ALL
+                    )
+                    editDeviceDialog.show(
+                        context.supportFragmentManager,
+                        "EditDeviceDialog"
+                    )
+                }
             }
         }
     }
@@ -244,7 +254,8 @@ fun TrackingTabsScreen(
                                         activeSensors = activeSensors,
                                         sourceMapping = sensorSourceMapping,
                                         allTelemetry = allTelemetry,
-                                        allDevices = allDevices
+                                        allDevices = allDevices,
+                                        onDeviceClick = { trackingTabsViewModel.onEditDevice(it) }
                                     )
                                 }
                             }
