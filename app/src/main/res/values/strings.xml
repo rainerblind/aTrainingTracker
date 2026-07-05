@@ -1181,6 +1181,7 @@
     <string name="source_active_backups">Active Backups</string>
     <string name="source_not_connected">Not Connected</string>
     <string name="source_internal">Internal Smartphone Sensors</string>
+    <string name="source_none_configured">No source configured</string>
     <string name="current_value">Current Value</string>
     <string name="battery_level">Battery Level</string>
 

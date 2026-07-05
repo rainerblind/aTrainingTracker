@@ -978,6 +978,8 @@
     <string name="source_device">Bron</string>
     <string name="source_active_backups">Actieve back-ups</string>
     <string name="source_not_connected">Niet verbonden</string>
+    <string name="source_internal">Interne smartphone-sensoren</string>
+    <string name="source_none_configured">Geen bron geconfigureerd</string>
     <string name="marker_options">Marker opties</string>
     <string name="marker_max_altitude">Max. hoogte</string>
     <string name="marker_max_distance">Max. afstand</string>

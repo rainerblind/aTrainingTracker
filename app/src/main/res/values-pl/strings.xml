@@ -741,6 +741,8 @@
     <string name="source_device">Źródło</string>
     <string name="source_active_backups">Aktywne kopie zapasowe</string>
     <string name="source_not_connected">Niepołączone</string>
+    <string name="source_internal">Wewnętrzne czujniki smartfona</string>
+    <string name="source_none_configured">Brak skonfigurowanego źródła</string>
     <string name="marker_options">Opcje markerów</string>
     <string name="marker_max_altitude">Maks. wys.</string>
     <string name="marker_max_distance">Maks. dystans</string>

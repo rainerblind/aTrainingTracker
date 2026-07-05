@@ -981,6 +981,8 @@
     <string name="source_device">Fuente</string>
     <string name="source_active_backups">Backups activos</string>
     <string name="source_not_connected">No conectado</string>
+    <string name="source_internal">Sensores internos del smartphone</string>
+    <string name="source_none_configured">Ninguna fuente configurada</string>
     <string name="marker_options">Opciones de marcadores</string>
     <string name="marker_max_altitude">Alt. máx.</string>
     <string name="marker_max_distance">Dist. máx.</string>

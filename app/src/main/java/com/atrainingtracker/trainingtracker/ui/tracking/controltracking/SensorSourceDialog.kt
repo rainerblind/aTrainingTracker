@@ -191,7 +191,7 @@ fun SensorSourceDialog(
                         )
                     } else {
                          Text(
-                            text = "No source configured",
+                            text = stringResource(id = R.string.source_none_configured),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

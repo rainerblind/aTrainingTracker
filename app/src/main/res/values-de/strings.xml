@@ -1070,6 +1070,8 @@
     <string name="source_device">Quelle</string>
     <string name="source_active_backups">Aktive Backups</string>
     <string name="source_not_connected">Nicht verbunden</string>
+    <string name="source_internal">Interne Smartphone-Sensoren</string>
+    <string name="source_none_configured">Keine Quelle konfiguriert</string>
 
     <string name="marker_options">Marker-Optionen</string>
     <string name="marker_max_altitude">Max. Höhe</string>

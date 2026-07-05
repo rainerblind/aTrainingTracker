@@ -18,7 +18,8 @@
 *   Imported `RouteColorSelected` and `RouteColorUnselected` from the theme.
 *   Applied the respective colors to the `Text` components serving as section headers.
 *   Increased header typography scale to `titleSmall` with `FontWeight.Bold` for better visual prominence.
-*   Maintained `onSurfaceVariant` for the "Not connected" and "No source configured" labels to ensure appropriate technical subordination.
+*   Maintained `onSurfaceVariant` for the "Not Connected" and "No source configured" labels to ensure appropriate technical subordination.
+*   Ensured full localization for "Internal Smartphone Sensors" and "No source configured" across all supported languages.
 
 ### strings.xml (Global)
 *   Refined section header strings:
