@@ -61,6 +61,7 @@ class PeriodsFragment : Fragment() {
                     val groupedPeriods by viewModel.groupedPeriods.collectAsStateWithLifecycle()
                     val selectedPeriod by viewModel.selectedPeriod.collectAsStateWithLifecycle()
                     val isHeatmapEnabled by viewModel.isHeatmapEnabled.collectAsStateWithLifecycle()
+                    val enabledMarkerTypes by viewModel.enabledMarkerTypes.collectAsStateWithLifecycle()
                     val groups = viewModel.groups
 
                     val peekedWorkoutDataWithTrack by viewModel.peekedWorkoutDataWithTrack.collectAsStateWithLifecycle()
@@ -77,6 +78,8 @@ class PeriodsFragment : Fragment() {
                             summary = selectedPeriod!!,
                             isHeatmapEnabled = isHeatmapEnabled,
                             onToggleHeatmapEnabled = { viewModel.toggleHeatmapEnabled() },
+                            enabledMarkerTypes = enabledMarkerTypes,
+                            onToggleMarkerType = { viewModel.toggleMarkerTypeEnabled(it) },
                             onWorkoutClick = { id -> viewModel.selectWorkoutForPeek(id) },
                             peekedWorkoutDataWithTrack = peekedWorkoutDataWithTrack,
                             clearPeekSelection = { viewModel.clearPeekSelection() },

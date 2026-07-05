@@ -978,4 +978,9 @@
     <string name="source_device">Bron</string>
     <string name="source_active_backups">Actieve back-ups</string>
     <string name="source_not_connected">Niet verbonden</string>
+    <string name="marker_options">Marker opties</string>
+    <string name="marker_max_altitude">Max. hoogte</string>
+    <string name="marker_max_distance">Max. afstand</string>
+    <string name="marker_start">Start</string>
+    <string name="marker_end">Einde</string>
 </resources>

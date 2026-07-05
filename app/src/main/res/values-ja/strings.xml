@@ -961,4 +961,9 @@
     <string name="source_device">ソース</string>
     <string name="source_active_backups">アクティブバックアップ</string>
     <string name="source_not_connected">未接続</string>
+    <string name="marker_options">マーカーオプション</string>
+    <string name="marker_max_altitude">最高高度</string>
+    <string name="marker_max_distance">最長距離</string>
+    <string name="marker_start">開始</string>
+    <string name="marker_end">終了</string>
 </resources>

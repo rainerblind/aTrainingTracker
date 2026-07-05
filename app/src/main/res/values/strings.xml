@@ -1183,4 +1183,10 @@
     <string name="source_internal">Internal Smartphone Sensors</string>
     <string name="current_value">Current Value</string>
     <string name="battery_level">Battery Level</string>
+
+    <string name="marker_options">Marker Options</string>
+    <string name="marker_max_altitude">Max Altitude</string>
+    <string name="marker_max_distance">Max Distance</string>
+    <string name="marker_start">Start</string>
+    <string name="marker_end">End</string>
 </resources>

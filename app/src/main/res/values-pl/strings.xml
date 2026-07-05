@@ -741,4 +741,9 @@
     <string name="source_device">Źródło</string>
     <string name="source_active_backups">Aktywne kopie zapasowe</string>
     <string name="source_not_connected">Niepołączone</string>
+    <string name="marker_options">Opcje markerów</string>
+    <string name="marker_max_altitude">Maks. wys.</string>
+    <string name="marker_max_distance">Maks. dystans</string>
+    <string name="marker_start">Start</string>
+    <string name="marker_end">Koniec</string>
 </resources>

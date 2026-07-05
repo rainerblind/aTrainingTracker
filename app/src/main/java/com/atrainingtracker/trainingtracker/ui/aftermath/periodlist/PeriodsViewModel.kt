@@ -27,6 +27,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -36,7 +37,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 import java.time.temporal.IsoFields
-import kotlin.collections.emptyList
 
 class PeriodsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -60,9 +60,28 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             initialValue = true
         )
 
+    val enabledMarkerTypes: StateFlow<Set<PeriodMarkerType>> = prefManager.enabledPeriodMarkerTypesFlow
+        .map { strings -> 
+            strings.mapNotNull { 
+                try { PeriodMarkerType.valueOf(it) } catch(e: Exception) { null } 
+            }.toSet()
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = setOf(PeriodMarkerType.ALTITUDE, PeriodMarkerType.DISTANCE)
+        )
+
     fun toggleHeatmapEnabled() {
         viewModelScope.launch {
             prefManager.setHeatmapEnabled(!isHeatmapEnabled.value)
+        }
+    }
+
+    fun toggleMarkerTypeEnabled(type: PeriodMarkerType) {
+        viewModelScope.launch {
+            val isEnabled = enabledMarkerTypes.value.contains(type)
+            prefManager.setPeriodMarkerTypeEnabled(type.name, !isEnabled)
         }
     }
 
@@ -254,7 +273,8 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
                     workoutId = workout.id,
                     pos = pos,
                     iconResId = R.drawable.ic_altitude_max,
-                    title = "${workout.workoutName}: Max Alt"
+                    title = "${workout.workoutName}: Max Alt",
+                    markerType = PeriodMarkerType.ALTITUDE
                 ))
             }
             workout.maxDisplacementLatLng?.let { pos ->
@@ -262,9 +282,32 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
                     workoutId = workout.id,
                     pos = pos,
                     iconResId = R.drawable.ic_distance,
-                    title = "${workout.workoutName}: Max Dist"
+                    title = "${workout.workoutName}: Max Dist",
+                    markerType = PeriodMarkerType.DISTANCE
                 ))
             }
+            
+            // Add Start and End markers (SCRUM-154)
+            if (workout.mapPolyline.isNotEmpty()) {
+                val points = PolyUtil.decode(workout.mapPolyline)
+                if (points.isNotEmpty()) {
+                    markers.add(PeriodPeakMarker(
+                        workoutId = workout.id,
+                        pos = points.first(),
+                        iconResId = R.drawable.control_start,
+                        title = "${workout.workoutName}: Start",
+                        markerType = PeriodMarkerType.START
+                    ))
+                    markers.add(PeriodPeakMarker(
+                        workoutId = workout.id,
+                        pos = points.last(),
+                        iconResId = R.drawable.control_stop,
+                        title = "${workout.workoutName}: End",
+                        markerType = PeriodMarkerType.END
+                    ))
+                }
+            }
+
             markers
         }
 

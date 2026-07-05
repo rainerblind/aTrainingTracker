@@ -1070,4 +1070,10 @@
     <string name="source_device">Quelle</string>
     <string name="source_active_backups">Aktive Backups</string>
     <string name="source_not_connected">Nicht verbunden</string>
+
+    <string name="marker_options">Marker-Optionen</string>
+    <string name="marker_max_altitude">Max. Höhe</string>
+    <string name="marker_max_distance">Max. Distanz</string>
+    <string name="marker_start">Start</string>
+    <string name="marker_end">Ende</string>
 </resources>

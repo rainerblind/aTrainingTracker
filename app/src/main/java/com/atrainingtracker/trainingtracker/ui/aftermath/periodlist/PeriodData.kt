@@ -24,6 +24,10 @@ enum class PeriodType {
     DAY, WEEK, MONTH, YEAR
 }
 
+enum class PeriodMarkerType {
+    ALTITUDE, DISTANCE, START, END
+}
+
 data class PeriodSummary(
     val periodLabel: String,         // e.g., "Week20, 2026" or "May 2026"
     val periodDateRange: String,     // e.g., "May 11 - May 17"
@@ -44,7 +48,8 @@ data class PeriodPeakMarker(
     val workoutId: Long,
     val pos: com.google.android.gms.maps.model.LatLng,
     val iconResId: Int,
-    val title: String
+    val title: String,
+    val markerType: PeriodMarkerType
 )
 
 data class SportStats(

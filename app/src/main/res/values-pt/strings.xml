@@ -977,5 +977,10 @@
     <string name="no_upload">- Sem carregamento -</string>
     <string name="source_device">Fonte</string>
     <string name="source_active_backups">Backups ativos</string>
-    <string name="source_not_connected">Não disponível</string>
+    <string name="source_not_connected">Não conectado</string>
+    <string name="marker_options">Opções de marcadores</string>
+    <string name="marker_max_altitude">Alt. máx.</string>
+    <string name="marker_max_distance">Dist. máx.</string>
+    <string name="marker_start">Início</string>
+    <string name="marker_end">Fim</string>
 </resources>

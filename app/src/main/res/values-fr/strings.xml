@@ -977,4 +977,9 @@
     <string name="source_device">Source</string>
     <string name="source_active_backups">Backups actifs</string>
     <string name="source_not_connected">Non connecté</string>
+    <string name="marker_options">Options des marqueurs</string>
+    <string name="marker_max_altitude">Alt. max</string>
+    <string name="marker_max_distance">Dist. max</string>
+    <string name="marker_start">Début</string>
+    <string name="marker_end">Fin</string>
 </resources>
