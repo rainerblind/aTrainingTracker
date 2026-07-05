@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -67,6 +68,7 @@ fun PeriodSummaryCard(
     onHeaderClick: (PeriodSummary) -> Unit,
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
+    onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val df = DistanceFormatter()
@@ -161,7 +163,8 @@ fun PeriodSummaryCard(
                         stats = stats,
                         tf = tf, df = df, af = af,
                         showDetails = true,
-                        onClick = { onSportClick(summary, bSportType) }
+                        onClick = { onSportClick(summary, bSportType) },
+                        onLongestWorkoutClick = { workoutId -> onLongestWorkoutClick(summary, bSportType, workoutId) }
                     )
                     if (index < summary.sportStats.size - 1) {
                         Spacer(modifier = Modifier.height(12.dp))
@@ -208,7 +211,8 @@ fun SportStatsRow(
     df: DistanceFormatter,
     af: AltitudeFormatter,
     showDetails: Boolean = false,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongestWorkoutClick: (Long) -> Unit
 ) {
     Surface(
         onClick = onClick,
@@ -292,7 +296,9 @@ fun SportStatsRow(
                 if (showLongestWorkout) {
                     // longestWorkout is smart-cast to non-null because it's a local val and showLongestWorkout checks for null
                     Spacer(modifier = Modifier.height(12.dp))
-                    Column {
+                    Column(
+                        modifier = Modifier.clickable { onLongestWorkoutClick(longestWorkout.id) }
+                    ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -521,7 +527,8 @@ fun PreviewPeriodSummary() {
             isHeatmapEnabled = true,
             onHeaderClick = {},
             onMapClick = {},
-            onSportClick = { _, _ ->}
+            onSportClick = { _, _ ->},
+            onLongestWorkoutClick = { _, _, _ ->}
         )
     }
 }
@@ -551,7 +558,8 @@ fun PreviewEmptyPeriod() {
             isHeatmapEnabled = true,
             onHeaderClick = {},
             onMapClick = {},
-            onSportClick = { _, _ ->}
+            onSportClick = { _, _ ->},
+            onLongestWorkoutClick = { _, _, _ ->}
         )
     }
 }

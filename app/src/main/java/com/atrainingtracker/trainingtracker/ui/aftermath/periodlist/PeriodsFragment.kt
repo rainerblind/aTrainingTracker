@@ -94,6 +94,9 @@ class PeriodsFragment : Fragment() {
                             onHeaderClick = { summary -> startWorkoutSummaryList(summary) },
                             onMapClick = { summary -> viewModel.showPeriodMap(summary) },
                             onSportClick = { summary, bSportType -> startWorkoutSummaryList(summary, bSportType) },
+                            onLongestWorkoutClick = { summary, bSportType, workoutId -> 
+                                startWorkoutSummaryList(summary, bSportType, workoutId) 
+                            },
                             isPlayServiceAvailable = isPlayAvailable,
                             tabs = groups,
                             isHeatmapEnabled = isHeatmapEnabled,
@@ -105,7 +108,11 @@ class PeriodsFragment : Fragment() {
         }
     }
 
-    fun startWorkoutSummaryList(periodSummary: PeriodSummary, bSportType: BSportType? = null) {
+    fun startWorkoutSummaryList(
+        periodSummary: PeriodSummary, 
+        bSportType: BSportType? = null,
+        scrollToWorkoutId: Long? = null
+    ) {
         // calc the secondary title
         // Either "Runs (3 workouts)" or "3 Running, 5 Cycling"
         val secondaryTitle = if (bSportType != null) {
@@ -132,7 +139,8 @@ class PeriodsFragment : Fragment() {
             secondaryTitle = secondaryTitle,
             bSportType = bSportType,
             startS = periodSummary.startTimestampS,
-            endS = periodSummary.endTimestampS
+            endS = periodSummary.endTimestampS,
+            scrollToWorkoutId = scrollToWorkoutId
         )
 
         parentFragmentManager.beginTransaction()

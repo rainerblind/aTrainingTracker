@@ -94,6 +94,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-STR-007** | **Formatter Sync** | `REQ-UI-016` | Static audit of `LocalMetricFormatter` usages. | No direct `new DistanceFormatter()` etc. in UI layer. | Verified |
 | **TST-STR-008** | **List Foundation** | `REQ-UI-017` | Audit of `MappableListItem` usages. | All list cards share same foundation and padding. | Verified |
 | **TST-UI-052** | **Source Header Color Audit** | `REQ-UI-051` | Open `SensorSourceDialog` for a sensor with active and standby sources. | Header text colors SHALL match: Source=Dark Green, Backup=Light Green, Not connected=Grey. | Verified |
+| **TST-UI-053** | **Longest Workout Navigation** | `REQ-UI-052` | 1. Open a Period Summary with multiple workouts. 2. Tap the "Longest Workout" section. | The app SHALL navigate to the list and automatically scroll to the targeted workout. | Verified |
 
 ## 4. Release Verification Workflow
 

@@ -75,7 +75,8 @@ fun PeriodsTabsScreen(
     onToggleHeatmapEnabled: () -> Unit,
     onHeaderClick: (PeriodSummary) -> Unit,
     onMapClick: (PeriodSummary) -> Unit,
-    onSportClick: (PeriodSummary, BSportType) -> Unit
+    onSportClick: (PeriodSummary, BSportType) -> Unit,
+    onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit
 ) {
 
     val scope = rememberCoroutineScope()
@@ -134,6 +135,7 @@ fun PeriodsTabsScreen(
                         onHeaderClick = onHeaderClick,
                         onMapClick = onMapClick,
                         onSportClick = onSportClick,
+                        onLongestWorkoutClick = onLongestWorkoutClick,
                         // PeriodList now only needs to handle the rest of the offset
                         appBarOffsetPx = 0,
                         headerHeightPx = 0f,

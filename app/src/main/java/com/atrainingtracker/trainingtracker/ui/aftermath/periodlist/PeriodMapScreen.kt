@@ -277,7 +277,8 @@ fun PeriodMapScreen(
                                             clearPeekSelection()
                                         }
                                     }
-                                }
+                                },
+                                onLongestWorkoutClick = { onWorkoutClick(it) }
                             )
                         }
                         if (index < summary.sportStats.size - 1) {
