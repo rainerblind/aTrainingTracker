@@ -82,8 +82,8 @@ fun SensorStatus(
                 contentDescription = type.name,
                 modifier = Modifier
                     .padding(horizontal = 6.dp)
-                    .size(24.dp)
-                    .alpha(if (isAvailable) 1f else 0.15f)
+                    .size(22.dp)
+                    .alpha(if (isAvailable) 1f else 0.2f)
                     .clickable {
                         selectedSensor = type
                     },
