@@ -42,6 +42,8 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.repositories.DeviceTelemetry
 import com.atrainingtracker.trainingtracker.ui.components.MetricLayout
+import com.atrainingtracker.trainingtracker.ui.theme.RouteColorSelected
+import com.atrainingtracker.trainingtracker.ui.theme.RouteColorUnselected
 
 @Composable
 fun SensorSourceDialog(
@@ -103,8 +105,9 @@ fun SensorSourceDialog(
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
                             text = stringResource(id = R.string.source_device),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = RouteColorSelected
                         )
                         DeviceIdentityBlock(
                             device = sourceDevice, 
@@ -125,8 +128,9 @@ fun SensorSourceDialog(
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
                             text = stringResource(id = R.string.source_active_backups),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = RouteColorUnselected
                         )
                         activeBackups.forEach { telemetry ->
                             val device = allDevices.find { it.id == telemetry.deviceId }
@@ -155,7 +159,8 @@ fun SensorSourceDialog(
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
                             text = stringResource(id = R.string.source_not_connected),
-                            style = MaterialTheme.typography.labelMedium,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         notConnected.forEach { device ->

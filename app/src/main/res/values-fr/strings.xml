@@ -974,4 +974,7 @@
     <string name="strava_disconnect">Déconnecter de Strava</string>
     <string name="strava_overall_rank_description">Rang global #%1$d</string>
     <string name="no_upload">- Pas de chargement -</string>
+    <string name="source_device">Source</string>
+    <string name="source_active_backups">Backups actifs</string>
+    <string name="source_not_connected">Non connecté</string>
 </resources>

@@ -1067,4 +1067,7 @@
     <string name="strava_disconnected_status">Du bist nicht mit Strava verbunden</string>
     <string name="strava_disconnect">Von Strava trennen</string>
     <string name="strava_overall_rank_description">Gesamtrang #%1$d</string>
+    <string name="source_device">Quelle</string>
+    <string name="source_active_backups">Aktive Backups</string>
+    <string name="source_not_connected">Nicht verbunden</string>
 </resources>

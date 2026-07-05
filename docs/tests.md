@@ -93,6 +93,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-STR-006** | **Metric Consistency**| `REQ-UI-015` | Visual audit of Workout, Route, and Segment screens. | All use `MetricItem` for data rows. | Verified |
 | **TST-STR-007** | **Formatter Sync** | `REQ-UI-016` | Static audit of `LocalMetricFormatter` usages. | No direct `new DistanceFormatter()` etc. in UI layer. | Verified |
 | **TST-STR-008** | **List Foundation** | `REQ-UI-017` | Audit of `MappableListItem` usages. | All list cards share same foundation and padding. | Verified |
+| **TST-UI-052** | **Source Header Color Audit** | `REQ-UI-051` | Open `SensorSourceDialog` for a sensor with active and standby sources. | Header text colors SHALL match: Source=Dark Green, Backup=Light Green, Not connected=Grey. | Verified |
 
 ## 4. Release Verification Workflow
 
