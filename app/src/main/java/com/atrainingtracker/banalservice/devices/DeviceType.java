@@ -124,11 +124,14 @@ public enum DeviceType {
             case ACCUMULATED_SENSORS:
             case LAP_NR:
             case SENSORS:
+                return null;
+
             case TIME_ACTIVE:
             case TIME_LAP:
             case TIME_OF_DAY:
             case TIME_TOTAL:
-                return null;
+                deviceTypes.add(DeviceType.CLOCK);
+                break;
 
             // all location sources
             case ACCURACY:
@@ -144,6 +147,7 @@ public enum DeviceType {
             // either from pressure of from location
             case ALTITUDE:
                 deviceTypes.add(DeviceType.ALTITUDE_FROM_PRESSURE);
+                deviceTypes.add(DeviceType.ENVIRONMENT);
                 deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GPS);
                 deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
                 deviceTypes.add(DeviceType.SPEED_AND_LOCATION_NETWORK);
@@ -193,7 +197,11 @@ public enum DeviceType {
                 deviceTypes.add(DeviceType.BIKE_POWER);     // but not all
                 break;
 
-            // only in environment (temperature) device
+            case SLOPE:
+            case VERTICAL_SPEED:
+                deviceTypes.add(DeviceType.VERTICAL_SPEED_AND_SLOPE);
+                deviceTypes.add(DeviceType.BIKE_POWER);
+                break;
             case TEMPERATURE:
             case TEMPERATURE_MAX:
             case TEMPERATURE_MIN:

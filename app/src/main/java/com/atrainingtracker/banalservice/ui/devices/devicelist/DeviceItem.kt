@@ -94,12 +94,17 @@ fun DeviceItem(
                                 modifier = Modifier.weight(1f)
                             ) {
                                 // Technical Status LED
-                                Surface(
-                                    modifier = Modifier.size(10.dp),
-                                    shape = CircleShape,
-                                    color = if (device.isConnected) ConnectionStatusGreen else Color.LightGray,
-                                    tonalElevation = 2.dp
-                                ) {}
+                                Box(
+                                    modifier = Modifier.size(18.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Surface(
+                                        modifier = Modifier.size(10.dp),
+                                        shape = CircleShape,
+                                        color = if (device.isConnected) ConnectionStatusGreen else Color.LightGray,
+                                        tonalElevation = 2.dp
+                                    ) {}
+                                }
                                 
                                 Spacer(modifier = Modifier.width(8.dp))
 

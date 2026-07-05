@@ -178,6 +178,16 @@ fun TrackingTabsScreen(
                         }
                     }
                 }
+                is TabNavigationEvent.EditDevice -> {
+                    val editDeviceDialog = EditDeviceFragmentFactory.create(
+                        deviceId = tabNavigationEvent.deviceId,
+                        deviceType = com.atrainingtracker.banalservice.devices.DeviceType.ALL
+                    )
+                    editDeviceDialog.show(
+                        context.supportFragmentManager,
+                        "EditDeviceDialog"
+                    )
+                }
             }
         }
     }
@@ -190,6 +200,17 @@ fun TrackingTabsScreen(
                 pagerState.scrollToPage(1)
             }
         }
+    }
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                trackingTabsViewModel.onResume()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Surface(
@@ -218,12 +239,24 @@ fun TrackingTabsScreen(
                         // TAB HEADER
                         when (screenMode) {
                             ScreenMode.TRACKING -> {
+                                // Collect source info
+                                val activeSensors by trackingTabsViewModel.activeSensors.collectAsState()
+                                val sensorSourceMapping by trackingTabsViewModel.sensorSourceMapping.collectAsState()
+                                val allTelemetry by trackingTabsViewModel.allTelemetry.collectAsState()
+                                val allDevices by trackingTabsViewModel.allDevices.collectAsState()
+
                                 // Show the available Sensors
                                 Surface(
                                     modifier = Modifier.padding(4.dp),
                                     color = Color.Transparent
                                 ) {
-                                    SensorStatus(activeSensors = activeSensors)
+                                    SensorStatus(
+                                        activeSensors = activeSensors,
+                                        sourceMapping = sensorSourceMapping,
+                                        allTelemetry = allTelemetry,
+                                        allDevices = allDevices,
+                                        onDeviceClick = { trackingTabsViewModel.onEditDevice(it) }
+                                    )
                                 }
                             }
 

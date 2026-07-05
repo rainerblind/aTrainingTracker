@@ -978,4 +978,12 @@
     <string name="strava_disconnect">Desconectar de Strava</string>
     <string name="strava_overall_rank_description">Rango global #%1$d</string>
     <string name="no_upload">- Sin subida -</string>
+    <string name="source_device">Fuente</string>
+    <string name="source_active_backups">Backups activos</string>
+    <string name="source_not_connected">No conectado</string>
+    <string name="marker_options">Opciones de marcadores</string>
+    <string name="marker_max_altitude">Alt. máx.</string>
+    <string name="marker_max_distance">Dist. máx.</string>
+    <string name="marker_start">Inicio</string>
+    <string name="marker_end">Fin</string>
 </resources>

@@ -37,6 +37,7 @@ import com.atrainingtracker.banalservice.devices.MyRemoteDevice;
 import com.atrainingtracker.banalservice.sensor.MyAccumulatorSensor;
 import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
+import com.atrainingtracker.banalservice.sensor.ProxySensor;
 import com.atrainingtracker.banalservice.sensor.SensorData;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
@@ -600,6 +601,16 @@ public class BANALService
 
         public SensorData getBestSensorData(SensorType sensorType) {
             return getSensorData(sensorType);
+        }
+
+        public long getSourceDeviceId(SensorType sensorType) {
+            MySensor sensor = cSensorManager.getSensor(sensorType);
+            if (sensor instanceof ProxySensor) {
+                return ((ProxySensor) sensor).getSourceDeviceId();
+            } else if (sensor != null) {
+                return sensor.getDevice().getDeviceId();
+            }
+            return -1;
         }
 
         public String getMainSensorStringValue(long deviceID) {

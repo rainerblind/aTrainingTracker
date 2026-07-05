@@ -71,7 +71,10 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-UI-045** | **Reactive Map Updates** | `REQ-MAP-009` | Open Route Detail Map. Toggle the \"Active\" switch in the header. | The route polyline on the map SHALL immediately change its color and width without requiring any camera movement (zoom/pan). | Verified |
 | **TST-UI-046** | **Stats Summary Block Visual Alignment** | `REQ-UI-046` | Inspect the `StatsSummaryBlock` in the Equipment or SportType details screen. | The block SHALL use the unified `MetricItem` component. Headings (Workouts, Distance, Time, Ascent) SHALL be positioned above their respective values. Visual hierarchy (icons, typography) SHALL be consistent with Workout and Segment list items. | Verified |
 | **TST-UI-047** | **Live Segment Sheet Swipe Limit** | `REQ-UI-047` | 1. Start tracking. 2. When a segment is active, swipe up on the bottom sheet. | The sheet SHALL stop expanding once the header and elevation profile are fully visible. It SHALL NOT cover the entire screen or reach the status bar. | Verified |
-| **TST-UI-048** | **Sensor Status Header Visual Audit** | `REQ-UI-048` | Inspect the `SensorStatus` row at the top of the tracking screen. | The row SHALL contain only sensor icons. No text labels (e.g., "HR", "Speed") SHALL be visible below the icons. Icons SHALL use appropriate technical scaling for high-density display. | Verified |
+| **TST-UI-048** | **Sensor Status Header Visual Audit** | `REQ-UI-048` | Inspect the `SensorStatus` row at the top of the tracking screen. | The row SHALL contain only sensor icons. No text labels (e.g., "HR", "Speed") SHALL be visible below the icons. Icons SHALL use a 22dp scale to remain legible without dominating the cockpit. | Verified |
+| **TST-UI-049** | **Sensor Source Dialog Verification** | `REQ-UI-049` | 1. Start a session. 2. Tap any sensor icon (active or inactive) in the header. | A dialog SHALL appear. For active sensors, it shows real-time telemetry. For inactive sensors, it identifies the paired source device(s) or internal fallbacks. | Verified |
+| **TST-UI-051** | **Grade Legend Visibility** | `REQ-MAP-010` | 1. Open any Elevation Profile (e.g., in Aftermath). 2. Tap the info icon. | The grade color legend SHALL appear. Tap again to hide. | Verified |
+| **TST-UI-050** | **Sensor Identity Logic** | `REQ-UI-050` | Open `SensorSourceDialog`, `EditDeviceDialog`, and `DeviceItem`. | Both SHALL feature identical Row 1/2 blocks. `EditDeviceDialog` SHALL include Row 3 (Manufacturer). The LED dot and the Battery icon SHALL be perfectly aligned on their vertical centers. | Verified |
 
 | **TST-FUSION-001** | **Dynamic Accuracy** | `REQ-FIL-007`, `REQ-FIL-008` | Audit live track during sharp turns and rapid acceleration. Verify no "overshoot" or "lag" in position relative to visual map markers. | Backlog |
 | **TST-FUSION-002** | **Dead Reckoning** | `REQ-FIL-009` | 1. Enter tunnel (GPS loss). 2. Continue moving. 3. Verify map track continues along road based on speed sensor. | Backlog |
@@ -90,6 +93,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-STR-006** | **Metric Consistency**| `REQ-UI-015` | Visual audit of Workout, Route, and Segment screens. | All use `MetricItem` for data rows. | Verified |
 | **TST-STR-007** | **Formatter Sync** | `REQ-UI-016` | Static audit of `LocalMetricFormatter` usages. | No direct `new DistanceFormatter()` etc. in UI layer. | Verified |
 | **TST-STR-008** | **List Foundation** | `REQ-UI-017` | Audit of `MappableListItem` usages. | All list cards share same foundation and padding. | Verified |
+| **TST-UI-052** | **Source Header Color Audit** | `REQ-UI-051` | Open `SensorSourceDialog` for a sensor with active and standby sources. | Header text colors SHALL match: Source=Dark Green, Backup=Light Green, Not connected=Grey. | Verified |
 
 ## 4. Release Verification Workflow
 

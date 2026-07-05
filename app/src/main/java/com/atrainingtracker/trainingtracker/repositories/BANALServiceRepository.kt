@@ -73,6 +73,7 @@ data class DeviceTelemetry(
     val deviceId: Long,
     val mainValue: com.atrainingtracker.banalservice.devices.SimpleSensorData?,
     val allValues: List<com.atrainingtracker.banalservice.devices.SimpleSensorData>,
+    val batteryPercentage: Int = -1,
     val version: Long = System.nanoTime() // Guaranteed uniqueness for StateFlow
 )
 
@@ -125,6 +126,10 @@ class BANALServiceRepository private constructor(context: Context) {
 
     private val _activeSensors = MutableStateFlow<Set<SensorType>>(emptySet())
     val activeSensors: StateFlow<Set<SensorType>> = _activeSensors.asStateFlow()
+
+    // Mapping from SensorType to the ID of the device currently providing the "best" value
+    private val _sensorSourceDeviceIds = MutableStateFlow<Map<SensorType, Long>>(emptyMap())
+    val sensorSourceDeviceIds: StateFlow<Map<SensorType, Long>> = _sensorSourceDeviceIds.asStateFlow()
 
     // all active devices telemetry (synchronized every second)
     private val _allActiveDevicesTelemetry = MutableStateFlow<List<DeviceTelemetry>>(emptyList())
@@ -300,13 +305,23 @@ class BANALServiceRepository private constructor(context: Context) {
                         _bSportType.value = binder.bSportType
                         _activeRemoteDevicesIds.value = binder.databaseIdsOfActiveRemoteDevices
                         _newlyFoundDevicesIds.value = binder.getIdsOfNewlyFoundDevices()
-                        _activeSensors.value = binder.availableSensorTypeSet?.toSet() ?: emptySet()
+
+                        val activeSensors = binder.availableSensorTypeSet?.toSet() ?: emptySet()
+                        _activeSensors.value = activeSensors
+
+                        // Update source device mapping for active sensors
+                        val sourceMapping = mutableMapOf<SensorType, Long>()
+                        activeSensors.forEach { type ->
+                            sourceMapping[type] = binder.getSourceDeviceId(type)
+                        }
+                        _sensorSourceDeviceIds.value = sourceMapping
 
                         _allActiveDevicesTelemetry.value = binder.activeDevicesIncludingSpeedAndLocationDevices?.map { device ->
                             DeviceTelemetry(
                                 deviceId = device.deviceId,
                                 mainValue = device.mainSensorData,
                                 allValues = device.allSensorData ?: emptyList(),
+                                batteryPercentage = device.batteryPercentage,
                                 version = System.nanoTime()
                             )
                         } ?: emptyList()

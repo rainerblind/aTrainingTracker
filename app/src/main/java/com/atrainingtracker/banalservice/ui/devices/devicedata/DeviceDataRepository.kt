@@ -141,8 +141,12 @@ class DeviceDataRepository private constructor(private val application: Applicat
             devicesDatabaseManager.getCursorForAllDevices()?.use { c ->
                 if (c.moveToFirst()) {
                     do {
-                        val rawData = mapper.getDeviceData(c)
-                        uiDeviceDataList.add(raw2UiDeviceData(rawData, application))
+                        try {
+                            val rawData = mapper.getDeviceData(c)
+                            uiDeviceDataList.add(raw2UiDeviceData(rawData, application))
+                        } catch (e: Exception) {
+                            Log.e("DeviceDataRepository", "Error parsing device from DB: ${e.message}")
+                        }
                     } while (c.moveToNext())
                 }
             }

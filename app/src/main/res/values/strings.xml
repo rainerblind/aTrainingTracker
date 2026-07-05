@@ -1177,4 +1177,16 @@
     <string name="strava_disconnect">Disconnect from Strava</string>
     <string name="strava_overall_rank_description">Overall Rank #%1$d</string>
     <string name="no_workouts_available">No workouts available</string>
+    <string name="source_device">Source</string>
+    <string name="source_active_backups">Active Backups</string>
+    <string name="source_not_connected">Not Connected</string>
+    <string name="source_internal">Internal Smartphone Sensors</string>
+    <string name="current_value">Current Value</string>
+    <string name="battery_level">Battery Level</string>
+
+    <string name="marker_options">Marker Options</string>
+    <string name="marker_max_altitude">Max Altitude</string>
+    <string name="marker_max_distance">Max Distance</string>
+    <string name="marker_start">Start</string>
+    <string name="marker_end">End</string>
 </resources>

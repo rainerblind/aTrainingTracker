@@ -31,21 +31,40 @@ class RawDeviceDataProvider(
     val discoveryManager: EquipmentAndSportTypeDiscoveryManager
 ) {
     fun getDeviceData(cursor: Cursor): DeviceRawData {
-        val id = cursor.getLong(cursor.getColumnIndex(DevicesDatabaseManager.DevicesDbHelper.C_ID))
-        val deviceType = DeviceType.valueOf(cursor.getString(cursor.getColumnIndex(
-            DevicesDatabaseManager.DevicesDbHelper.DEVICE_TYPE)))
-        val protocol = Protocol.valueOf(cursor.getString(cursor.getColumnIndex(
-            DevicesDatabaseManager.DevicesDbHelper.PROTOCOL)))
-        val lastSeen = cursor.getString(cursor.getColumnIndex(DevicesDatabaseManager.DevicesDbHelper.LAST_ACTIVE))
-        val batteryPercentage = cursor.getInt(cursor.getColumnIndex(DevicesDatabaseManager.DevicesDbHelper.LAST_BATTERY_PERCENTAGE))
-        val manufacturer = cursor.getString(cursor.getColumnIndex(DevicesDatabaseManager.DevicesDbHelper.MANUFACTURER_NAME))
-        val deviceName = cursor.getString(cursor.getColumnIndex(DevicesDatabaseManager.DevicesDbHelper.NAME))
-        val isPaired = cursor.getInt(cursor.getColumnIndex(DevicesDatabaseManager.DevicesDbHelper.PAIRED)) == 1
-        val calibrationValue = cursor.getDouble(cursor.getColumnIndex(DevicesDatabaseManager.DevicesDbHelper.CALIBRATION_FACTOR))
+        val id = cursor.getLong(cursor.getColumnIndexOrThrow(DevicesDatabaseManager.DevicesDbHelper.C_ID))
+        
+        val typeString = getSafeString(cursor, DevicesDatabaseManager.DevicesDbHelper.DEVICE_TYPE)
+        val deviceType = try {
+            DeviceType.valueOf(typeString)
+        } catch (e: Exception) {
+            DeviceType.DUMMY
+        }
+
+        val protocolString = getSafeString(cursor, DevicesDatabaseManager.DevicesDbHelper.PROTOCOL)
+        val protocol = try {
+            Protocol.valueOf(protocolString)
+        } catch (e: Exception) {
+            Protocol.ALL
+        }
+
+        val lastSeen = getSafeString(cursor, DevicesDatabaseManager.DevicesDbHelper.LAST_ACTIVE)
+        val batteryPercentage = getSafeInt(cursor, DevicesDatabaseManager.DevicesDbHelper.LAST_BATTERY_PERCENTAGE)
+        val manufacturer = getSafeString(cursor, DevicesDatabaseManager.DevicesDbHelper.MANUFACTURER_NAME)
+        val deviceName = getSafeString(cursor, DevicesDatabaseManager.DevicesDbHelper.NAME)
+        val isPaired = getSafeInt(cursor, DevicesDatabaseManager.DevicesDbHelper.PAIRED) == 1
+        
+        val calibIdx = cursor.getColumnIndex(DevicesDatabaseManager.DevicesDbHelper.CALIBRATION_FACTOR)
+        val calibrationValue = if (calibIdx != -1 && !cursor.isNull(calibIdx)) {
+            cursor.getDouble(calibIdx)
+        } else null
 
         val powerFeaturesFlags = devicesDatabaseManager.getBikePowerSensorFlags(id)
         val linkedEquipment = equipmentDbHelper.getLinkedEquipmentFromDeviceId(id)
-        val availableEquipment = equipmentDbHelper.getEquipment(deviceType.sportType)
+        val availableEquipment = try {
+            equipmentDbHelper.getEquipment(deviceType.sportType)
+        } catch (e: Exception) {
+            emptyList()
+        }
 
         // Predict linked sport types based on equipment mapping
         val linkedSportTypes = discoveryManager.getLinkedSportTypeNames(setOf(id)).toList()
@@ -65,5 +84,15 @@ class RawDeviceDataProvider(
             powerFeaturesFlags = powerFeaturesFlags,
             linkedSportTypes = linkedSportTypes
         )
+    }
+
+    private fun getSafeString(cursor: Cursor, columnName: String): String {
+        val idx = cursor.getColumnIndex(columnName)
+        return if (idx != -1) cursor.getString(idx) ?: "" else ""
+    }
+
+    private fun getSafeInt(cursor: Cursor, columnName: String): Int {
+        val idx = cursor.getColumnIndex(columnName)
+        return if (idx != -1) cursor.getInt(idx) else -1
     }
 }

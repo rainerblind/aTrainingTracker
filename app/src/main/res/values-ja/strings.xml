@@ -958,4 +958,12 @@
     <string name="strava_disconnect">Strava 切断</string>
     <string name="strava_overall_rank_description">総合順位 #%1$d</string>
     <string name="no_upload">- アップロードなし -</string>
+    <string name="source_device">ソース</string>
+    <string name="source_active_backups">アクティブバックアップ</string>
+    <string name="source_not_connected">未接続</string>
+    <string name="marker_options">マーカーオプション</string>
+    <string name="marker_max_altitude">最高高度</string>
+    <string name="marker_max_distance">最長距離</string>
+    <string name="marker_start">開始</string>
+    <string name="marker_end">終了</string>
 </resources>
