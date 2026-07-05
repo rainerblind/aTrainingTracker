@@ -81,12 +81,17 @@ fun EditDeviceDialog(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 // Technical Status LED
                                 val isConnected = liveData?.isConnected ?: data.isConnected
-                                Surface(
-                                    modifier = Modifier.size(12.dp),
-                                    shape = CircleShape,
-                                    color = if (isConnected) ConnectionStatusGreen else Color.LightGray,
-                                    tonalElevation = 2.dp
-                                ) {}
+                                Box(
+                                    modifier = Modifier.size(18.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Surface(
+                                        modifier = Modifier.size(12.dp),
+                                        shape = CircleShape,
+                                        color = if (isConnected) ConnectionStatusGreen else Color.LightGray,
+                                        tonalElevation = 2.dp
+                                    ) {}
+                                }
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = data.deviceName,

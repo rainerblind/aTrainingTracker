@@ -219,12 +219,17 @@ private fun DeviceIdentityBlock(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                    Surface(
-                        modifier = Modifier.size(10.dp),
-                        shape = androidx.compose.foundation.shape.CircleShape,
-                        color = if (isConnected) com.atrainingtracker.trainingtracker.ui.theme.ConnectionStatusGreen else Color.LightGray,
-                        tonalElevation = 2.dp
-                    ) {}
+                    Box(
+                        modifier = Modifier.size(18.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(
+                            modifier = Modifier.size(10.dp),
+                            shape = androidx.compose.foundation.shape.CircleShape,
+                            color = if (isConnected) com.atrainingtracker.trainingtracker.ui.theme.ConnectionStatusGreen else Color.LightGray,
+                            tonalElevation = 2.dp
+                        ) {}
+                    }
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = device.deviceName,
