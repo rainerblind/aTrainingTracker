@@ -56,7 +56,7 @@ fun SensorStatus(
     val sensorDefinitions = remember {
         listOf(
             SensorType.TIME_ACTIVE,
-            SensorType.LONGITUDE,
+            SensorType.ACCURACY,  // i.e., position
             SensorType.ALTITUDE,
             SensorType.DISTANCE_m,
             SensorType.SPEED_mps,

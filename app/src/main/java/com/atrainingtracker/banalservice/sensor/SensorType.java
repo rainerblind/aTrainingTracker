@@ -135,7 +135,7 @@ public enum SensorType
     public int getIconResId() {
         return switch (this) {
             case TIME_ACTIVE -> R.drawable.ic_time_active;
-            case LONGITUDE, LATITUDE -> R.drawable.ic_location;
+            case ACCURACY, LONGITUDE, LATITUDE -> R.drawable.ic_location;
             case ALTITUDE -> R.drawable.ic_altitude;
             case DISTANCE_m -> R.drawable.ic_distance;
             case SPEED_mps -> R.drawable.ic_speed;

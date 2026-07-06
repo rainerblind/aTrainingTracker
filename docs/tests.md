@@ -95,6 +95,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-STR-008** | **List Foundation** | `REQ-UI-017` | Audit of `MappableListItem` usages. | All list cards share same foundation and padding. | Verified |
 | **TST-UI-052** | **Source Header Color Audit** | `REQ-UI-051` | Open `SensorSourceDialog` for a sensor with active and standby sources. | Header text colors SHALL match: Source=Dark Green, Backup=Light Green, Not connected=Grey. | Verified |
 | **TST-UI-053** | **Longest Workout Navigation** | `REQ-UI-052` | 1. Open a Period Summary with multiple workouts. 2. Tap the "Longest Workout" section. | The app SHALL navigate to the list and automatically scroll to the targeted workout. | Verified |
+| **TST-UI-054** | **Location Audit Metric** | `REQ-UI-053` | 1. Start a tracking session with a location provider active. 2. Tap the location icon in the `SensorStatus` header. | The `SensorSourceDialog` SHALL show "Accuracy" and its current value (e.g. "5 m") instead of "Longitude". | Verified |
 
 ## 4. Release Verification Workflow
 
