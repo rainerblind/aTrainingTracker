@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
@@ -79,7 +80,7 @@ fun RouteOnMapScreen(
         },
         mapContent = {
             if (route != null) routes(listOf(route))
-            contextualPaths(backgroundPaths, sameSportAlpha = 0.7f)
+            contextualPaths(backgroundPaths, sameSportAlpha = TTAlpha.Medium)
         },
         modifier = modifier
     )

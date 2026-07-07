@@ -85,6 +85,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.map.MapTrack
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -228,7 +229,7 @@ fun PeriodMapScreen(
                                     painter = painterResource(id = R.drawable.ic_time_active),
                                     contentDescription = null,
                                     modifier = Modifier.size(16.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
@@ -260,7 +261,7 @@ fun PeriodMapScreen(
                         val isSelected = selectedSports.contains(sport)
                         // Logic: If nothing is selected, everything is 1f.
                         // If something is selected, dim everything except the selected ones.
-                        val rowAlpha = if (selectedSports.isEmpty() || isSelected) 1f else 0.5f
+                        val rowAlpha = if (selectedSports.isEmpty() || isSelected) TTAlpha.High else TTAlpha.SemiTransparent
 
                         Box(modifier = Modifier.alpha(rowAlpha)) {
                             SportStatsRow(
@@ -331,7 +332,7 @@ fun PeriodMapScreen(
                         onClick = { mapSnapshotTrigger = true },
                         modifier = Modifier.size(44.dp),
                         shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
                         shadowElevation = 6.dp,
                         tonalElevation = 2.dp
                     ) {
@@ -352,7 +353,7 @@ fun PeriodMapScreen(
                             onClick = { showMarkerMenu = true },
                             modifier = Modifier.size(44.dp),
                             shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
                             shadowElevation = 6.dp,
                             tonalElevation = 2.dp
                         ) {
@@ -361,7 +362,7 @@ fun PeriodMapScreen(
                                     imageVector = Icons.Default.Place,
                                     contentDescription = stringResource(R.string.marker_options),
                                     modifier = Modifier.size(22.dp),
-                                    tint = if (enabledMarkerTypes.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                    tint = if (enabledMarkerTypes.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Disabled)
                                 )
                             }
                         }
@@ -399,7 +400,7 @@ fun PeriodMapScreen(
                         onClick = onToggleHeatmapEnabled,
                         modifier = Modifier.size(44.dp),
                         shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
                         shadowElevation = 6.dp,
                         tonalElevation = 2.dp
                     ) {
@@ -408,7 +409,7 @@ fun PeriodMapScreen(
                                 imageVector = Icons.Default.Whatshot,
                                 contentDescription = if (isHeatmapEnabled) "Disable Heatmap" else "Enable Heatmap",
                                 modifier = Modifier.size(22.dp),
-                                tint = if (isHeatmapEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                tint = if (isHeatmapEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Disabled)
                             )
                         }
                     }

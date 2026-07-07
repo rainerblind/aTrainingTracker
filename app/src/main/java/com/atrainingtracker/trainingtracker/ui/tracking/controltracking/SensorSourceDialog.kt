@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.sensor.SensorType
@@ -43,8 +44,7 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.repositories.DeviceTelemetry
 import com.atrainingtracker.trainingtracker.ui.components.MetricLayout
-import com.atrainingtracker.trainingtracker.ui.theme.RouteColorSelected
-import com.atrainingtracker.trainingtracker.ui.theme.RouteColorUnselected
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 @Composable
 fun SensorSourceDialog(
@@ -109,7 +109,7 @@ fun SensorSourceDialog(
                             text = stringResource(id = R.string.source_device),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
-                            color = RouteColorSelected
+                            color = TTColor.RouteSelected
                         )
                         DeviceIdentityBlock(
                             device = sourceDevice, 
@@ -130,7 +130,7 @@ fun SensorSourceDialog(
                             text = stringResource(id = R.string.source_active_backups),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
-                            color = RouteColorUnselected
+                            color = TTColor.RouteUnselected
                         )
                         activeBackups.forEach { telemetry ->
                             val device = allDevices.find { it.id == telemetry.deviceId }
@@ -225,7 +225,7 @@ private fun DeviceIdentityBlock(
                 .size(if (device.protocol == Protocol.SMARTPHONE) 32.dp else 44.dp)
                 .padding(if (device.protocol == Protocol.ANT_PLUS) 2.dp else 0.dp),
             tint = if (device.protocol == Protocol.SMARTPHONE)
-                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
             else
                 Color.Unspecified
         )
@@ -244,7 +244,7 @@ private fun DeviceIdentityBlock(
                         Surface(
                             modifier = Modifier.size(10.dp),
                             shape = androidx.compose.foundation.shape.CircleShape,
-                            color = if (isConnected) com.atrainingtracker.trainingtracker.ui.theme.ConnectionStatusGreen else Color.LightGray,
+                            color = if (isConnected) TTColor.ConnectionStatusGreen else Color.LightGray,
                             tonalElevation = 2.dp
                         ) {}
                     }
@@ -269,7 +269,7 @@ private fun DeviceIdentityBlock(
             }
             DeviceStatusRow(
                 device = device,
-                alpha = 0.8f,
+                alpha = TTAlpha.Medium,
                 textStyle = MaterialTheme.typography.bodySmall
             )
         }

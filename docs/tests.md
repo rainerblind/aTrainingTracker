@@ -100,6 +100,8 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-UI-056** | **Map Preference Persistence** | `REQ-MAP-013` | 1. Toggle technical tracks in Workout Details. 2. Close and reopen the workout. | The previously selected track layers SHALL remain visible. | Verified |
 | **TST-UI-057** | **Period FAB Order** | `REQ-MAP-014` | 1. Open the Period Map. 2. Verify the vertical order of FABs. | The Share button SHALL be the topmost item in the FAB stack. | Verified |
 | **TST-UI-058** | **High-Fidelity Period Tracks** | `REQ-MAP-015` | 1. Compare a track in a Period Map overview with the same track in Workout Details. | Both tracks SHALL show identical fine-granular detail. | Verified |
+| **TST-UI-059** | **Alpha Consistency Audit** | `REQ-UI-054` | Static analysis of `WorkoutExtrema.kt` and `MetricItem.kt`. | No hardcoded `copy(alpha = ...)` literals; all use `TTAlpha` constants. | Verified |
+| **TST-UI-060** | **Primary Metric Hierarchy** | `REQ-UI-055` | Open Workout Details or Segment Details. | The primary value (e.g. Distance) SHALL be rendered in the `primary` theme color. | **Deactivated** |
 
 ## 4. Release Verification Workflow
 

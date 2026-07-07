@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
 import com.atrainingtracker.trainingtracker.ui.map.*
 
@@ -100,7 +101,7 @@ fun TrackOnMapScreen(
                         onClick = { showTrackMenu = true },
                         modifier = Modifier.size(44.dp),
                         shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
                         shadowElevation = 6.dp,
                         tonalElevation = 2.dp
                     ) {
@@ -109,7 +110,7 @@ fun TrackOnMapScreen(
                                 imageVector = Icons.Default.Layers,
                                 contentDescription = stringResource(R.string.track_layers),
                                 modifier = Modifier.size(22.dp),
-                                tint = if (enabledTrackTypes.size > 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                tint = if (enabledTrackTypes.size > 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Disabled)
                             )
                         }
                     }
@@ -127,7 +128,7 @@ fun TrackOnMapScreen(
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                        modifier = Modifier.alpha(if (isAvailable) 1.0f else 0.38f)
+                                        modifier = Modifier.alpha(if (isAvailable) TTAlpha.High else TTAlpha.Disabled)
                                     ) {
                                         Checkbox(
                                             checked = enabledTrackTypes.contains(type),

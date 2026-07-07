@@ -46,6 +46,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.RoundCap
 import com.google.maps.android.PolyUtil
@@ -128,7 +129,7 @@ fun PeriodSummaryCard(
                                         painter = painterResource(id = R.drawable.ic_time_active),
                                         contentDescription = null,
                                         modifier = Modifier.size(14.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
@@ -194,7 +195,7 @@ fun PeriodSummaryCard(
                             .align(Alignment.BottomCenter)
                             .background(
                                 brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.1f))
+                                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = TTAlpha.Ghost))
                                 )
                             )
                     )
@@ -219,7 +220,7 @@ fun SportStatsRow(
         shape = RoundedCornerShape(12.dp),
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = TTAlpha.SemiTransparent)
         )
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -276,7 +277,7 @@ fun SportStatsRow(
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 10.dp),
                     thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Subtle)
                 )
 
                 // Sub-Sport Types

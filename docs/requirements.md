@@ -129,6 +129,8 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-UI-051** | Color-Coded Sensor Source Headers. | The `SensorSourceDialog` SHALL use color-coded section headers to clearly distinguish between source roles: Dark Green for "Source Device", Light Green for "Active Backups", and Grey for "Not Connected Devices". | `SensorSourceDialog.kt` | `TST-UI-052` | Verified |
 | **REQ-UI-052** | Longest Workout Navigation. | Tapping the "Longest Workout" highlight in a Period Summary SHALL navigate to the filtered workout list and automatically scroll to the specific workout record. | `PeriodSummaryCard.kt`, `WorkoutSummariesListFragment.kt` | `TST-UI-053` | Verified |
 | **REQ-UI-053** | Location Accuracy Auditing. | The tracking header SHALL use `SensorType.ACCURACY` as the primary location indicator. Tapping this icon SHALL display the `SensorSourceDialog` focused on technical accuracy (in meters) to provide actionable data quality insights. | `SensorStatus.kt`, `SensorType.java` | `TST-UI-054` | Verified |
+| **REQ-UI-054** | Semantic Color Palette. | The system SHALL use semantic color tokens and standardized alpha constants (`TTAlpha`) instead of hardcoded hex values or magic numbers. | `Color.kt`, `Theme.kt` | `TST-UI-059` | Verified |
+| **REQ-UI-055** | Primary Metric Highlighting. | Primary performance data (Total Distance, Active Time) SHALL use the `primary` color to establish a clear visual hierarchy. | `MetricItem.kt`, `WorkoutDetails.kt` | `TST-UI-060` | **Deactivated** |
 | **REQ-EXP-005** | Exponential backoff for Strava uploads. | Robust sync even with API issues.                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | `StravaUploader.kt` | `TST-STR-001` | Verified |
 
 ## 9. External API Compliance
@@ -143,7 +145,7 @@ This document tracks all functional and non-functional requirements of the proje
 
 | ID | Description | Rationale | Implementation File(s) | Verification ID | Status |
 |:---|:---|:---|:---|:---|:---|
-| **REQ-UI-001** | Clean white background (Material Surface). | Ensure professional visual consistency. | `Theme.kt` | `TST-MAN-001` | Verified |
+| **REQ-UI-001** | Neutral Backgrounds. | The system SHALL use neutral white backgrounds (Light) or Material Surface (Dark) for all content areas. Branding colors MUST be isolated strictly to navigation elements (e.g., TabRow backgrounds). | `Theme.kt`, `periods/PeriodsTabsScreen.kt` | `TST-MAN-001` | Verified |
 | **REQ-UI-002** | Primary metrics in **boldface**. | Emphasize key training volume data. | `WorkoutSummary.kt` | `TST-MAN-001` | Verified |
 | **REQ-UI-003** | Deeply customizable tracking cockpits. | Users build their perfect dashboard. | `ConfigTrackingTabsActivity.kt` | `TST-MAN-001` | Verified |
 | **REQ-UI-004** | Scrollable bar graph for period volume. | Enhance historical navigation and trends. | `PeriodsTabsScreen.kt` | `TST-MAN-001` | Verified |

@@ -36,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.helpers.UIHelper
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
@@ -123,7 +124,7 @@ private fun SearchingHeader(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f),
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = TTAlpha.Medium),
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium
     ) {

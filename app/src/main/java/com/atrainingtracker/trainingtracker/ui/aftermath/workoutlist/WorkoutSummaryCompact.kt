@@ -37,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
@@ -52,7 +53,7 @@ fun WorkoutSummaryCompact(
     modifier: Modifier = Modifier
 ) {
     // Maintain the "unfinished" state visual feedback
-    val contentAlpha = if (workoutData.headerData.finished) 1.0f else 0.5f
+    val contentAlpha = if (workoutData.headerData.finished) TTAlpha.High else 0.5f
 
     var showContextMenu by remember { mutableStateOf(false) }
 
@@ -188,7 +189,7 @@ private fun CompactMetricItem(
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
         )
         Row(verticalAlignment = Alignment.Bottom) {
             Text(

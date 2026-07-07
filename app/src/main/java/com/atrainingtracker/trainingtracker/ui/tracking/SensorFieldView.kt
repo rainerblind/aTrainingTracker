@@ -56,11 +56,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.ui.theme.Zone1
-import com.atrainingtracker.trainingtracker.ui.theme.Zone2
-import com.atrainingtracker.trainingtracker.ui.theme.Zone3
-import com.atrainingtracker.trainingtracker.ui.theme.Zone4
-import com.atrainingtracker.trainingtracker.ui.theme.Zone5
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 
 enum class ViewSize {
@@ -349,7 +345,7 @@ private fun SensorFieldViewZone1Preview() {
         filterDescription = "Inst.",
         value = "175",
         units = "bpm",
-        zoneColor = Zone1
+        zoneColor = TTColor.Zone1
     )
 
     MaterialTheme {
@@ -373,7 +369,7 @@ private fun SensorFieldViewZone2Preview() {
         filterDescription = "Inst.",
         value = "175",
         units = "bpm",
-        zoneColor = Zone2
+        zoneColor = TTColor.Zone2
     )
 
     MaterialTheme {
@@ -397,7 +393,7 @@ private fun SensorFieldViewZone3Preview() {
         filterDescription = "Inst.",
         value = "175",
         units = "bpm",
-        zoneColor = Zone3
+        zoneColor = TTColor.Zone3
     )
 
     MaterialTheme {
@@ -421,7 +417,7 @@ private fun SensorFieldViewZone4Preview() {
         filterDescription = "Inst.",
         value = "175",
         units = "bpm",
-        zoneColor = Zone4
+        zoneColor = TTColor.Zone4
     )
 
     MaterialTheme {
@@ -445,7 +441,7 @@ private fun SensorFieldViewZone5Preview() {
         filterDescription = "Inst.",
         value = "175",
         units = "bpm",
-        zoneColor = Zone5
+        zoneColor = TTColor.Zone5
     )
 
     MaterialTheme {

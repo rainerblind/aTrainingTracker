@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
@@ -59,7 +60,7 @@ fun EmptyStatePlaceholder(
                     painter = painter,
                     contentDescription = null,
                     modifier = Modifier.size(64.dp),
-                    tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                    tint = MaterialTheme.colorScheme.outline.copy(alpha = TTAlpha.Disabled)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -76,7 +77,7 @@ fun EmptyStatePlaceholder(
                 Text(
                     text = hint,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.8f),
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = TTAlpha.Medium),
                     textAlign = TextAlign.Center
                 )
             }

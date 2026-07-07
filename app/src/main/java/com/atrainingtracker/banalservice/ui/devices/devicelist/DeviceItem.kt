@@ -33,13 +33,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.DeviceStatusRow
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
-import com.atrainingtracker.trainingtracker.ui.theme.ConnectionStatusGreen
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 
 @Composable
@@ -76,7 +77,7 @@ fun DeviceItem(
                             .size(if (device.protocol == Protocol.SMARTPHONE) 42.dp else 54.dp)
                             .padding(if (device.protocol == Protocol.ANT_PLUS) 2.dp else 0.dp),
                         tint = if (device.protocol == Protocol.SMARTPHONE) 
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
                         else 
                             Color.Unspecified
                     )
@@ -101,7 +102,7 @@ fun DeviceItem(
                                     Surface(
                                         modifier = Modifier.size(10.dp),
                                         shape = CircleShape,
-                                        color = if (device.isConnected) ConnectionStatusGreen else Color.LightGray,
+                                        color = if (device.isConnected) TTColor.ConnectionStatusGreen else Color.LightGray,
                                         tonalElevation = 2.dp
                                     ) {}
                                 }
@@ -139,7 +140,7 @@ fun DeviceItem(
                         Text(
                             text = device.manufacturer,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -173,7 +174,7 @@ fun DeviceItem(
                     Text(
                         text = "→ ${device.linkedSportTypes.joinToString(", ")}",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
                         textAlign = TextAlign.Start,
                         modifier = Modifier.fillMaxWidth()
                     )

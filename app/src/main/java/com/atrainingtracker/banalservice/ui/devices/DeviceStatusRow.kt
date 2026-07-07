@@ -29,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 
@@ -41,7 +42,7 @@ fun DeviceStatusRow(
     modifier: Modifier = Modifier,
     iconSize: Dp = 18.dp,
     textStyle: TextStyle = MaterialTheme.typography.bodyMedium,
-    alpha: Float = 0.6f
+    alpha: Float = TTAlpha.Medium
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,

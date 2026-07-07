@@ -25,7 +25,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.Dash
 import com.google.android.gms.maps.model.Dot
@@ -124,13 +124,13 @@ private fun SegmentDecorations(
 
         Polyline(
             points = calculateOrthogonalLine(startPt, startNext),
-            color = StravaOrange.copy(alpha = alpha),
+            color = TTColor.StravaOrange.copy(alpha = alpha),
             width = style.segmentWidth,
             zIndex = style.segmentZIndex
         )
         Polyline(
             points = calculateOrthogonalLine(endPt, endPrev),
-            color = StravaOrange.copy(alpha = alpha),
+            color = TTColor.StravaOrange.copy(alpha = alpha),
             width = style.segmentWidth,
             zIndex = style.segmentZIndex
         )

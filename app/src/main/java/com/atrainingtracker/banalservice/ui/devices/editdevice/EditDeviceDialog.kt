@@ -39,11 +39,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.DeviceStatusRow
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
-import com.atrainingtracker.trainingtracker.ui.theme.ConnectionStatusGreen
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 @Composable
 fun EditDeviceDialog(
@@ -72,7 +73,7 @@ fun EditDeviceDialog(
                                 .size(48.dp)
                                 .padding(if (data.protocol == Protocol.ANT_PLUS) 2.dp else 0.dp),
                             tint = if (data.protocol == Protocol.SMARTPHONE) 
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
                             else 
                                 Color.Unspecified
                         )
@@ -88,7 +89,7 @@ fun EditDeviceDialog(
                                     Surface(
                                         modifier = Modifier.size(12.dp),
                                         shape = CircleShape,
-                                        color = if (isConnected) ConnectionStatusGreen else Color.LightGray,
+                                        color = if (isConnected) TTColor.ConnectionStatusGreen else Color.LightGray,
                                         tonalElevation = 2.dp
                                     ) {}
                                 }
@@ -103,7 +104,7 @@ fun EditDeviceDialog(
                             }
                             DeviceStatusRow(
                                 device = data,
-                                alpha = 0.8f,
+                                alpha = TTAlpha.Medium,
                                 textStyle = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -111,7 +112,7 @@ fun EditDeviceDialog(
                     Text(
                         text = data.manufacturer,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
                         modifier = Modifier.padding(start = 0.dp)
                     )
                 }
@@ -225,7 +226,7 @@ private fun EquipmentSection(data: DeviceUiData, viewModel: EditDeviceViewModel)
             Text(
                 text = "→ ${data.linkedSportTypes.joinToString(", ")}",
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
                 modifier = Modifier.padding(start = 12.dp) // Align slightly with text inside button
             )
         }

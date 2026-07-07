@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.components.strava.ConnectWithStravaButton
 
 @Composable
@@ -43,7 +44,7 @@ fun StravaConnectionHeader(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f),
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = TTAlpha.Subtle),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(

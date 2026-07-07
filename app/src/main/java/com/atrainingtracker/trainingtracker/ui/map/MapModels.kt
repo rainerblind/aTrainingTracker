@@ -25,6 +25,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
@@ -100,12 +102,12 @@ object MapVisualization {
     const val ROUTE_OVERLAY_Z_INDEX = 40.0f
     const val ROUTE_UNSELECTED_Z_INDEX = 5.0f
     const val ROUTE_UNSELECTED_WIDTH = 6f
-    const val ROUTE_UNSELECTED_ALPHA = 0.3f
+    const val ROUTE_UNSELECTED_ALPHA = TTAlpha.Disabled
     const val ROUTE_DASH_LENGTH = 15f
     const val ROUTE_GAP_LENGTH = 15f
     const val SEGMENT_WIDTH = 10f
     const val SEGMENT_Z_INDEX = 30.0f
-    const val SEGMENT_UNSELECTED_ALPHA = 0.3f
+    const val SEGMENT_UNSELECTED_ALPHA = TTAlpha.Disabled
 }
 
 
@@ -176,7 +178,7 @@ data class MapSegment(
 ) : MappablePath {
     override val id: Long get() = stravaId
     override val latLngs: List<LatLng> by lazy { path.map { it.latLng } }
-    override val color: Color get() = com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
+    override val color: Color get() = TTColor.StravaOrange
     override val width: Float get() = MapVisualization.SEGMENT_WIDTH
     override val zIndex: Float get() = MapVisualization.SEGMENT_Z_INDEX
     override val overlayZIndex: Float? get() = null
@@ -192,7 +194,7 @@ data class MapRoute(
     override val path: List<PathPoint>
 ) : MappablePath {
     override val latLngs: List<LatLng> by lazy { path.map { it.latLng } }
-    override val color: Color get() = if (isSelected) com.atrainingtracker.trainingtracker.ui.theme.RouteColorSelected else com.atrainingtracker.trainingtracker.ui.theme.RouteColorUnselected
+    override val color: Color get() = if (isSelected) TTColor.RouteSelected else TTColor.RouteUnselected
     override val width: Float get() = if (isSelected) MapVisualization.ROUTE_WIDTH else MapVisualization.ROUTE_UNSELECTED_WIDTH
     override val zIndex: Float get() = if (isSelected) MapVisualization.ROUTE_BASE_Z_INDEX else MapVisualization.ROUTE_UNSELECTED_Z_INDEX
 

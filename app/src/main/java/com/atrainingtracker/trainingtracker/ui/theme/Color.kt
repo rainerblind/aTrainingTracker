@@ -20,6 +20,16 @@ package com.atrainingtracker.trainingtracker.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+object TTAlpha {
+    const val High = 1.0f
+    const val Overlay = 0.9f
+    const val Medium = 0.7f
+    const val SemiTransparent = 0.5f
+    const val Disabled = 0.38f
+    const val Subtle = 0.12f
+    const val Ghost = 0.1f
+}
+
 // Light Theme Colors from color.xml
 val LightPrimary = Color(0xFF1464F4)
 val LightOnPrimary = Color(0xFFFFFFFF)
@@ -91,23 +101,24 @@ val surfaceContainerHighDark = Color(0xFF2A2A2A)
 val surfaceContainerHighestDark = Color(0xFF353435)
 
 
-// Zone Colors from color.xml
-val Zone1 = Color(0xFF7FFF00) // Chartreuse
-val Zone2 = Color(0xFF008000) // Green
-val Zone3 = Color(0xFFFFA500) // Orange
-val Zone4 = Color(0xFFFF0000) // Red
-val Zone5 = Color(0xFF9400D3) // Dark Violet
+object TTColor {
+    // Achievements
+    val Gold = Color(0xFFFFD700)
+    val Silver = Color(0xFFC0C0C0)
+    val Bronze = Color(0xFFCD7F32)
 
-// some special colors
-val StravaOrange = Color(0xFFFC4C02)
-val ConnectionStatusGreen = Color(0xFF4CAF50)
+    // Zone Colors from color.xml
+    val Zone1 = Color(0xFF7FFF00) // Chartreuse
+    val Zone2 = Color(0xFF008000) // Green
+    val Zone3 = Color(0xFFFFA500) // Orange
+    val Zone4 = Color(0xFFFF0000) // Red
+    val Zone5 = Color(0xFF9400D3) // Dark Violet
 
-// routes
-val RouteColorSelected = Color(0xFF228B22) // ForestGreen
-// val RouteColorUnselected = Color(0xFF9ACD32) // YellowGreen
-// val RouteColorUnselected = Color(0xFF8FBC8B) // DarkSeaGreen
-// val RouteColorUnselected = Color(0xFF66CDAA) // MediumAquamarine
-// val RouteColorUnselected = Color(0xFF98FB98) // PaleGreen
-val RouteColorUnselected = Color(0xFF90EE90) // LightGreen
-// val RouteColorUnselected = Color(0xFF32CD32) // LimeGreen
-// val RouteColorUnselected = Color(0xFF7CFC00) // LawnGreen
+    // Branding / Status
+    val StravaOrange = Color(0xFFFC4C02)
+    val ConnectionStatusGreen = Color(0xFF4CAF50)
+
+    // Route Visualization
+    val RouteSelected = Color(0xFF228B22) // ForestGreen
+    val RouteUnselected = Color(0xFF90EE90) // LightGreen
+}

@@ -67,7 +67,7 @@ private val DarkColorScheme = darkColorScheme(
     surfaceContainerLow = DarkSurface,
     surfaceContainer = DarkSurface,
     surfaceContainerHigh = DarkSurface,
-    surfaceContainerHighest = surfaceContainerLowDark, // Used for tab backgrounds
+    surfaceContainerHighest = surfaceContainerDark, // Used for tab backgrounds
     surfaceTint = Color.Transparent
 )
 
@@ -104,7 +104,7 @@ private val LightColorScheme = lightColorScheme(
     surfaceContainerLow = LightSurface,
     surfaceContainer = LightSurface,
     surfaceContainerHigh = LightSurface,
-    surfaceContainerHighest = surfaceContainerLowLight, // Used for tab backgrounds
+    surfaceContainerHighest = surfaceContainerLight, // Used for tab backgrounds
     surfaceTint = Color.Transparent
 )
 
@@ -128,8 +128,8 @@ fun ATrainingTrackerTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+            window.statusBarColor = colorScheme.surface.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
 

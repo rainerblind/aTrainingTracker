@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
@@ -69,7 +70,7 @@ fun DeviceTypeSelectionDialog(
                                     .size(48.dp)
                                     .padding(if (protocol == Protocol.ANT_PLUS) 2.dp else 0.dp),
                                 tint = if (protocol == Protocol.SMARTPHONE) 
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) 
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
                                 else 
                                     Color.Unspecified
                             )

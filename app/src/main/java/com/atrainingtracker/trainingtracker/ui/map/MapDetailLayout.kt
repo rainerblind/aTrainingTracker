@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
 import com.atrainingtracker.trainingtracker.ui.components.MinimumDragHandle
 import com.google.android.gms.maps.model.LatLng
@@ -129,7 +130,7 @@ fun MapDetailLayout(
                         .padding(16.dp)
                         .size(44.dp),
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
                     shadowElevation = 6.dp,
                     tonalElevation = 2.dp
                 ) {

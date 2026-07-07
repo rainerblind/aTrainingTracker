@@ -43,6 +43,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 
 
 @Composable
@@ -114,7 +115,7 @@ private fun ControlItem(
     enabled: Boolean = true
 ) {
     // Determine the alpha based on the enabled state
-    val contentAlpha = if (enabled) 1f else 0.38f
+    val contentAlpha = if (enabled) TTAlpha.High else TTAlpha.Disabled
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,

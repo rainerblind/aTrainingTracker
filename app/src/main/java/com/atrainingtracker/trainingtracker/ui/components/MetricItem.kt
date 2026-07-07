@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 
 /**
  * Defines the layout orientation for a MetricItem.
@@ -121,7 +122,7 @@ fun MetricItem(
                     Text(
                         text = secondaryValue,
                         style = MaterialTheme.typography.bodySmall,
-                        color = labelColor,
+                        color = labelColor.copy(alpha = TTAlpha.Medium),
                         modifier = Modifier.padding(top = 2.dp)
                     )
                 }

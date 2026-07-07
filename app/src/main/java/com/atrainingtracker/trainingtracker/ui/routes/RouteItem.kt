@@ -44,8 +44,7 @@ import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.MapRoute
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.PathPreviewMap
-import com.atrainingtracker.trainingtracker.ui.theme.RouteColorSelected
-import com.atrainingtracker.trainingtracker.ui.theme.RouteColorUnselected
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 @Composable
 fun RouteItem(

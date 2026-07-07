@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
 import kotlin.math.max
@@ -173,7 +174,7 @@ fun PeriodsTabsScreen(
                                 Icon(
                                     imageVector = Icons.Default.Whatshot,
                                     contentDescription = if (isHeatmapEnabled) "Disable Heatmap" else "Enable Heatmap",
-                                    tint = if (isHeatmapEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.38f)
+                                    tint = if (isHeatmapEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = TTAlpha.Disabled)
                                 )
                             }
                         }
@@ -266,7 +267,7 @@ fun PeriodBarGraph(
                         .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
                         .background(
                             if (isSelected) MaterialTheme.colorScheme.primary 
-                            else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                            else MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Disabled)
                         )
                         .clickable { onBarClick(originalIndex) }
                 )
@@ -288,7 +289,7 @@ fun PeriodBarGraph(
                             softWrap = false,
                             modifier = Modifier.wrapContentWidth(unbounded = true),
                             color = if (isSelected) MaterialTheme.colorScheme.onSurface 
-                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Medium)
                         )
                     }
                 }

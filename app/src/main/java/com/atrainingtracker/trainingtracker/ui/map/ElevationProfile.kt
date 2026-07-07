@@ -211,11 +211,11 @@ fun ElevationProfile(
             val grade = if (distDiff > 1.0) ((sAlt2 - sAlt1) / distDiff) * 100 else 0.0
 
             val color = when {
-                grade < 2.0 -> Zone1
-                grade < 5.0 -> Zone2
-                grade < 10.0 -> Zone3
-                grade < 15.0 -> Zone4
-                grade < 20.0 -> Zone5
+                grade < 2.0 -> TTColor.Zone1
+                grade < 5.0 -> TTColor.Zone2
+                grade < 10.0 -> TTColor.Zone3
+                grade < 15.0 -> TTColor.Zone4
+                grade < 20.0 -> TTColor.Zone5
                 else -> Color.Black
             }
             segments.add(ElevationSegment(Offset(d1.toFloat(), a1.toFloat()), Offset(d2.toFloat(), a2.toFloat()), color))
@@ -312,7 +312,7 @@ fun ElevationProfile(
                     val y = height - ((currentA - cachedData.minAlt) / cachedData.altRange).toFloat() * height
                     if ((height - y) > (textPaint.textSize * 1.2f) && Math.abs(y - textPaint.textSize) > (textPaint.textSize * 1.2f) && Math.abs(y - lastY) > (textPaint.textSize * 1.2f)) {
                         canvas.nativeCanvas.drawLine(-10f, y, 0f, y, textPaint)
-                        drawLine(colorScheme.onSurfaceVariant.copy(alpha = 0.1f), Offset(0f, y), Offset(width, y), 1.dp.toPx())
+                        drawLine(colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Ghost), Offset(0f, y), Offset(width, y), 1.dp.toPx())
                         canvas.nativeCanvas.drawText(altitudeFormatter.format(currentA.toDouble()), -110f, y + 10f, textPaint)
                         lastY = y
                     }
@@ -325,7 +325,7 @@ fun ElevationProfile(
                 val y1 = height - (seg.p1.y * height)
                 val x2 = seg.p2.x * width
                 val y2 = height - (seg.p2.y * height)
-                drawPath(Path().apply { moveTo(x1, y1); lineTo(x2, y2); lineTo(x2, height); lineTo(x1, height); close() }, seg.color.copy(alpha = 0.3f))
+                drawPath(Path().apply { moveTo(x1, y1); lineTo(x2, y2); lineTo(x2, height); lineTo(x1, height); close() }, seg.color.copy(alpha = TTAlpha.Disabled))
                 drawLine(seg.color, Offset(x1, y1), Offset(x2, y2), 2.dp.toPx())
             }
 
@@ -359,7 +359,7 @@ fun ElevationProfile(
             onClick = { showLegend = !showLegend },
             modifier = Modifier.align(Alignment.TopEnd).padding(end = 4.dp).size(24.dp)
         ) {
-            Icon(Icons.Default.Info, contentDescription = "Legend", modifier = Modifier.size(16.dp), tint = colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            Icon(Icons.Default.Info, contentDescription = "Legend", modifier = Modifier.size(16.dp), tint = colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium))
         }
 
         if (showLegend) {
@@ -382,11 +382,11 @@ private fun GradeLegend(modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            GradeLegendItem(Zone1, "< 2%")
-            GradeLegendItem(Zone2, "2 - 5%")
-            GradeLegendItem(Zone3, "5 - 10%")
-            GradeLegendItem(Zone4, "10 - 15%")
-            GradeLegendItem(Zone5, "15 - 20%")
+            GradeLegendItem(TTColor.Zone1, "< 2%")
+            GradeLegendItem(TTColor.Zone2, "2 - 5%")
+            GradeLegendItem(TTColor.Zone3, "5 - 10%")
+            GradeLegendItem(TTColor.Zone4, "10 - 15%")
+            GradeLegendItem(TTColor.Zone5, "15 - 20%")
             GradeLegendItem(Color.Black, "> 20%")
         }
     }

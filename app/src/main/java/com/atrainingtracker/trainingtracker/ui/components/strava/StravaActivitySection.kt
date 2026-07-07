@@ -33,6 +33,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaActivity
@@ -193,9 +195,9 @@ private fun SegmentEffortRow(effort: StravaSegmentEffort) {
 @Composable
 private fun OverallRankBadge(rank: Int) {
     val color = when (rank) {
-        1 -> Color(0xFFFFD700) // Gold
-        2 -> Color(0xFFC0C0C0) // Silver
-        3 -> Color(0xFFCD7F32) // Bronze
+        1 -> TTColor.Gold
+        2 -> TTColor.Silver
+        3 -> TTColor.Bronze
         else -> MaterialTheme.colorScheme.tertiary
     }
     
@@ -243,9 +245,9 @@ private fun RankBadge(rank: Int) {
     }
 
     val color = when (rank) {
-        1 -> Color(0xFFFFD700) // Gold
-        2 -> Color(0xFFC0C0C0) // Silver
-        3 -> Color(0xFFCD7F32) // Bronze
+        1 -> TTColor.Gold
+        2 -> TTColor.Silver
+        3 -> TTColor.Bronze
         else -> MaterialTheme.colorScheme.primary
     }
 
