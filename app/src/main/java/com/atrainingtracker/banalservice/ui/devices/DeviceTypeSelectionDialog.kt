@@ -21,11 +21,13 @@ package com.atrainingtracker.banalservice.ui.devices
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -68,7 +70,8 @@ fun DeviceTypeSelectionDialog(
                                 contentDescription = null,
                                 modifier = Modifier
                                     .size(48.dp)
-                                    .padding(if (protocol == Protocol.ANT_PLUS) 2.dp else 0.dp),
+                                    .padding(if (protocol == Protocol.ANT_PLUS) 2.dp else 0.dp)
+                                    .clip(RoundedCornerShape(4.dp)),
                                 tint = if (protocol == Protocol.SMARTPHONE) 
                                     MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
                                 else 

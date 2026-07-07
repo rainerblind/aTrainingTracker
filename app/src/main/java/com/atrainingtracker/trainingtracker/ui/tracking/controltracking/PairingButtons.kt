@@ -34,6 +34,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import android.content.res.Configuration
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
@@ -89,7 +91,9 @@ private fun PairingItem(
         Icon(
             painter = painterResource(id = iconRes),
             contentDescription = null,
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(4.dp)),
             tint = Color.Unspecified
         )
         Spacer(Modifier.height(4.dp))

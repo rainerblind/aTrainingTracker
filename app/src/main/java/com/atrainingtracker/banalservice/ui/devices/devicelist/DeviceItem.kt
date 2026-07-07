@@ -34,6 +34,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
@@ -75,7 +77,8 @@ fun DeviceItem(
                         contentDescription = null,
                         modifier = Modifier
                             .size(if (device.protocol == Protocol.SMARTPHONE) 42.dp else 54.dp)
-                            .padding(if (device.protocol == Protocol.ANT_PLUS) 2.dp else 0.dp),
+                            .padding(if (device.protocol == Protocol.ANT_PLUS) 2.dp else 0.dp)
+                            .clip(RoundedCornerShape(4.dp)),
                         tint = if (device.protocol == Protocol.SMARTPHONE) 
                             MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
                         else 

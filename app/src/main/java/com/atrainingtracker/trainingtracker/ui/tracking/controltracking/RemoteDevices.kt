@@ -33,6 +33,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
@@ -77,7 +79,9 @@ private fun RemoteDeviceItem(
         Icon(
             painter = painterResource(id = device.iconRes),
             contentDescription = null,
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(4.dp)),
             tint = Color.Unspecified
         )
         Spacer(Modifier.height(4.dp))

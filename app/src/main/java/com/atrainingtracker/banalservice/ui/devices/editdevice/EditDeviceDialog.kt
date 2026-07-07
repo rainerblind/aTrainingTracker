@@ -22,6 +22,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
@@ -29,6 +30,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -71,7 +73,8 @@ fun EditDeviceDialog(
                             contentDescription = null,
                             modifier = Modifier
                                 .size(48.dp)
-                                .padding(if (data.protocol == Protocol.ANT_PLUS) 2.dp else 0.dp),
+                                .padding(if (data.protocol == Protocol.ANT_PLUS) 2.dp else 0.dp)
+                                .clip(RoundedCornerShape(4.dp)),
                             tint = if (data.protocol == Protocol.SMARTPHONE) 
                                 MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
                             else 
