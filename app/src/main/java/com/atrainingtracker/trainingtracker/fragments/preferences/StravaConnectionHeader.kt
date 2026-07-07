@@ -38,7 +38,8 @@ fun StravaConnectionHeader(
     isConnected: Boolean,
     onConnectClick: () -> Unit,
     onDisconnectClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isConnecting: Boolean = false
 ) {
     Surface(
         modifier = modifier
@@ -48,27 +49,35 @@ fun StravaConnectionHeader(
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(
-            modifier = Modifier.padding(8.dp),
+            modifier = Modifier.padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = if (isConnected) stringResource(R.string.strava_connected_status) 
-                       else stringResource(R.string.strava_disconnected_status),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = if (isConnected) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
-                textAlign = TextAlign.Center
-            )
-
-            if (!isConnected) {
-                ConnectWithStravaButton(onClick = onConnectClick)
+            if (isConnecting) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                Text(
+                    text = stringResource(R.string.please_wait),
+                    style = MaterialTheme.typography.bodyMedium
+                )
             } else {
-                Button(
-                    onClick = onDisconnectClick,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer)
-                ) {
-                    Text(stringResource(R.string.strava_disconnect))
+                Text(
+                    text = if (isConnected) stringResource(R.string.strava_connected_status) 
+                           else stringResource(R.string.strava_disconnected_status),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isConnected) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center
+                )
+
+                if (!isConnected) {
+                    ConnectWithStravaButton(onClick = onConnectClick)
+                } else {
+                    Button(
+                        onClick = onDisconnectClick,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer)
+                    ) {
+                        Text(stringResource(R.string.strava_disconnect))
+                    }
                 }
             }
         }

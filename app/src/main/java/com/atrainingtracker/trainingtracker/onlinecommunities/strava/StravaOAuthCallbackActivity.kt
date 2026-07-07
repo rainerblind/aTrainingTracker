@@ -16,59 +16,61 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.onlinecommunities.strava;
+package com.atrainingtracker.trainingtracker.onlinecommunities.strava
 
-import android.net.Uri;
+import android.app.Activity
+import android.content.Intent
+import android.net.Uri
+import android.os.Bundle
+import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
-import androidx.annotation.NonNull;
+class StravaOAuthCallbackActivity : Activity() {
 
-import com.atrainingtracker.BuildConfig;
-import com.atrainingtracker.trainingtracker.onlinecommunities.BaseOAuthCallbackActivity;
-
-import org.json.JSONObject;
-
-
-public class StravaOAuthCallbackActivity extends BaseOAuthCallbackActivity {
-    public static final String HTTPS = "https";
-    public static final String OAUTH = "oauth";
-    public static final String TOKEN = "token";
-    public static final String CLIENT_ID = "client_id";
-    public static final String CLIENT_SECRET = "client_secret";
-    protected static final String STRAVA_AUTHORITY = "www.strava.com";
-    protected static final String MY_CLIENT_ID = BuildConfig.STRAVA_CLIENT_ID;
-    protected static final String MY_CLIENT_SECRET = BuildConfig.STRAVA_CLIENT_SECRET;
-    public static final String StravaOAuthSuccess = "com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthSuccess";
-
-    @NonNull
-    @Override
-    protected String getRedirectUri() {
-        return "strava://rainerblind.github.io";
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        handleIntent(intent)
     }
 
-    @NonNull
-    @Override
-    protected String getOAuthSuccessID() {
-        return StravaOAuthSuccess;
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
     }
 
+    private fun handleIntent(intent: Intent?) {
+        val data: Uri? = intent?.data
+        if (data != null && data.toString().startsWith(REDIRECT_URI_PREFIX)) {
+            val error = data.getQueryParameter("error")
+            if (error != null) {
+                Log.e(TAG, "Auth error: $error")
+                finish()
+                return
+            }
 
-    @NonNull
-    @Override
-    protected String getAccessUrl(String code) {
-        Uri.Builder builder = new Uri.Builder();
-        builder.scheme(HTTPS)
-                .authority(STRAVA_AUTHORITY)
-                .appendPath(OAUTH)
-                .appendPath(TOKEN)
-                .appendQueryParameter(CLIENT_ID, MY_CLIENT_ID)
-                .appendQueryParameter(CLIENT_SECRET, MY_CLIENT_SECRET)
-                .appendQueryParameter(CODE, code);
-        return builder.build().toString();
+            val code = data.getQueryParameter(StravaHelper.CODE)
+            if (code != null) {
+                StravaAuthRepository.getInstance().resetState()
+                // Offload the exchange to the repository.
+                // The UI (StravaUploadFragment) will be observing the repository's StateFlow via ViewModel.
+                val repository = StravaAuthRepository.getInstance()
+                
+                // We use a global scope or similar if we want it to survive activity death, 
+                // but since the repo is a singleton and we use a suspend function, 
+                // we should ideally trigger it from a scope that persists.
+                // For now, let's just trigger it.
+                kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                   repository.exchangeCodeForToken(code)
+                }
+            }
+        }
+        finish()
     }
 
-    // override onJsonResponse if you need to save refresh tokens etc
-    protected void onJsonResponse(@NonNull JSONObject jsonObject) {
-        StravaHelper.storeJSONData(jsonObject);
+    companion object {
+        private const val TAG = "StravaOAuthCallback"
+        private const val REDIRECT_URI_PREFIX = "strava://rainerblind.github.io"
+        const val StravaOAuthSuccess = "com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthSuccess"
     }
-
 }

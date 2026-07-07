@@ -103,6 +103,8 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-UI-059** | **Alpha Consistency Audit** | `REQ-UI-054` | Static analysis of `WorkoutExtrema.kt` and `MetricItem.kt`. | No hardcoded `copy(alpha = ...)` literals; all use `TTAlpha` constants. | Verified |
 | **TST-UI-060** | **Primary Metric Hierarchy** | `REQ-UI-055` | Open Workout Details or Segment Details. | The primary value (e.g. Distance) SHALL be rendered in the `primary` theme color. | **Deactivated** |
 | **TST-UI-061** | **Theme Audit** | `REQ-UI-056` | Project-wide grep for `Color(0xFF...)` and `copy(alpha = ...)`. | All UI-related colors and alphas MUST use semantic tokens. | Proposed |
+| **TST-EXT-001** | **Strava Custom Tabs** | `REQ-EXT-004` | 1. Click "Connect to Strava". 2. Verify that a Custom Tab opens. | The authorization page SHALL open in a Chrome Custom Tab. | Proposed |
+| **TST-EXT-002** | **Strava OAuth Flow** | `REQ-EXT-005` | 1. Complete Strava authorization. 2. Observe the loading state. | The app SHALL show a non-blocking loading indicator and correctly store the resulting token. | Proposed |
 
 ## 4. Release Verification Workflow
 

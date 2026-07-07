@@ -141,6 +141,8 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-EXT-001** | "Powered by Strava" branding on all Strava data. | Comply with mandatory API guidelines. | `PoweredByStrava.kt` | `TST-REG-002` | Verified |
 | **REQ-EXT-002** | Official Strava "Connect" authentication assets. | Adhere to partner brand requirements. | `StravaUploadFragment.kt` | `TST-REG-002` | Verified |
 | **REQ-EXT-003** | Display logo contextually within lists/headers. | Maintain compliance without UI clutter. | `SegmentList.kt` | `TST-REG-002` | Verified |
+| **REQ-EXT-004** | Integrated Strava Authorization. | The system SHALL use Chrome Custom Tabs for Strava authorization to provide a seamless user experience within the application context. | `StravaHelper.kt`, `StravaUploadFragment.kt` | `TST-EXT-001` | Proposed |
+| **REQ-EXT-005** | Reactive OAuth Feedback. | The system SHALL provide immediate visual feedback (loading/error) during the Strava token exchange process using modern UI components. | `StravaOAuthCallbackActivity.kt`, `StravaAuthViewModel.kt` | `TST-EXT-002` | Proposed |
 
 ## 10. User Interface & Quality Standards
 
