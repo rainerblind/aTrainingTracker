@@ -315,6 +315,25 @@ fun PeriodMapScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    // FLOATING SHARE BUTTON
+                    Surface(
+                        onClick = { mapSnapshotTrigger = true },
+                        modifier = Modifier.size(44.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                        shadowElevation = 6.dp,
+                        tonalElevation = 2.dp
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = stringResource(R.string.share),
+                                modifier = Modifier.size(22.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
                     // MARKER DROPDOWN BUTTON
                     var showMarkerMenu by remember { mutableStateOf(false) }
                     Box {
@@ -379,25 +398,6 @@ fun PeriodMapScreen(
                                 contentDescription = if (isHeatmapEnabled) "Disable Heatmap" else "Enable Heatmap",
                                 modifier = Modifier.size(22.dp),
                                 tint = if (isHeatmapEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            )
-                        }
-                    }
-
-                    // FLOATING SHARE BUTTON
-                    Surface(
-                        onClick = { mapSnapshotTrigger = true },
-                        modifier = Modifier.size(44.dp),
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                        shadowElevation = 6.dp,
-                        tonalElevation = 2.dp
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = stringResource(R.string.share),
-                                modifier = Modifier.size(22.dp),
-                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
