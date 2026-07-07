@@ -106,11 +106,20 @@ fun PeriodMapScreen(
 
     // Track multiple selected sports
     var selectedSports by rememberSaveable { mutableStateOf(setOf<BSportType>()) }
-    val (filteredWorkouts, filteredMarkers) = remember(summary, selectedSports, enabledMarkerTypes) {
+    val (filteredWorkouts, filteredPaths, filteredMarkers) = remember(summary, selectedSports, enabledMarkerTypes) {
         val workouts = if (selectedSports.isEmpty()) {
             summary.workoutIdToPolylineMap
         } else {
             summary.workoutIdToPolylineMap.filter { (id, _) ->
+                val sport = summary.workoutIdToSportMap[id]
+                selectedSports.contains(sport)
+            }
+        }
+
+        val paths = if (selectedSports.isEmpty()) {
+            summary.workoutIdToPathMap
+        } else {
+            summary.workoutIdToPathMap.filter { (id, _) ->
                 val sport = summary.workoutIdToSportMap[id]
                 selectedSports.contains(sport)
             }
@@ -122,7 +131,7 @@ fun PeriodMapScreen(
             sportMatch && typeMatch
         }
         
-        Pair(workouts, markers)
+        Triple(workouts, paths, markers)
     }
 
     // Prepare Map data for the TrackOnMapScreen
@@ -292,9 +301,11 @@ fun PeriodMapScreen(
             // 2. INTERACTIVE MAP WITH OVERLAYED BUTTON
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 InteractivePeriodMap(
-                    workouts = filteredWorkouts,
-                    extremaMarkers = filteredMarkers,
-                    periodType = summary.periodType,
+                    summary = summary.copy(
+                        workoutIdToPolylineMap = filteredWorkouts,
+                        workoutIdToPathMap = filteredPaths,
+                        extremaMarkers = filteredMarkers
+                    ),
                     isHeatmapEnabled = isHeatmapEnabled,
                     onWorkoutClick = onWorkoutClick,
                     modifier = Modifier.fillMaxSize(),

@@ -99,6 +99,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-UI-055** | **Multi-Track Visibility Audit** | `REQ-MAP-011`, `REQ-MAP-012` | 1. Open the Workout Details screen for a recorded activity. 2. Tap the "Layers" FAB. 3. Toggle different track types (GPS, Fused, Network). | The map SHALL update polylines in real-time to show/hide the selected tracks. The selection menu includes a color legend. | Verified |
 | **TST-UI-056** | **Map Preference Persistence** | `REQ-MAP-013` | 1. Toggle technical tracks in Workout Details. 2. Close and reopen the workout. | The previously selected track layers SHALL remain visible. | Verified |
 | **TST-UI-057** | **Period FAB Order** | `REQ-MAP-014` | 1. Open the Period Map. 2. Verify the vertical order of FABs. | The Share button SHALL be the topmost item in the FAB stack. | Verified |
+| **TST-UI-058** | **High-Fidelity Period Tracks** | `REQ-MAP-015` | 1. Compare a track in a Period Map overview with the same track in Workout Details. | Both tracks SHALL show identical fine-granular detail. | Verified |
 
 ## 4. Release Verification Workflow
 

@@ -53,10 +53,7 @@ import androidx.compose.ui.graphics.Color
 @OptIn(MapsComposeExperimentalApi::class)
 @Composable
 fun InteractivePeriodMap(
-    // Map of WorkoutID to its Polyline String
-    workouts: Map<Long, String>,
-    extremaMarkers: List<PeriodPeakMarker> = emptyList(),
-    periodType: PeriodType,
+    summary: PeriodSummary,
     isHeatmapEnabled: Boolean = true,
     onWorkoutClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
@@ -65,12 +62,14 @@ fun InteractivePeriodMap(
     onSnapshotReady: (Bitmap) -> Unit = {}
 ) {
     val context = LocalContext.current
-    val allPaths = remember(workouts) {
-        workouts.mapValues { PolyUtil.decode(it.value) }
+    val allPaths = remember(summary.workoutIdToPolylineMap, summary.workoutIdToPathMap) {
+        summary.workoutIdToPolylineMap.mapValues { (id, polyline) ->
+            summary.workoutIdToPathMap[id] ?: PolyUtil.decode(polyline)
+        }
     }
 
-    val visuals = remember(allPaths, periodType, isHeatmapEnabled) {
-        getPeriodMapVisuals(periodType, allPaths.values.toList(), isHeatmapEnabled)
+    val visuals = remember(allPaths, summary.periodType, isHeatmapEnabled) {
+        getPeriodMapVisuals(summary.periodType, allPaths.values.toList(), isHeatmapEnabled)
     }
 
     var isMapLoaded by remember { mutableStateOf(false) }
@@ -140,7 +139,7 @@ fun InteractivePeriodMap(
 
         // 3. Extrema Markers
         val primaryColor = MaterialTheme.colorScheme.primary
-        extremaMarkers.forEach { marker ->
+        summary.extremaMarkers.forEach { marker ->
             val icon = remember(marker.iconResId, primaryColor) {
                 createSensorMarker(context, marker.iconResId, primaryColor, Color.White)
             }

@@ -87,6 +87,36 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
 
     fun showPeriodMap(summary: PeriodSummary) {
         _selectedPeriod.value = summary
+
+        // Launch background loading for originally sampled points (SCRUM-159)
+        viewModelScope.launch {
+            val richPaths = summary.workoutIdToPolylineMap.keys.associateWith { id ->
+                val fullPath = workoutRepo.getWorkoutTrackPoints(id, TrackType.BEST)
+                
+                // PERFORMANCE: Simplify for the map to prevent lag, but keep high fidelity
+                if (fullPath.size > 800) {
+                    val latLngs = fullPath.map { it.latLng }
+                    var tolerance = 1.0
+                    var simplified = PolyUtil.simplify(latLngs, tolerance)
+                    var iterations = 0
+                    while (simplified.size > 1000 && iterations < 5) {
+                        tolerance *= 2.0
+                        simplified = PolyUtil.simplify(latLngs, tolerance)
+                        iterations++
+                    }
+                    simplified
+                } else {
+                    fullPath.map { it.latLng }
+                }
+            }
+            
+            // Update the selected period with rich data if it's still the one active
+            val current = _selectedPeriod.value
+            if (current != null && current.startTimestampS == summary.startTimestampS && 
+                current.periodType == summary.periodType) {
+                _selectedPeriod.value = current.copy(workoutIdToPathMap = richPaths)
+            }
+        }
     }
 
     fun dismissPeriodMap() {
