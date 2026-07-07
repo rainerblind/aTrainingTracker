@@ -985,4 +985,11 @@
     <string name="marker_max_distance">Dist. max</string>
     <string name="marker_start">Inizio</string>
     <string name="marker_end">Fine</string>
+
+    <string name="track_layers">Livelli traccia</string>
+    <string name="track_type_best">Registrato</string>
+    <string name="track_type_gps">GPS</string>
+    <string name="track_type_fused">Google Fused</string>
+    <string name="track_type_network">Rete</string>
+    <string name="legend">Legenda</string>
 </resources>

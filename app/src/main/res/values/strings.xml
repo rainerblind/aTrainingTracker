@@ -1190,4 +1190,11 @@
     <string name="marker_max_distance">Max Distance</string>
     <string name="marker_start">Start</string>
     <string name="marker_end">End</string>
+
+    <string name="track_layers">Track Layers</string>
+    <string name="track_type_best">Tracked</string>
+    <string name="track_type_gps">GPS</string>
+    <string name="track_type_fused">Google Fused</string>
+    <string name="track_type_network">Network</string>
+    <string name="legend">Legend</string>
 </resources>

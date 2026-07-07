@@ -192,12 +192,17 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                         Box(modifier = Modifier.padding(paddingValues)) {
                             if (selectedWorkoutForDetails != null) {
                                 val aftermathUIState by trackOnMapViewModel.uiState.collectAsStateWithLifecycle()
+                                val enabledTrackTypes by trackOnMapViewModel.enabledTrackTypes.collectAsStateWithLifecycle()
                                 TrackOnMapScreen(
                                     workoutData = selectedWorkoutForDetails,
                                     tracks = aftermathUIState.tracks,
+                                    availableTrackTypes = aftermathUIState.availableTrackTypes,
                                     segments = aftermathUIState.segments,
                                     routes = aftermathUIState.routes,
                                     markers = aftermathUIState.markers,
+                                    enabledTrackTypes = enabledTrackTypes,
+                                    onToggleTrackType = { trackOnMapViewModel.toggleTrackTypeEnabled(it) },
+                                    showTechnicalTracks = true,
                                     modifier = Modifier
                                 )
 

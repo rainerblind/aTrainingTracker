@@ -3,30 +3,29 @@
 ## 1. Requirement Fulfillment
 | Requirement ID | Description | Status |
 |:---|:---|:---|
-| **REQ-UI-033** | The `PeriodMapScreen` SHALL display optional and selectable markers for the Start, End, Maximum Altitude, and Maximum Line Distance of each workout in the period. | Verified |
+| **REQ-UI-033** | The `PeriodMapScreen` SHALL display optional and selectable markers for the Start, End, Maximum Altitude, and Maximum Line Distance. | Verified |
 
 ## 2. Verification Evidence (TST-UI-041)
 *   **Procedure**:
     1. Open the Period Map for a Month or Year.
-    2. Tap the **drop (Place)** icon on the floating action button (not in the header).
-    3. Verify that a dropdown menu appears with localized "Max Altitude", "Max Distance", "Start", and "End" options.
-    4. Toggle the options and verify that markers appear/disappear on the map in real-time.
+    2. Tap the **drop (Place)** icon on the floating action button.
+    3. Verify that a dropdown menu appears with localized marker roles.
+    4. Toggle the options and verify that markers react in real-time.
 *   **Observation**:
     *   Markers are correctly filtered based on user selection.
-    *   The preference is persisted across application restarts.
+    *   **Start** and **End** markers are deactivated by default to maintain overview clarity.
+    *   The user's preference is persisted via DataStore.
 *   **Result**: **PASS**
 
 ## 3. Technical Changes
-### Data Layer (PeriodData.kt)
-*   Introduced `PeriodMarkerType` enum (ALTITUDE, DISTANCE).
-*   Added `markerType` property to `PeriodPeakMarker`.
-
 ### Logic Layer (PeriodsViewModel.kt)
-*   Updated `aggregateToPeriod` to Assign correct types to markers.
-*   Implemented polyline decoding to generate **Start** and **End** markers for each workout.
-*   Implemented `enabledMarkerTypes` state flow backed by DataStore.
+*   Aggregated technical marker types (Start, End, Max Alt, Max Dist) by assigning them specific `PeriodMarkerType` identifiers.
+*   Implemented polyline decoding in the aggregator to derive precise start/stop coordinates for every workout in the period.
 
-### UI Layer (PeriodsTabsScreen.kt / PeriodMapScreen.kt)
-*   Removed marker configuration from the `PeriodsTabsScreen` header.
-*   Implemented a `DropdownMenu` triggered by a **22dp Place (drop) icon** on the map's floating action button.
-*   Localized all menu options across supported languages.
+### UI Layer (PeriodMapScreen.kt)
+*   Consolidated map configuration into a specialized FAB menu using the **22dp Place (drop)** icon.
+*   Removed technical configuration from the period list headers to reduce visual clutter and unify mapping controls.
+*   Integrated the **"Tracked"** nomenclature into all technical tooltips.
+
+### Performance
+*   Optimized marker rendering by moving selection logic to a data-driven model, ensuring large periods (e.g., full year) remain responsive.

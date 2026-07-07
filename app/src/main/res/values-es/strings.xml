@@ -988,4 +988,11 @@
     <string name="marker_max_distance">Dist. máx.</string>
     <string name="marker_start">Inicio</string>
     <string name="marker_end">Fin</string>
+
+    <string name="track_layers">Capas de track</string>
+    <string name="track_type_best">Registrado</string>
+    <string name="track_type_gps">GPS</string>
+    <string name="track_type_fused">Google Fused</string>
+    <string name="track_type_network">Red</string>
+    <string name="legend">Leyenda</string>
 </resources>

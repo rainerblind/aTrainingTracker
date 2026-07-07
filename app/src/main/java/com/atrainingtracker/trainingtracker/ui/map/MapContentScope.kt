@@ -25,9 +25,6 @@ import com.google.android.gms.maps.model.LatLng
 /**
  * A DSL scope for defining the content of the ATrainingTrackerMap.
  */
-/**
- * A DSL scope for defining the content of the ATrainingTrackerMap.
- */
 interface MapContentScope {
     /**
      * Renders a generic mappable path (Track, Route, or Segment).
@@ -55,39 +52,98 @@ interface MapContentScope {
 
     fun markers(markers: List<LocationMarker>)
     fun liveTrack(path: List<LatLng>)
+
+    @Composable
+    fun Render(currentZoom: Float)
 }
 
 internal class MapContentScopeImpl(
     private val zoomFocus: MapZoomFocus,
-    private val currentZoom: Float,
     private val primaryColor: androidx.compose.ui.graphics.Color,
     private val context: android.content.Context,
     private val directionIcons: Triple<com.google.android.gms.maps.model.BitmapDescriptor?, com.google.android.gms.maps.model.BitmapDescriptor?, com.google.android.gms.maps.model.BitmapDescriptor?>,
     private val bSportType: com.atrainingtracker.banalservice.BSportType
 ) : MapContentScope {
 
-    private val composables = mutableStateListOf<@Composable () -> Unit>()
-    
-    // Collected data for Bounds fitting
+    // Data containers for rendering
     val tracks = mutableStateListOf<MapTrack>()
     val segments = mutableStateListOf<MapSegment>()
     val routes = mutableStateListOf<MapRoute>()
     val markers = mutableStateListOf<LocationMarker>()
     val currentTracks = mutableStateListOf<List<LatLng>>()
 
+    private data class ContextualPathData(val path: MappablePath, val alpha: Float)
+    private val contextualPaths = mutableStateListOf<ContextualPathData>()
+
     fun collect(block: MapContentScope.() -> Unit) {
-        composables.clear()
         tracks.clear()
         segments.clear()
         routes.clear()
         markers.clear()
         currentTracks.clear()
+        contextualPaths.clear()
         this.apply(block)
     }
 
     @Composable
-    fun Render() {
-        composables.forEach { it() }
+    override fun Render(currentZoom: Float) {
+        // 1. Contextual Paths (Background)
+        contextualPaths.forEach { data ->
+            MappablePathLayer(
+                path = data.path,
+                alpha = data.alpha,
+                currentZoom = currentZoom,
+                context = context,
+                directionIcons = directionIcons
+            )
+        }
+
+        // 2. Segments
+        segments.forEach { segment ->
+            MappablePathLayer(
+                path = segment,
+                alpha = 1.0f,
+                currentZoom = currentZoom,
+                context = context,
+                directionIcons = directionIcons
+            )
+        }
+
+        // 3. Routes
+        routes.forEach { route ->
+            val style = LocalMapStyle.current
+            val highlightRoute = zoomFocus != MapZoomFocus.FOLLOW_ME 
+                    || (route.isSelected && route.bSportType == bSportType)
+
+            MappablePathLayer(
+                path = route,
+                alpha = if (highlightRoute) 1.0f else style.routeUnselectedAlpha,
+                currentZoom = currentZoom,
+                context = context,
+                directionIcons = directionIcons
+            )
+        }
+
+        // 4. Tracks
+        tracks.forEach { track ->
+            MappablePathLayer(
+                path = track,
+                alpha = if (track.type == TrackType.BEST) 1.0f else 0.8f,
+                currentZoom = currentZoom,
+                context = context,
+                directionIcons = directionIcons
+            )
+        }
+
+        // 5. Markers
+        if (markers.isNotEmpty()) {
+            MarkerLayer(markers, primaryColor, context)
+        }
+
+        // 6. Live Tracks
+        currentTracks.forEach { path ->
+            LiveTrackLayer(path)
+        }
     }
 
     override fun path(path: MappablePath, alpha: Float, onPathClick: (Long) -> Unit) {
@@ -95,25 +151,12 @@ internal class MapContentScopeImpl(
             is MapTrack -> tracks.add(path)
             is MapSegment -> segments.add(path)
             is MapRoute -> routes.add(path)
-        }
-        composables.add {
-            MappablePathLayer(
-                path = path,
-                alpha = alpha,
-                currentZoom = currentZoom,
-                context = context,
-                directionIcons = directionIcons,
-                onPathClick = onPathClick
-            )
+            else -> {}
         }
     }
 
     override fun tracks(tracks: List<MapTrack>) {
-        tracks.forEach { track ->
-            if (track.isVisible) {
-                path(track)
-            }
-        }
+        this.tracks.addAll(tracks.filter { it.isVisible })
     }
 
     override fun segments(
@@ -121,44 +164,11 @@ internal class MapContentScopeImpl(
         activeLiveSegmentIds: Set<Long>,
         onSegmentClick: (Long) -> Unit
     ) {
-        segments.forEach { segment ->
-            composables.add {
-                val style = LocalMapStyle.current
-                val isLive = activeLiveSegmentIds.contains(segment.stravaId)
-                val isFollowMeEnabled = zoomFocus == MapZoomFocus.FOLLOW_ME
-                val alpha = if (!isFollowMeEnabled || isLive) 1.0f else style.segmentUnselectedAlpha
-                
-                MappablePathLayer(
-                    path = segment,
-                    alpha = alpha,
-                    currentZoom = currentZoom,
-                    context = context,
-                    directionIcons = directionIcons,
-                    onPathClick = onSegmentClick
-                )
-            }
-            this.segments.add(segment)
-        }
+        this.segments.addAll(segments)
     }
 
     override fun routes(routes: List<MapRoute>, onRouteClick: (Long) -> Unit) {
-        routes.forEach { route ->
-            composables.add {
-                val style = LocalMapStyle.current
-                val highlightRoute = zoomFocus != MapZoomFocus.FOLLOW_ME 
-                        || (route.isSelected && route.bSportType == bSportType)
-
-                MappablePathLayer(
-                    path = route,
-                    alpha = if (highlightRoute) 1.0f else style.routeUnselectedAlpha,
-                    currentZoom = currentZoom,
-                    context = context,
-                    directionIcons = directionIcons,
-                    onPathClick = onRouteClick
-                )
-            }
-            this.routes.add(route)
-        }
+        this.routes.addAll(routes)
     }
 
     override fun contextualPaths(
@@ -167,28 +177,16 @@ internal class MapContentScopeImpl(
         otherSportAlpha: Float
     ) {
         paths.forEach { path ->
-            // Background context is NOT added to the fitting lists (tracks, segments, routes)
-            // so that the MapBoundsController ignores them when calculating focus.
-            composables.add {
-                val alpha = if (path.bSportType == bSportType) sameSportAlpha else otherSportAlpha
-                MappablePathLayer(
-                    path = path,
-                    alpha = alpha,
-                    currentZoom = currentZoom,
-                    context = context,
-                    directionIcons = directionIcons
-                )
-            }
+            val alpha = if (path.bSportType == bSportType) sameSportAlpha else otherSportAlpha
+            contextualPaths.add(ContextualPathData(path, alpha))
         }
     }
 
     override fun markers(markers: List<LocationMarker>) {
         this.markers.addAll(markers)
-        composables.add { MarkerLayer(markers, primaryColor, context) }
     }
 
     override fun liveTrack(path: List<LatLng>) {
         this.currentTracks.add(path)
-        composables.add { LiveTrackLayer(path) }
     }
 }

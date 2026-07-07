@@ -36,6 +36,7 @@ class MyPreferenceManager(context: Context) {
         val IS_COMPACT_VIEW = booleanPreferencesKey("is_compact_view")
         val IS_HEATMAP_ENABLED = booleanPreferencesKey("is_heatmap_enabled")
         val ENABLED_PERIOD_MARKER_TYPES = stringSetPreferencesKey("enabled_period_marker_types")
+        val ENABLED_TRACK_TYPES = stringSetPreferencesKey("enabled_track_types")
     }
 
     val isCompactViewFlow: Flow<Boolean> = dataStore.data.map { preferences ->
@@ -73,6 +74,18 @@ class MyPreferenceManager(context: Context) {
             )
             val updated = if (enabled) current + type else current - type
             preferences[ENABLED_PERIOD_MARKER_TYPES] = updated
+        }
+    }
+
+    val enabledTrackTypesFlow: Flow<Set<String>> = dataStore.data.map { preferences ->
+        preferences[ENABLED_TRACK_TYPES] ?: setOf(com.atrainingtracker.trainingtracker.ui.map.TrackType.BEST.name)
+    }
+
+    suspend fun setTrackTypeEnabled(type: String, enabled: Boolean) {
+        dataStore.edit { preferences ->
+            val current = preferences[ENABLED_TRACK_TYPES] ?: setOf(com.atrainingtracker.trainingtracker.ui.map.TrackType.BEST.name)
+            val updated = if (enabled) current + type else current - type
+            preferences[ENABLED_TRACK_TYPES] = updated
         }
     }
 }

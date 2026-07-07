@@ -55,6 +55,7 @@ fun MapDetailLayout(
     maxAltitudeOverride: Double? = null,
     header: @Composable () -> Unit,
     mapContent: MapContentScope.() -> Unit = {},
+    overlay: @Composable BoxScope.() -> Unit = {},
     modifier: Modifier = Modifier,
     useStatusBarsPadding: Boolean = true,
     showMap: Boolean = true
@@ -117,6 +118,8 @@ fun MapDetailLayout(
                     },
                     content = mapContent
                 )
+
+                overlay()
 
                 // SHARE BUTTON
                 Surface(

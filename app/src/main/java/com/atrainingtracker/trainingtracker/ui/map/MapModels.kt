@@ -37,17 +37,17 @@ enum class TrackType(
     val zIndex: Float,
     val sourceSuffix: String?
 ) {
-    BEST(Color.Blue, 5f,null),
-    GPS(Color.Green, 4f, "gps"),
-    FUSED(Color.Yellow, 3f, "google_fused"),
-    NETWORK(Color.Magenta, 2f, "network");
+    BEST(Color.Blue, 2f,null),
+    GPS(Color.Green, 5f, "GPS"),
+    FUSED(Color.Yellow, 4f, "Google Fused"),
+    NETWORK(Color.Magenta, 3f, "Network");
 
     /**
      * Returns the database column name for Latitude for this specific source.
      */
     val latitudeColumn: String
         get() = if (sourceSuffix != null) {
-            "${SensorType.LATITUDE.name}_$sourceSuffix"
+            "${SensorType.LATITUDE.name} ($sourceSuffix)"
         } else {
             SensorType.LATITUDE.name
         }
@@ -57,7 +57,7 @@ enum class TrackType(
      */
     val longitudeColumn: String
         get() = if (sourceSuffix != null) {
-            "${SensorType.LONGITUDE.name}_$sourceSuffix"
+            "${SensorType.LONGITUDE.name} ($sourceSuffix)"
         } else {
             SensorType.LONGITUDE.name
         }
@@ -155,13 +155,15 @@ data class MapTrack(
 ) : MappablePath
 {
     override val latLngs: List<LatLng> by lazy { path.map { it.latLng } }
-    override val zIndex: Float get() = MapVisualization.TRACK_BASE_Z_INDEX
-    override val color: Color get() = type.color
-    override val width: Float get() = MapVisualization.TRACK_WIDTH
+    override val zIndex: Float get() = MapVisualization.TRACK_BASE_Z_INDEX + type.zIndex
+    override val color: Color get() = if (type == TrackType.BEST) type.color else type.color.copy(alpha = 0.8f)
+    override val width: Float get() = if (type == TrackType.BEST) MapVisualization.TRACK_WIDTH else MapVisualization.TRACK_WIDTH * 0.7f
     
-    override val overlayZIndex: Float get() = MapVisualization.TRACK_OVERLAY_Z_INDEX
-    override val pattern: List<com.google.android.gms.maps.model.PatternItem> 
-        get() = listOf(com.google.android.gms.maps.model.Dot(), com.google.android.gms.maps.model.Gap(MapVisualization.TRACK_DOT_GAP))
+    override val overlayZIndex: Float get() = MapVisualization.TRACK_OVERLAY_Z_INDEX + type.zIndex
+    override val pattern: List<com.google.android.gms.maps.model.PatternItem>?
+        get() = if (type == TrackType.BEST) {
+            listOf(com.google.android.gms.maps.model.Dot(), com.google.android.gms.maps.model.Gap(MapVisualization.TRACK_DOT_GAP))
+        } else null
 }
 
 @Immutable

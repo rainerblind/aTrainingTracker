@@ -1078,4 +1078,11 @@
     <string name="marker_max_distance">Max. Distanz</string>
     <string name="marker_start">Start</string>
     <string name="marker_end">Ende</string>
+
+    <string name="track_layers">Track-Ebenen</string>
+    <string name="track_type_best">Aufgezeichnet</string>
+    <string name="track_type_gps">GPS</string>
+    <string name="track_type_fused">Google Fused</string>
+    <string name="track_type_network">Netzwerk</string>
+    <string name="legend">Legende</string>
 </resources>

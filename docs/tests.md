@@ -96,6 +96,8 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-UI-052** | **Source Header Color Audit** | `REQ-UI-051` | Open `SensorSourceDialog` for a sensor with active and standby sources. | Header text colors SHALL match: Source=Dark Green, Backup=Light Green, Not connected=Grey. | Verified |
 | **TST-UI-053** | **Longest Workout Navigation** | `REQ-UI-052` | 1. Open a Period Summary with multiple workouts. 2. Tap the "Longest Workout" section. | The app SHALL navigate to the list and automatically scroll to the targeted workout. | Verified |
 | **TST-UI-054** | **Location Audit Metric** | `REQ-UI-053` | 1. Start a tracking session with a location provider active. 2. Tap the location icon in the `SensorStatus` header. | The `SensorSourceDialog` SHALL show "Accuracy" and its current value (e.g. "5 m") instead of "Longitude". | Verified |
+| **TST-UI-055** | **Multi-Track Visibility Audit** | `REQ-MAP-011`, `REQ-MAP-012` | 1. Open the Workout Details screen for a recorded activity. 2. Tap the "Layers" FAB. 3. Toggle different track types (GPS, Fused, Network). | The map SHALL update polylines in real-time to show/hide the selected tracks. The selection menu includes a color legend. | Verified |
+| **TST-UI-056** | **Map Preference Persistence** | `REQ-MAP-013` | 1. Toggle technical tracks in Workout Details. 2. Close and reopen the workout. | The previously selected track layers SHALL remain visible. | Verified |
 
 ## 4. Release Verification Workflow
 

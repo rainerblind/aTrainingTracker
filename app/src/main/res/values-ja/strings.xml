@@ -968,4 +968,11 @@
     <string name="marker_max_distance">最長距離</string>
     <string name="marker_start">開始</string>
     <string name="marker_end">終了</string>
+
+    <string name="track_layers">トラックレイヤー</string>
+    <string name="track_type_best">記録済み</string>
+    <string name="track_type_gps">GPS</string>
+    <string name="track_type_fused">Google Fused</string>
+    <string name="track_type_network">ネットワーク</string>
+    <string name="legend">凡例</string>
 </resources>
