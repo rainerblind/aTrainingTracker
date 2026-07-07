@@ -102,6 +102,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-UI-058** | **High-Fidelity Period Tracks** | `REQ-MAP-015` | 1. Compare a track in a Period Map overview with the same track in Workout Details. | Both tracks SHALL show identical fine-granular detail. | Verified |
 | **TST-UI-059** | **Alpha Consistency Audit** | `REQ-UI-054` | Static analysis of `WorkoutExtrema.kt` and `MetricItem.kt`. | No hardcoded `copy(alpha = ...)` literals; all use `TTAlpha` constants. | Verified |
 | **TST-UI-060** | **Primary Metric Hierarchy** | `REQ-UI-055` | Open Workout Details or Segment Details. | The primary value (e.g. Distance) SHALL be rendered in the `primary` theme color. | **Deactivated** |
+| **TST-UI-061** | **Theme Audit** | `REQ-UI-056` | Project-wide grep for `Color(0xFF...)` and `copy(alpha = ...)`. | All UI-related colors and alphas MUST use semantic tokens. | Proposed |
 
 ## 4. Release Verification Workflow
 
