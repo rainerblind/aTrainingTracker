@@ -167,26 +167,28 @@ fun DevicesTabbedScreen(
                                         )
                                     }
 
-                                    // Modern Options Menu
-                                    Box {
-                                        IconButton(onClick = { menuExpanded = true }) {
-                                            Icon(
-                                                imageVector = Icons.Default.MoreVert,
-                                                contentDescription = stringResource(R.string.devices_settings_header),
-                                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                            )
-                                        }
-                                        DropdownMenu(
-                                            expanded = menuExpanded,
-                                            onDismissRequest = { menuExpanded = false }
-                                        ) {
-                                            DropdownMenuItem(
-                                                text = { Text(stringResource(R.string.check_ANT_installation)) },
-                                                onClick = {
-                                                    menuExpanded = false
-                                                    onCheckAntInstallation()
-                                                }
-                                            )
+                                    // Modern Options Menu (Only shown for ANT+ troubleshooting)
+                                    if (protocol == Protocol.ANT_PLUS || protocol == Protocol.ALL) {
+                                        Box {
+                                            IconButton(onClick = { menuExpanded = true }) {
+                                                Icon(
+                                                    imageVector = Icons.Default.MoreVert,
+                                                    contentDescription = stringResource(R.string.devices_settings_header),
+                                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                                )
+                                            }
+                                            DropdownMenu(
+                                                expanded = menuExpanded,
+                                                onDismissRequest = { menuExpanded = false }
+                                            ) {
+                                                DropdownMenuItem(
+                                                    text = { Text(stringResource(R.string.check_ANT_installation)) },
+                                                    onClick = {
+                                                        menuExpanded = false
+                                                        onCheckAntInstallation()
+                                                    }
+                                                )
+                                            }
                                         }
                                     }
                                 }
