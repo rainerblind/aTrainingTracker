@@ -25,6 +25,9 @@ import android.view.ViewGroup
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -48,21 +51,31 @@ class FrequentPathsFragment : Fragment() {
             setContent {
                 ATrainingTrackerTheme {
                     val selectedCluster by viewModel.selectedCluster.collectAsState()
+                    var isTuning by remember { mutableStateOf(false) }
 
-                    if (selectedCluster == null) {
-                        FrequentPathsListScreen(
-                            viewModel = viewModel,
-                            onClusterClick = { viewModel.selectCluster(it) }
-                        )
-                    } else {
-                        BackHandler {
-                            viewModel.selectCluster(null)
+                    when {
+                        isTuning -> {
+                            BackHandler { isTuning = false }
+                            ClusterTuningScreen(
+                                viewModel = viewModel,
+                                onBack = { isTuning = false }
+                            )
                         }
-                        FrequentPathHeatmapScreen(
-                            cluster = selectedCluster!!,
-                            viewModel = viewModel,
-                            onBack = { viewModel.selectCluster(null) }
-                        )
+                        selectedCluster != null -> {
+                            BackHandler { viewModel.selectCluster(null) }
+                            FrequentPathHeatmapScreen(
+                                cluster = selectedCluster!!,
+                                viewModel = viewModel,
+                                onBack = { viewModel.selectCluster(null) }
+                            )
+                        }
+                        else -> {
+                            FrequentPathsListScreen(
+                                viewModel = viewModel,
+                                onClusterClick = { viewModel.selectCluster(it) },
+                                onTuneClick = { isTuning = true }
+                            )
+                        }
                     }
                 }
             }

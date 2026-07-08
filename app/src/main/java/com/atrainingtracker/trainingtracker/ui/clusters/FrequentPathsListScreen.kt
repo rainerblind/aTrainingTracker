@@ -42,7 +42,8 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 @Composable
 fun FrequentPathsListScreen(
     viewModel: FrequentPathsViewModel,
-    onClusterClick: (RouteCluster) -> Unit
+    onClusterClick: (RouteCluster) -> Unit,
+    onTuneClick: () -> Unit
 ) {
     val clusters by viewModel.allClusters.collectAsState()
 
@@ -50,6 +51,14 @@ fun FrequentPathsListScreen(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.my_locations)) },
+                actions = {
+                    IconButton(onClick = onTuneClick) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_settings_24),
+                            contentDescription = "Tune Clustering"
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
