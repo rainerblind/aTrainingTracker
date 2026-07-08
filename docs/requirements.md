@@ -54,6 +54,8 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-SET-007** | **Inferred Sport and Name.** | The system SHALL suggest the most likely Name and Sport for a new workout by matching its fingerprint against the learned Knowledge Base. | `WorkoutDataMapper.kt` | `TST-SET-001` | Verified |
 | **REQ-SET-008** | **Learning Feedback Loop.** | The system SHALL refine the cluster centroids and update probable sport/name associations whenever a user overrides or confirms a suggestion. | `WorkoutRepository.kt` | `TST-SET-001` | Verified |
 | **REQ-SET-009** | **Frequent Paths Heatmap.** | The system SHALL provide a visualization for Route Clusters that overlays all associated workout tracks as a heatmap, along with the spatial fingerprint markers. | `FrequentPathHeatmapScreen.kt` | `TST-SET-002` | Verified |
+| **REQ-SET-010** | **Tuning Parameters UI.** | The system SHALL provide a UI to edit the tuning parameters (Endpoint tolerance, Apex tolerance, Distance tolerance) for the Route Cluster Engine. | `ClusterTuningScreen.kt` | `TST-SET-003` | Verified |
+| **REQ-SET-011** | **Clustering Recalculation.** | Upon modification of tuning parameters, the system SHALL allow the user to trigger a full recalculation of Route Clusters across the entire workout history. | `RouteClusterEngine.kt` | `TST-SET-003` | Verified |
 
 ## 5. Data Storage & Post-Processing
 

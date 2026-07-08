@@ -1203,4 +1203,13 @@
     <string name="cluster_average_distance">Average Distance</string>
     <string name="cluster_recordings_format">%1$d recordings</string>
     <string name="cluster_ref_distance_label">Ref: %1$s</string>
+
+    <string name="cluster_tuning_title">Clustering Parameters</string>
+    <string name="cluster_tuning_endpoint_label">Endpoint Tolerance</string>
+    <string name="cluster_tuning_apex_label">Apex (Max Displacement) Tolerance</string>
+    <string name="cluster_tuning_distance_label">Distance Tolerance</string>
+    <string name="cluster_tuning_recalculate_button">Recalculate All Clusters</string>
+    <string name="cluster_tuning_warning">Warning: Recalculating will wipe all learned cluster names and grouping, then rebuild them from history using these new parameters.</string>
+    <string name="cluster_tuning_recalculating">Recalculating clusters…</string>
+    <string name="cluster_tuning_take_while">This might take a while.</string>
 </resources>

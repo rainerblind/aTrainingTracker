@@ -192,14 +192,21 @@ class RouteClusterEngine private constructor(context: Context) {
         val apexDist = distanceBetween(apex, LatLng(cluster.maxDispLat, cluster.maxDispLng))
         val lengthDiff = Math.abs(distance - cluster.refDistance) / cluster.refDistance
 
-        // Normalized weighted score. If total < 1.0, it's considered a match.
-        // Tolerances: 200m for endpoints, 400m for apex, 20% for distance.
-        val s1 = (startDist / 200.0) * 0.25
-        val s2 = (endDist / 200.0) * 0.25
-        val s3 = (apexDist / 400.0) * 0.25
-        val s4 = (lengthDiff / 0.20) * 0.25
+        // Normalized weighted score using dynamic tuning parameters
+        val s1 = (startDist / TrainingApplication.getClusterTolEndpoints()) * 0.25
+        val s2 = (endDist / TrainingApplication.getClusterTolEndpoints()) * 0.25
+        val s3 = (apexDist / TrainingApplication.getClusterTolApex()) * 0.25
+        val s4 = (lengthDiff / TrainingApplication.getClusterTolDistance()) * 0.25
         
         return s1 + s2 + s3 + s4
+    }
+
+    /**
+     * Wipes the cluster database and re-runs the migration logic with current parameters.
+     */
+    fun recalculateHistory(context: Context) {
+        dbManager.deleteAllClusters()
+        migrateHistory(context)
     }
 
     private fun distanceBetween(p1: LatLng, p2: LatLng): Float {

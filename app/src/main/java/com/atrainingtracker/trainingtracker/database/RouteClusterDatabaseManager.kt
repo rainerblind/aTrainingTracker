@@ -109,6 +109,10 @@ class RouteClusterDatabaseManager private constructor(context: Context) {
         )
     }
 
+    fun deleteAllClusters() {
+        dbHelper.writableDatabase.delete(RouteClusterContract.TABLE_NAME, null, null)
+    }
+
     private fun mapCursorToCluster(cursor: Cursor): RouteCluster {
         return RouteCluster(
             id = cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID)),

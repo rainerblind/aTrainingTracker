@@ -19,15 +19,21 @@
 package com.atrainingtracker.trainingtracker.ui.clusters
 
 import android.app.Application
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.RouteCluster
 import com.atrainingtracker.trainingtracker.database.RouteClusterRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class FrequentPathsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -41,6 +47,14 @@ class FrequentPathsViewModel(application: Application) : AndroidViewModel(applic
     private val _selectedCluster = MutableStateFlow<RouteCluster?>(null)
     val selectedCluster: StateFlow<RouteCluster?> = _selectedCluster.asStateFlow()
 
+    private val _isRecalculating = MutableStateFlow(false)
+    val isRecalculating: StateFlow<Boolean> = _isRecalculating.asStateFlow()
+
+    // Tuning Parameters State
+    var endpointTolerance by mutableStateOf(TrainingApplication.getClusterTolEndpoints())
+    var apexTolerance by mutableStateOf(TrainingApplication.getClusterTolApex())
+    var distanceTolerance by mutableStateOf(TrainingApplication.getClusterTolDistance())
+
     init {
         refresh()
     }
@@ -48,6 +62,27 @@ class FrequentPathsViewModel(application: Application) : AndroidViewModel(applic
     fun refresh() {
         viewModelScope.launch {
             repository.refreshClusters()
+        }
+    }
+
+    fun recalculateClusters() {
+        viewModelScope.launch {
+            _isRecalculating.value = true
+            
+            // Save current parameters to SP first
+            val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(getApplication())
+            prefs.edit()
+                .putFloat(TrainingApplication.SP_CLUSTER_TOL_ENDPOINTS, endpointTolerance)
+                .putFloat(TrainingApplication.SP_CLUSTER_TOL_APEX, apexTolerance)
+                .putFloat(TrainingApplication.SP_CLUSTER_TOL_DISTANCE, distanceTolerance)
+                .apply()
+
+            withContext(Dispatchers.IO) {
+                com.atrainingtracker.trainingtracker.database.RouteClusterEngine.Companion.getInstance(getApplication())
+                    .recalculateHistory(getApplication())
+                repository.refreshClusters()
+            }
+            _isRecalculating.value = false
         }
     }
 

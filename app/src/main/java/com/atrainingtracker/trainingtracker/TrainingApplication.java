@@ -108,6 +108,10 @@ public class TrainingApplication extends Application {
     public static final String SP_STRAVA_TOKEN = "stravaToken";
     public static final String SP_STRAVA_REFRESH_TOKEN = "stravaRefreshToken";
     public static final String SP_STRAVA_TOKEN_EXPIRES_AT = "stravaTokenExpiresAt";
+    public static final String SP_STRAVA_DEMO_MODE = "stravaDemoMode";
+    public static final String SP_CLUSTER_TOL_ENDPOINTS = "clusterTolEndpoints";
+    public static final String SP_CLUSTER_TOL_APEX = "clusterTolApex";
+    public static final String SP_CLUSTER_TOL_DISTANCE = "clusterTolDistance";
     public static final String UPDATE_STRAVA_EQUIPMENT = "updateStravaEquipment";
     public static final String SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT = "lastUpdateTimeOfStravaEquipment";
     public static final String SP_STRAVA_ATHLETE_ID = "stravaAthleteId";
@@ -540,8 +544,28 @@ public class TrainingApplication extends Application {
         cSharedPreferences.edit().remove(TrainingApplication.SP_STRAVA_TOKEN).apply();
         cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_STRAVA, false).apply();
         cSharedPreferences.edit().remove(SP_STRAVA_ATHLETE_ID).apply();
+        cSharedPreferences.edit().putBoolean(SP_STRAVA_DEMO_MODE, false).apply();
         if (DEBUG) Log.i(TAG, "end of deleteStravaToken");
     }
+
+    public static boolean isStravaDemoMode() {
+        return cSharedPreferences.getBoolean(SP_STRAVA_DEMO_MODE, false);
+    }
+
+    public static void injectMockStravaAccount() {
+        cSharedPreferences.edit()
+                .putString(SP_STRAVA_TOKEN, "mock_access_token")
+                .putString(SP_STRAVA_REFRESH_TOKEN, "mock_refresh_token")
+                .putInt(SP_STRAVA_TOKEN_EXPIRES_AT, (int) (System.currentTimeMillis() / 1000 + 3600))
+                .putInt(SP_STRAVA_ATHLETE_ID, 12345)
+                .putBoolean(SP_UPLOAD_TO_STRAVA, true)
+                .putBoolean(SP_STRAVA_DEMO_MODE, true)
+                .apply();
+    }
+
+    public static float getClusterTolEndpoints() { return cSharedPreferences.getFloat(SP_CLUSTER_TOL_ENDPOINTS, 200f); }
+    public static float getClusterTolApex() { return cSharedPreferences.getFloat(SP_CLUSTER_TOL_APEX, 400f); }
+    public static float getClusterTolDistance() { return cSharedPreferences.getFloat(SP_CLUSTER_TOL_DISTANCE, 0.20f); }
 
     @NonNull
     public static String getLastUpdateTimeOfStravaEquipment() {
