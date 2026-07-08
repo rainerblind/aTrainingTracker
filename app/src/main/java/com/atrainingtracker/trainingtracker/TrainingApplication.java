@@ -789,7 +789,7 @@ public class TrainingApplication extends Application {
     }
 
     private void runRouteClusterMigration() {
-        final String SP_MIGRATION_ROUTE_CLUSTERS = "migration_route_clusters_v1";
+        final String SP_MIGRATION_ROUTE_CLUSTERS = "migration_route_clusters_v2";
         if (!cSharedPreferences.getBoolean(SP_MIGRATION_ROUTE_CLUSTERS, false)) {
             new Thread(() -> {
                 if (DEBUG) Log.i(TAG, "Starting Route Cluster History Migration...");

@@ -54,12 +54,10 @@
                 android:icon="@drawable/ic_route"
                 android:title="@string/routes" />
 
-<!-- NO_MY_LOCATIONS
             <item
                 android:id="@+id/drawer_my_locations"
                 android:icon="@drawable/my_locations"
                 android:title="@string/my_locations" />
-                -->
         </menu>
     </item>
     <item android:title="@string/drawer__my_stuff">

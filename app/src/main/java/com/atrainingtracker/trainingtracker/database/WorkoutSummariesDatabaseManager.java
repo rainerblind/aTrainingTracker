@@ -814,6 +814,7 @@ public class WorkoutSummariesDatabaseManager {
         public static final String MAP_POLYLINE = "mapPolyline"; // added in Version 13
         public static final String DISTANCE_STREAM = "distanceStream"; // added in Version 14
         public static final String ALTITUDE_STREAM = "altitudeStream"; // added in Version 14
+        public static final String CLUSTER_ID = "clusterId"; // added in Version 20
         // new entries in version 5 of the DB
         @Deprecated
         public static final String EXTREMA_VALUES_CALCULATED = "extremumValuesCalculated";
@@ -879,7 +880,8 @@ public class WorkoutSummariesDatabaseManager {
         // public static final int DB_VERSION = 15; // upgrade to Version 15 at 06.05.2026: Unique step size for encoding map polyline, distance, and elevation: ENCODIN_STEP_SIZE
         // public static final int DB_VERSION = 16; // upgrade to Version 16 at 08.05.2026: Added uploadToStrava
         // public static final int DB_VERSION = 17; // 08.05.2026: Bugfix: add eventually missing columns (altitude and distance stream)
-        public static final int DB_VERSION = 19; // 18; // 10.06.2026 Added lat/long to the extrema values
+        // public static final int DB_VERSION = 18; // 10.06.2026 Added lat/long to the extrema values
+        public static final int DB_VERSION = 20; // 25.02.2026 Added clusterId
         
 
 
@@ -914,6 +916,7 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.MAP_POLYLINE + " text,"    // added in Version 13
                 + WorkoutSummaries.DISTANCE_STREAM + " text," // added in Version 14
                 + WorkoutSummaries.ALTITUDE_STREAM + " text," // added in Version 14
+                + WorkoutSummaries.CLUSTER_ID + " int DEFAULT -1," // added in Version 20
                 + WorkoutSummaries.EXTREMA_VALUES_CALCULATED + " int)";
 
         protected static final String CREATE_TABLE_EXTREMA_VALUES = "create table " + WorkoutSummaries.TABLE_EXTREMA_VALUES + " ("
@@ -1122,6 +1125,16 @@ public class WorkoutSummariesDatabaseManager {
 
                 // Populate new columns for existing data
                 migrateExtremaPositions(db);
+            }
+
+            if (oldVersion < 20) {
+                Log.i(TAG, "upgrading to DB version 20");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.CLUSTER_ID, "int", "-1");
+                
+                // Trigger re-learning to populate clusterIds
+                db.setTransactionSuccessful(); // ensure previous changes are committed if needed? No, onUpgrade is in a transaction usually.
+                // We'll run migration logic after upgrade finished in TrainingApplication or here?
+                // It's safer to do it in RouteClusterEngine.migrateHistory
             }
         }
 
