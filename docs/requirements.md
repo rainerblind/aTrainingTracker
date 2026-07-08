@@ -56,6 +56,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-SET-009** | **Frequent Paths Heatmap.** | The system SHALL provide a visualization for Route Clusters that overlays all associated workout tracks as a heatmap, along with the spatial fingerprint markers. | `FrequentPathHeatmapScreen.kt` | `TST-SET-002` | Verified |
 | **REQ-SET-010** | **Tuning Parameters UI.** | The system SHALL provide a UI to edit the tuning parameters (Endpoint tolerance, Apex tolerance, Distance tolerance) for the Route Cluster Engine. | `ClusterTuningScreen.kt` | `TST-SET-003` | Verified |
 | **REQ-SET-011** | **Clustering Recalculation.** | Upon modification of tuning parameters, the system SHALL allow the user to trigger a full recalculation of Route Clusters across the entire workout history. | `RouteClusterEngine.kt` | `TST-SET-003` | Verified |
+| **REQ-SET-012** | **Route Cluster List Visualization.** | The system SHALL display a small map for each item in the Frequent Paths list, visualizing the cluster's signature points (Start, End, and Max Line Distance) using standard icons. | `FrequentPathsListScreen.kt` | `TST-SET-004` | Verified |
 
 ## 5. Data Storage & Post-Processing
 
