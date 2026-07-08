@@ -81,7 +81,8 @@ fun FrequentPathHeatmapScreen(
     MapDetailLayout(
         bSportType = sportType,
         zoomFocus = MapZoomFocus.FIT_PRIMARY,
-        activeScrubPath = mapTracks.firstOrNull()?.path,
+        activeScrubPath = null,
+        showElevationProfile = false,
         header = {
             TopAppBar(
                 title = { 
