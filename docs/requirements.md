@@ -50,6 +50,9 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-SET-003** | Configurable speed thresholds for classification. | Tailor automation to user's specific pace profile. | `TrainingApplication.java` | `TST-UNT-003` | Verified |
 | **REQ-SET-004** | "Fancy Name" schemes using location and detours. | Provide descriptive workout names automatically. | `WorkoutSummariesDatabaseManager.java`| `TST-STR-001` | Verified |
 | **REQ-SET-005** | Support dual-unit systems (Metric and Imperial). | Accommodate global user base. | `MyUnits.java`, `MyHelper.java` | `TST-MAN-001` | Verified |
+| **REQ-SET-006** | **Agnostic Route Clustering.** | The system SHALL automatically group similar tracks into \"Route Clusters\" based on spatial fingerprints (Start, End, Apex, Distance) regardless of the initial sport type. | `RouteClusterEngine.kt` | `TST-SET-001` | Verified |
+| **REQ-SET-007** | **Inferred Sport and Name.** | The system SHALL suggest the most likely Name and Sport for a new workout by matching its fingerprint against the learned Knowledge Base. | `WorkoutDataMapper.kt` | `TST-SET-001` | Verified |
+| **REQ-SET-008** | **Learning Feedback Loop.** | The system SHALL refine the cluster centroids and update probable sport/name associations whenever a user overrides or confirms a suggestion. | `WorkoutRepository.kt` | `TST-SET-001` | Verified |
 
 ## 5. Data Storage & Post-Processing
 

@@ -784,6 +784,21 @@ public class TrainingApplication extends Application {
         ContextCompat.registerReceiver(this, mTrackingStoppedReceiver, new IntentFilter(TrackerService.TRACKING_FINISHED_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mPauseTrackingReceiver, new IntentFilter(REQUEST_PAUSE_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mResumeFromPaused, new IntentFilter(REQUEST_RESUME_FROM_PAUSED), ContextCompat.RECEIVER_NOT_EXPORTED);
+
+        runRouteClusterMigration();
+    }
+
+    private void runRouteClusterMigration() {
+        final String SP_MIGRATION_ROUTE_CLUSTERS = "migration_route_clusters_v1";
+        if (!cSharedPreferences.getBoolean(SP_MIGRATION_ROUTE_CLUSTERS, false)) {
+            new Thread(() -> {
+                if (DEBUG) Log.i(TAG, "Starting Route Cluster History Migration...");
+                com.atrainingtracker.trainingtracker.database.RouteClusterEngine.Companion.getInstance(this)
+                        .migrateHistory(this);
+                cSharedPreferences.edit().putBoolean(SP_MIGRATION_ROUTE_CLUSTERS, true).apply();
+                if (DEBUG) Log.i(TAG, "Route Cluster History Migration Finished.");
+            }).start();
+        }
     }
 
     // helper method to create the Notification Builder

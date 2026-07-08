@@ -76,20 +76,40 @@ class WorkoutDataMapper(
         val fileBaseName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME))
         val stravaActivityData = if (fileBaseName != null) stravaUploadDbHelper.getStravaActivityData(fileBaseName) else null
 
+        val totalDistance = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m))
+        val startLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.START)
+        val endLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.END)
+        val maxDispLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
+
+        var workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME))
+        var suggestedSportId = sportId
+
+        // --- AUTO-NAME & SPORT SUGGESTION (SCRUM-44) ---
+        if (workoutName == fileBaseName || workoutName.isNullOrEmpty()) {
+            if (startLatLng != null && endLatLng != null && maxDispLatLng != null) {
+                val suggestion = com.atrainingtracker.trainingtracker.database.RouteClusterEngine.getInstance(context)
+                    .suggestCluster(startLatLng, endLatLng, maxDispLatLng, totalDistance)
+                
+                if (suggestion != null) {
+                    workoutName = "${suggestion.name} #${suggestion.hitCount + 1}"
+                    suggestedSportId = suggestion.probableSportId
+                }
+            }
+        }
 
         // The mapper is responsible for assembling the final object from its constituent parts.
         return WorkoutData(
             id = workoutId,
             finished = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.FINISHED)) == 1,
             fileBaseName = fileBaseName,
-            workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME)),
-            sportId = sportId,
-            sportName = sportName,
+            workoutName = workoutName,
+            sportId = suggestedSportId,
+            sportName = if (suggestedSportId != sportId) sportTypeDatabaseManager.getUIName(suggestedSportId) else sportName,
             formattedDate = dateTimeResult.date,
             formattedTime = dateTimeResult.time,
             startTimeS = dateTimeResult.timestampS,
             localDateTime = dateTimeResult.localDateTime,
-            bSportType = bSportType,
+            bSportType = if (suggestedSportId != sportId) sportTypeDatabaseManager.getBSportType(suggestedSportId) else bSportType,
             equipmentName = equipmentName,
             equipmentId = equipmentId,
             commute = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.COMMUTE)) == 1,
@@ -99,7 +119,7 @@ class WorkoutDataMapper(
             encodedAltitudes = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.ALTITUDE_STREAM)) ?: "",
             encodedDistances = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_STREAM)) ?: "",
 
-            totalDistance = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m)),
+            totalDistance = totalDistance,
             maxDisplacement = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX),
             activeTimeSec = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s)),
             totalTimeSec = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_TOTAL_s)),
@@ -109,7 +129,9 @@ class WorkoutDataMapper(
             minAltitude = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.ALTITUDE, ExtremaType.MIN),
             maxAltitude = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.ALTITUDE, ExtremaType.MAX),
             maxAltitudeLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MAX),
-            maxDisplacementLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX),
+            maxDisplacementLatLng = maxDispLatLng,
+            startLatLng = startLatLng,
+            endLatLng = endLatLng,
 
             description = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.DESCRIPTION)),
             goal = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.GOAL)),

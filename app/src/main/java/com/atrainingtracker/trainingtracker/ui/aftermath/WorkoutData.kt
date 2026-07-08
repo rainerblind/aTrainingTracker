@@ -93,6 +93,8 @@ data class WorkoutData(
     val maxAltitude: Double?,
     val maxAltitudeLatLng: LatLng? = null,
     val maxDisplacementLatLng: LatLng? = null,
+    val startLatLng: LatLng? = null,
+    val endLatLng: LatLng? = null,
 
     val description: String?,
     val goal: String?,
