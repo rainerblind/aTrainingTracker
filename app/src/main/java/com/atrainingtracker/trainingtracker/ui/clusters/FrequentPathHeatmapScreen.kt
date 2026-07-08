@@ -78,6 +78,18 @@ fun FrequentPathHeatmapScreen(
         )
     }
 
+    val clusterPaths = remember(workouts) {
+        workouts.mapNotNull { if (it.mapPolyline.isNotEmpty()) com.google.maps.android.PolyUtil.decode(it.mapPolyline) else null }
+    }
+
+    // Adaptive heatmap parameters based on workout count (SCRUM-179 refinement)
+    val workoutCount = cluster.hitCount
+    val heatmapOpacity = when {
+        workoutCount <= 5 -> 0.6
+        workoutCount <= 20 -> 0.8
+        else -> 1.0
+    }
+
     MapDetailLayout(
         bSportType = sportType,
         zoomFocus = MapZoomFocus.FIT_PRIMARY,
@@ -106,9 +118,12 @@ fun FrequentPathHeatmapScreen(
             )
         },
         mapContent = {
-            // Apply a heatmap-like transparency to all tracks
+            // Background heatmap for the cluster
+            heatmap(clusterPaths, opacity = heatmapOpacity)
+
+            // Individual tracks with very low alpha to give some definition to the heatmap
             mapTracks.forEach { track ->
-                path(track, alpha = 0.2f)
+                path(track, alpha = 0.1f)
             }
             markers(fingerprintMarkers)
         },

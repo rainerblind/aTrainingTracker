@@ -19,10 +19,8 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.SphericalUtil
-import com.google.maps.android.heatmaps.Gradient
 import com.google.maps.android.heatmaps.HeatmapTileProvider
-import com.google.maps.android.heatmaps.WeightedLatLng
+import com.atrainingtracker.trainingtracker.ui.map.createHeatmapProvider
 
 /**
  * Encapsulates the visual styling for period-based maps.
@@ -46,41 +44,14 @@ fun getPeriodMapVisuals(
         if (allPaths.isEmpty() || periodType == PeriodType.DAY || !isHeatmapEnabled) {
             null
         } else {
-            // Densify points for cycle/fast activities so the heatmap looks like a continuous trail
-            // instead of disconnected blobs due to downsampling.
-            // We use WeightedLatLng to give every point a base "intensity" boost so single
-            // workouts are clearly visible even in long periods.
-            val allPoints = allPaths.flatMap { path ->
-                densifyPath(path, 5.0).map { WeightedLatLng(it, 2.0) }
+            val opacity = when (periodType) {
+                PeriodType.WEEK -> 0.6
+                PeriodType.MONTH -> 0.8
+                PeriodType.YEAR -> 1.0
+                else -> 0.0
             }
 
-            if (allPoints.isEmpty()) null
-            else {
-                val opacity = when (periodType) {
-                    PeriodType.WEEK -> 0.6
-                    PeriodType.MONTH -> 0.8
-                    PeriodType.YEAR -> 1.0
-                    else -> 0.0
-                }
-
-                // Modern sequential Blue gradient that respects the workout "Identity Blue".
-                // Transitions from a fresh Cyan -> Workout Blue -> Deep Indigo.
-                // This feels more modern and less "technical" than the old rainbow scale.
-                val colors = intArrayOf(
-                    0xFF00E5FF.toInt(), // Low density: Vibrant Cyan
-                    0xFF0000FF.toInt(), // Medium: The "Identity" Blue
-                    0xFF311B92.toInt()  // High density: Deep Indigo
-                )
-                val startPoints = floatArrayOf(0.2f, 0.6f, 1.0f)
-                val gradient = Gradient(colors, startPoints)
-
-                HeatmapTileProvider.Builder()
-                    .weightedData(allPoints)
-                    .opacity(opacity)
-                    .radius(10)
-                    .gradient(gradient)
-                    .build()
-            }
+            createHeatmapProvider(allPaths, opacity)
         }
     }
 
@@ -103,30 +74,4 @@ fun getPeriodMapVisuals(
     }
 
     return PeriodMapVisuals(heatmapProvider, polylineAlpha, polylineWidth)
-}
-
-/**
- * Adds intermediate points to a path if the distance between consecutive points
- * exceeds [maxDistanceMeters]. This improves heatmap quality for sparse data.
- */
-private fun densifyPath(path: List<LatLng>, maxDistanceMeters: Double): List<LatLng> {
-    if (path.isEmpty()) return emptyList()
-    val result = mutableListOf<LatLng>()
-
-    for (i in 0 until path.size - 1) {
-        val start = path[i]
-        val end = path[i + 1]
-        result.add(start)
-
-        val distance = SphericalUtil.computeDistanceBetween(start, end)
-        if (distance > maxDistanceMeters) {
-            val numSegments = (distance / maxDistanceMeters).toInt()
-            for (j in 1..numSegments) {
-                val fraction = j.toDouble() / (numSegments + 1)
-                result.add(SphericalUtil.interpolate(start, end, fraction))
-            }
-        }
-    }
-    result.add(path.last())
-    return result
 }

@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.map
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
 import com.google.android.gms.maps.model.LatLng
 
 /**
@@ -52,6 +53,7 @@ interface MapContentScope {
 
     fun markers(markers: List<LocationMarker>)
     fun liveTrack(path: List<LatLng>)
+    fun heatmap(allPaths: List<List<LatLng>>, opacity: Double = 0.8)
 
     @Composable
     fun Render(currentZoom: Float)
@@ -72,6 +74,9 @@ internal class MapContentScopeImpl(
     val markers = mutableStateListOf<LocationMarker>()
     val currentTracks = mutableStateListOf<List<LatLng>>()
 
+    private data class HeatmapData(val allPaths: List<List<LatLng>>, val opacity: Double)
+    private val heatmaps = mutableStateListOf<HeatmapData>()
+
     private data class ContextualPathData(val path: MappablePath, val alpha: Float)
     private val contextualPaths = mutableStateListOf<ContextualPathData>()
 
@@ -81,6 +86,7 @@ internal class MapContentScopeImpl(
         routes.clear()
         markers.clear()
         currentTracks.clear()
+        heatmaps.clear()
         contextualPaths.clear()
         this.apply(block)
     }
@@ -144,6 +150,16 @@ internal class MapContentScopeImpl(
         currentTracks.forEach { path ->
             LiveTrackLayer(path)
         }
+
+        // 7. Heatmaps
+        heatmaps.forEach { data ->
+            val provider = remember(data.allPaths, data.opacity) {
+                createHeatmapProvider(data.allPaths, data.opacity)
+            }
+            provider?.let {
+                com.google.maps.android.compose.TileOverlay(tileProvider = it)
+            }
+        }
     }
 
     override fun path(path: MappablePath, alpha: Float, onPathClick: (Long) -> Unit) {
@@ -188,5 +204,9 @@ internal class MapContentScopeImpl(
 
     override fun liveTrack(path: List<LatLng>) {
         this.currentTracks.add(path)
+    }
+
+    override fun heatmap(allPaths: List<List<LatLng>>, opacity: Double) {
+        this.heatmaps.add(HeatmapData(allPaths, opacity))
     }
 }

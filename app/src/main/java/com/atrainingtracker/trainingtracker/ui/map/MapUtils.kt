@@ -213,3 +213,62 @@ fun saveBitmapDescriptorFactoryFromBitmap(bm: Bitmap): BitmapDescriptor? {
         return null
     }
 }
+
+/**
+ * Adds intermediate points to a path if the distance between consecutive points
+ * exceeds [maxDistanceMeters]. This improves heatmap quality for sparse data.
+ */
+fun densifyPath(path: List<LatLng>, maxDistanceMeters: Double): List<LatLng> {
+    if (path.isEmpty()) return emptyList()
+    val result = mutableListOf<LatLng>()
+
+    for (i in 0 until path.size - 1) {
+        val start = path[i]
+        val end = path[i + 1]
+        result.add(start)
+
+        val distance = com.google.maps.android.SphericalUtil.computeDistanceBetween(start, end)
+        if (distance > maxDistanceMeters) {
+            val numSegments = (distance / maxDistanceMeters).toInt()
+            for (j in 1..numSegments) {
+                val fraction = j.toDouble() / (numSegments + 1)
+                result.add(com.google.maps.android.SphericalUtil.interpolate(start, end, fraction))
+            }
+        }
+    }
+    result.add(path.last())
+    return result
+}
+
+/**
+ * Creates a HeatmapTileProvider with the standard training heatmap styling.
+ */
+fun createHeatmapProvider(
+    allPaths: List<List<LatLng>>,
+    opacity: Double = 0.8,
+    radius: Int = 10
+): com.google.maps.android.heatmaps.HeatmapTileProvider? {
+    if (allPaths.isEmpty()) return null
+
+    val allPoints = allPaths.flatMap { path ->
+        densifyPath(path, 5.0).map { com.google.maps.android.heatmaps.WeightedLatLng(it, 2.0) }
+    }
+
+    if (allPoints.isEmpty()) return null
+
+    // Modern sequential Blue gradient (Cyan -> Blue -> Deep Indigo)
+    val colors = intArrayOf(
+        0xFF00E5FF.toInt(), // Low density: Vibrant Cyan
+        0xFF0000FF.toInt(), // Medium: The "Identity" Blue
+        0xFF311B92.toInt()  // High density: Deep Indigo
+    )
+    val startPoints = floatArrayOf(0.2f, 0.6f, 1.0f)
+    val gradient = com.google.maps.android.heatmaps.Gradient(colors, startPoints)
+
+    return com.google.maps.android.heatmaps.HeatmapTileProvider.Builder()
+        .weightedData(allPoints)
+        .opacity(opacity)
+        .radius(radius)
+        .gradient(gradient)
+        .build()
+}
