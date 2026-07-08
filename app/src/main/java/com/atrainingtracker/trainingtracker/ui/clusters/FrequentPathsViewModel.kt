@@ -26,6 +26,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.RouteCluster
+import com.atrainingtracker.trainingtracker.database.RouteClusterEngine
 import com.atrainingtracker.trainingtracker.database.RouteClusterRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import kotlinx.coroutines.Dispatchers
@@ -111,6 +112,31 @@ class FrequentPathsViewModel(application: Application) : AndroidViewModel(applic
             // Update selected cluster if it's the one renamed
             if (_selectedCluster.value?.id == cluster.id) {
                 _selectedCluster.value = updated
+            }
+        }
+    }
+
+    fun getCandidateClustersForWorkout(workout: WorkoutData): List<Pair<RouteCluster, Double>> {
+        val start = workout.startLatLng ?: return emptyList()
+        val end = workout.endLatLng ?: return emptyList()
+        val apex = workout.maxDisplacementLatLng ?: return emptyList()
+        
+        return RouteClusterEngine.getInstance(getApplication())
+            .getClusterScores(start, end, apex, workout.totalDistance, workout.workoutName)
+    }
+
+    fun moveWorkout(workout: WorkoutData, newClusterId: Long) {
+        val currentClusterId = _selectedCluster.value?.id ?: return
+        if (currentClusterId == newClusterId) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            RouteClusterEngine.getInstance(getApplication())
+                .moveWorkoutToCluster(getApplication(), workout.id, currentClusterId, newClusterId)
+            
+            // Refresh state
+            repository.refreshClusters()
+            _selectedCluster.value?.let { current ->
+                _clusterWorkouts.value = repository.getWorkoutsForCluster(current.id)
             }
         }
     }

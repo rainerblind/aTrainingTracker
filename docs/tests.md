@@ -116,6 +116,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-SET-006** | **Auto-Dismiss Tuning** | `REQ-SET-014` | 1. Open Tuning screen. 2. Tap \"Recalculate All Clusters\". 3. Wait for completion. | The UI SHALL automatically navigate back to the Frequent Paths list view upon completion. | Verified |
 | **TST-SET-007** | **Unique Cluster Naming** | `REQ-SET-015` | 1. Create a cluster named \"Home\". 2. Create a spatially distinct route and also name it \"Home\". | The second cluster SHALL be automatically named \"Home var 2\". | Verified |
 | **TST-SET-008** | **Edit Cluster Name** | `REQ-SET-016` | 1. Select a route cluster. 2. Tap Edit Icon in TopAppBar. 3. Enter new name. 4. Save. | 1. The name SHALL be updated in the database. 2. The UI SHALL immediately reflect the new name in the list and details view. | Verified |
+| **TST-SET-009** | **Manual Workout Reassignment** | `REQ-SET-017` | 1. Open a Route Heatmap. 2. Tap a specific workout polyline. 3. Select a different cluster from the candidate list. 4. Save. | 1. The workout SHALL be moved to the target cluster. 2. Centroids for both clusters SHALL be recalculated. 3. The UI SHALL refresh to show the workout in its new home. | Verified |
 
 ## 4. Release Verification Workflow
 

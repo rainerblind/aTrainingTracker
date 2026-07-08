@@ -61,6 +61,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-SET-014** | **Auto-Dismiss Tuning UI.** | The system SHALL automatically return to the cluster list view once a recalculation process is successfully completed. | `FrequentPathsFragment.kt`, `FrequentPathsViewModel.kt` | `TST-SET-006` | Verified |
 | **REQ-SET-015** | **Unique Cluster Naming.** | The system SHALL ensure that every route cluster has a unique name by appending a variant counter (e.g., var 2) if a name collision occurs for spatially distinct routes. | `RouteClusterEngine.kt`, `RouteClusterDatabaseManager.kt` | `TST-SET-007` | Verified |
 | **REQ-SET-016** | **Edit Cluster Name.** | The system SHALL allow the user to manually rename a route cluster via a dedicated edit dialog in the cluster's detail view. | `FrequentPathHeatmapScreen.kt`, `RouteClusterRepository.kt` | `TST-SET-008` | Verified |
+| **REQ-SET-017** | **Manual Workout Cluster Reassignment.** | The system SHALL allow the user to manually reassign a workout to a different route cluster via the heatmap view. Tapping a workout track SHALL show a list of candidate clusters sorted by similarity score. | `FrequentPathHeatmapScreen.kt`, `RouteClusterEngine.kt` | `TST-SET-009` | Verified |
 
 ## 5. Data Storage & Post-Processing
 

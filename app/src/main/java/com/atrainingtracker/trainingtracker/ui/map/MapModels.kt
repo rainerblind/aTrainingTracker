@@ -142,6 +142,7 @@ interface MappablePath {
     val zIndex: Float
     val overlayZIndex: Float?
     val pattern: List<com.google.android.gms.maps.model.PatternItem>?
+    val onClick: ((Long) -> Unit)?
 }
 
 /**
@@ -153,7 +154,8 @@ data class MapTrack(
     val type: TrackType,
     override val bSportType: BSportType,
     override val path: List<PathPoint>,
-    val isVisible: Boolean = true
+    val isVisible: Boolean = true,
+    override val onClick: ((Long) -> Unit)? = null
 ) : MappablePath
 {
     override val latLngs: List<LatLng> by lazy { path.map { it.latLng } }
@@ -174,7 +176,8 @@ data class MapSegment(
     val name: String,
     override val bSportType: BSportType,
     override val path: List<PathPoint>,
-    val showStartAndFinishText: Boolean = true
+    val showStartAndFinishText: Boolean = true,
+    override val onClick: ((Long) -> Unit)? = null
 ) : MappablePath {
     override val id: Long get() = stravaId
     override val latLngs: List<LatLng> by lazy { path.map { it.latLng } }
@@ -191,7 +194,8 @@ data class MapRoute(
     val name: String,
     val isSelected: Boolean,
     override val bSportType: BSportType,
-    override val path: List<PathPoint>
+    override val path: List<PathPoint>,
+    override val onClick: ((Long) -> Unit)? = null
 ) : MappablePath {
     override val latLngs: List<LatLng> by lazy { path.map { it.latLng } }
     override val color: Color get() = if (isSelected) TTColor.RouteSelected else TTColor.RouteUnselected
