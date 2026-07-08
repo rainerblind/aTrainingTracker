@@ -1085,4 +1085,10 @@
     <string name="track_type_fused">Google Fused</string>
     <string name="track_type_network">Netzwerk</string>
     <string name="legend">Legende</string>
+
+    <string name="cluster_statistics_title">Routenstatistik</string>
+    <string name="cluster_total_recordings">Aufzeichnungen gesamt</string>
+    <string name="cluster_average_distance">Mittlere Distanz</string>
+    <string name="cluster_recordings_format">%1$d Aufzeichnungen</string>
+    <string name="cluster_ref_distance_label">Ref: %1$s</string>
 </resources>

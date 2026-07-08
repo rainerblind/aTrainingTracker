@@ -839,12 +839,10 @@ public class MainActivityWithNavigation
                 mFragment = EquipmentFragment.newInstance(1);
                 tag = EquipmentFragment.TAG;
                 break;
-/* NO_MY_LOCATIONS
             case R.id.drawer_my_locations:
-                mFragment = new MyLocationsFragment();
-                tag = MyLocationsFragment.TAG;
+                mFragment = com.atrainingtracker.trainingtracker.ui.clusters.FrequentPathsFragment.Companion.newInstance();
+                tag = com.atrainingtracker.trainingtracker.ui.clusters.FrequentPathsFragment.TAG;
                 break;
- */
 
             case R.id.drawer_settings:
                 mFragment = new RootPrefsFragment();

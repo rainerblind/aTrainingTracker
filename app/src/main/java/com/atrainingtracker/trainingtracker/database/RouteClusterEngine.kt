@@ -101,7 +101,7 @@ class RouteClusterEngine private constructor(context: Context) {
      * Batch processes entire workout history to populate the cluster database.
      * Processes chronologically (ASC) so that the most recent names/sports stick.
      */
-    fun migrateHistory(context: android.content.Context) {
+    fun migrateHistory(context: Context) {
         val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
         val cursor = summariesManager.getCursorForAllWorkoutsAsc() ?: return
 
@@ -146,6 +146,7 @@ class RouteClusterEngine private constructor(context: Context) {
                             hitCount = match.hitCount + 1
                         )
                         dbManager.updateCluster(updated)
+                        updateWorkoutClusterId(context, workoutId, updated.id)
                     } else {
                         // No match: Create new cluster. 
                         // If it's a default name, use a generic descriptive name.
@@ -162,11 +163,25 @@ class RouteClusterEngine private constructor(context: Context) {
                             refDistance = distance,
                             hitCount = 1
                         )
-                        dbManager.insertCluster(newCluster)
+                        val newId = dbManager.insertCluster(newCluster)
+                        updateWorkoutClusterId(context, workoutId, newId)
                     }
                 }
             }
         }
+    }
+
+    private fun updateWorkoutClusterId(context: Context, workoutId: Long, clusterId: Long) {
+        val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
+        val values = android.content.ContentValues().apply {
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID, clusterId)
+        }
+        summariesManager.database.update(
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+            values,
+            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID} = ?",
+            arrayOf(workoutId.toString())
+        )
     }
 
     private fun calculateSimilarity(
