@@ -44,7 +44,11 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
     public void accumulate(N absoluteValue) {
         if (mLastAbsoluteValue != null) {
             N incrementBy = sub(absoluteValue, mLastAbsoluteValue);
-            increment(incrementBy);
+            if (incrementBy.doubleValue() >= 0) {
+                increment(incrementBy);
+            } else {
+                android.util.Log.w(TAG, "Negative increment detected (" + incrementBy + "). Sensor reset or wrap-around? Ignoring.");
+            }
         }
         mLastAbsoluteValue = absoluteValue;
     }
