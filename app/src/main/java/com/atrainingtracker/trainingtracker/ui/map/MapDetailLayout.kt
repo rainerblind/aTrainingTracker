@@ -59,7 +59,8 @@ fun MapDetailLayout(
     overlay: @Composable BoxScope.() -> Unit = {},
     modifier: Modifier = Modifier,
     useStatusBarsPadding: Boolean = true,
-    showMap: Boolean = true
+    showMap: Boolean = true,
+    showElevationProfile: Boolean = true
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -147,25 +148,27 @@ fun MapDetailLayout(
         }
 
         // 3. ELEVATION PROFILE
-        activeScrubPath?.let { path ->
-            Surface(
-                color = MaterialTheme.colorScheme.surface,
-                modifier = Modifier.navigationBarsPadding()
-            ) {
-                Box(modifier = Modifier.drawWithContent {
-                    elevationLayer.record {
-                        this@drawWithContent.drawContent()
+        if (showElevationProfile) {
+            activeScrubPath?.let { path ->
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.navigationBarsPadding()
+                ) {
+                    Box(modifier = Modifier.drawWithContent {
+                        elevationLayer.record {
+                            this@drawWithContent.drawContent()
+                        }
+                        drawLayer(elevationLayer)
+                    }) {
+                        ElevationProfile(
+                            pathPoints = path,
+                            currentDistance = selectedDistance,
+                            minAltitudeOverride = minAltitudeOverride,
+                            maxAltitudeOverride = maxAltitudeOverride,
+                            onDistanceSelected = { selectedDistance = it },
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
-                    drawLayer(elevationLayer)
-                }) {
-                    ElevationProfile(
-                        pathPoints = path,
-                        currentDistance = selectedDistance,
-                        minAltitudeOverride = minAltitudeOverride,
-                        maxAltitudeOverride = maxAltitudeOverride,
-                        onDistanceSelected = { selectedDistance = it },
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 }
             }
         }
