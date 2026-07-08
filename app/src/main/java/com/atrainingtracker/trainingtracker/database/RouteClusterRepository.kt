@@ -63,6 +63,11 @@ class RouteClusterRepository private constructor(private val context: Context) {
         _allClusters.value = clusterDb.getAllClusters().sortedByDescending { it.hitCount }
     }
 
+    suspend fun updateCluster(cluster: RouteCluster) = withContext(Dispatchers.IO) {
+        clusterDb.updateCluster(cluster)
+        refreshClusters()
+    }
+
     suspend fun getWorkoutsForCluster(clusterId: Long): List<WorkoutData> = withContext(Dispatchers.IO) {
         val workouts = mutableListOf<WorkoutData>()
         val selection = "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = ?"
