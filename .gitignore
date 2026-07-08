@@ -5,6 +5,10 @@ secrets.properties
 
 # Release signing property file
 release.properties
+release.keystore
+
+# Built release binaries; CI produces these as workflow artifacts
+/app/release/
 
 app/google-services.json
 
