@@ -1,0 +1,127 @@
+name: Android Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'release-*'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0" "platform-tools"
+
+      - name: Create CI secrets.properties
+        run: |
+          cat > secrets.properties <<'EOF'
+          MAPS_API_KEY=ci-dummy-key
+          STRAVA_CLIENT_ID=ci-dummy-id
+          STRAVA_CLIENT_SECRET=ci-dummy-secret
+          TRAININGPEAKS_CLIENT_ID=ci-dummy-id
+          TRAININGPEAKS_CLIENT_SECRET=ci-dummy-secret
+          RUNKEEPER_CLIENT_ID=ci-dummy-id
+          RUNKEEPER_CLIENT_SECRET=ci-dummy-secret
+          DROPBOX_APP_KEY=ci-dummy-key
+          EOF
+
+      - name: Create CI google-services.json
+        run: |
+          cat > app/google-services.json <<'EOF'
+          {
+            "project_info": {
+              "project_number": "0",
+              "project_id": "atrainingtracker-ci",
+              "storage_bucket": "atrainingtracker-ci.appspot.com",
+              "firebase_url": "https://atrainingtracker-ci.firebaseio.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:0:android:0000000000000000",
+                  "android_client_info": {
+                    "package_name": "com.atrainingtracker"
+                  }
+                },
+                "api_key": [
+                  {
+                    "current_key": "ci-dummy-api-key"
+                  }
+                ],
+                "services": {
+                  "appinvite_service": {
+                    "status": 1
+                  }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+
+      - name: Configure release signing
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          if [ -n "$RELEASE_KEYSTORE_BASE64" ] && [ -n "$RELEASE_KEYSTORE_PASSWORD" ] && [ -n "$RELEASE_KEY_ALIAS" ] && [ -n "$RELEASE_KEY_PASSWORD" ]; then
+            echo "Configuring release signing from repository secrets."
+            echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > release.keystore
+            cat > release.properties <<EOF
+          keyStore=release.keystore
+          keyStorePassword=$RELEASE_KEYSTORE_PASSWORD
+          keyAlias=$RELEASE_KEY_ALIAS
+          keyAliasPassword=$RELEASE_KEY_PASSWORD
+          EOF
+          else
+            echo "No release signing secrets configured; building unsigned release artifacts."
+          fi
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build release APK and AAB
+        run: ./gradlew :app:assembleRelease :app:bundleRelease
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+
+      - name: Attach artifacts to GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab

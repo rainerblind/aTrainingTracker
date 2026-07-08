@@ -5,6 +5,7 @@ secrets.properties
 
 # Release signing property file
 release.properties
+release.keystore
 
 app/google-services.json
 
