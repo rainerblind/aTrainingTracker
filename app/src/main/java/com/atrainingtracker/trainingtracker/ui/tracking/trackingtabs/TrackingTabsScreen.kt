@@ -102,6 +102,7 @@ fun TrackingTabsScreen(
     val devices by controlViewModel.remoteDevices.collectAsState()
     val activeSensors by controlViewModel.activeSensors.collectAsState()
     val bSportType by controlViewModel.bSportType.collectAsState()
+    val selectingProtocol by controlViewModel.selectingProtocol.collectAsState()
 
 
     // Page count: Control Tab + Sensor Tabs
@@ -177,6 +178,16 @@ fun TrackingTabsScreen(
                         }
                     }
                 }
+                is TabNavigationEvent.EditDevice -> {
+                    val editDeviceDialog = EditDeviceFragmentFactory.create(
+                        deviceId = tabNavigationEvent.deviceId,
+                        deviceType = com.atrainingtracker.banalservice.devices.DeviceType.ALL
+                    )
+                    editDeviceDialog.show(
+                        context.supportFragmentManager,
+                        "EditDeviceDialog"
+                    )
+                }
             }
         }
     }
@@ -189,6 +200,17 @@ fun TrackingTabsScreen(
                 pagerState.scrollToPage(1)
             }
         }
+    }
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                trackingTabsViewModel.onResume()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Surface(
@@ -205,10 +227,8 @@ fun TrackingTabsScreen(
 
             Column {
 
-                // 1. DYNAMIC HEADER (Config Mode or Tab Title)
                 Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    tonalElevation = 3.dp
+                    color = MaterialTheme.colorScheme.primaryContainer
                 ) {
                     Column(
                         modifier = Modifier
@@ -219,12 +239,24 @@ fun TrackingTabsScreen(
                         // TAB HEADER
                         when (screenMode) {
                             ScreenMode.TRACKING -> {
+                                // Collect source info
+                                val activeSensors by trackingTabsViewModel.activeSensors.collectAsState()
+                                val sensorSourceMapping by trackingTabsViewModel.sensorSourceMapping.collectAsState()
+                                val allTelemetry by trackingTabsViewModel.allTelemetry.collectAsState()
+                                val allDevices by trackingTabsViewModel.allDevices.collectAsState()
+
                                 // Show the available Sensors
                                 Surface(
                                     modifier = Modifier.padding(4.dp),
                                     color = Color.Transparent
                                 ) {
-                                    SensorStatus(activeSensors = activeSensors)
+                                    SensorStatus(
+                                        activeSensors = activeSensors,
+                                        sourceMapping = sensorSourceMapping,
+                                        allTelemetry = allTelemetry,
+                                        allDevices = allDevices,
+                                        onDeviceClick = { trackingTabsViewModel.onEditDevice(it) }
+                                    )
                                 }
                             }
 
@@ -258,7 +290,7 @@ fun TrackingTabsScreen(
                         // TAB ROW
                         PrimaryScrollableTabRow(
                             selectedTabIndex = pagerState.currentPage,
-                            containerColor = MaterialTheme.colorScheme.surface,
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                             edgePadding = 8.dp,
                             divider = {}
                         ) {
@@ -308,7 +340,8 @@ fun TrackingTabsScreen(
                                 when (navigation) {
                                     is ControlNavigation.ToPairing -> {
                                         (context as? MainActivityWithNavigation)?.startPairing(
-                                            navigation.protocol
+                                            navigation.protocol,
+                                            navigation.deviceType
                                         )
                                     }
 
@@ -342,6 +375,9 @@ fun TrackingTabsScreen(
                             onResume = { controlViewModel.onResumeTracking() },
                             onStop = { controlViewModel.onStopTracking() },
                             onPairingClicked = { controlViewModel.onPairingClicked(it) },
+                            selectingProtocol = selectingProtocol,
+                            onDeviceTypeSelected = { controlViewModel.onDeviceTypeSelected(it) },
+                            onCancelDeviceTypeSelection = { controlViewModel.onCancelDeviceTypeSelection() }
                         )
                     } else {
                         val viewIndex =

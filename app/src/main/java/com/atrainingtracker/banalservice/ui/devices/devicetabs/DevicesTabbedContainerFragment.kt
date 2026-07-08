@@ -26,7 +26,7 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import androidx.appcompat.app.AlertDialog
+import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.atrainingtracker.R
@@ -34,151 +34,46 @@ import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.dialogs.InstallANTShitDialog
-import com.atrainingtracker.databinding.FragmentTabbedDevicesBinding // Import generated ViewBinding class
-import com.google.android.material.tabs.TabLayoutMediator
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
- * A container fragment that hosts a ViewPager with tabs for each several device lists (available, paired, all known).
- * UI logic is driven by observing state from DevicesTabbedViewModel.
+ * A container fragment that hosts the modern Composable Device Management UI.
  */
 class DevicesTabbedContainerFragment : Fragment() {
 
-    private var _binding: FragmentTabbedDevicesBinding? = null
-    private val binding get() = _binding!!
-
-    // Initialize the ViewModel using the KTX delegate. It will be automatically created and retained.
     private val viewModel: DevicesTabbedViewModel by viewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        _binding = FragmentTabbedDevicesBinding.inflate(inflater, container, false)
-        return binding.root
+        return ComposeView(requireContext()).apply {
+            setContent {
+                val startTab = arguments?.getInt(STARTING_TAB, 0) ?: 0
+                val deviceType = arguments?.getString(BANALService.DEVICE_TYPE)?.let { DeviceType.valueOf(it) } ?: DeviceType.ALL
+                
+                // If only a protocol is specified (all device types), default to the "Known" tab (index 2)
+                val finalInitialTab = if (deviceType == DeviceType.ALL && startTab == 0) 2 else startTab
+
+                ATrainingTrackerTheme {
+                    DevicesTabbedScreen(
+                        tabViewModel = viewModel,
+                        initialTab = finalInitialTab,
+                        onCheckAntInstallation = {
+                            InstallANTShitDialog().show(parentFragmentManager, InstallANTShitDialog.TAG)
+                        }
+                    )
+                }
+            }
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        // The options menu is only for ANT+
-        if (viewModel.protocol == Protocol.ANT_PLUS) {
-            setHasOptionsMenu(true)
-        }
-
-        // Observe the UI state from the ViewModel. The UI will automatically react to state changes.
-        viewModel.uiState.observe(viewLifecycleOwner) { state ->
-            when (state) {
-                is UiState.AwaitingDeviceTypeSelection -> showDeviceTypeSelectionDialog()
-                is UiState.DisplayingTabs -> {
-                    setupViewPagerAndTabs(state.deviceType)
-                    viewModel.startSearching()
-                }
-            }
-        }
-
-        // Handle Window Insets to prevent drawing under Status Bar and Navigation Bar
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
-            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-
-            // Apply padding to the root view so the Tabs and ViewPager
-            // stay within the visible screen area
-            v.setPadding(
-                systemBars.left,
-                systemBars.top,
-                systemBars.right,
-                systemBars.bottom
-            )
-
-            insets
-        }
-    }
-
-    private fun showDeviceTypeSelectionDialog() {
-        // Check if a dialog is already showing to prevent duplicates on configuration change
-        if (parentFragmentManager.findFragmentByTag("DeviceTypeChoiceDialog") != null) return
-
-        val deviceTypeList = DeviceType.getRemoteDeviceTypes(viewModel.protocol).toList()
-
-        val dialog = AlertDialog.Builder(requireContext()).apply {
-            setIcon(viewModel.protocol.getIconId())
-            setTitle(R.string.select_device_type)
-            setPositiveButton(R.string.devices_all){ _dialog, _ ->
-                _dialog.dismiss()
-                viewModel.onDeviceTypeSelected(DeviceType.ALL)
-            }
-            val adapter = DeviceTypeChoiceArrayAdapter(requireActivity(), deviceTypeList, viewModel.protocol)
-            setAdapter(adapter) { dialog, which ->
-                // User made a selection. Notify the ViewModel. The UI will update automatically.
-                viewModel.onDeviceTypeSelected(deviceTypeList[which])
-                dialog.dismiss()
-            }
-        }.create()
-
-        dialog.setOnCancelListener {
-            requireActivity().onBackPressedDispatcher.onBackPressed()
-        }
-
-        dialog.show()
-    }
-
-    private fun setupViewPagerAndTabs(deviceType: DeviceType) {
-        // Prevent re-initializing the adapter if it's already set
-        if (binding.pager.adapter != null) return
-
-        if (DEBUG) Log.w(TAG, "setupViewPagerAndTabs for $deviceType")
-
-        val pagerAdapter = DeviceListPagerAdapter(
-            childFragmentManager,
-            lifecycle,
-            requireContext(),
-            viewModel.protocol,
-            deviceType
-        )
-        binding.pager.adapter = pagerAdapter
-
-        // Link the TabLayout with the ViewPager
-        TabLayoutMediator(binding.tabs, binding.pager) { tab, position ->
-            tab.text = pagerAdapter.getPageTitle(position)
-        }.attach()
-
-        //Set the initial tab from arguments
-        val startTab = arguments?.getInt(STARTING_TAB, 0) ?: 0
-        // Use post to ensure the ViewPager is fully laid out before switching tabs
-        binding.pager.post {
-            binding.pager.setCurrentItem(startTab, false)
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        viewModel.stopSearching()
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null // Important for memory leak prevention
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        super.onCreateOptionsMenu(menu, inflater)
-        if (DEBUG) Log.d(TAG, "onCreateOptionsMenu")
-        inflater.inflate(R.menu.remote_devices, menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (DEBUG) Log.w(TAG, "onOptionsItemSelected")
-        return when (item.itemId) {
-            R.id.itemCheckANTInstallation -> {
-                InstallANTShitDialog().show(parentFragmentManager, InstallANTShitDialog.TAG)
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
     }
 
     companion object {
         const val TAG = "DevicesTabContainer"
-        private const val DEBUG = true // BANALService.getDebug(true)
         private const val STARTING_TAB = "starting_tab"
 
         @JvmStatic
@@ -186,9 +81,7 @@ class DevicesTabbedContainerFragment : Fragment() {
             return DevicesTabbedContainerFragment().apply {
                 arguments = Bundle().apply {
                     putString(BANALService.PROTOCOL, protocol.name)
-                    // Pass deviceType via arguments. SavedStateHandle will pick it up automatically.
                     deviceType?.let { putString(BANALService.DEVICE_TYPE, it.name) }
-                    // Save the starting tab index
                     putInt(STARTING_TAB, startingTab)
                 }
             }

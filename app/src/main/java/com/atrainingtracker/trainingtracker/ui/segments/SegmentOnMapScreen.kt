@@ -55,7 +55,9 @@ fun SegmentOnMapScreen(
     segmentSummary: SegmentSummary?,
     segment: MapSegment?,
     backgroundPaths: List<MappablePath> = emptyList(),
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    useStatusBarsPadding: Boolean = true,
+    showMap: Boolean = true
 ) {
     val bSportType = segment?.bSportType ?: segmentSummary?.bSportType ?: BSportType.UNKNOWN
 
@@ -63,12 +65,14 @@ fun SegmentOnMapScreen(
         bSportType = bSportType,
         zoomFocus = MapZoomFocus.FIT_PRIMARY,
         activeScrubPath = segment?.path,
+        useStatusBarsPadding = useStatusBarsPadding,
+        showMap = showMap,
         header = {
             segmentSummary?.let {
                 Column {
                     SegmentHeader(
                         summary = it,
-                        modifier = Modifier.fillMaxWidth().padding(12.dp)
+                        modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 4.dp)
                     )
                     HorizontalDivider(
                         modifier = Modifier.fillMaxWidth(),
@@ -77,7 +81,7 @@ fun SegmentOnMapScreen(
                     )
                     SegmentDetails(
                         summary = it,
-                        modifier = Modifier.fillMaxWidth().padding(12.dp)
+                        modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 8.dp)
                     )
                 }
             }

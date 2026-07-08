@@ -44,6 +44,7 @@ fun PeriodList(
     onHeaderClick: (PeriodSummary) -> Unit,
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
+    onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
     appBarOffsetPx: Int,
     headerHeightPx: Float,
     modifier: Modifier = Modifier
@@ -74,7 +75,8 @@ fun PeriodList(
                 isHeatmapEnabled = isHeatmapEnabled,
                 onHeaderClick = onHeaderClick,
                 onMapClick = { onMapClick(periodSummary) },
-                onSportClick = onSportClick
+                onSportClick = onSportClick,
+                onLongestWorkoutClick = onLongestWorkoutClick
             )
         }
     }

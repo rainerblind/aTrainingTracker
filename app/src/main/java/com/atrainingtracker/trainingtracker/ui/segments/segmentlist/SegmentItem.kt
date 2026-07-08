@@ -30,7 +30,7 @@ import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentHeader
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentDetails
-import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 @Composable
 fun SegmentItem(

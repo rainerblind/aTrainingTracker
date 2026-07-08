@@ -33,14 +33,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.components.strava.PoweredByStrava
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
-import com.atrainingtracker.trainingtracker.ui.theme.RouteColorSelected
-import com.atrainingtracker.trainingtracker.ui.theme.RouteColorUnselected
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 @Composable
 fun RouteSummaryHeader(
@@ -60,7 +60,7 @@ fun RouteSummaryHeader(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 4.dp),
+                    .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 // --- TOP ROW: Sport Icon and Identity (Name + Source) ---
@@ -91,7 +91,7 @@ fun RouteSummaryHeader(
                             Text(
                                 text = stringResource(R.string.routes_source_label, stringResource(summary.source.displayNameResId)),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
                             )
                         }
                     }
@@ -130,12 +130,12 @@ fun RouteSummaryHeader(
                     checked = summary.isSelected,
                     onCheckedChange = onToggleSelection,
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = RouteColorSelected,
-                        checkedTrackColor = RouteColorSelected.copy(alpha = 0.5f),
-                        checkedBorderColor = RouteColorSelected,
-                        uncheckedThumbColor = RouteColorUnselected,
-                        uncheckedTrackColor = RouteColorUnselected.copy(alpha = 0.5f),
-                        uncheckedBorderColor = RouteColorUnselected
+                        checkedThumbColor = TTColor.RouteSelected,
+                        checkedTrackColor = TTColor.RouteSelected.copy(alpha = TTAlpha.Disabled),
+                        checkedBorderColor = TTColor.RouteSelected,
+                        uncheckedThumbColor = TTColor.RouteUnselected,
+                        uncheckedTrackColor = TTColor.RouteUnselected.copy(alpha = TTAlpha.Disabled),
+                        uncheckedBorderColor = TTColor.RouteUnselected
                     )
                 )
             }

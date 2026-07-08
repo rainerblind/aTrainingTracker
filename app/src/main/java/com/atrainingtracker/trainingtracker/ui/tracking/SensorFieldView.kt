@@ -56,11 +56,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.ui.theme.Zone1
-import com.atrainingtracker.trainingtracker.ui.theme.Zone2
-import com.atrainingtracker.trainingtracker.ui.theme.Zone3
-import com.atrainingtracker.trainingtracker.ui.theme.Zone4
-import com.atrainingtracker.trainingtracker.ui.theme.Zone5
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 
 enum class ViewSize {
@@ -186,20 +182,18 @@ fun SensorFieldView(
                 }
             ),
         shape = RectangleShape,
-        // elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (fieldState.zoneColor == MaterialTheme.colorScheme.surfaceVariant) {
-                fieldState.zoneColor // Keep default if no zone is active
+            containerColor = if (fieldState.zoneColor == Color.Transparent) {
+                MaterialTheme.colorScheme.surface
             } else {
                 fieldState.zoneColor.copy(alpha = 0.12f)
             }
         ),
-        // colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             // 1. Vertical Indicator Strip
-            if (fieldState.zoneColor != MaterialTheme.colorScheme.surfaceVariant) {
+            if (fieldState.zoneColor != Color.Transparent) {
                 Spacer(
                     modifier = Modifier
                         .width(6.dp)
@@ -300,7 +294,7 @@ private fun SensorFieldViewPreview(
         filterDescription = "GPS: 5 s avg",
         value = "5:32",
         units = "/km",
-        zoneColor = MaterialTheme.colorScheme.surfaceVariant
+        zoneColor = Color.Transparent
     )
 
     MaterialTheme {
@@ -325,7 +319,7 @@ private fun SensorFieldViewConfigPreview() {
         filterDescription = "GPS: 5 s avg",
         value = "5:32",
         units = "/km",
-        zoneColor = MaterialTheme.colorScheme.surfaceVariant
+        zoneColor = Color.Transparent
     )
 
     MaterialTheme {
@@ -351,7 +345,7 @@ private fun SensorFieldViewZone1Preview() {
         filterDescription = "Inst.",
         value = "175",
         units = "bpm",
-        zoneColor = Zone1
+        zoneColor = TTColor.Zone1
     )
 
     MaterialTheme {
@@ -375,7 +369,7 @@ private fun SensorFieldViewZone2Preview() {
         filterDescription = "Inst.",
         value = "175",
         units = "bpm",
-        zoneColor = Zone2
+        zoneColor = TTColor.Zone2
     )
 
     MaterialTheme {
@@ -399,7 +393,7 @@ private fun SensorFieldViewZone3Preview() {
         filterDescription = "Inst.",
         value = "175",
         units = "bpm",
-        zoneColor = Zone3
+        zoneColor = TTColor.Zone3
     )
 
     MaterialTheme {
@@ -423,7 +417,7 @@ private fun SensorFieldViewZone4Preview() {
         filterDescription = "Inst.",
         value = "175",
         units = "bpm",
-        zoneColor = Zone4
+        zoneColor = TTColor.Zone4
     )
 
     MaterialTheme {
@@ -447,7 +441,7 @@ private fun SensorFieldViewZone5Preview() {
         filterDescription = "Inst.",
         value = "175",
         units = "bpm",
-        zoneColor = Zone5
+        zoneColor = TTColor.Zone5
     )
 
     MaterialTheme {

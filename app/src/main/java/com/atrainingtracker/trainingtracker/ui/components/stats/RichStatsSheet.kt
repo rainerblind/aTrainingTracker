@@ -28,6 +28,7 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 
@@ -44,9 +45,6 @@ fun RichStatsSheet(
     onStatsClick: (StatsData) -> Unit
 ) {
     ModalBottomSheet(
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 0.dp,
-
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false),
         modifier = Modifier.fillMaxHeight() // Prevent an oscillation when the sheet is expanded
@@ -70,10 +68,7 @@ fun RichStatsSheet(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 items(periodStats) { stats ->
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                        ),
+                    OutlinedCard(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         StatsSummaryBlock(

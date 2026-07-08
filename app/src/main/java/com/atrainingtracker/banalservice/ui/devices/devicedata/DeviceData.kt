@@ -43,7 +43,8 @@ data class DeviceRawData(
     val calibrationValue: Double?,
     val linkedEquipment: List<String>,
     val availableEquipment: List<String>,
-    val powerFeaturesFlags: Int?
+    val powerFeaturesFlags: Int?,
+    val linkedSportTypes: List<String> = emptyList()
 )
 
 /**
@@ -61,6 +62,8 @@ data class DeviceUiData(
     val linkedEquipment: List<String>,
     val availableEquipment: List<String>,
     val powerFeaturesFlags: Int?,
+    val batteryPercentage: Int,
+    val linkedSportTypes: List<String> = emptyList(),
 
     // derived from the raw data
     val deviceTypeIconRes: Int,
@@ -73,7 +76,7 @@ data class DeviceUiData(
     val powerFeatures: BikePowerFeatures?,
 
     // stuff that we don't get from the database but from the devices itself.
-    val isAvailable: Boolean,
+    val isConnected: Boolean,
     val mainValue: String?,
     val allValues: List<String>?
     )
@@ -123,6 +126,7 @@ fun raw2UiDeviceData(rawData: DeviceRawData, context: Context): DeviceUiData {
         linkedEquipment = rawData.linkedEquipment,
         availableEquipment = rawData.availableEquipment,
         powerFeaturesFlags = rawData.powerFeaturesFlags,
+        batteryPercentage = batteryPercentage,
 
         deviceTypeIconRes = getIconId(rawData.deviceType, rawData.protocol),
         batteryStatusIconRes = getBatteryStatusIconRes(batteryPercentage),
@@ -133,9 +137,10 @@ fun raw2UiDeviceData(rawData: DeviceRawData, context: Context): DeviceUiData {
         powerFeatures = powerFeatures,
 
         // set by observing the devices
-        isAvailable = false,
+        isConnected = false,
         mainValue = null,
-        allValues = null
+        allValues = null,
+        linkedSportTypes = rawData.linkedSportTypes
         )
 }
 
@@ -247,7 +252,7 @@ fun getIconId(deviceType: DeviceType, protocol: Protocol): Int {
                 DeviceType.BIKE_POWER -> R.drawable.bike_pwr
                 DeviceType.RUN_SPEED -> R.drawable.run_spd
                 DeviceType.ENVIRONMENT -> R.drawable.temp
-                else -> -protocol.iconId
+                else -> protocol.iconId
             }
         }
 
@@ -260,6 +265,14 @@ fun getIconId(deviceType: DeviceType, protocol: Protocol): Int {
             DeviceType.RUN_SPEED -> R.drawable.bt_run
             else -> protocol.iconId
         }
+
+        Protocol.SMARTPHONE -> when (deviceType) {
+            DeviceType.SPEED_AND_LOCATION_GPS -> R.drawable.ic_location
+            DeviceType.SPEED_AND_LOCATION_NETWORK -> R.drawable.ic_cell_5_bar
+            DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED -> R.drawable.ic_navigation_arrow
+            else -> protocol.iconId
+        }
+
         else -> protocol.iconId
     }
 }

@@ -35,6 +35,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 
 @Composable
 fun WorkoutExtrema(
@@ -162,7 +163,7 @@ private fun ExtremaRow(
                 Text(
                     text = "[$unit]",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
                     maxLines = 1
                 )
             }
@@ -174,7 +175,7 @@ private fun ExtremaRow(
             text = min,
             modifier = Modifier.weight(2.0f),
             style = if (boldMin && !isHeader && !isMinDash) baseStyle.copy(fontWeight = FontWeight.Bold) else baseStyle,
-            color = if (isMinDash) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f) else color,
+            color = if (isMinDash) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Disabled) else color,
             textAlign = TextAlign.End
         )
 
@@ -184,7 +185,7 @@ private fun ExtremaRow(
             text = avg,
             modifier = Modifier.weight(2.0f),
             style = if (((boldAvg && !isHeader) || (isHeader && avg == "Ø")) && !isAvgDash) baseStyle.copy(fontWeight = FontWeight.Bold) else baseStyle,
-            color = if (isAvgDash) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f) else color,
+            color = if (isAvgDash) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Disabled) else color,
             textAlign = TextAlign.End
         )
 
@@ -194,7 +195,7 @@ private fun ExtremaRow(
             text = max,
             modifier = Modifier.weight(2.0f),
             style = if (boldMax && !isHeader && !isMaxDash) baseStyle.copy(fontWeight = FontWeight.Bold) else baseStyle,
-            color = if (isMaxDash) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f) else color,
+            color = if (isMaxDash) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Disabled) else color,
             textAlign = TextAlign.End
         )
     }

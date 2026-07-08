@@ -132,6 +132,20 @@ public enum SensorType
         this.filteringPossible = filteringPossible;
     }
 
+    public int getIconResId() {
+        return switch (this) {
+            case TIME_ACTIVE -> R.drawable.ic_time_active;
+            case ACCURACY, LONGITUDE, LATITUDE -> R.drawable.ic_location;
+            case ALTITUDE -> R.drawable.ic_altitude;
+            case DISTANCE_m -> R.drawable.ic_distance;
+            case SPEED_mps -> R.drawable.ic_speed;
+            case CADENCE -> R.drawable.ic_cadence;
+            case HR -> R.drawable.ic_heart_rate;
+            case POWER -> R.drawable.ic_power;
+            default -> R.drawable.ic_cross;
+        };
+    }
+
     @Override
     public String toString() {
         return TrainingApplication.getAppContext().getString(fullNameId);

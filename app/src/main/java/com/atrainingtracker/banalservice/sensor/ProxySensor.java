@@ -54,7 +54,11 @@ public class ProxySensor<T> extends MySensor<T> {
     }
 
     public String getSourceDeviceName() {
-        return getDevice().getName();
+        return mSourceSensor.getDevice().getName();
+    }
+
+    public long getSourceDeviceId() {
+        return mSourceSensor.getDevice().getDeviceId();
     }
 
     public void setSourceSensor(MySensor<T> sourceSensor) {

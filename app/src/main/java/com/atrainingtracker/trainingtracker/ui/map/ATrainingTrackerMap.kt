@@ -110,11 +110,13 @@ fun ATrainingTrackerMap(
     }
 
     // 3. Behavioral Controllers
-    val scope = remember(zoomFocus, cameraPositionState.position.zoom, primaryColor, context, directionIcons, bSportType) {
-        MapContentScopeImpl(zoomFocus, cameraPositionState.position.zoom, primaryColor, context, directionIcons, bSportType)
+    // IMPORTANT: Removing zoom from remember key to allow manual zooming without reset
+    val scope = remember(content, zoomFocus, primaryColor, context, directionIcons, bSportType) {
+        MapContentScopeImpl(zoomFocus, primaryColor, context, directionIcons, bSportType)
     }
     scope.collect(content)
 
+    val currentZoom = cameraPositionState.position.zoom
     MapBoundsController(scope.tracks, scope.markers, scope.segments, scope.routes, zoomFocus, currentLocation, cameraPositionState, isMapLoaded, context)
     
     // Render Preview Check
@@ -142,7 +144,7 @@ fun ATrainingTrackerMap(
             }
 
             // Render the DSL content
-            scope.Render()
+            scope.Render(currentZoom)
 
             // Render Shared Overlays (Scrubber, User Location)
             val scrubPath = activeScrubPath ?: emptyList()

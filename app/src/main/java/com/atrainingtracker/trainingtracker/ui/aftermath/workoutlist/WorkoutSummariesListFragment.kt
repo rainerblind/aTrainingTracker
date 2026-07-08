@@ -106,6 +106,7 @@ class WorkoutSummariesListFragment : Fragment() {
                     val equipId = arguments?.getLong(ARG_EQUIP_ID, -1)?.takeIf { it != -1L }
                     val startS = arguments?.getLong(ARG_START_S, -1L)?.takeIf { it != -1L }
                     val endS = arguments?.getLong(ARG_END_S, -1L)?.takeIf { it != -1L }
+                    val initialScrollToId = arguments?.getLong(ARG_INITIAL_SCROLL_TO_ID, -1L)?.takeIf { it != -1L }
 
                     // 3. Observe the filtered Flow reactively
                     // We 'remember' the flow so we don't recreate the observer on every recomposition
@@ -176,12 +177,17 @@ class WorkoutSummariesListFragment : Fragment() {
                             if (selectedWorkoutForDetailsData != null) {
                                 // 3. Render the Detail Map Screen
                                 val aftermathUIState by trackOnMapViewModel.uiState.collectAsStateWithLifecycle()
+                                val enabledTrackTypes by trackOnMapViewModel.enabledTrackTypes.collectAsStateWithLifecycle()
                                 TrackOnMapScreen(
                                     workoutData = selectedWorkoutForDetailsData,
                                     tracks = aftermathUIState.tracks,
+                                    availableTrackTypes = aftermathUIState.availableTrackTypes,
                                     segments = aftermathUIState.segments,
                                     routes = aftermathUIState.routes,
                                     markers = aftermathUIState.markers,
+                                    enabledTrackTypes = enabledTrackTypes,
+                                    onToggleTrackType = { trackOnMapViewModel.toggleTrackTypeEnabled(it) },
+                                    showTechnicalTracks = true,
                                     modifier = Modifier
                                 )
 
@@ -220,6 +226,16 @@ class WorkoutSummariesListFragment : Fragment() {
                                     LaunchedEffect(sortOrder) {
                                         if (viewModel.shouldScrollToTop(sortOrder)) {
                                             scrollState.scrollToItem(0)
+                                        }
+                                    }
+
+                                    // Initial scroll to ID (SCRUM-157)
+                                    LaunchedEffect(workouts) {
+                                        if (initialScrollToId != null && workouts.isNotEmpty()) {
+                                            val index = workouts.indexOfFirst { it.id == initialScrollToId }
+                                            if (index != -1) {
+                                                scrollState.scrollToItem(index)
+                                            }
                                         }
                                     }
 
@@ -323,6 +339,7 @@ class WorkoutSummariesListFragment : Fragment() {
         const val ARG_EQUIP_ID = "ARG_EQUIP_ID"
         const val ARG_START_S = "ARG_START_S"
         const val ARG_END_S = "ARG_END_S"
+        const val ARG_INITIAL_SCROLL_TO_ID = "ARG_INITIAL_SCROLL_TO_ID"
         const val TAG = "WorkoutSummariesListFragment"
         val DEBUG = TrainingApplication.getDebug(true)
 
@@ -334,7 +351,8 @@ class WorkoutSummariesListFragment : Fragment() {
             sportTypeId: Long? = null,
             equipmentId: Long? = null,
             startS: Long? = null,
-            endS: Long? = null
+            endS: Long? = null,
+            scrollToWorkoutId: Long? = null
         ) = WorkoutSummariesListFragment().apply {
             arguments = Bundle().apply {
                 putString(ARG_PRIMARY_TITLE, primaryTitle)
@@ -344,6 +362,7 @@ class WorkoutSummariesListFragment : Fragment() {
                 equipmentId?.let { putLong(ARG_EQUIP_ID, it) }
                 startS?.let { putLong(ARG_START_S, it) }
                 endS?.let { putLong(ARG_END_S, it) }
+                scrollToWorkoutId?.let { putLong(ARG_INITIAL_SCROLL_TO_ID, it) }
             }
         }
     }

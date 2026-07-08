@@ -18,33 +18,55 @@
 
 package com.atrainingtracker.banalservice.ui.devices.editdevice
 
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.DialogFragment
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
- * A factory object responsible for creating the correct instance of an
- * edit device dialog based on the device's type.
+ * A legacy bridge factory that returns a Composable-hosting DialogFragment.
+ * This allows legacy Java/Fragment code to show the modern EditDeviceDialog.
  */
-class EditDeviceFragmentFactory private constructor() {
+object EditDeviceFragmentFactory {
+    @JvmStatic
+    fun create(deviceId: Long, deviceType: DeviceType): DialogFragment {
+        return ComposableEditDeviceDialogFragment.newInstance(deviceId)
+    }
+}
 
-    companion object  {
-        /**
-         * Creates and returns the appropriate DialogFragment for editing a device.
-         * @param deviceId The ID of the device to edit.
-         * @param deviceType The type of the device.
-         * @return A DialogFragment instance ready to be shown.
-         */
-        @JvmStatic
-        fun create(deviceId: Long, deviceType: DeviceType): DialogFragment {
-            return when (deviceType) {
+/**
+ * A DialogFragment that hosts the modern Composable EditDeviceDialog.
+ */
+class ComposableEditDeviceDialogFragment : DialogFragment() {
 
-                DeviceType.RUN_SPEED -> EditRunDeviceFragment.newInstance(deviceId)
-                DeviceType.BIKE_SPEED,
-                DeviceType.BIKE_SPEED_AND_CADENCE -> EditSimpleBikeDeviceFragment.newInstance(deviceId)
-                DeviceType.BIKE_POWER -> EditBikePowerDeviceFragment.newInstance(deviceId)
-                DeviceType.BIKE_CADENCE -> EditGeneralDeviceFragment.newInstance(deviceId)
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        val deviceId = requireArguments().getLong(ARG_DEVICE_ID)
+        return ComposeView(requireContext()).apply {
+            setContent {
+                ATrainingTrackerTheme {
+                    EditDeviceDialog(
+                        deviceId = deviceId,
+                        onDismiss = { dismiss() }
+                    )
+                }
+            }
+        }
+    }
 
-                else -> EditGeneralDeviceFragment.newInstance(deviceId)
+    companion object {
+        private const val ARG_DEVICE_ID = "device_id"
+        
+        fun newInstance(deviceId: Long) = ComposableEditDeviceDialogFragment().apply {
+            arguments = Bundle().apply {
+                putLong(ARG_DEVICE_ID, deviceId)
             }
         }
     }

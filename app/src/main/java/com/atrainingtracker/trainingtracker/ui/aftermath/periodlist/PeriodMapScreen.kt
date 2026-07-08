@@ -24,15 +24,19 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.BottomSheetScaffold
@@ -40,6 +44,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -78,6 +85,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.map.MapTrack
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,6 +94,8 @@ fun PeriodMapScreen(
     summary: PeriodSummary,
     isHeatmapEnabled: Boolean,
     onToggleHeatmapEnabled: () -> Unit,
+    enabledMarkerTypes: Set<PeriodMarkerType>,
+    onToggleMarkerType: (PeriodMarkerType) -> Unit,
     onWorkoutClick: (Long) -> Unit,
     peekedWorkoutDataWithTrack: WorkoutDataWithTrack?,
     clearPeekSelection: () -> Unit,
@@ -97,20 +107,32 @@ fun PeriodMapScreen(
 
     // Track multiple selected sports
     var selectedSports by rememberSaveable { mutableStateOf(setOf<BSportType>()) }
-    val (filteredWorkouts, filteredMarkers) = remember(summary, selectedSports) {
-        if (selectedSports.isEmpty()) {
-            Pair(summary.workoutIdToPolylineMap, summary.extremaMarkers)
+    val (filteredWorkouts, filteredPaths, filteredMarkers) = remember(summary, selectedSports, enabledMarkerTypes) {
+        val workouts = if (selectedSports.isEmpty()) {
+            summary.workoutIdToPolylineMap
         } else {
-            val filteredMap = summary.workoutIdToPolylineMap.filter { (id, _) ->
+            summary.workoutIdToPolylineMap.filter { (id, _) ->
                 val sport = summary.workoutIdToSportMap[id]
                 selectedSports.contains(sport)
             }
-            val filteredMarkersList = summary.extremaMarkers.filter { marker ->
-                val sport = summary.workoutIdToSportMap[marker.workoutId]
+        }
+
+        val paths = if (selectedSports.isEmpty()) {
+            summary.workoutIdToPathMap
+        } else {
+            summary.workoutIdToPathMap.filter { (id, _) ->
+                val sport = summary.workoutIdToSportMap[id]
                 selectedSports.contains(sport)
             }
-            Pair(filteredMap, filteredMarkersList)
         }
+
+        val markers = summary.extremaMarkers.filter { marker ->
+            val sportMatch = selectedSports.isEmpty() || selectedSports.contains(summary.workoutIdToSportMap[marker.workoutId])
+            val typeMatch = enabledMarkerTypes.contains(marker.markerType)
+            sportMatch && typeMatch
+        }
+        
+        Triple(workouts, paths, markers)
     }
 
     // Prepare Map data for the TrackOnMapScreen
@@ -149,26 +171,20 @@ fun PeriodMapScreen(
     // We need a reference to trigger the map snapshot
     var mapSnapshotTrigger by remember { mutableStateOf(false) }
 
+    val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        sheetPeekHeight = if (peekedWorkoutDataWithTrack != null) 200.dp else 0.dp,
-        sheetDragHandle = {
-            Surface(
-                modifier = Modifier.statusBarsPadding(),
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                shape = CircleShape
-            ) {
-                Box(Modifier.size(width = 32.dp, height = 3.dp))
-            }
-        },
+        sheetPeekHeight = if (peekedWorkoutDataWithTrack != null) 120.dp + navBarHeight else 0.dp,
+        sheetDragHandle = null,
         sheetContent = {
             peekedWorkoutDataWithTrack?.workoutData?.let { workoutData ->
                 // Here we show the TrackOnMapScreen for the specific workout
                 TrackOnMapScreen(
                     workoutData = workoutData,
                     tracks = peekedTracks,
-                    modifier = Modifier
+                    modifier = Modifier,
+                    useStatusBarsPadding = false
                 )
             }
         }
@@ -176,7 +192,6 @@ fun PeriodMapScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             // 1. HEADER (Stats) - Wrapped in GraphicsLayer for sharing
             Surface(
-                color = MaterialTheme.colorScheme.surface,
                 modifier = Modifier
                     .statusBarsPadding()
                     .drawWithContent {
@@ -214,7 +229,7 @@ fun PeriodMapScreen(
                                     painter = painterResource(id = R.drawable.ic_time_active),
                                     contentDescription = null,
                                     modifier = Modifier.size(16.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
@@ -246,7 +261,7 @@ fun PeriodMapScreen(
                         val isSelected = selectedSports.contains(sport)
                         // Logic: If nothing is selected, everything is 1f.
                         // If something is selected, dim everything except the selected ones.
-                        val rowAlpha = if (selectedSports.isEmpty() || isSelected) 1f else 0.5f
+                        val rowAlpha = if (selectedSports.isEmpty() || isSelected) TTAlpha.High else TTAlpha.SemiTransparent
 
                         Box(modifier = Modifier.alpha(rowAlpha)) {
                             SportStatsRow(
@@ -272,7 +287,8 @@ fun PeriodMapScreen(
                                             clearPeekSelection()
                                         }
                                     }
-                                }
+                                },
+                                onLongestWorkoutClick = { onWorkoutClick(it) }
                             )
                         }
                         if (index < summary.sportStats.size - 1) {
@@ -286,9 +302,11 @@ fun PeriodMapScreen(
             // 2. INTERACTIVE MAP WITH OVERLAYED BUTTON
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 InteractivePeriodMap(
-                    workouts = filteredWorkouts,
-                    extremaMarkers = filteredMarkers,
-                    periodType = summary.periodType,
+                    summary = summary.copy(
+                        workoutIdToPolylineMap = filteredWorkouts,
+                        workoutIdToPathMap = filteredPaths,
+                        extremaMarkers = filteredMarkers
+                    ),
                     isHeatmapEnabled = isHeatmapEnabled,
                     onWorkoutClick = onWorkoutClick,
                     modifier = Modifier.fillMaxSize(),
@@ -309,31 +327,12 @@ fun PeriodMapScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // MODE TOGGLE BUTTON
-                    Surface(
-                        onClick = onToggleHeatmapEnabled,
-                        modifier = Modifier.size(44.dp),
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                        shadowElevation = 6.dp,
-                        tonalElevation = 2.dp
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Whatshot,
-                                contentDescription = if (isHeatmapEnabled) "Disable Heatmap" else "Enable Heatmap",
-                                modifier = Modifier.size(22.dp),
-                                tint = if (isHeatmapEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            )
-                        }
-                    }
-
                     // FLOATING SHARE BUTTON
                     Surface(
                         onClick = { mapSnapshotTrigger = true },
                         modifier = Modifier.size(44.dp),
                         shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
                         shadowElevation = 6.dp,
                         tonalElevation = 2.dp
                     ) {
@@ -343,6 +342,74 @@ fun PeriodMapScreen(
                                 contentDescription = stringResource(R.string.share),
                                 modifier = Modifier.size(22.dp),
                                 tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    // MARKER DROPDOWN BUTTON
+                    var showMarkerMenu by remember { mutableStateOf(false) }
+                    Box {
+                        Surface(
+                            onClick = { showMarkerMenu = true },
+                            modifier = Modifier.size(44.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
+                            shadowElevation = 6.dp,
+                            tonalElevation = 2.dp
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Place,
+                                    contentDescription = stringResource(R.string.marker_options),
+                                    modifier = Modifier.size(22.dp),
+                                    tint = if (enabledMarkerTypes.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Disabled)
+                                )
+                            }
+                        }
+                        DropdownMenu(
+                            expanded = showMarkerMenu,
+                            onDismissRequest = { showMarkerMenu = false }
+                        ) {
+                            PeriodMarkerType.entries.forEach { type ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Checkbox(
+                                                checked = enabledMarkerTypes.contains(type),
+                                                onCheckedChange = null
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                text = when(type) {
+                                                    PeriodMarkerType.ALTITUDE -> stringResource(R.string.marker_max_altitude)
+                                                    PeriodMarkerType.DISTANCE -> stringResource(R.string.marker_max_distance)
+                                                    PeriodMarkerType.START -> stringResource(R.string.marker_start)
+                                                    PeriodMarkerType.END -> stringResource(R.string.marker_end)
+                                                }
+                                            )
+                                        }
+                                    },
+                                    onClick = { onToggleMarkerType(type) }
+                                )
+                            }
+                        }
+                    }
+
+                    // MODE TOGGLE BUTTON
+                    Surface(
+                        onClick = onToggleHeatmapEnabled,
+                        modifier = Modifier.size(44.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
+                        shadowElevation = 6.dp,
+                        tonalElevation = 2.dp
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Whatshot,
+                                contentDescription = if (isHeatmapEnabled) "Disable Heatmap" else "Enable Heatmap",
+                                modifier = Modifier.size(22.dp),
+                                tint = if (isHeatmapEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Disabled)
                             )
                         }
                     }

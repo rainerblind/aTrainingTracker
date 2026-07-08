@@ -21,7 +21,9 @@ package com.atrainingtracker.trainingtracker
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMarkerType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -33,6 +35,8 @@ class MyPreferenceManager(context: Context) {
     companion object {
         val IS_COMPACT_VIEW = booleanPreferencesKey("is_compact_view")
         val IS_HEATMAP_ENABLED = booleanPreferencesKey("is_heatmap_enabled")
+        val ENABLED_PERIOD_MARKER_TYPES = stringSetPreferencesKey("enabled_period_marker_types")
+        val ENABLED_TRACK_TYPES = stringSetPreferencesKey("enabled_track_types")
     }
 
     val isCompactViewFlow: Flow<Boolean> = dataStore.data.map { preferences ->
@@ -52,6 +56,36 @@ class MyPreferenceManager(context: Context) {
     suspend fun setHeatmapEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[IS_HEATMAP_ENABLED] = enabled
+        }
+    }
+
+    val enabledPeriodMarkerTypesFlow: Flow<Set<String>> = dataStore.data.map { preferences ->
+        preferences[ENABLED_PERIOD_MARKER_TYPES] ?: setOf(
+            PeriodMarkerType.ALTITUDE.name,
+            PeriodMarkerType.DISTANCE.name
+        )
+    }
+
+    suspend fun setPeriodMarkerTypeEnabled(type: String, enabled: Boolean) {
+        dataStore.edit { preferences ->
+            val current = preferences[ENABLED_PERIOD_MARKER_TYPES] ?: setOf(
+                PeriodMarkerType.ALTITUDE.name,
+                PeriodMarkerType.DISTANCE.name
+            )
+            val updated = if (enabled) current + type else current - type
+            preferences[ENABLED_PERIOD_MARKER_TYPES] = updated
+        }
+    }
+
+    val enabledTrackTypesFlow: Flow<Set<String>> = dataStore.data.map { preferences ->
+        preferences[ENABLED_TRACK_TYPES] ?: setOf(com.atrainingtracker.trainingtracker.ui.map.TrackType.BEST.name)
+    }
+
+    suspend fun setTrackTypeEnabled(type: String, enabled: Boolean) {
+        dataStore.edit { preferences ->
+            val current = preferences[ENABLED_TRACK_TYPES] ?: setOf(com.atrainingtracker.trainingtracker.ui.map.TrackType.BEST.name)
+            val updated = if (enabled) current + type else current - type
+            preferences[ENABLED_TRACK_TYPES] = updated
         }
     }
 }

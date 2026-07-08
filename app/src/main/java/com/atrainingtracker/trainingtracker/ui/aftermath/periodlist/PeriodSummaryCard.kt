@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -45,6 +46,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.RoundCap
 import com.google.maps.android.PolyUtil
@@ -67,6 +69,7 @@ fun PeriodSummaryCard(
     onHeaderClick: (PeriodSummary) -> Unit,
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
+    onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val df = DistanceFormatter()
@@ -126,7 +129,7 @@ fun PeriodSummaryCard(
                                         painter = painterResource(id = R.drawable.ic_time_active),
                                         contentDescription = null,
                                         modifier = Modifier.size(14.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
@@ -161,7 +164,8 @@ fun PeriodSummaryCard(
                         stats = stats,
                         tf = tf, df = df, af = af,
                         showDetails = true,
-                        onClick = { onSportClick(summary, bSportType) }
+                        onClick = { onSportClick(summary, bSportType) },
+                        onLongestWorkoutClick = { workoutId -> onLongestWorkoutClick(summary, bSportType, workoutId) }
                     )
                     if (index < summary.sportStats.size - 1) {
                         Spacer(modifier = Modifier.height(12.dp))
@@ -191,7 +195,7 @@ fun PeriodSummaryCard(
                             .align(Alignment.BottomCenter)
                             .background(
                                 brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.1f))
+                                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = TTAlpha.Ghost))
                                 )
                             )
                     )
@@ -208,15 +212,15 @@ fun SportStatsRow(
     df: DistanceFormatter,
     af: AltitudeFormatter,
     showDetails: Boolean = false,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongestWorkoutClick: (Long) -> Unit
 ) {
     Surface(
         onClick = onClick,
-        color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(12.dp),
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = TTAlpha.SemiTransparent)
         )
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -273,7 +277,7 @@ fun SportStatsRow(
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 10.dp),
                     thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Subtle)
                 )
 
                 // Sub-Sport Types
@@ -293,7 +297,9 @@ fun SportStatsRow(
                 if (showLongestWorkout) {
                     // longestWorkout is smart-cast to non-null because it's a local val and showLongestWorkout checks for null
                     Spacer(modifier = Modifier.height(12.dp))
-                    Column {
+                    Column(
+                        modifier = Modifier.clickable { onLongestWorkoutClick(longestWorkout.id) }
+                    ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -522,7 +528,8 @@ fun PreviewPeriodSummary() {
             isHeatmapEnabled = true,
             onHeaderClick = {},
             onMapClick = {},
-            onSportClick = { _, _ ->}
+            onSportClick = { _, _ ->},
+            onLongestWorkoutClick = { _, _, _ ->}
         )
     }
 }
@@ -552,7 +559,8 @@ fun PreviewEmptyPeriod() {
             isHeatmapEnabled = true,
             onHeaderClick = {},
             onMapClick = {},
-            onSportClick = { _, _ ->}
+            onSportClick = { _, _ ->},
+            onLongestWorkoutClick = { _, _, _ ->}
         )
     }
 }

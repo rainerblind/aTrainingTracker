@@ -37,6 +37,7 @@ import com.atrainingtracker.banalservice.devices.MyRemoteDevice;
 import com.atrainingtracker.banalservice.sensor.MyAccumulatorSensor;
 import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
+import com.atrainingtracker.banalservice.sensor.ProxySensor;
 import com.atrainingtracker.banalservice.sensor.SensorData;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
@@ -72,7 +73,7 @@ public class BANALService
 
     public static final double DEFAULT_BIKE_CALIBRATION_FACTOR = 2.1;
     public static final double MIN_SPEED = 0.001;
-    public static final int MAX_PACE = 1000000000;
+    public static final int MAX_PACE = 10;
 
     // TODO: reorganize: All Strings/Intents that are used globally, must be moved to TrainingApplication.
     // TODO: only those, that are only used within BANALService stay here
@@ -556,6 +557,15 @@ public class BANALService
             cDeviceManager.stopSearchForNewRemoteDevices();
         }
 
+        public boolean isSearchingForNewRemoteDevices() {
+            return cDeviceManager.isSearchingForNewRemoteDevices();
+        }
+
+        @Nullable
+        public DeviceType getNewRemoteDeviceTypeCurrentlySearchingFor() {
+            return cDeviceManager.getNewRemoteDeviceTypeCurrentlySearchingFor();
+        }
+
 
         public Set<SensorType> getAvailableSensorTypeSet() {
             return BANALService.this.getAvailableSensorTypeSet();
@@ -591,6 +601,16 @@ public class BANALService
 
         public SensorData getBestSensorData(SensorType sensorType) {
             return getSensorData(sensorType);
+        }
+
+        public long getSourceDeviceId(SensorType sensorType) {
+            MySensor sensor = cSensorManager.getSensor(sensorType);
+            if (sensor instanceof ProxySensor) {
+                return ((ProxySensor) sensor).getSourceDeviceId();
+            } else if (sensor != null) {
+                return sensor.getDevice().getDeviceId();
+            }
+            return -1;
         }
 
         public String getMainSensorStringValue(long deviceID) {

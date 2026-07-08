@@ -23,10 +23,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -46,6 +50,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -53,9 +58,8 @@ import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheet
-import com.atrainingtracker.trainingtracker.ui.theme.Zone1
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
-import com.atrainingtracker.trainingtracker.ui.theme.LightBackground
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
@@ -97,11 +101,12 @@ fun SensorGridScreen(
         )
     )
 
+    val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
-        sheetDragHandle = null, // Removes the large top spacer entirely
-        // Only show sheet if we are in tracking mode and have an active segment
-        sheetPeekHeight = if (showLiveSegments && screenMode == ScreenMode.TRACKING) 170.dp else 0.dp,
+        sheetDragHandle = null,
+        sheetPeekHeight = if (showLiveSegments && screenMode == ScreenMode.TRACKING) 140.dp + navBarHeight else 0.dp,
         sheetSwipeEnabled = showLiveSegments,
         sheetContent = {
             if (showLiveSegments) {
@@ -196,7 +201,6 @@ fun SensorGridScreen(
             // 3. The Elevation Profile (Below the Map)
             if (state.showElevationProfile && state.pathPoints.isNotEmpty()) {
                 Surface(
-                    color = MaterialTheme.colorScheme.surface,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                 ) {
                     ElevationProfile(
@@ -245,9 +249,9 @@ fun SensorGridScreenConfigPreview() {
     val context = LocalContext.current
     ATrainingTrackerTheme {
         val previewFields = listOf(
-            SensorFieldState(configHash = 1, sensorFieldId = 1, rowNr = 0, colNr = 0, viewSize = ViewSize.NORMAL, label = "Pace", value = "5:31", units = "/min", zoneColor = LightBackground, filterDescription = "GPS: 5s avg"),
-            SensorFieldState(configHash = 2, sensorFieldId = 2, rowNr = 0, colNr = 1, viewSize = ViewSize.NORMAL, label = "Heart Rate", value = "145", units = "bpm", zoneColor = Zone1, filterDescription = ""),
-            SensorFieldState(configHash = 3, sensorFieldId = 3, rowNr = 1, colNr = 0, viewSize = ViewSize.NORMAL, label = "Distance", value = "10.3", units = "km", zoneColor = LightBackground, filterDescription = "")
+            SensorFieldState(configHash = 1, sensorFieldId = 1, rowNr = 0, colNr = 0, viewSize = ViewSize.NORMAL, label = "Pace", value = "5:31", units = "/min", zoneColor = Color.Transparent, filterDescription = "GPS: 5s avg"),
+            SensorFieldState(configHash = 2, sensorFieldId = 2, rowNr = 0, colNr = 1, viewSize = ViewSize.NORMAL, label = "Heart Rate", value = "145", units = "bpm", zoneColor = TTColor.Zone1, filterDescription = ""),
+            SensorFieldState(configHash = 3, sensorFieldId = 3, rowNr = 1, colNr = 0, viewSize = ViewSize.NORMAL, label = "Distance", value = "10.3", units = "km", zoneColor = Color.Transparent, filterDescription = "")
         )
         val mockActions = object : GridActions {
             override fun onEditField(fieldState: SensorFieldState) {}
@@ -272,9 +276,9 @@ fun SensorGridScreenTrackingPreview() {
     val context = LocalContext.current
     ATrainingTrackerTheme {
         val previewFields = listOf(
-            SensorFieldState(configHash = 1, sensorFieldId = 1, rowNr = 0, colNr = 0, viewSize = ViewSize.LARGE, label = "Pace", value = "5:31", units = "/min", zoneColor = LightBackground, filterDescription = "GPS: 5s avg"),
-            SensorFieldState(configHash = 2, sensorFieldId = 2, rowNr = 0, colNr = 1, viewSize = ViewSize.LARGE, label = "Heart Rate", value = "145", zoneColor = Zone1, units = "bpm", filterDescription = ""),
-            SensorFieldState(configHash = 3, sensorFieldId = 3, rowNr = 1, colNr = 0, viewSize = ViewSize.NORMAL, label = "Distance", value = "10.3", units = "km", zoneColor = LightBackground, filterDescription = "")
+            SensorFieldState(configHash = 1, sensorFieldId = 1, rowNr = 0, colNr = 0, viewSize = ViewSize.LARGE, label = "Pace", value = "5:31", units = "/min", zoneColor = Color.Transparent, filterDescription = "GPS: 5s avg"),
+            SensorFieldState(configHash = 2, sensorFieldId = 2, rowNr = 0, colNr = 1, viewSize = ViewSize.LARGE, label = "Heart Rate", value = "145", zoneColor = TTColor.Zone1, units = "bpm", filterDescription = ""),
+            SensorFieldState(configHash = 3, sensorFieldId = 3, rowNr = 1, colNr = 0, viewSize = ViewSize.NORMAL, label = "Distance", value = "10.3", units = "km", zoneColor = Color.Transparent, filterDescription = "")
         )
         val mockActions = object : GridActions {
             override fun onEditField(fieldState: SensorFieldState) {}

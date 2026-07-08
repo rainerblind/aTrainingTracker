@@ -66,6 +66,19 @@ data class LapEvent(
 
 
 /**
+ * Represents the real-time telemetry state of a device.
+ * Using data classes ensures that StateFlow correctly detects value changes.
+ */
+data class DeviceTelemetry(
+    val deviceId: Long,
+    val mainValue: com.atrainingtracker.banalservice.devices.SimpleSensorData?,
+    val allValues: List<com.atrainingtracker.banalservice.devices.SimpleSensorData>,
+    val batteryPercentage: Int = -1,
+    val version: Long = System.nanoTime() // Guaranteed uniqueness for StateFlow
+)
+
+
+/**
  * A singleton repository that acts as the single source of truth for all tracking-related data from the sensors.
  * It connects to the BANALService to provide a clean data source for all ViewModels.
  */
@@ -79,6 +92,8 @@ class BANALServiceRepository private constructor(context: Context) {
     private var isBoundToBanalService = false
     // Guard to prevent multiple simultaneous bind attempts during app startup
     private var isBinding = false
+    // Reference count to manage multiple ViewModels binding/unbinding
+    private var bindReferenceCount = 0
 
 
     // --- Reactive Data Streams (StateFlows for UI) ---
@@ -95,6 +110,10 @@ class BANALServiceRepository private constructor(context: Context) {
     private val _searchingForDevice = MutableStateFlow<String?>(null)
     val searchingForDevice: StateFlow<String?> = _searchingForDevice.asStateFlow()
 
+    // Status whether the service is actively searching for NEW devices
+    private val _isSearchingForNewDevices = MutableStateFlow(false)
+    val isSearchingForNewDevices: StateFlow<Boolean> = _isSearchingForNewDevices.asStateFlow()
+
     private val _bSportType = MutableStateFlow<BSportType>(BSportType.UNKNOWN)
     val bSportType: StateFlow<BSportType> = _bSportType.asStateFlow()
 
@@ -108,9 +127,13 @@ class BANALServiceRepository private constructor(context: Context) {
     private val _activeSensors = MutableStateFlow<Set<SensorType>>(emptySet())
     val activeSensors: StateFlow<Set<SensorType>> = _activeSensors.asStateFlow()
 
-    // all active devices (including the smartphones speed and location devices)
-    private val _allActiveDevices = MutableLiveData<List<MyDevice>>(emptyList())
-    val allActiveDevices: LiveData<List<MyDevice>> = _allActiveDevices
+    // Mapping from SensorType to the ID of the device currently providing the "best" value
+    private val _sensorSourceDeviceIds = MutableStateFlow<Map<SensorType, Long>>(emptyMap())
+    val sensorSourceDeviceIds: StateFlow<Map<SensorType, Long>> = _sensorSourceDeviceIds.asStateFlow()
+
+    // all active devices telemetry (synchronized every second)
+    private val _allActiveDevicesTelemetry = MutableStateFlow<List<DeviceTelemetry>>(emptyList())
+    val allActiveDevicesTelemetry: StateFlow<List<DeviceTelemetry>> = _allActiveDevicesTelemetry.asStateFlow()
 
     // StateFlow for the current location
     private val _currentLocation = MutableStateFlow<LatLng?>(null)
@@ -202,8 +225,8 @@ class BANALServiceRepository private constructor(context: Context) {
     // Handles the low-level Android Service Connection
     private val banalServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            if (DEBUG) Log.i(TAG, "onServiceConnected")
             val binder = service as? BANALService.BANALServiceComm
+            if (DEBUG) Log.i(TAG, "onServiceConnected - binder=$binder")
             _serviceBinder.value = binder // This "wakes up" the observation loop
             isBoundToBanalService = true
             isBinding = false
@@ -222,7 +245,8 @@ class BANALServiceRepository private constructor(context: Context) {
      * Uses startService first to ensure the service remains alive even if the Activity unbinds.
      */
     fun bindToBANALService() {
-        if (DEBUG) Log.i(TAG, "bindToBANALService()")
+        bindReferenceCount++
+        if (DEBUG) Log.i(TAG, "bindToBANALService() - count=$bindReferenceCount, isBound=$isBoundToBanalService")
         if (!isBoundToBanalService && !isBinding) {
             isBinding = true
             val intent = Intent(appContext, BANALService::class.java)
@@ -235,8 +259,10 @@ class BANALServiceRepository private constructor(context: Context) {
      * Unbinds from the service. The observation loop will automatically stop.
      */
     fun unbindFromBANALService() {
-        if (DEBUG) Log.i(TAG, "unbindFromBANALService()")
-        if (isBoundToBanalService) {
+        if (bindReferenceCount > 0) bindReferenceCount--
+        if (DEBUG) Log.i(TAG, "unbindFromBANALService() - count=$bindReferenceCount")
+        
+        if (bindReferenceCount == 0 && isBoundToBanalService) {
             try {
                 _serviceBinder.value = null
                 appContext.unbindService(banalServiceConnection)
@@ -275,12 +301,30 @@ class BANALServiceRepository private constructor(context: Context) {
 
                         // --- DEVICE AND SENSOR STATUS ---
                         _searchingForDevice.value = binder.nameOfSearchingDevice
+                        _isSearchingForNewDevices.value = binder.isSearchingForNewRemoteDevices()
                         _bSportType.value = binder.bSportType
                         _activeRemoteDevicesIds.value = binder.databaseIdsOfActiveRemoteDevices
                         _newlyFoundDevicesIds.value = binder.getIdsOfNewlyFoundDevices()
-                        _activeSensors.value = binder.availableSensorTypeSet?.toSet() ?: emptySet()
 
-                        _allActiveDevices.postValue(binder.activeDevicesIncludingSpeedAndLocationDevices ?: emptyList())
+                        val activeSensors = binder.availableSensorTypeSet?.toSet() ?: emptySet()
+                        _activeSensors.value = activeSensors
+
+                        // Update source device mapping for active sensors
+                        val sourceMapping = mutableMapOf<SensorType, Long>()
+                        activeSensors.forEach { type ->
+                            sourceMapping[type] = binder.getSourceDeviceId(type)
+                        }
+                        _sensorSourceDeviceIds.value = sourceMapping
+
+                        _allActiveDevicesTelemetry.value = binder.activeDevicesIncludingSpeedAndLocationDevices?.map { device ->
+                            DeviceTelemetry(
+                                deviceId = device.deviceId,
+                                mainValue = device.mainSensorData,
+                                allValues = device.allSensorData ?: emptyList(),
+                                batteryPercentage = device.batteryPercentage,
+                                version = System.nanoTime()
+                            )
+                        } ?: emptyList()
 
                         // --- LOCATION AND NAVIGATION ---
                         val latData = binder.getBestSensorData(SensorType.LATITUDE)
@@ -314,7 +358,7 @@ class BANALServiceRepository private constructor(context: Context) {
                             _currentPathPoints.value = _currentPathPoints.value + newPathPoint
                         }
 
-                        if (DEBUG) Log.i(TAG, "BANALService update:\n _searchingForDevice: ${_searchingForDevice.value},\n _bSportType: ${_bSportType.value},\n _foundDeviceIds: ${_activeRemoteDevicesIds.value},\n _activeSensors: ${_activeSensors.value}")
+                        if (DEBUG) Log.i(TAG, "BANALService update loop - binder=$binder")
 
                         delay(1000) // Pulse every second
                     }

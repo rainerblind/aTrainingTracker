@@ -78,8 +78,6 @@ fun BikeTypeSelector(
         )
 
         ExposedDropdownMenu(
-            containerColor = MaterialTheme.colorScheme.surface,
-            tonalElevation = 0.dp,
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {

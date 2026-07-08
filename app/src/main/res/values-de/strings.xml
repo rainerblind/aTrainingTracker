@@ -1067,4 +1067,22 @@
     <string name="strava_disconnected_status">Du bist nicht mit Strava verbunden</string>
     <string name="strava_disconnect">Von Strava trennen</string>
     <string name="strava_overall_rank_description">Gesamtrang #%1$d</string>
+    <string name="source_device">Quelle</string>
+    <string name="source_active_backups">Aktive Backups</string>
+    <string name="source_not_connected">Nicht verbunden</string>
+    <string name="source_internal">Interne Smartphone-Sensoren</string>
+    <string name="source_none_configured">Keine Quelle konfiguriert</string>
+
+    <string name="marker_options">Marker-Optionen</string>
+    <string name="marker_max_altitude">Max. Höhe</string>
+    <string name="marker_max_distance">Max. Distanz</string>
+    <string name="marker_start">Start</string>
+    <string name="marker_end">Ende</string>
+
+    <string name="track_layers">Track-Ebenen</string>
+    <string name="track_type_best">Aufgezeichnet</string>
+    <string name="track_type_gps">GPS</string>
+    <string name="track_type_fused">Google Fused</string>
+    <string name="track_type_network">Netzwerk</string>
+    <string name="legend">Legende</string>
 </resources>

@@ -24,7 +24,10 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
@@ -104,23 +107,14 @@ class MapFragmentWithTrack : Fragment() {
                         }
                     }
 
+                    val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
                     BottomSheetScaffold(
                         scaffoldState = scaffoldState,
-                        sheetPeekHeight = if (selectedSegmentId != null) { 225.dp
-                        } else if (selectedRouteId != null) { 175.dp
-                        } else 0.dp,
-                        sheetDragHandle = {
-                            // Subtle small drag handle
-                            Surface(
-                                modifier = Modifier.statusBarsPadding(),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                shape = CircleShape
-                            ) {
-                                Box(
-                                    Modifier.size(width = 32.dp, height = 3.dp)
-                                )
-                            }
-                        },
+                        sheetPeekHeight = if (selectedSegmentId != null) 185.dp + navBarHeight
+                        else if (selectedRouteId != null) 100.dp + navBarHeight
+                        else 0.dp,
+                        sheetDragHandle = null,
                         sheetContent = {
                             when {
                                 selectedSegmentId != null -> {
@@ -131,7 +125,8 @@ class MapFragmentWithTrack : Fragment() {
                                     SegmentOnMapScreen(
                                         segmentSummary = liveSegments.find { it.summary.stravaId == selectedSegmentId }?.summary,
                                         segment = selectedSegment,
-                                        modifier = Modifier
+                                        modifier = Modifier,
+                                        useStatusBarsPadding = false
                                     )
                                 }
                                 selectedRouteId != null -> {
@@ -146,6 +141,7 @@ class MapFragmentWithTrack : Fragment() {
                                             selected = it
                                         ) },
                                         modifier = Modifier,
+                                        useStatusBarsPadding = false
                                     )
                                 }
                             }

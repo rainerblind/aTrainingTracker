@@ -28,6 +28,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
+import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
@@ -155,7 +156,7 @@ class TrackingViewModel(
     )
 
     private val sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(application)
-    private val defaultZoneColor = Color(ContextCompat.getColor(application, R.color.color_background))
+    private val defaultZoneColor = Color.Transparent
 
     // Pre-load the zone colors into a list for efficient access. The order is important.
     private val zoneColors: List<Color> = listOf(
@@ -167,18 +168,9 @@ class TrackingViewModel(
     )
 
     init {
-        // ensure the repository is bound to the BANALService
-        banalServiceRepository.bindToBANALService()
-
         // Load both the main UI state and the activity type
         loadSensorFieldStates()
         loadActivityType()
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        // Trigger the unbind logic in the repository
-        banalServiceRepository.unbindFromBANALService()
     }
 
     private fun loadActivityType() {

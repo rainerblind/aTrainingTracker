@@ -32,8 +32,7 @@ import com.atrainingtracker.trainingtracker.segments.LiveSegmentData
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
-import com.atrainingtracker.trainingtracker.ui.theme.Zone3
-import com.atrainingtracker.trainingtracker.ui.theme.Zone4
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 @Composable
 fun SegmentLiveDetails(
@@ -76,9 +75,9 @@ fun SegmentLiveDetails(
                     color = if (liveSegmentData.segmentOffset_raw < LiveSegmentsRepository.SEGMENT_DISTANCE_THRESHOLD * 0.5f) {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     } else if (liveSegmentData.segmentOffset_raw < LiveSegmentsRepository.SEGMENT_DISTANCE_THRESHOLD * 0.75f) {
-                        Zone3
+                        TTColor.Zone3
                     } else {
-                        Zone4
+                        TTColor.Zone4
                     }
                 )
             }

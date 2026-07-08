@@ -20,12 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.map
 
 import android.content.Context
 import android.util.Log
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -47,8 +42,11 @@ fun MapBoundsController(
     isMapLoaded: Boolean,
     context: Context
 ) {
-    LaunchedEffect(tracks, markers, segments, routes, isMapLoaded) {
-        if (!isMapLoaded) return@LaunchedEffect
+    // Flag to ensure we only fit the bounds once per session/focus change
+    var hasFittedInitialBounds by remember(zoomFocus) { mutableStateOf(false) }
+
+    LaunchedEffect(tracks, markers, segments, routes, isMapLoaded, hasFittedInitialBounds) {
+        if (!isMapLoaded || hasFittedInitialBounds) return@LaunchedEffect
 
         if (zoomFocus == MapZoomFocus.TRACK_AND_MARKERS || 
             zoomFocus == MapZoomFocus.LOCAL_SEGMENTS || 
@@ -112,11 +110,13 @@ fun MapBoundsController(
                 val padding = (40 * context.resources.displayMetrics.density).toInt()
                 try {
                     cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(builder.build(), padding))
+                    hasFittedInitialBounds = true
                 } catch (e: Exception) {
                     // Silently fail if map not laid out
                 }
             } else if (userPos != null) {
                 cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(userPos, 12f))
+                hasFittedInitialBounds = true
             }
         }
     }

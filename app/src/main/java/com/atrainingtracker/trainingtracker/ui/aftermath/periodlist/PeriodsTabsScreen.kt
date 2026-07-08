@@ -42,6 +42,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -49,12 +51,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
 import kotlin.math.max
@@ -72,7 +76,8 @@ fun PeriodsTabsScreen(
     onToggleHeatmapEnabled: () -> Unit,
     onHeaderClick: (PeriodSummary) -> Unit,
     onMapClick: (PeriodSummary) -> Unit,
-    onSportClick: (PeriodSummary, BSportType) -> Unit
+    onSportClick: (PeriodSummary, BSportType) -> Unit,
+    onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit
 ) {
 
     val scope = rememberCoroutineScope()
@@ -131,6 +136,7 @@ fun PeriodsTabsScreen(
                         onHeaderClick = onHeaderClick,
                         onMapClick = onMapClick,
                         onSportClick = onSportClick,
+                        onLongestWorkoutClick = onLongestWorkoutClick,
                         // PeriodList now only needs to handle the rest of the offset
                         appBarOffsetPx = 0,
                         headerHeightPx = 0f,
@@ -168,7 +174,7 @@ fun PeriodsTabsScreen(
                                 Icon(
                                     imageVector = Icons.Default.Whatshot,
                                     contentDescription = if (isHeatmapEnabled) "Disable Heatmap" else "Enable Heatmap",
-                                    tint = if (isHeatmapEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.38f)
+                                    tint = if (isHeatmapEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = TTAlpha.Disabled)
                                 )
                             }
                         }
@@ -176,7 +182,7 @@ fun PeriodsTabsScreen(
 
                     PrimaryScrollableTabRow(
                         selectedTabIndex = pagerState.currentPage,
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                         divider = {}
                     ) {
                         tabs.forEachIndexed { index, title ->
@@ -261,7 +267,7 @@ fun PeriodBarGraph(
                         .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
                         .background(
                             if (isSelected) MaterialTheme.colorScheme.primary 
-                            else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                            else MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Disabled)
                         )
                         .clickable { onBarClick(originalIndex) }
                 )
@@ -283,7 +289,7 @@ fun PeriodBarGraph(
                             softWrap = false,
                             modifier = Modifier.wrapContentWidth(unbounded = true),
                             color = if (isSelected) MaterialTheme.colorScheme.onSurface 
-                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Medium)
                         )
                     }
                 }

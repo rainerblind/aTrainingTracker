@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
@@ -55,7 +56,9 @@ fun RouteOnMapScreen(
     routeSummary: RouteSummary?,
     backgroundPaths: List<MappablePath> = emptyList(),
     onToggleSelection: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    useStatusBarsPadding: Boolean = true,
+    showMap: Boolean = true
 ) {
     val bSportType = route?.bSportType ?: routeSummary?.bSportType ?: BSportType.UNKNOWN
 
@@ -63,6 +66,8 @@ fun RouteOnMapScreen(
         bSportType = bSportType,
         zoomFocus = MapZoomFocus.FIT_PRIMARY,
         activeScrubPath = route?.path,
+        useStatusBarsPadding = useStatusBarsPadding,
+        showMap = showMap,
         header = {
             routeSummary?.let {
                 RouteSummaryHeader(
@@ -75,7 +80,7 @@ fun RouteOnMapScreen(
         },
         mapContent = {
             if (route != null) routes(listOf(route))
-            contextualPaths(backgroundPaths, sameSportAlpha = 0.7f)
+            contextualPaths(backgroundPaths, sameSportAlpha = TTAlpha.Medium)
         },
         modifier = modifier
     )

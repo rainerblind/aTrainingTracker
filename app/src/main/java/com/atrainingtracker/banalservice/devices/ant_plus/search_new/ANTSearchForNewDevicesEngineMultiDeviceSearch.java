@@ -52,6 +52,10 @@ public class ANTSearchForNewDevicesEngineMultiDeviceSearch
         mCallbackInterface = callbackInterface;
     }
 
+    public DeviceType getDeviceType() {
+        return mDeviceType;
+    }
+
     @Override
     public void startAsyncSearch() {
         com.dsi.ant.plugins.antplus.pcc.defines.DeviceType antDeviceType = DeviceType.getAntPluginDeviceType(mDeviceType);

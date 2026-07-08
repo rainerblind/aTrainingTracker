@@ -30,31 +30,41 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.repositories.DeviceTelemetry
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import androidx.compose.foundation.clickable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 
 @Composable
 fun SensorStatus(
     activeSensors: Set<SensorType>,
+    sourceMapping: Map<SensorType, Long> = emptyMap(),
+    allTelemetry: List<DeviceTelemetry> = emptyList(),
+    allDevices: List<DeviceUiData> = emptyList(),
+    onDeviceClick: (Long) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    var selectedSensor by remember { mutableStateOf<SensorType?>(null) }
+
     // Fixed order definition
     val sensorDefinitions = remember {
         listOf(
-            SensorType.TIME_ACTIVE to R.drawable.ic_time_active,
-            SensorType.LONGITUDE to R.drawable.ic_location,
-            SensorType.ALTITUDE to R.drawable.ic_altitude,
-            SensorType.DISTANCE_m to R.drawable.ic_distance,
-            SensorType.SPEED_mps to R.drawable.ic_speed,
-            SensorType.CADENCE to R.drawable.ic_cadence,
-            SensorType.HR to R.drawable.ic_heart_rate,
-            SensorType.POWER to R.drawable.ic_power
+            SensorType.TIME_ACTIVE,
+            SensorType.ACCURACY,  // i.e., position
+            SensorType.ALTITUDE,
+            SensorType.DISTANCE_m,
+            SensorType.SPEED_mps,
+            SensorType.CADENCE,
+            SensorType.HR,
+            SensorType.POWER
         )
     }
-    val context = LocalContext.current // Get the context within the loop or at the top of the composable
 
     Row(
         modifier = modifier
@@ -64,34 +74,37 @@ fun SensorStatus(
         verticalAlignment = Alignment.CenterVertically
     ) {
 
-        sensorDefinitions.forEach { (type, iconRes) ->
+        sensorDefinitions.forEach { type ->
             val isAvailable = activeSensors.contains(type)
 
-            Column(
+            Icon(
+                painter = painterResource(id = type.iconResId),
+                contentDescription = type.name,
                 modifier = Modifier
-                    .padding(horizontal = 4.dp)
-                    .alpha(if (isAvailable) 1f else 0.15f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    painter = painterResource(id = iconRes),
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp), // Slightly smaller to accommodate text
-                    tint = if (isAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
-                )
-
-                Text(
-                    text = type.getShortName(context),
-                    style = MaterialTheme.typography.bodySmall,
-                    fontSize = 10.sp,
-                    modifier = Modifier.padding(top = 1.dp),
-                    maxLines = 1,
-                    softWrap = false,
-                    color = if (isAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
-                )
-            }
+                    .padding(horizontal = 6.dp)
+                    .size(22.dp)
+                    .alpha(if (isAvailable) 1f else 0.2f)
+                    .clickable {
+                        selectedSensor = type
+                    },
+                tint = if (isAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
+            )
         }
+    }
+
+    // Source Dialog
+    selectedSensor?.let { sensor ->
+        val sourceId = sourceMapping[sensor] ?: -1
+        val sourceDevice = allDevices.find { it.id == sourceId }
+
+        SensorSourceDialog(
+            sensorType = sensor,
+            sourceDevice = sourceDevice,
+            allTelemetry = allTelemetry,
+            allDevices = allDevices,
+            onDeviceClick = onDeviceClick,
+            onDismiss = { selectedSensor = null }
+        )
     }
 }
 

@@ -32,6 +32,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
@@ -65,7 +66,7 @@ fun WorkoutSummary(
     modifier: Modifier = Modifier
 ) {
     // When the workout is not yet finished (properly), we show it with an alpha of 0.5
-    val contentAlpha = if (workoutData.headerData.finished) 1.0f else 0.5f
+    val contentAlpha = if (workoutData.headerData.finished) TTAlpha.High else 0.5f
 
     // Shared modifier for the clickable sections
     val editWorkoutModifier = Modifier.clickable {

@@ -901,10 +901,10 @@ public class MainActivityWithNavigation
         }
     }
 
-    public void startPairing(@NonNull Protocol protocol) {
-        if (DEBUG) Log.d(TAG, "startPairingActivity: " + protocol);
+    public void startPairing(@NonNull Protocol protocol, @Nullable DeviceType deviceType) {
+        if (DEBUG) Log.d(TAG, "startPairingActivity: " + protocol + ", deviceType: " + deviceType);
 
-        mFragment = DevicesTabbedContainerFragment.newInstance(protocol, null, 0);
+        mFragment = DevicesTabbedContainerFragment.newInstance(protocol, deviceType, 0);
         String tag = DevicesTabbedContainerFragment.TAG;
 
         FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();

@@ -18,67 +18,52 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.rememberGraphicsLayer
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
-import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
-import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
-import com.atrainingtracker.trainingtracker.ui.map.MapTrack
-import com.atrainingtracker.trainingtracker.ui.map.MapSegment
-import com.atrainingtracker.trainingtracker.ui.map.MapRoute
-import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
-import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
-import com.atrainingtracker.trainingtracker.ui.map.MapDetailLayout
-import com.google.android.gms.maps.model.LatLng
-import kotlinx.coroutines.flow.MutableStateFlow
-import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.graphics.layer.drawLayer
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Icon
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.drawWithContent
-import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
-import kotlinx.coroutines.launch
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
+import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
+import com.atrainingtracker.trainingtracker.ui.map.*
 
 @Composable
 fun TrackOnMapScreen(
     workoutData: WorkoutData,
     modifier: Modifier = Modifier,
     tracks: List<MapTrack> = emptyList(),
+    availableTrackTypes: Set<TrackType> = setOf(TrackType.BEST),
     segments: List<MapSegment> = emptyList(),
     routes: List<MapRoute> = emptyList(),
-    markers: List<LocationMarker> = emptyList()
+    markers: List<LocationMarker> = emptyList(),
+    enabledTrackTypes: Set<TrackType> = setOf(TrackType.BEST),
+    onToggleTrackType: (TrackType) -> Unit = {},
+    showTechnicalTracks: Boolean = false,
+    useStatusBarsPadding: Boolean = true,
+    showMap: Boolean = true
 ) {
+    // PERFORMANCE: Memoize the filtered tracks list
+    val filteredTracks = remember(tracks, enabledTrackTypes) {
+        tracks.filter { it.type in enabledTrackTypes }
+    }
+
     MapDetailLayout(
         bSportType = workoutData.bSportType,
         zoomFocus = MapZoomFocus.FIT_PRIMARY,
-        activeScrubPath = tracks.firstOrNull()?.path,
+        activeScrubPath = tracks.find { it.type == TrackType.BEST }?.path ?: tracks.firstOrNull()?.path,
         minAltitudeOverride = workoutData.minAltitude,
         maxAltitudeOverride = workoutData.maxAltitude,
+        useStatusBarsPadding = useStatusBarsPadding,
+        showMap = showMap,
         header = {
             WorkoutHeader(
                 modifier = modifier,
@@ -91,11 +76,95 @@ fun TrackOnMapScreen(
             )
         },
         mapContent = {
-            tracks(tracks)
+            tracks(filteredTracks)
             contextualPaths(segments)
             contextualPaths(routes)
             markers(markers)
         },
-        modifier = modifier
+        modifier = modifier,
+        overlay = {
+            if (showTechnicalTracks) {
+                // Technical Track Selection FAB (Top-Right, but below the share button handled by layout if any)
+                // Actually MapDetailLayout aligns its share button TopEnd with 16dp padding.
+                // We'll place ours just below it or to the left.
+                // Let's use a Column to stack them if needed, or just let them overlap if they are in different corners.
+                // MapDetailLayout aligns SHARE to TopEnd.
+                
+                var showTrackMenu by remember { mutableStateOf(false) }
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 76.dp, end = 16.dp) // Offset vertically to not overlap share button
+                ) {
+                    Surface(
+                        onClick = { showTrackMenu = true },
+                        modifier = Modifier.size(44.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
+                        shadowElevation = 6.dp,
+                        tonalElevation = 2.dp
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Layers,
+                                contentDescription = stringResource(R.string.track_layers),
+                                modifier = Modifier.size(22.dp),
+                                tint = if (enabledTrackTypes.size > 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Disabled)
+                            )
+                        }
+                    }
+
+                    DropdownMenu(
+                        expanded = showTrackMenu,
+                        onDismissRequest = { showTrackMenu = false }
+                    ) {
+                        TrackType.entries.forEach { type ->
+                            val isAvailable = type in availableTrackTypes
+                            
+                            DropdownMenuItem(
+                                enabled = isAvailable,
+                                text = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        modifier = Modifier.alpha(if (isAvailable) TTAlpha.High else TTAlpha.Disabled)
+                                    ) {
+                                        Checkbox(
+                                            checked = enabledTrackTypes.contains(type),
+                                            onCheckedChange = null,
+                                            enabled = isAvailable
+                                        )
+                                        // THE LEGEND: Small color square
+                                        Surface(
+                                            modifier = Modifier.size(12.dp),
+                                            color = type.color,
+                                            shape = RoundedCornerShape(2.dp)
+                                        ) {}
+                                        Text(
+                                            text = getTrackTypeName(type),
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    onToggleTrackType(type)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
     )
+}
+
+@Composable
+private fun getTrackTypeName(type: TrackType): String {
+    return when (type) {
+        TrackType.BEST -> stringResource(R.string.track_type_best)
+        TrackType.GPS -> stringResource(R.string.track_type_gps)
+        TrackType.FUSED -> stringResource(R.string.track_type_fused)
+        TrackType.NETWORK -> stringResource(R.string.track_type_network)
+    }
 }

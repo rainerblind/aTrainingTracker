@@ -978,4 +978,21 @@
     <string name="strava_disconnect">Desconectar de Strava</string>
     <string name="strava_overall_rank_description">Rango global #%1$d</string>
     <string name="no_upload">- Sin subida -</string>
+    <string name="source_device">Fuente</string>
+    <string name="source_active_backups">Backups activos</string>
+    <string name="source_not_connected">No conectado</string>
+    <string name="source_internal">Sensores internos del smartphone</string>
+    <string name="source_none_configured">Ninguna fuente configurada</string>
+    <string name="marker_options">Opciones de marcadores</string>
+    <string name="marker_max_altitude">Alt. máx.</string>
+    <string name="marker_max_distance">Dist. máx.</string>
+    <string name="marker_start">Inicio</string>
+    <string name="marker_end">Fin</string>
+
+    <string name="track_layers">Capas de track</string>
+    <string name="track_type_best">Registrado</string>
+    <string name="track_type_gps">GPS</string>
+    <string name="track_type_fused">Google Fused</string>
+    <string name="track_type_network">Red</string>
+    <string name="legend">Leyenda</string>
 </resources>

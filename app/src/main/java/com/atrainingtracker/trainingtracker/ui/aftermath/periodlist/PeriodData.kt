@@ -24,6 +24,10 @@ enum class PeriodType {
     DAY, WEEK, MONTH, YEAR
 }
 
+enum class PeriodMarkerType {
+    ALTITUDE, DISTANCE, START, END
+}
+
 data class PeriodSummary(
     val periodLabel: String,         // e.g., "Week20, 2026" or "May 2026"
     val periodDateRange: String,     // e.g., "May 11 - May 17"
@@ -35,6 +39,7 @@ data class PeriodSummary(
     val sportStats: Map<BSportType, SportStats>,
     val polylines: List<String>, // List of encoded polylines for the map
     val workoutIdToPolylineMap: Map<Long, String>, // ID -> Encoded Polyline
+    val workoutIdToPathMap: Map<Long, List<com.google.android.gms.maps.model.LatLng>> = emptyMap(), // ID -> Rich Path
     val workoutIdToSportMap: Map<Long, BSportType>,
     val extremaMarkers: List<PeriodPeakMarker> = emptyList(),
     val sortKey: String // Used for sorting
@@ -44,7 +49,8 @@ data class PeriodPeakMarker(
     val workoutId: Long,
     val pos: com.google.android.gms.maps.model.LatLng,
     val iconResId: Int,
-    val title: String
+    val title: String,
+    val markerType: PeriodMarkerType
 )
 
 data class SportStats(

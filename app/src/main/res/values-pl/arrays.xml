@@ -132,7 +132,6 @@
     </string-array>
 
     <string-array name="wheel_size_names">
-        <item>Niestandardowy</item>
         <item>700 x 28</item>
         <item>700 x 25</item>
         <item>700 x 23</item>

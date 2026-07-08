@@ -29,6 +29,8 @@ import androidx.lifecycle.asFlow
 
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.ActivityType
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.LapEvent
@@ -49,6 +51,7 @@ import kotlinx.coroutines.launch
 // helper class to navigate the fragment container after adding or deletion of a tab
 sealed class TabNavigationEvent {
     data class NavigateTo(val index: Int) : TabNavigationEvent()
+    data class EditDevice(val deviceId: Long) : TabNavigationEvent()
 }
 
 /**
@@ -57,7 +60,8 @@ sealed class TabNavigationEvent {
 class TrackingTabsViewModel(
     application: Application,
     private val trackingViewsRepository: TrackingViewsRepository,
-    private val banalServiceRepository: BANALServiceRepository
+    private val banalServiceRepository: BANALServiceRepository,
+    private val devicesRepository: DeviceDataRepository = DeviceDataRepository.getInstance(application)
 ) : AndroidViewModel(application) {
 
     // State to hold the explicitly selected ActivityType
@@ -81,10 +85,27 @@ class TrackingTabsViewModel(
         )
 
     val trackingMode: LiveData<TrackingMode> = banalServiceRepository.trackingMode
+    val activeSensors = banalServiceRepository.activeSensors
+    val sensorSourceMapping = banalServiceRepository.sensorSourceDeviceIds
+    val allTelemetry = banalServiceRepository.allActiveDevicesTelemetry
+    val allDevices = devicesRepository.allDevices
+
     val lapEvent: LiveData<LapEvent?> = banalServiceRepository.lapEvent
     fun clearLapEvent() = banalServiceRepository.clearLapEvent()
 
     val screenMode: StateFlow<ScreenMode> = trackingViewsRepository.screenMode
+
+    fun onResume() {
+        viewModelScope.launch {
+            devicesRepository.loadAllDevices()
+        }
+    }
+
+    fun onEditDevice(deviceId: Long) {
+        viewModelScope.launch {
+            _navigationEvent.emit(TabNavigationEvent.EditDevice(deviceId))
+        }
+    }
 
     private val _navigationEvent = MutableSharedFlow<TabNavigationEvent>()
     val navigationEvent = _navigationEvent.asSharedFlow()
@@ -107,6 +128,9 @@ class TrackingTabsViewModel(
     val navigateToTrackingTab = SingleLiveEvent<Unit>()
 
     init {
+        // ensure the repository is bound to the BANALService
+        banalServiceRepository.bindToBANALService()
+
         // Observe the tracking mode from the repository
         viewModelScope.launch {
             banalServiceRepository.trackingMode.asFlow().collect { mode ->
@@ -116,6 +140,12 @@ class TrackingTabsViewModel(
                 }
             }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Trigger the unbind logic in the repository
+        banalServiceRepository.unbindFromBANALService()
     }
 
     // Method for the Fragment to set the explicit ActivityType

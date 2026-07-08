@@ -35,7 +35,9 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
+import com.atrainingtracker.trainingtracker.ui.components.MinimumDragHandle
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -53,8 +55,11 @@ fun MapDetailLayout(
     minAltitudeOverride: Double? = null,
     maxAltitudeOverride: Double? = null,
     header: @Composable () -> Unit,
-    mapContent: MapContentScope.() -> Unit,
-    modifier: Modifier = Modifier
+    mapContent: MapContentScope.() -> Unit = {},
+    overlay: @Composable BoxScope.() -> Unit = {},
+    modifier: Modifier = Modifier,
+    useStatusBarsPadding: Boolean = true,
+    showMap: Boolean = true
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -66,14 +71,22 @@ fun MapDetailLayout(
     var selectedDistance by remember { mutableStateOf<Double?>(null) }
     val noLocation = remember { MutableStateFlow<LatLng?>(null) }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(
+        modifier = modifier.then(
+            if (showMap) Modifier.fillMaxSize() else Modifier.wrapContentHeight()
+        )
+    ) {
+        // DRAG HANDLE (For sheets)
+        if (!useStatusBarsPadding) {
+            MinimumDragHandle()
+        }
 
         // 1. HEADER (Slotted)
         Surface(
             color = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface,
             shape = RectangleShape,
-            modifier = Modifier.statusBarsPadding()
+            modifier = if (useStatusBarsPadding) Modifier.statusBarsPadding() else Modifier
         ) {
             Box(modifier = Modifier.drawWithContent {
                 headerLayer.record {
@@ -86,45 +99,49 @@ fun MapDetailLayout(
         }
 
         // 2. MAP AREA with OVERLAYED SHARE BUTTON
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            ATrainingTrackerMap(
-                zoomFocus = zoomFocus,
-                bSportType = bSportType,
-                currentLocationFlow = noLocation,
-                selectedDistance = selectedDistance,
-                activeScrubPath = activeScrubPath,
-                modifier = Modifier.fillMaxSize(),
-                shouldTakeSnapshot = isSharing,
-                onSnapshotReady = { mapBitmap ->
-                    scope.launch {
-                        val hBmp = headerLayer.toImageBitmap().asAndroidBitmap()
-                        val eBmp = elevationLayer.toImageBitmap().asAndroidBitmap()
-                        combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp)
-                        isSharing = false
-                    }
-                },
-                content = mapContent
-            )
+        if (showMap) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                ATrainingTrackerMap(
+                    zoomFocus = zoomFocus,
+                    bSportType = bSportType,
+                    currentLocationFlow = noLocation,
+                    selectedDistance = selectedDistance,
+                    activeScrubPath = activeScrubPath,
+                    modifier = Modifier.fillMaxSize(),
+                    shouldTakeSnapshot = isSharing,
+                    onSnapshotReady = { mapBitmap ->
+                        scope.launch {
+                            val hBmp = headerLayer.toImageBitmap().asAndroidBitmap()
+                            val eBmp = elevationLayer.toImageBitmap().asAndroidBitmap()
+                            combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp)
+                            isSharing = false
+                        }
+                    },
+                    content = mapContent
+                )
 
-            // SHARE BUTTON
-            Surface(
-                onClick = { isSharing = true },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)
-                    .size(44.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                shadowElevation = 6.dp,
-                tonalElevation = 2.dp
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = "Share",
-                        modifier = Modifier.size(22.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                overlay()
+
+                // SHARE BUTTON
+                Surface(
+                    onClick = { isSharing = true },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                        .size(44.dp),
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
+                    shadowElevation = 6.dp,
+                    tonalElevation = 2.dp
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Share",
+                            modifier = Modifier.size(22.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
         }

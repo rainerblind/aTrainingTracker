@@ -78,7 +78,6 @@ fun WorkoutListActions(
                 )
             }
             DropdownMenu(
-                containerColor = MaterialTheme.colorScheme.surface,
                 expanded = showSortMenu,
                 onDismissRequest = { showSortMenu = false }
             ) {

@@ -15,10 +15,6 @@
 
 package com.atrainingtracker.trainingtracker.fragments.preferences
 
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
@@ -27,19 +23,23 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaAuthViewModel
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaAuthState
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDeauthorizationThread
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSynchronizeThread
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
-import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthCallbackActivity
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
@@ -49,12 +49,7 @@ class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSha
     private var mSharedPreferences: SharedPreferences? = null
     private var mHeaderComposeView: ComposeView? = null
 
-    private val tokenReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            val token = intent?.getStringExtra("access_token")
-            handleToken(token)
-        }
-    }
+    private val authViewModel: StravaAuthViewModel by viewModels()
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         if (DEBUG) Log.i(TAG, "onCreatePreferences(savedInstanceState, rootKey=$rootKey)")
@@ -62,11 +57,6 @@ class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSha
         setPreferencesFromResource(R.xml.prefs, rootKey)
 
         mUpdateStravaEquipment = findPreference(TrainingApplication.UPDATE_STRAVA_EQUIPMENT)
-
-        LocalBroadcastManager.getInstance(requireActivity()).registerReceiver(
-            tokenReceiver,
-            IntentFilter(StravaOAuthCallbackActivity.StravaOAuthSuccess)
-        )
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -92,17 +82,36 @@ class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSha
         mHeaderComposeView?.setContent {
             ATrainingTrackerTheme {
                 val isConnected = TrainingApplication.getStravaAccessToken() != null
+                val authState by authViewModel.authState.collectAsStateWithLifecycle()
+
+                LaunchedEffect(authState) {
+                    if (authState is StravaAuthState.Success) {
+                        // side effects already handled in repo for basic storage, 
+                        // but we need to trigger sync and navigation updates
+                        updateSelectiveUploadVisibility()
+                        StravaEquipmentSynchronizeThread(requireActivity()).start()
+
+                        val repository = SegmentsRepository.getInstance(requireContext())
+                        repository.syncSegmentsAsync(BSportType.BIKE)
+                        repository.syncSegmentsAsync(BSportType.RUN)
+                        
+                        authViewModel.resetState()
+                    }
+                }
+
                 StravaConnectionHeader(
                     modifier = Modifier.statusBarsPadding(),
                     isConnected = isConnected,
+                    isConnecting = authState is StravaAuthState.Loading,
                     onConnectClick = {
                         StravaHelper.requestAccessToken(requireContext())
                     },
                     onDisconnectClick = {
                         TrainingApplication.deleteStravaToken()
                         StravaDeauthorizationThread(requireActivity()).start()
-                        updateHeaderContent()
                         updateSelectiveUploadVisibility()
+                        // Force recompose since we use static call to TrainingApplication
+                        updateHeaderContent()
                     }
                 )
             }
@@ -147,11 +156,6 @@ class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSha
         mSharedPreferences?.unregisterOnSharedPreferenceChangeListener(this)
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        LocalBroadcastManager.getInstance(requireActivity()).unregisterReceiver(tokenReceiver)
-    }
-
     private fun updateSelectiveUploadVisibility() {
         val isConnected = TrainingApplication.getStravaAccessToken() != null
         
@@ -169,21 +173,6 @@ class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSha
         if (TrainingApplication.SP_STRAVA_TOKEN == key) {
             updateSelectiveUploadVisibility()
             updateHeaderContent()
-        }
-    }
-
-    protected fun handleToken(token: String?) {
-        if (token != null) {
-            TrainingApplication.setStravaAccessToken(token)
-
-            updateSelectiveUploadVisibility()
-            updateHeaderContent()
-
-            StravaEquipmentSynchronizeThread(requireActivity()).start()
-
-            val repository = SegmentsRepository.getInstance(requireContext())
-            repository.syncSegmentsAsync(BSportType.BIKE)
-            repository.syncSegmentsAsync(BSportType.RUN)
         }
     }
 

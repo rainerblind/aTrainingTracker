@@ -206,7 +206,7 @@ fun SportTypesTabsScreen(
 
                     PrimaryScrollableTabRow(
                         selectedTabIndex = pagerState.currentPage,
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                         divider = {}
                     ) {
                         tabs.forEachIndexed { index, tab ->
@@ -521,8 +521,6 @@ fun SportTypeCard(
 
         // The Menu itself (anchored to the Card via the Box)
         DropdownMenu(
-            containerColor = MaterialTheme.colorScheme.surface,
-            tonalElevation = 0.dp,
             expanded = showMenu,
             onDismissRequest = { showMenu = false }
         ) {

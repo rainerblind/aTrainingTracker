@@ -61,6 +61,7 @@ class PeriodsFragment : Fragment() {
                     val groupedPeriods by viewModel.groupedPeriods.collectAsStateWithLifecycle()
                     val selectedPeriod by viewModel.selectedPeriod.collectAsStateWithLifecycle()
                     val isHeatmapEnabled by viewModel.isHeatmapEnabled.collectAsStateWithLifecycle()
+                    val enabledMarkerTypes by viewModel.enabledMarkerTypes.collectAsStateWithLifecycle()
                     val groups = viewModel.groups
 
                     val peekedWorkoutDataWithTrack by viewModel.peekedWorkoutDataWithTrack.collectAsStateWithLifecycle()
@@ -77,6 +78,8 @@ class PeriodsFragment : Fragment() {
                             summary = selectedPeriod!!,
                             isHeatmapEnabled = isHeatmapEnabled,
                             onToggleHeatmapEnabled = { viewModel.toggleHeatmapEnabled() },
+                            enabledMarkerTypes = enabledMarkerTypes,
+                            onToggleMarkerType = { viewModel.toggleMarkerTypeEnabled(it) },
                             onWorkoutClick = { id -> viewModel.selectWorkoutForPeek(id) },
                             peekedWorkoutDataWithTrack = peekedWorkoutDataWithTrack,
                             clearPeekSelection = { viewModel.clearPeekSelection() },
@@ -91,6 +94,9 @@ class PeriodsFragment : Fragment() {
                             onHeaderClick = { summary -> startWorkoutSummaryList(summary) },
                             onMapClick = { summary -> viewModel.showPeriodMap(summary) },
                             onSportClick = { summary, bSportType -> startWorkoutSummaryList(summary, bSportType) },
+                            onLongestWorkoutClick = { summary, bSportType, workoutId -> 
+                                startWorkoutSummaryList(summary, bSportType, workoutId) 
+                            },
                             isPlayServiceAvailable = isPlayAvailable,
                             tabs = groups,
                             isHeatmapEnabled = isHeatmapEnabled,
@@ -102,7 +108,11 @@ class PeriodsFragment : Fragment() {
         }
     }
 
-    fun startWorkoutSummaryList(periodSummary: PeriodSummary, bSportType: BSportType? = null) {
+    fun startWorkoutSummaryList(
+        periodSummary: PeriodSummary, 
+        bSportType: BSportType? = null,
+        scrollToWorkoutId: Long? = null
+    ) {
         // calc the secondary title
         // Either "Runs (3 workouts)" or "3 Running, 5 Cycling"
         val secondaryTitle = if (bSportType != null) {
@@ -129,7 +139,8 @@ class PeriodsFragment : Fragment() {
             secondaryTitle = secondaryTitle,
             bSportType = bSportType,
             startS = periodSummary.startTimestampS,
-            endS = periodSummary.endTimestampS
+            endS = periodSummary.endTimestampS,
+            scrollToWorkoutId = scrollToWorkoutId
         )
 
         parentFragmentManager.beginTransaction()
