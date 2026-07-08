@@ -1212,4 +1212,8 @@
     <string name="cluster_tuning_warning">Warning: Recalculating will wipe all learned cluster names and grouping, then rebuild them from history using these new parameters.</string>
     <string name="cluster_tuning_recalculating">Recalculating clusters…</string>
     <string name="cluster_tuning_take_while">This might take a while.</string>
+
+    <string name="cluster_move_workout_title">Move Workout</string>
+    <string name="cluster_move_workout_hint">Select target route cluster (Similarity score in brackets, lower is better):</string>
+    <string name="cluster_score_format">Score: %1$.3f | %2$d recordings</string>
 </resources>

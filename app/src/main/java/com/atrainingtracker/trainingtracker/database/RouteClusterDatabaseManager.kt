@@ -109,6 +109,27 @@ class RouteClusterDatabaseManager private constructor(context: Context) {
         )
     }
 
+    fun deleteCluster(id: Long) {
+        dbHelper.writableDatabase.delete(
+            RouteClusterContract.TABLE_NAME,
+            "${BaseColumns._ID} = ?",
+            arrayOf(id.toString())
+        )
+    }
+
+    fun getClusterById(id: Long): RouteCluster? {
+        val selection = "${BaseColumns._ID} = ?"
+        val args = arrayOf(id.toString())
+        dbHelper.readableDatabase.query(
+            RouteClusterContract.TABLE_NAME, null, selection, args, null, null, null
+        ).use { cursor ->
+            if (cursor.moveToFirst()) {
+                return mapCursorToCluster(cursor)
+            }
+        }
+        return null
+    }
+
     fun deleteAllClusters() {
         dbHelper.writableDatabase.delete(RouteClusterContract.TABLE_NAME, null, null)
     }

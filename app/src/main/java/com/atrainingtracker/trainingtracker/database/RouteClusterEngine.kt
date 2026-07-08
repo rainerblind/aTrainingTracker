@@ -247,6 +247,70 @@ class RouteClusterEngine private constructor(context: Context) {
         migrateHistory(context)
     }
 
+    /**
+     * Returns all clusters paired with their similarity score for a given workout shape.
+     */
+    fun getClusterScores(start: LatLng, end: LatLng, apex: LatLng, distance: Double, workoutName: String? = null): List<Pair<RouteCluster, Double>> {
+        val allClusters = dbManager.getAllClusters()
+        return allClusters.map { cluster ->
+            cluster to calculateSimilarity(start, end, apex, distance, cluster, workoutName)
+        }.sortedBy { it.second }
+    }
+
+    /**
+     * Moves a workout from one cluster to another, recalculating centroids for both.
+     */
+    fun moveWorkoutToCluster(context: Context, workoutId: Long, currentClusterId: Long, newClusterId: Long) {
+        val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
+
+        // 1. Fetch workout spatial data
+        val start = summariesManager.getExtremaPosition(workoutId, com.atrainingtracker.banalservice.sensor.SensorType.LATITUDE, ExtremaType.START)
+        val end = summariesManager.getExtremaPosition(workoutId, com.atrainingtracker.banalservice.sensor.SensorType.LATITUDE, ExtremaType.END)
+        val apex = summariesManager.getExtremaPosition(workoutId, com.atrainingtracker.banalservice.sensor.SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
+        val distance = summariesManager.getDouble(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m)
+
+        if (start == null || end == null || apex == null || distance == null) return
+
+        // 2. Remove from old cluster
+        val oldCluster = dbManager.getClusterById(currentClusterId)
+        if (oldCluster != null) {
+            if (oldCluster.hitCount > 1) {
+                val updatedOld = oldCluster.copy(
+                    startLat = (oldCluster.startLat * oldCluster.hitCount - start.latitude) / (oldCluster.hitCount - 1),
+                    startLng = (oldCluster.startLng * oldCluster.hitCount - start.longitude) / (oldCluster.hitCount - 1),
+                    endLat = (oldCluster.endLat * oldCluster.hitCount - end.latitude) / (oldCluster.hitCount - 1),
+                    endLng = (oldCluster.endLng * oldCluster.hitCount - end.longitude) / (oldCluster.hitCount - 1),
+                    maxDispLat = (oldCluster.maxDispLat * oldCluster.hitCount - apex.latitude) / (oldCluster.hitCount - 1),
+                    maxDispLng = (oldCluster.maxDispLng * oldCluster.hitCount - apex.longitude) / (oldCluster.hitCount - 1),
+                    refDistance = (oldCluster.refDistance * oldCluster.hitCount - distance) / (oldCluster.hitCount - 1),
+                    hitCount = oldCluster.hitCount - 1
+                )
+                dbManager.updateCluster(updatedOld)
+            } else {
+                dbManager.deleteCluster(currentClusterId)
+            }
+        }
+
+        // 3. Add to new cluster
+        val newCluster = dbManager.getClusterById(newClusterId)
+        if (newCluster != null) {
+            val updatedNew = newCluster.copy(
+                startLat = (newCluster.startLat * newCluster.hitCount + start.latitude) / (newCluster.hitCount + 1),
+                startLng = (newCluster.startLng * newCluster.hitCount + start.longitude) / (newCluster.hitCount + 1),
+                endLat = (newCluster.endLat * newCluster.hitCount + end.latitude) / (newCluster.hitCount + 1),
+                endLng = (newCluster.endLng * newCluster.hitCount + end.longitude) / (newCluster.hitCount + 1),
+                maxDispLat = (newCluster.maxDispLat * newCluster.hitCount + apex.latitude) / (newCluster.hitCount + 1),
+                maxDispLng = (newCluster.maxDispLng * newCluster.hitCount + apex.longitude) / (newCluster.hitCount + 1),
+                refDistance = (newCluster.refDistance * newCluster.hitCount + distance) / (newCluster.hitCount + 1),
+                hitCount = newCluster.hitCount + 1
+            )
+            dbManager.updateCluster(updatedNew)
+        }
+
+        // 4. Update workout record
+        updateWorkoutClusterId(context, workoutId, newClusterId)
+    }
+
     private fun distanceBetween(p1: LatLng, p2: LatLng): Float {
         val results = FloatArray(1)
         Location.distanceBetween(p1.latitude, p1.longitude, p2.latitude, p2.longitude, results)

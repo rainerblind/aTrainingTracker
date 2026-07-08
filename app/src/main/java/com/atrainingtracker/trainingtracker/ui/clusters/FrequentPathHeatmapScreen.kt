@@ -31,8 +31,13 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.database.RouteCluster
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.map.*
 import com.google.android.gms.maps.model.LatLng
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.text.font.FontWeight
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,6 +97,7 @@ fun FrequentPathHeatmapScreen(
     }
 
     var showRenameDialog by remember { mutableStateOf(false) }
+    var workoutToMove by remember { mutableStateOf<WorkoutData?>(null) }
 
     if (showRenameDialog) {
         RenameClusterDialog(
@@ -101,6 +107,20 @@ fun FrequentPathHeatmapScreen(
                 showRenameDialog = false
             },
             onDismiss = { showRenameDialog = false }
+        )
+    }
+
+    if (workoutToMove != null) {
+        val candidates = remember(workoutToMove) { viewModel.getCandidateClustersForWorkout(workoutToMove!!) }
+        MoveWorkoutClusterDialog(
+            workout = workoutToMove!!,
+            currentCluster = cluster,
+            candidates = candidates,
+            onMove = { targetId ->
+                viewModel.moveWorkout(workoutToMove!!, targetId)
+                workoutToMove = null
+            },
+            onDismiss = { workoutToMove = null }
         )
     }
 
@@ -143,9 +163,11 @@ fun FrequentPathHeatmapScreen(
             // Background heatmap for the cluster
             heatmap(clusterPaths, opacity = heatmapOpacity)
 
-            // Individual tracks with very low alpha to give some definition to the heatmap
+            // Individual tracks with low alpha for definition and clickability
             mapTracks.forEach { track ->
-                path(track, alpha = 0.1f)
+                path(track, alpha = 0.2f, onPathClick = { id ->
+                    workoutToMove = workouts.find { it.id == id }
+                })
             }
             markers(fingerprintMarkers)
         },
@@ -211,6 +233,82 @@ fun RenameClusterDialog(
             TextButton(
                 onClick = { onConfirm(text) },
                 enabled = text.isNotBlank()
+            ) {
+                Text(stringResource(R.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
+fun MoveWorkoutClusterDialog(
+    workout: WorkoutData,
+    currentCluster: RouteCluster,
+    candidates: List<Pair<RouteCluster, Double>>,
+    onMove: (Long) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selectedId by remember { mutableStateOf(currentCluster.id) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { 
+            Column {
+                Text(stringResource(R.string.cluster_move_workout_title), style = MaterialTheme.typography.titleLarge)
+                Text(workout.workoutName, style = MaterialTheme.typography.bodySmall)
+            }
+        },
+        text = {
+            Column(modifier = Modifier.heightIn(max = 400.dp)) {
+                Text(stringResource(R.string.cluster_move_workout_hint), 
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                
+                LazyColumn {
+                    items(candidates) { (cluster, score) ->
+                        val isSelected = selectedId == cluster.id
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = isSelected,
+                                    onClick = { selectedId = cluster.id }
+                                )
+                                .padding(vertical = 12.dp, horizontal = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = { selectedId = cluster.id }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = cluster.name,
+                                    style = if (isSelected) MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold) 
+                                            else MaterialTheme.typography.bodyLarge
+                                )
+                                Text(
+                                    text = stringResource(R.string.cluster_score_format, score, cluster.hitCount),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onMove(selectedId) },
+                enabled = selectedId != currentCluster.id
             ) {
                 Text(stringResource(R.string.save))
             }
