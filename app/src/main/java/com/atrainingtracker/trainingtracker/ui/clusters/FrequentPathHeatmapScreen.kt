@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
@@ -90,6 +91,19 @@ fun FrequentPathHeatmapScreen(
         else -> 1.0
     }
 
+    var showRenameDialog by remember { mutableStateOf(false) }
+
+    if (showRenameDialog) {
+        RenameClusterDialog(
+            currentName = cluster.name,
+            onConfirm = { newName ->
+                viewModel.renameCluster(cluster, newName)
+                showRenameDialog = false
+            },
+            onDismiss = { showRenameDialog = false }
+        )
+    }
+
     MapDetailLayout(
         bSportType = sportType,
         zoomFocus = MapZoomFocus.FIT_PRIMARY,
@@ -110,6 +124,14 @@ fun FrequentPathHeatmapScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = null)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showRenameDialog = true }) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_table_edit),
+                            contentDescription = stringResource(R.string.edit_workout_name)
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -163,4 +185,40 @@ fun ClusterStatsContent(cluster: RouteCluster, workoutCount: Int) {
             Text(text = distanceFormatter.format_with_units(cluster.refDistance), style = MaterialTheme.typography.titleMedium)
         }
     }
+}
+
+@Composable
+fun RenameClusterDialog(
+    currentName: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var text by remember { mutableStateOf(currentName) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.edit_workout_name)) },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                label = { Text(stringResource(R.string.name)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(text) },
+                enabled = text.isNotBlank()
+            ) {
+                Text(stringResource(R.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
 }

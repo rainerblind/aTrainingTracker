@@ -103,4 +103,15 @@ class FrequentPathsViewModel(application: Application) : AndroidViewModel(applic
             _clusterWorkouts.value = emptyList()
         }
     }
+
+    fun renameCluster(cluster: RouteCluster, newName: String) {
+        viewModelScope.launch {
+            val updated = cluster.copy(name = newName)
+            repository.updateCluster(updated)
+            // Update selected cluster if it's the one renamed
+            if (_selectedCluster.value?.id == cluster.id) {
+                _selectedCluster.value = updated
+            }
+        }
+    }
 }

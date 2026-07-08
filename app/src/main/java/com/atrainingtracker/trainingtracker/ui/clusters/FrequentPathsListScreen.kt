@@ -85,7 +85,10 @@ fun FrequentPathsListScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(clusters) { cluster ->
-                ClusterItem(cluster = cluster, onClick = { onClusterClick(cluster) })
+                ClusterItem(
+                    cluster = cluster,
+                    onClick = { onClusterClick(cluster) }
+                )
             }
         }
     }
