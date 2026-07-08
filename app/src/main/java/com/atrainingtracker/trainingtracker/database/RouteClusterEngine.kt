@@ -43,14 +43,14 @@ class RouteClusterEngine private constructor(context: Context) {
     }
 
     /**
-     * Suggests a cluster match for a workout based on spatial shape metrics.
+     * Suggests a cluster match for a workout based on spatial shape metrics and optional name.
      */
-    fun suggestCluster(start: LatLng, end: LatLng, apex: LatLng, distance: Double): RouteCluster? {
+    fun suggestCluster(start: LatLng, end: LatLng, apex: LatLng, distance: Double, workoutName: String? = null): RouteCluster? {
         val candidates = dbManager.findCandidates(start.latitude, start.longitude, distance)
-        if (DEBUG) Log.d(TAG, "Found ${candidates.size} candidates for shape [start=$start, dist=$distance]")
+        if (DEBUG) Log.d(TAG, "Found ${candidates.size} candidates for shape [start=$start, dist=$distance, name=$workoutName]")
 
         return candidates.map { cluster ->
-            val score = calculateSimilarity(start, end, apex, distance, cluster)
+            val score = calculateSimilarity(start, end, apex, distance, cluster, workoutName)
             cluster to score
         }.filter { it.second < 1.0 } // 1.0 is the threshold for a "good" match
          .minByOrNull { it.second }?.first
@@ -60,7 +60,7 @@ class RouteClusterEngine private constructor(context: Context) {
      * Records user feedback (name/sport edit) to update or create clusters.
      */
     fun learnFromWorkout(start: LatLng, end: LatLng, apex: LatLng, distance: Double, userSpecifiedName: String, userSportId: Long) {
-        val existingMatch = suggestCluster(start, end, apex, distance)
+        val existingMatch = suggestCluster(start, end, apex, distance, userSpecifiedName)
 
         if (existingMatch != null) {
             // Update existing cluster (Moving Average logic for centroids)
@@ -126,7 +126,7 @@ class RouteClusterEngine private constructor(context: Context) {
                 if (start != null && end != null && apex != null && distance > 100.0) {
                     val isDefaultName = workoutName.isNullOrEmpty() || workoutName == fileBaseName
                     
-                    val match = suggestCluster(start, end, apex, distance)
+                    val match = suggestCluster(start, end, apex, distance, if (!isDefaultName) workoutName else null)
                     if (match != null) {
                         // Update centroids and hitCount. 
                         // Only update name if the current workout has a CUSTOM name.
@@ -185,7 +185,8 @@ class RouteClusterEngine private constructor(context: Context) {
     }
 
     private fun calculateSimilarity(
-        start: LatLng, end: LatLng, apex: LatLng, distance: Double, cluster: RouteCluster
+        start: LatLng, end: LatLng, apex: LatLng, distance: Double, cluster: RouteCluster,
+        workoutName: String? = null
     ): Double {
         val startDist = distanceBetween(start, LatLng(cluster.startLat, cluster.startLng))
         val endDist = distanceBetween(end, LatLng(cluster.endLat, cluster.endLng))
@@ -198,7 +199,24 @@ class RouteClusterEngine private constructor(context: Context) {
         val s3 = (apexDist / TrainingApplication.getClusterTolApex()) * 0.25
         val s4 = (lengthDiff / TrainingApplication.getClusterTolDistance()) * 0.25
         
-        return s1 + s2 + s3 + s4
+        var totalScore = s1 + s2 + s3 + s4
+
+        // --- NAME BONUS (SCRUM-186) ---
+        if (workoutName != null) {
+            val normalizedWorkout = normalizeName(workoutName)
+            val normalizedCluster = normalizeName(cluster.name)
+            if (normalizedWorkout.isNotEmpty() && normalizedWorkout == normalizedCluster) {
+                // Halve the score if names match exactly (lower score = better match)
+                // This makes it 2x as likely to match if the user has consistently named it.
+                totalScore *= 0.5 
+            }
+        }
+
+        return totalScore
+    }
+
+    private fun normalizeName(name: String): String {
+        return name.replace(Regex(" #\\d+$"), "").trim().lowercase()
     }
 
     /**
