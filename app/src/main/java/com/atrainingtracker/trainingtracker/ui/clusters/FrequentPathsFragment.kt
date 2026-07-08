@@ -23,6 +23,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,6 +33,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import kotlinx.coroutines.flow.collectLatest
 
 class FrequentPathsFragment : Fragment() {
 
@@ -52,6 +54,12 @@ class FrequentPathsFragment : Fragment() {
                 ATrainingTrackerTheme {
                     val selectedCluster by viewModel.selectedCluster.collectAsState()
                     var isTuning by remember { mutableStateOf(false) }
+
+                    LaunchedEffect(Unit) {
+                        viewModel.recalculationFinished.collectLatest {
+                            isTuning = false
+                        }
+                    }
 
                     when {
                         isTuning -> {

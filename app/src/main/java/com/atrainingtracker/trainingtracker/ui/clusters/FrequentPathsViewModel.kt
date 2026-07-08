@@ -29,8 +29,11 @@ import com.atrainingtracker.trainingtracker.database.RouteCluster
 import com.atrainingtracker.trainingtracker.database.RouteClusterRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -49,6 +52,9 @@ class FrequentPathsViewModel(application: Application) : AndroidViewModel(applic
 
     private val _isRecalculating = MutableStateFlow(false)
     val isRecalculating: StateFlow<Boolean> = _isRecalculating.asStateFlow()
+
+    private val _recalculationFinished = MutableSharedFlow<Unit>()
+    val recalculationFinished: SharedFlow<Unit> = _recalculationFinished.asSharedFlow()
 
     // Tuning Parameters State
     var endpointTolerance by mutableStateOf(TrainingApplication.getClusterTolEndpoints())
@@ -83,6 +89,7 @@ class FrequentPathsViewModel(application: Application) : AndroidViewModel(applic
                 repository.refreshClusters()
             }
             _isRecalculating.value = false
+            _recalculationFinished.emit(Unit)
         }
     }
 
