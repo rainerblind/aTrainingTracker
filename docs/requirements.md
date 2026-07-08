@@ -59,6 +59,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-SET-012** | **Route Cluster List Visualization.** | The system SHALL display a small map for each item in the Frequent Paths list, visualizing the cluster's signature points (Start, End, and Max Line Distance) using standard icons. | `FrequentPathsListScreen.kt` | `TST-SET-004` | Verified |
 | **REQ-SET-013** | **Name-Aware Clustering.** | The system SHALL prioritize existing identical workout names when matching routes to clusters to improve grouping accuracy for user-named paths. | `RouteClusterEngine.kt` | `TST-SET-005` | Verified |
 | **REQ-SET-014** | **Auto-Dismiss Tuning UI.** | The system SHALL automatically return to the cluster list view once a recalculation process is successfully completed. | `FrequentPathsFragment.kt`, `FrequentPathsViewModel.kt` | `TST-SET-006` | Verified |
+| **REQ-SET-015** | **Unique Cluster Naming.** | The system SHALL ensure that every route cluster has a unique name by appending a variant counter (e.g., var 2) if a name collision occurs for spatially distinct routes. | `RouteClusterEngine.kt`, `RouteClusterDatabaseManager.kt` | `TST-SET-007` | Verified |
 
 ## 5. Data Storage & Post-Processing
 

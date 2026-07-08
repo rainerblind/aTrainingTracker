@@ -64,8 +64,12 @@ class RouteClusterEngine private constructor(context: Context) {
 
         if (existingMatch != null) {
             // Update existing cluster (Moving Average logic for centroids)
+            // Ensure unique name if it changed (SCRUM-190 refinement)
+            val uniqueName = if (existingMatch.name == userSpecifiedName) userSpecifiedName 
+                             else findUniqueClusterName(userSpecifiedName, existingMatch.id)
+
             val updatedCluster = existingMatch.copy(
-                name = userSpecifiedName,
+                name = uniqueName,
                 probableSportId = userSportId,
                 startLat = (existingMatch.startLat * existingMatch.hitCount + start.latitude) / (existingMatch.hitCount + 1),
                 startLng = (existingMatch.startLng * existingMatch.hitCount + start.longitude) / (existingMatch.hitCount + 1),
@@ -79,9 +83,10 @@ class RouteClusterEngine private constructor(context: Context) {
             dbManager.updateCluster(updatedCluster)
             if (DEBUG) Log.i(TAG, "Learned from existing route: ${updatedCluster.name} (hitCount=${updatedCluster.hitCount})")
         } else {
-            // Create a new cluster
+            // Create a new cluster with unique name (SCRUM-190)
+            val uniqueName = findUniqueClusterName(userSpecifiedName)
             val newCluster = RouteCluster(
-                name = userSpecifiedName,
+                name = uniqueName,
                 probableSportId = userSportId,
                 startLat = start.latitude,
                 startLng = start.longitude,
@@ -130,7 +135,10 @@ class RouteClusterEngine private constructor(context: Context) {
                     if (match != null) {
                         // Update centroids and hitCount. 
                         // Only update name if the current workout has a CUSTOM name.
-                        val finalName = if (!isDefaultName) workoutName else match.name
+                        val rawName = if (!isDefaultName) workoutName else match.name
+                        val finalName = if (match.name == rawName) rawName 
+                                        else findUniqueClusterName(rawName, match.id)
+
                         val finalSport = if (!isDefaultName) sportId else match.probableSportId
 
                         val updated = match.copy(
@@ -151,8 +159,9 @@ class RouteClusterEngine private constructor(context: Context) {
                         // No match: Create new cluster. 
                         // If it's a default name, use a generic descriptive name.
                         val clusterName = if (!isDefaultName) workoutName else "Route at ${fileBaseName?.take(10) ?: "Unknown"}"
+                        val uniqueName = findUniqueClusterName(clusterName)
                         val newCluster = RouteCluster(
-                            name = clusterName,
+                            name = uniqueName,
                             probableSportId = sportId,
                             startLat = start.latitude,
                             startLng = start.longitude,
@@ -169,6 +178,16 @@ class RouteClusterEngine private constructor(context: Context) {
                 }
             }
         }
+    }
+
+    private fun findUniqueClusterName(baseName: String, excludeId: Long = -1): String {
+        var candidate = baseName
+        var counter = 2
+        while (dbManager.isNameTaken(candidate, excludeId)) {
+            candidate = "$baseName var $counter"
+            counter++
+        }
+        return candidate
     }
 
     private fun updateWorkoutClusterId(context: Context, workoutId: Long, clusterId: Long) {
@@ -216,7 +235,8 @@ class RouteClusterEngine private constructor(context: Context) {
     }
 
     private fun normalizeName(name: String): String {
-        return name.replace(Regex(" #\\d+$"), "").trim().lowercase()
+        // Strip both "#2" and "var 2" suffixes to get the core name
+        return name.replace(Regex(" (?:#|var) \\d+$"), "").trim().lowercase()
     }
 
     /**

@@ -114,6 +114,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-SET-004** | **Route Cluster Item Map** | `REQ-SET-012` | 1. Navigate to \"Frequent Paths\". 2. Inspect list items. | 1. Each item SHALL display a small map. 2. Start (Green pin with start icon), End (Red pin with stop icon), and Apex (Blue pin with distance icon) SHALL be visible on the map. | Verified |
 | **TST-SET-005** | **Name-Aware Clustering** | `REQ-SET-013` | 1. Identify two workouts with same name but high spatial drift. 2. Trigger recalculation. | The system SHALL group them into the same cluster by applying the name-match bonus to the similarity score. | Verified |
 | **TST-SET-006** | **Auto-Dismiss Tuning** | `REQ-SET-014` | 1. Open Tuning screen. 2. Tap \"Recalculate All Clusters\". 3. Wait for completion. | The UI SHALL automatically navigate back to the Frequent Paths list view upon completion. | Verified |
+| **TST-SET-007** | **Unique Cluster Naming** | `REQ-SET-015` | 1. Create a cluster named \"Home\". 2. Create a spatially distinct route and also name it \"Home\". | The second cluster SHALL be automatically named \"Home var 2\". | Verified |
 
 ## 4. Release Verification Workflow
 

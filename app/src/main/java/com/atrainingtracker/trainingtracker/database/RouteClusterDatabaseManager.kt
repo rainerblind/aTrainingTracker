@@ -113,6 +113,22 @@ class RouteClusterDatabaseManager private constructor(context: Context) {
         dbHelper.writableDatabase.delete(RouteClusterContract.TABLE_NAME, null, null)
     }
 
+    fun isNameTaken(name: String, excludeId: Long = -1): Boolean {
+        var selection = "${RouteClusterContract.COLUMN_NAME} = ?"
+        var args = arrayOf(name)
+        
+        if (excludeId != -1L) {
+            selection += " AND ${BaseColumns._ID} != ?"
+            args = arrayOf(name, excludeId.toString())
+        }
+
+        dbHelper.readableDatabase.query(
+            RouteClusterContract.TABLE_NAME, arrayOf(BaseColumns._ID), selection, args, null, null, null
+        ).use { cursor ->
+            return cursor.count > 0
+        }
+    }
+
     private fun mapCursorToCluster(cursor: Cursor): RouteCluster {
         return RouteCluster(
             id = cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID)),
