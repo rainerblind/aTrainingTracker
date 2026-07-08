@@ -495,6 +495,23 @@ class WorkoutRepository private constructor(private val application: Application
             // 2. Trigger export with the new data
             exportManager.exportWorkout(userEditedWorkout)
 
+            // --- LEARNING LOOP (SCRUM-44) ---
+            if (userEditedWorkout.startLatLng != null && userEditedWorkout.endLatLng != null && userEditedWorkout.maxDisplacementLatLng != null) {
+                val finalName = userEditedWorkout.workoutName.replace(Regex(" #\\d+$"), "").trim()
+                // Only learn names that aren't the default timestamp
+                if (finalName.isNotEmpty() && finalName != userEditedWorkout.fileBaseName) {
+                    com.atrainingtracker.trainingtracker.database.RouteClusterEngine.getInstance(application)
+                        .learnFromWorkout(
+                            userEditedWorkout.startLatLng,
+                            userEditedWorkout.endLatLng,
+                            userEditedWorkout.maxDisplacementLatLng,
+                            userEditedWorkout.totalDistance,
+                            finalName,
+                            userEditedWorkout.sportId
+                        )
+                }
+            }
+
             // 3. Update memory surgically - perform the merge ATOMICALLY inside update
             Log.i(TAG, "update from saveWorkout")
             _allWorkouts.update { currentList ->

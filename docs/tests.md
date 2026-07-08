@@ -107,6 +107,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-EXT-002** | **Strava OAuth Flow** | `REQ-EXT-005` | 1. Complete Strava authorization. 2. Observe the loading state. | The app SHALL show a non-blocking loading indicator and correctly store the resulting token. | Proposed |
 | **TST-UI-062** | **Protocol-Aware Menu** | `REQ-UI-044` | 1. Open the Bluetooth sensor list. 2. Check the options menu. 3. Open the ANT+ sensor list. 4. Check the options menu. | The "Check ANT+ Installation" option SHALL NOT be visible in the Bluetooth view, but SHALL be visible in the ANT+ view. | Verified |
 | **TST-UI-063** | **Global Icon Clipping** | `REQ-UI-057` | 1. Open the app in Dark Mode. 2. Inspect sensor and protocol icons. | All icons SHALL appear with subtle 4dp rounded corners, and square white corner artifacts (on PNG assets) SHALL be masked. | Verified |
+| **TST-SET-001** | **Route Learning Engine** | `REQ-SET-006`, `007`, `008` | 1. Track a route. 2. Name it \"Park Loop\" and set sport to \"Running\". 3. Track the same route again. | 1. The second workout SHALL automatically be named \"Park Loop #2\". 2. The sport SHALL automatically be set to \"Running\". 3. Changing the name to \"Morning Loop\" SHALL update future suggestions to \"Morning Loop\". | Verified |
 
 ## 4. Release Verification Workflow
 
