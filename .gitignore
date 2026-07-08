@@ -7,6 +7,9 @@ secrets.properties
 release.properties
 release.keystore
 
+# Built release binaries; CI produces these as workflow artifacts
+/app/release/
+
 app/google-services.json
 
 # Gedit temp files
