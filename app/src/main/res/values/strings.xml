@@ -1218,4 +1218,11 @@
     <string name="cluster_score_format">Score: %1$.3f | %2$d recordings</string>
 
     <string name="cluster_suggestions_title">Suggested Routes (lower score is better):</string>
+
+    <string name="cluster_manual_title">Add Route Cluster</string>
+    <string name="cluster_manual_pick_start">Pick Start</string>
+    <string name="cluster_manual_pick_end">Pick End</string>
+    <string name="cluster_manual_pick_apex">Pick Apex (Furthest Away)</string>
+    <string name="cluster_manual_distance_hint">Workout Distance (m)</string>
+    <string name="cluster_manual_missing_points">Please pick all 3 spatial points on the map.</string>
 </resources>

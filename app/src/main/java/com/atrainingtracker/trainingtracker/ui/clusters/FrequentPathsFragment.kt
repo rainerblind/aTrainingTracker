@@ -54,6 +54,7 @@ class FrequentPathsFragment : Fragment() {
                 ATrainingTrackerTheme {
                     val selectedCluster by viewModel.selectedCluster.collectAsState()
                     var isTuning by remember { mutableStateOf(false) }
+                    var isAdding by remember { mutableStateOf(false) }
 
                     LaunchedEffect(Unit) {
                         viewModel.recalculationFinished.collectLatest {
@@ -69,6 +70,13 @@ class FrequentPathsFragment : Fragment() {
                                 onBack = { isTuning = false }
                             )
                         }
+                        isAdding -> {
+                            BackHandler { isAdding = false }
+                            ManualClusterScreen(
+                                viewModel = viewModel,
+                                onBack = { isAdding = false }
+                            )
+                        }
                         selectedCluster != null -> {
                             BackHandler { viewModel.selectCluster(null) }
                             FrequentPathHeatmapScreen(
@@ -81,7 +89,8 @@ class FrequentPathsFragment : Fragment() {
                             FrequentPathsListScreen(
                                 viewModel = viewModel,
                                 onClusterClick = { viewModel.selectCluster(it) },
-                                onTuneClick = { isTuning = true }
+                                onTuneClick = { isTuning = true },
+                                onAddClick = { isAdding = true }
                             )
                         }
                     }

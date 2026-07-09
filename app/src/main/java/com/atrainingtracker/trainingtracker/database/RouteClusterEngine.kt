@@ -312,6 +312,33 @@ class RouteClusterEngine private constructor(context: Context) {
         updateWorkoutClusterId(context, workoutId, newClusterId)
     }
 
+    /**
+     * Manually creates a new cluster with the given spatial fingerprint.
+     */
+    fun manuallyCreateCluster(
+        name: String,
+        sportId: Long,
+        start: LatLng,
+        end: LatLng,
+        apex: LatLng,
+        distance: Double
+    ): Long {
+        val uniqueName = findUniqueClusterName(name)
+        val newCluster = RouteCluster(
+            name = uniqueName,
+            probableSportId = sportId,
+            startLat = start.latitude,
+            startLng = start.longitude,
+            endLat = end.latitude,
+            endLng = end.longitude,
+            maxDispLat = apex.latitude,
+            maxDispLng = apex.longitude,
+            refDistance = distance,
+            hitCount = 0 // Hit count is 0 for manually created clusters until workouts are associated
+        )
+        return dbManager.insertCluster(newCluster)
+    }
+
     private fun distanceBetween(p1: LatLng, p2: LatLng): Float {
         val results = FloatArray(1)
         Location.distanceBetween(p1.latitude, p1.longitude, p2.latitude, p2.longitude, results)
