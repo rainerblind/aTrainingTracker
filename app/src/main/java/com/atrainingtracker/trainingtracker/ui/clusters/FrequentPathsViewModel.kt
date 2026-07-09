@@ -28,7 +28,9 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.RouteCluster
 import com.atrainingtracker.trainingtracker.database.RouteClusterEngine
 import com.atrainingtracker.trainingtracker.database.RouteClusterRepository
+import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,8 +44,10 @@ import kotlinx.coroutines.withContext
 class FrequentPathsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = RouteClusterRepository.getInstance(application)
+    private val banalRepository = BANALServiceRepository.getInstance(application)
 
     val allClusters: StateFlow<List<RouteCluster>> = repository.allClusters
+    val currentLocation: StateFlow<LatLng?> = banalRepository.currentLocation
 
     private val _clusterWorkouts = MutableStateFlow<List<WorkoutData>>(emptyList())
     val clusterWorkouts: StateFlow<List<WorkoutData>> = _clusterWorkouts.asStateFlow()
@@ -138,6 +142,21 @@ class FrequentPathsViewModel(application: Application) : AndroidViewModel(applic
             _selectedCluster.value?.let { current ->
                 _clusterWorkouts.value = repository.getWorkoutsForCluster(current.id)
             }
+        }
+    }
+
+    fun addManualCluster(
+        name: String,
+        sportId: Long,
+        start: com.google.android.gms.maps.model.LatLng,
+        end: com.google.android.gms.maps.model.LatLng,
+        apex: com.google.android.gms.maps.model.LatLng,
+        distance: Double
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            RouteClusterEngine.getInstance(getApplication())
+                .manuallyCreateCluster(name, sportId, start, end, apex, distance)
+            repository.refreshClusters()
         }
     }
 }

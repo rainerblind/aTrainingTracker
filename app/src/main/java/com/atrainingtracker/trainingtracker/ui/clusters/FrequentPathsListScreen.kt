@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,7 +56,8 @@ import com.google.maps.android.compose.*
 fun FrequentPathsListScreen(
     viewModel: FrequentPathsViewModel,
     onClusterClick: (RouteCluster) -> Unit,
-    onTuneClick: () -> Unit
+    onTuneClick: () -> Unit,
+    onAddClick: () -> Unit
 ) {
     val clusters by viewModel.allClusters.collectAsState()
 
@@ -75,6 +78,15 @@ fun FrequentPathsListScreen(
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onAddClick,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add Cluster")
+            }
         }
     ) { padding ->
         LazyColumn(

@@ -18,7 +18,6 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.editworkout
 
-import androidx.compose.animation.core.copy
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,14 +32,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -49,7 +44,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -61,11 +55,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.ui.components.DropdownSelector
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,17 +71,6 @@ fun EditWorkoutScreen(
     val workoutData by viewModel.workoutData.collectAsState()
     val sportTypes by viewModel.sportTypeNames.observeAsState(emptyList())
     val equipmentNames by viewModel.equipmentNames.observeAsState(emptyList())
-    val saveFinished by viewModel.saveFinishedEvent.observeAsState()
-
-    /*
-    // Handle Save Completion
-    LaunchedEffect(saveFinished) {
-        saveFinished?.let { (id, success) ->
-            if (success) onBack()
-        }
-    }
-
-     */
 
     Scaffold(
         topBar = {
@@ -120,7 +103,7 @@ fun EditWorkoutScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Workout Name with Cluster Suggestions (SCRUM-191)
+            // 1. Workout Name with Cluster Suggestions
             val suggestions by viewModel.clusterSuggestions.collectAsState()
             var showSuggestions by remember { mutableStateOf(false) }
 
@@ -144,7 +127,7 @@ fun EditWorkoutScreen(
                     }
                 )
 
-                DropdownMenu(
+                androidx.compose.material3.DropdownMenu(
                     expanded = showSuggestions,
                     onDismissRequest = { showSuggestions = false },
                     modifier = Modifier.fillMaxWidth(0.9f)
@@ -156,12 +139,12 @@ fun EditWorkoutScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                     suggestions.forEach { (cluster, score) ->
-                        DropdownMenuItem(
+                        androidx.compose.material3.DropdownMenuItem(
                             text = {
                                 Column {
                                     Text(cluster.name, style = MaterialTheme.typography.bodyLarge)
                                     Text(
-                                        text = "Score: ${"%.3f".format(score)} | ${cluster.hitCount} recordings",
+                                        text = stringResource(R.string.cluster_score_format, score, cluster.hitCount),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -210,7 +193,6 @@ fun EditWorkoutScreen(
                 Checkbox(
                     checked = workoutData?.commute ?: false,
                     onCheckedChange = { viewModel.updateIsCommute(it) }
-                    // TODO: It must not be possible to select both!
                 )
                 Text(stringResource(R.string.commute))
                 Spacer(Modifier.width(16.dp))
@@ -222,15 +204,11 @@ fun EditWorkoutScreen(
             }
 
             // 3.5 Workout individual upload to Strava
-            // Only show this option if Strava uploading is globally enabled/available
             if (TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     val uploadStatus = workoutData?.uploadToStrava ?: -1
                     val stravaMappingAvailable = workoutData?.stravaSportName != null
 
-                    // Determine the visual state of the checkbox
-                    // If -1, it defaults to 'true' because we already checked the global status above
-                    // If mapping is NOT available, it MUST be false
                     val isChecked = if (stravaMappingAvailable) {
                         when (uploadStatus) {
                             1 -> true
@@ -239,12 +217,11 @@ fun EditWorkoutScreen(
                         }
                     } else false
 
-                    // The Strava Logo
                     Icon(
                         painter = painterResource(R.drawable.logo_square_strava),
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
-                        tint = if (stravaMappingAvailable) Color.Unspecified else Color.Gray // Important: Keeps the original orange/brand colors
+                        tint = if (stravaMappingAvailable) Color.Unspecified else Color.Gray
                     )
 
                     Checkbox(
@@ -285,51 +262,6 @@ fun EditWorkoutScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DropdownSelector(
-    label: String,
-    options: List<String>,
-    selectedOption: String,
-    onOptionSelected: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    stayOpenOn: Set<String>
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Box(modifier = modifier) {
-        OutlinedTextField(
-            value = selectedOption,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(label) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.fillMaxWidth()
-        )
-        // Invisible clickable area to trigger dropdown
-        Box(modifier = Modifier
-            .matchParentSize()
-            .clickable { expanded = true })
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            containerColor = MaterialTheme.colorScheme.surface,
-        ) {
-            options.forEach { selection ->
-                DropdownMenuItem(
-                    text = { Text(selection) },
-                    onClick = {
-                        onOptionSelected(selection)
-                        // If the selection is the dummy option, don't close the menu
-                        if (selection !in stayOpenOn) {
-                            expanded = false
-                        }
-                    }
-                )
-            }
         }
     }
 }
