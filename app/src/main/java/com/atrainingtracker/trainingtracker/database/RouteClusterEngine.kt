@@ -59,8 +59,9 @@ class RouteClusterEngine private constructor(context: Context) {
     /**
      * Records user feedback (name/sport edit) to update or create clusters.
      */
-    fun learnFromWorkout(start: LatLng, end: LatLng, apex: LatLng, distance: Double, userSpecifiedName: String, userSportId: Long) {
-        val existingMatch = suggestCluster(start, end, apex, distance, userSpecifiedName)
+    fun learnFromWorkout(start: LatLng, end: LatLng, apex: LatLng, distance: Double, userSpecifiedName: String, userSportId: Long, clusterIdOverride: Long = -1) {
+        val existingMatch = if (clusterIdOverride != -1L) dbManager.getClusterById(clusterIdOverride) 
+                            else suggestCluster(start, end, apex, distance, userSpecifiedName)
 
         if (existingMatch != null) {
             // Update existing cluster (Moving Average logic for centroids)

@@ -120,13 +120,70 @@ fun EditWorkoutScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Workout Name
-            OutlinedTextField(
-                value = workoutData?.workoutName ?: "",
-                onValueChange = { viewModel.updateWorkoutName(it) },
-                label = { Text(stringResource(R.string.hint_workout_name)) },
-                modifier = Modifier.fillMaxWidth()
-            )
+            // 1. Workout Name with Cluster Suggestions (SCRUM-191)
+            val suggestions by viewModel.clusterSuggestions.collectAsState()
+            var showSuggestions by remember { mutableStateOf(false) }
+
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = workoutData?.workoutName ?: "",
+                    onValueChange = { viewModel.updateWorkoutName(it) },
+                    label = { Text(stringResource(R.string.hint_workout_name)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = {
+                        if (suggestions.isNotEmpty()) {
+                            IconButton(onClick = { showSuggestions = true }) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.my_locations),
+                                    contentDescription = "Suggestions",
+                                    tint = if (suggestions.any { it.second < 1.0 }) MaterialTheme.colorScheme.primary 
+                                           else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                )
+
+                DropdownMenu(
+                    expanded = showSuggestions,
+                    onDismissRequest = { showSuggestions = false },
+                    modifier = Modifier.fillMaxWidth(0.9f)
+                ) {
+                    Text(
+                        text = stringResource(R.string.cluster_suggestions_title),
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    suggestions.forEach { (cluster, score) ->
+                        DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text(cluster.name, style = MaterialTheme.typography.bodyLarge)
+                                    Text(
+                                        text = "Score: ${"%.3f".format(score)} | ${cluster.hitCount} recordings",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            },
+                            onClick = {
+                                viewModel.applyClusterIdentity(cluster)
+                                showSuggestions = false
+                            },
+                            leadingIcon = {
+                                val sport = com.atrainingtracker.banalservice.BSportType.entries.find { it.ordinal.toLong() == cluster.probableSportId } ?: com.atrainingtracker.banalservice.BSportType.UNKNOWN
+                                Icon(
+                                    painter = painterResource(id = sport.iconResId),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                    tint = if (score < 1.0) MaterialTheme.colorScheme.primary else Color.Unspecified
+                                )
+                            }
+                        )
+                    }
+                }
+            }
 
             // 2. Spinners (Sport & Equipment)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

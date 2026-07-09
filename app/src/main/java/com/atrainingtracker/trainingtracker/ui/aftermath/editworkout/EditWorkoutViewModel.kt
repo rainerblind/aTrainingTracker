@@ -97,6 +97,8 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     val saveFinishedEvent: MutableLiveData<Pair<Long, Boolean>> = repository.saveFinishedEvent
 
+    private val _clusterSuggestions = MutableStateFlow<List<Pair<com.atrainingtracker.trainingtracker.database.RouteCluster, Double>>>(emptyList())
+    val clusterSuggestions: StateFlow<List<Pair<com.atrainingtracker.trainingtracker.database.RouteCluster, Double>>> = _clusterSuggestions.asStateFlow()
 
     init {
         // workoutData = repository.getWorkoutById(workoutId)
@@ -109,6 +111,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         repository.initialWorkoutLoaded.observeForever { initialWorkout ->
             initSuggestedSportAndEquipmentNames(initialWorkout)
             _workoutData.value = initialWorkout
+            fetchClusterSuggestions(initialWorkout)
         }
 
         // Observe the single source of truth from the repository.
@@ -437,6 +440,36 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
      */
     fun saveChanges() {
         repository.saveWorkout(workoutData.value)
+    }
+
+    private fun fetchClusterSuggestions(workout: WorkoutData) {
+        val start = workout.startLatLng ?: return
+        val end = workout.endLatLng ?: return
+        val apex = workout.maxDisplacementLatLng ?: return
+        
+        viewModelScope.launch {
+            val suggestions = com.atrainingtracker.trainingtracker.database.RouteClusterEngine.getInstance(getApplication())
+                .getClusterScores(start, end, apex, workout.totalDistance, workout.workoutName)
+            _clusterSuggestions.value = suggestions
+        }
+    }
+
+    fun applyClusterIdentity(cluster: com.atrainingtracker.trainingtracker.database.RouteCluster) {
+        val simpleSportTypeInfo = sportTypesList.find { it.id == cluster.probableSportId }
+        val sportName = simpleSportTypeInfo?.name ?: sportTypeDatabaseManager.getUIName(cluster.probableSportId)
+        
+        _workoutData.update { current ->
+            current?.copy(
+                workoutName = cluster.name,
+                sportName = sportName,
+                sportId = cluster.probableSportId,
+                bSportType = simpleSportTypeInfo?.bSportType ?: sportTypeDatabaseManager.getBSportType(cluster.probableSportId),
+                clusterId = cluster.id
+            )
+        }
+        
+        // Also update suggested equipment based on the new sport
+        updateSuggestedEquipmentNames(sportName)
     }
 }
 

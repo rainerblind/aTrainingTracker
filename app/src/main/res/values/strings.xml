@@ -1216,4 +1216,6 @@
     <string name="cluster_move_workout_title">Move Workout</string>
     <string name="cluster_move_workout_hint">Select target route cluster (Similarity score in brackets, lower is better):</string>
     <string name="cluster_score_format">Score: %1$.3f | %2$d recordings</string>
+
+    <string name="cluster_suggestions_title">Suggested Routes (lower score is better):</string>
 </resources>
