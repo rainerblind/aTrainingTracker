@@ -65,6 +65,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-SET-018** | **Cluster Suggestions in Edit Workout.** | The system SHALL provide a list of spatially similar cluster candidates when editing a workout's name. Selecting a candidate SHALL automatically update the workout's Name, Sport, and Cluster association. | `EditWorkoutScreen.kt`, `EditWorkoutViewModel.kt` | `TST-SET-010` | Verified |
 | **REQ-SET-019** | **Manual Cluster Creation.** | The system SHALL allow the user to manually create a new route cluster by specifying its spatial fingerprint (Start, End, Apex) and distance metrics via a dedicated UI. | `ManualClusterScreen.kt`, `RouteClusterEngine.kt` | `TST-SET-011` | Verified |
 | **REQ-SET-020** | **Workout Peek in Heatmap.** | The system SHALL display a detailed peek (Bottom Sheet) when a workout track is tapped in the cluster heatmap, similar to the Periods view. This peek SHALL include an option to reassign the workout to a different cluster. | `FrequentPathHeatmapScreen.kt` | `TST-SET-012` | Verified |
+| **REQ-SET-021** | **Manual Fingerprint Editing.** | The system SHALL allow the user to manually adjust the signature points (Start, End, Apex) of an existing route cluster via the heatmap detail view. | `FrequentPathHeatmapScreen.kt`, `RouteClusterRepository.kt` | `TST-SET-013` | Verified |
 
 ## 5. Data Storage & Post-Processing
 

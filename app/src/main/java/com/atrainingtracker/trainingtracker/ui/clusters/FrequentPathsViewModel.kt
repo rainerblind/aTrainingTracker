@@ -178,4 +178,26 @@ class FrequentPathsViewModel(application: Application) : AndroidViewModel(applic
             repository.refreshClusters()
         }
     }
+
+    fun updateClusterFingerprint(
+        cluster: RouteCluster,
+        start: LatLng,
+        end: LatLng,
+        apex: LatLng
+    ) {
+        viewModelScope.launch {
+            val updated = cluster.copy(
+                startLat = start.latitude,
+                startLng = start.longitude,
+                endLat = end.latitude,
+                endLng = end.longitude,
+                maxDispLat = apex.latitude,
+                maxDispLng = apex.longitude
+            )
+            repository.updateCluster(updated)
+            if (_selectedCluster.value?.id == cluster.id) {
+                _selectedCluster.value = updated
+            }
+        }
+    }
 }

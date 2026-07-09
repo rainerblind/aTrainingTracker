@@ -20,7 +20,9 @@ package com.atrainingtracker.trainingtracker.ui.map
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import com.atrainingtracker.R
@@ -36,6 +38,8 @@ import com.google.android.gms.maps.model.PatternItem
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filter
 
 /**
  * A unified layer that can render any MappablePath (Track, Route, or Segment).
@@ -196,14 +200,29 @@ fun MarkerLayer(
         val icon = remember(markerData.iconResId, primaryColor) {
             createSensorMarker(context, markerData.iconResId, primaryColor, Color.White)
         }
+        val markerState = remember(markerData.position) { MarkerState(position = markerData.position) }
+
+        // Sync marker position with external state changes (e.g. Cancel)
+        LaunchedEffect(markerData.position) {
+            markerState.position = markerData.position
+        }
+
         Marker(
-            state = remember(markerData.position) { MarkerState(position = markerData.position) },
+            state = markerState,
             icon = icon,
             title = markerData.title,
             rotation = markerData.rotation,
             flat = markerData.flat,
-            anchor = markerData.anchor
+            anchor = markerData.anchor,
+            draggable = markerData.draggable
         )
+        
+        // Notify the caller when the position changes (including during dragging)
+        LaunchedEffect(markerState.position) {
+            if (markerData.draggable && markerState.position != markerData.position) {
+                markerData.onDragEnd(markerState.position)
+            }
+        }
     }
 }
 

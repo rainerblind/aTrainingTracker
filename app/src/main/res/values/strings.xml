@@ -1225,4 +1225,7 @@
     <string name="cluster_manual_pick_apex">Pick Apex (Furthest Away)</string>
     <string name="cluster_manual_distance_hint">Workout Distance (m)</string>
     <string name="cluster_manual_missing_points">Please pick all 3 spatial points on the map.</string>
+
+    <string name="cluster_edit_fingerprint">Edit Route Fingerprint</string>
+    <string name="cluster_edit_fingerprint_hint">Adjust Start, End, or Apex by selecting the type and tapping the map.</string>
 </resources>

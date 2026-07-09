@@ -70,7 +70,7 @@ fun ATrainingTrackerMap(
 
     // UI & Callbacks
     modifier: Modifier = Modifier,
-    onMapClick: (() -> Unit)? = null,
+    onMapClick: ((LatLng) -> Unit)? = null,
     shouldTakeSnapshot: Boolean = false,
     onSnapshotReady: (Bitmap) -> Unit = {},
     
@@ -132,7 +132,7 @@ fun ATrainingTrackerMap(
         GoogleMap(
             modifier = modifier,
             cameraPositionState = cameraPositionState,
-            onMapClick = { onMapClick?.invoke() },
+            onMapClick = { latLng -> onMapClick?.invoke(latLng) },
             properties = MapProperties(mapType = MapType.TERRAIN),
             uiSettings = MapUiSettings(zoomControlsEnabled = false, tiltGesturesEnabled = true),
             onMapLoaded = { isMapLoaded = true }

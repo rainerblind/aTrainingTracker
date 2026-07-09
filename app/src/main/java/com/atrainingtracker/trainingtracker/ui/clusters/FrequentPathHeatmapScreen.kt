@@ -21,7 +21,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.EditLocationAlt
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,6 +42,7 @@ import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.database.RouteCluster
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.map.*
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.google.android.gms.maps.model.LatLng
@@ -63,29 +67,47 @@ fun FrequentPathHeatmapScreen(
         workouts.map { it.toMapTrack().copy(isVisible = true) }
     }
 
+    // --- FINGERPRINT EDIT STATE (SCRUM-197 Refined) ---
+    var isEditingFingerprint by remember { mutableStateOf(false) }
+    var editStart by remember(cluster) { mutableStateOf(LatLng(cluster.startLat, cluster.startLng)) }
+    var editEnd by remember(cluster) { mutableStateOf(LatLng(cluster.endLat, cluster.endLng)) }
+    var editApex by remember(cluster) { mutableStateOf(LatLng(cluster.maxDispLat, cluster.maxDispLng)) }
+
+    val hasChanges = remember(cluster, editStart, editEnd, editApex) {
+        LatLng(cluster.startLat, cluster.startLng) != editStart ||
+        LatLng(cluster.endLat, cluster.endLng) != editEnd ||
+        LatLng(cluster.maxDispLat, cluster.maxDispLng) != editApex
+    }
+
     val startLabel = stringResource(R.string.start)
     val endLabel = stringResource(R.string.end)
     val apexLabel = stringResource(R.string.max_line_distance)
 
-    val fingerprintMarkers = remember(cluster, startLabel, endLabel, apexLabel) {
+    val fingerprintMarkers = remember(editStart, editEnd, editApex, isEditingFingerprint, startLabel, endLabel, apexLabel) {
         listOf(
             LocationMarker(
-                position = LatLng(cluster.startLat, cluster.startLng),
+                position = editStart,
                 iconResId = R.drawable.ic_location,
                 title = startLabel,
-                iconDescriptor = createSensorMarker(context, R.drawable.ic_location, Color(0xFF2E7D32)) // Green
+                iconDescriptor = createSensorMarker(context, R.drawable.ic_location, Color(0xFF2E7D32)), // Green
+                draggable = isEditingFingerprint,
+                onDragEnd = { editStart = it }
             ),
             LocationMarker(
-                position = LatLng(cluster.endLat, cluster.endLng),
+                position = editEnd,
                 iconResId = R.drawable.ic_location,
                 title = endLabel,
-                iconDescriptor = createSensorMarker(context, R.drawable.ic_location, Color(0xFFC62828) ) // Red
+                iconDescriptor = createSensorMarker(context, R.drawable.ic_location, Color(0xFFC62828)), // Red
+                draggable = isEditingFingerprint,
+                onDragEnd = { editEnd = it }
             ),
             LocationMarker(
-                position = LatLng(cluster.maxDispLat, cluster.maxDispLng),
+                position = editApex,
                 iconResId = R.drawable.ic_distance,
                 title = apexLabel,
-                iconDescriptor = createSensorMarker(context, R.drawable.ic_distance, Color(0xFF1565C0)) // Blue
+                iconDescriptor = createSensorMarker(context, R.drawable.ic_distance, Color(0xFF1565C0)), // Blue
+                draggable = isEditingFingerprint,
+                onDragEnd = { editApex = it }
             )
         )
     }
@@ -135,7 +157,7 @@ fun FrequentPathHeatmapScreen(
     )
 
     LaunchedEffect(peekedWorkoutDataWithTrack) {
-        if (peekedWorkoutDataWithTrack != null) {
+        if (peekedWorkoutDataWithTrack != null && !isEditingFingerprint) {
             scaffoldState.bottomSheetState.partialExpand()
         } else {
             scaffoldState.bottomSheetState.hide()
@@ -146,7 +168,7 @@ fun FrequentPathHeatmapScreen(
 
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
-        sheetPeekHeight = if (peekedWorkoutDataWithTrack != null) 120.dp + navBarHeight else 0.dp,
+        sheetPeekHeight = if (peekedWorkoutDataWithTrack != null && !isEditingFingerprint) 120.dp + navBarHeight else 0.dp,
         sheetDragHandle = null,
         sheetContent = {
             peekedWorkoutDataWithTrack?.workoutData?.let { workoutData ->
@@ -189,43 +211,73 @@ fun FrequentPathHeatmapScreen(
                         }
                     },
                     navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = null)
+                        IconButton(onClick = {
+                            if (isEditingFingerprint) {
+                                isEditingFingerprint = false
+                                // Revert changes
+                                editStart = LatLng(cluster.startLat, cluster.startLng)
+                                editEnd = LatLng(cluster.endLat, cluster.endLng)
+                                editApex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
+                            } else {
+                                onBack()
+                            }
+                        }) {
+                            Icon(if (isEditingFingerprint) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                         }
                     },
                     actions = {
-                        IconButton(onClick = { showRenameDialog = true }) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_table_edit),
-                                contentDescription = stringResource(R.string.edit_workout_name)
-                            )
+                        if (isEditingFingerprint) {
+                            IconButton(
+                                onClick = {
+                                    viewModel.updateClusterFingerprint(cluster, editStart, editEnd, editApex)
+                                    isEditingFingerprint = false
+                                },
+                                enabled = hasChanges
+                            ) {
+                                Icon(Icons.Default.Save, contentDescription = "Save Fingerprint", tint = if (hasChanges) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        } else {
+                            IconButton(onClick = { showRenameDialog = true }) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_table_edit),
+                                    contentDescription = stringResource(R.string.edit_workout_name)
+                                )
+                            }
+                            IconButton(onClick = { isEditingFingerprint = true }) {
+                                Icon(Icons.Default.EditLocationAlt, contentDescription = "Edit Fingerprint")
+                            }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = if (isEditingFingerprint) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
                     )
                 )
             },
             mapContent = {
                 heatmap(clusterPaths, opacity = heatmapOpacity)
 
+                // Only allow path clicks if not editing fingerprint
                 mapTracks.forEach { track ->
                     path(track, alpha = 0.2f, onPathClick = { id ->
-                        viewModel.selectWorkoutForPeek(id)
+                        if (!isEditingFingerprint) {
+                            viewModel.selectWorkoutForPeek(id)
+                        }
                     })
                 }
                 markers(fingerprintMarkers)
             },
             overlay = {
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 32.dp, start = 16.dp, end = 16.dp),
-                    shape = MaterialTheme.shapes.medium,
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                    tonalElevation = 4.dp
-                ) {
-                    ClusterStatsContent(cluster = cluster, workoutCount = workouts.size)
+                if (!isEditingFingerprint) {
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 32.dp, start = 16.dp, end = 16.dp),
+                        shape = MaterialTheme.shapes.medium,
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                        tonalElevation = 4.dp
+                    ) {
+                        ClusterStatsContent(cluster = cluster, workoutCount = workouts.size)
+                    }
                 }
             },
             modifier = Modifier.fillMaxSize()
@@ -235,6 +287,11 @@ fun FrequentPathHeatmapScreen(
     BackHandler {
         if (peekedWorkoutDataWithTrack != null) {
             viewModel.clearPeekSelection()
+        } else if (isEditingFingerprint) {
+            isEditingFingerprint = false
+            editStart = LatLng(cluster.startLat, cluster.startLng)
+            editEnd = LatLng(cluster.endLat, cluster.endLng)
+            editApex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
         } else {
             onBack()
         }

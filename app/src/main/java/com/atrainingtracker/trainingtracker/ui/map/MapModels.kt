@@ -118,7 +118,9 @@ data class LocationMarker(
     val rotation: Float = 0f,
     val flat: Boolean = false,
     val anchor: Offset = Offset(0.5f, 0.5f),
-    val iconDescriptor: BitmapDescriptor? = null
+    val iconDescriptor: BitmapDescriptor? = null,
+    val draggable: Boolean = false,
+    val onDragEnd: (LatLng) -> Unit = {}
 )
 
 /* Data class to encapsulate a single point in a track */
