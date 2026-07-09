@@ -114,6 +114,9 @@ public class WorkoutSummariesDatabaseManager {
         // individual Strava upload
         values.put(WorkoutSummaries.UPLOAD_TO_STRAVA, workoutData.getUploadToStrava());
 
+        // cluster association (SCRUM-191)
+        values.put(WorkoutSummaries.CLUSTER_ID, workoutData.getClusterId());
+
         getDatabase().update(WorkoutSummaries.TABLE,
                 values,
                 WorkoutSummaries.C_ID + "=" + workoutData.getId(),

@@ -83,6 +83,7 @@ class WorkoutDataMapper(
 
         var workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME))
         var suggestedSportId = sportId
+        var clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID))
 
         // --- AUTO-NAME & SPORT SUGGESTION (SCRUM-44) ---
         if (workoutName == fileBaseName || workoutName.isNullOrEmpty()) {
@@ -93,6 +94,7 @@ class WorkoutDataMapper(
                 if (suggestion != null) {
                     workoutName = "${suggestion.name} #${suggestion.hitCount + 1}"
                     suggestedSportId = suggestion.probableSportId
+                    clusterId = suggestion.id
                 }
             }
         }
@@ -118,6 +120,7 @@ class WorkoutDataMapper(
             mapPolyline = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.MAP_POLYLINE)) ?: "",
             encodedAltitudes = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.ALTITUDE_STREAM)) ?: "",
             encodedDistances = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_STREAM)) ?: "",
+            clusterId = clusterId,
 
             totalDistance = totalDistance,
             maxDisplacement = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX),

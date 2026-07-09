@@ -103,6 +103,7 @@ data class WorkoutData(
     val stravaSportName: String?,
 
     val stravaActivityData: String? = null,
+    val clusterId: Long = -1,
 
     // --- 2. Heavy/Live Data ---
     val exportStatuses: List<ExportStatusGroupData> = emptyList(),

@@ -507,7 +507,8 @@ class WorkoutRepository private constructor(private val application: Application
                             userEditedWorkout.maxDisplacementLatLng,
                             userEditedWorkout.totalDistance,
                             finalName,
-                            userEditedWorkout.sportId
+                            userEditedWorkout.sportId,
+                            userEditedWorkout.clusterId
                         )
                 }
             }

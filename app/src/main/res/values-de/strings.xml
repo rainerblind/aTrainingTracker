@@ -1104,4 +1104,6 @@
     <string name="cluster_move_workout_title">Einheit verschieben</string>
     <string name="cluster_move_workout_hint">Ziel-Routencluster auswählen (Score in Klammern, niedriger ist besser):</string>
     <string name="cluster_score_format">Score: %1$.3f | %2$d Aufzeichnungen</string>
+
+    <string name="cluster_suggestions_title">Vorgeschlagene Routen (niedriger Score ist besser):</string>
 </resources>
