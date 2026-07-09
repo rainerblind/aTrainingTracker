@@ -60,7 +60,8 @@ fun MapDetailLayout(
     modifier: Modifier = Modifier,
     useStatusBarsPadding: Boolean = true,
     showMap: Boolean = true,
-    showElevationProfile: Boolean = true
+    showElevationProfile: Boolean = true,
+    onMapClick: ((LatLng) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -110,6 +111,7 @@ fun MapDetailLayout(
                     activeScrubPath = activeScrubPath,
                     modifier = Modifier.fillMaxSize(),
                     shouldTakeSnapshot = isSharing,
+                    onMapClick = onMapClick,
                     onSnapshotReady = { mapBitmap ->
                         scope.launch {
                             val hBmp = headerLayer.toImageBitmap().asAndroidBitmap()

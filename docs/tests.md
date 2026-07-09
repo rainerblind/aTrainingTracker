@@ -120,6 +120,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-SET-010** | **Edit Workout Suggestions** | `REQ-SET-018` | 1. Edit a workout. 2. Tap the \"My Locations\" icon in the Name field. 3. Select a suggested cluster. | 1. The workout name SHALL update to the cluster's name. 2. The sport SHALL update to the cluster's sport. 3. Saving SHALL persist the cluster association. | Verified |
 | **TST-SET-011** | **Manual Cluster Creation** | `REQ-SET-019` | 1. Navigate to \"Frequent Paths\". 2. Tap \"+\" FAB. 3. Fill in name and distance. 4. Tap map to set 3 points. 5. Save. | 1. A new cluster SHALL be created in the database with 0 hit count. 2. The cluster SHALL be visible in the list. | Verified |
 | **TST-SET-012** | **Workout Peek & Move** | `REQ-SET-020` | 1. Open a Route Heatmap. 2. Tap a specific workout track. 3. Observe the Bottom Sheet peek. 4. Tap the \"Move\" FAB in the peek. | 1. The workout details SHALL be visible in the sheet. 2. The \"Move Workout\" dialog SHALL appear upon tapping the FAB. | Verified |
+| **TST-SET-013** | **Manual Fingerprint Edit** | `REQ-SET-021` | 1. Open a Route Heatmap. 2. Tap a signature marker (Start/End/Apex). 3. Select \"Edit Position\". 4. Tap map to set new position. 5. Save. | 1. The cluster centroid SHALL be updated in the database. 2. Future matching SHALL use the new coordinates. | Verified |
 
 ## 4. Release Verification Workflow
 

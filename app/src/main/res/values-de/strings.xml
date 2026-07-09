@@ -1113,4 +1113,7 @@
     <string name="cluster_manual_pick_apex">Apex (Entferntester Punkt) wählen</string>
     <string name="cluster_manual_distance_hint">Einheit-Distanz (m)</string>
     <string name="cluster_manual_missing_points">Bitte wählen Sie alle 3 räumlichen Punkte auf der Karte aus.</string>
+
+    <string name="cluster_edit_fingerprint">Routen-Fingerabdruck bearbeiten</string>
+    <string name="cluster_edit_fingerprint_hint">Passen Sie Start, Ende oder Apex an, indem Sie den Typ auswählen und auf die Karte tippen.</string>
 </resources>
