@@ -11,9 +11,6 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
 package com.atrainingtracker.trainingtracker.ui.clusters
@@ -24,9 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -41,6 +36,20 @@ fun ClusterTuningScreen(
     onBack: () -> Unit
 ) {
     val isRecalculating by viewModel.isRecalculating.collectAsState()
+    var showDetails by remember { mutableStateOf(false) }
+
+    // Constants for mapping
+    val endRange = 10f..500f
+    val apexRange = 10f..500f
+    val distRange = 0.01f..0.2f
+
+    // Derived master sensitivity (average of normalized values)
+    val currentMasterValue = remember(viewModel.endpointTolerance, viewModel.apexTolerance, viewModel.distanceTolerance) {
+        val nEnd = (viewModel.endpointTolerance - endRange.start) / (endRange.endInclusive - endRange.start)
+        val nApex = (viewModel.apexTolerance - apexRange.start) / (apexRange.endInclusive - apexRange.start)
+        val nDist = (viewModel.distanceTolerance - distRange.start) / (distRange.endInclusive - distRange.start)
+        (nEnd + nApex + nDist) / 3f
+    }
 
     Scaffold(
         topBar = {
@@ -72,30 +81,72 @@ fun ClusterTuningScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                TuningSlider(
-                    label = stringResource(R.string.cluster_tuning_endpoint_label),
-                    value = viewModel.endpointTolerance,
-                    onValueChange = { viewModel.endpointTolerance = it },
-                    valueRange = 10f..500f,
-                    unit = "m"
-                )
+                // 1. Master Slider
+                Column {
+                    Text(
+                        text = stringResource(R.string.cluster_tuning_master_label),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Slider(
+                        value = currentMasterValue,
+                        onValueChange = { sensitivity ->
+                            viewModel.endpointTolerance = endRange.start + (endRange.endInclusive - endRange.start) * sensitivity
+                            viewModel.apexTolerance = apexRange.start + (apexRange.endInclusive - apexRange.start) * sensitivity
+                            viewModel.distanceTolerance = distRange.start + (distRange.endInclusive - distRange.start) * sensitivity
+                        },
+                        valueRange = 0f..1f
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(stringResource(R.string.cluster_tuning_strict), style = MaterialTheme.typography.labelSmall)
+                        Text(stringResource(R.string.cluster_tuning_relaxed), style = MaterialTheme.typography.labelSmall)
+                    }
+                }
 
-                TuningSlider(
-                    label = stringResource(R.string.cluster_tuning_apex_label),
-                    value = viewModel.apexTolerance,
-                    onValueChange = { viewModel.apexTolerance = it },
-                    valueRange = 10f..500f,
-                    unit = "m"
-                )
+                // 2. Details Toggle
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(stringResource(R.string.cluster_tuning_show_details), style = MaterialTheme.typography.bodyMedium)
+                    Switch(
+                        checked = showDetails,
+                        onCheckedChange = { showDetails = it }
+                    )
+                }
 
-                TuningSlider(
-                    label = stringResource(R.string.cluster_tuning_distance_label),
-                    value = viewModel.distanceTolerance,
-                    onValueChange = { viewModel.distanceTolerance = it },
-                    valueRange = 0.01f..0.2f,
-                    unit = "%",
-                    displayMultiplier = 100f
-                )
+                // 3. Individual Sliders (Optional)
+                if (showDetails) {
+                    TuningSlider(
+                        label = stringResource(R.string.cluster_tuning_endpoint_label),
+                        value = viewModel.endpointTolerance,
+                        onValueChange = { viewModel.endpointTolerance = it },
+                        valueRange = endRange,
+                        unit = "m"
+                    )
+
+                    TuningSlider(
+                        label = stringResource(R.string.cluster_tuning_apex_label),
+                        value = viewModel.apexTolerance,
+                        onValueChange = { viewModel.apexTolerance = it },
+                        valueRange = apexRange,
+                        unit = "m"
+                    )
+
+                    TuningSlider(
+                        label = stringResource(R.string.cluster_tuning_distance_label),
+                        value = viewModel.distanceTolerance,
+                        onValueChange = { viewModel.distanceTolerance = it },
+                        valueRange = distRange,
+                        unit = "%",
+                        displayMultiplier = 100f
+                    )
+                }
 
                 Spacer(modifier = Modifier.weight(1f))
 
