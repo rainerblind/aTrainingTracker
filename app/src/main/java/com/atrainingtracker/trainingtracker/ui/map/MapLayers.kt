@@ -25,6 +25,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
@@ -202,12 +204,20 @@ fun MarkerLayer(
         }
         // Use a composite key for marker identity
         val markerState = remember(markerData.title, markerData.iconResId) { MarkerState(position = markerData.position) }
+        val haptic = LocalHapticFeedback.current
 
         // Sync marker position with external state changes (e.g. Cancel)
         LaunchedEffect(markerData.position) {
             // Update internal state only if it significantly differs (avoiding feedback loops during drag)
             if (markerState.position != markerData.position) {
                 markerState.position = markerData.position
+            }
+        }
+
+        // Haptic feedback when dragging starts
+        LaunchedEffect(markerState.isDragging) {
+            if (markerState.isDragging) {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             }
         }
 
