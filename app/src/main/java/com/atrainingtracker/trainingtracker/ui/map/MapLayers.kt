@@ -200,11 +200,15 @@ fun MarkerLayer(
         val icon = remember(markerData.iconResId, primaryColor) {
             createSensorMarker(context, markerData.iconResId, primaryColor, Color.White)
         }
-        val markerState = remember(markerData.position) { MarkerState(position = markerData.position) }
+        // Use a composite key for marker identity
+        val markerState = remember(markerData.title, markerData.iconResId) { MarkerState(position = markerData.position) }
 
         // Sync marker position with external state changes (e.g. Cancel)
         LaunchedEffect(markerData.position) {
-            markerState.position = markerData.position
+            // Update internal state only if it significantly differs (avoiding feedback loops during drag)
+            if (markerState.position != markerData.position) {
+                markerState.position = markerData.position
+            }
         }
 
         Marker(
@@ -217,9 +221,9 @@ fun MarkerLayer(
             draggable = markerData.draggable
         )
         
-        // Notify the caller when the position changes (including during dragging)
-        LaunchedEffect(markerState.position) {
-            if (markerData.draggable && markerState.position != markerData.position) {
+        // Notify the caller when dragging stops
+        LaunchedEffect(markerState.isDragging) {
+            if (!markerState.isDragging && markerData.draggable) {
                 markerData.onDragEnd(markerState.position)
             }
         }
