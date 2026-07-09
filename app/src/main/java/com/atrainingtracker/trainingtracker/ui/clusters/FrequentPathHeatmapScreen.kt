@@ -15,9 +15,14 @@
 
 package com.atrainingtracker.trainingtracker.ui.clusters
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,18 +31,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.database.RouteCluster
+import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.map.*
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.google.android.gms.maps.model.LatLng
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.ui.text.font.FontWeight
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,6 +53,7 @@ fun FrequentPathHeatmapScreen(
 ) {
     val context = LocalContext.current
     val workouts by viewModel.clusterWorkouts.collectAsState()
+    val peekedWorkoutDataWithTrack by viewModel.peekedWorkoutDataWithTrack.collectAsState()
     
     val sportType = remember(cluster.probableSportId) {
         BSportType.entries.find { it.ordinal.toLong() == cluster.probableSportId } ?: BSportType.UNKNOWN
@@ -88,11 +94,10 @@ fun FrequentPathHeatmapScreen(
         workouts.mapNotNull { if (it.mapPolyline.isNotEmpty()) com.google.maps.android.PolyUtil.decode(it.mapPolyline) else null }
     }
 
-    // Adaptive heatmap parameters based on workout count (SCRUM-179 refinement)
-    val workoutCount = cluster.hitCount
+    // Adaptive heatmap parameters based on workout count
     val heatmapOpacity = when {
-        workoutCount <= 5 -> 0.6
-        workoutCount <= 20 -> 0.8
+        cluster.hitCount <= 5 -> 0.6
+        cluster.hitCount <= 20 -> 0.8
         else -> 1.0
     }
 
@@ -119,73 +124,121 @@ fun FrequentPathHeatmapScreen(
             onMove = { targetId ->
                 viewModel.moveWorkout(workoutToMove!!, targetId)
                 workoutToMove = null
+                viewModel.clearPeekSelection()
             },
             onDismiss = { workoutToMove = null }
         )
     }
 
-    MapDetailLayout(
-        bSportType = sportType,
-        zoomFocus = MapZoomFocus.FIT_PRIMARY,
-        activeScrubPath = null,
-        showElevationProfile = false,
-        header = {
-            TopAppBar(
-                title = { 
-                    Column {
-                        Text(cluster.name, style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            stringResource(R.string.my_locations), 
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = null)
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showRenameDialog = true }) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_table_edit),
-                            contentDescription = stringResource(R.string.edit_workout_name)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
-        },
-        mapContent = {
-            // Background heatmap for the cluster
-            heatmap(clusterPaths, opacity = heatmapOpacity)
-
-            // Individual tracks with low alpha for definition and clickability
-            mapTracks.forEach { track ->
-                path(track, alpha = 0.2f, onPathClick = { id ->
-                    workoutToMove = workouts.find { it.id == id }
-                })
-            }
-            markers(fingerprintMarkers)
-        },
-        overlay = {
-            // Overlay for aggregated stats
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 32.dp, start = 16.dp, end = 16.dp),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                tonalElevation = 4.dp
-            ) {
-                ClusterStatsContent(cluster = cluster, workoutCount = workouts.size)
-            }
-        },
-        modifier = Modifier.fillMaxSize()
+    val scaffoldState = rememberBottomSheetScaffoldState(
+        bottomSheetState = rememberStandardBottomSheetState(skipHiddenState = false)
     )
+
+    LaunchedEffect(peekedWorkoutDataWithTrack) {
+        if (peekedWorkoutDataWithTrack != null) {
+            scaffoldState.bottomSheetState.partialExpand()
+        } else {
+            scaffoldState.bottomSheetState.hide()
+        }
+    }
+
+    val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+    BottomSheetScaffold(
+        scaffoldState = scaffoldState,
+        sheetPeekHeight = if (peekedWorkoutDataWithTrack != null) 120.dp + navBarHeight else 0.dp,
+        sheetDragHandle = null,
+        sheetContent = {
+            peekedWorkoutDataWithTrack?.workoutData?.let { workoutData ->
+                TrackOnMapScreen(
+                    workoutData = workoutData,
+                    tracks = listOf(MapTrack(workoutData.id, TrackType.BEST, workoutData.bSportType, peekedWorkoutDataWithTrack!!.trackPoints)),
+                    modifier = Modifier,
+                    useStatusBarsPadding = false,
+                    headerActions = {
+                        IconButton(
+                            onClick = { workoutToMove = workoutData },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SwapHoriz,
+                                contentDescription = "Move Cluster",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                )
+            }
+        }
+    ) {
+        MapDetailLayout(
+            bSportType = sportType,
+            zoomFocus = MapZoomFocus.FIT_PRIMARY,
+            activeScrubPath = null,
+            showElevationProfile = false,
+            header = {
+                TopAppBar(
+                    title = { 
+                        Column {
+                            Text(cluster.name, style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                stringResource(R.string.my_locations), 
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = null)
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { showRenameDialog = true }) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_table_edit),
+                                contentDescription = stringResource(R.string.edit_workout_name)
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                )
+            },
+            mapContent = {
+                heatmap(clusterPaths, opacity = heatmapOpacity)
+
+                mapTracks.forEach { track ->
+                    path(track, alpha = 0.2f, onPathClick = { id ->
+                        viewModel.selectWorkoutForPeek(id)
+                    })
+                }
+                markers(fingerprintMarkers)
+            },
+            overlay = {
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 32.dp, start = 16.dp, end = 16.dp),
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                    tonalElevation = 4.dp
+                ) {
+                    ClusterStatsContent(cluster = cluster, workoutCount = workouts.size)
+                }
+            },
+            modifier = Modifier.fillMaxSize()
+        )
+    }
+
+    BackHandler {
+        if (peekedWorkoutDataWithTrack != null) {
+            viewModel.clearPeekSelection()
+        } else {
+            onBack()
+        }
+    }
 }
 
 @Composable

@@ -106,7 +106,26 @@ class FrequentPathsViewModel(application: Application) : AndroidViewModel(applic
             }
         } else {
             _clusterWorkouts.value = emptyList()
+            clearPeekSelection()
         }
+    }
+
+    // --- PEEK / BOTTOM SHEET STATE (SCRUM-196) ---
+    private val _peekedWorkoutDataWithTrack = MutableStateFlow<com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack?>(null)
+    val peekedWorkoutDataWithTrack: StateFlow<com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack?> = _peekedWorkoutDataWithTrack.asStateFlow()
+
+    fun selectWorkoutForPeek(id: Long) {
+        viewModelScope.launch {
+            val workout = _clusterWorkouts.value.find { it.id == id }
+            if (workout != null) {
+                val trackPoints = repository.getWorkoutTrackPoints(id, com.atrainingtracker.trainingtracker.ui.map.TrackType.BEST)
+                _peekedWorkoutDataWithTrack.value = com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack(workout, trackPoints)
+            }
+        }
+    }
+
+    fun clearPeekSelection() {
+        _peekedWorkoutDataWithTrack.value = null
     }
 
     fun renameCluster(cluster: RouteCluster, newName: String) {

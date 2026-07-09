@@ -49,7 +49,8 @@ fun TrackOnMapScreen(
     onToggleTrackType: (TrackType) -> Unit = {},
     showTechnicalTracks: Boolean = false,
     useStatusBarsPadding: Boolean = true,
-    showMap: Boolean = true
+    showMap: Boolean = true,
+    headerActions: @Composable RowScope.() -> Unit = {}
 ) {
     // PERFORMANCE: Memoize the filtered tracks list
     val filteredTracks = remember(tracks, enabledTrackTypes) {
@@ -72,7 +73,8 @@ fun TrackOnMapScreen(
                 onClicked = { },
                 onExport = { },
                 onSaveAsRoute = { },
-                onDeleteRequest = { }
+                onDeleteRequest = { },
+                actions = headerActions
             )
         },
         mapContent = {
