@@ -1093,6 +1093,10 @@
     <string name="cluster_ref_distance_label">Ref: %1$s</string>
 
     <string name="cluster_tuning_title">Cluster-Parameter</string>
+    <string name="cluster_tuning_master_label">Gruppierungs-Sensitivität</string>
+    <string name="cluster_tuning_strict">Streng</string>
+    <string name="cluster_tuning_relaxed">Locker</string>
+    <string name="cluster_tuning_show_details">Detaillierte Parameter anzeigen</string>
     <string name="cluster_tuning_endpoint_label">Endpunkt-Toleranz</string>
     <string name="cluster_tuning_apex_label">Apex (Max. Abweichung) Toleranz</string>
     <string name="cluster_tuning_distance_label">Distanz-Toleranz</string>
