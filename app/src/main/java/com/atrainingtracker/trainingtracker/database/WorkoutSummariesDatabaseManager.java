@@ -123,6 +123,24 @@ public class WorkoutSummariesDatabaseManager {
                 null);
     }
 
+    /**
+     * Finds the most frequent sportId associated with a specific cluster.
+     * Used to refine the "probable sport" for a route family.
+     */
+    public long getMostFrequentSportIdForCluster(long clusterId) {
+        if (clusterId == -1) return -1;
+        String sql = "SELECT " + WorkoutSummaries.SPORT_ID + ", COUNT(*) as cnt FROM " + WorkoutSummaries.TABLE +
+                " WHERE " + WorkoutSummaries.CLUSTER_ID + " = ?" +
+                " GROUP BY " + WorkoutSummaries.SPORT_ID +
+                " ORDER BY cnt DESC LIMIT 1";
+        try (Cursor cursor = getDatabase().rawQuery(sql, new String[]{String.valueOf(clusterId)})) {
+            if (cursor.moveToFirst()) {
+                return cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID));
+            }
+        }
+        return -1;
+    }
+
     public Cursor getWorkoutCursor(long workoutId) {
         return getDatabase().query(WorkoutSummaries.TABLE,
                 null,

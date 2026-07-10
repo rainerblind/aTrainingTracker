@@ -91,4 +91,12 @@ class RouteClusterRepository private constructor(private val context: Context) {
     suspend fun getWorkoutTrackPoints(workoutId: Long, trackType: TrackType): List<PathPoint> {
         return WorkoutRepository.getInstance(context as android.app.Application).getWorkoutTrackPoints(workoutId, trackType)
     }
+
+    fun getSportName(sportId: Long): String {
+        return SportTypeDatabaseManager.getInstance(context).getUIName(sportId)
+    }
+
+    fun getBSportType(sportId: Long): com.atrainingtracker.banalservice.BSportType {
+        return SportTypeDatabaseManager.getInstance(context).getBSportType(sportId)
+    }
 }

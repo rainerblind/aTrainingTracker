@@ -26,7 +26,8 @@ import com.google.android.gms.maps.model.LatLng
 
 class RouteClusterEngine private constructor(context: Context) {
 
-    private val dbManager = RouteClusterDatabaseManager.getInstance(context)
+    private val appContext = context.applicationContext
+    private val dbManager = RouteClusterDatabaseManager.getInstance(appContext)
 
     companion object {
         private const val TAG = "RouteClusterEngine"
@@ -83,6 +84,12 @@ class RouteClusterEngine private constructor(context: Context) {
             )
             dbManager.updateCluster(updatedCluster)
             if (DEBUG) Log.i(TAG, "Learned from existing route: ${updatedCluster.name} (hitCount=${updatedCluster.hitCount})")
+            
+            // Re-evaluate probable sport based on majority (SCRUM-182)
+            val mostFrequentSport = WorkoutSummariesDatabaseManager.getInstance(appContext).getMostFrequentSportIdForCluster(updatedCluster.id)
+            if (mostFrequentSport != -1L && mostFrequentSport != updatedCluster.probableSportId) {
+                dbManager.updateCluster(updatedCluster.copy(probableSportId = mostFrequentSport))
+            }
         } else {
             // Create a new cluster with unique name (SCRUM-190)
             val uniqueName = findUniqueClusterName(userSpecifiedName)
@@ -156,6 +163,12 @@ class RouteClusterEngine private constructor(context: Context) {
                         )
                         dbManager.updateCluster(updated)
                         updateWorkoutClusterId(context, workoutId, updated.id)
+
+                        // Re-evaluate probable sport based on majority (SCRUM-182)
+                        val mostFrequentSport = WorkoutSummariesDatabaseManager.getInstance(context).getMostFrequentSportIdForCluster(updated.id)
+                        if (mostFrequentSport != -1L && mostFrequentSport != updated.probableSportId) {
+                            dbManager.updateCluster(updated.copy(probableSportId = mostFrequentSport))
+                        }
                     } else {
                         // No match: Create new cluster. 
                         // If it's a default name, use a generic descriptive name.
@@ -287,6 +300,12 @@ class RouteClusterEngine private constructor(context: Context) {
                     hitCount = oldCluster.hitCount - 1
                 )
                 dbManager.updateCluster(updatedOld)
+                
+                // Re-evaluate probable sport based on majority (SCRUM-182)
+                val mostFrequentSport = WorkoutSummariesDatabaseManager.getInstance(context).getMostFrequentSportIdForCluster(updatedOld.id)
+                if (mostFrequentSport != -1L && mostFrequentSport != updatedOld.probableSportId) {
+                    dbManager.updateCluster(updatedOld.copy(probableSportId = mostFrequentSport))
+                }
             } else {
                 dbManager.deleteCluster(currentClusterId)
             }
@@ -306,6 +325,12 @@ class RouteClusterEngine private constructor(context: Context) {
                 hitCount = newCluster.hitCount + 1
             )
             dbManager.updateCluster(updatedNew)
+            
+            // Re-evaluate probable sport based on majority (SCRUM-182)
+            val mostFrequentSport = WorkoutSummariesDatabaseManager.getInstance(context).getMostFrequentSportIdForCluster(updatedNew.id)
+            if (mostFrequentSport != -1L && mostFrequentSport != updatedNew.probableSportId) {
+                dbManager.updateCluster(updatedNew.copy(probableSportId = mostFrequentSport))
+            }
         }
 
         // 4. Update workout record

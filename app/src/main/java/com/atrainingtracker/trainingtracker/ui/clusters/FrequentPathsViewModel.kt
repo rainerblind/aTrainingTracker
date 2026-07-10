@@ -45,6 +45,7 @@ class FrequentPathsViewModel(application: Application) : AndroidViewModel(applic
 
     private val repository = RouteClusterRepository.getInstance(application)
     private val banalRepository = BANALServiceRepository.getInstance(application)
+    private val discoveryManager = com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager.getInstance(application)
 
     val allClusters: StateFlow<List<RouteCluster>> = repository.allClusters
     val currentLocation: StateFlow<LatLng?> = banalRepository.currentLocation
@@ -200,5 +201,13 @@ class FrequentPathsViewModel(application: Application) : AndroidViewModel(applic
                 _selectedCluster.value = updated
             }
         }
+    }
+
+    fun getSportName(sportId: Long): String = repository.getSportName(sportId)
+    fun getBSportType(sportId: Long): com.atrainingtracker.banalservice.BSportType = repository.getBSportType(sportId)
+
+    fun getLinkedEquipment(sportId: Long): List<String> {
+        val sportName = getSportName(sportId)
+        return discoveryManager.getEquipmentNamesForSport(sportName).toList()
     }
 }
