@@ -117,11 +117,6 @@ fun ClusterItem(
     viewModel: FrequentPathsViewModel,
     onClick: () -> Unit
 ) {
-    val context = LocalContext.current
-    val distanceFormatter = remember { DistanceFormatter() }
-    val sportName = remember(cluster.probableSportId) { viewModel.getSportName(cluster.probableSportId) }
-    val bSportType = remember(cluster.probableSportId) { viewModel.getBSportType(cluster.probableSportId) }
-
     MappableListItem(onClick = onClick) {
         Column(
             modifier = Modifier
@@ -129,26 +124,7 @@ fun ClusterItem(
                 .padding(12.dp)
         ) {
             // --- 1. TOP ROW: Standard Header (Icon + Name) ---
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Icon(
-                    painter = painterResource(id = bSportType.iconResId),
-                    contentDescription = null,
-                    modifier = Modifier.size(32.dp),
-                    tint = Color.Unspecified
-                )
-                Text(
-                    text = cluster.name,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            RouteClusterIdentityRow(cluster = cluster, viewModel = viewModel)
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -158,48 +134,12 @@ fun ClusterItem(
                 verticalAlignment = Alignment.Bottom
             ) {
                 // LEFT SIDE: Metadata & Metrics (SCRUM-188 Reordered)
-                Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                    // 1. Distance
-                    MetricItem(
-                        iconRes = R.drawable.ic_distance,
-                        value = distanceFormatter.format_with_units(cluster.refDistance),
-                        isPrimary = false,
-                        valueColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        iconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // 2. Sport Name
-                    Text(
-                        text = sportName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    // 3. Predicted Equipment (Technical mapping via Sport Type)
-                    val linkedEquipment = remember(cluster.probableSportId) { viewModel.getLinkedEquipment(cluster.probableSportId) }
-                    if (linkedEquipment.isNotEmpty()) {
-                        Text(
-                            text = "→ ${linkedEquipment.joinToString(", ")}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
-                            textAlign = TextAlign.Start,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-
-                    // Variable space (SCRUM refinement)
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    // 4. Hit Count (Recordings count, Consistent with Periods)
-                    Text(
-                        text = stringResource(R.string.cluster_recordings_format, cluster.hitCount),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
+                RouteClusterMetadataBlock(
+                    cluster = cluster,
+                    viewModel = viewModel,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    includeSpacer = true
+                )
 
                 Spacer(modifier = Modifier.width(16.dp))
 
@@ -209,6 +149,7 @@ fun ClusterItem(
                     shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerHigh
                 ) {
+                    val context = LocalContext.current
                     Box(modifier = Modifier.fillMaxSize()) {
                         val start = LatLng(cluster.startLat, cluster.startLng)
                         val end = LatLng(cluster.endLat, cluster.endLng)
