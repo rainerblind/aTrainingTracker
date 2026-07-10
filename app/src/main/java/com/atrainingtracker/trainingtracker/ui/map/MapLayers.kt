@@ -21,7 +21,10 @@ package com.atrainingtracker.trainingtracker.ui.map
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -199,44 +202,52 @@ fun MarkerLayer(
     context: Context
 ) {
     markers.forEach { markerData ->
-        val icon = remember(markerData.iconResId, primaryColor) {
-            createSensorMarker(context, markerData.iconResId, primaryColor, Color.White)
-        }
-        // Use a composite key for marker identity
-        val markerState = remember(markerData.title, markerData.iconResId) { MarkerState(position = markerData.position) }
-        val haptic = LocalHapticFeedback.current
-
-        // Sync marker position with external state changes (e.g. Cancel)
-        LaunchedEffect(markerData.position) {
-            // Update internal state only if it significantly differs (avoiding feedback loops during drag)
-            if (markerState.position != markerData.position) {
-                markerState.position = markerData.position
+        key(markerData.title, markerData.iconResId) {
+            val icon = remember(markerData.iconResId, primaryColor) {
+                createSensorMarker(context, markerData.iconResId, primaryColor, Color.White)
             }
-        }
+            // Use a composite key for marker identity
+            val markerState = remember(markerData.title, markerData.iconResId) { MarkerState(position = markerData.position) }
+            val haptic = LocalHapticFeedback.current
 
-        // Haptic feedback when dragging starts
-        LaunchedEffect(markerState.isDragging) {
-            if (markerState.isDragging) {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            // Sync marker position with external state changes (e.g. Cancel)
+            // IMPORTANT: Only sync if not dragging, to avoid snapping back during movement
+            LaunchedEffect(markerData.position) {
+                if (!markerState.isDragging && markerState.position != markerData.position) {
+                    markerState.position = markerData.position
+                }
             }
-        }
 
-        Marker(
-            state = markerState,
-            icon = icon,
-            title = markerData.title,
-            rotation = markerData.rotation,
-            flat = markerData.flat,
-            anchor = markerData.anchor,
-            draggable = markerData.draggable,
-            alpha = markerData.alpha,
-            onClick = { markerData.onClick() }
-        )
-        
-        // Notify the caller when dragging stops
-        LaunchedEffect(markerState.isDragging) {
-            if (!markerState.isDragging && markerData.draggable) {
-                markerData.onDragEnd(markerState.position)
+            // Haptic feedback when dragging starts
+            LaunchedEffect(markerState.isDragging) {
+                if (markerState.isDragging) {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                }
+            }
+
+            Marker(
+                state = markerState,
+                icon = icon,
+                title = markerData.title,
+                rotation = markerData.rotation,
+                flat = markerData.flat,
+                anchor = markerData.anchor,
+                draggable = markerData.draggable,
+                alpha = markerData.alpha,
+                onClick = { markerData.onClick() }
+            )
+
+            // Notify the caller when dragging stops
+            val currentOnDragEnd by rememberUpdatedState(markerData.onDragEnd)
+            LaunchedEffect(markerState) {
+                var wasDragging = false
+                snapshotFlow { markerState.isDragging }
+                    .collect { isDragging ->
+                        if (wasDragging && !isDragging) {
+                            currentOnDragEnd(markerState.position)
+                        }
+                        wasDragging = isDragging
+                    }
             }
         }
     }
