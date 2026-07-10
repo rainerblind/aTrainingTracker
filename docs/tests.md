@@ -123,6 +123,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-SET-013** | **Manual Fingerprint Edit** | `REQ-SET-021` | 1. Open a Route Heatmap. 2. Tap a signature marker (Start/End/Apex). 3. Select \"Edit Position\". 4. Tap map to set new position. 5. Save. | 1. The cluster centroid SHALL be updated in the database. 2. Future matching SHALL use the new coordinates. | Verified |
 | **TST-SET-014** | **Workout Markers in Cluster** | `REQ-SET-022` | 1. Open a Route Heatmap. 2. Observe the distribution of markers for all members. 3. Tap a specific workout track OR any marker. 4. Inspect markers in the peek. | 1. Markers for ALL member workouts SHALL be visible with subtle transparency. 2. Tapping a marker SHALL correctly trigger the detailed peek for that workout. | Verified |
 | **TST-SET-015** | **Imperial Units in Clusters** | `REQ-SET-023` | 1. Switch to Imperial. 2. Add manual cluster (miles). 3. View tuning details (mile). | 1. Manual distance input SHALL accept miles and store as meters. 2. Tuning tolerances SHALL be displayed in miles with high precision. | Verified |
+| **TST-SET-016** | **Cluster Equipment Determination** | `REQ-SET-024` | 1. Open a Route Cluster. 2. Verify the associated equipment list (→). | 1. The list of equipment linked to the cluster's primary sport SHALL be visible. | Verified |
 
 ## 4. Release Verification Workflow
 

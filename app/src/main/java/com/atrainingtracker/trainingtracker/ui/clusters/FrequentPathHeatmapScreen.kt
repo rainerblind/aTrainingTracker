@@ -35,6 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
@@ -59,9 +60,7 @@ fun FrequentPathHeatmapScreen(
     val workouts by viewModel.clusterWorkouts.collectAsState()
     val peekedWorkoutDataWithTrack by viewModel.peekedWorkoutDataWithTrack.collectAsState()
     
-    val sportType = remember(cluster.probableSportId) {
-        BSportType.entries.find { it.ordinal.toLong() == cluster.probableSportId } ?: BSportType.UNKNOWN
-    }
+    val sportType = remember(cluster.probableSportId) { viewModel.getBSportType(cluster.probableSportId) }
 
     val mapTracks = remember(workouts) {
         workouts.map { it.toMapTrack().copy(isVisible = true) }
@@ -308,7 +307,7 @@ fun FrequentPathHeatmapScreen(
                         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
                         tonalElevation = 4.dp
                     ) {
-                        ClusterStatsContent(cluster = cluster, workoutCount = workouts.size)
+                        ClusterStatsContent(cluster = cluster, viewModel = viewModel, workoutCount = workouts.size)
                     }
                 }
             },
@@ -331,22 +330,40 @@ fun FrequentPathHeatmapScreen(
 }
 
 @Composable
-fun ClusterStatsContent(cluster: RouteCluster, workoutCount: Int) {
+fun ClusterStatsContent(cluster: RouteCluster, viewModel: FrequentPathsViewModel, workoutCount: Int) {
     val distanceFormatter = remember { DistanceFormatter() }
+    val sportName = remember(cluster.probableSportId) { viewModel.getSportName(cluster.probableSportId) }
+    val linkedEquipment = remember(cluster.probableSportId) { viewModel.getLinkedEquipment(cluster.probableSportId) }
     
-    Row(
-        modifier = Modifier
-            .padding(16.dp)
-            .fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
+    Column(
+        modifier = Modifier.padding(16.dp).fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = stringResource(R.string.stats_workouts), style = MaterialTheme.typography.labelSmall)
-            Text(text = workoutCount.toString(), style = MaterialTheme.typography.titleMedium)
-        }
+        // 1. Distance
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = stringResource(R.string.cluster_average_distance), style = MaterialTheme.typography.labelSmall)
             Text(text = distanceFormatter.format_with_units(cluster.refDistance), style = MaterialTheme.typography.titleMedium)
+        }
+
+        // 2. Sport Type
+        Text(text = sportName, style = MaterialTheme.typography.bodyMedium)
+        
+        // 3. Resulting Equipment
+        if (linkedEquipment.isNotEmpty()) {
+            Text(
+                text = "→ ${linkedEquipment.joinToString(", ")}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        // 4. Hit Count
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text = stringResource(R.string.stats_workouts), style = MaterialTheme.typography.labelSmall)
+            Text(text = workoutCount.toString(), style = MaterialTheme.typography.titleMedium)
         }
     }
 }

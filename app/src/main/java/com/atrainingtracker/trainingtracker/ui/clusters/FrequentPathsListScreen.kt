@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.clusters
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -38,12 +39,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.database.RouteCluster
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
+import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -99,6 +103,7 @@ fun FrequentPathsListScreen(
             items(clusters) { cluster ->
                 ClusterItem(
                     cluster = cluster,
+                    viewModel = viewModel,
                     onClick = { onClusterClick(cluster) }
                 )
             }
@@ -109,108 +114,154 @@ fun FrequentPathsListScreen(
 @Composable
 fun ClusterItem(
     cluster: RouteCluster,
+    viewModel: FrequentPathsViewModel,
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
     val distanceFormatter = remember { DistanceFormatter() }
-    
+    val sportName = remember(cluster.probableSportId) { viewModel.getSportName(cluster.probableSportId) }
+    val bSportType = remember(cluster.probableSportId) { viewModel.getBSportType(cluster.probableSportId) }
+
     MappableListItem(onClick = onClick) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(12.dp)
         ) {
-            // 1. LEFT SIDE: DETAILS
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    val sport = BSportType.entries.find { it.ordinal.toLong() == cluster.probableSportId } ?: BSportType.UNKNOWN
-                    Icon(
-                        painter = painterResource(id = sport.iconResId),
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = cluster.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Text(
-                    text = stringResource(R.string.cluster_recordings_format, cluster.hitCount),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Medium)
+            // --- 1. TOP ROW: Standard Header (Icon + Name) ---
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = bSportType.iconResId),
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp),
+                    tint = Color.Unspecified
                 )
-                
                 Text(
-                    text = distanceFormatter.format_with_units(cluster.refDistance),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Subtle)
+                    text = cluster.name,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // 2. RIGHT SIDE: SMALL SQUARE MAP
-            Surface(
-                modifier = Modifier.size(100.dp),
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh
+            // --- 2. BOTTOM AREA: Details on left, Map on right ---
+            Row(
+                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                verticalAlignment = Alignment.Bottom
             ) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    val start = LatLng(cluster.startLat, cluster.startLng)
-                    val end = LatLng(cluster.endLat, cluster.endLng)
-                    val apex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
+                // LEFT SIDE: Metadata & Metrics (SCRUM-188 Reordered)
+                Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    // 1. Distance
+                    MetricItem(
+                        iconRes = R.drawable.ic_distance,
+                        value = distanceFormatter.format_with_units(cluster.refDistance),
+                        isPrimary = false,
+                        valueColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        iconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+                    )
 
-                    val bounds = remember(start, end, apex) {
-                        LatLngBounds.Builder()
-                            .include(start)
-                            .include(end)
-                            .include(apex)
-                            .build()
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // 2. Sport Name
+                    Text(
+                        text = sportName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    // 3. Predicted Equipment (Technical mapping via Sport Type)
+                    val linkedEquipment = remember(cluster.probableSportId) { viewModel.getLinkedEquipment(cluster.probableSportId) }
+                    if (linkedEquipment.isNotEmpty()) {
+                        Text(
+                            text = "→ ${linkedEquipment.joinToString(", ")}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
+                            textAlign = TextAlign.Start,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
 
-                    val cameraPositionState = rememberCameraPositionState()
-                    var isMapLoaded by remember { mutableStateOf(false) }
+                    // Variable space (SCRUM refinement)
+                    Spacer(modifier = Modifier.weight(1f))
 
-                    LaunchedEffect(bounds, isMapLoaded) {
-                        if (isMapLoaded) {
-                            cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(bounds, 40))
+                    // 4. Hit Count (Recordings count, Consistent with Periods)
+                    Text(
+                        text = stringResource(R.string.cluster_recordings_format, cluster.hitCount),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                // RIGHT SIDE: SMALL SQUARE MAP
+                Surface(
+                    modifier = Modifier.size(100.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        val start = LatLng(cluster.startLat, cluster.startLng)
+                        val end = LatLng(cluster.endLat, cluster.endLng)
+                        val apex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
+
+                        val bounds = remember(start, end, apex) {
+                            LatLngBounds.Builder()
+                                .include(start)
+                                .include(end)
+                                .include(apex)
+                                .build()
                         }
-                    }
 
-                    GoogleMap(
-                        modifier = Modifier.fillMaxSize(),
-                        cameraPositionState = cameraPositionState,
-                        properties = MapProperties(mapType = MapType.TERRAIN),
-                        onMapLoaded = { isMapLoaded = true },
-                        uiSettings = MapUiSettings(
-                            zoomControlsEnabled = false,
-                            scrollGesturesEnabled = false,
-                            zoomGesturesEnabled = false,
-                            tiltGesturesEnabled = false,
-                            rotationGesturesEnabled = false,
-                            myLocationButtonEnabled = false
-                        ),
-                        onMapClick = { onClick() }
-                    ) {
-                        Marker(
-                            state = remember(start) { MarkerState(position = start) },
-                            icon = remember { createSensorMarker(context, R.drawable.control_start, Color(0xFF2E7D32)) }
-                        )
-                        Marker(
-                            state = remember(end) { MarkerState(position = end) },
-                            icon = remember { createSensorMarker(context, R.drawable.control_stop, Color(0xFFC62828)) }
-                        )
-                        Marker(
-                            state = remember(apex) { MarkerState(position = apex) },
-                            icon = remember { createSensorMarker(context, R.drawable.ic_distance, Color(0xFF1565C0)) }
-                        )
+                        val cameraPositionState = rememberCameraPositionState()
+                        var isMapLoaded by remember { mutableStateOf(false) }
+
+                        LaunchedEffect(bounds, isMapLoaded) {
+                            if (isMapLoaded) {
+                                cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(bounds, 40))
+                            }
+                        }
+
+                        GoogleMap(
+                            modifier = Modifier.fillMaxSize(),
+                            cameraPositionState = cameraPositionState,
+                            properties = MapProperties(mapType = MapType.TERRAIN),
+                            onMapLoaded = { isMapLoaded = true },
+                            uiSettings = MapUiSettings(
+                                zoomControlsEnabled = false,
+                                scrollGesturesEnabled = false,
+                                zoomGesturesEnabled = false,
+                                tiltGesturesEnabled = false,
+                                rotationGesturesEnabled = false,
+                                myLocationButtonEnabled = false
+                            ),
+                            onMapClick = { onClick() }
+                        ) {
+                            Marker(
+                                state = remember(start) { MarkerState(position = start) },
+                                icon = remember { createSensorMarker(context, R.drawable.control_start, Color(0xFF2E7D32)) }
+                            )
+                            Marker(
+                                state = remember(end) { MarkerState(position = end) },
+                                icon = remember { createSensorMarker(context, R.drawable.control_stop, Color(0xFFC62828)) }
+                            )
+                            Marker(
+                                state = remember(apex) { MarkerState(position = apex) },
+                                icon = remember { createSensorMarker(context, R.drawable.ic_distance, Color(0xFF1565C0)) }
+                            )
+                        }
+                        
+                        // Transparent overlay to ensure reliable click handling in a scrollable list
+                        Box(modifier = Modifier.fillMaxSize().clickable { onClick() })
                     }
                 }
             }
