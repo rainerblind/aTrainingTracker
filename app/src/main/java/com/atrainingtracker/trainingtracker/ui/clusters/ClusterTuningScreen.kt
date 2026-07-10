@@ -28,6 +28,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.MyUnits
+import com.atrainingtracker.banalservice.BANALService
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,12 +125,18 @@ fun ClusterTuningScreen(
 
                 // 3. Individual Sliders (Optional)
                 if (showDetails) {
+                    val isImperial = TrainingApplication.getUnit() == MyUnits.IMPERIAL
+                    val lengthUnit = if (isImperial) "mile" else "km"
+                    val lengthMultiplier = if (isImperial) (1.0 / BANALService.METER_PER_MILE).toFloat() else 0.001f
+
                     TuningSlider(
                         label = stringResource(R.string.cluster_tuning_endpoint_label),
                         value = viewModel.endpointTolerance,
                         onValueChange = { viewModel.endpointTolerance = it },
                         valueRange = endRange,
-                        unit = "m"
+                        unit = lengthUnit,
+                        displayMultiplier = lengthMultiplier,
+                        decimalPlaces = 3
                     )
 
                     TuningSlider(
@@ -135,7 +144,9 @@ fun ClusterTuningScreen(
                         value = viewModel.apexTolerance,
                         onValueChange = { viewModel.apexTolerance = it },
                         valueRange = apexRange,
-                        unit = "m"
+                        unit = lengthUnit,
+                        displayMultiplier = lengthMultiplier,
+                        decimalPlaces = 3
                     )
 
                     TuningSlider(
@@ -144,7 +155,8 @@ fun ClusterTuningScreen(
                         onValueChange = { viewModel.distanceTolerance = it },
                         valueRange = distRange,
                         unit = "%",
-                        displayMultiplier = 100f
+                        displayMultiplier = 100f,
+                        decimalPlaces = 0
                     )
                 }
 
@@ -175,8 +187,10 @@ private fun TuningSlider(
     onValueChange: (Float) -> Unit,
     valueRange: ClosedFloatingPointRange<Float>,
     unit: String,
-    displayMultiplier: Float = 1f
+    displayMultiplier: Float = 1f,
+    decimalPlaces: Int = 0
 ) {
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
     Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -184,7 +198,7 @@ private fun TuningSlider(
         ) {
             Text(text = label, style = MaterialTheme.typography.titleSmall)
             Text(
-                text = "${(value * displayMultiplier).toInt()} $unit",
+                text = java.lang.String.format(locale, "%.${decimalPlaces}f %s", value * displayMultiplier, unit),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary

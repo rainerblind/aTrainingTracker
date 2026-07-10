@@ -49,7 +49,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-SET-002** | Equipment management (Bikes/Shoes) with odometer. | Help users monitor gear wear and tear. | `EquipmentRepository.kt` | `TST-MAN-001` | Verified |
 | **REQ-SET-003** | Configurable speed thresholds for classification. | Tailor automation to user's specific pace profile. | `TrainingApplication.java` | `TST-UNT-003` | Verified |
 | **REQ-SET-004** | "Fancy Name" schemes using location and detours. | Provide descriptive workout names automatically. | `WorkoutSummariesDatabaseManager.java`| `TST-STR-001` | Verified |
-| **REQ-SET-005** | Support dual-unit systems (Metric and Imperial). | Accommodate global user base. | `MyUnits.java`, `MyHelper.java` | `TST-MAN-001` | Verified |
+| **REQ-SET-005** | **Global Unit Support (Metric/Imperial).** | The system SHALL support both Metric and Imperial unit systems globally across all modules (Tracking, Aftermath, Periods, RouteClusters, and Settings). All user-facing values, entry fields, and visualizations SHALL adapt dynamically to the user's unit preference. | `MyUnits.java`, `MyHelper.java` | `TST-MAN-001` | Verified |
 | **REQ-SET-006** | **Agnostic Route Clustering.** | The system SHALL automatically group similar tracks into \"Route Clusters\" based on spatial fingerprints (Start, End, Apex, Distance) regardless of the initial sport type. | `RouteClusterEngine.kt` | `TST-SET-001` | Verified |
 | **REQ-SET-007** | **Inferred Sport and Name.** | The system SHALL suggest the most likely Name and Sport for a new workout by matching its fingerprint against the learned Knowledge Base. | `WorkoutDataMapper.kt` | `TST-SET-001` | Verified |
 | **REQ-SET-008** | **Learning Feedback Loop.** | The system SHALL refine the cluster centroids and update probable sport/name associations whenever a user overrides or confirms a suggestion. | `WorkoutRepository.kt` | `TST-SET-001` | Verified |
@@ -67,6 +67,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-SET-020** | **Workout Peek in Heatmap.** | The system SHALL display a detailed peek (Bottom Sheet) when a workout track is tapped in the cluster heatmap, similar to the Periods view. This peek SHALL include an option to reassign the workout to a different cluster. | `FrequentPathHeatmapScreen.kt` | `TST-SET-012` | Verified |
 | **REQ-SET-021** | **Manual Fingerprint Editing.** | The system SHALL allow the user to manually adjust the signature points (Start, End, Apex) of an existing route cluster via the heatmap detail view. | `FrequentPathHeatmapScreen.kt`, `RouteClusterRepository.kt` | `TST-SET-013` | Verified |
 | **REQ-SET-022** | **Workout Markers in Cluster Detail.** | When viewing a route cluster heatmap, the system SHALL display the spatial signature markers (Start, Stop, Apex) for EVERY member workout of the cluster to visualize spatial distribution. Additionally, it SHALL display all individual markers (Start, Stop, Extrema) for a specific workout when peeked. Clicking on any marker SHALL trigger the workout peek functionality. | `FrequentPathHeatmapScreen.kt`, `WorkoutRepository.kt` | `TST-SET-014` | Verified |
+| **REQ-SET-023** | **Global Route Unit Support.** | The system SHALL support both Metric and Imperial units in the RouteCluster management UI. Distance entry and tuning visualization MUST use high-level units (km/mile) with appropriate precision to ensure professional-grade spatial definition. | `ManualClusterScreen.kt`, `ClusterTuningScreen.kt` | `TST-SET-015` | Verified |
 
 ## 5. Data Storage & Post-Processing
 
@@ -169,16 +170,17 @@ This document tracks all functional and non-functional requirements of the proje
 
 | ID | Description | Rationale | Implementation File(s) | Verification ID | Status |
 |:---|:---|:---|:---|:---|:---|
-| **REQ-UI-001** | Neutral Backgrounds. | The system SHALL use neutral white backgrounds (Light) or Material Surface (Dark) for all content areas. Branding colors MUST be isolated strictly to navigation elements (e.g., TabRow backgrounds). | `Theme.kt`, `periods/PeriodsTabsScreen.kt` | `TST-MAN-001` | Verified |
-| **REQ-UI-002** | Primary metrics in **boldface**. | Emphasize key training volume data. | `WorkoutSummary.kt` | `TST-MAN-001` | Verified |
-| **REQ-UI-003** | Deeply customizable tracking cockpits. | Users build their perfect dashboard. | `ConfigTrackingTabsActivity.kt` | `TST-MAN-001` | Verified |
-| **REQ-UI-004** | Scrollable bar graph for period volume. | Enhance historical navigation and trends. | `PeriodsTabsScreen.kt` | `TST-MAN-001` | Verified |
-| **REQ-UI-005** | Handling of system bar insets (edge-to-edge). | Modern, immersive Android experience. | `StravaUploadFragment.kt` | `TST-MAN-001` | Verified |
-| **REQ-UI-006** | Support multiple languages (EN, DE, ES, FR, IT, PT, NL, PL, JA). | Reach international audience of athletes. | `strings.xml`, `values-xx/` | `TST-MAN-001` | Verified |
-| **REQ-UI-007** | Flexible sorting for lists (Date/Dist/Elev). | Allow users to organize and find data easily. | `WorkoutSummariesViewModel.kt` | `TST-MAN-001` | Verified |
-| **REQ-UI-008** | Agents ask for clarification if instructions unclear. | Protect project quality and precision. | `project_protocol.md` | `TST-STR-001` | Verified |
-| **REQ-UI-009** | Optionally display the current track on a map and its elevation profile. | Provide real-time spatial and vertical situational awareness of the active session. | `BANALServiceRepository.kt`, `SensorGridScreen.kt` | `TST-UI-029` | Verified |
-| **REQ-UI-010** | Adaptive layout for tab configuration settings. | Ensure all configuration toggles remain accessible and legible across different screen sizes using FlowRow, in the prioritized order: Map, Elevation Profile, Live Segments, Lap Button. | `TrackingTabConfigHeader.kt` | `TST-INT-006` | Verified |
+| **REQ-UI-101** | Neutral Backgrounds. | The system SHALL use neutral white backgrounds (Light) or Material Surface (Dark) for all content areas. Branding colors MUST be isolated strictly to navigation elements (e.g., TabRow backgrounds). | `Theme.kt`, `periods/PeriodsTabsScreen.kt` | `TST-MAN-001` | Verified |
+| **REQ-UI-102** | Primary metrics in **boldface**. | Emphasize key training volume data. | `WorkoutSummary.kt` | `TST-MAN-001` | Verified |
+| **REQ-UI-103** | Deeply customizable tracking cockpits. | Users build their perfect dashboard. | `ConfigTrackingTabsActivity.kt` | `TST-MAN-001` | Verified |
+| **REQ-UI-104** | Scrollable bar graph for period volume. | Enhance historical navigation and trends. | `PeriodsTabsScreen.kt` | `TST-MAN-001` | Verified |
+| **REQ-UI-105** | Handling of system bar insets (edge-to-edge). | Modern, immersive Android experience. | `StravaUploadFragment.kt` | `TST-MAN-001` | Verified |
+| **REQ-UI-106** | **Global Localization (Languages).** | The system SHALL support multiple languages (EN, DE, ES, FR, IT, PT, NL, PL, JA). All user-facing strings MUST be externalized in `strings.xml`. | `strings.xml`, `values-xx/` | `TST-MAN-001` | Verified |
+| **REQ-UI-107** | **Ubiquitous Unit Support.** | The system SHALL support both Metric and Imperial unit systems everywhere in the application. All user-facing interfaces (Tracking, Analysis, Management, Settings) MUST dynamically adapt to the user's unit preference for distance, speed, pace, and altitude. | `MyUnits.java`, `MyHelper.java`, `MetricFormatterContext.kt` | `TST-MAN-001` | Verified |
+| **REQ-UI-108** | **Flexible sorting for lists.** | Allow users to organize and find data easily based on Date, Distance, or Elevation. | `WorkoutSummariesViewModel.kt` | `TST-MAN-001` | Verified |
+| **REQ-UI-109** | **Communication Clarification.** | Agents SHALL ask for clarification if instructions are unclear to protect project quality and precision. | `project_protocol.md` | `TST-STR-001` | Verified |
+| **REQ-UI-110** | Optionally display the current track on a map and its elevation profile. | Provide real-time spatial and vertical situational awareness of the active session. | `BANALServiceRepository.kt`, `SensorGridScreen.kt` | `TST-UI-029` | Verified |
+| **REQ-UI-111** | Adaptive layout for tab configuration settings. | Ensure all configuration toggles remain accessible and legible across different screen sizes using FlowRow, in the prioritized order: Map, Elevation Profile, Live Segments, Lap Button. | `TrackingTabConfigHeader.kt` | `TST-INT-006` | Verified |
 
 ## 11. Wearable Integration
 

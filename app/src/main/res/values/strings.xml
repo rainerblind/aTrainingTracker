@@ -1220,6 +1220,7 @@
     <string name="cluster_move_workout_title">Move Workout</string>
     <string name="cluster_move_workout_hint">Select target route cluster (Similarity score in brackets, lower is better):</string>
     <string name="cluster_score_format">Score: %1$.3f | %2$d recordings</string>
+    <string name="cluster_score_format_with_dist">Score: %1$.3f | %2$d recordings | %3$s</string>
 
     <string name="cluster_suggestions_title">Suggested Routes (lower score is better):</string>
 
@@ -1227,7 +1228,7 @@
     <string name="cluster_manual_pick_start">Pick Start</string>
     <string name="cluster_manual_pick_end">Pick End</string>
     <string name="cluster_manual_pick_apex">Pick Apex (Furthest Away)</string>
-    <string name="cluster_manual_distance_hint">Workout Distance (m)</string>
+    <string name="cluster_manual_distance_hint">Workout Distance (%s)</string>
     <string name="cluster_manual_missing_points">Please pick all 3 spatial points on the map.</string>
 
     <string name="cluster_edit_fingerprint">Edit Route Fingerprint</string>
