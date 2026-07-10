@@ -63,7 +63,11 @@ class RouteClusterRepository private constructor(private val context: Context) {
     }
 
     suspend fun refreshClusters() = withContext(Dispatchers.IO) {
-        _allClusters.value = clusterDb.getAllClusters().sortedByDescending { it.hitCount }
+        val rawClusters = clusterDb.getAllClusters()
+        val enriched = rawClusters.map { cluster ->
+            cluster.copy(bSportType = getBSportType(cluster.probableSportId))
+        }
+        _allClusters.value = enriched.sortedByDescending { it.hitCount }
     }
 
     suspend fun updateCluster(cluster: RouteCluster) = withContext(Dispatchers.IO) {

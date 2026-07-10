@@ -36,7 +36,8 @@ data class RouteCluster(
     val maxDispLat: Double,
     val maxDispLng: Double,
     val refDistance: Double,
-    val hitCount: Int
+    val hitCount: Int,
+    val bSportType: com.atrainingtracker.banalservice.BSportType = com.atrainingtracker.banalservice.BSportType.UNKNOWN
 )
 
 class RouteClusterDatabaseManager private constructor(context: Context) {

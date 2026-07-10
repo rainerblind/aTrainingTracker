@@ -56,6 +56,13 @@ class FrequentPathsFragment : Fragment() {
                     var isTuning by remember { mutableStateOf(false) }
                     var isAdding by remember { mutableStateOf(false) }
 
+                    // SCRUM-184: Persist scroll states when navigating to/from details
+                    val pagerState = androidx.compose.foundation.pager.rememberPagerState { 4 }
+                    val allListState = androidx.compose.foundation.lazy.rememberLazyListState()
+                    val bikeListState = androidx.compose.foundation.lazy.rememberLazyListState()
+                    val runListState = androidx.compose.foundation.lazy.rememberLazyListState()
+                    val otherListState = androidx.compose.foundation.lazy.rememberLazyListState()
+
                     LaunchedEffect(Unit) {
                         viewModel.recalculationFinished.collectLatest {
                             isTuning = false
@@ -86,8 +93,13 @@ class FrequentPathsFragment : Fragment() {
                             )
                         }
                         else -> {
-                            FrequentPathsListScreen(
+                            FrequentPathsTabsScreen(
                                 viewModel = viewModel,
+                                pagerState = pagerState,
+                                allListState = allListState,
+                                bikeListState = bikeListState,
+                                runListState = runListState,
+                                otherListState = otherListState,
                                 onClusterClick = { viewModel.selectCluster(it) },
                                 onTuneClick = { isTuning = true },
                                 onAddClick = { isAdding = true }
