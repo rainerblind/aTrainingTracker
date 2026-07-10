@@ -53,7 +53,8 @@ data class WorkoutDataClassic(
 
 data class WorkoutDataWithTrack(
     val workoutData: WorkoutData?,
-    val trackPoints: List<PathPoint>
+    val trackPoints: List<PathPoint>,
+    val markers: List<com.atrainingtracker.trainingtracker.ui.map.LocationMarker> = emptyList()
 )
 
 // TODO: move the methods to update redundant data to here???

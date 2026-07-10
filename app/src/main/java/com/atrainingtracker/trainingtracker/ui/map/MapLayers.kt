@@ -228,7 +228,9 @@ fun MarkerLayer(
             rotation = markerData.rotation,
             flat = markerData.flat,
             anchor = markerData.anchor,
-            draggable = markerData.draggable
+            draggable = markerData.draggable,
+            alpha = markerData.alpha,
+            onClick = { markerData.onClick() }
         )
         
         // Notify the caller when dragging stops

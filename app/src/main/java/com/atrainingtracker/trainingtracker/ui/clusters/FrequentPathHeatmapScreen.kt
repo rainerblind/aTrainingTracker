@@ -112,6 +112,30 @@ fun FrequentPathHeatmapScreen(
         )
     }
 
+    // --- ALL WORKOUT MARKERS (SCRUM-199) ---
+    val memberAlpha = 0.3f
+    val memberMarkers = remember(workouts, context) {
+        // Shared descriptors (Solid colors, alpha handled by Marker property)
+        val startIcon = createSensorMarker(context, R.drawable.control_start, Color(0xFF2E7D32))
+        val endIcon = createSensorMarker(context, R.drawable.control_stop, Color(0xFFC62828))
+        val apexIcon = createSensorMarker(context, R.drawable.ic_distance, Color(0xFF1565C0))
+
+        workouts.flatMap { w ->
+            val list = mutableListOf<LocationMarker>()
+            val onMarkerClick: () -> Boolean = {
+                if (!isEditingFingerprint) {
+                    viewModel.selectWorkoutForPeek(w.id)
+                    true
+                } else false
+            }
+
+            w.startLatLng?.let { list.add(LocationMarker(it, R.drawable.control_start, iconDescriptor = startIcon, alpha = memberAlpha, onClick = onMarkerClick)) }
+            w.endLatLng?.let { list.add(LocationMarker(it, R.drawable.control_stop, iconDescriptor = endIcon, alpha = memberAlpha, onClick = onMarkerClick)) }
+            w.maxDisplacementLatLng?.let { list.add(LocationMarker(it, R.drawable.ic_distance, iconDescriptor = apexIcon, alpha = memberAlpha, onClick = onMarkerClick)) }
+            list
+        }
+    }
+
     val clusterPaths = remember(workouts) {
         workouts.mapNotNull { if (it.mapPolyline.isNotEmpty()) com.google.maps.android.PolyUtil.decode(it.mapPolyline) else null }
     }
@@ -175,6 +199,7 @@ fun FrequentPathHeatmapScreen(
                 TrackOnMapScreen(
                     workoutData = workoutData,
                     tracks = listOf(MapTrack(workoutData.id, TrackType.BEST, workoutData.bSportType, peekedWorkoutDataWithTrack!!.trackPoints)),
+                    markers = peekedWorkoutDataWithTrack!!.markers,
                     modifier = Modifier,
                     useStatusBarsPadding = false,
                     headerActions = {
@@ -258,12 +283,19 @@ fun FrequentPathHeatmapScreen(
 
                 // Only allow path clicks if not editing fingerprint
                 mapTracks.forEach { track ->
-                    path(track, alpha = 0.2f, onPathClick = { id ->
+                    path(track, alpha = memberAlpha, onPathClick = { id ->
                         if (!isEditingFingerprint) {
                             viewModel.selectWorkoutForPeek(id)
                         }
                     })
                 }
+                
+                // Show distribution of markers for all cluster members (SCRUM-199)
+                if (!isEditingFingerprint) {
+                    markers(memberMarkers)
+                }
+                
+                // Primary cluster signature
                 markers(fingerprintMarkers)
             },
             overlay = {
