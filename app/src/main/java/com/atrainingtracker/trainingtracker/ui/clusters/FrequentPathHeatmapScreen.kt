@@ -148,17 +148,17 @@ fun FrequentPathHeatmapScreen(
         else -> 1.0
     }
 
-    var showRenameDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
     var workoutToMove by remember { mutableStateOf<WorkoutData?>(null) }
 
-    if (showRenameDialog) {
-        RenameClusterDialog(
-            currentName = cluster.name,
-            onConfirm = { newName ->
-                viewModel.renameCluster(cluster, newName)
-                showRenameDialog = false
+    if (showEditDialog) {
+        EditClusterIdentityDialog(
+            cluster = cluster,
+            onConfirm = { newName, newSportId ->
+                viewModel.updateClusterIdentity(cluster, newName, newSportId)
+                showEditDialog = false
             },
-            onDismiss = { showRenameDialog = false }
+            onDismiss = { showEditDialog = false }
         )
     }
 
@@ -240,7 +240,7 @@ fun FrequentPathHeatmapScreen(
                             onBack()
                         }
                     },
-                    onRename = { showRenameDialog = true },
+                    onRename = { showEditDialog = true },
                     onEditFingerprint = { isEditingFingerprint = true },
                     onSaveFingerprint = {
                         viewModel.updateClusterFingerprint(cluster, editStart, editEnd, editApex)
@@ -382,29 +382,51 @@ fun ClusterSummaryHeader(
 }
 
 @Composable
-fun RenameClusterDialog(
-    currentName: String,
-    onConfirm: (String) -> Unit,
+fun EditClusterIdentityDialog(
+    cluster: RouteCluster,
+    onConfirm: (String, Long) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var text by remember { mutableStateOf(currentName) }
+    var name by remember { mutableStateOf(cluster.name) }
+    
+    val context = LocalContext.current
+    val sportTypesList = remember { com.atrainingtracker.trainingtracker.repositories.SportTypesRepository.getInstance(context.applicationContext as android.app.Application).sportTypesList }
+    val sportNames = remember { sportTypesList.map { it.name } }
+    
+    var selectedSportName by remember { 
+        mutableStateOf(sportTypesList.find { it.id == cluster.probableSportId }?.name ?: sportNames.firstOrNull() ?: "") 
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.edit_workout_name)) },
         text = {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                label = { Text(stringResource(R.string.name)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.name)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                com.atrainingtracker.trainingtracker.ui.components.DropdownSelector(
+                    label = stringResource(R.string.Sport),
+                    options = sportNames,
+                    selectedOption = selectedSportName,
+                    onOptionSelected = { selectedSportName = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    stayOpenOn = emptySet()
+                )
+            }
         },
         confirmButton = {
             TextButton(
-                onClick = { onConfirm(text) },
-                enabled = text.isNotBlank()
+                onClick = { 
+                    val sportId = sportTypesList.find { it.name == selectedSportName }?.id ?: cluster.probableSportId
+                    onConfirm(name, sportId) 
+                },
+                enabled = name.isNotBlank()
             ) {
                 Text(stringResource(R.string.save))
             }

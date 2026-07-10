@@ -130,11 +130,11 @@ class FrequentPathsViewModel(application: Application) : AndroidViewModel(applic
         _peekedWorkoutDataWithTrack.value = null
     }
 
-    fun renameCluster(cluster: RouteCluster, newName: String) {
+    fun updateClusterIdentity(cluster: RouteCluster, newName: String, newSportId: Long) {
         viewModelScope.launch {
-            val updated = cluster.copy(name = newName)
+            val updated = cluster.copy(name = newName, probableSportId = newSportId)
             repository.updateCluster(updated)
-            // Update selected cluster if it's the one renamed
+            // Update selected cluster if it's the one modified
             if (_selectedCluster.value?.id == cluster.id) {
                 _selectedCluster.value = updated
             }
