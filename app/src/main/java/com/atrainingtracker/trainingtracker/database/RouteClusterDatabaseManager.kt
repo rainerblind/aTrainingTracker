@@ -24,8 +24,6 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.provider.BaseColumns
-import android.util.Log
-import com.atrainingtracker.trainingtracker.TrainingApplication
 
 data class RouteCluster(
     val id: Long = 0,
@@ -46,9 +44,6 @@ class RouteClusterDatabaseManager private constructor(context: Context) {
     private val dbHelper = RouteClusterDbHelper(context)
 
     companion object {
-        private const val TAG = "RouteClusterDbManager"
-        private val DEBUG = TrainingApplication.getDebug(true)
-
         @Volatile
         private var instance: RouteClusterDatabaseManager? = null
 

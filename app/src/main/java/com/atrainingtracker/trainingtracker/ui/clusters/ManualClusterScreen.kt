@@ -233,21 +233,21 @@ fun ManualClusterScreen(
                 ) {
                     startPos?.let {
                         Marker(
-                            state = rememberMarkerState(position = it),
+                            state = rememberMarkerState(position = it).apply { position = it },
                             icon = remember { createSensorMarker(context, R.drawable.control_start, Color(0xFF2E7D32)) },
                             title = stringResource(R.string.start)
                         )
                     }
                     endPos?.let {
                         Marker(
-                            state = rememberMarkerState(position = it),
+                            state = rememberMarkerState(position = it).apply { position = it },
                             icon = remember { createSensorMarker(context, R.drawable.control_stop, Color(0xFFC62828)) },
                             title = stringResource(R.string.end)
                         )
                     }
                     apexPos?.let {
                         Marker(
-                            state = rememberMarkerState(position = it),
+                            state = rememberMarkerState(position = it).apply { position = it },
                             icon = remember { createSensorMarker(context, R.drawable.ic_distance, Color(0xFF1565C0)) },
                             title = stringResource(R.string.max_line_distance)
                         )
