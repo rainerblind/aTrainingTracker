@@ -36,6 +36,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
@@ -44,6 +45,7 @@ import com.atrainingtracker.trainingtracker.database.RouteCluster
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
+import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.map.*
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.google.android.gms.maps.model.LatLng
@@ -223,58 +225,28 @@ fun FrequentPathHeatmapScreen(
             activeScrubPath = null,
             showElevationProfile = false,
             header = {
-                TopAppBar(
-                    title = { 
-                        Column {
-                            Text(cluster.name, style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                stringResource(R.string.my_locations), 
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = {
-                            if (isEditingFingerprint) {
-                                isEditingFingerprint = false
-                                // Revert changes
-                                editStart = LatLng(cluster.startLat, cluster.startLng)
-                                editEnd = LatLng(cluster.endLat, cluster.endLng)
-                                editApex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
-                            } else {
-                                onBack()
-                            }
-                        }) {
-                            Icon(if (isEditingFingerprint) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                        }
-                    },
-                    actions = {
+                ClusterSummaryHeader(
+                    cluster = cluster,
+                    viewModel = viewModel,
+                    isEditing = isEditingFingerprint,
+                    onBack = {
                         if (isEditingFingerprint) {
-                            IconButton(
-                                onClick = {
-                                    viewModel.updateClusterFingerprint(cluster, editStart, editEnd, editApex)
-                                    isEditingFingerprint = false
-                                },
-                                enabled = hasChanges
-                            ) {
-                                Icon(Icons.Default.Save, contentDescription = "Save Fingerprint", tint = if (hasChanges) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
+                            isEditingFingerprint = false
+                            // Revert changes
+                            editStart = LatLng(cluster.startLat, cluster.startLng)
+                            editEnd = LatLng(cluster.endLat, cluster.endLng)
+                            editApex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
                         } else {
-                            IconButton(onClick = { showRenameDialog = true }) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_table_edit),
-                                    contentDescription = stringResource(R.string.edit_workout_name)
-                                )
-                            }
-                            IconButton(onClick = { isEditingFingerprint = true }) {
-                                Icon(Icons.Default.EditLocationAlt, contentDescription = "Edit Fingerprint")
-                            }
+                            onBack()
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = if (isEditingFingerprint) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
-                    )
+                    onRename = { showRenameDialog = true },
+                    onEditFingerprint = { isEditingFingerprint = true },
+                    onSaveFingerprint = {
+                        viewModel.updateClusterFingerprint(cluster, editStart, editEnd, editApex)
+                        isEditingFingerprint = false
+                    },
+                    hasChanges = hasChanges
                 )
             },
             mapContent = {
@@ -297,20 +269,6 @@ fun FrequentPathHeatmapScreen(
                 // Primary cluster signature
                 markers(fingerprintMarkers)
             },
-            overlay = {
-                if (!isEditingFingerprint) {
-                    Surface(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 32.dp, start = 16.dp, end = 16.dp),
-                        shape = MaterialTheme.shapes.medium,
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                        tonalElevation = 4.dp
-                    ) {
-                        ClusterStatsContent(cluster = cluster, viewModel = viewModel, workoutCount = workouts.size)
-                    }
-                }
-            },
             modifier = Modifier.fillMaxSize()
         )
     }
@@ -330,40 +288,95 @@ fun FrequentPathHeatmapScreen(
 }
 
 @Composable
-fun ClusterStatsContent(cluster: RouteCluster, viewModel: FrequentPathsViewModel, workoutCount: Int) {
-    val distanceFormatter = remember { DistanceFormatter() }
-    val sportName = remember(cluster.probableSportId) { viewModel.getSportName(cluster.probableSportId) }
-    val linkedEquipment = remember(cluster.probableSportId) { viewModel.getLinkedEquipment(cluster.probableSportId) }
-    
-    Column(
-        modifier = Modifier.padding(16.dp).fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+fun ClusterSummaryHeader(
+    cluster: RouteCluster,
+    viewModel: FrequentPathsViewModel,
+    isEditing: Boolean,
+    onBack: () -> Unit,
+    onRename: () -> Unit,
+    onEditFingerprint: () -> Unit,
+    onSaveFingerprint: () -> Unit,
+    hasChanges: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = if (isEditing) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
+        tonalElevation = if (isEditing) 2.dp else 0.dp
     ) {
-        // 1. Distance
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = stringResource(R.string.cluster_average_distance), style = MaterialTheme.typography.labelSmall)
-            Text(text = distanceFormatter.format_with_units(cluster.refDistance), style = MaterialTheme.typography.titleMedium)
-        }
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // --- TOP ROW: Navigation (Conditional) + Icon + Name ---
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (isEditing) {
+                        IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.Close, contentDescription = null)
+                        }
+                    }
 
-        // 2. Sport Type
-        Text(text = sportName, style = MaterialTheme.typography.bodyMedium)
-        
-        // 3. Resulting Equipment
-        if (linkedEquipment.isNotEmpty()) {
-            Text(
-                text = "→ ${linkedEquipment.joinToString(", ")}",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
+                    RouteClusterIdentityRow(
+                        cluster = cluster,
+                        viewModel = viewModel,
+                        modifier = Modifier.weight(1f)
+                    )
 
-        // 4. Hit Count
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = stringResource(R.string.stats_workouts), style = MaterialTheme.typography.labelSmall)
-            Text(text = workoutCount.toString(), style = MaterialTheme.typography.titleMedium)
+                    // Spacer for actions area
+                    Spacer(modifier = Modifier.width(72.dp))
+                }
+
+                if (!isEditing) {
+                    RouteClusterMetadataBlock(
+                        cluster = cluster,
+                        viewModel = viewModel
+                    )
+                } else {
+                    // Editing Mode Hint
+                    Text(
+                        text = stringResource(R.string.cluster_edit_fingerprint_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+
+            // --- ACTIONS AREA (Pinned to Top-End) ---
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 8.dp, end = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                if (isEditing) {
+                    IconButton(onClick = onSaveFingerprint, enabled = hasChanges) {
+                        Icon(
+                            Icons.Default.Save,
+                            contentDescription = "Save Fingerprint",
+                            tint = if (hasChanges) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    IconButton(onClick = onRename) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_table_edit),
+                            contentDescription = stringResource(R.string.edit_workout_name)
+                        )
+                    }
+                    IconButton(onClick = onEditFingerprint) {
+                        Icon(Icons.Default.EditLocationAlt, contentDescription = "Edit Fingerprint")
+                    }
+                }
+            }
         }
     }
 }
