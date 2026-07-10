@@ -119,7 +119,8 @@ class FrequentPathsViewModel(application: Application) : AndroidViewModel(applic
             val workout = _clusterWorkouts.value.find { it.id == id }
             if (workout != null) {
                 val trackPoints = repository.getWorkoutTrackPoints(id, com.atrainingtracker.trainingtracker.ui.map.TrackType.BEST)
-                _peekedWorkoutDataWithTrack.value = com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack(workout, trackPoints)
+                val markers = com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository.getInstance(getApplication()).getWorkoutMarkers(workout)
+                _peekedWorkoutDataWithTrack.value = com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack(workout, trackPoints, markers)
             }
         }
     }

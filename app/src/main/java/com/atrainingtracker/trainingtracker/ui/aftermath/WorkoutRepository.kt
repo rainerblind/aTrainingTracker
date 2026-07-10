@@ -29,20 +29,13 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.withContext
-
-
-
+import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
@@ -55,13 +48,21 @@ import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
+import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 /**
@@ -240,6 +241,83 @@ class WorkoutRepository private constructor(private val application: Application
         }
         points
     }
+
+    private val extremaSensorTypes = arrayOf(
+        SensorType.ALTITUDE, SensorType.TEMPERATURE,
+        SensorType.HR, SensorType.POWER, SensorType.LINE_DISTANCE_m, SensorType.SPEED_mps
+    )
+
+    suspend fun getWorkoutMarkers(workoutData: WorkoutData): List<LocationMarker> = withContext(Dispatchers.IO) {
+        val workoutId = workoutData.id
+        val markerList = mutableListOf<LocationMarker>()
+
+        // 1. Primary spatial markers (Fast, from WorkoutData)
+        workoutData.startLatLng?.let {
+            markerList.add(LocationMarker(it, R.drawable.control_start, application.getString(R.string.Start)))
+        }
+        workoutData.endLatLng?.let {
+            markerList.add(LocationMarker(it, R.drawable.control_stop, application.getString(R.string.Stop)))
+        }
+        workoutData.maxDisplacementLatLng?.let {
+            markerList.add(LocationMarker(it, R.drawable.ic_distance, application.getString(R.string.max_line_distance)))
+        }
+
+        // 2. Sensor Max/Min Markers (from Extremum table)
+        extremaSensorTypes.forEach { sensor ->
+            // Skip line distance as it's already added as the Apex above
+            if (sensor != SensorType.LINE_DISTANCE_m) {
+                addExtremaMarkerIfPresent(workoutId, sensor, ExtremaType.MAX, markerList)
+                if (sensor == SensorType.ALTITUDE || sensor == SensorType.TEMPERATURE) {
+                    addExtremaMarkerIfPresent(workoutId, sensor, ExtremaType.MIN, markerList)
+                }
+            }
+        }
+        markerList
+    }
+
+    private fun addExtremaMarkerIfPresent(
+        workoutId: Long,
+        sensor: SensorType,
+        extremaType: ExtremaType,
+        markerList: MutableList<LocationMarker>
+    ) {
+        // Try to get both from the summary record first (efficient, new way)
+        var value: Double? = summariesManager.getExtremaValue(workoutId, sensor, extremaType)
+        var pos: LatLng? = summariesManager.getExtremaPosition(workoutId, sensor, extremaType)
+
+        // Fallback for legacy data if position is missing in the summary table
+        if (pos == null) {
+            val legacyExtrema = samplesManager.getExtremaPosition(summariesManager, workoutId, sensor, extremaType)
+            if (legacyExtrema != null) {
+                pos = legacyExtrema.latLng
+                value = legacyExtrema.value
+            }
+        }
+
+        if (value != null && pos != null) {
+            val title = application.getString(
+                R.string.location_extrema_format,
+                extremaType.toString(), // Use localized name ("Max", "Min")
+                sensor.getFullName(application),
+                sensor.myFormatter.format(value),
+                application.getString(MyHelper.getShortUnitsId(sensor))
+            )
+            markerList.add(LocationMarker(pos, getExtremaIcon(sensor, extremaType), title))
+        }
+    }
+
+    private fun getExtremaIcon(sensor: SensorType, type: ExtremaType): Int {
+        return when (sensor) {
+            SensorType.ALTITUDE -> if (type == ExtremaType.MAX) { R.drawable.ic_altitude_max} else { R.drawable.ic_altitude_min }
+            SensorType.TEMPERATURE -> if (type == ExtremaType.MAX) R.drawable.ic_temp_max else R.drawable.ic_temp_min
+            SensorType.HR -> R.drawable.ic_heart_rate
+            SensorType.POWER -> R.drawable.ic_power
+            SensorType.LINE_DISTANCE_m -> R.drawable.ic_distance
+            SensorType.SPEED_mps -> R.drawable.ic_speed
+            else -> -1
+        }
+    }
+
 
 
     init {
