@@ -72,6 +72,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-SET-025** | **Route Cluster Collapsing Header.** | The Route Cluster list SHALL feature a collapsing top app bar that integrates with the list's scroll behavior, providing a modern and consistent navigation experience similar to the Workouts and Routes screens. | `FrequentPathsTabsScreen.kt` | `TST-SET-017` | Verified |
 | **REQ-SET-027** | **Persistent Scroll State.** | The system SHALL preserve the scroll position and active tab of the Route Cluster list when navigating back from a detail heatmap view. | `FrequentPathsFragment.kt`, `FrequentPathsTabsScreen.kt` | `TST-SET-019` | Verified |
 | **REQ-SET-026** | **Route Cluster Tabbed Layout.** | The Route Cluster list SHALL feature a tabbed layout based on `BSportType` (All, Bike, Run, Other), matching the design pattern of Workouts, Segments, and Routes. | `FrequentPathsTabsScreen.kt`, `FrequentPathsFragment.kt` | `TST-SET-018` | Verified |
+| **REQ-SET-028** | **Unified Action Button Layout.** | The "Add Cluster" Floating Action Button SHALL use a standardized layout (manual Box alignment and navigationBarsPadding) consistent with the Sport Type and Equipment management screens. | `FrequentPathsTabsScreen.kt` | `TST-SET-020` | Verified |
 
 ## 5. Data Storage & Post-Processing
 

@@ -72,25 +72,12 @@ fun FrequentPathsTabsScreen(
         CollapsingAppBarNestedScrollConnection(headerHeightPx)
     }
 
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddClick,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Cluster")
-            }
-        },
-        containerColor = MaterialTheme.colorScheme.background,
-        contentWindowInsets = WindowInsets(0.dp)
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .nestedScroll(connection)
-        ) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Box(modifier = Modifier.nestedScroll(connection)) {
+            // 1. THE CONTENT (Pager)
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
@@ -122,7 +109,7 @@ fun FrequentPathsTabsScreen(
                 )
             }
 
-            // THE COLLAPSING HEADER (Synchronized parameters with Routes/Segments)
+            // 2. THE COLLAPSING HEADER
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -170,6 +157,18 @@ fun FrequentPathsTabsScreen(
                         }
                     }
                 }
+            }
+
+            // 3. THE FLOATING ACTION BUTTON
+            // Synchronized look & feel (SCRUM-208): Using default M3 colors to match SportTypes/Equipment
+            FloatingActionButton(
+                onClick = onAddClick,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+                    .navigationBarsPadding()
+            ) {
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.text_new))
             }
         }
     }

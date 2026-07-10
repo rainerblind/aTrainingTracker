@@ -127,6 +127,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-SET-017** | **Route Cluster Collapsing Header** | `REQ-SET-025` | 1. Navigate to \"Frequent Paths\". 2. Scroll the list downwards. 3. Observe the TopAppBar behavior. | 1. The header SHALL collapse smoothly as the user scrolls. 2. The header SHALL re-expand when the user scrolls back to the top. | Verified |
 | **TST-SET-018** | **Route Cluster Tabbed Layout** | `REQ-SET-026` | 1. Navigate to \"Frequent Paths\". 2. Observe the tabs at the top. 3. Swipe between tabs (All, Bike, Run, Other). | 1. The list SHALL filter clusters correctly based on the selected sport type tab. 2. Swiping SHALL be smooth and synchronized with the tab indicator. | Verified |
 | **TST-SET-019** | **Route Cluster Scroll Persistence** | `REQ-SET-027` | 1. Scroll down the \"All\" tab. 2. Select a cluster to open its heatmap. 3. Navigate back. | 1. The list SHALL remain scrolled to the previously viewed position. 2. The active tab SHALL be preserved. | Verified |
+| **TST-SET-020** | **Unified FAB Layout** | `REQ-SET-028` | 1. Navigate to \"Frequent Paths\". 2. Observe FAB position and styling. 3. Compare with \"Sport Types\" and \"Equipment\" FABs. | 1. The FAB SHALL be positioned at the bottom-right. 2. It SHALL correctly respect system navigation bar padding. | Verified |
 
 ## 4. Release Verification Workflow
 
