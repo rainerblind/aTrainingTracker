@@ -1108,6 +1108,7 @@
     <string name="cluster_move_workout_title">Einheit verschieben</string>
     <string name="cluster_move_workout_hint">Ziel-Routencluster auswählen (Score in Klammern, niedriger ist besser):</string>
     <string name="cluster_score_format">Score: %1$.3f | %2$d Aufzeichnungen</string>
+    <string name="cluster_score_format_with_dist">Score: %1$.3f | %2$d Aufzeichnungen | %3$s</string>
 
     <string name="cluster_suggestions_title">Vorgeschlagene Routen (niedriger Score ist besser):</string>
 
@@ -1115,7 +1116,7 @@
     <string name="cluster_manual_pick_start">Start wählen</string>
     <string name="cluster_manual_pick_end">Ende wählen</string>
     <string name="cluster_manual_pick_apex">Apex (Entferntester Punkt) wählen</string>
-    <string name="cluster_manual_distance_hint">Einheit-Distanz (m)</string>
+    <string name="cluster_manual_distance_hint">Einheit-Distanz (%s)</string>
     <string name="cluster_manual_missing_points">Bitte wählen Sie alle 3 räumlichen Punkte auf der Karte aus.</string>
 
     <string name="cluster_edit_fingerprint">Routen-Fingerabdruck bearbeiten</string>

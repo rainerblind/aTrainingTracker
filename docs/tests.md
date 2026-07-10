@@ -122,6 +122,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-SET-012** | **Workout Peek & Move** | `REQ-SET-020` | 1. Open a Route Heatmap. 2. Tap a specific workout track. 3. Observe the Bottom Sheet peek. 4. Tap the \"Move\" FAB in the peek. | 1. The workout details SHALL be visible in the sheet. 2. The \"Move Workout\" dialog SHALL appear upon tapping the FAB. | Verified |
 | **TST-SET-013** | **Manual Fingerprint Edit** | `REQ-SET-021` | 1. Open a Route Heatmap. 2. Tap a signature marker (Start/End/Apex). 3. Select \"Edit Position\". 4. Tap map to set new position. 5. Save. | 1. The cluster centroid SHALL be updated in the database. 2. Future matching SHALL use the new coordinates. | Verified |
 | **TST-SET-014** | **Workout Markers in Cluster** | `REQ-SET-022` | 1. Open a Route Heatmap. 2. Observe the distribution of markers for all members. 3. Tap a specific workout track OR any marker. 4. Inspect markers in the peek. | 1. Markers for ALL member workouts SHALL be visible with subtle transparency. 2. Tapping a marker SHALL correctly trigger the detailed peek for that workout. | Verified |
+| **TST-SET-015** | **Imperial Units in Clusters** | `REQ-SET-023` | 1. Switch to Imperial. 2. Add manual cluster (miles). 3. View tuning details (mile). | 1. Manual distance input SHALL accept miles and store as meters. 2. Tuning tolerances SHALL be displayed in miles with high precision. | Verified |
 
 ## 4. Release Verification Workflow
 

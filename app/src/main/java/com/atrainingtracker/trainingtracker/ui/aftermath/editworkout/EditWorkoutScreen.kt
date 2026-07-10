@@ -143,8 +143,9 @@ fun EditWorkoutScreen(
                             text = {
                                 Column {
                                     Text(cluster.name, style = MaterialTheme.typography.bodyLarge)
+                                    val distanceFormatter = remember { com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter() }
                                     Text(
-                                        text = stringResource(R.string.cluster_score_format, score, cluster.hitCount),
+                                        text = stringResource(R.string.cluster_score_format_with_dist, score, cluster.hitCount, distanceFormatter.format_with_units(cluster.refDistance)),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )

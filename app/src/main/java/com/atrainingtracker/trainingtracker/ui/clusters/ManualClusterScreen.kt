@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.MyUnits
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -90,13 +92,20 @@ fun ManualClusterScreen(
                     Button(
                         onClick = {
                             val sportId = sportTypesList.find { it.name == selectedSportName }?.id ?: -1L
+                            var distance = distanceStr.toDoubleOrNull() ?: 0.0
+                            if (TrainingApplication.getUnit() == MyUnits.IMPERIAL) {
+                                distance *= com.atrainingtracker.banalservice.BANALService.METER_PER_MILE
+                            } else {
+                                distance *= 1000.0 // km to m (SCRUM-201)
+                            }
+                            
                             viewModel.addManualCluster(
                                 name = name,
                                 sportId = sportId,
                                 start = startPos!!,
                                 end = endPos!!,
                                 apex = apexPos!!,
-                                distance = distanceStr.toDoubleOrNull() ?: 0.0
+                                distance = distance
                             )
                             onBack()
                         },
@@ -141,7 +150,10 @@ fun ManualClusterScreen(
                     OutlinedTextField(
                         value = distanceStr,
                         onValueChange = { distanceStr = it },
-                        label = { Text(stringResource(R.string.cluster_manual_distance_hint)) },
+                        label = {
+                            val unitStr = if (TrainingApplication.getUnit() == MyUnits.IMPERIAL) "mile" else "km"
+                            Text(stringResource(R.string.cluster_manual_distance_hint, unitStr))
+                        },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f),
                         singleLine = true

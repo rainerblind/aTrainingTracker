@@ -436,8 +436,9 @@ fun MoveWorkoutClusterDialog(
                                     style = if (isSelected) MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold) 
                                             else MaterialTheme.typography.bodyLarge
                                 )
+                                val distanceFormatter = remember { DistanceFormatter() }
                                 Text(
-                                    text = stringResource(R.string.cluster_score_format, score, cluster.hitCount),
+                                    text = stringResource(R.string.cluster_score_format_with_dist, score, cluster.hitCount, distanceFormatter.format_with_units(cluster.refDistance)),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
