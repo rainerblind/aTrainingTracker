@@ -471,6 +471,14 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         // Also update suggested equipment based on the new sport
         updateSuggestedEquipmentNames(sportName)
     }
+
+    fun getSportName(sportId: Long): String {
+        return sportTypeDatabaseManager.getUIName(sportId)
+    }
+
+    fun getBSportType(sportId: Long): BSportType {
+        return sportTypeDatabaseManager.getBSportType(sportId)
+    }
 }
 
 class EditWorkoutViewModelFactory(private val application: Application, private val workoutId: Long) : ViewModelProvider.Factory {

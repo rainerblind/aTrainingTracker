@@ -18,8 +18,7 @@ package com.atrainingtracker.trainingtracker.ui.clusters
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -164,16 +163,17 @@ fun FrequentPathHeatmapScreen(
 
     if (workoutToMove != null) {
         val candidates = remember(workoutToMove) { viewModel.getCandidateClustersForWorkout(workoutToMove!!) }
-        MoveWorkoutClusterDialog(
-            workout = workoutToMove!!,
-            currentCluster = cluster,
+        RouteClusterSelectionDialog(
+            title = stringResource(R.string.cluster_move_workout_title),
             candidates = candidates,
-            onMove = { targetId ->
-                viewModel.moveWorkout(workoutToMove!!, targetId)
+            onSelect = { target ->
+                viewModel.moveWorkout(workoutToMove!!, target.id)
                 workoutToMove = null
                 viewModel.clearPeekSelection()
             },
-            onDismiss = { workoutToMove = null }
+            onDismiss = { workoutToMove = null },
+            sportNameResolver = { viewModel.getSportName(it) },
+            bSportTypeResolver = { viewModel.getBSportType(it) }
         )
     }
 
@@ -439,79 +439,3 @@ fun EditClusterIdentityDialog(
     )
 }
 
-@Composable
-fun MoveWorkoutClusterDialog(
-    workout: WorkoutData,
-    currentCluster: RouteCluster,
-    candidates: List<Pair<RouteCluster, Double>>,
-    onMove: (Long) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var selectedId by remember { mutableStateOf(currentCluster.id) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { 
-            Column {
-                Text(stringResource(R.string.cluster_move_workout_title), style = MaterialTheme.typography.titleLarge)
-                Text(workout.workoutName, style = MaterialTheme.typography.bodySmall)
-            }
-        },
-        text = {
-            Column(modifier = Modifier.heightIn(max = 400.dp)) {
-                Text(stringResource(R.string.cluster_move_workout_hint), 
-                    style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                
-                LazyColumn {
-                    items(candidates) { (cluster, score) ->
-                        val isSelected = selectedId == cluster.id
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .selectable(
-                                    selected = isSelected,
-                                    onClick = { selectedId = cluster.id }
-                                )
-                                .padding(vertical = 12.dp, horizontal = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = isSelected,
-                                onClick = { selectedId = cluster.id }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column {
-                                Text(
-                                    text = cluster.name,
-                                    style = if (isSelected) MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold) 
-                                            else MaterialTheme.typography.bodyLarge
-                                )
-                                val distanceFormatter = remember { DistanceFormatter() }
-                                Text(
-                                    text = stringResource(R.string.cluster_score_format_with_dist, score, cluster.hitCount, distanceFormatter.format_with_units(cluster.refDistance)),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onMove(selectedId) },
-                enabled = selectedId != currentCluster.id
-            ) {
-                Text(stringResource(R.string.save))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
-        }
-    )
-}

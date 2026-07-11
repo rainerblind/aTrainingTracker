@@ -11,15 +11,14 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
 package com.atrainingtracker.trainingtracker.ui.clusters
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -240,4 +239,133 @@ fun ClusterItem(
             }
         }
     }
+}
+
+/**
+ * Standard selection item for a Route Cluster (Used in dropdowns and dialogs).
+ */
+@Composable
+fun RouteClusterSelectionItem(
+    cluster: RouteCluster,
+    score: Double,
+    sportName: String,
+    bSportType: com.atrainingtracker.banalservice.BSportType,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Icon(
+            painter = painterResource(id = bSportType.iconResId),
+            contentDescription = null,
+            modifier = Modifier.size(32.dp),
+            tint = Color.Unspecified
+        )
+
+        Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+            // 1. Identity Row: Name (weighted) + Score (pinned right)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = cluster.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "(%.3f)".format(score),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
+            // 2. Sport Row
+            Text(
+                text = sportName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            // 3. Hit Count Row (Blue/Primary, not bold)
+            Text(
+                text = stringResource(R.string.cluster_recordings_format, cluster.hitCount),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+/**
+ * Standard dialog for selecting a Route Cluster from a list of candidates.
+ * Harmonized between Edit Workout and Manual Reassignment (SCRUM-214).
+ */
+@Composable
+fun RouteClusterSelectionDialog(
+    title: String,
+    candidates: List<Pair<RouteCluster, Double>>,
+    onSelect: (RouteCluster) -> Unit,
+    onDismiss: () -> Unit,
+    sportNameResolver: (Long) -> String,
+    bSportTypeResolver: (Long) -> com.atrainingtracker.banalservice.BSportType
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        modifier = Modifier.fillMaxWidth(0.95f),
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource(R.string.cluster_suggestions_title),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
+                
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 400.dp)
+                ) {
+                    itemsIndexed(candidates) { index, pair ->
+                        val cluster = pair.first
+                        val score = pair.second
+                        
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { 
+                                    onSelect(cluster)
+                                    onDismiss()
+                                }
+                                .padding(vertical = 8.dp)
+                        ) {
+                            RouteClusterSelectionItem(
+                                cluster = cluster,
+                                score = score,
+                                sportName = sportNameResolver(cluster.probableSportId),
+                                bSportType = bSportTypeResolver(cluster.probableSportId)
+                            )
+                        }
+                        
+                        if (index < candidates.size - 1) {
+                            HorizontalDivider(
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {}
+    )
 }
