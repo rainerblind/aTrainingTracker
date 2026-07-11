@@ -124,6 +124,30 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * Applies an inferred identity (Equipment, Strava) to a workout based on its SportType.
+     * Use this during learning or cluster assignment (SCRUM-200).
+     */
+    public void applyInferredIdentity(long workoutId, EquipmentAndSportTypeDiscoveryManager.InferredIdentity identity) {
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.SPORT_ID, identity.getSportId());
+        values.put(WorkoutSummaries.B_SPORT, identity.getBSportType().name());
+
+        long equipmentId = identity.getEquipmentId();
+        if (equipmentId == -1) {
+            values.putNull(WorkoutSummaries.EQUIPMENT_ID);
+        } else {
+            values.put(WorkoutSummaries.EQUIPMENT_ID, equipmentId);
+        }
+
+        values.put(WorkoutSummaries.UPLOAD_TO_STRAVA, identity.getUploadToStrava());
+
+        getDatabase().update(WorkoutSummaries.TABLE,
+                values,
+                WorkoutSummaries.C_ID + "=" + workoutId,
+                null);
+    }
+
+    /**
      * Finds the most frequent sportId associated with a specific cluster.
      * Used to refine the "probable sport" for a route family.
      */
@@ -532,6 +556,20 @@ public class WorkoutSummariesDatabaseManager {
         }
 
         return fancyNameId;
+    }
+
+    public long getSportIdForFancyName(String fancyName) {
+        long sportId = -1;
+        try (Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
+                new String[]{WorkoutSummaries.SPORT_ID},
+                WorkoutSummaries.FANCY_NAME + "=?",
+                new String[]{fancyName},
+                null, null, null)) {
+            if (cursor.moveToFirst()) {
+                sportId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.SPORT_ID));
+            }
+        }
+        return sportId;
     }
 
     @NonNull

@@ -81,23 +81,8 @@ class WorkoutDataMapper(
         val endLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.END)
         val maxDispLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
 
-        var workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME))
-        var suggestedSportId = sportId
-        var clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID))
-
-        // --- AUTO-NAME & SPORT SUGGESTION (SCRUM-44) ---
-        if (workoutName == fileBaseName || workoutName.isNullOrEmpty()) {
-            if (startLatLng != null && endLatLng != null && maxDispLatLng != null) {
-                val suggestion = com.atrainingtracker.trainingtracker.database.RouteClusterEngine.getInstance(context)
-                    .suggestCluster(startLatLng, endLatLng, maxDispLatLng, totalDistance)
-                
-                if (suggestion != null) {
-                    workoutName = "${suggestion.name} #${suggestion.hitCount + 1}"
-                    suggestedSportId = suggestion.probableSportId
-                    clusterId = suggestion.id
-                }
-            }
-        }
+        val workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME))
+        val clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID))
 
         // The mapper is responsible for assembling the final object from its constituent parts.
         return WorkoutData(
@@ -105,13 +90,13 @@ class WorkoutDataMapper(
             finished = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.FINISHED)) == 1,
             fileBaseName = fileBaseName,
             workoutName = workoutName,
-            sportId = suggestedSportId,
-            sportName = if (suggestedSportId != sportId) sportTypeDatabaseManager.getUIName(suggestedSportId) else sportName,
+            sportId = sportId,
+            sportName = sportName,
             formattedDate = dateTimeResult.date,
             formattedTime = dateTimeResult.time,
             startTimeS = dateTimeResult.timestampS,
             localDateTime = dateTimeResult.localDateTime,
-            bSportType = if (suggestedSportId != sportId) sportTypeDatabaseManager.getBSportType(suggestedSportId) else bSportType,
+            bSportType = bSportType,
             equipmentName = equipmentName,
             equipmentId = equipmentId,
             commute = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.COMMUTE)) == 1,

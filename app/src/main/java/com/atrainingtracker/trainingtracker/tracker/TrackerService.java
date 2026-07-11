@@ -56,6 +56,8 @@ import com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelper;
 import com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelper.ActiveDevices;
 import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.ExtremaType;
+import com.atrainingtracker.trainingtracker.database.RouteCluster;
+import com.atrainingtracker.trainingtracker.database.RouteClusterEngine;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
@@ -970,6 +972,43 @@ public class TrackerService extends Service {
 
         // 3. Guess Commute and Trainer
         guessCommuteAndTrainer();
+
+        // 4. Identity Determination (SCRUM-200)
+        // Perform arbitration between hardware and route patterns
+        EquipmentAndSportTypeDiscoveryManager discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(this);
+        
+        // Initial arbitration using currently active devices in memory (more reliable than waiting for DB sync)
+        EquipmentAndSportTypeDiscoveryManager.InferredIdentity identity = discoveryManager.resolveIdentity(new HashSet<>(mBanalService.getDatabaseIdsOfActiveRemoteDevices()), mBanalService.getBSportType(), getAverageSpeed());
+
+        LatLng startPosRaw = mLiveSession.getStartLatLng();
+        LatLng endPosRaw = mLiveSession.getLastLatLng();
+        LatLng maxDispPos = summariesManager.getExtremaPosition(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
+
+        if (startPosRaw != null && endPosRaw != null && maxDispPos != null) {
+            RouteClusterEngine engine = RouteClusterEngine.Companion.getInstance(this);
+            RouteCluster suggestion = engine.suggestCluster(startPosRaw, endPosRaw, maxDispPos, mDistanceTotal_m, null);
+            if (suggestion != null) {
+                // If hardware confidence is high, we only take the name from the cluster
+                if (identity.isHighConfidence()) {
+                    ContentValues nameValues = new ContentValues();
+                    nameValues.put(WorkoutSummaries.WORKOUT_NAME, suggestion.getName() + " #" + (suggestion.getHitCount() + 1));
+                    nameValues.put(WorkoutSummaries.CLUSTER_ID, suggestion.getId());
+                    summariesManager.getDatabase().update(WorkoutSummaries.TABLE, nameValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(mWorkoutID)});
+                    
+                    // Apply hardware-based identity (Sport, Gear, Strava)
+                    summariesManager.applyInferredIdentity(mWorkoutID, identity);
+                } else {
+                    // Low hardware confidence -> Route Cluster wins everything
+                    engine.assignClusterToWorkout(this, mWorkoutID, suggestion.getId());
+                }
+            } else {
+                // No cluster match -> use hardware identity
+                summariesManager.applyInferredIdentity(mWorkoutID, identity);
+            }
+        } else {
+            // No spatial data -> use hardware identity
+            summariesManager.applyInferredIdentity(mWorkoutID, identity);
+        }
 
         // 5. Finalize Map and Streams (one last check)
         String polyline = PolyUtil.encode(mLiveSession.getSampledLatLngs());

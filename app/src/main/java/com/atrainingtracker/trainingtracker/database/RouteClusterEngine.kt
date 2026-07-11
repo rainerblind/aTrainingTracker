@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.database
 import android.content.Context
 import android.location.Location
 import android.util.Log
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.google.android.gms.maps.model.LatLng
 
@@ -162,7 +163,7 @@ class RouteClusterEngine private constructor(context: Context) {
                             hitCount = match.hitCount + 1
                         )
                         dbManager.updateCluster(updated)
-                        updateWorkoutClusterId(context, workoutId, updated.id)
+                        assignClusterToWorkout(context, workoutId, updated.id)
 
                         // Re-evaluate probable sport based on majority (SCRUM-182)
                         val mostFrequentSport = WorkoutSummariesDatabaseManager.getInstance(context).getMostFrequentSportIdForCluster(updated.id)
@@ -187,7 +188,7 @@ class RouteClusterEngine private constructor(context: Context) {
                             hitCount = 1
                         )
                         val newId = dbManager.insertCluster(newCluster)
-                        updateWorkoutClusterId(context, workoutId, newId)
+                        assignClusterToWorkout(context, workoutId, newId)
                     }
                 }
             }
@@ -204,10 +205,24 @@ class RouteClusterEngine private constructor(context: Context) {
         return candidate
     }
 
-    private fun updateWorkoutClusterId(context: Context, workoutId: Long, clusterId: Long) {
+    fun assignClusterToWorkout(context: Context, workoutId: Long, clusterId: Long) {
         val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
+        val discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(context)
+        val dbManager = RouteClusterDatabaseManager.getInstance(context)
+
+        val cluster = dbManager.getClusterById(clusterId) ?: return
+
         val values = android.content.ContentValues().apply {
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID, clusterId)
+
+            // Auto-Name logic
+            val currentName = summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME)
+            val fileBaseName = summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME)
+
+            if (currentName.isNullOrEmpty() || currentName == fileBaseName) {
+                val autoName = "${cluster.name} #${cluster.hitCount + 1}"
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME, autoName)
+            }
         }
         summariesManager.database.update(
             WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
@@ -215,6 +230,24 @@ class RouteClusterEngine private constructor(context: Context) {
             "${WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID} = ?",
             arrayOf(workoutId.toString())
         )
+
+        // ARBITRATION (SCRUM-200): Only propagate sport-identity if NOT determined by hardware
+        val sportStr = summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT)
+        val currentBSport = if (sportStr != null) BSportType.valueOf(sportStr) else BSportType.UNKNOWN
+        val avgSpeed = summariesManager.getDouble(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.SPEED_AVERAGE_mps) ?: 0.0
+
+        val hardwareIdentity = discoveryManager.resolveIdentity(workoutId, currentBSport, avgSpeed)
+
+        if (hardwareIdentity.isHighConfidence) {
+            // Hardware confidence is high -> keep hardware-based sport and equipment
+            summariesManager.applyInferredIdentity(workoutId, hardwareIdentity)
+            if (DEBUG) Log.i(TAG, "Hardware confidence high for workout $workoutId. Vetoing cluster-based override.")
+        } else {
+            // Low confidence -> let the cluster majority win
+            val clusterIdentity = discoveryManager.inferIdentityFromSport(cluster.probableSportId)
+            summariesManager.applyInferredIdentity(workoutId, clusterIdentity)
+            if (DEBUG) Log.i(TAG, "Route Cluster majority winning for workout $workoutId.")
+        }
     }
 
     private fun calculateSimilarity(
@@ -334,7 +367,7 @@ class RouteClusterEngine private constructor(context: Context) {
         }
 
         // 4. Update workout record
-        updateWorkoutClusterId(context, workoutId, newClusterId)
+        assignClusterToWorkout(context, workoutId, newClusterId)
     }
 
     /**

@@ -430,9 +430,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     // This function will be called when the user selects a name from the dialog.
     fun onFancyNameSelected(baseName: String) {
-        val fullFancyName = workoutSummariesDatabaseManager.getFancyNameAndIncrement(baseName)
-
-        updateWorkoutName(fullFancyName)
+        repository.applyFancyNameToWorkout(workoutId, baseName)
     }
 
     /**

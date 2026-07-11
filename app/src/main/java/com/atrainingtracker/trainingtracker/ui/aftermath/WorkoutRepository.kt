@@ -706,4 +706,44 @@ class WorkoutRepository private constructor(private val application: Application
         val routesRepo = RoutesRepository.getInstance(application)
         routesRepo.insertRoute(routeSummary, points)
     }
+
+    /**
+     * Assigns a cluster to a workout and automatically propagates sport-specific settings (SCRUM-200).
+     */
+    fun assignClusterToWorkout(workoutId: Long, clusterId: Long) {
+        launch(Dispatchers.IO) {
+            com.atrainingtracker.trainingtracker.database.RouteClusterEngine.Companion.getInstance(application)
+                .assignClusterToWorkout(application, workoutId, clusterId)
+
+            // Reload fresh data from DB to propagate inferred identity to UI
+            reloadWorkoutData(workoutId)
+        }
+    }
+
+    /**
+     * Applies a fancy name to a workout and automatically propagates sport-specific settings (SCRUM-200).
+     */
+    fun applyFancyNameToWorkout(workoutId: Long, baseName: String) {
+        launch(Dispatchers.IO) {
+            val fullName = summariesManager.getFancyNameAndIncrement(baseName)
+            val sportId = summariesManager.getSportIdForFancyName(baseName)
+
+            val values = android.content.ContentValues()
+            values.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME, fullName)
+            summariesManager.database.update(
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                values,
+                "${WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID} = ?",
+                arrayOf(workoutId.toString())
+            )
+
+            if (sportId != -1L) {
+                val discoveryManager = com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager.getInstance(application)
+                val identity = discoveryManager.inferIdentityFromSport(sportId)
+                summariesManager.applyInferredIdentity(workoutId, identity)
+            }
+
+            reloadWorkoutData(workoutId)
+        }
+    }
 }
