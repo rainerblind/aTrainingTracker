@@ -63,14 +63,14 @@ fun combineAndShare(context: Context, header: Bitmap, map: Bitmap) {
 /**
  * Shares a detailed workout consisting of a Header, Map, and Elevation profile.
  */
-fun combineWorkoutAndShare(context: Context, header: Bitmap, map: Bitmap, elevation: Bitmap) {
-    val sHeader = ensureSoftwareBitmap(header)
+fun combineWorkoutAndShare(context: Context, header: Bitmap?, map: Bitmap, elevation: Bitmap?) {
+    val sHeader = header?.let { ensureSoftwareBitmap(it) }
     val sMap = ensureSoftwareBitmap(map)
-    val sElevation = ensureSoftwareBitmap(elevation)
+    val sElevation = elevation?.let { ensureSoftwareBitmap(it) }
 
     val footerHeight = 125
     val totalWidth = sMap.width // Use map width as the base
-    val totalHeight = sHeader.height + sMap.height + sElevation.height + footerHeight
+    val totalHeight = (sHeader?.height ?: 0) + sMap.height + (sElevation?.height ?: 0) + footerHeight
 
     val combined = createBitmap(totalWidth, totalHeight)
     val canvas = Canvas(combined)
@@ -79,16 +79,20 @@ fun combineWorkoutAndShare(context: Context, header: Bitmap, map: Bitmap, elevat
     var currentY = 0f
 
     // 1. Header
-    canvas.drawBitmap(sHeader, 0f, currentY, null)
-    currentY += sHeader.height
+    sHeader?.let {
+        canvas.drawBitmap(it, 0f, currentY, null)
+        currentY += it.height
+    }
 
     // 2. Map
     canvas.drawBitmap(sMap, 0f, currentY, null)
     currentY += sMap.height
 
     // 3. Elevation
-    canvas.drawBitmap(sElevation, 0f, currentY, null)
-    currentY += sElevation.height
+    sElevation?.let {
+        canvas.drawBitmap(it, 0f, currentY, null)
+        currentY += it.height
+    }
 
     // 4. Branding
     drawFooter(context, canvas, totalWidth, currentY, footerHeight)

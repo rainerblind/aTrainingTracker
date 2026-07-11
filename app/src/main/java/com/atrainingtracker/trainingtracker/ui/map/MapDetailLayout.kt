@@ -114,8 +114,14 @@ fun MapDetailLayout(
                     onMapClick = onMapClick,
                     onSnapshotReady = { mapBitmap ->
                         scope.launch {
-                            val hBmp = headerLayer.toImageBitmap().asAndroidBitmap()
-                            val eBmp = elevationLayer.toImageBitmap().asAndroidBitmap()
+                            val hBmp = if (headerLayer.size.width > 0 && headerLayer.size.height > 0) {
+                                headerLayer.toImageBitmap().asAndroidBitmap()
+                            } else null
+                            
+                            val eBmp = if (elevationLayer.size.width > 0 && elevationLayer.size.height > 0) {
+                                elevationLayer.toImageBitmap().asAndroidBitmap()
+                            } else null
+
                             combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp)
                             isSharing = false
                         }
