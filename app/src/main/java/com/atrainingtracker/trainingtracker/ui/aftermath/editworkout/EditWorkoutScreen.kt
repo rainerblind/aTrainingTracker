@@ -55,6 +55,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -127,45 +129,15 @@ fun EditWorkoutScreen(
                     }
                 )
 
-                androidx.compose.material3.DropdownMenu(
-                    expanded = showSuggestions,
-                    onDismissRequest = { showSuggestions = false },
-                    modifier = Modifier.fillMaxWidth(0.9f)
-                ) {
-                    Text(
-                        text = stringResource(R.string.cluster_suggestions_title),
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.primary
+                if (showSuggestions) {
+                    com.atrainingtracker.trainingtracker.ui.clusters.RouteClusterSelectionDialog(
+                        title = stringResource(R.string.edit_workout_name),
+                        candidates = suggestions,
+                        onSelect = { viewModel.applyClusterIdentity(it) },
+                        onDismiss = { showSuggestions = false },
+                        sportNameResolver = { viewModel.getSportName(it) },
+                        bSportTypeResolver = { viewModel.getBSportType(it) }
                     )
-                    suggestions.forEach { (cluster, score) ->
-                        androidx.compose.material3.DropdownMenuItem(
-                            text = {
-                                Column {
-                                    Text(cluster.name, style = MaterialTheme.typography.bodyLarge)
-                                    val distanceFormatter = remember { com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter() }
-                                    Text(
-                                        text = stringResource(R.string.cluster_score_format_with_dist, score, cluster.hitCount, distanceFormatter.format_with_units(cluster.refDistance)),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            },
-                            onClick = {
-                                viewModel.applyClusterIdentity(cluster)
-                                showSuggestions = false
-                            },
-                            leadingIcon = {
-                                val sport = com.atrainingtracker.banalservice.BSportType.entries.find { it.ordinal.toLong() == cluster.probableSportId } ?: com.atrainingtracker.banalservice.BSportType.UNKNOWN
-                                Icon(
-                                    painter = painterResource(id = sport.iconResId),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp),
-                                    tint = if (score < 1.0) MaterialTheme.colorScheme.primary else Color.Unspecified
-                                )
-                            }
-                        )
-                    }
                 }
             }
 
