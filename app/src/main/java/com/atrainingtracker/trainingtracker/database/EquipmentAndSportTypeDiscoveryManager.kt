@@ -33,6 +33,14 @@ class EquipmentAndSportTypeDiscoveryManager private constructor(context: Context
     val sportTypeManager = SportTypeDatabaseManager.getInstance(context)
     val workoutSummariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
 
+    data class InferredIdentity(
+        val sportId: Long,
+        val bSportType: BSportType,
+        val equipmentId: Long,
+        val stravaSportName: String?,
+        val uploadToStrava: Int,
+        val isHighConfidence: Boolean
+    )
 
     companion object {
         @Volatile
@@ -233,5 +241,76 @@ class EquipmentAndSportTypeDiscoveryManager private constructor(context: Context
         else {
             return sportTypeManager.getSportTypesIdList(bSportType).first()
         }
+    }
+
+    /**
+     * Resolves identity using in-memory active devices for immediate accuracy in TrackerService.
+     */
+    fun resolveIdentity(deviceIds: Set<Long>, bSportType: BSportType, averageSpeed: Double): InferredIdentity {
+        val linkedEquipmentIds = getLinkedEquipmentIds(deviceIds)
+
+        var sportId: Long = -1
+        var equipmentId: Long = -1
+        var isHighConfidence = false
+
+        if (linkedEquipmentIds.size == 1) {
+            equipmentId = linkedEquipmentIds.first()
+            isHighConfidence = true
+            val linkedSportIds = sportTypeEquipmentLinkHelper.getSportTypeIdsForEquipment(equipmentId)
+            sportId = if (linkedSportIds.size == 1) {
+                linkedSportIds.first()
+            } else {
+                val candidatesFromSpeed = getSpeedBasedSportTypeIds(bSportType, averageSpeed)
+                val intersect = linkedSportIds intersect candidatesFromSpeed
+                if (intersect.isNotEmpty()) intersect.first() else linkedSportIds.first()
+            }
+        } else {
+            sportId = resolveSportType(deviceIds, bSportType, averageSpeed)
+            val gearCandidates = sportTypeEquipmentLinkHelper.getEquipmentIdsForSport(sportId)
+            if (gearCandidates.size == 1) {
+                equipmentId = gearCandidates.first()
+            }
+        }
+
+        val stravaSportName = sportTypeManager.getStravaName(sportId)
+
+        return InferredIdentity(
+            sportId = sportId,
+            bSportType = sportTypeManager.getBSportType(sportId),
+            equipmentId = equipmentId,
+            stravaSportName = stravaSportName,
+            uploadToStrava = if (stravaSportName != null) 1 else 0,
+            isHighConfidence = isHighConfidence
+        )
+    }
+
+    /**
+     *  Determines the best identity (Sport, Equipment, Strava) for a workout.
+     *  Implements the arbitration between hardware sensors and route clusters (SCRUM-200).
+     */
+    fun resolveIdentity(workoutId: Long, bSportType: BSportType, averageSpeed: Double): InferredIdentity {
+        val activeDeviceIds = activeDevicesHelper.getDatabaseIdsOfActiveDevices(workoutId).toSet()
+        return resolveIdentity(activeDeviceIds, bSportType, averageSpeed)
+    }
+
+    /**
+     * Helper to infer identity purely from a sportId (e.g. during manual edit/dialog).
+     */
+    fun inferIdentityFromSport(sportId: Long): InferredIdentity {
+        val sportName = sportTypeManager.getUIName(sportId)
+        val linkedEquipment = getEquipmentNamesForSport(sportName)
+        val bestEquipmentName = if (linkedEquipment.size == 1) linkedEquipment.first() else null
+        val bestEquipmentId = if (bestEquipmentName != null) equipmentDbHelper.getEquipmentId(bestEquipmentName) else -1L
+
+        val stravaSportName = sportTypeManager.getStravaName(sportId)
+
+        return InferredIdentity(
+            sportId = sportId,
+            bSportType = sportTypeManager.getBSportType(sportId),
+            equipmentId = bestEquipmentId,
+            stravaSportName = stravaSportName,
+            uploadToStrava = if (stravaSportName != null) 1 else 0,
+            isHighConfidence = false
+        )
     }
 }
