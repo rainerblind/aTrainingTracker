@@ -147,6 +147,13 @@ class FrequentPathsViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
+    fun deleteCluster(cluster: RouteCluster) {
+        viewModelScope.launch {
+            repository.deleteCluster(cluster.id)
+            _selectedCluster.value = null
+        }
+    }
+
     fun getCandidateClustersForWorkout(workout: WorkoutData): List<Pair<RouteCluster, Double>> {
         val start = workout.startLatLng ?: return emptyList()
         val end = workout.endLatLng ?: return emptyList()

@@ -287,6 +287,22 @@ class RoutesDatabaseManager private constructor(context: Context) {
     }
 
     /**
+     * Clears the cluster ID for any route linked to it (SCRUM-217).
+     */
+    fun clearClusterLink(clusterId: Long): Int {
+        val db = dbHelper.writableDatabase
+        val values = ContentValues().apply {
+            put(RouteContract.COLUMN_CLUSTER_ID, -1L)
+        }
+        return db.update(
+            RouteContract.TABLE_ROUTES,
+            values,
+            "${RouteContract.COLUMN_CLUSTER_ID} = ?",
+            arrayOf(clusterId.toString())
+        )
+    }
+
+    /**
      * Deletes a route by its internal database ID.
      */
     fun deleteRoute(routeId: Long): Int {

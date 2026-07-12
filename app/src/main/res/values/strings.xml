@@ -1245,4 +1245,6 @@
     <string name="cluster_score_brackets_format">(%1$.3f)</string>
     <string name="cluster_suggestions_content_desc">Suggestions</string>
     <string name="cluster_autoname_format">%1$s #%2$d</string>
+    <string name="cluster_delete_title">Delete Route Cluster</string>
+    <string name="cluster_delete_message">Are you sure you want to delete this route cluster? This will not delete the associated workouts, but they will no longer be grouped under this cluster.</string>
 </resources>

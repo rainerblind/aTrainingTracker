@@ -38,6 +38,7 @@ fun FrequentPathsList(
     clusters: List<RouteCluster>,
     viewModel: FrequentPathsViewModel,
     onClusterClick: (RouteCluster) -> Unit,
+    onDeleteRequest: (RouteCluster) -> Unit,
     scrollState: LazyListState,
     appBarOffsetPx: Int,
     headerHeightDp: Dp,
@@ -68,7 +69,8 @@ fun FrequentPathsList(
                 ClusterItem(
                     cluster = cluster,
                     viewModel = viewModel,
-                    onClick = { onClusterClick(cluster) }
+                    onClick = { onClusterClick(cluster) },
+                    onDeleteRequest = onDeleteRequest
                 )
             }
         }

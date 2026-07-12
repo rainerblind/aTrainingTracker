@@ -16,21 +16,21 @@
 package com.atrainingtracker.trainingtracker.ui.clusters
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -139,103 +139,132 @@ fun RouteClusterMetadataBlock(
     }
 }
 
-/**
- * Standard list item for a Route Cluster.
- */
 @Composable
 fun ClusterItem(
     cluster: RouteCluster,
     viewModel: FrequentPathsViewModel,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDeleteRequest: (RouteCluster) -> Unit
 ) {
-    MappableListItem(onClick = onClick) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-        ) {
-            // --- 1. TOP ROW: Standard Header (Icon + Name) ---
-            RouteClusterIdentityRow(cluster = cluster, viewModel = viewModel)
+    var showContextMenu by remember { mutableStateOf(false) }
+    val haptic = LocalHapticFeedback.current
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // --- 2. BOTTOM AREA: Details on left, Map on right ---
-            Row(
-                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-                verticalAlignment = Alignment.Bottom
+    MappableListItem(
+        onClick = onClick,
+        onLongClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            showContextMenu = true
+        }
+    ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp)
             ) {
-                // LEFT SIDE: Metadata & Metrics
-                RouteClusterMetadataBlock(
-                    cluster = cluster,
-                    viewModel = viewModel,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    includeSpacer = true
-                )
+                // --- 1. TOP ROW: Standard Header (Icon + Name) ---
+                RouteClusterIdentityRow(cluster = cluster, viewModel = viewModel)
 
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // RIGHT SIDE: SMALL SQUARE MAP
-                Surface(
-                    modifier = Modifier.size(100.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh
+                // --- 2. BOTTOM AREA: Details on left, Map on right ---
+                Row(
+                    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                    verticalAlignment = Alignment.Bottom
                 ) {
-                    val context = LocalContext.current
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        val start = LatLng(cluster.startLat, cluster.startLng)
-                        val end = LatLng(cluster.endLat, cluster.endLng)
-                        val apex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
+                    // LEFT SIDE: Metadata & Metrics
+                    RouteClusterMetadataBlock(
+                        cluster = cluster,
+                        viewModel = viewModel,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        includeSpacer = true
+                    )
 
-                        val bounds = remember(start, end, apex) {
-                            LatLngBounds.Builder()
-                                .include(start)
-                                .include(end)
-                                .include(apex)
-                                .build()
-                        }
+                    Spacer(modifier = Modifier.width(16.dp))
 
-                        val cameraPositionState = rememberCameraPositionState()
-                        var isMapLoaded by remember { mutableStateOf(false) }
+                    // RIGHT SIDE: SMALL SQUARE MAP
+                    Surface(
+                        modifier = Modifier.size(100.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh
+                    ) {
+                        val context = LocalContext.current
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            val start = LatLng(cluster.startLat, cluster.startLng)
+                            val end = LatLng(cluster.endLat, cluster.endLng)
+                            val apex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
 
-                        LaunchedEffect(bounds, isMapLoaded) {
-                            if (isMapLoaded) {
-                                cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(bounds, 40))
+                            val bounds = remember(start, end, apex) {
+                                LatLngBounds.Builder()
+                                    .include(start)
+                                    .include(end)
+                                    .include(apex)
+                                    .build()
                             }
-                        }
 
-                        GoogleMap(
-                            modifier = Modifier.fillMaxSize(),
-                            cameraPositionState = cameraPositionState,
-                            properties = MapProperties(mapType = MapType.TERRAIN),
-                            onMapLoaded = { isMapLoaded = true },
-                            uiSettings = MapUiSettings(
-                                zoomControlsEnabled = false,
-                                scrollGesturesEnabled = false,
-                                zoomGesturesEnabled = false,
-                                tiltGesturesEnabled = false,
-                                rotationGesturesEnabled = false,
-                                myLocationButtonEnabled = false
-                            ),
-                            onMapClick = { onClick() }
-                        ) {
-                            Marker(
-                                state = remember(start) { MarkerState(position = start) },
-                                icon = remember { createSensorMarker(context, R.drawable.control_start, Color(0xFF2E7D32)) }
-                            )
-                            Marker(
-                                state = remember(end) { MarkerState(position = end) },
-                                icon = remember { createSensorMarker(context, R.drawable.control_stop, Color(0xFFC62828)) }
-                            )
-                            Marker(
-                                state = remember(apex) { MarkerState(position = apex) },
-                                icon = remember { createSensorMarker(context, R.drawable.ic_distance, Color(0xFF1565C0)) }
-                            )
+                            val cameraPositionState = rememberCameraPositionState()
+                            var isMapLoaded by remember { mutableStateOf(false) }
+
+                            LaunchedEffect(bounds, isMapLoaded) {
+                                if (isMapLoaded) {
+                                    cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(bounds, 40))
+                                }
+                            }
+
+                            GoogleMap(
+                                modifier = Modifier.fillMaxSize(),
+                                cameraPositionState = cameraPositionState,
+                                properties = MapProperties(mapType = MapType.TERRAIN),
+                                onMapLoaded = { isMapLoaded = true },
+                                uiSettings = MapUiSettings(
+                                    zoomControlsEnabled = false,
+                                    scrollGesturesEnabled = false,
+                                    zoomGesturesEnabled = false,
+                                    tiltGesturesEnabled = false,
+                                    rotationGesturesEnabled = false,
+                                    myLocationButtonEnabled = false
+                                ),
+                                onMapClick = { onClick() }
+                            ) {
+                                Marker(
+                                    state = remember(start) { MarkerState(position = start) },
+                                    icon = remember { createSensorMarker(context, R.drawable.control_start, Color(0xFF2E7D32)) }
+                                )
+                                Marker(
+                                    state = remember(end) { MarkerState(position = end) },
+                                    icon = remember { createSensorMarker(context, R.drawable.control_stop, Color(0xFFC62828)) }
+                                )
+                                Marker(
+                                    state = remember(apex) { MarkerState(position = apex) },
+                                    icon = remember { createSensorMarker(context, R.drawable.ic_distance, Color(0xFF1565C0)) }
+                                )
+                            }
+                            
+                            // Transparent overlay to ensure reliable click handling in a scrollable list
+                            Box(modifier = Modifier.fillMaxSize().combinedClickable(
+                                onClick = onClick,
+                                onLongClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    showContextMenu = true
+                                }
+                            ))
                         }
-                        
-                        // Transparent overlay to ensure reliable click handling in a scrollable list
-                        Box(modifier = Modifier.fillMaxSize().clickable { onClick() })
                     }
                 }
+            }
+
+            // Context Menu for deletion (Long-click target)
+            DropdownMenu(
+                expanded = showContextMenu,
+                onDismissRequest = { showContextMenu = false },
+                containerColor = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.align(Alignment.TopEnd)
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.delete)) },
+                    onClick = { showContextMenu = false; onDeleteRequest(cluster) },
+                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                )
             }
         }
     }

@@ -797,4 +797,6 @@
     <string name="cluster_score_brackets_format">(%1$.3f)</string>
     <string name="cluster_suggestions_content_desc">Sugestie</string>
     <string name="cluster_autoname_format">%1$s #%2$d</string>
+    <string name="cluster_delete_title">Usuń klaster trasy</string>
+    <string name="cluster_delete_message">Czy na pewno chcesz usunąć ten klaster trasy? Nie spowoduje to usunięcia powiązanych treningów, ale nie będą one już grupowane w ramach tego klastra.</string>
 </resources>

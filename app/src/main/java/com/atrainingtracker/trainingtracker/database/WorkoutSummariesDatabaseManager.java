@@ -165,6 +165,16 @@ public class WorkoutSummariesDatabaseManager {
         return -1;
     }
 
+    /**
+     * Clears the cluster ID for any workout linked to it (SCRUM-217).
+     */
+    public int clearClusterLink(long clusterId) {
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.CLUSTER_ID, -1L);
+        return getDatabase().update(WorkoutSummaries.TABLE, values,
+                WorkoutSummaries.CLUSTER_ID + "=?", new String[]{String.valueOf(clusterId)});
+    }
+
     public Cursor getWorkoutCursor(long workoutId) {
         return getDatabase().query(WorkoutSummaries.TABLE,
                 null,
