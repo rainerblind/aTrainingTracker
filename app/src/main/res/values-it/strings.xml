@@ -1034,4 +1034,6 @@
     <string name="cluster_score_brackets_format">(%1$.3f)</string>
     <string name="cluster_suggestions_content_desc">Suggerimenti</string>
     <string name="cluster_autoname_format">%1$s #%2$d</string>
+    <string name="cluster_delete_title">Elimina gruppo di percorsi</string>
+    <string name="cluster_delete_message">Sei sicuro di voler eliminare questo gruppo di percorsi? Questo non eliminerà gli allenamenti associati, ma non saranno più raggruppati sotto questo gruppo.</string>
 </resources>

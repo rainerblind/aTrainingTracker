@@ -132,6 +132,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-SET-021** | **Identity Arbitration** | `REQ-SET-029`, `030` | 1. Link a specific sensor to a bike. 2. Record a session with that sensor on a route matched to a cluster with a different majority sport. | 1. The workout SHALL adopt the cluster's Name. 2. The sport and equipment SHALL remain hardware-driven (Vetoing the route majority). | Verified |
 | **TST-SET-022** | **Route-to-Cluster Matching** | `REQ-SET-031` | 1. Import a GPX Route. 2. Navigate to \"Frequent Paths\". | 1. A new Route Cluster SHALL automatically be created for the imported route. 2. Recalculating history SHALL also include existing routes as cluster seeds. | Verified |
 | **TST-SET-023** | **Reference Route in Heatmap** | `REQ-SET-032` | 1. Open a Route Cluster that is linked to an explicit Route. 2. Observe the heatmap visualization. | 1. The authoritative route's path SHALL be visible as a solid, prominent line overlaid on the workout heatmap. | Verified |
+| **TST-SET-024** | **Route Cluster Deletion** | `REQ-SET-033` | 1. Open a Route Cluster detail view. 2. Long-click the header. 3. Select \"Delete\". 4. Confirm deletion. | 1. The cluster SHALL be deleted. 2. Associated workouts SHALL remain in history but lose their cluster assignment. | Verified |
 
 ## 4. Release Verification Workflow
 

@@ -62,6 +62,8 @@ class FrequentPathsFragment : Fragment() {
                     val bikeListState = androidx.compose.foundation.lazy.rememberLazyListState()
                     val runListState = androidx.compose.foundation.lazy.rememberLazyListState()
                     val otherListState = androidx.compose.foundation.lazy.rememberLazyListState()
+                    
+                    var clusterToDelete by remember { mutableStateOf<com.atrainingtracker.trainingtracker.database.RouteCluster?>(null) }
 
                     LaunchedEffect(Unit) {
                         viewModel.recalculationFinished.collectLatest {
@@ -102,9 +104,34 @@ class FrequentPathsFragment : Fragment() {
                                 otherListState = otherListState,
                                 onClusterClick = { viewModel.selectCluster(it) },
                                 onTuneClick = { isTuning = true },
-                                onAddClick = { isAdding = true }
+                                onAddClick = { isAdding = true },
+                                onDeleteRequest = { clusterToDelete = it }
                             )
                         }
+                    }
+
+                    if (clusterToDelete != null) {
+                        androidx.compose.material3.AlertDialog(
+                            onDismissRequest = { clusterToDelete = null },
+                            title = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.atrainingtracker.R.string.cluster_delete_title)) },
+                            text = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.atrainingtracker.R.string.cluster_delete_message)) },
+                            confirmButton = {
+                                androidx.compose.material3.TextButton(
+                                    onClick = {
+                                        viewModel.deleteCluster(clusterToDelete!!)
+                                        clusterToDelete = null
+                                    },
+                                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = androidx.compose.material3.MaterialTheme.colorScheme.error)
+                                ) {
+                                    androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.atrainingtracker.R.string.delete))
+                                }
+                            },
+                            dismissButton = {
+                                androidx.compose.material3.TextButton(onClick = { clusterToDelete = null }) {
+                                    androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.atrainingtracker.R.string.cancel))
+                                }
+                            }
+                        )
                     }
                 }
             }

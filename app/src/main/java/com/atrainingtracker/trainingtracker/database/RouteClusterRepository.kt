@@ -75,6 +75,20 @@ class RouteClusterRepository private constructor(private val context: Context) {
         refreshClusters()
     }
 
+    suspend fun deleteCluster(clusterId: Long) = withContext(Dispatchers.IO) {
+        // 1. Clear links in workouts
+        summariesManager.clearClusterLink(clusterId)
+
+        // 2. Clear links in routes
+        RoutesDatabaseManager.getInstance(context).clearClusterLink(clusterId)
+
+        // 3. Delete the cluster itself
+        clusterDb.deleteCluster(clusterId)
+
+        // 4. Refresh
+        refreshClusters()
+    }
+
     suspend fun getWorkoutsForCluster(clusterId: Long): List<WorkoutData> = withContext(Dispatchers.IO) {
         val workouts = mutableListOf<WorkoutData>()
         val selection = "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = ?"

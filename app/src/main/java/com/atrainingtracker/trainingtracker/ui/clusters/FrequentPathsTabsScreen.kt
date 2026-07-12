@@ -50,7 +50,8 @@ fun FrequentPathsTabsScreen(
     otherListState: LazyListState,
     onClusterClick: (RouteCluster) -> Unit,
     onTuneClick: () -> Unit,
-    onAddClick: () -> Unit
+    onAddClick: () -> Unit,
+    onDeleteRequest: (RouteCluster) -> Unit
 ) {
     val clusters by viewModel.allClusters.collectAsState()
     
@@ -107,7 +108,8 @@ fun FrequentPathsTabsScreen(
                     headerHeightDp = headerHeightDp,
                     density = density,
                     emptyMessage = if (currentSport == null) stringResource(R.string.absolutely_no_routes_available)
-                                   else stringResource(R.string.no_routes_available, tabs[pageIndex].first)
+                                   else stringResource(R.string.no_routes_available, tabs[pageIndex].first),
+                    onDeleteRequest = onDeleteRequest
                 )
             }
 
