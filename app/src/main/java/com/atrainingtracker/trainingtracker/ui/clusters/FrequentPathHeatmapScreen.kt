@@ -210,7 +210,7 @@ fun FrequentPathHeatmapScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.SwapHoriz,
-                                contentDescription = "Move Cluster",
+                                contentDescription = stringResource(R.string.cluster_move_content_desc),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -361,7 +361,7 @@ fun ClusterSummaryHeader(
                     IconButton(onClick = onSaveFingerprint, enabled = hasChanges) {
                         Icon(
                             Icons.Default.Save,
-                            contentDescription = "Save Fingerprint",
+                            contentDescription = stringResource(R.string.cluster_save_fingerprint_content_desc),
                             tint = if (hasChanges) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -373,7 +373,7 @@ fun ClusterSummaryHeader(
                         )
                     }
                     IconButton(onClick = onEditFingerprint) {
-                        Icon(Icons.Default.EditLocationAlt, contentDescription = "Edit Fingerprint")
+                        Icon(Icons.Default.EditLocationAlt, contentDescription = stringResource(R.string.cluster_edit_fingerprint_content_desc))
                     }
                 }
             }

@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.database
 import android.content.Context
 import android.location.Location
 import android.util.Log
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.google.android.gms.maps.model.LatLng
@@ -173,7 +174,7 @@ class RouteClusterEngine private constructor(context: Context) {
                     } else {
                         // No match: Create new cluster. 
                         // If it's a default name, use a generic descriptive name.
-                        val clusterName = if (!isDefaultName) workoutName else "Route at ${fileBaseName?.take(10) ?: "Unknown"}"
+                        val clusterName = if (!isDefaultName) workoutName else context.getString(R.string.cluster_default_name_format, fileBaseName?.take(10) ?: context.getString(R.string.unknown_manufacturer))
                         val uniqueName = findUniqueClusterName(clusterName)
                         val newCluster = RouteCluster(
                             name = uniqueName,
@@ -220,7 +221,7 @@ class RouteClusterEngine private constructor(context: Context) {
             val fileBaseName = summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME)
 
             if (currentName.isNullOrEmpty() || currentName == fileBaseName) {
-                val autoName = "${cluster.name} #${cluster.hitCount + 1}"
+                val autoName = context.getString(R.string.cluster_autoname_format, cluster.name, cluster.hitCount + 1)
                 put(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME, autoName)
             }
         }

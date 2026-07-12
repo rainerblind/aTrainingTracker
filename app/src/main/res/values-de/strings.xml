@@ -1121,4 +1121,16 @@
 
     <string name="cluster_edit_fingerprint">Routen-Fingerabdruck bearbeiten</string>
     <string name="cluster_edit_fingerprint_hint">Passen Sie Start, Ende oder Apex an, indem Sie den Typ auswählen und auf die Karte tippen.</string>
+    <string name="cluster_tuning_content_desc">Clustering anpassen</string>
+    <string name="cluster_move_content_desc">Einheit verschieben</string>
+    <string name="cluster_save_fingerprint_content_desc">Fingerabdruck speichern</string>
+    <string name="cluster_edit_fingerprint_content_desc">Fingerabdruck bearbeiten</string>
+    <string name="cluster_manual_pick_hint">Räumlichen Fingerabdruck auf der Karte wählen:</string>
+    <string name="cluster_manual_tap_map_format">Tippen Sie auf die Karte, um %s zu setzen</string>
+    <string name="cluster_clear_content_desc">Löschen</string>
+    <string name="cluster_default_name_format">Route bei %s</string>
+    <string name="cluster_equipment_mapping_format">→ %s</string>
+    <string name="cluster_score_brackets_format">(%1$.3f)</string>
+    <string name="cluster_suggestions_content_desc">Vorschläge</string>
+    <string name="cluster_autoname_format">%1$s #%2$d</string>
 </resources>

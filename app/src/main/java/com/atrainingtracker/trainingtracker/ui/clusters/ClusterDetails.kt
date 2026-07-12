@@ -112,7 +112,7 @@ fun ClusterDetails(
             // 3. Resulting Equipment
             if (linkedEquipment.isNotEmpty()) {
                 Text(
-                    text = "→ ${linkedEquipment.joinToString(", ")}",
+                    text = stringResource(R.string.cluster_equipment_mapping_format, linkedEquipment.joinToString(", ")),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
                     textAlign = textAlign,

@@ -117,7 +117,7 @@ fun RouteClusterMetadataBlock(
         // 3. Resulting Equipment
         if (linkedEquipment.isNotEmpty()) {
             Text(
-                text = "→ ${linkedEquipment.joinToString(", ")}",
+                text = stringResource(R.string.cluster_equipment_mapping_format, linkedEquipment.joinToString(", ")),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
             )
@@ -280,7 +280,7 @@ fun RouteClusterSelectionItem(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "(%.3f)".format(score),
+                    text = stringResource(R.string.cluster_score_brackets_format, score),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

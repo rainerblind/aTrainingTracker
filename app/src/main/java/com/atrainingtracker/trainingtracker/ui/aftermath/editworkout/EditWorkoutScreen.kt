@@ -120,7 +120,7 @@ fun EditWorkoutScreen(
                             IconButton(onClick = { showSuggestions = true }) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.my_locations),
-                                    contentDescription = "Suggestions",
+                                    contentDescription = stringResource(R.string.cluster_suggestions_content_desc),
                                     tint = if (suggestions.any { it.second < 1.0 }) MaterialTheme.colorScheme.primary 
                                            else MaterialTheme.colorScheme.onSurfaceVariant
                                 )

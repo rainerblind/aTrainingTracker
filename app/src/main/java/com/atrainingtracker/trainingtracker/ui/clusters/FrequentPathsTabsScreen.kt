@@ -105,7 +105,9 @@ fun FrequentPathsTabsScreen(
                     scrollState = listState,
                     appBarOffsetPx = connection.appBarOffset,
                     headerHeightDp = headerHeightDp,
-                    density = density
+                    density = density,
+                    emptyMessage = if (currentSport == null) stringResource(R.string.absolutely_no_routes_available)
+                                   else stringResource(R.string.no_routes_available, tabs[pageIndex].first)
                 )
             }
 
@@ -136,7 +138,7 @@ fun FrequentPathsTabsScreen(
                             IconButton(onClick = onTuneClick) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_settings_24),
-                                    contentDescription = "Tune Clustering",
+                                    contentDescription = stringResource(R.string.cluster_tuning_content_desc),
                                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
