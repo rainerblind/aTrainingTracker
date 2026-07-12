@@ -158,7 +158,8 @@ class RouteClusterDatabaseManager private constructor(context: Context) {
             maxDispLat = cursor.getDouble(cursor.getColumnIndexOrThrow(RouteClusterContract.COLUMN_MAX_DISP_LAT)),
             maxDispLng = cursor.getDouble(cursor.getColumnIndexOrThrow(RouteClusterContract.COLUMN_MAX_DISP_LNG)),
             refDistance = cursor.getDouble(cursor.getColumnIndexOrThrow(RouteClusterContract.COLUMN_REF_DISTANCE)),
-            hitCount = cursor.getInt(cursor.getColumnIndexOrThrow(RouteClusterContract.COLUMN_HIT_COUNT))
+            hitCount = cursor.getInt(cursor.getColumnIndexOrThrow(RouteClusterContract.COLUMN_HIT_COUNT)),
+            bSportType = com.atrainingtracker.banalservice.BSportType.valueOf(cursor.getString(cursor.getColumnIndexOrThrow(RouteClusterContract.COLUMN_SPORT_TYPE)))
         )
     }
 
@@ -173,6 +174,7 @@ class RouteClusterDatabaseManager private constructor(context: Context) {
         put(RouteClusterContract.COLUMN_MAX_DISP_LNG, cluster.maxDispLng)
         put(RouteClusterContract.COLUMN_REF_DISTANCE, cluster.refDistance)
         put(RouteClusterContract.COLUMN_HIT_COUNT, cluster.hitCount)
+        put(RouteClusterContract.COLUMN_SPORT_TYPE, cluster.bSportType.name)
     }
 
     object RouteClusterContract {
@@ -187,6 +189,7 @@ class RouteClusterDatabaseManager private constructor(context: Context) {
         const val COLUMN_MAX_DISP_LNG = "max_disp_lng"
         const val COLUMN_REF_DISTANCE = "ref_distance"
         const val COLUMN_HIT_COUNT = "hit_count"
+        const val COLUMN_SPORT_TYPE = "b_sport_type"
 
         const val CREATE_TABLE = """
             CREATE TABLE $TABLE_NAME (
@@ -200,20 +203,23 @@ class RouteClusterDatabaseManager private constructor(context: Context) {
                 $COLUMN_MAX_DISP_LAT REAL,
                 $COLUMN_MAX_DISP_LNG REAL,
                 $COLUMN_REF_DISTANCE REAL,
-                $COLUMN_HIT_COUNT INTEGER
+                $COLUMN_HIT_COUNT INTEGER,
+                $COLUMN_SPORT_TYPE TEXT
             )
         """
     }
 
     private class RouteClusterDbHelper(context: Context) : SQLiteOpenHelper(
-        context, "RouteClusters.db", null, 1
+        context, "RouteClusters.db", null, 2
     ) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(RouteClusterContract.CREATE_TABLE)
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            // Initial version
+            if (oldVersion < 2) {
+                db.execSQL("ALTER TABLE ${RouteClusterContract.TABLE_NAME} ADD COLUMN ${RouteClusterContract.COLUMN_SPORT_TYPE} TEXT DEFAULT 'UNKNOWN'")
+            }
         }
     }
 }
