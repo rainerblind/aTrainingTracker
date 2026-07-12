@@ -44,6 +44,7 @@ import kotlinx.coroutines.withContext
 class FrequentPathsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = RouteClusterRepository.getInstance(application)
+    private val routesRepository = com.atrainingtracker.trainingtracker.repositories.RoutesRepository.getInstance(application)
     private val banalRepository = BANALServiceRepository.getInstance(application)
     private val discoveryManager = com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager.getInstance(application)
 
@@ -52,6 +53,9 @@ class FrequentPathsViewModel(application: Application) : AndroidViewModel(applic
 
     private val _clusterWorkouts = MutableStateFlow<List<WorkoutData>>(emptyList())
     val clusterWorkouts: StateFlow<List<WorkoutData>> = _clusterWorkouts.asStateFlow()
+
+    private val _linkedRoute = MutableStateFlow<com.atrainingtracker.trainingtracker.database.RouteWithPath?>(null)
+    val linkedRoute: StateFlow<com.atrainingtracker.trainingtracker.database.RouteWithPath?> = _linkedRoute.asStateFlow()
 
     private val _selectedCluster = MutableStateFlow<RouteCluster?>(null)
     val selectedCluster: StateFlow<RouteCluster?> = _selectedCluster.asStateFlow()
@@ -104,9 +108,11 @@ class FrequentPathsViewModel(application: Application) : AndroidViewModel(applic
         if (cluster != null) {
             viewModelScope.launch {
                 _clusterWorkouts.value = repository.getWorkoutsForCluster(cluster.id)
+                _linkedRoute.value = routesRepository.getRouteByClusterId(cluster.id)
             }
         } else {
             _clusterWorkouts.value = emptyList()
+            _linkedRoute.value = null
             clearPeekSelection()
         }
     }

@@ -60,10 +60,15 @@ class RouteClusterEngine private constructor(context: Context) {
     }
 
     /**
-     * Records user feedback (name/sport edit) to update or create clusters.
+     * Records user feedback (name/sport edit) or route seeding to update or create clusters.
      * Returns the cluster ID.
      */
-    fun learnFromWorkout(start: LatLng, end: LatLng, apex: LatLng, distance: Double, userSpecifiedName: String, userSportId: Long, clusterIdOverride: Long = -1): Long {
+    fun learnFromWorkout(
+        start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
+        userSpecifiedName: String, userSportId: Long, 
+        clusterIdOverride: Long = -1,
+        isWorkoutSession: Boolean = true
+    ): Long {
         val existingMatch = if (clusterIdOverride != -1L) dbManager.getClusterById(clusterIdOverride) 
                             else suggestCluster(start, end, apex, distance, userSpecifiedName)
 
@@ -72,6 +77,8 @@ class RouteClusterEngine private constructor(context: Context) {
             // Ensure unique name if it changed (SCRUM-190 refinement)
             val uniqueName = if (existingMatch.name == userSpecifiedName) userSpecifiedName 
                              else findUniqueClusterName(userSpecifiedName, existingMatch.id)
+
+            val newHitCount = if (isWorkoutSession) existingMatch.hitCount + 1 else existingMatch.hitCount
 
             val updatedCluster = existingMatch.copy(
                 name = uniqueName,
@@ -84,7 +91,7 @@ class RouteClusterEngine private constructor(context: Context) {
                 maxDispLat = (existingMatch.maxDispLat * existingMatch.hitCount + apex.latitude) / (existingMatch.hitCount + 1),
                 maxDispLng = (existingMatch.maxDispLng * existingMatch.hitCount + apex.longitude) / (existingMatch.hitCount + 1),
                 refDistance = (existingMatch.refDistance * existingMatch.hitCount + distance) / (existingMatch.hitCount + 1),
-                hitCount = existingMatch.hitCount + 1
+                hitCount = newHitCount
             )
             dbManager.updateCluster(updatedCluster)
             if (DEBUG) Log.i(TAG, "Learned from existing route: ${updatedCluster.name} (hitCount=${updatedCluster.hitCount})")
@@ -109,7 +116,7 @@ class RouteClusterEngine private constructor(context: Context) {
                 maxDispLat = apex.latitude,
                 maxDispLng = apex.longitude,
                 refDistance = distance,
-                hitCount = 1,
+                hitCount = if (isWorkoutSession) 1 else 0,
                 bSportType = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(appContext).getBSportType(userSportId)
             )
             val newId = dbManager.insertCluster(newCluster)
@@ -158,8 +165,16 @@ class RouteClusterEngine private constructor(context: Context) {
 
         val sportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(route.summary.bSportType)
 
-        // Routes are high-confidence seeds, but we use a hitCount of 1 to allow workouts to influence them.
-        return learnFromWorkout(start, end, apex, distance, route.summary.name, sportId)
+        // Routes are high-confidence seeds, but we use a hitCount of 0 to allow workouts to influence them (SCRUM-216 Refinement).
+        return learnFromWorkout(
+            start = start,
+            end = end,
+            apex = apex,
+            distance = distance,
+            userSpecifiedName = route.summary.name,
+            userSportId = sportId,
+            isWorkoutSession = false
+        )
     }
 
     private fun calculateLineDistance(point: LatLng, start: LatLng, end: LatLng): Double {

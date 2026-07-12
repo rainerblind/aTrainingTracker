@@ -149,9 +149,6 @@ class RoutesDatabaseManager private constructor(context: Context) {
         )
     }
 
-    /**
-     * Retrieves all routes.
-     */
     fun getAllRoutes(): List<RouteWithPath> {
         val routes = mutableListOf<RouteWithPath>()
         val db = dbHelper.readableDatabase
@@ -175,6 +172,29 @@ class RoutesDatabaseManager private constructor(context: Context) {
             }
         }
         return routes
+    }
+
+    /**
+     * Retrieves a route linked to a specific cluster ID.
+     */
+    fun getRouteByClusterId(clusterId: Long): RouteWithPath? {
+        val db = dbHelper.readableDatabase
+        db.query(
+            RouteContract.TABLE_ROUTES,
+            null,
+            "${RouteContract.COLUMN_CLUSTER_ID} = ?",
+            arrayOf(clusterId.toString()),
+            null,
+            null,
+            null
+        ).use { cursor ->
+            if (cursor.moveToFirst()) {
+                val routeSummary = mapCursorToRouteSummary(cursor)
+                val pathPoints = getRoutePath(routeSummary.id)
+                return RouteWithPath(routeSummary, pathPoints)
+            }
+        }
+        return null
     }
 
     /**
