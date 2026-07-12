@@ -84,6 +84,13 @@ class RoutesRepository private constructor(private val context: Context) {
     }
 
     /**
+     * Fetches a route by its linked cluster ID.
+     */
+    suspend fun getRouteByClusterId(clusterId: Long): RouteWithPath? = withContext(Dispatchers.IO) {
+        routesDb.getRouteByClusterId(clusterId)
+    }
+
+    /**
      * Inserts a new route (from GPX import or API) and refreshes the flow.
      */
     suspend fun insertRoute(summary: RouteSummary, path: List<PathPoint>): Long = withContext(Dispatchers.IO) {

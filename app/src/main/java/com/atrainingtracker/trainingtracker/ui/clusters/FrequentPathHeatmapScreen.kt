@@ -59,6 +59,7 @@ fun FrequentPathHeatmapScreen(
 ) {
     val context = LocalContext.current
     val workouts by viewModel.clusterWorkouts.collectAsState()
+    val linkedRoute by viewModel.linkedRoute.collectAsState()
     val peekedWorkoutDataWithTrack by viewModel.peekedWorkoutDataWithTrack.collectAsState()
     
     val sportType = remember(cluster.probableSportId) { viewModel.getBSportType(cluster.probableSportId) }
@@ -252,6 +253,12 @@ fun FrequentPathHeatmapScreen(
             mapContent = {
                 heatmap(clusterPaths, opacity = heatmapOpacity)
 
+                // 1. Authoritative Route (If linked - SCRUM-216)
+                linkedRoute?.let { route ->
+                    path(route.toMapRoute().copy(isSelected = true), alpha = 1.0f)
+                }
+
+                // 2. Member traces
                 // Only allow path clicks if not editing fingerprint
                 mapTracks.forEach { track ->
                     path(track, alpha = memberAlpha, onPathClick = { id ->
@@ -261,7 +268,7 @@ fun FrequentPathHeatmapScreen(
                     })
                 }
                 
-                // Show distribution of markers for all cluster members (SCRUM-199)
+                // 3. Show distribution of markers for all cluster members (SCRUM-199)
                 if (!isEditingFingerprint) {
                     markers(memberMarkers)
                 }

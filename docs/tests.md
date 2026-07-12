@@ -131,6 +131,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-SET-020** | **Unified FAB Layout** | `REQ-SET-028` | 1. Navigate to \"Frequent Paths\". 2. Observe FAB position and styling. 3. Compare with \"Sport Types\" and \"Equipment\" FABs. | 1. The FAB SHALL be positioned at the bottom-right. 2. It SHALL correctly respect system navigation bar padding. | Verified |
 | **TST-SET-021** | **Identity Arbitration** | `REQ-SET-029`, `030` | 1. Link a specific sensor to a bike. 2. Record a session with that sensor on a route matched to a cluster with a different majority sport. | 1. The workout SHALL adopt the cluster's Name. 2. The sport and equipment SHALL remain hardware-driven (Vetoing the route majority). | Verified |
 | **TST-SET-022** | **Route-to-Cluster Matching** | `REQ-SET-031` | 1. Import a GPX Route. 2. Navigate to \"Frequent Paths\". | 1. A new Route Cluster SHALL automatically be created for the imported route. 2. Recalculating history SHALL also include existing routes as cluster seeds. | Verified |
+| **TST-SET-023** | **Reference Route in Heatmap** | `REQ-SET-032` | 1. Open a Route Cluster that is linked to an explicit Route. 2. Observe the heatmap visualization. | 1. The authoritative route's path SHALL be visible as a solid, prominent line overlaid on the workout heatmap. | Verified |
 
 ## 4. Release Verification Workflow
 
