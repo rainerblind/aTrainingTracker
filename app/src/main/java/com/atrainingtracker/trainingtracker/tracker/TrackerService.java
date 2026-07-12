@@ -41,6 +41,7 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BANALService.BANALServiceComm;
 import com.atrainingtracker.banalservice.devices.AltitudeFromPressureDevice;
@@ -991,7 +992,8 @@ public class TrackerService extends Service {
                 // If hardware confidence is high, we only take the name from the cluster
                 if (identity.isHighConfidence()) {
                     ContentValues nameValues = new ContentValues();
-                    nameValues.put(WorkoutSummaries.WORKOUT_NAME, suggestion.getName() + " #" + (suggestion.getHitCount() + 1));
+                    String autoName = getString(R.string.cluster_autoname_format, suggestion.getName(), suggestion.getHitCount() + 1);
+                    nameValues.put(WorkoutSummaries.WORKOUT_NAME, autoName);
                     nameValues.put(WorkoutSummaries.CLUSTER_ID, suggestion.getId());
                     summariesManager.getDatabase().update(WorkoutSummaries.TABLE, nameValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(mWorkoutID)});
                     

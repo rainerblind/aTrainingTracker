@@ -41,7 +41,8 @@ fun FrequentPathsList(
     scrollState: LazyListState,
     appBarOffsetPx: Int,
     headerHeightDp: Dp,
-    density: androidx.compose.ui.unit.Density
+    density: androidx.compose.ui.unit.Density,
+    emptyMessage: String
 ) {
     val currentAppBarOffsetDp = with(density) { appBarOffsetPx.toDp() }
 
@@ -49,7 +50,7 @@ fun FrequentPathsList(
         EmptyStatePlaceholder(
             modifier = Modifier.padding(top = headerHeightDp + currentAppBarOffsetDp + 32.dp),
             icon = Icons.Default.LocationOn,
-            message = stringResource(R.string.no_routes_available)
+            message = emptyMessage
         )
     } else {
         LazyColumn(

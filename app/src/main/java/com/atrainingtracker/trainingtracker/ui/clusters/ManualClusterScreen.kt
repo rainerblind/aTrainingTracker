@@ -151,7 +151,8 @@ fun ManualClusterScreen(
                         value = distanceStr,
                         onValueChange = { distanceStr = it },
                         label = {
-                            val unitStr = if (TrainingApplication.getUnit() == MyUnits.IMPERIAL) "mile" else "km"
+                            val isImperial = TrainingApplication.getUnit() == MyUnits.IMPERIAL
+                            val unitStr = stringResource(if (isImperial) R.string.units_distance_imperial else R.string.units_distance_metric)
                             Text(stringResource(R.string.cluster_manual_distance_hint, unitStr))
                         },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -161,7 +162,7 @@ fun ManualClusterScreen(
                 }
 
                 Text(
-                    text = "Pick spatial fingerprint on map:",
+                    text = stringResource(R.string.cluster_manual_pick_hint),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
@@ -255,6 +256,12 @@ fun ManualClusterScreen(
                 }
                 
                 if (selectionMode != SelectionMode.NONE) {
+                    val modeLabel = when (selectionMode) {
+                        SelectionMode.START -> stringResource(R.string.start)
+                        SelectionMode.END -> stringResource(R.string.end)
+                        SelectionMode.APEX -> stringResource(R.string.max_line_distance)
+                        else -> ""
+                    }
                     Surface(
                         modifier = Modifier.align(Alignment.TopCenter).padding(16.dp),
                         shape = MaterialTheme.shapes.medium,
@@ -262,7 +269,7 @@ fun ManualClusterScreen(
                         shadowElevation = 4.dp
                     ) {
                         Text(
-                            text = "Tap map to set ${selectionMode.name}",
+                            text = stringResource(R.string.cluster_manual_tap_map_format, modeLabel),
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold
@@ -310,7 +317,7 @@ private fun PointToggleButton(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Clear,
-                        contentDescription = "Clear",
+                        contentDescription = stringResource(R.string.cluster_clear_content_desc),
                         modifier = Modifier.size(16.dp),
                         tint = color
                     )

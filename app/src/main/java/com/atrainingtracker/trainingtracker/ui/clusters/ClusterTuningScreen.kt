@@ -126,7 +126,7 @@ fun ClusterTuningScreen(
                 // 3. Individual Sliders (Optional)
                 if (showDetails) {
                     val isImperial = TrainingApplication.getUnit() == MyUnits.IMPERIAL
-                    val lengthUnit = if (isImperial) "mile" else "km"
+                    val lengthUnit = stringResource(if (isImperial) R.string.units_distance_imperial else R.string.units_distance_metric)
                     val lengthMultiplier = if (isImperial) (1.0 / BANALService.METER_PER_MILE).toFloat() else 0.001f
 
                     TuningSlider(
@@ -154,7 +154,7 @@ fun ClusterTuningScreen(
                         value = viewModel.distanceTolerance,
                         onValueChange = { viewModel.distanceTolerance = it },
                         valueRange = distRange,
-                        unit = "%",
+                        unit = stringResource(R.string.units_percent),
                         displayMultiplier = 100f,
                         decimalPlaces = 0
                     )
