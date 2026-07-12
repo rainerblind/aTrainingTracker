@@ -61,12 +61,13 @@ class RouteClusterEngine private constructor(context: Context) {
 
     /**
      * Records user feedback (name/sport edit) to update or create clusters.
+     * Returns the cluster ID.
      */
-    fun learnFromWorkout(start: LatLng, end: LatLng, apex: LatLng, distance: Double, userSpecifiedName: String, userSportId: Long, clusterIdOverride: Long = -1) {
+    fun learnFromWorkout(start: LatLng, end: LatLng, apex: LatLng, distance: Double, userSpecifiedName: String, userSportId: Long, clusterIdOverride: Long = -1): Long {
         val existingMatch = if (clusterIdOverride != -1L) dbManager.getClusterById(clusterIdOverride) 
                             else suggestCluster(start, end, apex, distance, userSpecifiedName)
 
-        if (existingMatch != null) {
+        return if (existingMatch != null) {
             // Update existing cluster (Moving Average logic for centroids)
             // Ensure unique name if it changed (SCRUM-190 refinement)
             val uniqueName = if (existingMatch.name == userSpecifiedName) userSpecifiedName 
@@ -75,6 +76,7 @@ class RouteClusterEngine private constructor(context: Context) {
             val updatedCluster = existingMatch.copy(
                 name = uniqueName,
                 probableSportId = userSportId,
+                bSportType = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(appContext).getBSportType(userSportId),
                 startLat = (existingMatch.startLat * existingMatch.hitCount + start.latitude) / (existingMatch.hitCount + 1),
                 startLng = (existingMatch.startLng * existingMatch.hitCount + start.longitude) / (existingMatch.hitCount + 1),
                 endLat = (existingMatch.endLat * existingMatch.hitCount + end.latitude) / (existingMatch.hitCount + 1),
@@ -90,8 +92,10 @@ class RouteClusterEngine private constructor(context: Context) {
             // Re-evaluate probable sport based on majority (SCRUM-182)
             val mostFrequentSport = WorkoutSummariesDatabaseManager.getInstance(appContext).getMostFrequentSportIdForCluster(updatedCluster.id)
             if (mostFrequentSport != -1L && mostFrequentSport != updatedCluster.probableSportId) {
-                dbManager.updateCluster(updatedCluster.copy(probableSportId = mostFrequentSport))
+                val newBSport = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(appContext).getBSportType(mostFrequentSport)
+                dbManager.updateCluster(updatedCluster.copy(probableSportId = mostFrequentSport, bSportType = newBSport))
             }
+            updatedCluster.id
         } else {
             // Create a new cluster with unique name (SCRUM-190)
             val uniqueName = findUniqueClusterName(userSpecifiedName)
@@ -105,18 +109,107 @@ class RouteClusterEngine private constructor(context: Context) {
                 maxDispLat = apex.latitude,
                 maxDispLng = apex.longitude,
                 refDistance = distance,
-                hitCount = 1
+                hitCount = 1,
+                bSportType = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(appContext).getBSportType(userSportId)
             )
-            dbManager.insertCluster(newCluster)
+            val newId = dbManager.insertCluster(newCluster)
             if (DEBUG) Log.i(TAG, "Created new route family: ${newCluster.name}")
+            newId
         }
     }
 
     /**
-     * Batch processes entire workout history to populate the cluster database.
+     * Updates the name of a RouteCluster when its originating Route is renamed (SCRUM-207).
+     * Uses ID link for 100% accuracy.
+     */
+    fun syncRouteNameChange(clusterId: Long, newName: String) {
+        if (clusterId == -1L) return
+        val match = dbManager.getClusterById(clusterId)
+        if (match != null) {
+            val uniqueName = findUniqueClusterName(newName, match.id)
+            dbManager.updateCluster(match.copy(name = uniqueName))
+            if (DEBUG) Log.i(TAG, "Synced cluster name change (ID=$clusterId): $uniqueName")
+        }
+    }
+
+    /**
+     * Similar to learnFromWorkout, but for explicit Route entities.
+     * Ensures that imported or created routes seed the cluster database (SCRUM-207).
+     * Returns the cluster ID.
+     */
+    fun learnFromRoute(route: RouteWithPath): Long {
+        val path = route.path
+        if (path.size < 2) return -1L
+
+        val start = path.first().latLng
+        val end = path.last().latLng
+        val distance = route.summary.distance
+
+        var maxLineDist = -1.0
+        var apex = start
+
+        path.forEach { point ->
+            val dist = calculateLineDistance(point.latLng, start, end)
+            if (dist > maxLineDist) {
+                maxLineDist = dist
+                apex = point.latLng
+            }
+        }
+
+        val sportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(route.summary.bSportType)
+
+        // Routes are high-confidence seeds, but we use a hitCount of 1 to allow workouts to influence them.
+        return learnFromWorkout(start, end, apex, distance, route.summary.name, sportId)
+    }
+
+    private fun calculateLineDistance(point: LatLng, start: LatLng, end: LatLng): Double {
+        if (start == end) {
+            val results = FloatArray(1)
+            Location.distanceBetween(point.latitude, point.longitude, start.latitude, start.longitude, results)
+            return results[0].toDouble()
+        }
+
+        // Standard distance from point to line segment (rough approximation on plane)
+        val lat = point.latitude
+        val lng = point.longitude
+        val sLat = start.latitude
+        val sLng = start.longitude
+        val eLat = end.latitude
+        val eLng = end.longitude
+
+        val dx = eLat - sLat
+        val dy = eLng - sLng
+
+        if (dx == 0.0 && dy == 0.0) return distanceBetween(point, start).toDouble()
+
+        val t = ((lat - sLat) * dx + (lng - sLng) * dy) / (dx * dx + dy * dy)
+        
+        return if (t < 0) {
+            distanceBetween(point, start).toDouble()
+        } else if (t > 1) {
+            distanceBetween(point, end).toDouble()
+        } else {
+            val projLat = sLat + t * dx
+            val projLng = sLng + t * dy
+            distanceBetween(point, LatLng(projLat, projLng)).toDouble()
+        }
+    }
+
+    /**
+     * Batch processes entire workout and route history to populate the cluster database.
      * Processes chronologically (ASC) so that the most recent names/sports stick.
      */
     fun migrateHistory(context: Context) {
+        // 1. Process all Routes first as they are authoritative seeds (SCRUM-207)
+        val routesDb = RoutesDatabaseManager.getInstance(context)
+        routesDb.getAllRoutes().forEach { routeWithPath ->
+            val clusterId = learnFromRoute(routeWithPath)
+            if (clusterId != -1L) {
+                routesDb.updateRouteSummary(routeWithPath.summary.copy(clusterId = clusterId))
+            }
+        }
+
+        // 2. Process all Workouts
         val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
         val cursor = summariesManager.getCursorForAllWorkoutsAsc() ?: return
 
@@ -161,7 +254,8 @@ class RouteClusterEngine private constructor(context: Context) {
                             maxDispLat = (match.maxDispLat * match.hitCount + apex.latitude) / (match.hitCount + 1),
                             maxDispLng = (match.maxDispLng * match.hitCount + apex.longitude) / (match.hitCount + 1),
                             refDistance = (match.refDistance * match.hitCount + distance) / (match.hitCount + 1),
-                            hitCount = match.hitCount + 1
+                            hitCount = match.hitCount + 1,
+                            bSportType = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(context).getBSportType(finalSport)
                         )
                         dbManager.updateCluster(updated)
                         assignClusterToWorkout(context, workoutId, updated.id)
@@ -169,7 +263,8 @@ class RouteClusterEngine private constructor(context: Context) {
                         // Re-evaluate probable sport based on majority (SCRUM-182)
                         val mostFrequentSport = WorkoutSummariesDatabaseManager.getInstance(context).getMostFrequentSportIdForCluster(updated.id)
                         if (mostFrequentSport != -1L && mostFrequentSport != updated.probableSportId) {
-                            dbManager.updateCluster(updated.copy(probableSportId = mostFrequentSport))
+                            val newBSport = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(context).getBSportType(mostFrequentSport)
+                            dbManager.updateCluster(updated.copy(probableSportId = mostFrequentSport, bSportType = newBSport))
                         }
                     } else {
                         // No match: Create new cluster. 
@@ -186,7 +281,8 @@ class RouteClusterEngine private constructor(context: Context) {
                             maxDispLat = apex.latitude,
                             maxDispLng = apex.longitude,
                             refDistance = distance,
-                            hitCount = 1
+                            hitCount = 1,
+                            bSportType = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(context).getBSportType(sportId)
                         )
                         val newId = dbManager.insertCluster(newCluster)
                         assignClusterToWorkout(context, workoutId, newId)
@@ -338,7 +434,8 @@ class RouteClusterEngine private constructor(context: Context) {
                 // Re-evaluate probable sport based on majority (SCRUM-182)
                 val mostFrequentSport = WorkoutSummariesDatabaseManager.getInstance(context).getMostFrequentSportIdForCluster(updatedOld.id)
                 if (mostFrequentSport != -1L && mostFrequentSport != updatedOld.probableSportId) {
-                    dbManager.updateCluster(updatedOld.copy(probableSportId = mostFrequentSport))
+                    val newBSport = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(context).getBSportType(mostFrequentSport)
+                    dbManager.updateCluster(updatedOld.copy(probableSportId = mostFrequentSport, bSportType = newBSport))
                 }
             } else {
                 dbManager.deleteCluster(currentClusterId)
@@ -363,7 +460,8 @@ class RouteClusterEngine private constructor(context: Context) {
             // Re-evaluate probable sport based on majority (SCRUM-182)
             val mostFrequentSport = WorkoutSummariesDatabaseManager.getInstance(context).getMostFrequentSportIdForCluster(updatedNew.id)
             if (mostFrequentSport != -1L && mostFrequentSport != updatedNew.probableSportId) {
-                dbManager.updateCluster(updatedNew.copy(probableSportId = mostFrequentSport))
+                val newBSport = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(context).getBSportType(mostFrequentSport)
+                dbManager.updateCluster(updatedNew.copy(probableSportId = mostFrequentSport, bSportType = newBSport))
             }
         }
 
@@ -393,7 +491,8 @@ class RouteClusterEngine private constructor(context: Context) {
             maxDispLat = apex.latitude,
             maxDispLng = apex.longitude,
             refDistance = distance,
-            hitCount = 0 // Hit count is 0 for manually created clusters until workouts are associated
+            hitCount = 0, // Hit count is 0 for manually created clusters until workouts are associated
+            bSportType = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(appContext).getBSportType(sportId)
         )
         return dbManager.insertCluster(newCluster)
     }
