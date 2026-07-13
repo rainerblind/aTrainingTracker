@@ -79,8 +79,9 @@ class WorkoutClusterEngine private constructor(context: Context) {
         return if (existingMatch != null) {
             // Update existing cluster (Moving Average logic for centroids)
             // Ensure unique name if it changed (SCRUM-190 refinement)
-            val uniqueName = if (existingMatch.name == userSpecifiedName) userSpecifiedName 
-                             else findUniqueClusterName(userSpecifiedName, existingMatch.id)
+            val normalizedInputName = stripHitCount(userSpecifiedName)
+            val uniqueName = if (existingMatch.name == normalizedInputName) normalizedInputName 
+                             else findUniqueClusterName(normalizedInputName, existingMatch.id)
 
             val newHitCount = if (isWorkoutSession) existingMatch.hitCount + 1 else existingMatch.hitCount
 
@@ -109,7 +110,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
             updatedCluster.id
         } else {
             // Create a new cluster with unique name (SCRUM-190)
-            val uniqueName = findUniqueClusterName(userSpecifiedName)
+            val uniqueName = findUniqueClusterName(stripHitCount(userSpecifiedName))
             val newCluster = WorkoutCluster(
                 name = uniqueName,
                 probableSportId = userSportId,
@@ -252,12 +253,13 @@ class WorkoutClusterEngine private constructor(context: Context) {
 
                 if (start != null && end != null && apex != null && distance > 100.0) {
                     val isDefaultName = workoutName.isNullOrEmpty() || workoutName == fileBaseName
+                    val normalizedWorkoutName = if (!isDefaultName) stripHitCount(workoutName) else null
                     
-                    val match = suggestCluster(start, end, apex, distance, if (!isDefaultName) workoutName else null)
+                    val match = suggestCluster(start, end, apex, distance, normalizedWorkoutName)
                     if (match != null) {
                         // Update centroids and hitCount. 
                         // Only update name if the current workout has a CUSTOM name.
-                        val rawName = if (!isDefaultName) workoutName else match.name
+                        val rawName = normalizedWorkoutName ?: match.name
                         val finalName = if (match.name == rawName) rawName 
                                         else findUniqueClusterName(rawName, match.id)
 
@@ -288,7 +290,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
                     } else {
                         // No match: Create new cluster. 
                         // If it's a default name, use a generic descriptive name.
-                        val clusterName = if (!isDefaultName) workoutName else context.getString(R.string.cluster_default_name_format, fileBaseName?.take(10) ?: context.getString(R.string.unknown_manufacturer))
+                        val clusterName = if (!isDefaultName) normalizedWorkoutName!! else context.getString(R.string.cluster_default_name_format, fileBaseName?.take(10) ?: context.getString(R.string.unknown_manufacturer))
                         val uniqueName = findUniqueClusterName(clusterName)
                         val newCluster = WorkoutCluster(
                             name = uniqueName,
@@ -399,7 +401,14 @@ class WorkoutClusterEngine private constructor(context: Context) {
 
     private fun normalizeName(name: String): String {
         // Strip both "#2" and "var 2" suffixes to get the core name
-        return name.replace(Regex(" (?:#|var) \\d+$"), "").trim().lowercase()
+        return name.replace(Regex(" (?:#|var) \\d+$", RegexOption.IGNORE_CASE), "").trim().lowercase()
+    }
+
+    /**
+     * Strips ONLY the hit count suffix (e.g., " #2") from a workout name.
+     */
+    private fun stripHitCount(name: String): String {
+        return name.replace(Regex(" #\\d+$"), "").trim()
     }
 
     /**
