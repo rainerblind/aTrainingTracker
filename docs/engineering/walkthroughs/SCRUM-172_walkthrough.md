@@ -3,11 +3,11 @@
 ## 1. Requirement Fulfillment
 | Requirement ID | Description | Status |
 |:---|:---|:---|
-| **REQ-SET-009** | Frequent Paths Heatmap visualization with fingerprint markers. | Verified |
+| **REQ-SET-009** | Regular Tracks Heatmap visualization with fingerprint markers. | Verified |
 
 ## 2. Verification Evidence (TST-SET-002)
 * **Procedure**:
-    1. Navigate to **Frequent Paths** in the drawer.
+    1. Navigate to **Regular Tracks** in the drawer.
     2. Observe the list of learned route clusters.
     3. Select a cluster (e.g., "Park Run").
 * **Observation**:

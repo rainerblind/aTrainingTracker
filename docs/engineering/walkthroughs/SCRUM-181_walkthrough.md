@@ -7,13 +7,13 @@
 
 ## 2. Verification Evidence (TST-SET-006)
 * **Procedure**:
-    1. Navigate to **Frequent Paths**.
+    1. Navigate to **Regular Tracks**.
     2. Enter **Tuning** mode.
     3. Adjust a parameter and tap **Recalculate All Clusters**.
     4. Observe the progress indicator.
 * **Observation**:
     * Once the background recalculation task finished, the Tuning screen closed automatically.
-    * The UI returned to the Frequent Paths list view, showing the updated clusters.
+    * The UI returned to the Regular Tracks list view, showing the updated clusters.
 * **Result**: **PASS**
 
 ## 3. Technical Implementation

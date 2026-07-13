@@ -35,7 +35,7 @@ import com.atrainingtracker.banalservice.BANALService
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClusterTuningScreen(
-    viewModel: FrequentPathsViewModel,
+    viewModel: WorkoutClustersViewModel,
     onBack: () -> Unit
 ) {
     val isRecalculating by viewModel.isRecalculating.collectAsState()

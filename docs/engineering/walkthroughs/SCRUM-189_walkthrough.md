@@ -7,7 +7,7 @@
 
 ## 2. Verification Evidence (TST-SET-008)
 * **Procedure**:
-    1. Navigate to **Frequent Paths**.
+    1. Navigate to **Regular Tracks**.
     2. Select a cluster (e.g., "Commute").
     3. Tap the **Edit (Pencil)** icon in the top bar.
     4. Change the name to "Work Commute".

@@ -53,6 +53,7 @@ import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents;
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsFragment;
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment;
+import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersFragment;
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
 import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack;
 import com.atrainingtracker.trainingtracker.ui.routes.RoutesFragment;
@@ -840,8 +841,8 @@ public class MainActivityWithNavigation
                 tag = EquipmentFragment.TAG;
                 break;
             case R.id.drawer_my_locations:
-                mFragment = com.atrainingtracker.trainingtracker.ui.clusters.FrequentPathsFragment.Companion.newInstance();
-                tag = com.atrainingtracker.trainingtracker.ui.clusters.FrequentPathsFragment.TAG;
+                mFragment = WorkoutClustersFragment.Companion.newInstance();
+                tag = WorkoutClustersFragment.TAG;
                 break;
 
             case R.id.drawer_settings:

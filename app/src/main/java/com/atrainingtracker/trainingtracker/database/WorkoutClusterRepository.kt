@@ -21,7 +21,6 @@ package com.atrainingtracker.trainingtracker.database
 import android.content.Context
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper
-import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
@@ -33,9 +32,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 
-class RouteClusterRepository private constructor(private val context: Context) {
+class WorkoutClusterRepository private constructor(private val context: Context) {
 
-    private val clusterDb = RouteClusterDatabaseManager.getInstance(context)
+    private val clusterDb = WorkoutClusterDatabaseManager.getInstance(context)
     private val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
     
     private val mapper by lazy {
@@ -48,16 +47,17 @@ class RouteClusterRepository private constructor(private val context: Context) {
         )
     }
 
-    private val _allClusters = MutableStateFlow<List<RouteCluster>>(emptyList())
-    val allClusters: StateFlow<List<RouteCluster>> = _allClusters.asStateFlow()
+    private val _allClusters = MutableStateFlow<List<WorkoutCluster>>(emptyList())
+    val allClusters: StateFlow<List<WorkoutCluster>> = _allClusters.asStateFlow()
 
     companion object {
         @Volatile
-        private var instance: RouteClusterRepository? = null
+        private var instance: WorkoutClusterRepository? = null
 
-        fun getInstance(context: Context): RouteClusterRepository {
+        @JvmStatic
+        fun getInstance(context: Context): WorkoutClusterRepository {
             return instance ?: synchronized(this) {
-                instance ?: RouteClusterRepository(context.applicationContext).also { instance = it }
+                instance ?: WorkoutClusterRepository(context.applicationContext).also { instance = it }
             }
         }
     }
@@ -70,7 +70,7 @@ class RouteClusterRepository private constructor(private val context: Context) {
         _allClusters.value = enriched.sortedByDescending { it.hitCount }
     }
 
-    suspend fun updateCluster(cluster: RouteCluster) = withContext(Dispatchers.IO) {
+    suspend fun updateCluster(cluster: WorkoutCluster) = withContext(Dispatchers.IO) {
         clusterDb.updateCluster(cluster)
         refreshClusters()
     }

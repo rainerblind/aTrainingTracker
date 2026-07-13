@@ -7,7 +7,7 @@
 
 ## 2. Verification Evidence (TST-SET-012)
 * **Interaction**:
-    * Navigated to **Frequent Paths > Heatmap**.
+    * Navigated to **Regular Tracks > Heatmap**.
     * Tapped on an individual workout track on the map.
     * A Bottom Sheet "peek" appeared, showing the workout header and its specific track (similar to the Periods view).
 * **Reassignment**:

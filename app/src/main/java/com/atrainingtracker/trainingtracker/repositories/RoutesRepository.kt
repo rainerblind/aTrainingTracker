@@ -26,6 +26,7 @@ import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.database.RoutesDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaRoute
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaStream
@@ -98,7 +99,7 @@ class RoutesRepository private constructor(private val context: Context) {
         
         // Seed the cluster database (SCRUM-207)
         val routeWithPath = RouteWithPath(summary.copy(id = newId), path)
-        val clusterId = com.atrainingtracker.trainingtracker.database.RouteClusterEngine.getInstance(context)
+        val clusterId = WorkoutClusterEngine.getInstance(context)
             .learnFromRoute(routeWithPath)
 
         // Store the persistent link (SCRUM-207 refinement)
@@ -121,7 +122,7 @@ class RoutesRepository private constructor(private val context: Context) {
 
         // 2. Sync name change with RouteCluster (SCRUM-207)
         if (summary.clusterId != -1L) {
-            com.atrainingtracker.trainingtracker.database.RouteClusterEngine.getInstance(context)
+            WorkoutClusterEngine.getInstance(context)
                 .syncRouteNameChange(summary.clusterId, summary.name)
         }
 
@@ -253,7 +254,7 @@ class RoutesRepository private constructor(private val context: Context) {
             val newId = routesDb.insertRoute(summary, pathPoints)
             
             // Seed the cluster database (SCRUM-207)
-            val clusterId = com.atrainingtracker.trainingtracker.database.RouteClusterEngine.getInstance(context)
+            val clusterId = WorkoutClusterEngine.getInstance(context)
                 .learnFromRoute(RouteWithPath(summary.copy(id = newId), pathPoints))
 
             // Store the persistent link

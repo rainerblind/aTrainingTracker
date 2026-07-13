@@ -8,12 +8,12 @@
 ## 2. Verification Evidence (TST-SET-015)
 * **Manual Cluster Creation**:
     * Changed application units to **Imperial** in settings.
-    * Navigated to **Frequent Paths > Add (+)**.
+    * Navigated to **Regular Tracks > Add (+)**.
     * Verified that the distance field hint changed to "Workout Distance (mile)".
     * Entered "6.2" miles.
     * Saved the cluster and verified it appears as roughly "10.00 km" (or "6.21 mile") in the list depending on current unit.
 * **Cluster Tuning**:
-    * Navigated to **Frequent Paths > Tuning**.
+    * Navigated to **Regular Tracks > Tuning**.
     * Toggled **Show Detailed Parameters**.
     * Verified that the Endpoint and Apex tolerances are displayed in **feet (ft)**.
     * Switched back to **Metric** and verified they changed back to **meters (m)**.

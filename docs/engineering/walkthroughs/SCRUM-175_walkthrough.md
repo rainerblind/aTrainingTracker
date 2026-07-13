@@ -7,7 +7,7 @@
 
 ## 2. Verification Evidence (TST-SET-004)
 * **Visual Audit**:
-    * Navigated to **Frequent Paths**.
+    * Navigated to **Regular Tracks**.
     * Each route cluster in the list now displays a small, non-interactive map.
     * The map correctly zooms to fit the spatial "signature" of the cluster.
     * Three standard markers are visible:

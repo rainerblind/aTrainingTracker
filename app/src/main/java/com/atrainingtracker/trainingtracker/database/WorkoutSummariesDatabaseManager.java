@@ -150,6 +150,7 @@ public class WorkoutSummariesDatabaseManager {
     /**
      * Finds the most frequent sportId associated with a specific cluster.
      * Used to refine the "probable sport" for a route family.
+     * It's safer to do it in WorkoutClusterEngine.migrateHistory
      */
     public long getMostFrequentSportIdForCluster(long clusterId) {
         if (clusterId == -1) return -1;
