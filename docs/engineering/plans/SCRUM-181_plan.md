@@ -24,7 +24,7 @@ The current UI requires the user to manually go back from the tuning screen afte
     * Set `isTuning = false` when an event is received.
 
 ## 5. Verification Criteria (TST-SET-006)
-1. Open "Regular Tracks".
+1. Open "Favorite Tracks".
 2. Enter "Tuning" mode.
 3. Adjust a parameter and tap "Recalculate All Clusters".
 4. Verify that once the progress indicator disappears, the Tuning screen closes and the List view is displayed.

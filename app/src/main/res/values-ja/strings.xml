@@ -496,7 +496,7 @@
     <string name="start">スタート</string>
     <string name="max_line_distance">最遠地点</string>
     <string name="end">ゴール</string>
-    <string name="my_locations">定番コース</string>
+    <string name="my_locations">お気に入りコース</string>
     <string name="drawer__settings">設定</string>
     <string name="get_extremaType_of_sportType_format">%2$s トレーニングの %1$s 位置を取得</string>
     <string name="getting_my_locations">登録地点を検索中</string>
@@ -910,8 +910,8 @@
     <string name="routes">ルート</string>
     <string name="no_routes_available">ルート (%s) なし</string>
     <string name="absolutely_no_routes_available">ルートなし</string>
-    <string name="no_clusters_available">定番コース (%s) なし</string>
-    <string name="absolutely_no_clusters_available">定番コースなし</string>
+    <string name="no_clusters_available">お気に入りコース (%s) なし</string>
+    <string name="absolutely_no_clusters_available">お気に入りコースなし</string>
     <string name="routes_import_hint">「+」またはファイルマネージャーから GPX を読み込んでください。</string>
     <string name="route_edit">ルートを編集</string>
     <string name="route_sport_type">種目</string>

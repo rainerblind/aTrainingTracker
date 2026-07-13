@@ -498,7 +498,7 @@
     <string name="start">partida</string>
     <string name="max_line_distance">mais distante</string>
     <string name="end">chegada</string>
-    <string name="my_locations">Trajetos habituais</string>
+    <string name="my_locations">Meus trajetos</string>
     <string name="drawer__settings">Ajustes</string>
     <string name="get_extremaType_of_sportType_format">Obter posições %1$s dos seus %2$s treinos.</string>
     <string name="getting_my_locations">Buscando locais conhecidos.</string>
@@ -924,8 +924,8 @@
     <string name="routes">Rotas</string>
     <string name="no_routes_available">Nenhuma rota %s.</string>
     <string name="absolutely_no_routes_available">Nenhuma rota disponível.</string>
-    <string name="no_clusters_available">Nenhum trajeto %s habitual.</string>
-    <string name="absolutely_no_clusters_available">Nenhum trajeto habitual disponível.</string>
+    <string name="no_clusters_available">Nenhum trajeto %s disponível.</string>
+    <string name="absolutely_no_clusters_available">Nenhum trajeto disponível.</string>
     <string name="routes_import_hint">Importa um GPX do \"+\" ou do gestor de arquivos.</string>
     <string name="route_edit">Modificar rota</string>
     <string name="route_sport_type">Desporto</string>

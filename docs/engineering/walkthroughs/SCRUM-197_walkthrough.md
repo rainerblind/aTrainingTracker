@@ -7,7 +7,7 @@
 
 ## 2. Verification Evidence (TST-SET-013 - Refined)
 * **Interaction**:
-    * Navigated to **Regular Tracks > Select Cluster**.
+    * Navigated to **Favorite Tracks > Select Cluster**.
     * Tapped the **Edit Location (Map Pin with Pencil)** icon in the TopAppBar.
     * The UI entered "Fingerprint Edit Mode":
         * TopAppBar color changed to surfaceVariant.

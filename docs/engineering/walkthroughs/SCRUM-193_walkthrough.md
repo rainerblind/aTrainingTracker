@@ -7,7 +7,7 @@
 
 ## 2. Verification Evidence (TST-SET-011)
 * **Initial State**:
-    * Navigated to **Regular Tracks > Add (+)**.
+    * Navigated to **Favorite Tracks > Add (+)**.
     * The map automatically zoomed to the current location (GPS-aware).
 * **Metadata Input**:
     * Entered Name: "Local Loop".

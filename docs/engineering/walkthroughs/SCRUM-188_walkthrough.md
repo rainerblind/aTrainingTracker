@@ -7,7 +7,7 @@
 
 ## 2. Verification Evidence (TST-SET-004 - Refined)
 * **Layout Consistency**:
-    * Navigated to **Regular Tracks**.
+    * Navigated to **Favorite Tracks**.
     * Verified the vertical hierarchy of information:
         * **Full-Width Top Row**: BSportType Icon (32dp) and Cluster Name (TitleLarge, Bold).
         * **Bottom Area (Left)**: Vertical stack with Distance, Sport Type, and Resulting Equipment at the top.

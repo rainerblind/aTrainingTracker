@@ -8,7 +8,7 @@
 
 ## 2. Verification Evidence (TST-SET-003)
 * **Parameter Adjustment**:
-    * Navigated to **Regular Tracks > Tuning (Gear Icon)**.
+    * Navigated to **Favorite Tracks > Tuning (Gear Icon)**.
     * Adjusted Endpoint, Apex, and Distance tolerances using the new sliders.
     * Values were correctly persisted in `SharedPreferences`.
 * **Full Recalculation**:
