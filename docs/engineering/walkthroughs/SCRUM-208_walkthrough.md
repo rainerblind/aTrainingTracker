@@ -7,7 +7,7 @@
 
 ## 2. Verification Evidence (TST-SET-020)
 * **Interaction**:
-    * Navigated to **Regular Tracks**.
+    * Navigated to **Favorite Tracks**.
     * Compared the "Add" FAB with those in **Sport Types** and **Equipment**.
 * **Observation**:
     * The FAB is now manually aligned to the bottom-right within the root `Box`.

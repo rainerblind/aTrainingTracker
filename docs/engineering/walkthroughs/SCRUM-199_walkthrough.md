@@ -7,7 +7,7 @@
 
 ## 2. Verification Evidence (TST-SET-014)
 * **Interaction**:
-    * Navigated to **Regular Tracks > Route Heatmap**.
+    * Navigated to **Favorite Tracks > Route Heatmap**.
 * **Observation**:
     * The map now displays a "cloud" of markers for **every member workout** in the cluster.
     * **Start (Green)**, **Stop (Red)**, and **Apex (Blue)** markers are shown with subtle transparency (0.3 alpha) to visualize spatial drift across the cluster's history.

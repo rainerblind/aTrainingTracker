@@ -498,7 +498,7 @@
     <string name="start">start</string>
     <string name="max_line_distance">verste punt</string>
     <string name="end">stop</string>
-    <string name="my_locations">Vaste trajecten</string>
+    <string name="my_locations">Mijn trajecten</string>
     <string name="drawer__settings">Instellingen</string>
     <string name="get_extremaType_of_sportType_format">Haal %1$s posities van uw %2$s trainingen.</string>
     <string name="getting_my_locations">Zoeken naar bekende locaties.</string>
@@ -924,8 +924,8 @@
     <string name="routes">Routes</string>
     <string name="no_routes_available">Geen %s routes.</string>
     <string name="absolutely_no_routes_available">Geen routes beschikbaar.</string>
-    <string name="no_clusters_available">Geen %s vaste trajecten.</string>
-    <string name="absolutely_no_clusters_available">Geen vaste trajecten beschikbaar.</string>
+    <string name="no_clusters_available">Geen %s trajecten beschikbaar.</string>
+    <string name="absolutely_no_clusters_available">Geen trajecten beschikbaar.</string>
     <string name="routes_import_hint">Importeer een GPX via \"+\" of je bestandsbeheer.</string>
     <string name="route_edit">Route bewerken</string>
     <string name="route_sport_type">Sport</string>

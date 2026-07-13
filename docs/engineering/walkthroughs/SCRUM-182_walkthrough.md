@@ -11,7 +11,7 @@
 * **Majority Learning**:
     * Added two workouts to the same cluster with "Cycling" sport type.
 * **Observation**:
-    * Navigated to **Regular Tracks**.
+    * Navigated to **Favorite Tracks**.
     * Verified that the cluster's icon and associated sport name changed from "Running" to **"Cycling"** once the majority switched.
 * **Metadata Persistence**:
     * Restarted the app and confirmed that the "Cycling" classification persisted in the `RouteClusters.db`.

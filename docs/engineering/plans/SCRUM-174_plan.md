@@ -38,7 +38,7 @@ The current route clustering parameters are hardcoded and may not work optimally
 * **`TrainingApplication.java`**: Define SP keys for tuning parameters and default values.
 
 ## 5. Verification Criteria (TST-SET-003)
-1. Open "Regular Tracks".
+1. Open "Favorite Tracks".
 2. Tap the "Tuning" icon.
 3. Adjust "Endpoint Tolerance" to 300m.
 4. Tap "Recalculate Clustering".

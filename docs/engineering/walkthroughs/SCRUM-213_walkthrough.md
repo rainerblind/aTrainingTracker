@@ -7,7 +7,7 @@
 
 ## 2. Verification Evidence (TST-UI-067)
 * **Interaction**:
-    * Navigated to **Regular Tracks > Route Heatmap**.
+    * Navigated to **Favorite Tracks > Route Heatmap**.
     * Confirmed the elevation profile is hidden (REQ-UI-058).
     * Tapped the **Share** (FAB) button.
 * **Observation**:

@@ -7,7 +7,7 @@
 
 ## 2. Verification Evidence (TST-SET-003)
 * **Master Slider**:
-    * Navigated to **Regular Tracks > Tuning**.
+    * Navigated to **Favorite Tracks > Tuning**.
     * Adjusted the new **Grouping Sensitivity** slider from "Strict" to "Relaxed".
     * Verified that all underlying tolerances (Endpoint, Apex, Distance) were updated proportionally.
 * **Detailed Controls**:

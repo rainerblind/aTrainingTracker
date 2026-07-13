@@ -552,7 +552,7 @@
     <string name="start">Start</string>
     <string name="max_line_distance">maximal entfernten</string>
     <string name="end">End</string>
-    <string name="my_locations">Stammstrecken</string>
+    <string name="my_locations">Lieblingsstrecken</string>
     <string name="drawer__settings">Einstellungen</string>
     <string name="get_extremaType_of_sportType_format">Suche nach den %1$s Orten deiner %2$s Einheiten.</string>
     <string name="getting_my_locations">Suche nach bekannten Orten.</string>
@@ -1017,8 +1017,8 @@
     <string name="routes">Routen</string>
     <string name="no_routes_available">Keine %s Routen verfügbar.</string>
     <string name="absolutely_no_routes_available">Keine Routen verfügbar.</string>
-    <string name="no_clusters_available">Keine %s Stammstrecken verfügbar.</string>
-    <string name="absolutely_no_clusters_available">Keine Stammstrecken verfügbar.</string>
+    <string name="no_clusters_available">Keine %s Lieblingsstrecken verfügbar.</string>
+    <string name="absolutely_no_clusters_available">Keine Lieblingsstrecken verfügbar.</string>
     <string name="routes_import_hint">Du kannst GPX Dateien importieren, indem Du oben auf das \"+\" klickst, oder im Datei Exploerer auf eine GPX-Datei klickst.</string>
     <string name="route_edit">Route bearbeiten</string>
     <string name="route_sport_type">Sportart</string>

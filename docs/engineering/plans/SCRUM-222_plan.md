@@ -32,10 +32,10 @@ When a workout is matched to a `WorkoutCluster`, it is often automatically named
 2.  **Tracking**: Complete a workout that matches this cluster. 
 3.  **Observation**: 
     *   Workout name should be "Morning Run #1" (or similar).
-    *   Navigate to **Regular Tracks**.
+    *   Navigate to **Favorite Tracks**.
     *   Verify the cluster name is still "Morning Run".
 4.  **Edit**: Edit the workout in History and change name to "Sunny Morning Run #42".
 5.  **Observation**: 
     *   Workout name is saved as "Sunny Morning Run #42".
-    *   Navigate to **Regular Tracks**.
+    *   Navigate to **Favorite Tracks**.
     *   Verify the cluster name is "Sunny Morning Run" (stripped of #42).

@@ -7,12 +7,12 @@
 
 ## 2. Verification Evidence (TST-SET-019)
 * **Interaction**:
-    * Navigated to **Regular Tracks**.
+    * Navigated to **Favorite Tracks**.
     * Scrolled down the list in the "All" tab.
     * Selected a cluster to view its heatmap.
     * Tapped "Back".
 * **Observation**:
-    * The UI returned to the Regular Tracks list.
+    * The UI returned to the Favorite Tracks list.
     * The list remained at the exact scroll position where the user left off.
     * The "All" tab remained correctly selected.
 * **Result**: **PASS**
