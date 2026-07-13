@@ -7,7 +7,7 @@
 
 ## 2. Verification Evidence (TST-SET-008 - Refinement)
 * **Interaction**:
-    * Navigated to **Frequent Paths > Route Heatmap**.
+    * Navigated to **Regular Tracks > Route Heatmap**.
     * Tapped the **Edit (Pencil)** icon in the TopAppBar.
     * The **Edit Cluster Identity** dialog appeared.
 * **Editing**:

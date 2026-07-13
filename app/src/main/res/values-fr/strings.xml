@@ -498,7 +498,7 @@
     <string name="start">départ</string>
     <string name="max_line_distance">point le plus loin</string>
     <string name="end">arrivée</string>
-    <string name="my_locations">Mes lieux</string>
+    <string name="my_locations">Parcours habituels</string>
     <string name="drawer__settings">Réglages</string>
     <string name="get_extremaType_of_sportType_format">Positions %1$s de vos séances %2$s.</string>
     <string name="getting_my_locations">Recherche des lieux connus.</string>
@@ -923,6 +923,8 @@
     <string name="routes">Itinéraires</string>
     <string name="no_routes_available">Aucun itinéraire %s.</string>
     <string name="absolutely_no_routes_available">Aucun itinéraire.</string>
+    <string name="no_clusters_available">Aucun parcours %s habituel.</string>
+    <string name="absolutely_no_clusters_available">Aucun parcours habituel.</string>
     <string name="routes_import_hint">Importez un GPX via le \"+\" ou via votre explorateur.</string>
     <string name="route_edit">Éditer itinéraire</string>
     <string name="route_sport_type">Sport</string>

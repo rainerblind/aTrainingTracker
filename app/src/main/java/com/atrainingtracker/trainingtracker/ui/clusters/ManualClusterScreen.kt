@@ -37,9 +37,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.components.DropdownSelector
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
@@ -49,7 +51,7 @@ private enum class SelectionMode { NONE, START, END, APEX }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ManualClusterScreen(
-    viewModel: FrequentPathsViewModel,
+    viewModel: WorkoutClustersViewModel,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -94,7 +96,7 @@ fun ManualClusterScreen(
                             val sportId = sportTypesList.find { it.name == selectedSportName }?.id ?: -1L
                             var distance = distanceStr.toDoubleOrNull() ?: 0.0
                             if (TrainingApplication.getUnit() == MyUnits.IMPERIAL) {
-                                distance *= com.atrainingtracker.banalservice.BANALService.METER_PER_MILE
+                                distance *= BANALService.METER_PER_MILE
                             } else {
                                 distance *= 1000.0 // km to m (SCRUM-201)
                             }
@@ -177,7 +179,7 @@ fun ManualClusterScreen(
                         label = stringResource(R.string.start),
                         isSelected = selectionMode == SelectionMode.START,
                         hasValue = startPos != null,
-                        color = Color(0xFF2E7D32),
+                        color = TTColor.StartPoint,
                         onClick = { selectionMode = if (selectionMode == SelectionMode.START) SelectionMode.NONE else SelectionMode.START },
                         onClear = { startPos = null },
                         modifier = Modifier.weight(1f)
@@ -186,7 +188,7 @@ fun ManualClusterScreen(
                         label = stringResource(R.string.end),
                         isSelected = selectionMode == SelectionMode.END,
                         hasValue = endPos != null,
-                        color = Color(0xFFC62828),
+                        color = TTColor.EndPoint,
                         onClick = { selectionMode = if (selectionMode == SelectionMode.END) SelectionMode.NONE else SelectionMode.END },
                         onClear = { endPos = null },
                         modifier = Modifier.weight(1f)
@@ -195,7 +197,7 @@ fun ManualClusterScreen(
                         label = stringResource(R.string.max_line_distance),
                         isSelected = selectionMode == SelectionMode.APEX,
                         hasValue = apexPos != null,
-                        color = Color(0xFF1565C0),
+                        color = TTColor.ApexPoint,
                         onClick = { selectionMode = if (selectionMode == SelectionMode.APEX) SelectionMode.NONE else SelectionMode.APEX },
                         onClear = { apexPos = null },
                         modifier = Modifier.weight(1f)
@@ -235,21 +237,21 @@ fun ManualClusterScreen(
                     startPos?.let {
                         Marker(
                             state = rememberMarkerState(position = it).apply { position = it },
-                            icon = remember { createSensorMarker(context, R.drawable.control_start, Color(0xFF2E7D32)) },
+                            icon = remember { createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint) },
                             title = stringResource(R.string.start)
                         )
                     }
                     endPos?.let {
                         Marker(
                             state = rememberMarkerState(position = it).apply { position = it },
-                            icon = remember { createSensorMarker(context, R.drawable.control_stop, Color(0xFFC62828)) },
+                            icon = remember { createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint) },
                             title = stringResource(R.string.end)
                         )
                     }
                     apexPos?.let {
                         Marker(
                             state = rememberMarkerState(position = it).apply { position = it },
-                            icon = remember { createSensorMarker(context, R.drawable.ic_distance, Color(0xFF1565C0)) },
+                            icon = remember { createSensorMarker(context, R.drawable.ic_distance, TTColor.ApexPoint) },
                             title = stringResource(R.string.max_line_distance)
                         )
                     }

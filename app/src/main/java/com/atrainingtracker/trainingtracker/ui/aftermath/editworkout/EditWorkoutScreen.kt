@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialog
 import com.atrainingtracker.trainingtracker.ui.components.DropdownSelector
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -130,7 +131,7 @@ fun EditWorkoutScreen(
                 )
 
                 if (showSuggestions) {
-                    com.atrainingtracker.trainingtracker.ui.clusters.RouteClusterSelectionDialog(
+                    WorkoutClusterSelectionDialog(
                         title = stringResource(R.string.edit_workout_name),
                         candidates = suggestions,
                         onSelect = { viewModel.applyClusterIdentity(it) },
@@ -149,15 +150,15 @@ fun EditWorkoutScreen(
                     selectedOption = viewModel.suggestedSportTypeName,
                     onOptionSelected = { viewModel.updateSportName(it) },
                     modifier = Modifier.weight(1f),
-                    stayOpenOn = setOf(viewModel.ALL_SPORT_TYPES)
+                    stayOpenOn = setOf(viewModel.allSportTypes)
                 )
                 DropdownSelector(
                     label = stringResource(R.string.Equipment),
                     options = equipmentNames,
-                    selectedOption = viewModel.suggestedEquipmentName ?: viewModel.NO_EQUIPMENT,
+                    selectedOption = viewModel.suggestedEquipmentName ?: viewModel.noEquipment,
                     onOptionSelected = { viewModel.updateEquipmentName(it) },
                     modifier = Modifier.weight(1f),
-                    stayOpenOn = setOf(viewModel.ALL_EQUIPMENT, viewModel.ALL_SHOES, viewModel.ALL_BIKES)
+                    stayOpenOn = setOf(viewModel.allEquipment, viewModel.allShoes, viewModel.allBikes)
                 )
             }
 

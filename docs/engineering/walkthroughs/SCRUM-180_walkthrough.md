@@ -7,7 +7,7 @@
 
 ## 2. Verification Evidence (TST-SET-009)
 * **Interaction**:
-    * Navigated to **Frequent Paths > Heatmap**.
+    * Navigated to **Regular Tracks > Heatmap**.
     * Tapped on an individual workout track on the map.
     * A dialog titled "Move Workout" appeared, listing all existing clusters sorted by similarity score.
 * **Recalculation**:

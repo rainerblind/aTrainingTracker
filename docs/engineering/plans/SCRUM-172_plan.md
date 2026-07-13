@@ -6,10 +6,10 @@ The spatial learning engine (SCRUM-44) populates a knowledge base of route famil
 ## 2. Requirement Traceability
 | Requirement ID | Component | Description | Test ID |
 |:---|:---|:---|:---|
-| **REQ-SET-009** | UI | Frequent Paths Heatmap visualization with fingerprint markers. | TST-SET-002 |
+| **REQ-SET-009** | UI | Regular Tracks Heatmap visualization with fingerprint markers. | TST-SET-002 |
 
 ## 3. Impact Analysis
-* **UI Structure**: Re-enables the primary navigation drawer entry for "Frequent Paths".
+* **UI Structure**: Re-enables the primary navigation drawer entry for "Regular Tracks".
 * **Map Performance**: Rendering multiple polyline layers (heatmap) may stress the GPU on low-end devices. Mitigation: Use simplified tracks for background rendering.
 * **Navigation**: Introduces a new drill-down pattern from Cluster List to Heatmap Detail.
 
@@ -24,11 +24,11 @@ The spatial learning engine (SCRUM-44) populates a knowledge base of route famil
 * **`MainActivityWithNavigation.java`**: Wired to the new fragment under `drawer_my_locations`.
 
 ### Resources
-* **`strings.xml`**: Update "My Locations" to "Frequent Paths".
+* **`strings.xml`**: Update "My Locations" to "Regular Tracks".
 
 ## 5. Verification Criteria (TST-SET-002)
 1. Open the Navigation Drawer.
-2. Tap "Frequent Paths".
+2. Tap "Regular Tracks".
 3. Verify the list of learned routes is displayed.
 4. Select a route (e.g., "Commute").
 5. Verify the map shows:

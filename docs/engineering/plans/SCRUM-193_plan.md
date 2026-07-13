@@ -31,7 +31,7 @@ Users want to manually define route clusters by specifying their spatial fingerp
 * **`FrequentPathsFragment.kt`**: Updated navigation state to manage the new manual creation screen.
 
 ## 5. Verification Criteria (TST-SET-011)
-1. Open "Frequent Paths".
+1. Open "Regular Tracks".
 2. Tap the "+" FAB.
 3. Enter Name: "Test Trail", Sport: "Run", Distance: "5000".
 4. Use the map to pick 3 points.

@@ -39,6 +39,10 @@ import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
+import com.atrainingtracker.trainingtracker.database.RouteSource
+import com.atrainingtracker.trainingtracker.database.RouteSummary
+import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster
@@ -434,17 +438,17 @@ class WorkoutRepository private constructor(private val application: Application
         updateWorkoutInMemory(workoutId) { it.copy(workoutName = name) }
     }
 
-    fun updateExtremaValue(workoutId: Long, sensorType: SensorType, extremaType: com.atrainingtracker.trainingtracker.database.ExtremaType, value: Double, position: LatLng? = null) {
+    fun updateExtremaValue(workoutId: Long, sensorType: SensorType, extremaType: ExtremaType, value: Double, position: LatLng? = null) {
         val formattedValue = sensorType.myFormatter.format(value)
         updateWorkoutInMemory(workoutId) { workout ->
             var updated = workout
 
             // 1. Update specific raw fields
             when (sensorType) {
-                SensorType.LINE_DISTANCE_m -> if (extremaType == com.atrainingtracker.trainingtracker.database.ExtremaType.MAX) updated = updated.copy(maxDisplacement = value)
+                SensorType.LINE_DISTANCE_m -> if (extremaType == ExtremaType.MAX) updated = updated.copy(maxDisplacement = value)
                 SensorType.ALTITUDE -> {
-                    if (extremaType == com.atrainingtracker.trainingtracker.database.ExtremaType.MIN) updated = updated.copy(minAltitude = value)
-                    if (extremaType == com.atrainingtracker.trainingtracker.database.ExtremaType.MAX) updated = updated.copy(maxAltitude = value)
+                    if (extremaType == ExtremaType.MIN) updated = updated.copy(minAltitude = value)
+                    if (extremaType == ExtremaType.MAX) updated = updated.copy(maxAltitude = value)
                 }
                 else -> {}
             }
@@ -454,9 +458,9 @@ class WorkoutRepository private constructor(private val application: Application
             val updatedRows = updated.extremaRows.map { row ->
                 if (row.sensorLabel == sensorLabel) {
                     when (extremaType) {
-                        com.atrainingtracker.trainingtracker.database.ExtremaType.MIN -> row.copy(minValue = formattedValue, minLatLng = position)
-                        com.atrainingtracker.trainingtracker.database.ExtremaType.AVG -> row.copy(avgValue = formattedValue)
-                        com.atrainingtracker.trainingtracker.database.ExtremaType.MAX -> row.copy(maxValue = formattedValue, maxLatLng = position)
+                        ExtremaType.MIN -> row.copy(minValue = formattedValue, minLatLng = position)
+                        ExtremaType.AVG -> row.copy(avgValue = formattedValue)
+                        ExtremaType.MAX -> row.copy(maxValue = formattedValue, maxLatLng = position)
                         else -> row
                     }
                 } else row
@@ -578,7 +582,7 @@ class WorkoutRepository private constructor(private val application: Application
                 val finalName = userEditedWorkout.workoutName.replace(Regex(" #\\d+$"), "").trim()
                 // Only learn names that aren't the default timestamp
                 if (finalName.isNotEmpty() && finalName != userEditedWorkout.fileBaseName) {
-                    com.atrainingtracker.trainingtracker.database.RouteClusterEngine.getInstance(application)
+                    com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.getInstance(application)
                         .learnFromWorkout(
                             userEditedWorkout.startLatLng,
                             userEditedWorkout.endLatLng,
@@ -691,7 +695,7 @@ class WorkoutRepository private constructor(private val application: Application
         val points = getWorkoutTrackPoints(workout.id, TrackType.BEST)
         if (points.isEmpty()) return@withContext null
 
-        val routeSummary = com.atrainingtracker.trainingtracker.database.RouteSummary(
+        val routeSummary = RouteSummary(
             id = 0, // Auto-increment
             externalId = workout.fileBaseName ?: "",
             name = workout.workoutName,
@@ -700,7 +704,7 @@ class WorkoutRepository private constructor(private val application: Application
             distance = workout.totalDistance,
             elevationGain = workout.ascentMeters.toDouble(),
             bSportType = workout.bSportType,
-            source = com.atrainingtracker.trainingtracker.database.RouteSource.WORKOUT
+            source = RouteSource.WORKOUT
         )
 
         val routesRepo = RoutesRepository.getInstance(application)
@@ -712,7 +716,7 @@ class WorkoutRepository private constructor(private val application: Application
      */
     fun assignClusterToWorkout(workoutId: Long, clusterId: Long) {
         launch(Dispatchers.IO) {
-            com.atrainingtracker.trainingtracker.database.RouteClusterEngine.Companion.getInstance(application)
+            WorkoutClusterEngine.getInstance(application)
                 .assignClusterToWorkout(application, workoutId, clusterId)
 
             // Reload fresh data from DB to propagate inferred identity to UI
@@ -738,7 +742,7 @@ class WorkoutRepository private constructor(private val application: Application
             )
 
             if (sportId != -1L) {
-                val discoveryManager = com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager.getInstance(application)
+                val discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(application)
                 val identity = discoveryManager.inferIdentityFromSport(sportId)
                 summariesManager.applyInferredIdentity(workoutId, identity)
             }

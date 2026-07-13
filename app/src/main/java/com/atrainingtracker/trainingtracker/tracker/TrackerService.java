@@ -57,8 +57,8 @@ import com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelper;
 import com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelper.ActiveDevices;
 import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.ExtremaType;
-import com.atrainingtracker.trainingtracker.database.RouteCluster;
-import com.atrainingtracker.trainingtracker.database.RouteClusterEngine;
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster;
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
@@ -986,8 +986,8 @@ public class TrackerService extends Service {
         LatLng maxDispPos = summariesManager.getExtremaPosition(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
 
         if (startPosRaw != null && endPosRaw != null && maxDispPos != null) {
-            RouteClusterEngine engine = RouteClusterEngine.Companion.getInstance(this);
-            RouteCluster suggestion = engine.suggestCluster(startPosRaw, endPosRaw, maxDispPos, mDistanceTotal_m, null);
+            WorkoutClusterEngine engine = WorkoutClusterEngine.Companion.getInstance(this);
+            WorkoutCluster suggestion = engine.suggestCluster(startPosRaw, endPosRaw, maxDispPos, mDistanceTotal_m, null);
             if (suggestion != null) {
                 // If hardware confidence is high, we only take the name from the cluster
                 if (identity.isHighConfidence()) {
@@ -1000,7 +1000,7 @@ public class TrackerService extends Service {
                     // Apply hardware-based identity (Sport, Gear, Strava)
                     summariesManager.applyInferredIdentity(mWorkoutID, identity);
                 } else {
-                    // Low hardware confidence -> Route Cluster wins everything
+                    // Low hardware confidence -> Workout Cluster wins everything
                     engine.assignClusterToWorkout(this, mWorkoutID, suggestion.getId());
                 }
             } else {

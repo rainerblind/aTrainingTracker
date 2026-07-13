@@ -61,6 +61,7 @@ import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleService;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleServiceBuildIn;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.Watchapp;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHelper;
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents;
@@ -809,18 +810,18 @@ public class TrainingApplication extends Application {
         ContextCompat.registerReceiver(this, mPauseTrackingReceiver, new IntentFilter(REQUEST_PAUSE_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mResumeFromPaused, new IntentFilter(REQUEST_RESUME_FROM_PAUSED), ContextCompat.RECEIVER_NOT_EXPORTED);
 
-        runRouteClusterMigration();
+        runWorkoutClusterMigration();
     }
 
-    private void runRouteClusterMigration() {
-        final String SP_MIGRATION_ROUTE_CLUSTERS = "migration_route_clusters_v2";
-        if (!cSharedPreferences.getBoolean(SP_MIGRATION_ROUTE_CLUSTERS, false)) {
+    private void runWorkoutClusterMigration() {
+        final String SP_MIGRATION_WORKOUT_CLUSTERS = "migration_workout_clusters_v2";
+        if (!cSharedPreferences.getBoolean(SP_MIGRATION_WORKOUT_CLUSTERS, false)) {
             new Thread(() -> {
-                if (DEBUG) Log.i(TAG, "Starting Route Cluster History Migration...");
-                com.atrainingtracker.trainingtracker.database.RouteClusterEngine.Companion.getInstance(this)
+                if (DEBUG) Log.i(TAG, "Starting Workout Cluster History Migration...");
+                WorkoutClusterEngine.getInstance(this)
                         .migrateHistory(this);
-                cSharedPreferences.edit().putBoolean(SP_MIGRATION_ROUTE_CLUSTERS, true).apply();
-                if (DEBUG) Log.i(TAG, "Route Cluster History Migration Finished.");
+                cSharedPreferences.edit().putBoolean(SP_MIGRATION_WORKOUT_CLUSTERS, true).apply();
+                if (DEBUG) Log.i(TAG, "Workout Cluster History Migration Finished.");
             }).start();
         }
     }

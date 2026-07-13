@@ -234,6 +234,7 @@
     <string name="pedal_smoothness_l_short">płyn. l</string>
     <string name="pedal_smoothness_r">płynność pedałowania prawa</string>
     <string name="get_extremaType_of_sportType_format">Pobierz pozycje %1$s swoich treningów %2$s.</string>
+    <string name="my_locations">Stałe trasy</string>
     <string name="getting_my_locations">Szukanie znanych miejsc.</string>
     <string name="editLocationName">Nazwa:</string>
     <string name="LocationAltitude">Wysokość:</string>
@@ -681,6 +682,8 @@
     <string name="routes">Trasy</string>
     <string name="no_routes_available">Brak tras %s.</string>
     <string name="absolutely_no_routes_available">Brak dostępnych tras.</string>
+    <string name="no_clusters_available">Brak stałych tras %s.</string>
+    <string name="absolutely_no_clusters_available">Brak dostępnych stałych tras.</string>
     <string name="routes_import_hint">Importuj GPX przez \"+\" lub menedżer plików.</string>
     <string name="route_edit">Edytuj trasę</string>
     <string name="route_sport_type">Sport</string>
@@ -755,7 +758,7 @@
     <string name="track_type_fused">Google Fused</string>
     <string name="track_type_network">Sieć</string>
     <string name="legend">Legenda</string>
-    <string name="cluster_statistics_title">Statystyki trasy</string>
+    <string name="cluster_statistics_title">Statystyki treningu</string>
     <string name="cluster_total_recordings">Całkowita liczba nagrań</string>
     <string name="cluster_average_distance">Średni dystans</string>
     <string name="cluster_recordings_format">%1$d nagrań</string>
@@ -773,17 +776,17 @@
     <string name="cluster_tuning_recalculating">Przeliczanie klastrów…</string>
     <string name="cluster_tuning_take_while">To może chwilę potrwać.</string>
     <string name="cluster_move_workout_title">Przenieś trening</string>
-    <string name="cluster_move_workout_hint">Wybierz docelowy klaster trasy (wynik podobieństwa w nawiasach, niższy jest lepszy):</string>
+    <string name="cluster_move_workout_hint">Wybierz docelowy klaster treningu (wynik podobieństwa w nawiasach, niższy jest lepszy):</string>
     <string name="cluster_score_format">Wynik: %1$.3f | %2$d nagrań</string>
     <string name="cluster_score_format_with_dist">Wynik: %1$.3f | %2$d nagrań | %3$s</string>
-    <string name="cluster_suggestions_title">Sugerowane trasy (niższy wynik jest lepszy):</string>
-    <string name="cluster_manual_title">Dodaj klaster trasy</string>
+    <string name="cluster_suggestions_title">Sugerowane treningi (niższy wynik jest lepszy):</string>
+    <string name="cluster_manual_title">Dodaj klaster treningu</string>
     <string name="cluster_manual_pick_start">Wybierz start</string>
     <string name="cluster_manual_pick_end">Wybierz koniec</string>
     <string name="cluster_manual_pick_apex">Wybierz wierzchołek (najdalej)</string>
     <string name="cluster_manual_distance_hint">Dystans treningu (%s)</string>
     <string name="cluster_manual_missing_points">Proszę wybrać wszystkie 3 punkty przestrzenne na mapie.</string>
-    <string name="cluster_edit_fingerprint">Edytuj odcisk trasy</string>
+    <string name="cluster_edit_fingerprint">Edytuj odcisk treningu</string>
     <string name="cluster_edit_fingerprint_hint">Dostosuj start, koniec lub wierzchołek, wybierając typ i dotykając mapy.</string>
     <string name="cluster_tuning_content_desc">Dostosuj grupowanie</string>
     <string name="cluster_move_content_desc">Przenieś klaster</string>
@@ -792,11 +795,11 @@
     <string name="cluster_manual_pick_hint">Wybierz odcisk przestrzenny na mapie:</string>
     <string name="cluster_manual_tap_map_format">Dotknij mapy, aby ustawić %s</string>
     <string name="cluster_clear_content_desc">Wyczyść</string>
-    <string name="cluster_default_name_format">Trasa w %s</string>
+    <string name="cluster_default_name_format">Trening w %s</string>
     <string name="cluster_equipment_mapping_format">→ %s</string>
     <string name="cluster_score_brackets_format">(%1$.3f)</string>
     <string name="cluster_suggestions_content_desc">Sugestie</string>
     <string name="cluster_autoname_format">%1$s #%2$d</string>
-    <string name="cluster_delete_title">Usuń klaster trasy</string>
-    <string name="cluster_delete_message">Czy na pewno chcesz usunąć ten klaster trasy? Nie spowoduje to usunięcia powiązanych treningów, ale nie będą one już grupowane w ramach tego klastra.</string>
+    <string name="cluster_delete_title">Usuń klaster treningu</string>
+    <string name="cluster_delete_message">Czy na pewno chcesz usunąć ten klaster treningu? Nie spowoduje to usunięcia powiązanych treningów, ale nie będą one już grupowane w ramach tego klastra.</string>
 </resources>

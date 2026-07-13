@@ -3,11 +3,11 @@
 ## 1. Requirement Fulfillment
 | Requirement ID | Description | Status |
 |:---|:---|:---|
-| **REQ-SET-026** | Tabbed layout (All, Bike, Run, Other) for Frequent Paths. | Verified |
+| **REQ-SET-026** | Tabbed layout (All, Bike, Run, Other) for Regular Tracks. | Verified |
 
 ## 2. Verification Evidence (TST-SET-018)
 * **Interaction**:
-    * Navigated to **Frequent Paths**.
+    * Navigated to **Regular Tracks**.
 * **Observation**:
     * A tab row is now visible at the top, featuring "All", "Bike", "Run", and "Other" tabs.
     * Swiping between tabs smoothly filters the list of route clusters based on their determined `BSportType`.
