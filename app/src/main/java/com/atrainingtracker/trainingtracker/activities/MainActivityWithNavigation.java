@@ -103,7 +103,6 @@ import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManage
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
 import com.atrainingtracker.trainingtracker.fragments.preferences.CloudUploadFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.FancyWorkoutNameListFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.RootPrefsFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.RunkeeperUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.SearchFragment;
@@ -960,7 +959,6 @@ public class MainActivityWithNavigation
                     fragment = new TrainingpeaksUploadFragment();
             case "pebbleScreen" -> fragment = new PebbleScreenFragment();
             case "search_settings" -> fragment = new SearchFragment();
-            case "fancyWorkoutNames" -> fragment = new FancyWorkoutNameListFragment();
             default -> Log.d(TAG, "WTF: unknown key");
         }
 

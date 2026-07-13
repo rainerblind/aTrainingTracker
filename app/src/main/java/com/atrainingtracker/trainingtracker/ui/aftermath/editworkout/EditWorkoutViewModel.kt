@@ -241,17 +241,6 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     }
 
 
-    // -- fancy / auto name
-    // LiveData to hold the list of fancy names for the dialog
-    val fancyNameList: LiveData<List<String>> by lazy {
-        MutableLiveData(workoutSummariesDatabaseManager.getFancyNameList())
-    }
-
-    // This function will be called when the user selects a name from the dialog.
-    fun onFancyNameSelected(baseName: String) {
-        repository.applyFancyNameToWorkout(workoutId, baseName)
-    }
-
     /**
      * Saves the current state of the WorkoutData object to the database.
      */

@@ -724,30 +724,4 @@ class WorkoutRepository private constructor(private val application: Application
         }
     }
 
-    /**
-     * Applies a fancy name to a workout and automatically propagates sport-specific settings (SCRUM-200).
-     */
-    fun applyFancyNameToWorkout(workoutId: Long, baseName: String) {
-        launch(Dispatchers.IO) {
-            val fullName = summariesManager.getFancyNameAndIncrement(baseName)
-            val sportId = summariesManager.getSportIdForFancyName(baseName)
-
-            val values = android.content.ContentValues()
-            values.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME, fullName)
-            summariesManager.database.update(
-                WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
-                values,
-                "${WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID} = ?",
-                arrayOf(workoutId.toString())
-            )
-
-            if (sportId != -1L) {
-                val discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(application)
-                val identity = discoveryManager.inferIdentityFromSport(sportId)
-                summariesManager.applyInferredIdentity(workoutId, identity)
-            }
-
-            reloadWorkoutData(workoutId)
-        }
-    }
 }
