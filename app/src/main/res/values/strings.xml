@@ -45,11 +45,8 @@
     <string name="Lap">Lap</string>
     <string name="Equipment">Equipment</string>
     <string name="edit_device">edit device</string>
-    <string name="edit_location">edit location</string>
-    <string name="Edit_Location">Edit Location</string>
     <string name="edit_workout">edit workout</string>
     <string name="save_as_route">save as route</string>
-    <string name="Edit_Location_Message">Edit the name and altitude of this location</string>
     <string name="edit_wheel_circumference">edit wheel circumference</string>
     <string name="edit_calibration_factor">edit calibration factor</string>
     <string name="delete">delete</string>
@@ -62,7 +59,6 @@
     <string name="defaultDaysToKeep" translatable="false">30</string>
     <string name="delete_sensor">delete</string>
     <string name="really_delete_workout">Do you really want to delete this workout?</string>
-    <string name="really_delete_location">Do you really want to delete this location?</string>
     <string name="really_delete_pebble_view_format">Do you really want to delete the Pebble view "%1$s"?</string>
     <string name="really_delete_view_format">Do you really want to delete the tracking view "%1$s"?</string>
     <string name="deleting_please_wait">Deleting workout …\nplease wait</string>
@@ -71,7 +67,6 @@
     <string name="calculating_extrema_value_for">calculating %1$s of %2$s</string>
     <string name="calculating_max_away_point">calculating max away point</string>
     <string name="initializing">initializing</string>
-    <string name="delete_location">delete location</string>
     <string name="show_HW_details">show HW details</string>
     <string name="show_google_maps_licence">Google Maps Legal Info</string>
     <string name="play_services_not_installed">Google Play services is not installed on this device.</string>
@@ -639,24 +634,9 @@
     <string name="edit_my_location">Edit Location</string>
     <string name="radius_format" translatable="false">%1$s %2$d %3$s</string>
     <string name="units_radius" translatable="false">m</string>
-    <string name="create_new_my_location">Creating new known location.</string>
-    <string name="calc_workout_name">Calculating workout name.</string>
     <string name="calc_map_polyline">Calculating map polyline.</string>
-    <string name="edit_counter">edit</string>
-    <string name="edit_counter_format">Edit %1$s counter.</string>
-    <string name="editWorkoutNameCounters">Edit workout name counters.</string>
-    <string name="StartLocation">Start location:</string>
-    <string name="EndLocation">End location:</string>
-    <string name="NameScheme">Name scheme:</string>
-    <string name="addCounter">Add counter</string>
-    <string name="addVia">Add name of max line distance location when making a detour.</string>
-    <string name="configureWorkoutNameSchemes">Configure how your workouts should be named.</string>
-    <string name="via_format">&#032;via %1$s</string>
-    <string name="loop_around_format">&#032;to %1$s and back</string>
-    <string name="really_delete_format">Do you really want to delete \"%1$s\"?</string>
-    <string name="workout_name_scheme">Workout Name Scheme</string>
-    <string name="workout_name_schemes">Workout Name Schemes</string>
     <string name="starred_run_segments">Run</string>
+    <string name="really_delete_format">Do you really want to delete \"%1$s\"?</string>
     <string name="starred_bike_segments">Bike</string>
     <string name="segments">Strava Segments</string>
 

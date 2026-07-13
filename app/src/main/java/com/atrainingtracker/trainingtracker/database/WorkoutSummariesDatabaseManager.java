@@ -537,192 +537,6 @@ public class WorkoutSummariesDatabaseManager {
     }
 
 
-    // -- Fancy / Auto Name
-
-    @NonNull
-    public List<String> getFancyNameList() {
-        List<String> result = new LinkedList<>();
-
-        try (Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, // table
-                null, null, null, null, null, null)) {
-
-            while (cursor.moveToNext()) {
-                result.add(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FANCY_NAME)));
-            }
-        }
-
-        return result;
-    }
-
-    public long getFancyNameId(String fancyName) {
-        long fancyNameId = -1;
-
-        Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
-                null,
-                WorkoutSummaries.FANCY_NAME + "=?",
-                new String[]{fancyName},
-                null, null, null);
-        if (cursor.moveToFirst()) {
-            fancyNameId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
-        }
-
-        return fancyNameId;
-    }
-
-    public long getSportIdForFancyName(String fancyName) {
-        long sportId = -1;
-        try (Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
-                new String[]{WorkoutSummaries.SPORT_ID},
-                WorkoutSummaries.FANCY_NAME + "=?",
-                new String[]{fancyName},
-                null, null, null)) {
-            if (cursor.moveToFirst()) {
-                sportId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.SPORT_ID));
-            }
-        }
-        return sportId;
-    }
-
-    @NonNull
-    public String getFancyNameAndIncrement(String fancyName) {
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(fancyName);
-
-        SQLiteDatabase db = getDatabase();
-        Cursor cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
-                null,
-                WorkoutSummaries.FANCY_NAME + "=?",
-                new String[]{fancyName},
-                null, null, null);
-
-        if (cursor.moveToFirst()) {
-            if (cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.ADD_COUNTER)) >= 1) {
-                int counter = cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.COUNTER)) + 1;
-                stringBuilder.append(" #");
-                stringBuilder.append(counter);
-
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(WorkoutSummaries.COUNTER, counter);
-                db.update(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, contentValues,
-                        WorkoutSummaries.FANCY_NAME + "=?",
-                        new String[]{fancyName});
-            }
-        }
-
-        return stringBuilder.toString();
-    }
-
-    // TODO: create helper class instead of passing database managers arround...
-    @Nullable
-    public String getFancyName(SportTypeDatabaseManager sportTypeDatabaseManager,
-                               long sportTypeId,
-                               @Nullable KnownLocationsDatabaseManager.MyLocation startLocation,
-                               @Nullable KnownLocationsDatabaseManager.MyLocation maxLineDistanceLocation,
-                               @Nullable KnownLocationsDatabaseManager.MyLocation endLocation) {
-        if (startLocation != null & endLocation != null) {
-
-            StringBuilder stringBuilder = new StringBuilder();
-
-            SQLiteDatabase db = getDatabase();
-
-            // get the first part, something like #bike2work, b2w, >> work ...
-            Cursor cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, // table
-                    null,  // columns,
-                    WorkoutSummaries.SPORT_ID + "=? AND " + WorkoutSummaries.START_LOCATION_NAME + "=? AND " + WorkoutSummaries.END_LOCATION_NAME + "=?", // selection,
-                    new String[]{Long.toString(sportTypeId), startLocation.name, endLocation.name}, // selectionArgs,
-                    null, null, null);// groupBy, having, orderBy
-
-            if (cursor.moveToFirst()) {
-                stringBuilder.append(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FANCY_NAME)));
-            } else {
-                stringBuilder.append(createDefaultFancyName(sportTypeDatabaseManager, sportTypeId, startLocation, maxLineDistanceLocation, endLocation));
-                cursor.requery();
-            }
-
-            if (cursor.moveToFirst()) {
-
-                // optionally add counter like #42
-                if (cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.ADD_COUNTER)) >= 1) {
-                    int counter = cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.COUNTER)) + 1;
-                    stringBuilder.append(" #");
-                    stringBuilder.append(counter);
-
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put(WorkoutSummaries.COUNTER, counter);
-                    db.update(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, contentValues,
-                            WorkoutSummaries.SPORT_ID + "=? AND " + WorkoutSummaries.START_LOCATION_NAME + "=? AND " + WorkoutSummaries.END_LOCATION_NAME + "=?", // selection,
-                            new String[]{Long.toString(sportTypeId), startLocation.name, endLocation.name}); // selectionArgs,
-                }
-
-                // optionally add via ...
-                if (cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.ADD_VIA)) >= 1) {
-                    if (maxLineDistanceLocation != null && maxLineDistanceLocation.id != endLocation.id) {
-                        if (DEBUG) Log.i(TAG, "made a detour or a loop");
-
-                        if (startLocation.id == endLocation.id) {  // loop around
-                            stringBuilder.append(TrainingApplication.getAppContext().getString(R.string.loop_around_format, maxLineDistanceLocation.name));
-                        } else {// detour on commute
-                            stringBuilder.append(TrainingApplication.getAppContext().getString(R.string.via_format, maxLineDistanceLocation.name));
-                        }
-                    }
-                }
-            }
-
-            // clean up
-            cursor.close();
-
-            return stringBuilder.toString();
-        }
-
-        return null;
-    }
-
-    // TODO: create extra helper instead of passing database managers arround...
-    @Nullable
-    protected String createDefaultFancyName(SportTypeDatabaseManager sportTypeDatabaseManager,
-                                            long sportTypeId,
-                                            @Nullable KnownLocationsDatabaseManager.MyLocation startLocation,
-                                            KnownLocationsDatabaseManager.MyLocation maxLineDistanceLocation,
-                                            @Nullable KnownLocationsDatabaseManager.MyLocation endLocation) {
-
-        if (startLocation != null & endLocation != null) {
-            StringBuilder stringBuilder = new StringBuilder();
-
-            if (startLocation.id != endLocation.id) { // probably a commute
-                stringBuilder.append("#");
-                stringBuilder.append(sportTypeDatabaseManager.getUIName(sportTypeId));
-                stringBuilder.append("2");
-                stringBuilder.append(endLocation.name);
-            } else { // a loop
-                stringBuilder.append(sportTypeDatabaseManager.getUIName(sportTypeId)).append("@").append(startLocation.name);
-            }
-
-            String baseName = stringBuilder.toString();
-
-            ContentValues contentValues = new ContentValues();
-            contentValues.put(WorkoutSummaries.SPORT_ID, sportTypeId);
-            contentValues.put(WorkoutSummaries.START_LOCATION_NAME, startLocation.name);
-            contentValues.put(WorkoutSummaries.END_LOCATION_NAME, endLocation.name);
-            contentValues.put(WorkoutSummaries.FANCY_NAME, baseName);
-            contentValues.put(WorkoutSummaries.ADD_COUNTER, 1);
-            contentValues.put(WorkoutSummaries.COUNTER, 0);
-            contentValues.put(WorkoutSummaries.ADD_VIA, 1);
-
-            getDatabase().insert(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, null, contentValues);
-
-            return baseName;
-        }
-
-        return null;
-    }
-
-    public void deleteFancyName(long id) {
-        if (DEBUG) Log.i(TAG, "deleteFancyName: id=" + id);
-
-        getDatabase().delete(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
-                WorkoutSummaries.C_ID + " =? ",
-                new String[]{Long.toString(id)});
-    }
 
 
     /**
@@ -848,8 +662,6 @@ public class WorkoutSummariesDatabaseManager {
         public static final String TABLE = "WorkoutSummaries";
         public static final String TABLE_EXTREMA_VALUES = "ExtremumValues";
         public static final String TABLE_ACCUMULATED_SENSORS = "AccumulatedSensors";
-        // public static final String TABLE_WORKOUT_NAME_COUNTERS = "TODO:remove!";
-        public static final String TABLE_WORKOUT_NAME_PATTERNS = "WorkoutNamePatterns";
 
 
         public static final String C_ID = BaseColumns._ID;
@@ -910,20 +722,6 @@ public class WorkoutSummariesDatabaseManager {
         public static final String VALUE = "value";
         public static final String LATITUDE = "latitude";
         public static final String LONGITUDE = "longitude";
-        // columns of the WorkoutNamePattern table
-        // public static final String SPORT // already defined
-        public static final String START_LOCATION_NAME = "startLocationName";
-
-        // columns of the WorkoutNameCounter table
-        // public static final String WORKOUT_NAME_HASH_KEY = "workoutNameHashKey";
-        // public static final String COUNTER               = "counter";
-        public static final String END_LOCATION_NAME = "endLocationName";
-        public static final String FANCY_NAME = "fancyName";
-        public static final String ADD_COUNTER = "addCounter";
-        public static final String COUNTER = "counter";
-        public static final String ADD_VIA = "addVia";
-        @Deprecated
-        private static final String SPORT_OLD = "sport";
 
         public final static int ENCODING_STEP_SIZE = 20;  // twenty seconds (Introduced in Version 15)
     }
@@ -1004,17 +802,6 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.WORKOUT_ID + " int,"
                 + WorkoutSummaries.SENSOR_TYPE + " text)";
 
-        protected static final String CREATE_TABLE_WORKOUT_NAME_PATTERNS
-                = "create table " + WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS + " ("
-                + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + WorkoutSummaries.SPORT_ID + " int, "
-                + WorkoutSummaries.START_LOCATION_NAME + " text, "
-                + WorkoutSummaries.END_LOCATION_NAME + " text, "
-                + WorkoutSummaries.FANCY_NAME + " text, "
-                + WorkoutSummaries.ADD_COUNTER + " int, "
-                + WorkoutSummaries.COUNTER + " int, "
-                + WorkoutSummaries.ADD_VIA + " int)";
-
         private static final String TAG = "WorkoutSummariesDbHelper";
         private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
@@ -1039,9 +826,6 @@ public class WorkoutSummariesDatabaseManager {
 
             db.execSQL(CREATE_TABLE_ACCUMULATED_SENSORS);
             if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_ACCUMULATED_SENSORS);
-
-            db.execSQL(CREATE_TABLE_WORKOUT_NAME_PATTERNS);
-            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_WORKOUT_NAME_PATTERNS);
 
         }
 
@@ -1112,11 +896,19 @@ public class WorkoutSummariesDatabaseManager {
             }
 
             if (oldVersion == 9) {
-                addColumn(db, WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, WorkoutSummaries.COUNTER, "int", "0");
+                addColumn(db, "WorkoutNamePatterns", "counter", "int", "0");
             } else if (oldVersion < 10) {
                 Log.i(TAG, "upgrading to DB version 10");
 
-                db.execSQL(CREATE_TABLE_WORKOUT_NAME_PATTERNS);
+                db.execSQL("create table WorkoutNamePatterns ("
+                        + BaseColumns._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                        + "sportId int, "
+                        + "startLocationName text, "
+                        + "endLocationName text, "
+                        + "fancyName text, "
+                        + "addCounter int, "
+                        + "counter int, "
+                        + "addVia int)");
             }
 
             if (oldVersion < 11) {
@@ -1128,14 +920,14 @@ public class WorkoutSummariesDatabaseManager {
                 db.endTransaction();
 
                 Cursor cursor = db.query(WorkoutSummaries.TABLE,
-                        new String[]{WorkoutSummaries.C_ID, WorkoutSummaries.SPORT_OLD},
+                        new String[]{WorkoutSummaries.C_ID, "sport"},
                         null, null,
                         null, null, null);
                 ContentValues contentValues = new ContentValues();
                 while (cursor.moveToNext()) {
                     contentValues.clear();
                     long id = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
-                    String sport = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.SPORT_OLD));
+                    String sport = cursor.getString(cursor.getColumnIndex("sport"));
                     contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getSportTypeIdFromTTSportTypeName(sport));
                     contentValues.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getBSportType(sport).name());
                     db.update(WorkoutSummaries.TABLE, contentValues,
@@ -1144,17 +936,17 @@ public class WorkoutSummariesDatabaseManager {
                 cursor.close();
 
 
-                addColumn(db, WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, WorkoutSummaries.SPORT_ID, "text", "???");
+                addColumn(db, "WorkoutNamePatterns", "sportId", "text", "???");
 
-                cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
-                        new String[]{WorkoutSummaries.C_ID, WorkoutSummaries.SPORT_OLD},
+                cursor = db.query("WorkoutNamePatterns",
+                        new String[]{WorkoutSummaries.C_ID, "sport"},
                         null, null,
                         null, null, null);
                 while (cursor.moveToNext()) {
                     long id = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
-                    String sport = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.SPORT_OLD));
+                    String sport = cursor.getString(cursor.getColumnIndex("sport"));
                     contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getSportTypeIdFromTTSportTypeName(sport));
-                    db.update(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, contentValues,
+                    db.update("WorkoutNamePatterns", contentValues,
                             WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(id)});
                 }
                 cursor.close();
