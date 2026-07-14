@@ -80,6 +80,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-SET-030** | **Sensor-First Identity Arbitration.** | The system SHALL implement a confidence-based arbitration model to resolve conflicts between active hardware and route history. High-confidence sensor signals (e.g., uniquely linked hardware) SHALL veto route-based sport/gear overrides, while low-confidence sessions (GPS-only) SHALL be corrected by the Workout Cluster majority. | `EquipmentAndSportTypeDiscoveryManager.kt`, `WorkoutClusterEngine.kt` | `TST-SET-021` | Verified |
 | **REQ-SET-034** | **Stable Cluster Naming.** | The system SHALL maintain the base name of a Workout Cluster when assigning it to a workout. The auto-generated workout name (including a hit counter) MUST NOT be propagated back to the cluster's permanent name. | `WorkoutClusterEngine.kt` | `TST-SET-025` | Verified |
 | **REQ-SET-035** | **Preview Heatmap.** | The Workout Cluster list item SHALL display a representative spatial preview on its mini-map, consisting of the linked Route path (if available) or the 5 most recent workout tracks rendered as a low-opacity heatmap. | `WorkoutClusterComponents.kt`, `WorkoutClusterRepository.kt` | `TST-SET-026` | Verified |
+| **REQ-SET-036** | **Persistent DB Connection.** | The Workout Cluster database SHALL remain open during the application lifecycle to facilitate real-time debugging and inspection via external tools. | `WorkoutClusterDatabaseManager.kt` | `TST-SET-027` | Verified |
 
 ## 5. Data Storage & Post-Processing
 
