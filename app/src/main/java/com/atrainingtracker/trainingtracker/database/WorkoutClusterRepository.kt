@@ -26,6 +26,7 @@ import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -64,8 +65,41 @@ class WorkoutClusterRepository private constructor(private val context: Context)
 
     suspend fun refreshClusters() = withContext(Dispatchers.IO) {
         val rawClusters = clusterDb.getAllClusters()
+        val routesDb = RoutesDatabaseManager.getInstance(context)
+
         val enriched = rawClusters.map { cluster ->
-            cluster.copy(bSportType = getBSportType(cluster.probableSportId))
+            // --- POPULATE PREVIEW PATHS (SCRUM-224) ---
+            val previewPaths = mutableListOf<String>()
+            
+            // 1. Check for linked route
+            val linkedRoute = routesDb.getRouteByClusterId(cluster.id)
+            if (linkedRoute != null && linkedRoute.path.isNotEmpty()) {
+                previewPaths.add(PolyUtil.encode(linkedRoute.path.map { it.latLng }))
+            } else {
+                // 2. Fetch 5 most recent workout paths
+                val selection = "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = ?"
+                val args = arrayOf(cluster.id.toString())
+                val projection = arrayOf(WorkoutSummariesDatabaseManager.WorkoutSummaries.MAP_POLYLINE)
+                
+                summariesManager.database.query(
+                    WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                    projection, selection, args, null, null,
+                    "${WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START} DESC",
+                    "5" // Limit to 5
+                ).use { cursor ->
+                    while (cursor.moveToNext()) {
+                        val polyline = cursor.getString(0)
+                        if (!polyline.isNullOrEmpty()) {
+                            previewPaths.add(polyline)
+                        }
+                    }
+                }
+            }
+
+            cluster.copy(
+                bSportType = getBSportType(cluster.probableSportId),
+                previewPaths = previewPaths
+            )
         }
         _allClusters.value = enriched.sortedByDescending { it.hitCount }
     }
