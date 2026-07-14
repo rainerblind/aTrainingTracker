@@ -1235,4 +1235,7 @@
     <string name="all_shoes">+ all shoes +</string>
     <string name="all_bikes">+ all bikes +</string>
     <string name="no_equipment">- none -</string>
+
+    <string name="unclustered">Unclustered</string>
+    <string name="no_unclustered_workouts">All workouts are clustered.</string>
 </resources>

@@ -153,9 +153,25 @@ class WorkoutClusterRepository private constructor(private val context: Context)
         val selection = "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = ?"
         val args = arrayOf(clusterId.toString())
         
-        summariesManager.database.query(
+        summariesManager.getDatabase().query(
             WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
             null, selection, args, null, null, 
+            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START} DESC"
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                workouts.add(mapper.fromCursor(cursor))
+            }
+        }
+        workouts
+    }
+
+    suspend fun getUnclusteredWorkouts(): List<WorkoutData> = withContext(Dispatchers.IO) {
+        val workouts = mutableListOf<WorkoutData>()
+        val selection = "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = -1"
+
+        summariesManager.getDatabase().query(
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+            null, selection, null, null, null,
             "${WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START} DESC"
         ).use { cursor ->
             while (cursor.moveToNext()) {

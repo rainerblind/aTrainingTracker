@@ -1143,4 +1143,7 @@
     <string name="all_shoes">+ Alle Schuhe +</string>
     <string name="all_bikes">+ Alle Räder +</string>
     <string name="no_equipment">- Keine -</string>
+
+    <string name="unclustered">Offen</string>
+    <string name="no_unclustered_workouts">Alle Einheiten sind gruppiert.</string>
 </resources>
