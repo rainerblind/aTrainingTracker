@@ -134,6 +134,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-SET-023** | **Reference Route in Heatmap** | `REQ-SET-032` | 1. Open a Workout Cluster that is linked to an explicit Route. 2. Observe the heatmap visualization. | 1. The authoritative route's path SHALL be visible as a solid, prominent line overlaid on the workout heatmap. | Verified |
 | **TST-SET-024** | **Workout Cluster Deletion** | `REQ-SET-033` | 1. Open a Workout Cluster detail view. 2. Long-click the header. 3. Select \"Delete\". 4. Confirm deletion. | 1. The cluster SHALL be deleted. 2. Associated workouts SHALL remain in history but lose their cluster assignment. | Verified |
 | **TST-SET-025** | **Stable Cluster Naming** | `REQ-SET-034` | 1. Identify a cluster named \"Park Loop\". 2. Track a workout matching this cluster. | 1. The workout SHALL be named \"Park Loop #X\". 2. The cluster name SHALL remain \"Park Loop\". | Verified |
+| **TST-SET-026** | **Preview Heatmap** | `REQ-SET-035` | 1. Open the Favorite Tracks list. 2. Observe the mini-map in a list item. | 1. If a Route is linked, its path is visible. 2. If no Route, a subtle heatmap of recent tracks is visible. 3. All 3 signature markers are visible. | Verified |
 
 ## 4. Release Verification Workflow
 
