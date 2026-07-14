@@ -61,6 +61,11 @@ fun ManualClusterScreen(
     var name by remember { mutableStateOf("") }
     var selectedSportName by remember { mutableStateOf(sportNames.firstOrNull() ?: "") }
     var distanceStr by remember { mutableStateOf("") }
+
+    // Locale-aware double parsing (SCRUM-230)
+    val parsedDistance = remember(distanceStr) {
+        distanceStr.replace(',', '.').toDoubleOrNull()
+    }
     
     var startPos by remember { mutableStateOf<LatLng?>(null) }
     var endPos by remember { mutableStateOf<LatLng?>(null) }
@@ -90,11 +95,11 @@ fun ManualClusterScreen(
                     }
                 },
                 actions = {
-                    val isValid = name.isNotBlank() && startPos != null && endPos != null && apexPos != null && distanceStr.toDoubleOrNull() != null
+                    val isValid = name.isNotBlank() && startPos != null && endPos != null && apexPos != null && parsedDistance != null
                     Button(
                         onClick = {
                             val sportId = sportTypesList.find { it.name == selectedSportName }?.id ?: -1L
-                            var distance = distanceStr.toDoubleOrNull() ?: 0.0
+                            var distance = parsedDistance ?: 0.0
                             if (TrainingApplication.getUnit() == MyUnits.IMPERIAL) {
                                 distance *= BANALService.METER_PER_MILE
                             } else {
