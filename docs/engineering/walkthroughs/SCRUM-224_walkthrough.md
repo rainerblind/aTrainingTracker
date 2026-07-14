@@ -28,5 +28,8 @@
     * Maintained a solid, clean line for single route previews.
     * Ensured all points are decoded using `PolyUtil.decode` with `remember` for optimal scroll performance.
 
+### Debugging & Inspection
+* **`WorkoutClusterDatabaseManager.kt`**: Updated to hold a persistent `SQLiteDatabase` reference and provided a `getDatabase()` accessor. This ensures the `RouteClusters.db` connection remains open during the app lifecycle, facilitating real-time inspection via the Android Studio Database Inspector (SCRUM-224 Debug Support).
+
 ## 4. Final Review
 The feature provides excellent visual context in the list view, helping users quickly identify their favorite training tracks by their shape. Performance is maintained by limiting the number of paths and using efficient decoding.
