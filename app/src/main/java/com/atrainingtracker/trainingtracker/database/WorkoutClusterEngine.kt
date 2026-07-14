@@ -157,7 +157,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
         var apex = start
 
         path.forEach { point ->
-            val dist = calculateLineDistance(point.latLng, start, end)
+            val dist = distanceBetween(point.latLng, start).toDouble()
             if (dist > maxLineDist) {
                 maxLineDist = dist
                 apex = point.latLng
@@ -175,39 +175,6 @@ class WorkoutClusterEngine private constructor(context: Context) {
             userSpecifiedName = route.summary.name,
             userSportId = sportId
         )
-    }
-
-    private fun calculateLineDistance(point: LatLng, start: LatLng, end: LatLng): Double {
-        if (start == end) {
-            val results = FloatArray(1)
-            Location.distanceBetween(point.latitude, point.longitude, start.latitude, start.longitude, results)
-            return results[0].toDouble()
-        }
-
-        // Standard distance from point to line segment (rough approximation on plane)
-        val lat = point.latitude
-        val lng = point.longitude
-        val sLat = start.latitude
-        val sLng = start.longitude
-        val eLat = end.latitude
-        val eLng = end.longitude
-
-        val dx = eLat - sLat
-        val dy = eLng - sLng
-
-        if (dx == 0.0 && dy == 0.0) return distanceBetween(point, start).toDouble()
-
-        val t = ((lat - sLat) * dx + (lng - sLng) * dy) / (dx * dx + dy * dy)
-        
-        return if (t < 0) {
-            distanceBetween(point, start).toDouble()
-        } else if (t > 1) {
-            distanceBetween(point, end).toDouble()
-        } else {
-            val projLat = sLat + t * dx
-            val projLng = sLng + t * dy
-            distanceBetween(point, LatLng(projLat, projLng)).toDouble()
-        }
     }
 
     /**
