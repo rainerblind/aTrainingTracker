@@ -582,16 +582,21 @@ class WorkoutRepository private constructor(private val application: Application
                 val finalName = userEditedWorkout.workoutName.replace(Regex(" #\\d+$"), "").trim()
                 // Only learn names that aren't the default timestamp
                 if (finalName.isNotEmpty() && finalName != userEditedWorkout.fileBaseName) {
-                    com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.getInstance(application)
-                        .learnFromWorkout(
-                            userEditedWorkout.startLatLng,
-                            userEditedWorkout.endLatLng,
-                            userEditedWorkout.maxDisplacementLatLng,
-                            userEditedWorkout.totalDistance,
-                            finalName,
-                            userEditedWorkout.sportId,
-                            userEditedWorkout.clusterId
-                        )
+                    val engine = com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.getInstance(application)
+                    val learnedId = engine.learnFromWorkout(
+                        userEditedWorkout.startLatLng,
+                        userEditedWorkout.endLatLng,
+                        userEditedWorkout.maxDisplacementLatLng,
+                        userEditedWorkout.totalDistance,
+                        finalName,
+                        userEditedWorkout.sportId,
+                        userEditedWorkout.clusterId
+                    )
+                    
+                    // persist link and increment count if it's a new or changed association (SCRUM-228)
+                    if (userEditedWorkout.clusterId != learnedId) {
+                        engine.assignClusterToWorkout(application, workoutId, learnedId)
+                    }
                 }
             }
 

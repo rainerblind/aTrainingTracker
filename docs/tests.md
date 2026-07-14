@@ -136,6 +136,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-SET-025** | **Stable Cluster Naming** | `REQ-SET-034` | 1. Identify a cluster named \"Park Loop\". 2. Track a workout matching this cluster. | 1. The workout SHALL be named \"Park Loop #X\". 2. The cluster name SHALL remain \"Park Loop\". | Verified |
 | **TST-SET-026** | **Preview Heatmap** | `REQ-SET-035` | 1. Open the Favorite Tracks list. 2. Observe the mini-map in a list item. | 1. If a Route is linked, its path is visible. 2. If no Route, a subtle heatmap of recent tracks is visible. 3. All 3 signature markers are visible. | Verified |
 | **TST-SET-027** | **Persistent DB Connection** | `REQ-SET-036` | 1. Start the app. 2. Open Android Studio Database Inspector. | 1. RouteClusters.db should be visible and accessible as an active connection. | Verified |
+| **TST-SET-028** | **Hit Count Synchronization** | `REQ-SET-037`, `038` | 1. Identify a cluster with hit count > 0. 2. Use Database Inspector to manually clear `clusterId` for its workouts. 3. Open Favorite Tracks list. | 1. The hit count should automatically update to 0. 2. Assigning a workout via editor should correctly increment both DBs. | Proposed |
 
 ## 4. Release Verification Workflow
 
