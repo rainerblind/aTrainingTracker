@@ -810,6 +810,8 @@ public class TrainingApplication extends Application {
         ContextCompat.registerReceiver(this, mPauseTrackingReceiver, new IntentFilter(REQUEST_PAUSE_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mResumeFromPaused, new IntentFilter(REQUEST_RESUME_FROM_PAUSED), ContextCompat.RECEIVER_NOT_EXPORTED);
 
+        com.google.android.gms.maps.MapsInitializer.initialize(this);
+
         runWorkoutClusterMigration();
     }
 

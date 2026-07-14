@@ -203,8 +203,14 @@ fun MarkerLayer(
 ) {
     markers.forEach { markerData ->
         key(markerData.title, markerData.iconResId) {
-            val icon = remember(markerData.iconResId, primaryColor) {
-                createSensorMarker(context, markerData.iconResId, primaryColor, Color.White)
+            val icon = markerData.iconDescriptor ?: remember(markerData.iconResId, primaryColor) {
+                val color = when (markerData.iconResId) {
+                    R.drawable.control_start -> TTColor.StartPoint
+                    R.drawable.control_stop -> TTColor.EndPoint
+                    R.drawable.ic_distance -> TTColor.ApexPoint
+                    else -> primaryColor
+                }
+                createSensorMarker(context, markerData.iconResId, color, Color.White)
             }
             // Use a composite key for marker identity
             val markerState = remember(markerData.title, markerData.iconResId) { MarkerState(position = markerData.position) }
