@@ -45,7 +45,11 @@ import com.atrainingtracker.trainingtracker.ui.map.MapRoute
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.map.MapDetailLayout
 import com.atrainingtracker.trainingtracker.ui.map.MappablePath
+import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
+import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -61,6 +65,18 @@ fun RouteOnMapScreen(
     showMap: Boolean = true
 ) {
     val bSportType = route?.bSportType ?: routeSummary?.bSportType ?: BSportType.UNKNOWN
+
+    val context = LocalContext.current
+    val startMarker = remember(route?.path?.firstOrNull()) {
+        route?.path?.firstOrNull()?.let {
+            createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint)
+        }
+    }
+    val endMarker = remember(route?.path?.lastOrNull()) {
+        route?.path?.lastOrNull()?.let {
+            createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint)
+        }
+    }
 
     MapDetailLayout(
         bSportType = bSportType,
@@ -79,7 +95,27 @@ fun RouteOnMapScreen(
             }
         },
         mapContent = {
-            if (route != null) routes(listOf(route))
+            if (route != null) {
+                routes(listOf(route))
+                
+                // Add unified Start and End markers (SCRUM-185)
+                if (route.path.isNotEmpty() && startMarker != null && endMarker != null) {
+                    markers(listOf(
+                        LocationMarker(
+                            position = route.path.first().latLng,
+                            iconResId = R.drawable.control_start,
+                            title = "Start",
+                            iconDescriptor = startMarker
+                        ),
+                        LocationMarker(
+                            position = route.path.last().latLng,
+                            iconResId = R.drawable.control_stop,
+                            title = "End",
+                            iconDescriptor = endMarker
+                        )
+                    ))
+                }
+            }
             contextualPaths(backgroundPaths, sameSportAlpha = TTAlpha.Medium)
         },
         modifier = modifier

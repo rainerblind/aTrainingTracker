@@ -49,6 +49,7 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import androidx.compose.ui.platform.LocalContext
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import androidx.compose.ui.graphics.Color
 
 @OptIn(MapsComposeExperimentalApi::class)
@@ -139,10 +140,15 @@ fun InteractivePeriodMap(
         }
 
         // 3. Extrema Markers
-        val primaryColor = MaterialTheme.colorScheme.primary
         summary.extremaMarkers.forEach { marker ->
-            val icon = remember(marker.iconResId, primaryColor) {
-                createSensorMarker(context, marker.iconResId, primaryColor, Color.White)
+            val color = when (marker.markerType) {
+                PeriodMarkerType.START -> TTColor.StartPoint
+                PeriodMarkerType.END -> TTColor.EndPoint
+                PeriodMarkerType.DISTANCE -> TTColor.ApexPoint
+                else -> MaterialTheme.colorScheme.primary
+            }
+            val icon = remember(marker.iconResId, color) {
+                createSensorMarker(context, marker.iconResId, color, Color.White)
             }
             Marker(
                 state = remember(marker.pos) { MarkerState(position = marker.pos) },

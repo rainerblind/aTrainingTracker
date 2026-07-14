@@ -50,14 +50,14 @@ fun createSensorMarker(
     val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
 
-    val pinDrawable = ContextCompat.getDrawable(context, R.drawable.ic_map_pin_base)
+    val pinDrawable = ContextCompat.getDrawable(context, R.drawable.ic_map_pin_base)?.mutate()
     pinDrawable?.let {
         it.setTint(pinColor.toArgb())
         it.setBounds(0, 0, size, size)
         it.draw(canvas)
     }
 
-    val sensorDrawable = ContextCompat.getDrawable(context, iconResId)
+    val sensorDrawable = ContextCompat.getDrawable(context, iconResId)?.mutate()
     sensorDrawable?.let {
         it.setTint(iconColor.toArgb())
         val left = (size - iconSize) / 2

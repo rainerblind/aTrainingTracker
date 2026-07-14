@@ -95,17 +95,17 @@ fun WorkoutClusterHeatmapScreen(
         listOf(
             LocationMarker(
                 position = editStart,
-                iconResId = R.drawable.ic_location,
+                iconResId = R.drawable.control_start,
                 title = startLabel,
-                iconDescriptor = createSensorMarker(context, R.drawable.ic_location, TTColor.StartPoint), // Green
+                iconDescriptor = createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint), // Green
                 draggable = isEditingFingerprint,
                 onDragEnd = { editStart = it }
             ),
             LocationMarker(
                 position = editEnd,
-                iconResId = R.drawable.ic_location,
+                iconResId = R.drawable.control_stop,
                 title = endLabel,
-                iconDescriptor = createSensorMarker(context, R.drawable.ic_location, TTColor.EndPoint), // Red
+                iconDescriptor = createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint), // Red
                 draggable = isEditingFingerprint,
                 onDragEnd = { editEnd = it }
             ),
