@@ -70,8 +70,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
     fun learnFromWorkout(
         start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
         userSpecifiedName: String, userSportId: Long, 
-        clusterIdOverride: Long = -1,
-        isWorkoutSession: Boolean = true
+        clusterIdOverride: Long = -1
     ): Long {
         val existingMatch = if (clusterIdOverride != -1L) dbManager.getClusterById(clusterIdOverride) 
                             else suggestCluster(start, end, apex, distance, userSpecifiedName)
@@ -83,8 +82,6 @@ class WorkoutClusterEngine private constructor(context: Context) {
             val uniqueName = if (existingMatch.name == normalizedInputName) normalizedInputName 
                              else findUniqueClusterName(normalizedInputName, existingMatch.id)
 
-            val newHitCount = if (isWorkoutSession) existingMatch.hitCount + 1 else existingMatch.hitCount
-
             val updatedCluster = existingMatch.copy(
                 name = uniqueName,
                 probableSportId = userSportId,
@@ -95,11 +92,10 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 endLng = (existingMatch.endLng * existingMatch.hitCount + end.longitude) / (existingMatch.hitCount + 1),
                 maxDispLat = (existingMatch.maxDispLat * existingMatch.hitCount + apex.latitude) / (existingMatch.hitCount + 1),
                 maxDispLng = (existingMatch.maxDispLng * existingMatch.hitCount + apex.longitude) / (existingMatch.hitCount + 1),
-                refDistance = (existingMatch.refDistance * existingMatch.hitCount + distance) / (existingMatch.hitCount + 1),
-                hitCount = newHitCount
+                refDistance = (existingMatch.refDistance * existingMatch.hitCount + distance) / (existingMatch.hitCount + 1)
             )
             dbManager.updateCluster(updatedCluster)
-            if (DEBUG) Log.i(TAG, "Learned from existing route: ${updatedCluster.name} (hitCount=${updatedCluster.hitCount})")
+            if (DEBUG) Log.i(TAG, "Updated shape for cluster: ${updatedCluster.name}")
             
             // Re-evaluate probable sport based on majority (SCRUM-182)
             val mostFrequentSport = WorkoutSummariesDatabaseManager.getInstance(appContext).getMostFrequentSportIdForCluster(updatedCluster.id)
@@ -121,7 +117,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 maxDispLat = apex.latitude,
                 maxDispLng = apex.longitude,
                 refDistance = distance,
-                hitCount = if (isWorkoutSession) 1 else 0,
+                hitCount = 0, // Hit count is 0 until assigned via assignClusterToWorkout
                 bSportType = SportTypeDatabaseManager.getInstance(appContext).getBSportType(userSportId)
             )
             val newId = dbManager.insertCluster(newCluster)
@@ -177,8 +173,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
             apex = apex,
             distance = distance,
             userSpecifiedName = route.summary.name,
-            userSportId = sportId,
-            isWorkoutSession = false
+            userSportId = sportId
         )
     }
 
@@ -275,7 +270,6 @@ class WorkoutClusterEngine private constructor(context: Context) {
                             maxDispLat = (match.maxDispLat * match.hitCount + apex.latitude) / (match.hitCount + 1),
                             maxDispLng = (match.maxDispLng * match.hitCount + apex.longitude) / (match.hitCount + 1),
                             refDistance = (match.refDistance * match.hitCount + distance) / (match.hitCount + 1),
-                            hitCount = match.hitCount + 1,
                             bSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(finalSport)
                         )
                         dbManager.updateCluster(updated)
@@ -302,7 +296,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
                             maxDispLat = apex.latitude,
                             maxDispLng = apex.longitude,
                             refDistance = distance,
-                            hitCount = 1,
+                            hitCount = 0,
                             bSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(sportId)
                         )
                         val newId = dbManager.insertCluster(newCluster)
@@ -326,9 +320,24 @@ class WorkoutClusterEngine private constructor(context: Context) {
     fun assignClusterToWorkout(context: Context, workoutId: Long, clusterId: Long) {
         val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
         val discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(context)
-        val dbManager = WorkoutClusterDatabaseManager.getInstance(context)
+        val clusterDb = WorkoutClusterDatabaseManager.getInstance(context)
 
-        val cluster = dbManager.getClusterById(clusterId) ?: return
+        // 1. Check if workout was previously linked to a DIFFERENT cluster
+        val previousClusterId = summariesManager.getLong(workoutId, WorkoutSummaries.CLUSTER_ID) ?: -1L
+        if (previousClusterId != -1L && previousClusterId != clusterId) {
+            // Decrement the old cluster (simple count decrement)
+            val oldCluster = clusterDb.getClusterById(previousClusterId)
+            if (oldCluster != null) {
+                clusterDb.updateCluster(oldCluster.copy(hitCount = (oldCluster.hitCount - 1).coerceAtLeast(0)))
+            }
+        }
+
+        val cluster = clusterDb.getClusterById(clusterId) ?: return
+
+        // 2. Increment hit count for the new cluster if link is new
+        if (previousClusterId != clusterId) {
+            clusterDb.updateCluster(cluster.copy(hitCount = cluster.hitCount + 1))
+        }
 
         val values = android.content.ContentValues().apply {
             put(WorkoutSummaries.CLUSTER_ID, clusterId)
@@ -338,7 +347,9 @@ class WorkoutClusterEngine private constructor(context: Context) {
             val fileBaseName = summariesManager.getString(workoutId, WorkoutSummaries.FILE_BASE_NAME)
 
             if (currentName.isNullOrEmpty() || currentName == fileBaseName) {
-                val autoName = context.getString(R.string.cluster_autoname_format, cluster.name, cluster.hitCount + 1)
+                // Use current cluster hitCount + 1 for the auto-name if we just linked it
+                val displayCount = if (previousClusterId == clusterId) cluster.hitCount else cluster.hitCount + 1
+                val autoName = context.getString(R.string.cluster_autoname_format, cluster.name, displayCount)
                 put(WorkoutSummaries.WORKOUT_NAME, autoName)
             }
         }
@@ -443,7 +454,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
 
         if (start == null || end == null || apex == null || distance == null) return
 
-        // 2. Remove from old cluster
+        // 2. Remove spatial influence from old cluster
         val oldCluster = dbManager.getClusterById(currentClusterId)
         if (oldCluster != null) {
             if (oldCluster.hitCount > 1) {
@@ -454,8 +465,8 @@ class WorkoutClusterEngine private constructor(context: Context) {
                     endLng = (oldCluster.endLng * oldCluster.hitCount - end.longitude) / (oldCluster.hitCount - 1),
                     maxDispLat = (oldCluster.maxDispLat * oldCluster.hitCount - apex.latitude) / (oldCluster.hitCount - 1),
                     maxDispLng = (oldCluster.maxDispLng * oldCluster.hitCount - apex.longitude) / (oldCluster.hitCount - 1),
-                    refDistance = (oldCluster.refDistance * oldCluster.hitCount - distance) / (oldCluster.hitCount - 1),
-                    hitCount = oldCluster.hitCount - 1
+                    refDistance = (oldCluster.refDistance * oldCluster.hitCount - distance) / (oldCluster.hitCount - 1)
+                    // hitCount decrement is handled by assignClusterToWorkout
                 )
                 dbManager.updateCluster(updatedOld)
                 
@@ -466,11 +477,12 @@ class WorkoutClusterEngine private constructor(context: Context) {
                     dbManager.updateCluster(updatedOld.copy(probableSportId = mostFrequentSport, bSportType = newBSport))
                 }
             } else {
-                dbManager.deleteCluster(currentClusterId)
+                // If this is the last workout (hitCount=1), we skip centroid recalculation 
+                // to avoid division by zero, but keep the cluster (it persists with hitCount=0).
             }
         }
 
-        // 3. Add to new cluster
+        // 3. Add spatial influence to new cluster
         val newCluster = dbManager.getClusterById(newClusterId)
         if (newCluster != null) {
             val updatedNew = newCluster.copy(
@@ -480,8 +492,8 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 endLng = (newCluster.endLng * newCluster.hitCount + end.longitude) / (newCluster.hitCount + 1),
                 maxDispLat = (newCluster.maxDispLat * newCluster.hitCount + apex.latitude) / (newCluster.hitCount + 1),
                 maxDispLng = (newCluster.maxDispLng * newCluster.hitCount + apex.longitude) / (newCluster.hitCount + 1),
-                refDistance = (newCluster.refDistance * newCluster.hitCount + distance) / (newCluster.hitCount + 1),
-                hitCount = newCluster.hitCount + 1
+                refDistance = (newCluster.refDistance * newCluster.hitCount + distance) / (newCluster.hitCount + 1)
+                // hitCount increment is handled by assignClusterToWorkout
             )
             dbManager.updateCluster(updatedNew)
             
@@ -493,7 +505,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
             }
         }
 
-        // 4. Update workout record
+        // 4. Update workout record (delegating assignment and target increment)
         assignClusterToWorkout(context, workoutId, newClusterId)
     }
 

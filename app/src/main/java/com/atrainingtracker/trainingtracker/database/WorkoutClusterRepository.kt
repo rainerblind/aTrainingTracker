@@ -37,6 +37,7 @@ class WorkoutClusterRepository private constructor(private val context: Context)
 
     private val clusterDb = WorkoutClusterDatabaseManager.getInstance(context)
     private val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
+    private val DEBUG = com.atrainingtracker.trainingtracker.TrainingApplication.getDebug(true)
     
     private val mapper by lazy {
         WorkoutDataMapper(
@@ -64,21 +65,45 @@ class WorkoutClusterRepository private constructor(private val context: Context)
     }
 
     suspend fun refreshClusters() = withContext(Dispatchers.IO) {
+        // --- SELF-HEALING HIT COUNTS (SCRUM-228) ---
+        val actualCounts = mutableMapOf<Long, Int>()
+        summariesManager.database.query(
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+            arrayOf(WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID, "COUNT(*)"),
+            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} != -1",
+            null,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID,
+            null, null
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                actualCounts[cursor.getLong(0)] = cursor.getInt(1)
+            }
+        }
+
         val rawClusters = clusterDb.getAllClusters()
         val routesDb = RoutesDatabaseManager.getInstance(context)
 
         val enriched = rawClusters.map { cluster ->
+            // Update hit count if reality differs (Self-Healing)
+            val realCount = actualCounts[cluster.id] ?: 0
+            val updatedCluster = if (cluster.hitCount != realCount) {
+                if (DEBUG) android.util.Log.i("WorkoutClusterRepo", "Correcting hit count for ${cluster.name}: ${cluster.hitCount} -> $realCount")
+                val fixed = cluster.copy(hitCount = realCount)
+                clusterDb.updateCluster(fixed)
+                fixed
+            } else cluster
+
             // --- POPULATE PREVIEW PATHS (SCRUM-224) ---
             val previewPaths = mutableListOf<String>()
             
             // 1. Check for linked route
-            val linkedRoute = routesDb.getRouteByClusterId(cluster.id)
+            val linkedRoute = routesDb.getRouteByClusterId(updatedCluster.id)
             if (linkedRoute != null && linkedRoute.path.isNotEmpty()) {
                 previewPaths.add(PolyUtil.encode(linkedRoute.path.map { it.latLng }))
             } else {
                 // 2. Fetch 5 most recent workout paths
                 val selection = "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = ?"
-                val args = arrayOf(cluster.id.toString())
+                val args = arrayOf(updatedCluster.id.toString())
                 val projection = arrayOf(WorkoutSummariesDatabaseManager.WorkoutSummaries.MAP_POLYLINE)
                 
                 summariesManager.database.query(
@@ -96,8 +121,8 @@ class WorkoutClusterRepository private constructor(private val context: Context)
                 }
             }
 
-            cluster.copy(
-                bSportType = getBSportType(cluster.probableSportId),
+            updatedCluster.copy(
+                bSportType = getBSportType(updatedCluster.probableSportId),
                 previewPaths = previewPaths
             )
         }
