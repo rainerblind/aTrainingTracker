@@ -86,7 +86,8 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-SET-039** | **Locale-Aware Distance Input.** | The manual cluster creation interface SHALL support locale-specific decimal separators (e.g., comma in DE, dot in EN) when entering workout distances. | `ManualClusterScreen.kt` | `TST-SET-030` | Verified |
 | **REQ-SET-040** | **Unclustered Workout Access.** | The system SHALL provide a dedicated view for workouts that are not associated with any Workout Cluster to facilitate manual organization and re-clustering. | `WorkoutClustersTabsScreen.kt`, `WorkoutClusterRepository.kt` | `TST-SET-029` | Verified |
 | **REQ-SET-042** | **Markers in Previews.** | The system SHALL display Start, End, and Apex markers in the mini-map previews for Workouts. For Routes, ONLY Start and End markers SHALL be displayed to provide spatial context without clutter. | `PathPreviewMap.kt`, `WorkoutSummary.kt`, `RouteItem.kt` | `TST-SET-032` | Proposed |
-| **REQ-SET-042** | **Markers in Previews.** | The system SHALL display Start, End, and Max Line Distance (Apex) markers in the mini-map previews for both Workouts and Routes to provide immediate spatial context. | `PathPreviewMap.kt`, `WorkoutSummary.kt`, `RouteItem.kt` | `TST-SET-032` | Proposed |
+| **REQ-SET-042** | **Markers in Previews.** | The system SHALL display Start, End, and Apex markers in the mini-map previews for Workouts. For Routes, ONLY Start and End markers SHALL be displayed to provide spatial context without clutter. | `PathPreviewMap.kt`, `WorkoutSummary.kt`, `RouteItem.kt` | `TST-SET-032` | Verified |
+| **REQ-SET-043** | **Fingerprint Parity.** | To ensure 100% matching accuracy, the system SHALL calculate Route spatial fingerprints using 'Max Displacement from Start', matching the live tracking engine's logic. | `WorkoutClusterEngine.kt` | `TST-SET-033` | Verified |
 
 ## 5. Data Storage & Post-Processing
 
