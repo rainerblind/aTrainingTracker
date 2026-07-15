@@ -26,6 +26,7 @@ import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.database.RoutesDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaRoute
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaStream
@@ -51,7 +52,7 @@ import okhttp3.Request
  * Repository responsible for managing Route data.
  * Bridges the UI and the RoutesDatabaseManager.
  */
-class RoutesRepository private constructor(context: Context) {
+class RoutesRepository private constructor(private val context: Context) {
 
     private val routesDb = RoutesDatabaseManager.getInstance(context)
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -84,10 +85,28 @@ class RoutesRepository private constructor(context: Context) {
     }
 
     /**
+     * Fetches a route by its linked cluster ID.
+     */
+    suspend fun getRouteByClusterId(clusterId: Long): RouteWithPath? = withContext(Dispatchers.IO) {
+        routesDb.getRouteByClusterId(clusterId)
+    }
+
+    /**
      * Inserts a new route (from GPX import or API) and refreshes the flow.
      */
     suspend fun insertRoute(summary: RouteSummary, path: List<PathPoint>): Long = withContext(Dispatchers.IO) {
         val newId = routesDb.insertRoute(summary, path)
+        
+        // Seed the cluster database (SCRUM-207)
+        val routeWithPath = RouteWithPath(summary.copy(id = newId), path)
+        val clusterId = WorkoutClusterEngine.getInstance(context)
+            .learnFromRoute(routeWithPath)
+
+        // Store the persistent link (SCRUM-207 refinement)
+        if (clusterId != -1L) {
+            routesDb.updateRouteSummary(summary.copy(id = newId, clusterId = clusterId))
+        }
+
         refreshRoutes() // Notify observers that a new route is available
         newId
     }
@@ -101,7 +120,13 @@ class RoutesRepository private constructor(context: Context) {
         // 1. Update the record in the database
         routesDb.updateRouteSummary(summary)
 
-        // 2. Trigger a refresh so all collectors (List View, Map View)
+        // 2. Sync name change with RouteCluster (SCRUM-207)
+        if (summary.clusterId != -1L) {
+            WorkoutClusterEngine.getInstance(context)
+                .syncRouteNameChange(summary.clusterId, summary.name)
+        }
+
+        // 3. Trigger a refresh so all collectors (List View, Map View)
         refreshRoutes()
     }
 
@@ -226,7 +251,16 @@ class RoutesRepository private constructor(context: Context) {
             )
 
             // 4. Insert into DB
-            routesDb.insertRoute(summary, pathPoints)
+            val newId = routesDb.insertRoute(summary, pathPoints)
+            
+            // Seed the cluster database (SCRUM-207)
+            val clusterId = WorkoutClusterEngine.getInstance(context)
+                .learnFromRoute(RouteWithPath(summary.copy(id = newId), pathPoints))
+
+            // Store the persistent link
+            if (clusterId != -1L) {
+                routesDb.updateRouteSummary(summary.copy(id = newId, clusterId = clusterId))
+            }
         }
 
         // 5. Refresh the list

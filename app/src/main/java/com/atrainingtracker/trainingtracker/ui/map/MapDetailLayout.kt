@@ -59,7 +59,9 @@ fun MapDetailLayout(
     overlay: @Composable BoxScope.() -> Unit = {},
     modifier: Modifier = Modifier,
     useStatusBarsPadding: Boolean = true,
-    showMap: Boolean = true
+    showMap: Boolean = true,
+    showElevationProfile: Boolean = true,
+    onMapClick: ((LatLng) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -109,10 +111,17 @@ fun MapDetailLayout(
                     activeScrubPath = activeScrubPath,
                     modifier = Modifier.fillMaxSize(),
                     shouldTakeSnapshot = isSharing,
+                    onMapClick = onMapClick,
                     onSnapshotReady = { mapBitmap ->
                         scope.launch {
-                            val hBmp = headerLayer.toImageBitmap().asAndroidBitmap()
-                            val eBmp = elevationLayer.toImageBitmap().asAndroidBitmap()
+                            val hBmp = if (headerLayer.size.width > 0 && headerLayer.size.height > 0) {
+                                headerLayer.toImageBitmap().asAndroidBitmap()
+                            } else null
+                            
+                            val eBmp = if (elevationLayer.size.width > 0 && elevationLayer.size.height > 0) {
+                                elevationLayer.toImageBitmap().asAndroidBitmap()
+                            } else null
+
                             combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp)
                             isSharing = false
                         }
@@ -147,25 +156,27 @@ fun MapDetailLayout(
         }
 
         // 3. ELEVATION PROFILE
-        activeScrubPath?.let { path ->
-            Surface(
-                color = MaterialTheme.colorScheme.surface,
-                modifier = Modifier.navigationBarsPadding()
-            ) {
-                Box(modifier = Modifier.drawWithContent {
-                    elevationLayer.record {
-                        this@drawWithContent.drawContent()
+        if (showElevationProfile) {
+            activeScrubPath?.let { path ->
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.navigationBarsPadding()
+                ) {
+                    Box(modifier = Modifier.drawWithContent {
+                        elevationLayer.record {
+                            this@drawWithContent.drawContent()
+                        }
+                        drawLayer(elevationLayer)
+                    }) {
+                        ElevationProfile(
+                            pathPoints = path,
+                            currentDistance = selectedDistance,
+                            minAltitudeOverride = minAltitudeOverride,
+                            maxAltitudeOverride = maxAltitudeOverride,
+                            onDistanceSelected = { selectedDistance = it },
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
-                    drawLayer(elevationLayer)
-                }) {
-                    ElevationProfile(
-                        pathPoints = path,
-                        currentDistance = selectedDistance,
-                        minAltitudeOverride = minAltitudeOverride,
-                        maxAltitudeOverride = maxAltitudeOverride,
-                        onDistanceSelected = { selectedDistance = it },
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 }
             }
         }

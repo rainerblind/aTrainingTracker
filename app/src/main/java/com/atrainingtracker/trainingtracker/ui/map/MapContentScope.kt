@@ -11,15 +11,14 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
 package com.atrainingtracker.trainingtracker.ui.map
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
+import com.atrainingtracker.banalservice.BSportType
 import com.google.android.gms.maps.model.LatLng
 
 /**
@@ -52,6 +51,7 @@ interface MapContentScope {
 
     fun markers(markers: List<LocationMarker>)
     fun liveTrack(path: List<LatLng>)
+    fun heatmap(allPaths: List<List<LatLng>>, opacity: Double = 0.8)
 
     @Composable
     fun Render(currentZoom: Float)
@@ -62,25 +62,37 @@ internal class MapContentScopeImpl(
     private val primaryColor: androidx.compose.ui.graphics.Color,
     private val context: android.content.Context,
     private val directionIcons: Triple<com.google.android.gms.maps.model.BitmapDescriptor?, com.google.android.gms.maps.model.BitmapDescriptor?, com.google.android.gms.maps.model.BitmapDescriptor?>,
-    private val bSportType: com.atrainingtracker.banalservice.BSportType
+    private val bSportType: BSportType
 ) : MapContentScope {
 
-    // Data containers for rendering
-    val tracks = mutableStateListOf<MapTrack>()
-    val segments = mutableStateListOf<MapSegment>()
-    val routes = mutableStateListOf<MapRoute>()
+    private data class PathData(val path: MappablePath, val alpha: Float, val onClick: (Long) -> Unit)
+    
+    // Internal containers with rich metadata
+    private val trackData = mutableStateListOf<PathData>()
+    private val segmentData = mutableStateListOf<PathData>()
+    private val routeData = mutableStateListOf<PathData>()
+
+    // Exposed for Bounds Controller
+    val tracks: List<MapTrack> get() = trackData.map { it.path as MapTrack }
+    val segments: List<MapSegment> get() = segmentData.map { it.path as MapSegment }
+    val routes: List<MapRoute> get() = routeData.map { it.path as MapRoute }
+    
     val markers = mutableStateListOf<LocationMarker>()
     val currentTracks = mutableStateListOf<List<LatLng>>()
+
+    private data class HeatmapData(val allPaths: List<List<LatLng>>, val opacity: Double)
+    private val heatmaps = mutableStateListOf<HeatmapData>()
 
     private data class ContextualPathData(val path: MappablePath, val alpha: Float)
     private val contextualPaths = mutableStateListOf<ContextualPathData>()
 
     fun collect(block: MapContentScope.() -> Unit) {
-        tracks.clear()
-        segments.clear()
-        routes.clear()
+        trackData.clear()
+        segmentData.clear()
+        routeData.clear()
         markers.clear()
         currentTracks.clear()
+        heatmaps.clear()
         contextualPaths.clear()
         this.apply(block)
     }
@@ -99,39 +111,43 @@ internal class MapContentScopeImpl(
         }
 
         // 2. Segments
-        segments.forEach { segment ->
+        segmentData.forEach { data ->
             MappablePathLayer(
-                path = segment,
-                alpha = 1.0f,
+                path = data.path,
+                alpha = data.alpha,
                 currentZoom = currentZoom,
                 context = context,
-                directionIcons = directionIcons
+                directionIcons = directionIcons,
+                onPathClick = data.onClick
             )
         }
 
         // 3. Routes
-        routes.forEach { route ->
+        routeData.forEach { data ->
             val style = LocalMapStyle.current
+            val route = data.path as MapRoute
             val highlightRoute = zoomFocus != MapZoomFocus.FOLLOW_ME 
                     || (route.isSelected && route.bSportType == bSportType)
 
             MappablePathLayer(
                 path = route,
-                alpha = if (highlightRoute) 1.0f else style.routeUnselectedAlpha,
+                alpha = if (highlightRoute) data.alpha else style.routeUnselectedAlpha,
                 currentZoom = currentZoom,
                 context = context,
-                directionIcons = directionIcons
+                directionIcons = directionIcons,
+                onPathClick = data.onClick
             )
         }
 
         // 4. Tracks
-        tracks.forEach { track ->
+        trackData.forEach { data ->
             MappablePathLayer(
-                path = track,
-                alpha = if (track.type == TrackType.BEST) 1.0f else 0.8f,
+                path = data.path,
+                alpha = data.alpha,
                 currentZoom = currentZoom,
                 context = context,
-                directionIcons = directionIcons
+                directionIcons = directionIcons,
+                onPathClick = data.onClick
             )
         }
 
@@ -144,19 +160,33 @@ internal class MapContentScopeImpl(
         currentTracks.forEach { path ->
             LiveTrackLayer(path)
         }
+
+        // 7. Heatmaps
+        heatmaps.forEach { data ->
+            val provider = remember(data.allPaths, data.opacity) {
+                createHeatmapProvider(data.allPaths, data.opacity)
+            }
+            provider?.let {
+                com.google.maps.android.compose.TileOverlay(tileProvider = it)
+            }
+        }
     }
 
     override fun path(path: MappablePath, alpha: Float, onPathClick: (Long) -> Unit) {
+        val data = PathData(path, alpha, onPathClick)
         when (path) {
-            is MapTrack -> tracks.add(path)
-            is MapSegment -> segments.add(path)
-            is MapRoute -> routes.add(path)
+            is MapTrack -> trackData.add(data)
+            is MapSegment -> segmentData.add(data)
+            is MapRoute -> routeData.add(data)
             else -> {}
         }
     }
 
     override fun tracks(tracks: List<MapTrack>) {
-        this.tracks.addAll(tracks.filter { it.isVisible })
+        tracks.filter { it.isVisible }.forEach { track ->
+            val alpha = if (track.type == TrackType.BEST) 1.0f else 0.8f
+            this.trackData.add(PathData(track, alpha, track.onClick ?: {}))
+        }
     }
 
     override fun segments(
@@ -164,11 +194,15 @@ internal class MapContentScopeImpl(
         activeLiveSegmentIds: Set<Long>,
         onSegmentClick: (Long) -> Unit
     ) {
-        this.segments.addAll(segments)
+        segments.forEach { segment ->
+            this.segmentData.add(PathData(segment, 1.0f, onSegmentClick))
+        }
     }
 
     override fun routes(routes: List<MapRoute>, onRouteClick: (Long) -> Unit) {
-        this.routes.addAll(routes)
+        routes.forEach { route ->
+            this.routeData.add(PathData(route, 1.0f, onRouteClick))
+        }
     }
 
     override fun contextualPaths(
@@ -188,5 +222,9 @@ internal class MapContentScopeImpl(
 
     override fun liveTrack(path: List<LatLng>) {
         this.currentTracks.add(path)
+    }
+
+    override fun heatmap(allPaths: List<List<LatLng>>, opacity: Double) {
+        this.heatmaps.add(HeatmapData(allPaths, opacity))
     }
 }

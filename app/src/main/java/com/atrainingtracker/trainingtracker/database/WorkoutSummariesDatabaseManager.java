@@ -114,10 +114,66 @@ public class WorkoutSummariesDatabaseManager {
         // individual Strava upload
         values.put(WorkoutSummaries.UPLOAD_TO_STRAVA, workoutData.getUploadToStrava());
 
+        // cluster association (SCRUM-191)
+        values.put(WorkoutSummaries.CLUSTER_ID, workoutData.getClusterId());
+
         getDatabase().update(WorkoutSummaries.TABLE,
                 values,
                 WorkoutSummaries.C_ID + "=" + workoutData.getId(),
                 null);
+    }
+
+    /**
+     * Applies an inferred identity (Equipment, Strava) to a workout based on its SportType.
+     * Use this during learning or cluster assignment (SCRUM-200).
+     */
+    public void applyInferredIdentity(long workoutId, EquipmentAndSportTypeDiscoveryManager.InferredIdentity identity) {
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.SPORT_ID, identity.getSportId());
+        values.put(WorkoutSummaries.B_SPORT, identity.getBSportType().name());
+
+        long equipmentId = identity.getEquipmentId();
+        if (equipmentId == -1) {
+            values.putNull(WorkoutSummaries.EQUIPMENT_ID);
+        } else {
+            values.put(WorkoutSummaries.EQUIPMENT_ID, equipmentId);
+        }
+
+        values.put(WorkoutSummaries.UPLOAD_TO_STRAVA, identity.getUploadToStrava());
+
+        getDatabase().update(WorkoutSummaries.TABLE,
+                values,
+                WorkoutSummaries.C_ID + "=" + workoutId,
+                null);
+    }
+
+    /**
+     * Finds the most frequent sportId associated with a specific cluster.
+     * Used to refine the "probable sport" for a route family.
+     * It's safer to do it in WorkoutClusterEngine.migrateHistory
+     */
+    public long getMostFrequentSportIdForCluster(long clusterId) {
+        if (clusterId == -1) return -1;
+        String sql = "SELECT " + WorkoutSummaries.SPORT_ID + ", COUNT(*) as cnt FROM " + WorkoutSummaries.TABLE +
+                " WHERE " + WorkoutSummaries.CLUSTER_ID + " = ?" +
+                " GROUP BY " + WorkoutSummaries.SPORT_ID +
+                " ORDER BY cnt DESC LIMIT 1";
+        try (Cursor cursor = getDatabase().rawQuery(sql, new String[]{String.valueOf(clusterId)})) {
+            if (cursor.moveToFirst()) {
+                return cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID));
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Clears the cluster ID for any workout linked to it (SCRUM-217).
+     */
+    public int clearClusterLink(long clusterId) {
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.CLUSTER_ID, -1L);
+        return getDatabase().update(WorkoutSummaries.TABLE, values,
+                WorkoutSummaries.CLUSTER_ID + "=?", new String[]{String.valueOf(clusterId)});
     }
 
     public Cursor getWorkoutCursor(long workoutId) {
@@ -134,6 +190,14 @@ public class WorkoutSummariesDatabaseManager {
                 WorkoutSummaries.TABLE,
                 null, null, null, null, null,
                 WorkoutSummaries.TIME_START + " DESC"
+        );
+    }
+
+    public Cursor getCursorForAllWorkoutsAsc() {
+        return getDatabase().query(
+                WorkoutSummaries.TABLE,
+                null, null, null, null, null,
+                WorkoutSummaries.TIME_START + " ASC"
         );
     }
 
@@ -473,178 +537,6 @@ public class WorkoutSummariesDatabaseManager {
     }
 
 
-    // -- Fancy / Auto Name
-
-    @NonNull
-    public List<String> getFancyNameList() {
-        List<String> result = new LinkedList<>();
-
-        try (Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, // table
-                null, null, null, null, null, null)) {
-
-            while (cursor.moveToNext()) {
-                result.add(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FANCY_NAME)));
-            }
-        }
-
-        return result;
-    }
-
-    public long getFancyNameId(String fancyName) {
-        long fancyNameId = -1;
-
-        Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
-                null,
-                WorkoutSummaries.FANCY_NAME + "=?",
-                new String[]{fancyName},
-                null, null, null);
-        if (cursor.moveToFirst()) {
-            fancyNameId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
-        }
-
-        return fancyNameId;
-    }
-
-    @NonNull
-    public String getFancyNameAndIncrement(String fancyName) {
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(fancyName);
-
-        SQLiteDatabase db = getDatabase();
-        Cursor cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
-                null,
-                WorkoutSummaries.FANCY_NAME + "=?",
-                new String[]{fancyName},
-                null, null, null);
-
-        if (cursor.moveToFirst()) {
-            if (cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.ADD_COUNTER)) >= 1) {
-                int counter = cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.COUNTER)) + 1;
-                stringBuilder.append(" #");
-                stringBuilder.append(counter);
-
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(WorkoutSummaries.COUNTER, counter);
-                db.update(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, contentValues,
-                        WorkoutSummaries.FANCY_NAME + "=?",
-                        new String[]{fancyName});
-            }
-        }
-
-        return stringBuilder.toString();
-    }
-
-    // TODO: create helper class instead of passing database managers arround...
-    @Nullable
-    public String getFancyName(SportTypeDatabaseManager sportTypeDatabaseManager,
-                               long sportTypeId,
-                               @Nullable KnownLocationsDatabaseManager.MyLocation startLocation,
-                               @Nullable KnownLocationsDatabaseManager.MyLocation maxLineDistanceLocation,
-                               @Nullable KnownLocationsDatabaseManager.MyLocation endLocation) {
-        if (startLocation != null & endLocation != null) {
-
-            StringBuilder stringBuilder = new StringBuilder();
-
-            SQLiteDatabase db = getDatabase();
-
-            // get the first part, something like #bike2work, b2w, >> work ...
-            Cursor cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, // table
-                    null,  // columns,
-                    WorkoutSummaries.SPORT_ID + "=? AND " + WorkoutSummaries.START_LOCATION_NAME + "=? AND " + WorkoutSummaries.END_LOCATION_NAME + "=?", // selection,
-                    new String[]{Long.toString(sportTypeId), startLocation.name, endLocation.name}, // selectionArgs,
-                    null, null, null);// groupBy, having, orderBy
-
-            if (cursor.moveToFirst()) {
-                stringBuilder.append(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FANCY_NAME)));
-            } else {
-                stringBuilder.append(createDefaultFancyName(sportTypeDatabaseManager, sportTypeId, startLocation, maxLineDistanceLocation, endLocation));
-                cursor.requery();
-            }
-
-            if (cursor.moveToFirst()) {
-
-                // optionally add counter like #42
-                if (cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.ADD_COUNTER)) >= 1) {
-                    int counter = cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.COUNTER)) + 1;
-                    stringBuilder.append(" #");
-                    stringBuilder.append(counter);
-
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put(WorkoutSummaries.COUNTER, counter);
-                    db.update(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, contentValues,
-                            WorkoutSummaries.SPORT_ID + "=? AND " + WorkoutSummaries.START_LOCATION_NAME + "=? AND " + WorkoutSummaries.END_LOCATION_NAME + "=?", // selection,
-                            new String[]{Long.toString(sportTypeId), startLocation.name, endLocation.name}); // selectionArgs,
-                }
-
-                // optionally add via ...
-                if (cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.ADD_VIA)) >= 1) {
-                    if (maxLineDistanceLocation != null && maxLineDistanceLocation.id != endLocation.id) {
-                        if (DEBUG) Log.i(TAG, "made a detour or a loop");
-
-                        if (startLocation.id == endLocation.id) {  // loop around
-                            stringBuilder.append(TrainingApplication.getAppContext().getString(R.string.loop_around_format, maxLineDistanceLocation.name));
-                        } else {// detour on commute
-                            stringBuilder.append(TrainingApplication.getAppContext().getString(R.string.via_format, maxLineDistanceLocation.name));
-                        }
-                    }
-                }
-            }
-
-            // clean up
-            cursor.close();
-
-            return stringBuilder.toString();
-        }
-
-        return null;
-    }
-
-    // TODO: create extra helper instead of passing database managers arround...
-    @Nullable
-    protected String createDefaultFancyName(SportTypeDatabaseManager sportTypeDatabaseManager,
-                                            long sportTypeId,
-                                            @Nullable KnownLocationsDatabaseManager.MyLocation startLocation,
-                                            KnownLocationsDatabaseManager.MyLocation maxLineDistanceLocation,
-                                            @Nullable KnownLocationsDatabaseManager.MyLocation endLocation) {
-
-        if (startLocation != null & endLocation != null) {
-            StringBuilder stringBuilder = new StringBuilder();
-
-            if (startLocation.id != endLocation.id) { // probably a commute
-                stringBuilder.append("#");
-                stringBuilder.append(sportTypeDatabaseManager.getUIName(sportTypeId));
-                stringBuilder.append("2");
-                stringBuilder.append(endLocation.name);
-            } else { // a loop
-                stringBuilder.append(sportTypeDatabaseManager.getUIName(sportTypeId)).append("@").append(startLocation.name);
-            }
-
-            String baseName = stringBuilder.toString();
-
-            ContentValues contentValues = new ContentValues();
-            contentValues.put(WorkoutSummaries.SPORT_ID, sportTypeId);
-            contentValues.put(WorkoutSummaries.START_LOCATION_NAME, startLocation.name);
-            contentValues.put(WorkoutSummaries.END_LOCATION_NAME, endLocation.name);
-            contentValues.put(WorkoutSummaries.FANCY_NAME, baseName);
-            contentValues.put(WorkoutSummaries.ADD_COUNTER, 1);
-            contentValues.put(WorkoutSummaries.COUNTER, 0);
-            contentValues.put(WorkoutSummaries.ADD_VIA, 1);
-
-            getDatabase().insert(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, null, contentValues);
-
-            return baseName;
-        }
-
-        return null;
-    }
-
-    public void deleteFancyName(long id) {
-        if (DEBUG) Log.i(TAG, "deleteFancyName: id=" + id);
-
-        getDatabase().delete(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
-                WorkoutSummaries.C_ID + " =? ",
-                new String[]{Long.toString(id)});
-    }
 
 
     /**
@@ -770,8 +662,6 @@ public class WorkoutSummariesDatabaseManager {
         public static final String TABLE = "WorkoutSummaries";
         public static final String TABLE_EXTREMA_VALUES = "ExtremumValues";
         public static final String TABLE_ACCUMULATED_SENSORS = "AccumulatedSensors";
-        // public static final String TABLE_WORKOUT_NAME_COUNTERS = "TODO:remove!";
-        public static final String TABLE_WORKOUT_NAME_PATTERNS = "WorkoutNamePatterns";
 
 
         public static final String C_ID = BaseColumns._ID;
@@ -806,6 +696,7 @@ public class WorkoutSummariesDatabaseManager {
         public static final String MAP_POLYLINE = "mapPolyline"; // added in Version 13
         public static final String DISTANCE_STREAM = "distanceStream"; // added in Version 14
         public static final String ALTITUDE_STREAM = "altitudeStream"; // added in Version 14
+        public static final String CLUSTER_ID = "clusterId"; // added in Version 20
         // new entries in version 5 of the DB
         @Deprecated
         public static final String EXTREMA_VALUES_CALCULATED = "extremumValuesCalculated";
@@ -831,20 +722,6 @@ public class WorkoutSummariesDatabaseManager {
         public static final String VALUE = "value";
         public static final String LATITUDE = "latitude";
         public static final String LONGITUDE = "longitude";
-        // columns of the WorkoutNamePattern table
-        // public static final String SPORT // already defined
-        public static final String START_LOCATION_NAME = "startLocationName";
-
-        // columns of the WorkoutNameCounter table
-        // public static final String WORKOUT_NAME_HASH_KEY = "workoutNameHashKey";
-        // public static final String COUNTER               = "counter";
-        public static final String END_LOCATION_NAME = "endLocationName";
-        public static final String FANCY_NAME = "fancyName";
-        public static final String ADD_COUNTER = "addCounter";
-        public static final String COUNTER = "counter";
-        public static final String ADD_VIA = "addVia";
-        @Deprecated
-        private static final String SPORT_OLD = "sport";
 
         public final static int ENCODING_STEP_SIZE = 20;  // twenty seconds (Introduced in Version 15)
     }
@@ -871,7 +748,8 @@ public class WorkoutSummariesDatabaseManager {
         // public static final int DB_VERSION = 15; // upgrade to Version 15 at 06.05.2026: Unique step size for encoding map polyline, distance, and elevation: ENCODIN_STEP_SIZE
         // public static final int DB_VERSION = 16; // upgrade to Version 16 at 08.05.2026: Added uploadToStrava
         // public static final int DB_VERSION = 17; // 08.05.2026: Bugfix: add eventually missing columns (altitude and distance stream)
-        public static final int DB_VERSION = 19; // 18; // 10.06.2026 Added lat/long to the extrema values
+        // public static final int DB_VERSION = 18; // 10.06.2026 Added lat/long to the extrema values
+        public static final int DB_VERSION = 20; // 25.02.2026 Added clusterId
         
 
 
@@ -906,6 +784,7 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.MAP_POLYLINE + " text,"    // added in Version 13
                 + WorkoutSummaries.DISTANCE_STREAM + " text," // added in Version 14
                 + WorkoutSummaries.ALTITUDE_STREAM + " text," // added in Version 14
+                + WorkoutSummaries.CLUSTER_ID + " int DEFAULT -1," // added in Version 20
                 + WorkoutSummaries.EXTREMA_VALUES_CALCULATED + " int)";
 
         protected static final String CREATE_TABLE_EXTREMA_VALUES = "create table " + WorkoutSummaries.TABLE_EXTREMA_VALUES + " ("
@@ -922,17 +801,6 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + WorkoutSummaries.WORKOUT_ID + " int,"
                 + WorkoutSummaries.SENSOR_TYPE + " text)";
-
-        protected static final String CREATE_TABLE_WORKOUT_NAME_PATTERNS
-                = "create table " + WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS + " ("
-                + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + WorkoutSummaries.SPORT_ID + " int, "
-                + WorkoutSummaries.START_LOCATION_NAME + " text, "
-                + WorkoutSummaries.END_LOCATION_NAME + " text, "
-                + WorkoutSummaries.FANCY_NAME + " text, "
-                + WorkoutSummaries.ADD_COUNTER + " int, "
-                + WorkoutSummaries.COUNTER + " int, "
-                + WorkoutSummaries.ADD_VIA + " int)";
 
         private static final String TAG = "WorkoutSummariesDbHelper";
         private static final boolean DEBUG = TrainingApplication.getDebug(true);
@@ -958,9 +826,6 @@ public class WorkoutSummariesDatabaseManager {
 
             db.execSQL(CREATE_TABLE_ACCUMULATED_SENSORS);
             if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_ACCUMULATED_SENSORS);
-
-            db.execSQL(CREATE_TABLE_WORKOUT_NAME_PATTERNS);
-            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_WORKOUT_NAME_PATTERNS);
 
         }
 
@@ -1031,11 +896,19 @@ public class WorkoutSummariesDatabaseManager {
             }
 
             if (oldVersion == 9) {
-                addColumn(db, WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, WorkoutSummaries.COUNTER, "int", "0");
+                addColumn(db, "WorkoutNamePatterns", "counter", "int", "0");
             } else if (oldVersion < 10) {
                 Log.i(TAG, "upgrading to DB version 10");
 
-                db.execSQL(CREATE_TABLE_WORKOUT_NAME_PATTERNS);
+                db.execSQL("create table WorkoutNamePatterns ("
+                        + BaseColumns._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                        + "sportId int, "
+                        + "startLocationName text, "
+                        + "endLocationName text, "
+                        + "fancyName text, "
+                        + "addCounter int, "
+                        + "counter int, "
+                        + "addVia int)");
             }
 
             if (oldVersion < 11) {
@@ -1047,14 +920,14 @@ public class WorkoutSummariesDatabaseManager {
                 db.endTransaction();
 
                 Cursor cursor = db.query(WorkoutSummaries.TABLE,
-                        new String[]{WorkoutSummaries.C_ID, WorkoutSummaries.SPORT_OLD},
+                        new String[]{WorkoutSummaries.C_ID, "sport"},
                         null, null,
                         null, null, null);
                 ContentValues contentValues = new ContentValues();
                 while (cursor.moveToNext()) {
                     contentValues.clear();
                     long id = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
-                    String sport = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.SPORT_OLD));
+                    String sport = cursor.getString(cursor.getColumnIndex("sport"));
                     contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getSportTypeIdFromTTSportTypeName(sport));
                     contentValues.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getBSportType(sport).name());
                     db.update(WorkoutSummaries.TABLE, contentValues,
@@ -1063,17 +936,17 @@ public class WorkoutSummariesDatabaseManager {
                 cursor.close();
 
 
-                addColumn(db, WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, WorkoutSummaries.SPORT_ID, "text", "???");
+                addColumn(db, "WorkoutNamePatterns", "sportId", "text", "???");
 
-                cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
-                        new String[]{WorkoutSummaries.C_ID, WorkoutSummaries.SPORT_OLD},
+                cursor = db.query("WorkoutNamePatterns",
+                        new String[]{WorkoutSummaries.C_ID, "sport"},
                         null, null,
                         null, null, null);
                 while (cursor.moveToNext()) {
                     long id = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
-                    String sport = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.SPORT_OLD));
+                    String sport = cursor.getString(cursor.getColumnIndex("sport"));
                     contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getSportTypeIdFromTTSportTypeName(sport));
-                    db.update(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, contentValues,
+                    db.update("WorkoutNamePatterns", contentValues,
                             WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(id)});
                 }
                 cursor.close();
@@ -1114,6 +987,16 @@ public class WorkoutSummariesDatabaseManager {
 
                 // Populate new columns for existing data
                 migrateExtremaPositions(db);
+            }
+
+            if (oldVersion < 20) {
+                Log.i(TAG, "upgrading to DB version 20");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.CLUSTER_ID, "int", "-1");
+                
+                // Trigger re-learning to populate clusterIds
+                db.setTransactionSuccessful(); // ensure previous changes are committed if needed? No, onUpgrade is in a transaction usually.
+                // We'll run migration logic after upgrade finished in TrainingApplication or here?
+                // It's safer to do it in RouteClusterEngine.migrateHistory
             }
         }
 

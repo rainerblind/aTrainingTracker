@@ -61,6 +61,7 @@ import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleService;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleServiceBuildIn;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.Watchapp;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHelper;
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents;
@@ -108,6 +109,10 @@ public class TrainingApplication extends Application {
     public static final String SP_STRAVA_TOKEN = "stravaToken";
     public static final String SP_STRAVA_REFRESH_TOKEN = "stravaRefreshToken";
     public static final String SP_STRAVA_TOKEN_EXPIRES_AT = "stravaTokenExpiresAt";
+    public static final String SP_STRAVA_DEMO_MODE = "stravaDemoMode";
+    public static final String SP_CLUSTER_TOL_ENDPOINTS = "clusterTolEndpoints";
+    public static final String SP_CLUSTER_TOL_APEX = "clusterTolApex";
+    public static final String SP_CLUSTER_TOL_DISTANCE = "clusterTolDistance";
     public static final String UPDATE_STRAVA_EQUIPMENT = "updateStravaEquipment";
     public static final String SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT = "lastUpdateTimeOfStravaEquipment";
     public static final String SP_STRAVA_ATHLETE_ID = "stravaAthleteId";
@@ -540,8 +545,28 @@ public class TrainingApplication extends Application {
         cSharedPreferences.edit().remove(TrainingApplication.SP_STRAVA_TOKEN).apply();
         cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_STRAVA, false).apply();
         cSharedPreferences.edit().remove(SP_STRAVA_ATHLETE_ID).apply();
+        cSharedPreferences.edit().putBoolean(SP_STRAVA_DEMO_MODE, false).apply();
         if (DEBUG) Log.i(TAG, "end of deleteStravaToken");
     }
+
+    public static boolean isStravaDemoMode() {
+        return cSharedPreferences.getBoolean(SP_STRAVA_DEMO_MODE, false);
+    }
+
+    public static void injectMockStravaAccount() {
+        cSharedPreferences.edit()
+                .putString(SP_STRAVA_TOKEN, "mock_access_token")
+                .putString(SP_STRAVA_REFRESH_TOKEN, "mock_refresh_token")
+                .putInt(SP_STRAVA_TOKEN_EXPIRES_AT, (int) (System.currentTimeMillis() / 1000 + 3600))
+                .putInt(SP_STRAVA_ATHLETE_ID, 12345)
+                .putBoolean(SP_UPLOAD_TO_STRAVA, true)
+                .putBoolean(SP_STRAVA_DEMO_MODE, true)
+                .apply();
+    }
+
+    public static float getClusterTolEndpoints() { return cSharedPreferences.getFloat(SP_CLUSTER_TOL_ENDPOINTS, 200f); }
+    public static float getClusterTolApex() { return cSharedPreferences.getFloat(SP_CLUSTER_TOL_APEX, 400f); }
+    public static float getClusterTolDistance() { return cSharedPreferences.getFloat(SP_CLUSTER_TOL_DISTANCE, 0.20f); }
 
     @NonNull
     public static String getLastUpdateTimeOfStravaEquipment() {
@@ -784,6 +809,23 @@ public class TrainingApplication extends Application {
         ContextCompat.registerReceiver(this, mTrackingStoppedReceiver, new IntentFilter(TrackerService.TRACKING_FINISHED_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mPauseTrackingReceiver, new IntentFilter(REQUEST_PAUSE_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mResumeFromPaused, new IntentFilter(REQUEST_RESUME_FROM_PAUSED), ContextCompat.RECEIVER_NOT_EXPORTED);
+
+        com.google.android.gms.maps.MapsInitializer.initialize(this);
+
+        runWorkoutClusterMigration();
+    }
+
+    private void runWorkoutClusterMigration() {
+        final String SP_MIGRATION_WORKOUT_CLUSTERS = "migration_workout_clusters_v2";
+        if (!cSharedPreferences.getBoolean(SP_MIGRATION_WORKOUT_CLUSTERS, false)) {
+            new Thread(() -> {
+                if (DEBUG) Log.i(TAG, "Starting Workout Cluster History Migration...");
+                WorkoutClusterEngine.getInstance(this)
+                        .migrateHistory(this);
+                cSharedPreferences.edit().putBoolean(SP_MIGRATION_WORKOUT_CLUSTERS, true).apply();
+                if (DEBUG) Log.i(TAG, "Workout Cluster History Migration Finished.");
+            }).start();
+        }
     }
 
     // helper method to create the Notification Builder

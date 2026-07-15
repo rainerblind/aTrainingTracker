@@ -121,4 +121,9 @@ object TTColor {
     // Route Visualization
     val RouteSelected = Color(0xFF228B22) // ForestGreen
     val RouteUnselected = Color(0xFF90EE90) // LightGreen
+
+    // Spatial Signature Points
+    val StartPoint = Color(0xFF2E7D32) // Material Green 800
+    val EndPoint = Color(0xFFC62828)   // Material Red 800
+    val ApexPoint = Color(0xFF1565C0)  // Material Blue 800
 }

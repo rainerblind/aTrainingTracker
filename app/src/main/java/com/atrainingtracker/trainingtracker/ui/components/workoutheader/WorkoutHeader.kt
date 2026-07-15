@@ -55,7 +55,8 @@ fun WorkoutHeader(
     onSaveAsRoute: () -> Unit,
     onDeleteRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    menuEnabled: Boolean = true
+    menuEnabled: Boolean = true,
+    actions: @Composable RowScope.() -> Unit = {}
 ) {
     // State to control menu visibility
     var showMenu by remember { mutableStateOf(false) }
@@ -158,98 +159,104 @@ fun WorkoutHeader(
                 }
             }
 
-            // 4. Menu Button (Pinned to Top-End)
-            if (menuEnabled) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd) // This moves it to the right
-                        .padding(top = 4.dp, end = 4.dp)
-                ) {
-                    IconButton(
-                        onClick = { showMenu = true },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_baseline_more_vert_24),
-                            contentDescription = stringResource(R.string.ExportFiles),
-                        )
-                    }
+            // 4. Action / Menu Button Area (Pinned to Top-End)
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 4.dp, end = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Custom actions provided by caller
+                actions()
 
-                    // Material 3 Dropdown Menu for exporting to various file formats.
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ) {
-                        // 1. Define standard formats
-                        val standardFormats = listOf(
-                            FileFormat.TCX to R.string.tcxWrite,
-                            FileFormat.GPX to R.string.gpxWrite,
-                            FileFormat.CSV to R.string.csvWrite,
-                            FileFormat.GC to R.string.jsonWrite
-                        )
-
-                        // 2. Render standard formats
-                        standardFormats.forEach { (format, labelRes) ->
-                            DropdownMenuItem(
-                                text = { Text(stringResource(labelRes)) },
-                                onClick = {
-                                    showMenu = false
-                                    onExport(format)
-                                }
+                if (menuEnabled) {
+                    Box {
+                        IconButton(
+                            onClick = { showMenu = true },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_baseline_more_vert_24),
+                                contentDescription = stringResource(R.string.ExportFiles),
                             )
                         }
 
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        // Material 3 Dropdown Menu for exporting to various file formats.
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ) {
+                            // 1. Define standard formats
+                            val standardFormats = listOf(
+                                FileFormat.TCX to R.string.tcxWrite,
+                                FileFormat.GPX to R.string.gpxWrite,
+                                FileFormat.CSV to R.string.csvWrite,
+                                FileFormat.GC to R.string.jsonWrite
+                            )
 
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.save_as_route)) },
-                            onClick = {
-                                showMenu = false
-                                onSaveAsRoute()
-                            },
-                            leadingIcon = { Icon(painterResource(R.drawable.ic_route), contentDescription = null) }
-                        )
-
-                        // Check if Strava is globally enabled AND if this workout specifically allows it
-                        val stravaGloballyEnabled = TrainingApplication.uploadToCommunity(FileFormat.STRAVA)
-                        val stravaMappingAvailable = data.stravaSportName != null
-                        val stravaIndividuallyEnabled = data.uploadToStrava != 0
-
-                        if (stravaGloballyEnabled && stravaIndividuallyEnabled && stravaMappingAvailable) {
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.logo_square_strava),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp),
-                                            tint = Color.Unspecified
-                                        )
-                                        Spacer(Modifier.width(8.dp))
-                                        Text(stringResource(R.string.stravaUpload))
+                            // 2. Render standard formats
+                            standardFormats.forEach { (format, labelRes) ->
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(labelRes)) },
+                                    onClick = {
+                                        showMenu = false
+                                        onExport(format)
                                     }
-                                },
+                                )
+                            }
+
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.save_as_route)) },
                                 onClick = {
                                     showMenu = false
-                                    onExport(FileFormat.STRAVA)
-                                }
+                                    onSaveAsRoute()
+                                },
+                                leadingIcon = { Icon(painterResource(R.drawable.ic_route), contentDescription = null) }
+                            )
+
+                            // Check if Strava is globally enabled AND if this workout specifically allows it
+                            val stravaGloballyEnabled = TrainingApplication.uploadToCommunity(FileFormat.STRAVA)
+                            val stravaMappingAvailable = data.stravaSportName != null
+                            val stravaIndividuallyEnabled = data.uploadToStrava != 0
+
+                            if (stravaGloballyEnabled && stravaIndividuallyEnabled && stravaMappingAvailable) {
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.logo_square_strava),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp),
+                                                tint = Color.Unspecified
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(stringResource(R.string.stravaUpload))
+                                        }
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        onExport(FileFormat.STRAVA)
+                                    }
+                                )
+                            }
+                        }
+
+                        // Context Menu for deletion
+                        DropdownMenu(
+                            expanded = showContextMenu,
+                            onDismissRequest = { showContextMenu = false },
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.delete)) },
+                                onClick = { showContextMenu = false; onDeleteRequest() },
+                                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
                             )
                         }
-                    }
-
-                    // Context Menu for deletion
-                    DropdownMenu(
-                        expanded = showContextMenu,
-                        onDismissRequest = { showContextMenu = false },
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.delete)) },
-                            onClick = { showContextMenu = false; onDeleteRequest() },
-                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
-                        )
                     }
                 }
             }

@@ -93,6 +93,8 @@ fun RouteItem(
                         path = pathPoints
                     ),
                     modifier = Modifier.fillMaxSize(),
+                    start = pathPoints.firstOrNull()?.latLng,
+                    end = pathPoints.lastOrNull()?.latLng,
                     onMapClick = { onMapClick(summary.id) }
                 )
             }

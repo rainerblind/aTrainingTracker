@@ -45,11 +45,8 @@
     <string name="Lap">Lap</string>
     <string name="Equipment">Equipment</string>
     <string name="edit_device">edit device</string>
-    <string name="edit_location">edit location</string>
-    <string name="Edit_Location">Edit Location</string>
     <string name="edit_workout">edit workout</string>
     <string name="save_as_route">save as route</string>
-    <string name="Edit_Location_Message">Edit the name and altitude of this location</string>
     <string name="edit_wheel_circumference">edit wheel circumference</string>
     <string name="edit_calibration_factor">edit calibration factor</string>
     <string name="delete">delete</string>
@@ -62,7 +59,6 @@
     <string name="defaultDaysToKeep" translatable="false">30</string>
     <string name="delete_sensor">delete</string>
     <string name="really_delete_workout">Do you really want to delete this workout?</string>
-    <string name="really_delete_location">Do you really want to delete this location?</string>
     <string name="really_delete_pebble_view_format">Do you really want to delete the Pebble view "%1$s"?</string>
     <string name="really_delete_view_format">Do you really want to delete the tracking view "%1$s"?</string>
     <string name="deleting_please_wait">Deleting workout …\nplease wait</string>
@@ -71,7 +67,6 @@
     <string name="calculating_extrema_value_for">calculating %1$s of %2$s</string>
     <string name="calculating_max_away_point">calculating max away point</string>
     <string name="initializing">initializing</string>
-    <string name="delete_location">delete location</string>
     <string name="show_HW_details">show HW details</string>
     <string name="show_google_maps_licence">Google Maps Legal Info</string>
     <string name="play_services_not_installed">Google Play services is not installed on this device.</string>
@@ -629,7 +624,7 @@
     <string name="start">start</string>
     <string name="max_line_distance">furthest away</string>
     <string name="end">end</string>
-    <string name="my_locations">My Locations</string>
+    <string name="my_locations">Favorite Tracks</string>
     <string name="drawer__settings">Settings</string>
     <string name="get_extremaType_of_sportType_format">Get %1$s positions of your %2$s workouts.</string>
     <string name="getting_my_locations">Looking for known locations.</string>
@@ -639,24 +634,9 @@
     <string name="edit_my_location">Edit Location</string>
     <string name="radius_format" translatable="false">%1$s %2$d %3$s</string>
     <string name="units_radius" translatable="false">m</string>
-    <string name="create_new_my_location">Creating new known location.</string>
-    <string name="calc_workout_name">Calculating workout name.</string>
     <string name="calc_map_polyline">Calculating map polyline.</string>
-    <string name="edit_counter">edit</string>
-    <string name="edit_counter_format">Edit %1$s counter.</string>
-    <string name="editWorkoutNameCounters">Edit workout name counters.</string>
-    <string name="StartLocation">Start location:</string>
-    <string name="EndLocation">End location:</string>
-    <string name="NameScheme">Name scheme:</string>
-    <string name="addCounter">Add counter</string>
-    <string name="addVia">Add name of max line distance location when making a detour.</string>
-    <string name="configureWorkoutNameSchemes">Configure how your workouts should be named.</string>
-    <string name="via_format">&#032;via %1$s</string>
-    <string name="loop_around_format">&#032;to %1$s and back</string>
-    <string name="really_delete_format">Do you really want to delete \"%1$s\"?</string>
-    <string name="workout_name_scheme">Workout Name Scheme</string>
-    <string name="workout_name_schemes">Workout Name Schemes</string>
     <string name="starred_run_segments">Run</string>
+    <string name="really_delete_format">Do you really want to delete \"%1$s\"?</string>
     <string name="starred_bike_segments">Bike</string>
     <string name="segments">Strava Segments</string>
 
@@ -1126,6 +1106,8 @@
     <string name="routes">Routes</string>
     <string name="no_routes_available">No %s routes available.</string>
     <string name="absolutely_no_routes_available">No routes available.</string>
+    <string name="no_clusters_available">No %s favorite tracks available.</string>
+    <string name="absolutely_no_clusters_available">No favorite tracks available.</string>
     <string name="routes_import_hint">Import a GPX file by clicking on the \"+\" at the top or by clicking on one in your file manager.</string>
     <string name="route_edit">Edit Route</string>
     <string name="route_sport_type">Sport Type</string>
@@ -1197,4 +1179,63 @@
     <string name="track_type_fused">Google Fused</string>
     <string name="track_type_network">Network</string>
     <string name="legend">Legend</string>
+
+    <string name="cluster_statistics_title">Workout Statistics</string>
+    <string name="cluster_total_recordings">Total Recordings</string>
+    <string name="cluster_average_distance">Average Distance</string>
+    <string name="cluster_recordings_format">%1$d recordings</string>
+    <string name="cluster_ref_distance_label">Ref: %1$s</string>
+
+    <string name="cluster_tuning_title">Clustering Parameters</string>
+    <string name="cluster_tuning_master_label">Grouping Sensitivity</string>
+    <string name="cluster_tuning_strict">Strict</string>
+    <string name="cluster_tuning_relaxed">Relaxed</string>
+    <string name="cluster_tuning_show_details">Show Detailed Parameters</string>
+    <string name="cluster_tuning_endpoint_label">Endpoint Tolerance</string>
+    <string name="cluster_tuning_apex_label">Apex (Max Displacement) Tolerance</string>
+    <string name="cluster_tuning_distance_label">Distance Tolerance</string>
+    <string name="cluster_tuning_recalculate_button">Recalculate All Clusters</string>
+    <string name="cluster_tuning_warning">Warning: Recalculating will wipe all learned cluster names and grouping, then rebuild them from history using these new parameters.</string>
+    <string name="cluster_tuning_recalculating">Recalculating clusters…</string>
+    <string name="cluster_tuning_take_while">This might take a while.</string>
+
+    <string name="cluster_move_workout_title">Move Workout</string>
+    <string name="cluster_move_workout_hint">Select target workout cluster (Similarity score in brackets, lower is better):</string>
+    <string name="cluster_score_format">Score: %1$.3f | %2$d recordings</string>
+    <string name="cluster_score_format_with_dist">Score: %1$.3f | %2$d recordings | %3$s</string>
+
+    <string name="cluster_suggestions_title">Suggested Routes (lower score is better):</string>
+
+    <string name="cluster_manual_title">Add Workout Cluster</string>
+    <string name="cluster_manual_pick_start">Pick Start</string>
+    <string name="cluster_manual_pick_end">Pick End</string>
+    <string name="cluster_manual_pick_apex">Pick Apex (Furthest Away)</string>
+    <string name="cluster_manual_distance_hint">Workout Distance (%s)</string>
+    <string name="cluster_manual_missing_points">Please pick all 3 spatial points on the map.</string>
+
+    <string name="cluster_edit_fingerprint">Edit Workout Fingerprint</string>
+    <string name="cluster_edit_fingerprint_hint">Adjust Start, End, or Apex by selecting the type and tapping the map.</string>
+    <string name="cluster_tuning_content_desc">Tune Clustering</string>
+    <string name="cluster_move_content_desc">Move Cluster</string>
+    <string name="cluster_save_fingerprint_content_desc">Save Fingerprint</string>
+    <string name="cluster_edit_fingerprint_content_desc">Edit Fingerprint</string>
+    <string name="cluster_manual_pick_hint">Pick spatial fingerprint on map:</string>
+    <string name="cluster_manual_tap_map_format">Tap map to set %s</string>
+    <string name="cluster_clear_content_desc">Clear</string>
+    <string name="cluster_default_name_format">Workout at %s</string>
+    <string name="cluster_equipment_mapping_format">→ %s</string>
+    <string name="cluster_score_brackets_format">(%1$.3f)</string>
+    <string name="cluster_suggestions_content_desc">Suggestions</string>
+    <string name="cluster_autoname_format">%1$s #%2$d</string>
+    <string name="cluster_delete_title">Delete Workout Cluster</string>
+    <string name="cluster_delete_message">Are you sure you want to delete this workout cluster? This will not delete the associated workouts, but they will no longer be grouped under this cluster.</string>
+
+    <string name="all_sports">+ all sports +</string>
+    <string name="all_equipment">+ all equipment +</string>
+    <string name="all_shoes">+ all shoes +</string>
+    <string name="all_bikes">+ all bikes +</string>
+    <string name="no_equipment">- none -</string>
+
+    <string name="unclustered">Unclustered</string>
+    <string name="no_unclustered_workouts">All workouts are clustered.</string>
 </resources>

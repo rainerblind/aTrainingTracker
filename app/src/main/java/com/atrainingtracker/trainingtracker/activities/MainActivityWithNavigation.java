@@ -53,6 +53,7 @@ import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents;
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsFragment;
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment;
+import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersFragment;
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
 import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack;
 import com.atrainingtracker.trainingtracker.ui.routes.RoutesFragment;
@@ -102,7 +103,6 @@ import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManage
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
 import com.atrainingtracker.trainingtracker.fragments.preferences.CloudUploadFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.FancyWorkoutNameListFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.RootPrefsFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.RunkeeperUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.SearchFragment;
@@ -839,12 +839,10 @@ public class MainActivityWithNavigation
                 mFragment = EquipmentFragment.newInstance(1);
                 tag = EquipmentFragment.TAG;
                 break;
-/* NO_MY_LOCATIONS
             case R.id.drawer_my_locations:
-                mFragment = new MyLocationsFragment();
-                tag = MyLocationsFragment.TAG;
+                mFragment = WorkoutClustersFragment.Companion.newInstance();
+                tag = WorkoutClustersFragment.TAG;
                 break;
- */
 
             case R.id.drawer_settings:
                 mFragment = new RootPrefsFragment();
@@ -961,7 +959,6 @@ public class MainActivityWithNavigation
                     fragment = new TrainingpeaksUploadFragment();
             case "pebbleScreen" -> fragment = new PebbleScreenFragment();
             case "search_settings" -> fragment = new SearchFragment();
-            case "fancyWorkoutNames" -> fragment = new FancyWorkoutNameListFragment();
             default -> Log.d(TAG, "WTF: unknown key");
         }
 
