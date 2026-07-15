@@ -1238,4 +1238,5 @@
 
     <string name="unclustered">Unclustered</string>
     <string name="no_unclustered_workouts">All workouts are clustered.</string>
+    <string name="error_sharing_failed">Unable to generate share image. Please try again.</string>
 </resources>

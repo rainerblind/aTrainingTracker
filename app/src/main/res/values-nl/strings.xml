@@ -1038,4 +1038,8 @@
     <string name="cluster_autoname_format">%1$s #%2$d</string>
     <string name="cluster_delete_title">Workoutcluster verwijderen</string>
     <string name="cluster_delete_message">Weet u zeker dat u dit workoutcluster wilt verwijderen? De bijbehorende trainingen worden niet verwijderd, maar ze worden niet meer onder dit cluster gegroepeerd.</string>
+
+    <string name="unclustered">Open</string>
+    <string name="no_unclustered_workouts">Alle trainingen zijn gegroepeerd.</string>
+    <string name="error_sharing_failed">Delen mislukt. Probeer het opnieuw.</string>
 </resources>

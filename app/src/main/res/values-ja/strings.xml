@@ -1021,4 +1021,8 @@
     <string name="cluster_autoname_format">%1$s #%2$d</string>
     <string name="cluster_delete_title">ワークアウトクラスターを削除</string>
     <string name="cluster_delete_message">このワークアウトクラスターを削除してもよろしいですか？関連するワークアウトは削除されませんが、このクラスターの下にはグループ化されなくなります。</string>
+
+    <string name="unclustered">未分類</string>
+    <string name="no_unclustered_workouts">すべてのワークアウトが分類されています。</string>
+    <string name="error_sharing_failed">共有に失敗しました。もう一度お試しください。</string>
 </resources>

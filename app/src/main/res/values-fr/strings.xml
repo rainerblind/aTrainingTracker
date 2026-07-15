@@ -1037,4 +1037,8 @@
     <string name="cluster_autoname_format">%1$s #%2$d</string>
     <string name="cluster_delete_title">Supprimer le groupe d’itinéraires</string>
     <string name="cluster_delete_message">Êtes-vous sûr de vouloir supprimer ce groupe d’itinéraires ? Cela ne supprimera pas les entraînements associés, mais ils ne seront plus regroupés sous ce groupe.</string>
+
+    <string name="unclustered">Ouvert</string>
+    <string name="no_unclustered_workouts">Tous les entraînements sont groupés.</string>
+    <string name="error_sharing_failed">Échec du partage. Veuillez réessayer.</string>
 </resources>

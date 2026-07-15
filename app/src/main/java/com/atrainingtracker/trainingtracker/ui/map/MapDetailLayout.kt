@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
 import com.atrainingtracker.trainingtracker.ui.components.MinimumDragHandle
@@ -125,6 +126,10 @@ fun MapDetailLayout(
                             combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp)
                             isSharing = false
                         }
+                    },
+                    onSnapshotError = {
+                        isSharing = false
+                        android.widget.Toast.makeText(context, R.string.error_sharing_failed, android.widget.Toast.LENGTH_SHORT).show()
                     },
                     content = mapContent
                 )

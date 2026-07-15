@@ -81,6 +81,11 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   **Sync Discovery**: Update `docs/requirements.md` and `docs/tests.md` to reflect the *actual* final state of the implemented feature.
     *   **Truth Verification**: Ensure the documentation remains a "Single Source of Truth" that accurately describes the code as it exists after implementation.
 
+10. **Localization Compliance (Mandatory Standard)**:
+    *   Whenever a new user-facing string is introduced, the agent MUST translate it to ALL supported languages (EN, DE, ES, FR, IT, PT, NL, PL, JA) before the task is considered complete.
+    *   All translations MUST be externalized in the respective `strings.xml` files.
+    *   This is a non-negotiable quality standard for a world-class application.
+
 ## New Version / Release Workflow
 Whenever preparing for a new version:
 1.  **File Audit**: The agent identifies all files modified since the last release.
