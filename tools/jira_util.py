@@ -77,10 +77,26 @@ def list_sprint_issues():
 
 def show_issue(issue_key):
     config = get_config()
-    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=summary,description,comment,attachment"
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=summary,description,comment,attachment,parent"
     issue = jira_request(url)
 
     print(f"h1. {issue['key']}: {issue['fields']['summary']}")
+
+    # Epic/Parent context
+    parent = issue['fields'].get('parent')
+    if parent:
+        parent_key = parent['key']
+        parent_summary = parent['fields']['summary']
+        parent_type = parent['fields']['issuetype']['name']
+        print(f"\n*Parent ({parent_type})*: {parent_key}: {parent_summary}")
+
+        # If parent is an Epic, fetch its description for more context
+        if parent_type == "Epic":
+            epic_url = f"{config['JIRA_URL']}/rest/api/2/issue/{parent_key}?fields=description"
+            epic = jira_request(epic_url)
+            epic_desc = epic['fields'].get('description', 'No description')
+            print(f"\n*Epic Description*:\n{epic_desc}")
+
     print(f"\n*Description*:\n{issue['fields']['description']}")
 
     print("\n*Attachments*:")
@@ -132,9 +148,32 @@ def add_comment(issue_key, text):
     jira_request(url, method="POST", payload=payload)
     print(f"Comment added to {issue_key}.")
 
+def search_issues(jql):
+    config = get_config()
+    # Using API v3 POST for search as GET might be deprecated or removed
+    url = f"{config['JIRA_URL']}/rest/api/3/search/jql"
+    payload = {
+        "jql": jql,
+        "fields": ["summary", "status"]
+    }
+    data = jira_request(url, method="POST", payload=payload)
+    for i in data.get("issues", []):
+        print(f"{i['key']}: {i['fields']['summary']} [{i['fields']['status']['name']}]")
+
+def update_issue_description(issue_key, description):
+    config = get_config()
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}"
+    payload = {
+        "fields": {
+            "description": description
+        }
+    }
+    jira_request(url, method="PUT", payload=payload)
+    print(f"Description updated for {issue_key}.")
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: jira_util.py [list | show KEY | move KEY todo|in_progress|in_review|done | comment KEY TEXT | download URL FILENAME]")
+        print("Usage: jira_util.py [list | show KEY | move KEY todo|in_progress|in_review|done | comment KEY TEXT | download URL FILENAME | search JQL | update-desc KEY TEXT]")
         sys.exit(1)
 
     cmd = sys.argv[1]
@@ -148,5 +187,9 @@ if __name__ == "__main__":
         transition_issue(sys.argv[2], sys.argv[3])
     elif cmd == "comment" and len(sys.argv) == 4:
         add_comment(sys.argv[2], sys.argv[3])
+    elif cmd == "search" and len(sys.argv) == 3:
+        search_issues(sys.argv[2])
+    elif cmd == "update-desc" and len(sys.argv) == 4:
+        update_issue_description(sys.argv[2], sys.argv[3])
     else:
         print("Invalid command or arguments.")
