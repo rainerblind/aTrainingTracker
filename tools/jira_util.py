@@ -171,9 +171,24 @@ def update_issue_description(issue_key, description):
     jira_request(url, method="PUT", payload=payload)
     print(f"Description updated for {issue_key}.")
 
+def create_subtask(parent_key, summary, description):
+    config = get_config()
+    url = f"{config['JIRA_URL']}/rest/api/2/issue"
+    payload = {
+        "fields": {
+            "project": {"key": "SCRUM"},
+            "parent": {"key": parent_key},
+            "summary": summary,
+            "description": description,
+            "issuetype": {"id": "10002"}  # Subtask ID
+        }
+    }
+    data = jira_request(url, method="POST", payload=payload)
+    print(f"Sub-task {data['key']} created for parent {parent_key}.")
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: jira_util.py [list | show KEY | move KEY todo|in_progress|in_review|done | comment KEY TEXT | download URL FILENAME | search JQL | update-desc KEY TEXT]")
+        print("Usage: jira_util.py [list | show KEY | move KEY todo|in_progress|in_review|done | comment KEY TEXT | download URL FILENAME | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC]")
         sys.exit(1)
 
     cmd = sys.argv[1]
@@ -191,5 +206,7 @@ if __name__ == "__main__":
         search_issues(sys.argv[2])
     elif cmd == "update-desc" and len(sys.argv) == 4:
         update_issue_description(sys.argv[2], sys.argv[3])
+    elif cmd == "create-subtask" and len(sys.argv) == 5:
+        create_subtask(sys.argv[2], sys.argv[3], sys.argv[4])
     else:
         print("Invalid command or arguments.")

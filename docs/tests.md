@@ -144,6 +144,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-SET-032** | **Markers in Previews** | `REQ-SET-042` | 1. Open the Workout History list. 2. Open the Routes list. 3. Observe the mini-maps. | 1. Workout previews show Start (Green), End (Red), and Apex (Blue) markers. 2. Route previews show ONLY Start and End markers. | Verified |
 | **TST-SET-033** | **Fingerprint Parity** | `REQ-SET-043` | 1. Import a Route. 2. Record a workout on that exact route. 3. Navigate to Favorite Tracks. | 1. Both the Route and Workout SHALL have the exact same Apex coordinate (Furthest from Start). 2. Grouping accuracy is 100%. | Verified |
 | **TST-UI-070** | **Unified Deletion UI** | `REQ-UI-061` | 1. Long-press a Workout item. 2. Long-press a Route item. 3. Long-press an Equipment item. | The Deletion DropdownMenu appears in the exact same relative position (Top-Left) for all items. | Verified |
+| **TST-STR-012** | **Sub-Task Automation Verification** | `REQ-PRO-007` | 1. Define a requirement and a test case in the docs. 2. The agent should be able to create a sub-task in Jira linked to the main ticket with the test ID and summary. 3. Verify the sub-task is created with the correct parent. | Sub-task is successfully created in Jira with parent linkage. | Verified |
 
 ## 4. Release Verification Workflow
 
