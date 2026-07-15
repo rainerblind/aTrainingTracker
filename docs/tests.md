@@ -143,6 +143,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-SET-030** | **Locale-Aware Distance Input** | `REQ-SET-039` | 1. Set device locale to German. 2. Open 'Add Workout Cluster' flow. 3. Enter '5,5' in the distance field. | 1. The 'Save' button becomes enabled. 2. Saving the cluster correctly parses '5,5' as 5.5 units (km or miles). | Verified |
 | **TST-SET-032** | **Markers in Previews** | `REQ-SET-042` | 1. Open the Workout History list. 2. Open the Routes list. 3. Observe the mini-maps. | 1. Workout previews show Start (Green), End (Red), and Apex (Blue) markers. 2. Route previews show ONLY Start and End markers. | Verified |
 | **TST-SET-033** | **Fingerprint Parity** | `REQ-SET-043` | 1. Import a Route. 2. Record a workout on that exact route. 3. Navigate to Favorite Tracks. | 1. Both the Route and Workout SHALL have the exact same Apex coordinate (Furthest from Start). 2. Grouping accuracy is 100%. | Verified |
+| **TST-UI-070** | **Unified Deletion UI** | `REQ-UI-061` | 1. Long-press a Workout item. 2. Long-press a Route item. 3. Long-press an Equipment item. | The Deletion DropdownMenu appears in the exact same relative position (Top-Left) for all items. | Verified |
 
 ## 4. Release Verification Workflow
 

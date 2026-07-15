@@ -20,8 +20,14 @@ package com.atrainingtracker.banalservice.ui.devices.devicelist
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -53,148 +59,173 @@ fun DeviceItem(
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    MappableListItem(
-        modifier = modifier,
-        onClick = onItemClick,
-        onLongClick = onLongClick
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(IntrinsicSize.Min)
+    var showContextMenu by remember { mutableStateOf(false) }
+
+    Box {
+        MappableListItem(
+            modifier = modifier,
+            onClick = onItemClick,
+            onLongClick = { showContextMenu = true }
         ) {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                    .height(IntrinsicSize.Min)
             ) {
-                // Identity Row: Icon + Name/Value + Manufacturer
-                Row(verticalAlignment = Alignment.Top) {
-                    // Device Type Icon (Padding normalized for protocol-specific asset whitespace)
-                    Icon(
-                        painter = painterResource(id = device.deviceTypeIconRes),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(if (device.protocol == Protocol.SMARTPHONE) 42.dp else 54.dp)
-                            .padding(if (device.protocol == Protocol.ANT_PLUS) 2.dp else 0.dp)
-                            .clip(RoundedCornerShape(4.dp)),
-                        tint = if (device.protocol == Protocol.SMARTPHONE) 
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
-                        else 
-                            Color.Unspecified
-                    )
-                    
-                    Spacer(modifier = Modifier.width(12.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Identity Row: Icon + Name/Value + Manufacturer
+                    Row(verticalAlignment = Alignment.Top) {
+                        // Device Type Icon (Padding normalized for protocol-specific asset whitespace)
+                        Icon(
+                            painter = painterResource(id = device.deviceTypeIconRes),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(if (device.protocol == Protocol.SMARTPHONE) 42.dp else 54.dp)
+                                .padding(if (device.protocol == Protocol.ANT_PLUS) 2.dp else 0.dp)
+                                .clip(RoundedCornerShape(4.dp)),
+                            tint = if (device.protocol == Protocol.SMARTPHONE) 
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+                            else 
+                                Color.Unspecified
+                        )
+                        
+                        Spacer(modifier = Modifier.width(12.dp))
 
-                    Column(modifier = Modifier.weight(1f)) {
-                        // Row 1: Name (left) and Value (right)
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            // Row 1: Name (left) and Value (right)
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                // Technical Status LED
-                                Box(
-                                    modifier = Modifier.size(18.dp),
-                                    contentAlignment = Alignment.Center
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
                                 ) {
-                                    Surface(
-                                        modifier = Modifier.size(10.dp),
-                                        shape = CircleShape,
-                                        color = if (device.isConnected) TTColor.ConnectionStatusGreen else Color.LightGray,
-                                        tonalElevation = 2.dp
-                                    ) {}
+                                    // Technical Status LED
+                                    Box(
+                                        modifier = Modifier.size(18.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Surface(
+                                            modifier = Modifier.size(10.dp),
+                                            shape = CircleShape,
+                                            color = if (device.isConnected) TTColor.ConnectionStatusGreen else Color.LightGray,
+                                            tonalElevation = 2.dp
+                                        ) {}
+                                    }
+                                    
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    Text(
+                                        text = device.deviceName,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
                                 
-                                Spacer(modifier = Modifier.width(8.dp))
+                                if (device.isConnected) {
+                                    Text(
+                                        text = device.mainValue ?: "--",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        textAlign = TextAlign.End
+                                    )
+                                } else {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_device_not_available),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(24.dp),
+                                        tint = Color.Unspecified
+                                    )
+                                }
+                            }
 
-                                Text(
-                                    text = device.deviceName,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                            
-                            if (device.isConnected) {
-                                Text(
-                                    text = device.mainValue ?: "--",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    textAlign = TextAlign.End
-                                )
-                            } else {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_device_not_available),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp),
-                                    tint = Color.Unspecified
-                                )
-                            }
+                            // Row 2: Manufacturer
+                            Text(
+                                text = device.manufacturer,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
+                    }
 
-                        // Row 2: Manufacturer
+                    // Row 3: Technical Status (Battery + Last Seen/Connected)
+                    DeviceStatusRow(
+                        device = device,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+
+                    // Row 4: Linked Equipment
+                    if (device.linkedEquipment.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = device.manufacturer,
-                            style = MaterialTheme.typography.bodyMedium,
+                            text = stringResource(
+                                R.string.devices_on_short_format,
+                                device.linkedEquipment.joinToString(", ")
+                            ),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Start,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    // Row 5: Predicted Sport Types (Technical mapping)
+                    if (device.linkedSportTypes.isNotEmpty()) {
+                        Text(
+                            text = "→ ${device.linkedSportTypes.joinToString(", ")}",
+                            style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            textAlign = TextAlign.Start,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
 
-                // Row 3: Technical Status (Battery + Last Seen/Connected)
-                DeviceStatusRow(
-                    device = device,
-                    modifier = Modifier.padding(top = 2.dp)
+                // Control (Bottom Right): Pairing Switch
+                // Scaled components keep their layout bounds, so we use negative offsets 
+                // to push the visual switch closer to the card edges.
+                Switch(
+                    checked = device.isPaired,
+                    onCheckedChange = { onPairClick() },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .offset(x = (-4).dp, y = (4).dp)
+                        .scale(0.8f)
                 )
-
-                // Row 4: Linked Equipment
-                if (device.linkedEquipment.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = stringResource(
-                            R.string.devices_on_short_format,
-                            device.linkedEquipment.joinToString(", ")
-                        ),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.Start,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-
-                // Row 5: Predicted Sport Types (Technical mapping)
-                if (device.linkedSportTypes.isNotEmpty()) {
-                    Text(
-                        text = "→ ${device.linkedSportTypes.joinToString(", ")}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
-                        textAlign = TextAlign.Start,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
             }
+        }
 
-            // Control (Bottom Right): Pairing Switch
-            // Scaled components keep their layout bounds, so we use negative offsets 
-            // to push the visual switch closer to the card edges.
-            Switch(
-                checked = device.isPaired,
-                onCheckedChange = { onPairClick() },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = (-4).dp, y = (4).dp)
-                    .scale(0.8f)
-            )
+        // Context Menu for deletion (Pinned to Top-Start to cover the header area)
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 12.dp, top = 8.dp)
+        ) {
+            DropdownMenu(
+                expanded = showContextMenu,
+                onDismissRequest = { showContextMenu = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.delete)) },
+                    onClick = {
+                        showContextMenu = false
+                        onLongClick()
+                    },
+                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                )
+            }
         }
     }
 }

@@ -163,19 +163,25 @@ fun WorkoutSummaryCompact(
             }
         }
 
-        // Context Menu for deletion
-        DropdownMenu(
-            expanded = showContextMenu,
-            onDismissRequest = { showContextMenu = false }
+        // Context Menu for deletion (Pinned to Top-Start to cover the header area)
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 12.dp, top = 8.dp)
         ) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.delete)) },
-                onClick = {
-                    showContextMenu = false
-                    onDeleteRequest()
-                },
-                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
-            )
+            DropdownMenu(
+                expanded = showContextMenu,
+                onDismissRequest = { showContextMenu = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.delete)) },
+                    onClick = {
+                        showContextMenu = false
+                        onDeleteRequest()
+                    },
+                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                )
+            }
         }
     }
 }

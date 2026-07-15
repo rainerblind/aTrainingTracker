@@ -442,15 +442,25 @@ fun EquipmentItem(
 
         }
 
-        DropdownMenu(
-            containerColor = MaterialTheme.colorScheme.surface,
-            expanded = showMenu,
-            onDismissRequest = { showMenu = false }) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.delete)) },
-                onClick = { showMenu = false; onDelete() },
-                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
-            )
+        // Context Menu for deletion (Pinned to Top-Start to cover the header area)
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 12.dp, top = 8.dp)
+        ) {
+            DropdownMenu(
+                containerColor = MaterialTheme.colorScheme.surface,
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.delete)) },
+                    onClick = {
+                        showMenu = false
+                        onDelete()
+                    },
+                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                )
+            }
         }
     }
 }
