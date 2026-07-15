@@ -244,20 +244,27 @@ fun WorkoutHeader(
                                 )
                             }
                         }
-
-                        // Context Menu for deletion
-                        DropdownMenu(
-                            expanded = showContextMenu,
-                            onDismissRequest = { showContextMenu = false },
-                            containerColor = MaterialTheme.colorScheme.surface
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.delete)) },
-                                onClick = { showContextMenu = false; onDeleteRequest() },
-                                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
-                            )
-                        }
                     }
+                }
+            }
+
+            // Context Menu for deletion (Pinned to Top-Start to cover the header area)
+            // Move it here so it's anchored to the main Box's Top-Start (SCRUM-218)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 12.dp, top = 8.dp)
+            ) {
+                DropdownMenu(
+                    expanded = showContextMenu,
+                    onDismissRequest = { showContextMenu = false },
+                    containerColor = MaterialTheme.colorScheme.surface
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.delete)) },
+                        onClick = { showContextMenu = false; onDeleteRequest() },
+                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                    )
                 }
             }
         }

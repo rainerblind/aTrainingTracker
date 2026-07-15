@@ -154,138 +154,147 @@ fun ClusterItem(
     var showContextMenu by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
 
-    MappableListItem(
-        onClick = onClick,
-        onLongClick = {
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            showContextMenu = true
-        }
-    ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp)
-            ) {
-                // --- 1. TOP ROW: Standard Header (Icon + Name) ---
-                WorkoutClusterIdentityRow(cluster = cluster, viewModel = viewModel)
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // --- 2. BOTTOM AREA: Details on left, Map on right ---
-                Row(
-                    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-                    verticalAlignment = Alignment.Bottom
+    Box {
+        MappableListItem(
+            onClick = onClick,
+            onLongClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                showContextMenu = true
+            }
+        ) {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp)
                 ) {
-                    // LEFT SIDE: Metadata & Metrics
-                    WorkoutClusterMetadataBlock(
-                        cluster = cluster,
-                        viewModel = viewModel,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        includeSpacer = true
-                    )
+                    // --- 1. TOP ROW: Standard Header (Icon + Name) ---
+                    WorkoutClusterIdentityRow(cluster = cluster, viewModel = viewModel)
 
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    // RIGHT SIDE: SMALL SQUARE MAP
-                    Surface(
-                        modifier = Modifier.size(100.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh
+                    // --- 2. BOTTOM AREA: Details on left, Map on right ---
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                        verticalAlignment = Alignment.Bottom
                     ) {
-                        val context = LocalContext.current
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            val start = LatLng(cluster.startLat, cluster.startLng)
-                            val end = LatLng(cluster.endLat, cluster.endLng)
-                            val apex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
+                        // LEFT SIDE: Metadata & Metrics
+                        WorkoutClusterMetadataBlock(
+                            cluster = cluster,
+                            viewModel = viewModel,
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            includeSpacer = true
+                        )
 
-                            val bounds = remember(start, end, apex) {
-                                LatLngBounds.Builder()
-                                    .include(start)
-                                    .include(end)
-                                    .include(apex)
-                                    .build()
-                            }
+                        Spacer(modifier = Modifier.width(16.dp))
 
-                            val cameraPositionState = rememberCameraPositionState()
-                            var isMapLoaded by remember { mutableStateOf(false) }
+                        // RIGHT SIDE: SMALL SQUARE MAP
+                        Surface(
+                            modifier = Modifier.size(100.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ) {
+                            val context = LocalContext.current
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                val start = LatLng(cluster.startLat, cluster.startLng)
+                                val end = LatLng(cluster.endLat, cluster.endLng)
+                                val apex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
 
-                            LaunchedEffect(bounds, isMapLoaded) {
-                                if (isMapLoaded) {
-                                    cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(bounds, 40))
+                                val bounds = remember(start, end, apex) {
+                                    LatLngBounds.Builder()
+                                        .include(start)
+                                        .include(end)
+                                        .include(apex)
+                                        .build()
                                 }
-                            }
 
-                            GoogleMap(
-                                modifier = Modifier.fillMaxSize(),
-                                cameraPositionState = cameraPositionState,
-                                properties = MapProperties(mapType = MapType.TERRAIN),
-                                onMapLoaded = { isMapLoaded = true },
-                                uiSettings = MapUiSettings(
-                                    zoomControlsEnabled = false,
-                                    scrollGesturesEnabled = false,
-                                    zoomGesturesEnabled = false,
-                                    tiltGesturesEnabled = false,
-                                    rotationGesturesEnabled = false,
-                                    myLocationButtonEnabled = false
-                                ),
-                                onMapClick = { onClick() }
-                            ) {
-                                // --- RENDER PREVIEW PATHS (SCRUM-224) ---
-                                val pathColor = MaterialTheme.colorScheme.primary
-                                val isHeatmap = cluster.previewPaths.size > 1
+                                val cameraPositionState = rememberCameraPositionState()
+                                var isMapLoaded by remember { mutableStateOf(false) }
 
-                                cluster.previewPaths.forEach { polyline ->
-                                    val points = remember(polyline) { PolyUtil.decode(polyline) }
-                                    if (points.isNotEmpty()) {
-                                        Polyline(
-                                            points = points,
-                                            color = if (isHeatmap) pathColor.copy(alpha = 0.2f) else pathColor,
-                                            width = if (isHeatmap) 6f else 4f,
-                                            startCap = RoundCap(),
-                                            endCap = RoundCap(),
-                                            jointType = JointType.ROUND
-                                        )
+                                LaunchedEffect(bounds, isMapLoaded) {
+                                    if (isMapLoaded) {
+                                        cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(bounds, 40))
                                     }
                                 }
 
-                                Marker(
-                                    state = remember(start) { MarkerState(position = start) },
-                                    icon = remember { createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint) }
-                                )
-                                Marker(
-                                    state = remember(end) { MarkerState(position = end) },
-                                    icon = remember { createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint) }
-                                )
-                                Marker(
-                                    state = remember(apex) { MarkerState(position = apex) },
-                                    icon = remember { createSensorMarker(context, R.drawable.ic_distance, TTColor.ApexPoint) }
-                                )
-                            }
-                            
-                            // Transparent overlay to ensure reliable click handling in a scrollable list
-                            Box(modifier = Modifier.fillMaxSize().combinedClickable(
-                                onClick = onClick,
-                                onLongClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    showContextMenu = true
+                                GoogleMap(
+                                    modifier = Modifier.fillMaxSize(),
+                                    cameraPositionState = cameraPositionState,
+                                    properties = MapProperties(mapType = MapType.TERRAIN),
+                                    onMapLoaded = { isMapLoaded = true },
+                                    uiSettings = MapUiSettings(
+                                        zoomControlsEnabled = false,
+                                        scrollGesturesEnabled = false,
+                                        zoomGesturesEnabled = false,
+                                        tiltGesturesEnabled = false,
+                                        rotationGesturesEnabled = false,
+                                        myLocationButtonEnabled = false
+                                    ),
+                                    onMapClick = { onClick() }
+                                ) {
+                                    // --- RENDER PREVIEW PATHS (SCRUM-224) ---
+                                    val pathColor = MaterialTheme.colorScheme.primary
+                                    val isHeatmap = cluster.previewPaths.size > 1
+
+                                    cluster.previewPaths.forEach { polyline ->
+                                        val points = remember(polyline) { PolyUtil.decode(polyline) }
+                                        if (points.isNotEmpty()) {
+                                            Polyline(
+                                                points = points,
+                                                color = if (isHeatmap) pathColor.copy(alpha = 0.2f) else pathColor,
+                                                width = if (isHeatmap) 6f else 4f,
+                                                startCap = RoundCap(),
+                                                endCap = RoundCap(),
+                                                jointType = JointType.ROUND
+                                            )
+                                        }
+                                    }
+
+                                    Marker(
+                                        state = remember(start) { MarkerState(position = start) },
+                                        icon = remember { createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint) }
+                                    )
+                                    Marker(
+                                        state = remember(end) { MarkerState(position = end) },
+                                        icon = remember { createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint) }
+                                    )
+                                    Marker(
+                                        state = remember(apex) { MarkerState(position = apex) },
+                                        icon = remember { createSensorMarker(context, R.drawable.ic_distance, TTColor.ApexPoint) }
+                                    )
                                 }
-                            ))
+                                
+                                // Transparent overlay to ensure reliable click handling in a scrollable list
+                                Box(modifier = Modifier.fillMaxSize().combinedClickable(
+                                    onClick = onClick,
+                                    onLongClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        showContextMenu = true
+                                    }
+                                ))
+                            }
                         }
                     }
                 }
             }
+        }
 
-            // Context Menu for deletion (Long-click target)
+        // Context Menu for deletion (Pinned to Top-Start to cover the header area)
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 12.dp, top = 8.dp)
+        ) {
             DropdownMenu(
                 expanded = showContextMenu,
-                onDismissRequest = { showContextMenu = false },
-                containerColor = MaterialTheme.colorScheme.surface,
-                modifier = Modifier.align(Alignment.TopEnd)
+                onDismissRequest = { showContextMenu = false }
             ) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.delete)) },
-                    onClick = { showContextMenu = false; onDeleteRequest(cluster) },
+                    onClick = {
+                        showContextMenu = false
+                        onDeleteRequest(cluster)
+                    },
                     leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
                 )
             }
