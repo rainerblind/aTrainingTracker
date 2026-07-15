@@ -73,6 +73,7 @@ fun ATrainingTrackerMap(
     onMapClick: ((LatLng) -> Unit)? = null,
     shouldTakeSnapshot: Boolean = false,
     onSnapshotReady: (Bitmap) -> Unit = {},
+    onSnapshotError: (() -> Unit)? = null,
     
     // Modular Data Layers (DSL)
     content: MapContentScope.() -> Unit
@@ -139,7 +140,13 @@ fun ATrainingTrackerMap(
         ) {
             MapEffect(shouldTakeSnapshot) { map ->
                 if (shouldTakeSnapshot) {
-                    map.snapshot { onSnapshotReady(it!!) }
+                    map.snapshot { bitmap ->
+                        if (bitmap != null) {
+                            onSnapshotReady(bitmap)
+                        } else {
+                            onSnapshotError?.invoke()
+                        }
+                    }
                 }
             }
 

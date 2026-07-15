@@ -1146,4 +1146,5 @@
 
     <string name="unclustered">Offen</string>
     <string name="no_unclustered_workouts">Alle Einheiten sind gruppiert.</string>
+    <string name="error_sharing_failed">Teilen fehlgeschlagen. Bitte erneut versuchen.</string>
 </resources>
