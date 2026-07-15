@@ -119,7 +119,7 @@ public abstract class MyDevice {
 
     protected abstract void addSensors();
 
-    protected void addSensor(MySensor mySensor) {
+    protected synchronized void addSensor(MySensor mySensor) {
         if (DEBUG) {
             Log.d(TAG, "addSensor(" + mySensor.getSensorType().name() + ")");
         }
@@ -127,7 +127,7 @@ public abstract class MyDevice {
         mSensorMap.put(mySensor.getSensorType(), mySensor);
     }
 
-    protected void removeSensor(SensorType sensorType) {
+    protected synchronized void removeSensor(SensorType sensorType) {
         if (DEBUG) Log.d(TAG, "removeSensor(" + sensorType.name() + ")");
 
         mSensorMap.remove(sensorType);
@@ -240,18 +240,18 @@ public abstract class MyDevice {
     /**
      * returns the Sensors
      */
-    public Collection<MySensor> getSensors() {
-        return mSensorMap.values();
+    public synchronized Collection<MySensor> getSensors() {
+        return new ArrayList<>(mSensorMap.values());
     }
 
-    public int getNrOfSensors() {
+    public synchronized int getNrOfSensors() {
         return mSensorMap.size();
     }
 
     /**
      * returns the corresponding Sensor when available, otherwise null
      */
-    public MySensor getSensor(SensorType sensorType) {
+    public synchronized MySensor getSensor(SensorType sensorType) {
         return mSensorMap.get(sensorType);
     }
 
