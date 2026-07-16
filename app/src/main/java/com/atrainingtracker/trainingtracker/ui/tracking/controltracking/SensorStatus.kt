@@ -20,6 +20,8 @@ package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -48,6 +50,7 @@ fun SensorStatus(
     allTelemetry: List<DeviceTelemetry> = emptyList(),
     allDevices: List<DeviceUiData> = emptyList(),
     onDeviceClick: (Long) -> Unit = {},
+    onMenuClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var selectedSensor by remember { mutableStateOf<SensorType?>(null) }
@@ -70,25 +73,49 @@ fun SensorStatus(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (onMenuClick != null) {
+            IconButton(
+                onClick = onMenuClick,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Menu,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        } else {
+            Spacer(modifier = Modifier.size(24.dp))
+        }
 
-        sensorDefinitions.forEach { type ->
-            val isAvailable = activeSensors.contains(type)
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                sensorDefinitions.forEach { type ->
+                    val isAvailable = activeSensors.contains(type)
 
-            Icon(
-                painter = painterResource(id = type.iconResId),
-                contentDescription = type.name,
-                modifier = Modifier
-                    .padding(horizontal = 6.dp)
-                    .size(22.dp)
-                    .alpha(if (isAvailable) 1f else 0.2f)
-                    .clickable {
-                        selectedSensor = type
-                    },
-                tint = if (isAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
-            )
+                    Icon(
+                        painter = painterResource(id = type.iconResId),
+                        contentDescription = type.name,
+                        modifier = Modifier
+                            .padding(horizontal = 6.dp)
+                            .size(22.dp)
+                            .alpha(if (isAvailable) 1f else 0.2f)
+                            .clickable {
+                                selectedSensor = type
+                            },
+                        tint = if (isAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
+                    )
+                }
+            }
         }
     }
 
