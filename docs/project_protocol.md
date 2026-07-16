@@ -22,7 +22,10 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   **MANDATORY HARD STOP**: After requirement synchronization, the agent MUST define the verification criteria with the user.
     *   Identify which manual or automated tests in `docs/tests.md` will prove the requirement is met.
     *   If no suitable test exists, add a new one to `docs/tests.md` immediately.
-    *   **Jira Integration**: For each identified or new test case, the agent MUST create a **Sub-task** in Jira linked to the main ticket. The sub-task summary MUST follow the format: `[Test] TST-XXX-###: Summary`.
+    *   **Jira Integration**: For each identified or new test case, the agent MUST create a **Sub-task** in Jira linked to the main ticket.
+        *   The sub-task **Summary** MUST follow the format: `[Test] TST-XXX-###: Summary`.
+        *   The sub-task **Description** MUST be identical to the procedure and expected result defined in `docs/tests.md` to ensure absolute synchronization.
+        *   After creation, the agent MUST update `docs/tests.md` to include the **Jira Ticket ID** of the sub-task (e.g., `AT-123`) in the test case table for bidirectional traceability.
     *   **Iterative Refinement**: The agent must refine the test cases based on user feedback until the user explicitly agrees.
     *   **Enforcement**: The agent is strictly FORBIDDEN from proposing an implementation plan or writing any code until the user has formally agreed to the test cases in `docs/tests.md` and the corresponding sub-tasks have been created in Jira. This phase is used to clarify and freeze the requirements.
 
