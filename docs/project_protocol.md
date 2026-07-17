@@ -15,6 +15,8 @@ Any AI assistant working on this project **must** follow these steps for every t
         *   **MUST**: For strict technical constraints or quality attributes (e.g., "The database MUST...").
         *   **Atomic & Unambiguous**: One requirement per entry; avoid vague terms like "easy", "improved", or "better".
         *   **System-Centric**: Describe system behavior, not user desires. (Avoid "The user wants...", "I would like...").
+        *   **State-Oriented**: Requirements MUST describe the intended *behavior* or *state* of the system, NOT the *change process* or *implementation steps*. (Strictly avoid "The system SHALL change...", "The system SHALL rename...", "Update the...").
+        *   **Lifecycle Management**: When introducing new functionality, create a new requirement. When modifying existing behavior that is already documented, **update the existing requirement's description** to reflect the new state instead of adding a "change" requirement.
     *   Define the **Rationale** (the "Why") clearly.
     *   Map the requirement to the relevant **Implementation File(s)**.
 
