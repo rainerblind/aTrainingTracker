@@ -1122,4 +1122,34 @@
     <string name="unclustered">Offen</string>
     <string name="no_unclustered_workouts">Alle Einheiten sind gruppiert.</string>
     <string name="error_sharing_failed">Teilen fehlgeschlagen. Bitte erneut versuchen.</string>
+
+    <string name="Edit">Bearbeiten</string>
+    <string name="LocationAltitude">Höhe:</string>
+    <string name="LocationRadius">Radius:</string>
+    <string name="battery_level">Batteriestand</string>
+    <string name="calc_map_polyline">Berechne Karten-Polyline.</string>
+    <string name="config_tracking__showElevationProfile">Höhenprofil</string>
+    <string name="current_value">Aktueller Wert</string>
+    <string name="editLocationName">Name:</string>
+    <string name="edit_my_location">Strecke bearbeiten</string>
+    <string name="end">Ende</string>
+    <string name="filter_max">Max</string>
+    <string name="get_extremaType_of_sportType_format">Ermittle %1$s Positionen deiner %2$s Einheiten.</string>
+    <string name="getting_my_locations">Suche nach bekannten Orten.</string>
+    <string name="invalid_date">\???</string>
+    <string name="mapping_format_gc">GC: %1$s</string>
+    <string name="mapping_format_strava">Strava: %1$s</string>
+    <string name="mapping_format_tcx">TCX: %1$s</string>
+    <string name="max_line_distance">weiteste Entfernung</string>
+    <string name="no_sport_types_available">Keine Sportarten verfügbar</string>
+    <string name="no_workouts_available">Keine Einheiten verfügbar</string>
+    <string name="really_delete_format">Willst du \"%1$s\" wirklich löschen?</string>
+    <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/master/privacy.md</string>
+    <string name="view_size_huge">Riesig</string>
+    <string name="view_size_large">Groß</string>
+    <string name="view_size_normal">Normal</string>
+    <string name="view_size_small">Klein</string>
+    <string name="view_size_xhuge">Gigantisch</string>
+    <string name="view_size_xlarge">Sehr groß</string>
+    <string name="view_size_xsmall">Sehr klein</string>
 </resources>
