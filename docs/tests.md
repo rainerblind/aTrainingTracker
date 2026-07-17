@@ -141,6 +141,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-SET-033** | | **Fingerprint Parity** | `REQ-SET-043` | 1. Import a Route. 2. Record a workout on that exact route. 3. Navigate to Favorite Tracks. | 1. Both the Route and Workout SHALL have the exact same Apex coordinate (Furthest from Start). 2. Grouping accuracy is 100%. | Verified |
 | **TST-UI-070** | `ATT-238` | **Deletion UI** | `REQ-UI-061` | 1. Long-press a Workout item. 2. Long-press a Route item. 3. Long-press an Equipment item. | The Deletion DropdownMenu appears in the exact same relative position (Top-Left) for all items. | Verified |
 | **TST-STR-012** | | **Sub-Task Automation Verification** | `REQ-PRO-007` | 1. Define a requirement and a test case in the docs. 2. The agent should be able to create a sub-task in Jira linked to the main ticket with the test ID and summary. 3. Verify the sub-task is created with the correct parent. | Sub-task is successfully created in Jira with parent linkage. | Verified |
+| **TST-STR-013** | `ATT-251` | **String Resource Integrity Check** | `REQ-UI-113` | 1. Audit all `values-*/strings.xml` files. 2. Compare the set of keys in each file with the keys in `values/strings.xml`. 3. Identify keys present in translations but missing in default. 4. Verify that after implementation, no such discrepancies exist. | Every key defined in a translation file exists in the default `strings.xml`. | Proposed |
 
 ## 4. Release Verification Workflow
 
