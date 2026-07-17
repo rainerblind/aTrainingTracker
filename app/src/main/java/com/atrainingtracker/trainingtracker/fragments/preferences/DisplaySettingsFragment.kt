@@ -10,9 +10,7 @@
 
 package com.atrainingtracker.trainingtracker.fragments.preferences
 
-import android.content.SharedPreferences
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -31,23 +29,13 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.preference.PreferenceFragmentCompat
-import androidx.preference.PreferenceManager
-import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
-import com.dropbox.core.DbxRequestConfig
-import com.dropbox.core.android.Auth
 
-class CloudUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSharedPreferenceChangeListener {
-
-    private var mSharedPreferences: SharedPreferences? = null
-    private var mAwaitDropboxResult = false
-    private var mHeaderComposeView: ComposeView? = null
+class DisplaySettingsFragment : PreferenceFragmentCompat() {
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
-        if (DEBUG) Log.i(TAG, "onCreatePreferences(savedInstanceState, rootKey=$rootKey)")
-        setPreferencesFromResource(R.xml.prefs_dropbox, null)
+        setPreferencesFromResource(R.xml.prefs_display, null)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -58,21 +46,10 @@ class CloudUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnShar
             layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         }
 
-        mHeaderComposeView = ComposeView(requireContext()).apply {
+        val headerComposeView = ComposeView(requireContext()).apply {
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-            updateHeaderContent()
-        }
-
-        root.addView(mHeaderComposeView)
-        prefView?.let { root.addView(it) }
-
-        return root
-    }
-
-    private fun updateHeaderContent() {
-        mHeaderComposeView?.setContent {
-            ATrainingTrackerTheme {
-                Column {
+            setContent {
+                ATrainingTrackerTheme {
                     Surface(
                         color = MaterialTheme.colorScheme.primaryContainer
                     ) {
@@ -86,31 +63,21 @@ class CloudUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnShar
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = stringResource(R.string.Dropbox),
+                                    text = stringResource(R.string.Display),
                                     style = MaterialTheme.typography.headlineSmall,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
                         }
                     }
-
-                    // Connection Control (Buttons) - Matching Strava pattern
-                    val isConnected = TrainingApplication.uploadToDropbox()
-                    DropboxConnectionHeader(
-                        isConnected = isConnected,
-                        onConnectClick = {
-                            Auth.startOAuth2PKCE(requireActivity(), BuildConfig.DROPBOX_APP_KEY, DbxRequestConfig(BuildConfig.DROPBOX_APP_KEY))
-                            mAwaitDropboxResult = true
-                        },
-                        onDisconnectClick = {
-                            TrainingApplication.deleteDropboxCredential()
-                            TrainingApplication.setUploadToDropbox(false)
-                            updateHeaderContent()
-                        }
-                    )
                 }
             }
         }
+
+        root.addView(headerComposeView)
+        prefView?.let { root.addView(it) }
+
+        return root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -125,37 +92,10 @@ class CloudUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnShar
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        if (DEBUG) Log.i(TAG, "onResume()")
-
-        if (mAwaitDropboxResult) {
-            val dbxCredential = Auth.getDbxCredential()
-            TrainingApplication.storeDropboxCredential(dbxCredential)
-            mAwaitDropboxResult = false
-        }
-
-        mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(requireActivity())
-        mSharedPreferences?.registerOnSharedPreferenceChangeListener(this)
-        
-        updateHeaderContent()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        mSharedPreferences?.unregisterOnSharedPreferenceChangeListener(this)
-    }
-
-    override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
-        if (DEBUG) Log.i(TAG, "onSharedPreferenceChanged: key=$key")
-
-        if (TrainingApplication.SP_UPLOAD_TO_DROPBOX == key) {
-            updateHeaderContent()
-        }
-    }
-
     companion object {
-        private val TAG = CloudUploadFragment::class.java.name
-        private val DEBUG = TrainingApplication.getDebug(false)
+        const val TAG: String = "DisplaySettingsFragment"
+
+        @JvmStatic
+        fun newInstance(): DisplaySettingsFragment = DisplaySettingsFragment()
     }
 }

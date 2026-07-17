@@ -796,6 +796,8 @@
     <string name="drawer__training">トレーニング</string>
     <string name="drawer__maps">マップ</string>
     <string name="drawer__my_stuff">マイデータ</string>
+    <string name="drawer__ecosystem">エコシステム</string>
+    <string name="drawer__system">システム</string>
 
     <!-- sensor view settings -->
     <string name="source">ソース</string>
@@ -957,6 +959,10 @@
 
     <string name="strava_connected_status">Strava 接続中</string>
     <string name="strava_disconnected_status">Strava 未接続</string>
+    <string name="dropbox_connected_status">Dropbox 接続中</string>
+    <string name="dropbox_disconnected_status">Dropbox 未接続</string>
+    <string name="dropbox_disconnect">Dropbox から切断</string>
+    <string name="dropbox_connect">Dropbox に接続</string>
     <string name="strava_disconnect">Strava 切断</string>
     <string name="strava_overall_rank_description">総合順位 #%1$d</string>
     <string name="no_upload">- アップロードなし -</string>

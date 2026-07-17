@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  -->
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <MultiSelectListPreference
+        android:key="pref_display_options"
+        android:title="@string/Display"
+        android:summary="@string/prefsDisplaySummary"
+        android:icon="@drawable/ic_checklist"
+        android:entries="@array/display_options_titles"
+        android:entryValues="@array/display_options_values"
+        android:defaultValue="@array/display_options_defaults"
+        android:layout="@layout/preference_slim" />
+
+    <Preference
+        android:icon="@drawable/ic_table_edit"
+        android:title="@string/prefsConfigureDisplaysTitle"
+        android:layout="@layout/preference_slim">
+        <intent android:action="com.atrainingtracker.trainingtracker.intent.action.ConfigureAllTrackingViews" />
+    </Preference>
+
+</PreferenceScreen>

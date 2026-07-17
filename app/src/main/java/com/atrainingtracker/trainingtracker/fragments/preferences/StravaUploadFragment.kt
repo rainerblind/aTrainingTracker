@@ -6,11 +6,6 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
  */
 
 package com.atrainingtracker.trainingtracker.fragments.preferences
@@ -22,11 +17,28 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.preference.Preference
@@ -35,6 +47,7 @@ import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaAuthViewModel
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaAuthState
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDeauthorizationThread
@@ -54,7 +67,7 @@ class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSha
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         if (DEBUG) Log.i(TAG, "onCreatePreferences(savedInstanceState, rootKey=$rootKey)")
 
-        setPreferencesFromResource(R.xml.prefs, rootKey)
+        setPreferencesFromResource(R.xml.prefs_strava, null)
 
         mUpdateStravaEquipment = findPreference(TrainingApplication.UPDATE_STRAVA_EQUIPMENT)
     }
@@ -81,13 +94,12 @@ class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSha
     private fun updateHeaderContent() {
         mHeaderComposeView?.setContent {
             ATrainingTrackerTheme {
+                val context = LocalContext.current
                 val isConnected = TrainingApplication.getStravaAccessToken() != null
                 val authState by authViewModel.authState.collectAsStateWithLifecycle()
 
                 LaunchedEffect(authState) {
                     if (authState is StravaAuthState.Success) {
-                        // side effects already handled in repo for basic storage, 
-                        // but we need to trigger sync and navigation updates
                         updateSelectiveUploadVisibility()
                         StravaEquipmentSynchronizeThread(requireActivity()).start()
 
@@ -99,21 +111,45 @@ class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSha
                     }
                 }
 
-                StravaConnectionHeader(
-                    modifier = Modifier.statusBarsPadding(),
-                    isConnected = isConnected,
-                    isConnecting = authState is StravaAuthState.Loading,
-                    onConnectClick = {
-                        StravaHelper.requestAccessToken(requireContext())
-                    },
-                    onDisconnectClick = {
-                        TrainingApplication.deleteStravaToken()
-                        StravaDeauthorizationThread(requireActivity()).start()
-                        updateSelectiveUploadVisibility()
-                        // Force recompose since we use static call to TrainingApplication
-                        updateHeaderContent()
+                Column {
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Column(
+                            modifier = Modifier.statusBarsPadding()
+                        ) {
+                            // Title Row
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.Strava),
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
                     }
-                )
+
+                    // Connection Control (Buttons) - Now below the colored header
+                    StravaConnectionHeader(
+                        isConnected = isConnected,
+                        isConnecting = authState is StravaAuthState.Loading,
+                        onConnectClick = {
+                            StravaHelper.requestAccessToken(requireContext())
+                        },
+                        onDisconnectClick = {
+                            TrainingApplication.deleteStravaToken()
+                            StravaDeauthorizationThread(requireActivity()).start()
+                            updateSelectiveUploadVisibility()
+                            // Force recompose since we use static call to TrainingApplication
+                            updateHeaderContent()
+                        }
+                    )
+                }
             }
         }
     }

@@ -568,6 +568,8 @@
     <string name="drawer__training">Trening</string>
     <string name="drawer__maps">Mapy</string>
     <string name="drawer__my_stuff">Moje dane</string>
+    <string name="drawer__ecosystem">Ekosystem</string>
+    <string name="drawer__system">System</string>
 
     <!-- sensor view settings -->
     <string name="source">Źródło</string>
@@ -738,6 +740,10 @@
 
     <string name="strava_connected_status">Połączono ze Strava</string>
     <string name="strava_disconnected_status">Nie połączono ze Strava</string>
+    <string name="dropbox_connected_status">Połączono z Dropbox</string>
+    <string name="dropbox_disconnected_status">Nie połączono z Dropbox</string>
+    <string name="dropbox_disconnect">Rozłącz z Dropbox</string>
+    <string name="dropbox_connect">Połącz z Dropbox</string>
     <string name="strava_disconnect">Rozłącz ze Strava</string>
     <string name="strava_overall_rank_description">Ranking ogólny #%1$d</string>
     <string name="no_upload">- Brak przesyłania -</string>

@@ -125,7 +125,10 @@ public class TrainingApplication extends Application {
     public static final String SP_TRAINING_PEAKS_ACCESS_TOKEN = "trainingPeaksAccessToken";
     public static final String SP_TRAINING_PEAKS_REFRESH_TOKEN = "trainingPeaksRefreshToken";
     // public static final String SP_DISPLAY_UPDATE_TIME     = "displayUpdateTime";
-    public static final String SP_EXPORT_FORMATS = "pref_export_formats";
+    public static final String SP_EXPORT_TCX = "export_tcx";
+    public static final String SP_EXPORT_GPX = "export_gpx";
+    public static final String SP_EXPORT_CSV = "export_csv";
+    public static final String SP_EXPORT_GC_JSON = "export_gcjson";
     public static final String SP_CHECK_ANT_INSTALLATION = "checkANTInstallation";
     public static final String MIN_WALK_SPEED = "minWalkSpeed";
     public static final String MAX_WALK_SPEED = "maxWalkSpeed";
@@ -713,21 +716,19 @@ public class TrainingApplication extends Application {
 
     // File exports
     public static boolean exportToTCX() {
-        return cSharedPreferences.getStringSet(SP_EXPORT_FORMATS,
-                        new HashSet<>(Collections.singletonList("TCX")))  // by default, we export to TCX.
-                .contains("TCX");
+        return cSharedPreferences.getBoolean(SP_EXPORT_TCX, true); // by default, we export to TCX.
     }
 
     public static boolean exportToGPX() {
-        return cSharedPreferences.getStringSet(SP_EXPORT_FORMATS, new HashSet<>()).contains("GPX");
+        return cSharedPreferences.getBoolean(SP_EXPORT_GPX, false);
     }
 
     public static boolean exportToCSV() {
-        return cSharedPreferences.getStringSet(SP_EXPORT_FORMATS, new HashSet<>()).contains("CSV");
+        return cSharedPreferences.getBoolean(SP_EXPORT_CSV, false);
     }
 
     public static boolean exportToGCJson() {
-        return cSharedPreferences.getStringSet(SP_EXPORT_FORMATS, new HashSet<>()).contains("GC_JSON");
+        return cSharedPreferences.getBoolean(SP_EXPORT_GC_JSON, false);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
