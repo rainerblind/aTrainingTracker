@@ -58,6 +58,11 @@ import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
 import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack;
 import com.atrainingtracker.trainingtracker.ui.routes.RoutesFragment;
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegmentsFragment;
+import com.atrainingtracker.trainingtracker.fragments.preferences.ExportSettingsFragment;
+import com.atrainingtracker.trainingtracker.fragments.preferences.SearchSettingsFragment;
+import com.atrainingtracker.trainingtracker.fragments.preferences.DisplaySettingsFragment;
+import com.atrainingtracker.trainingtracker.fragments.preferences.UnitsSettingsFragment;
+import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.ConfigTrackingTabsFragment;
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
 import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc;
@@ -839,14 +844,50 @@ public class MainActivityWithNavigation
                 mFragment = EquipmentFragment.newInstance(1);
                 tag = EquipmentFragment.TAG;
                 break;
+
             case R.id.drawer_my_locations:
                 mFragment = WorkoutClustersFragment.Companion.newInstance();
                 tag = WorkoutClustersFragment.TAG;
                 break;
 
-            case R.id.drawer_settings:
-                mFragment = new RootPrefsFragment();
-                tag = RootPrefsFragment.TAG;
+            case R.id.drawer_sport_types:
+                mFragment = SportTypeListFragment.newInstance();
+                tag = SportTypeListFragment.TAG;
+                break;
+
+            case R.id.drawer_training_zones:
+                mFragment = ZoneSettingsFragment.newInstance();
+                tag = ZoneSettingsFragment.TAG;
+                break;
+
+            case R.id.drawer_strava:
+                mFragment = new StravaUploadFragment();
+                tag = StravaUploadFragment.class.getName();
+                break;
+
+            case R.id.drawer_dropbox:
+                mFragment = new CloudUploadFragment();
+                tag = CloudUploadFragment.class.getName();
+                break;
+
+            case R.id.drawer_export:
+                mFragment = ExportSettingsFragment.newInstance();
+                tag = ExportSettingsFragment.TAG;
+                break;
+
+            case R.id.drawer_units:
+                mFragment = UnitsSettingsFragment.newInstance();
+                tag = UnitsSettingsFragment.TAG;
+                break;
+
+            case R.id.drawer_display_settings:
+                mFragment = DisplaySettingsFragment.newInstance();
+                tag = DisplaySettingsFragment.TAG;
+                break;
+
+            case R.id.drawer_search_settings:
+                mFragment = SearchSettingsFragment.newInstance();
+                tag = SearchSettingsFragment.TAG;
                 break;
 
             case R.id.drawer_privacy_policy:
@@ -871,6 +912,7 @@ public class MainActivityWithNavigation
             fragmentTransaction.commit();
         }
 
+        mDrawerLayout.closeDrawer(GravityCompat.START);
         return true;
     }
 

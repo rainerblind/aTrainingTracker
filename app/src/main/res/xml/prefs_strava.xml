@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <Preference
+        android:key="updateStravaEquipment"
+        android:summary="@string/lastUpdateOfEquipmentNever"
+        android:title="@string/updateStravaEquipment"
+        android:layout="@layout/preference_slim"/>
+
+    <PreferenceCategory android:key="strava_selective_upload_category" android:title="@string/selectiveUpload">
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="uploadStravaGPS"
+            android:title="@string/uploadGPS"
+            android:layout="@layout/preference_slim"/>
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="uploadStravaAltitude"
+            android:title="@string/uploadAltitude"
+            android:layout="@layout/preference_slim"/>
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="uploadStravaHR"
+            android:title="@string/uploadHR"
+            android:layout="@layout/preference_slim"/>
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="uploadStravaPower"
+            android:title="@string/uploadPower"
+            android:layout="@layout/preference_slim"/>
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="uploadStravaCadence"
+            android:title="@string/uploadCadence"
+            android:layout="@layout/preference_slim"/>
+    </PreferenceCategory>
+
+</PreferenceScreen>
