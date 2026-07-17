@@ -143,4 +143,29 @@
         <item>26 x 1.0"</item>
     </string-array>
 
+    <string-array name="Basic_Sport_Types">
+        <item>@string/sport_type_other</item>
+        <item>@string/sport_type_run</item>
+        <item>@string/sport_type_bike</item>
+    </string-array>
+    <string-array name="Filter_Types_UI">
+        <item>@string/filter_instantaneous</item>
+        <item>@string/filter_average</item>
+        <item>@string/filter_moving_average</item>
+        <item>@string/filter_exponential_smoothing</item>
+        <item>@string/filter_max</item>
+    </string-array>
+    <string-array name="PebbleWatchapps">
+        <item>@string/pebble_build_in</item>
+        <item>@string/pebble_a_training_tracker_watchapp</item>
+    </string-array>
+    <string-array name="Time_Units_UI">
+        <item>@string/units_seconds</item>
+        <item>@string/units_minutes</item>
+        <item>@string/units_samples</item>
+    </string-array>
+    <string-array name="units">
+        <item>@string/units_type_metric</item>
+        <item>@string/units_type_imperial</item>
+    </string-array>
 </resources>

@@ -23,7 +23,7 @@
         <item>@string/units_type_metric</item>
         <item>@string/units_type_imperial</item>
     </string-array>
-    <string-array name="units_values">
+    <string-array name="units_values" translatable="false">
         <item>@string/METRIC</item>
         <item>@string/IMPERIAL</item>
     </string-array>
@@ -32,7 +32,7 @@
         <item>@string/pebble_build_in</item>
         <item>@string/pebble_a_training_tracker_watchapp</item>
     </string-array>
-    <string-array name="PebbleWatchapps_values">
+    <string-array name="PebbleWatchapps_values" translatable="false">
         <item>@string/BUILD_IN</item>
         <item>@string/TRAINING_TRACKER</item>
     </string-array>
@@ -50,7 +50,7 @@
     <string name="filter_max">max</string>
 
 
-    <string-array name="Strava_Sport_Types_Strava_Names">
+    <string-array name="Strava_Sport_Types_Strava_Names" translatable="false">
         <item/>
         <item>Workout</item>
         <item>Ride</item>
@@ -239,7 +239,7 @@
      Corresponding circumference values in millimeters.
      MUST be in the same order as wheel_size_names.
     -->
-    <string-array name="wheel_size_values">
+    <string-array name="wheel_size_values" translatable="false">
         <item>2136</item>
         <item>2105</item>
         <item>2097</item>
@@ -260,7 +260,7 @@
         <item>CSV</item>
     </string-array>
 
-    <string-array name="export_formats_values">
+    <string-array name="export_formats_values" translatable="false">
         <item>TCX</item>
         <item>GPX</item>
         <item>GC_JSON</item>
@@ -278,13 +278,13 @@
         <item>@string/prefsNoUnlockingTitle</item>
     </string-array>
 
-    <string-array name="display_options_values">
+    <string-array name="display_options_values" translatable="false">
         <item>forcePortrait</item>
         <item>keepScreenOn</item>
         <item>noUnlocking</item>
     </string-array>
 
-    <string-array name="display_options_defaults">
+    <string-array name="display_options_defaults" translatable="false">
         <item>forcePortrait</item>
         <item>keepScreenOn</item>
         <item>noUnlocking</item>

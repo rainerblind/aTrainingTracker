@@ -67,4 +67,124 @@
         <item>Rollstuhl</item>
 </string-array>
 
+    <string-array name="Basic_Sport_Types">
+        <item>@string/sport_type_other</item>
+        <item>@string/sport_type_run</item>
+        <item>@string/sport_type_bike</item>
+    </string-array>
+
+    <string-array name="Filter_Types_UI">
+        <item>@string/filter_instantaneous</item>
+        <item>@string/filter_average</item>
+        <item>@string/filter_moving_average</item>
+        <item>@string/filter_exponential_smoothing</item>
+        <item>@string/filter_max</item>
+    </string-array>
+
+    <string-array name="GC_Sport_Types">
+        <item>Gehen</item>
+        <item>Laufen</item>
+        <item>MTB</item>
+        <item>Radfahren</item>
+    </string-array>
+
+    <string-array name="PebbleWatchapps">
+        <item>@string/pebble_build_in</item>
+        <item>@string/pebble_a_training_tracker_watchapp</item>
+    </string-array>
+
+    <string-array name="Runkeeper_Sport_Types">
+        <item>Andere</item>
+        <item>Laufen</item>
+        <item>Radfahren</item>
+        <item>Mountainbiking</item>
+        <item>Gehen</item>
+        <item>Wandern</item>
+        <item>Ski Alpin</item>
+        <item>Skilanglauf</item>
+        <item>Snowboarden</item>
+        <item>Skaten</item>
+        <item>Schwimmen</item>
+        <item>Rollstuhl</item>
+        <item>Rudern</item>
+        <item>Crosstrainer</item>
+        <item>Yoga</item>
+        <item>Pilates</item>
+        <item>CrossFit</item>
+        <item>Spinning</item>
+        <item>Zumba</item>
+        <item>Barre</item>
+        <item>Gruppentraining</item>
+        <item>Tanzen</item>
+        <item>Bootcamp</item>
+        <item>Boxen / MMA</item>
+        <item>Meditation</item>
+        <item>Krafttraining</item>
+        <item>Zirkeltraining</item>
+        <item>Core-Training</item>
+        <item>Arc Trainer</item>
+        <item>Stairmaster / Stepwell</item>
+        <item>Sport</item>
+        <item>Nordic Walking</item>
+    </string-array>
+
+    <string-array name="TCX_Sport_Types">
+        <item>Andere</item>
+        <item>Gehen</item>
+        <item>Laufen</item>
+        <item>Radfahren</item>
+    </string-array>
+
+    <string-array name="Time_Units_UI">
+        <item>@string/units_seconds</item>
+        <item>@string/units_minutes</item>
+        <item>@string/units_samples</item>
+    </string-array>
+
+    <string-array name="Training_Peaks_Sport_Types">
+        <item>Andere</item>
+        <item>Radfahren</item>
+        <item>Laufen</item>
+        <item>Gehen</item>
+        <item>Schwimmen</item>
+        <item>X-Train</item>
+        <item>MTB</item>
+        <item>Krafttraining</item>
+        <item>Skilanglauf</item>
+        <item>Rudern</item>
+    </string-array>
+
+    <string-array name="default_export_formats">
+        <item>TCX</item>
+    </string-array>
+
+    <string-array name="display_options_titles">
+        <item>@string/forcePortrait</item>
+        <item>@string/prefsKeepScreenOnTitle</item>
+        <item>@string/prefsNoUnlockingTitle</item>
+    </string-array>
+
+    <string-array name="export_formats_title">
+        <item>TCX</item>
+        <item>GPX</item>
+        <item>Golden Cheetah JSON</item>
+        <item>CSV</item>
+    </string-array>
+
+    <string-array name="units">
+        <item>@string/units_type_metric</item>
+        <item>@string/units_type_imperial</item>
+    </string-array>
+
+    <string-array name="wheel_size_names">
+        <item>700 x 28</item>
+        <item>700 x 25</item>
+        <item>700 x 23</item>
+        <item>700 x 20</item>
+        <item>26 x 2.125"</item>
+        <item>26 x 1.9"</item>
+        <item>26 x 1.5"</item>
+        <item>26 x 1.25"</item>
+        <item>26 x 1.0"</item>
+    </string-array>
 </resources>
