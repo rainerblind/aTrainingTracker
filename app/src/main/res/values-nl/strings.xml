@@ -328,7 +328,7 @@
     <string name="prefsUploadTitle">Uploaden</string>
     <string name="prefsUploadSummary">Upload naar cloud en communities</string>
     <string name="prefsOnlineStorage">Online opslag</string>
-    <string name="prefsOnlineCommunities">Online communities</string>
+    <string name="prefsOnlineCommunities">Synchronisatie</string>
     <string name="prefsUploadToDropboxSummary">Automatisch alles naar Dropbox uploaden</string>
     <string name="prefsUploadToStravaSummary">Training naar Strava uploaden</string>
     <string name="prefsUploadToRunkeeperSummary">Training naar Runkeeper uploaden</string>
@@ -809,7 +809,7 @@
     <!-- drawer -->
     <string name="drawer__training">Training</string>
     <string name="drawer__maps">Kaarten</string>
-    <string name="drawer__my_stuff">Mijn Gegevens</string>
+    <string name="drawer__my_stuff">Uitrusting</string>
     <string name="drawer__ecosystem">Ecosysteem</string>
     <string name="drawer__system">Systeem</string>
 

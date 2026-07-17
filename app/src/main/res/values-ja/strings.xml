@@ -328,7 +328,7 @@
     <string name="prefsUploadTitle">アップロード</string>
     <string name="prefsUploadSummary">クラウドへのアップロード</string>
     <string name="prefsOnlineStorage">オンラインストレージ</string>
-    <string name="prefsOnlineCommunities">オンラインコミュニティ</string>
+    <string name="prefsOnlineCommunities">同期</string>
     <string name="prefsUploadToDropboxSummary">Dropboxに自動アップロード</string>
     <string name="prefsUploadToStravaSummary">Stravaに自動アップロード</string>
     <string name="prefsUploadToRunkeeperSummary">Runkeeperに自動アップロード</string>
@@ -795,7 +795,7 @@
     <!-- drawer -->
     <string name="drawer__training">トレーニング</string>
     <string name="drawer__maps">マップ</string>
-    <string name="drawer__my_stuff">マイデータ</string>
+    <string name="drawer__my_stuff">装備</string>
     <string name="drawer__ecosystem">エコシステム</string>
     <string name="drawer__system">システム</string>
 

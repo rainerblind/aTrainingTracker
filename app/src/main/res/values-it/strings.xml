@@ -328,7 +328,7 @@
     <string name="prefsUploadTitle">Caricamento</string>
     <string name="prefsUploadSummary">Cloud e comunità online</string>
     <string name="prefsOnlineStorage">Cloud storage</string>
-    <string name="prefsOnlineCommunities">Comunità online</string>
+    <string name="prefsOnlineCommunities">Sincronizzazione</string>
     <string name="prefsUploadToDropboxSummary">Carica su Dropbox</string>
     <string name="prefsUploadToStravaSummary">Carica su Strava</string>
     <string name="prefsUploadToRunkeeperSummary">Carica su Runkeeper</string>
@@ -809,7 +809,7 @@
     <!-- drawer -->
     <string name="drawer__training">Allenamento</string>
     <string name="drawer__maps">Mappe</string>
-    <string name="drawer__my_stuff">Miei dati</string>
+    <string name="drawer__my_stuff">Attrezzatura</string>
     <string name="drawer__ecosystem">Ecosistema</string>
     <string name="drawer__system">Sistema</string>
 

@@ -411,7 +411,7 @@
     <string name="prefsUploadTitle">Upload</string>
     <string name="prefsUploadSummary">Upload to cloud services and online communities</string>
     <string name="prefsOnlineStorage">Online storage</string>
-    <string name="prefsOnlineCommunities">Online communities</string>
+    <string name="prefsOnlineCommunities">Synchronization</string>
     <string name="prefsUploadToDropboxTitle" translatable="false">Dropbox</string>
     <string name="prefsUploadToDropboxSummary">Automatically upload all exported formats also to your Dropbox</string>
     <string name="prefsUploadToStravaTitle" translatable="false">Strava</string>
@@ -989,7 +989,7 @@
     <!-- drawer -->
     <string name="drawer__training">Training</string>
     <string name="drawer__maps">Maps</string>
-    <string name="drawer__my_stuff">My Stuff</string>
+    <string name="drawer__my_stuff">Equipment</string>
     <string name="drawer__ecosystem">Ecosystem</string>
     <string name="drawer__system">System</string>
 

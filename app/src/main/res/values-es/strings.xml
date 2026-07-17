@@ -328,7 +328,7 @@
     <string name="prefsUploadTitle">Subida</string>
     <string name="prefsUploadSummary">Subir a la nube y comunidades online</string>
     <string name="prefsOnlineStorage">Almacenamiento online</string>
-    <string name="prefsOnlineCommunities">Comunidades online</string>
+    <string name="prefsOnlineCommunities">Sincronización</string>
     <string name="prefsUploadToDropboxSummary">Subir automáticamente todos los formatos a Dropbox</string>
     <string name="prefsUploadToStravaSummary">Subir automáticamente entrenamientos a Strava</string>
     <string name="prefsUploadToRunkeeperSummary">Subir automáticamente entrenamientos a Runkeeper</string>
@@ -812,7 +812,7 @@
     <!-- drawer -->
     <string name="drawer__training">Entrenamiento</string>
     <string name="drawer__maps">Mapas</string>
-    <string name="drawer__my_stuff">Mis cosas</string>
+    <string name="drawer__my_stuff">Equipo</string>
     <string name="drawer__ecosystem">Ecosistema</string>
     <string name="drawer__system">Sistema</string>
 
