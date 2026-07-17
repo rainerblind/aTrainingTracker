@@ -205,6 +205,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-UI-109** | **Communication Clarification.** | Agents SHALL ask for clarification if instructions are unclear to protect project quality and precision. | `project_protocol.md` | `TST-STR-001` | Verified |
 | **REQ-UI-110** | Optionally display the current track on a map and its elevation profile. | Provide real-time spatial and vertical situational awareness of the active session. | `BANALServiceRepository.kt`, `SensorGridScreen.kt` | `TST-UI-029` | Verified |
 | **REQ-UI-111** | Adaptive layout for tab configuration settings. | Ensure all configuration toggles remain accessible and legible across different screen sizes using FlowRow, in the prioritized order: Map, Elevation Profile, Live Segments, Lap Button. | `TrackingTabConfigHeader.kt` | `TST-INT-006` | Verified |
+| **REQ-UI-112** | **Navigation Drawer Labeling Refinement.** | The system SHALL update navigation drawer labels to improve professional terminology. Specifically: "File Export" SHALL be renamed to "Dateiexport" (German), "My Stuff" SHALL be renamed to "Equipment" (English) / "Ausrüstung" (German), and "Online Communities" SHALL be renamed to "Synchronization" (English) / "Synchronisation" (German). | `main_navigation_drawer.xml`, `strings.xml` | `TST-NAV-002` | Verified |
 
 ## 11. Wearable Integration
 

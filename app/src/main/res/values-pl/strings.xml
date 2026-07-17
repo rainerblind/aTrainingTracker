@@ -278,6 +278,8 @@
     <string name="alpha_must_be_between_0_and_1">α musi być między 0 i 1.</string>
 
     <string name="Search_Settings">Ustawienia szukania</string>
+    <string name="prefsExportTitle">Eksport plików</string>
+    <string name="prefsOnlineCommunities">Synchronizacja</string>
     <string name="prefsNumberOfSearchTriesTitle">Rundy szukania</string>
     <string name="prefStartSearchTitle">Zacznij szukać, gdy …</string>
     <string name="prefsStartSearchWhenAppStartsTitle">App startuje</string>
@@ -567,7 +569,7 @@
     <!-- drawer -->
     <string name="drawer__training">Trening</string>
     <string name="drawer__maps">Mapy</string>
-    <string name="drawer__my_stuff">Moje dane</string>
+    <string name="drawer__my_stuff">Sprzęt</string>
     <string name="drawer__ecosystem">Ekosystem</string>
     <string name="drawer__system">System</string>
 

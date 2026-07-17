@@ -340,13 +340,13 @@
     <string name="prefsPebbleWatchappsSummary">Standard</string>
     <string name="prefsConfigurePebbleDisplaysTitle">Pebble Anzeigen konfigurieren</string>
 
-    <string name="prefsExportTitle">Datei Export</string>
+    <string name="prefsExportTitle">Dateiexport</string>
     <string name="prefsExportSummary">Dateiformate zu denen die Einheiten exportiert werden</string>
 
     <string name="prefsUploadTitle">Hochladen</string>
     <string name="prefsUploadSummary">Hochladen zu Cloud Diensten und Online Communities</string>
     <string name="prefsOnlineStorage">Online Speicher</string>
-    <string name="prefsOnlineCommunities">Online Gemeinschaften</string>
+    <string name="prefsOnlineCommunities">Synchronisation</string>
     <string name="prefsUploadToDropboxSummary">Exportierte Dateien auch zu Dropbox hochladen</string>
     <string name="prefsUploadToStravaSummary">Trainingseinheiten bei Strava hochladen</string>
     <string name="prefsUploadToRunkeeperSummary">Trainingseinheiten bei Runkeeper hochladen</string>
@@ -910,7 +910,7 @@
     <!-- drawer -->
     <string name="drawer__training">Training</string>
     <string name="drawer__maps">Karten</string>
-    <string name="drawer__my_stuff">Mein Zeugs</string>
+    <string name="drawer__my_stuff">Ausrüstung</string>
     <string name="drawer__ecosystem">Ökosystem</string>
     <string name="drawer__system">System</string>
 
