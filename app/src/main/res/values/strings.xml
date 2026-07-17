@@ -223,7 +223,6 @@
     <string name="device_type_altitude_from_pressure">altitude from pressure</string>
     <string name="device_type_short_altitude_from_pressure">altitude</string>
     <string name="device_type_sensor_manager">sensor manager</string>
-    <string name="device_type_short_sensor_manager">sensor manager</string>
     <string name="device_type_clock">clock</string>
     <string name="device_type_short_clock">clock</string>
 

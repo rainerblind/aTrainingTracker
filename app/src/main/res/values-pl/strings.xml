@@ -42,11 +42,8 @@
     <string name="Lap">Okrążenie</string>
     <string name="Equipment">Sprzęt</string>
     <string name="edit_device">edytuj urządzenie</string>
-    <string name="edit_location">edytuj lokalizację</string>
-    <string name="Edit_Location">Edytuj lokalizację</string>
     <string name="edit_workout">edytuj trening</string>
     <string name="save_as_route">zapisz jako trasę</string>
-    <string name="Edit_Location_Message">Edytuj nazwę i wysokość tej lokalizacji</string>
     <string name="edit_wheel_circumference">edytuj obwód koła</string>
     <string name="edit_calibration_factor">edytuj współczynnik kalibracji</string>
     <string name="delete">usuń</string>
@@ -58,7 +55,6 @@
     <string name="deleteWorkoutsThatAreOlderThanDays">usuń treningi starsze niż … dni</string>
     <string name="delete_sensor">usuń</string>
     <string name="really_delete_workout">Czy na pewno chcesz usunąć ten trening?</string>
-    <string name="really_delete_location">Czy na pewno chcesz usunąć tę lokalizację?</string>
     <string name="really_delete_pebble_view_format">Czy na pewno chcesz usunąć widok Pebble "%1$s"?</string>
     <string name="really_delete_view_format">Czy na pewno chcesz usunąć widok "%1$s"?</string>
     <string name="deleting_please_wait">Usuwanie treningu …\nproszę czekać</string>
@@ -67,7 +63,6 @@
     <string name="calculating_extrema_value_for">obliczanie %1$s z %2$s</string>
     <string name="calculating_max_away_point">obliczanie najdalszego punktu</string>
     <string name="initializing">inicjalizacja</string>
-    <string name="delete_location">usuń lokalizację</string>
     <string name="show_HW_details">szczegóły sprzętowe</string>
     <string name="show_google_maps_licence">Informacje prawne Google Maps</string>
     <string name="play_services_not_installed">Usługi Google Play nie są zainstalowane.</string>
@@ -160,7 +155,6 @@
     <string name="device_type_altitude_from_pressure">wysokość ciśnieniowa</string>
     <string name="device_type_short_altitude_from_pressure">wysokość</string>
     <string name="device_type_sensor_manager">menedżer czujników</string>
-    <string name="device_type_short_sensor_manager">menedżer czuj.</string>
     <string name="device_type_clock">zegar</string>
     <string name="device_type_short_clock">zegar</string>
 
@@ -233,30 +227,6 @@
     <string name="pedal_smoothness_l">płynność pedałowania lewa</string>
     <string name="pedal_smoothness_l_short">płyn. l</string>
     <string name="pedal_smoothness_r">płynność pedałowania prawa</string>
-    <string name="get_extremaType_of_sportType_format">Pobierz pozycje %1$s swoich treningów %2$s.</string>
-    <string name="my_locations">Moje trasy</string>
-    <string name="getting_my_locations">Szukanie znanych miejsc.</string>
-    <string name="editLocationName">Nazwa:</string>
-    <string name="LocationAltitude">Wysokość:</string>
-    <string name="LocationRadius">Promień:</string>
-    <string name="edit_my_location">Edytuj lokalizację</string>
-    <string name="create_new_my_location">Tworzenie nowego znanego miejsca.</string>
-    <string name="calc_workout_name">Obliczanie nazwy treningu.</string>
-    <string name="calc_map_polyline">Obliczanie trasy.</string>
-    <string name="edit_counter">edytuj</string>
-    <string name="edit_counter_format">Edytuj licznik %1$s.</string>
-    <string name="editWorkoutNameCounters">Edytuj liczniki nazw.</string>
-    <string name="StartLocation">Miejsce startu:</string>
-    <string name="EndLocation">Miejsce końca:</string>
-    <string name="NameScheme">Schemat nazw:</string>
-    <string name="addCounter">Dodaj licznik</string>
-    <string name="addVia">Dodaj przez [daleki punkt].</string>
-    <string name="configureWorkoutNameSchemes">Konfiguruj automatyczne nazwy.</string>
-    <string name="via_format">&#032;przez %1$s</string>
-    <string name="loop_around_format">&#032;do %1$s i z powrotem</string>
-    <string name="really_delete_format">Czy chcesz usunąć \"%1$s\"?</string>
-    <string name="workout_name_scheme">Schemat nazwy</string>
-    <string name="workout_name_schemes">Schematy nazw</string>
     <string name="starred_run_segments">Bieg</string>
     <string name="starred_bike_segments">Rower</string>
     <string name="segments">Segmenty Strava</string>
