@@ -47,7 +47,7 @@ class ConfigTrackingTabsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         ActivityTypeSelectionHelper.showSelectionDialog(
-            context = requireContext(),
+            fragmentManager = parentFragmentManager,
             onTypeSelected = { showTrackingTabs(it) },
             onCancel = { parentFragmentManager.popBackStack() }
         )

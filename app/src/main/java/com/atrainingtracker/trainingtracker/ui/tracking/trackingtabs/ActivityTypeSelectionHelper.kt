@@ -18,67 +18,28 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
-import android.content.Context
-import android.graphics.Color
-import android.view.Gravity
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
-import androidx.core.content.ContextCompat
-import com.atrainingtracker.R
+import androidx.fragment.app.FragmentManager
 import com.atrainingtracker.banalservice.ActivityType
 
 object ActivityTypeSelectionHelper {
 
     /**
-     * Shows a professional AlertDialog for selecting an Activity Type.
-     * Extracts the logic previously duplicated in ConfigTrackingTabsActivity and Fragment.
+     * Shows a professional Compose-based DialogFragment for selecting an Activity Type.
+     * Consistent with modern Material 3 dialog style (ATT-267).
      */
     @JvmStatic
     fun showSelectionDialog(
-        context: Context,
+        fragmentManager: FragmentManager,
         onTypeSelected: (ActivityType) -> Unit,
         onCancel: () -> Unit = {}
     ) {
-        val types = ActivityType.values()
-
-        val adapter = object : ArrayAdapter<ActivityType>(
-            context,
-            android.R.layout.select_dialog_item,
-            android.R.id.text1,
-            types
-        ) {
-            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-                val v = super.getView(position, convertView, parent)
-                val tv = v.findViewById<TextView>(android.R.id.text1)
-
-                val type = getItem(position)
-                if (type != null) {
-                    tv.text = context.getString(type.titleId)
-                    tv.setCompoundDrawablesWithIntrinsicBounds(type.logoId, 0, 0, 0)
-                    tv.compoundDrawablePadding = 32
-                }
-                return v
+        val dialog = ActivityTypeSelectionDialogFragment.newInstance()
+        dialog.setListener(object : ActivityTypeSelectionDialogFragment.ActivityTypeSelectionListener {
+            override fun onActivityTypeSelected(activityType: ActivityType) {
+                onTypeSelected(activityType)
             }
-        }
-
-        val titleView = TextView(context).apply {
-            setText(R.string.choose_activity_type)
-            setPadding(40, 40, 40, 40)
-            textSize = 22f
-            setTextColor(Color.WHITE)
-            setBackgroundColor(ContextCompat.getColor(context, R.color.color_primary))
-            gravity = Gravity.CENTER
-        }
-
-        AlertDialog.Builder(context)
-            .setCustomTitle(titleView)
-            .setAdapter(adapter) { _, which ->
-                onTypeSelected(types[which])
-            }
-            .setOnCancelListener { onCancel() }
-            .show()
+        })
+        dialog.setCancelListener(onCancel)
+        dialog.show(fragmentManager, ActivityTypeSelectionDialogFragment.TAG)
     }
 }

@@ -93,6 +93,9 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   All translations MUST be externalized in the respective `strings.xml` files.
     *   This is a non-negotiable quality standard for a world-class application.
 
+11. **UI Visual Standards (Mandatory Design Rules)**:
+    *   **Original Sport Icons**: Sport type icons MUST always be displayed in their original colors to ensure quick identification and maintain branding. Agents are FORBIDDEN from applying theme-based tinting (e.g., `primary` color) to these icons, except when they are explicitly in a muted background state or disabled.
+
 ## New Version / Release Workflow
 Whenever preparing for a new version:
 1.  **File Audit**: The agent identifies all files modified since the last release.
