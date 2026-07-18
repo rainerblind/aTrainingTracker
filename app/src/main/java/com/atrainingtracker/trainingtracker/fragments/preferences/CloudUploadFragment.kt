@@ -45,6 +45,11 @@ class CloudUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnShar
     private var mAwaitDropboxResult = false
     private var mHeaderComposeView: ComposeView? = null
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        mAwaitDropboxResult = savedInstanceState?.getBoolean(KEY_AWAIT_DROPBOX, false) ?: false
+    }
+
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         if (DEBUG) Log.i(TAG, "onCreatePreferences(savedInstanceState, rootKey=$rootKey)")
         setPreferencesFromResource(R.xml.prefs_dropbox, null)
@@ -131,7 +136,10 @@ class CloudUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnShar
 
         if (mAwaitDropboxResult) {
             val dbxCredential = Auth.getDbxCredential()
-            TrainingApplication.storeDropboxCredential(dbxCredential)
+            if (dbxCredential != null) {
+                TrainingApplication.storeDropboxCredential(dbxCredential)
+                TrainingApplication.setUploadToDropbox(true)
+            }
             mAwaitDropboxResult = false
         }
 
@@ -146,6 +154,11 @@ class CloudUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnShar
         mSharedPreferences?.unregisterOnSharedPreferenceChangeListener(this)
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(KEY_AWAIT_DROPBOX, mAwaitDropboxResult)
+    }
+
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
         if (DEBUG) Log.i(TAG, "onSharedPreferenceChanged: key=$key")
 
@@ -157,5 +170,6 @@ class CloudUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnShar
     companion object {
         private val TAG = CloudUploadFragment::class.java.name
         private val DEBUG = TrainingApplication.getDebug(false)
+        private const val KEY_AWAIT_DROPBOX = "KEY_AWAIT_DROPBOX"
     }
 }
