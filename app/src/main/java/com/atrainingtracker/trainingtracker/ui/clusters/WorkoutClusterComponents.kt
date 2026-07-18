@@ -250,6 +250,22 @@ fun ClusterItem(
                                         }
                                     }
 
+                                    // --- RENDER AUTHORITATIVE ROUTE (ATT-255) ---
+                                    cluster.routePolyline?.let { polyline ->
+                                        val points = remember(polyline) { PolyUtil.decode(polyline) }
+                                        if (points.isNotEmpty()) {
+                                            Polyline(
+                                                points = points,
+                                                color = TTColor.RouteSelected, // Green
+                                                width = 6f,
+                                                startCap = RoundCap(),
+                                                endCap = RoundCap(),
+                                                jointType = JointType.ROUND,
+                                                zIndex = 10f // Ensure it's on top
+                                            )
+                                        }
+                                    }
+
                                     Marker(
                                         state = remember(start) { MarkerState(position = start) },
                                         icon = remember { createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint) }

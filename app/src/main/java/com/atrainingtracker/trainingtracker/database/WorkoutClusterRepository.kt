@@ -98,32 +98,33 @@ class WorkoutClusterRepository private constructor(private val context: Context)
             
             // 1. Check for linked route
             val linkedRoute = routesDb.getRouteByClusterId(updatedCluster.id)
-            if (linkedRoute != null && linkedRoute.path.isNotEmpty()) {
-                previewPaths.add(PolyUtil.encode(linkedRoute.path.map { it.latLng }))
-            } else {
-                // 2. Fetch 5 most recent workout paths
-                val selection = "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = ?"
-                val args = arrayOf(updatedCluster.id.toString())
-                val projection = arrayOf(WorkoutSummariesDatabaseManager.WorkoutSummaries.MAP_POLYLINE)
-                
-                summariesManager.database.query(
-                    WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
-                    projection, selection, args, null, null,
-                    "${WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START} DESC",
-                    "5" // Limit to 5
-                ).use { cursor ->
-                    while (cursor.moveToNext()) {
-                        val polyline = cursor.getString(0)
-                        if (!polyline.isNullOrEmpty()) {
-                            previewPaths.add(polyline)
-                        }
+            val routePolyline = if (linkedRoute != null && linkedRoute.path.isNotEmpty()) {
+                PolyUtil.encode(linkedRoute.path.map { it.latLng })
+            } else null
+
+            // 2. Fetch 5 most recent workout paths
+            val selection = "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = ?"
+            val args = arrayOf(updatedCluster.id.toString())
+            val projection = arrayOf(WorkoutSummariesDatabaseManager.WorkoutSummaries.MAP_POLYLINE)
+            
+            summariesManager.database.query(
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                projection, selection, args, null, null,
+                "${WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START} DESC",
+                "5" // Limit to 5
+            ).use { cursor ->
+                while (cursor.moveToNext()) {
+                    val polyline = cursor.getString(0)
+                    if (!polyline.isNullOrEmpty()) {
+                        previewPaths.add(polyline)
                     }
                 }
             }
 
             updatedCluster.copy(
                 bSportType = getBSportType(updatedCluster.probableSportId),
-                previewPaths = previewPaths
+                previewPaths = previewPaths,
+                routePolyline = routePolyline
             )
         }
         _allClusters.value = enriched.sortedByDescending { it.hitCount }
