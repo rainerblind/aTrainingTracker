@@ -16,7 +16,7 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
+package com.atrainingtracker.trainingtracker.ui.settings.trackingtabs
 
 import androidx.fragment.app.FragmentManager
 import com.atrainingtracker.banalservice.ActivityType

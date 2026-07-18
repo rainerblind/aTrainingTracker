@@ -16,16 +16,18 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
+package com.atrainingtracker.trainingtracker.ui.settings.trackingtabs
 
 import android.os.Bundle
 import androidx.activity.viewModels
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface
+import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment
+import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModel
+import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelFactory
 
 
 /**

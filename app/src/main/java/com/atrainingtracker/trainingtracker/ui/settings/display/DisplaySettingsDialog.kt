@@ -8,25 +8,31 @@
  * (at your option) any later version.
  */
 
-package com.atrainingtracker.trainingtracker.fragments.preferences
+package com.atrainingtracker.trainingtracker.ui.settings.display
 
+import android.content.SharedPreferences
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.DisplaySettings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 
 @Composable
-fun ExportSettingsDialog(
+fun DisplaySettingsDialog(
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
+    val sharedPreferences = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+    
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -35,40 +41,35 @@ fun ExportSettingsDialog(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Upload,
+                    imageVector = Icons.Default.DisplaySettings,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = stringResource(R.string.prefs_Export),
+                    text = stringResource(R.string.Display),
                     style = MaterialTheme.typography.headlineSmall
                 )
             }
         },
         text = {
             Column(
-                modifier = Modifier.wrapContentWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                ExportOptionToggle(
-                    label = "TCX",
-                    initialValue = TrainingApplication.exportToTCX(),
-                    onCheckedChange = { TrainingApplication.setExportToTCX(it) }
+                DisplayOptionToggle(
+                    label = stringResource(R.string.forcePortrait),
+                    prefValue = "forcePortrait",
+                    sharedPreferences = sharedPreferences
                 )
-                ExportOptionToggle(
-                    label = "GPX",
-                    initialValue = TrainingApplication.exportToGPX(),
-                    onCheckedChange = { TrainingApplication.setExportToGPX(it) }
+                DisplayOptionToggle(
+                    label = stringResource(R.string.prefsKeepScreenOnTitle),
+                    prefValue = "keepScreenOn",
+                    sharedPreferences = sharedPreferences
                 )
-                ExportOptionToggle(
-                    label = "Golden Cheetah JSON",
-                    initialValue = TrainingApplication.exportToGCJson(),
-                    onCheckedChange = { TrainingApplication.setExportToGCJson(it) }
-                )
-                ExportOptionToggle(
-                    label = "CSV",
-                    initialValue = TrainingApplication.exportToCSV(),
-                    onCheckedChange = { TrainingApplication.setExportToCSV(it) }
+                DisplayOptionToggle(
+                    label = stringResource(R.string.prefsNoUnlockingTitle),
+                    prefValue = "noUnlocking",
+                    sharedPreferences = sharedPreferences
                 )
             }
         },
@@ -81,12 +82,18 @@ fun ExportSettingsDialog(
 }
 
 @Composable
-private fun ExportOptionToggle(
-    label: String,
-    initialValue: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+private fun DisplayOptionToggle(
+    label: String, 
+    prefValue: String,
+    sharedPreferences: SharedPreferences
 ) {
-    var isChecked by remember { mutableStateOf(initialValue) }
+    val key = TrainingApplication.SP_DISPLAY_OPTIONS
+    
+    var currentOptions by remember { 
+        mutableStateOf(sharedPreferences.getStringSet(key, emptySet()) ?: emptySet())
+    }
+    
+    val isChecked = currentOptions.contains(prefValue)
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -96,9 +103,11 @@ private fun ExportOptionToggle(
         Text(text = label, style = MaterialTheme.typography.bodyLarge)
         Switch(
             checked = isChecked,
-            onCheckedChange = {
-                isChecked = it
-                onCheckedChange(it)
+            onCheckedChange = { checked ->
+                val newSet = currentOptions.toMutableSet()
+                if (checked) newSet.add(prefValue) else newSet.remove(prefValue)
+                sharedPreferences.edit().putStringSet(key, newSet).apply()
+                currentOptions = newSet
             },
             modifier = Modifier.scale(0.7f)
         )
