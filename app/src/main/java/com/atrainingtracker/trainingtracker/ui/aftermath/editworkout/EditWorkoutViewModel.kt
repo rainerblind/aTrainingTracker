@@ -31,7 +31,6 @@ import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscov
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.EquipmentData
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
@@ -48,7 +47,6 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     private val equipmentRepository = EquipmentRepository.getInstance(application)
     private val sportTypesRepository = SportTypesRepository.getInstance(application)
     private val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(application)
-    private val workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(application)
     private val discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(application)
 
     // Using StateFlow for modern reactive UI
@@ -59,15 +57,14 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     private val sportTypesList: List<SimpleSportTypeInfo> = sportTypesRepository.sportTypesList
     private val equipmentList: List<EquipmentData> = equipmentRepository.equipmentList
 
-    private val _sportTypeNames = MutableLiveData(sportTypesList.map { it.name })
+    private val _sportTypeNames = MutableLiveData<List<String>>()
     val sportTypeNames: LiveData<List<String>> = _sportTypeNames
     
     private val _equipmentNames = MutableLiveData<List<String>>()
     val equipmentNames: LiveData<List<String>> = _equipmentNames
 
-    // Suggested values (Sport & Equipment)
+    // Suggested values for dropdown synchronization (SCRUM-200)
     var suggestedSportTypeName by mutableStateOf("")
-    var userSelectedSportTypeName by mutableStateOf<String?>(null)
     var suggestedEquipmentName by mutableStateOf<String?>(null)
     
     var currentBSportType by mutableStateOf(BSportType.UNKNOWN)
@@ -91,11 +88,31 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         viewModelScope.launch {
             repository.loadWorkout(workoutId)
             repository.initialWorkoutLoaded.asFlow().collect { data ->
-                _workoutData.value = data
+                // Guard against global events for different workouts
+                if (data.id != workoutId) return@collect
+
+                _workoutData.update { current ->
+                    // If we already have data and are just updating identity, merge it
+                    if (current != null) {
+                        current.copy(
+                            workoutName = data.workoutName,
+                            sportId = data.sportId,
+                            sportName = data.sportName,
+                            bSportType = data.bSportType,
+                            equipmentId = data.equipmentId,
+                            equipmentName = data.equipmentName,
+                            clusterId = data.clusterId,
+                            stravaSportName = data.stravaSportName
+                        )
+                    } else {
+                        data
+                    }
+                }
                 
                 suggestedSportTypeName = data.sportName
                 currentBSportType = data.bSportType
                 suggestedEquipmentName = data.equipmentName
+                updateSuggestedSportTypeNames(data)
                 updateSuggestedEquipmentNames(data.sportName)
                 fetchClusterSuggestions(data)
             }
@@ -141,12 +158,15 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         // first, get the new sportId and bSportType
         val newBSportType = sportTypeDatabaseManager.getBSportType(newSportId)
 
-        if (newSportName != suggestedSportTypeName) {
-            userSelectedSportTypeName = newSportName
-        }
 
         currentBSportType = newBSportType
         suggestedSportTypeName = newSportName
+        
+        // Use current data for sport suggestion context, but update based on new selection
+        workoutData.value?.let { current ->
+            val updatedForSuggestions = current.copy(sportName = newSportName, bSportType = identity.bSportType)
+            updateSuggestedSportTypeNames(updatedForSuggestions)
+        }
         updateSuggestedEquipmentNames(newSportName)
     }
 
@@ -164,6 +184,22 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                 suggestedEquipmentName = if (newId == -1L) null else newName
             }
         }
+    }
+
+    // --- Smart handlers for suggestions (SCRUM-200) ---
+
+    private fun updateSuggestedSportTypeNames(data: WorkoutData) {
+        val suggestedSports = discoveryManager.getSpeedBasedSportTypeNames(data.bSportType, data.avgSpeedMps).toMutableList()
+        
+        // Ensure current sport is in the list
+        if (!suggestedSports.contains(data.sportName)) {
+            suggestedSports.add(0, data.sportName)
+        }
+        
+        // Add "All sports" option to allow expanding the list
+        suggestedSports.add(allSportTypes)
+        
+        _sportTypeNames.value = suggestedSports
     }
 
     private fun updateSuggestedEquipmentNames(sportName: String) {

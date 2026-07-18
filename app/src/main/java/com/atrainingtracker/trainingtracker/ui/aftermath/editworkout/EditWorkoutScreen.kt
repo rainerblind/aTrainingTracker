@@ -134,7 +134,10 @@ fun EditWorkoutScreen(
                     WorkoutClusterSelectionDialog(
                         title = stringResource(R.string.edit_workout_name),
                         candidates = suggestions,
-                        onSelect = { viewModel.applyClusterIdentity(it) },
+                        onSelect = { 
+                            viewModel.applyClusterIdentity(it)
+                            showSuggestions = false
+                        },
                         onDismiss = { showSuggestions = false },
                         sportNameResolver = { viewModel.getSportName(it) },
                         bSportTypeResolver = { viewModel.getBSportType(it) }

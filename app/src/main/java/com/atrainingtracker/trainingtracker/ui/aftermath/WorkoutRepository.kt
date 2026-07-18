@@ -167,7 +167,7 @@ class WorkoutRepository private constructor(private val application: Application
                 TrackerService.WORKOUT_UPDATED_INTENT, TrackerService.TRACKING_FINISHED_INTENT -> {
                     if (workoutId != -1L) {
                         if (DEBUG) Log.d(TAG, "Workout update broadcast received for workoutId=$workoutId. Reloading.")
-                        reloadWorkoutData(workoutId)
+                        launch { reloadWorkoutData(workoutId) }
                     }
                 }
             }
@@ -545,10 +545,10 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     // Function to update the workout data from the database but keep transient metadata
-    private fun reloadWorkoutData(workoutId: Long) {
+    private suspend fun reloadWorkoutData(workoutId: Long) {
         if (DEBUG) Log.i(TAG, "reloadWorkoutData: workoutId=$workoutId")
 
-        launch(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
             summariesManager.getWorkoutCursor(workoutId).use { cursor ->
                 if (cursor?.moveToFirst() == true) {
                     // Get the fresh data from the database.
@@ -598,6 +598,10 @@ class WorkoutRepository private constructor(private val application: Application
                     // persist link and increment count if it's a new or changed association (SCRUM-228)
                     if (userEditedWorkout.clusterId != learnedId) {
                         engine.assignClusterToWorkout(application, workoutId, learnedId)
+                        // reload from DB to ensure memory and UI are in sync with inferred identity (SCRUM-254)
+                        reloadWorkoutData(workoutId)
+                        saveFinishedEvent.postValue(Pair(workoutId, true))
+                        return@launch
                     }
                 }
             }
@@ -724,10 +728,11 @@ class WorkoutRepository private constructor(private val application: Application
     fun assignClusterToWorkout(workoutId: Long, clusterId: Long) {
         launch(Dispatchers.IO) {
             WorkoutClusterEngine.getInstance(application)
-                .assignClusterToWorkout(application, workoutId, clusterId)
+                .assignClusterToWorkout(application, workoutId, clusterId, forceIdentity = true)
 
             // Reload fresh data from DB to propagate inferred identity to UI
             reloadWorkoutData(workoutId)
+            loadWorkout(workoutId)
         }
     }
 
