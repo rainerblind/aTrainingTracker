@@ -34,8 +34,22 @@ fun DisplaySettingsDialog(
     
     AlertDialog(
         onDismissRequest = onDismiss,
-        icon = { Icon(Icons.Default.DisplaySettings, contentDescription = null) },
-        title = { Text(text = stringResource(R.string.Display)) },
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DisplaySettings,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = stringResource(R.string.Display),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+            }
+        },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),

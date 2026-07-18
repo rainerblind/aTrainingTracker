@@ -41,13 +41,21 @@ fun UnitsSettingsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        // Standard Material 3 dialog icon & title
-        icon = { Icon(Icons.Default.SquareFoot, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        title = { 
-            Text(
-                text = stringResource(R.string.prefsUnitsTitle),
-                style = MaterialTheme.typography.headlineSmall
-            ) 
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.SquareFoot,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = stringResource(R.string.prefsUnitsTitle),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+            }
         },
         text = {
             // Remove fillMaxWidth() to allow the dialog container to hug the content more tightly.
