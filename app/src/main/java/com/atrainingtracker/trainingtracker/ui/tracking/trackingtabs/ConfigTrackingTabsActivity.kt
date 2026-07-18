@@ -58,7 +58,7 @@ class ConfigTrackingTabsActivity : AppCompatActivity(),
 
         // Now, show a dialog to select the activity type
         ActivityTypeSelectionHelper.showSelectionDialog(
-            context = this,
+            fragmentManager = supportFragmentManager,
             onTypeSelected = { showTrackingTabs(it) },
             onCancel = { finish() }
         )
