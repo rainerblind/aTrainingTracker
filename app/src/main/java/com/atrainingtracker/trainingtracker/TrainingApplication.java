@@ -719,16 +719,32 @@ public class TrainingApplication extends Application {
         return cSharedPreferences.getBoolean(SP_EXPORT_TCX, true); // by default, we export to TCX.
     }
 
+    public static void setExportToTCX(boolean value) {
+        cSharedPreferences.edit().putBoolean(SP_EXPORT_TCX, value).apply();
+    }
+
     public static boolean exportToGPX() {
         return cSharedPreferences.getBoolean(SP_EXPORT_GPX, false);
+    }
+
+    public static void setExportToGPX(boolean value) {
+        cSharedPreferences.edit().putBoolean(SP_EXPORT_GPX, value).apply();
     }
 
     public static boolean exportToCSV() {
         return cSharedPreferences.getBoolean(SP_EXPORT_CSV, false);
     }
 
+    public static void setExportToCSV(boolean value) {
+        cSharedPreferences.edit().putBoolean(SP_EXPORT_CSV, value).apply();
+    }
+
     public static boolean exportToGCJson() {
         return cSharedPreferences.getBoolean(SP_EXPORT_GC_JSON, false);
+    }
+
+    public static void setExportToGCJson(boolean value) {
+        cSharedPreferences.edit().putBoolean(SP_EXPORT_GC_JSON, value).apply();
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

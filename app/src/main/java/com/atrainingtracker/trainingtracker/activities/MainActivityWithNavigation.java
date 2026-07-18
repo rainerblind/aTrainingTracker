@@ -63,6 +63,7 @@ import com.atrainingtracker.trainingtracker.fragments.preferences.SearchSettings
 import com.atrainingtracker.trainingtracker.fragments.preferences.DisplaySettingsFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.UnitsSettingsFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.DisplaySettingsDialogFragment;
+import com.atrainingtracker.trainingtracker.fragments.preferences.ExportSettingsDialogFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.UnitsSettingsDialogFragment;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.ActivityTypeSelectionHelper;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.ConfigTrackingTabsActivity;
@@ -867,9 +868,9 @@ public class MainActivityWithNavigation
                 break;
 
             case R.id.drawer_export:
-                mFragment = ExportSettingsFragment.newInstance();
-                tag = ExportSettingsFragment.TAG;
-                break;
+                mDrawerLayout.closeDrawer(GravityCompat.START);
+                ExportSettingsDialogFragment.newInstance().show(getSupportFragmentManager(), ExportSettingsDialogFragment.TAG);
+                return false;
 
             case R.id.drawer_tracking_layouts:
                 mDrawerLayout.closeDrawer(GravityCompat.START);
