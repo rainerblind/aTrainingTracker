@@ -50,7 +50,6 @@
 
     <!-- device_list -->
     <string name="devices_myRemoteDevices">Sensoren</string>
-    <!-- <string name="knownDevices">known devices</string> -->
     <string name="devices_newDevices">Neue Sensoren</string>
     <string name="devices_searchingForDevice">Suche nach %1$s %2$s Sensoren</string>
 
@@ -78,13 +77,6 @@
     <string name="devices_wheel_circumference">Radumfang</string>
     <string name="devices_set_calibration">%1$s berechnen</string>
 
-    <!--     <string name="textDeviceNumber">device Number</string> -->
-    <!--     <string name="textPaired">paired</string> -->
-    <!--     <string name="textCalibrationFactor">calibration factor</string> -->
-    <!--     <string name="textDeviceName">device name</string> -->
-    <!--     <string name="textDeviceOwner">device owner</string> -->
-    <!--     <string name="textEquipment">Equipment</string> -->
-    <!--     <string name="textEditDeviceOk">OK</string> -->
 
     <!-- edit_device_bike_cadence -->
     <string name="devices_editDeviceBikeCadenceDeviceNameValue">Garmin Frequenz</string>
@@ -103,7 +95,7 @@
     <string name="devices_editDeviceGenericDeviceTypeValue">Generisch</string>
     <string name="devices_select_wheel_size_prompt">Radgröße wählen…</string>
     <string name="devices_last_seen_never">Nie</string>
-    <string name="devices_equipment_none" />
+    <string name="devices_equipment_none">- keine -</string>
 
     <!-- smartphone devices -->
     <string name="devices_location_GPS">Smartphone GPS (Satellit)</string>

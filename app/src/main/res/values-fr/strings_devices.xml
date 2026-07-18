@@ -86,6 +86,7 @@
     <string name="devices_editDeviceGenericDeviceTypeValue">Générique</string>
     <string name="devices_select_wheel_size_prompt">Choisir taille roue…</string>
     <string name="devices_last_seen_never">jamais</string>
+    <string name="devices_equipment_none">- aucun -</string>
 
     <string name="devices_location_GPS">GPS du téléphone (Satellite)</string>
     <string name="devices_location_Network">Localisation du téléphone (Réseau/WiFi)</string>
