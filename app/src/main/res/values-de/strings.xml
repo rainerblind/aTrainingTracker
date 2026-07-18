@@ -29,9 +29,7 @@
     <string name="default_device_name">irgendein ANT+ Sensor</string>
     <string name="waiting">warte</string>
     <string name="pairing_ANT">ANT+ Kopplung</string>
-    <!-- <string name="ANTSettings">ANT+ Settings</string> -->
     <string name="pairing_bluetooth">Bluetooth LE Kopplung</string>
-    <!-- <string name="settings_bluetooth">Bluetooth LE Settings</string> -->
     <string name="searching">suche</string>
     <string name="research">Suchen</string>
     <string name="Start">Start</string>
@@ -129,11 +127,8 @@
     <!--  ActivityType -->
     <string name="activity_type_bike_power">Rad Leistung</string>
     <string name="activity_type_bike_speed_and_cadence">Radeln</string>
-    <!-- <string name="activity_type_bike_speed">Rad Geschwindigkeit</string> -->
     <string name="activity_type_multisport_with_hr">Generell</string>
-    <!-- <string name="activity_type_multisport">Multisport</string> -->
     <string name="activity_type_run_speed_and_cadence">Laufen</string>
-    <!-- <string name="activity_type_run_speed">Lauf Geschwindigkeit</string> -->
 
     <string name="text_default">Standard</string>
     <string name="string_and_number_format">%1$s %2$d</string>
@@ -247,10 +242,6 @@
     <string name="sport_type_bike">Radeln</string>
     <string name="sport_type_other">Andere</string>
 
-    <!-- <string name="ready_to_train">ready to %1$s</string> -->
-    <!-- <string name="rock">rock</string> -->
-    <!-- <string name="bike">bike</string> -->
-    <!-- <string name="run">run</string>   -->
 
     <!-- Bike Power Features -->
     <string name="bike_power__features">Enthaltene Sensoren</string>
@@ -293,11 +284,6 @@
     <string name="EditDeviceActivityLabel">Einstellungen Sensor</string>
     <string name="LegalInfoLabel">Google Maps Lizenz</string>
 
-    <!-- 	<string name="titleBaseActivity">MyANT+</string> -->
-    <!--     <string name="titlePowerActivity">Power</string> -->
-    <!--     <string name="titleGenericSensorListActivity">Generic ANT+</string> -->
-    <!--     <string name="titleExpandableDeviceListActivity">Manage Devices</string> -->
-    <!--     <string name="titleDeviceListActivity">ANT+ Devices</string> -->
 
 
     <!--  For Preferences Activity -->
@@ -359,7 +345,6 @@
     <string name="got_bike">Aktualisiere Fahrräder\nRad: %1$s</string>
     <string name="strava_success_but_must_check">zu Strava hochgeladen, überprüfe die Rückmeldung …</string>
     <string name="strava_success_waiting_for_result">zu Strava hochgeladen, warte auf Rückmeldung …</string>
-    <!-- <string name="checking_bike">getting bikes from Strava\nchecking bike: %1$s</string> -->
 
     <string name="choose_view">Ansicht wählen</string>
     <string name="choose_activity_type">Aktivitätstyp wählen</string>
@@ -421,8 +406,6 @@
     <string name="jsonWrite">export nach Golden Cheetah json</string>
     <string name="tcxWrite">export nach TCX</string>
     <string name="gpxWrite">export nach GPX</string>
-    <!--     <string name="gpxShow">show GPX data in other application</string>  -->
-    <!-- 	<string name="deleteWorkout">delete Workout</string> -->
     <string name="stravaUpload">hochladen zu Strava</string>
     <string name="runkeeperUpload">hochladen zu Runkeeper</string>
     <string name="trainingPeaksUpload">hochladen zu TrainingPeaks</string>

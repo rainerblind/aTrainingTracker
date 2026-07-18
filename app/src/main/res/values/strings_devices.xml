@@ -124,7 +124,7 @@
     <string name="devices_editDeviceGenericDeviceTypeValue">Generic</string>
     <string name="devices_select_wheel_size_prompt">Select wheel size…</string>
     <string name="devices_last_seen_never">Never</string>
-    <string name="devices_equipment_none" />
+    <string name="devices_equipment_none">- none -</string>
 
     <!-- smartphone devices -->
     <string name="devices_location_GPS">Phone GPS (Satellite)</string>

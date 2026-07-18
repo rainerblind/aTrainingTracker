@@ -626,6 +626,7 @@
     <string name="my_locations">Favorite Tracks</string>
     <string name="drawer__settings">Settings</string>
     <string name="get_extremaType_of_sportType_format">Get %1$s positions of your %2$s workouts.</string>
+    <string name="strava" translatable="false">Strava</string>
     <string name="getting_my_locations">Looking for known locations.</string>
     <string name="editLocationName">Name:</string>
     <string name="LocationAltitude">Altitude:</string>
