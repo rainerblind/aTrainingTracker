@@ -75,7 +75,9 @@ class TrackingTabsFragment : Fragment() {
 
     override fun onDestroy() {
         super.onDestroy()
-        viewModel.setScreenMode(ScreenMode.TRACKING)
+        // Removed: viewModel.setScreenMode(ScreenMode.TRACKING)
+        // This was causing race conditions when replacing the fragment with another 
+        // TrackingTabsFragment instance in CONFIGURATION mode. (ATT-245)
     }
 
     companion object {

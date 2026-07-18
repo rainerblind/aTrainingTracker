@@ -62,6 +62,8 @@ import com.atrainingtracker.trainingtracker.fragments.preferences.ExportSettings
 import com.atrainingtracker.trainingtracker.fragments.preferences.SearchSettingsFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.DisplaySettingsFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.UnitsSettingsFragment;
+import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.ActivityTypeSelectionHelper;
+import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.ConfigTrackingTabsActivity;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.ConfigTrackingTabsFragment;
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
@@ -783,23 +785,15 @@ public class MainActivityWithNavigation
 
         mDrawerLayout.closeDrawers();
 
-        // uncheck previous menuItem
-        if (mPreviousMenuItem != null) {
-            mPreviousMenuItem.setChecked(false);
-        }
-        mPreviousMenuItem = menuItem;
-        menuItem.setChecked(true);
-
         // just for debugging
         // if (DEBUG) Toast.makeText(getApplicationContext(), menuItem.getTitle(), Toast.LENGTH_SHORT).show();
-
-        // save
-        mSelectedFragmentId = menuItem.getItemId();
 
         mFragment = null;
         String tag = null;
 
-        switch (mSelectedFragmentId) {
+        int itemId = menuItem.getItemId();
+
+        switch (itemId) {
             case R.id.drawer_start_tracking:
                 mFragment = TrackingTabsFragment.newInstance();
                 tag = TrackingTabsFragment.TAG;
@@ -875,6 +869,12 @@ public class MainActivityWithNavigation
                 tag = ExportSettingsFragment.TAG;
                 break;
 
+            case R.id.drawer_tracking_layouts:
+                mDrawerLayout.closeDrawer(GravityCompat.START);
+                Intent configIntent = new Intent(this, ConfigTrackingTabsActivity.class);
+                startActivity(configIntent);
+                return false;
+
             case R.id.drawer_units:
                 mFragment = UnitsSettingsFragment.newInstance();
                 tag = UnitsSettingsFragment.TAG;
@@ -901,6 +901,16 @@ public class MainActivityWithNavigation
         }
 
         if (mFragment != null) {
+            // Update the checked state ONLY if a fragment transition occurred (ATT-245)
+            if (mPreviousMenuItem != null) {
+                mPreviousMenuItem.setChecked(false);
+            }
+            mPreviousMenuItem = menuItem;
+            menuItem.setChecked(true);
+
+            // save
+            mSelectedFragmentId = itemId;
+
             // Clear the backstack before switching top-level fragments
             // This prevents Preference fragments or other sub-screens from
             // overlapping when the user presses 'Back' later.
