@@ -16,7 +16,7 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.fragments.preferences
+package com.atrainingtracker.trainingtracker.ui.settings.dropbox
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*

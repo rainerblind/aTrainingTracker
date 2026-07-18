@@ -8,7 +8,7 @@
  * (at your option) any later version.
  */
 
-package com.atrainingtracker.trainingtracker.fragments.preferences
+package com.atrainingtracker.trainingtracker.ui.settings.dropbox
 
 import android.content.SharedPreferences
 import android.os.Bundle
@@ -22,59 +22,42 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.core.view.GravityCompat
-import androidx.drawerlayout.widget.DrawerLayout
-import androidx.fragment.app.viewModels
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
+import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
-import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaAuthViewModel
-import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaAuthState
-import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDeauthorizationThread
-import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSynchronizeThread
-import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
-import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.dropbox.core.DbxRequestConfig
+import com.dropbox.core.android.Auth
 
-class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSharedPreferenceChangeListener {
+class CloudUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSharedPreferenceChangeListener {
 
-    private var mUpdateStravaEquipment: Preference? = null
     private var mSharedPreferences: SharedPreferences? = null
+    private var mAwaitDropboxResult = false
     private var mHeaderComposeView: ComposeView? = null
 
-    private val authViewModel: StravaAuthViewModel by viewModels()
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        mAwaitDropboxResult = savedInstanceState?.getBoolean(KEY_AWAIT_DROPBOX, false) ?: false
+    }
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         if (DEBUG) Log.i(TAG, "onCreatePreferences(savedInstanceState, rootKey=$rootKey)")
-
-        setPreferencesFromResource(R.xml.prefs_strava, null)
-
-        mUpdateStravaEquipment = findPreference(TrainingApplication.UPDATE_STRAVA_EQUIPMENT)
+        setPreferencesFromResource(R.xml.prefs_dropbox, null)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val prefView = super.onCreateView(inflater, container, savedInstanceState)
-        
+
         val root = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
@@ -94,23 +77,6 @@ class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSha
     private fun updateHeaderContent() {
         mHeaderComposeView?.setContent {
             ATrainingTrackerTheme {
-                val context = LocalContext.current
-                val isConnected = TrainingApplication.getStravaAccessToken() != null
-                val authState by authViewModel.authState.collectAsStateWithLifecycle()
-
-                LaunchedEffect(authState) {
-                    if (authState is StravaAuthState.Success) {
-                        updateSelectiveUploadVisibility()
-                        StravaEquipmentSynchronizeThread(requireActivity()).start()
-
-                        val repository = SegmentsRepository.getInstance(requireContext())
-                        repository.syncSegmentsAsync(BSportType.BIKE)
-                        repository.syncSegmentsAsync(BSportType.RUN)
-                        
-                        authViewModel.resetState()
-                    }
-                }
-
                 Column {
                     Surface(
                         color = MaterialTheme.colorScheme.primaryContainer
@@ -118,7 +84,6 @@ class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSha
                         Column(
                             modifier = Modifier.statusBarsPadding()
                         ) {
-                            // Title Row
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -126,7 +91,7 @@ class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSha
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = stringResource(R.string.Strava),
+                                    text = stringResource(R.string.Dropbox),
                                     style = MaterialTheme.typography.headlineSmall,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
@@ -134,18 +99,17 @@ class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSha
                         }
                     }
 
-                    // Connection Control (Buttons) - Now below the colored header
-                    StravaConnectionHeader(
+                    // Connection Control (Buttons) - Matching Strava pattern
+                    val isConnected = TrainingApplication.uploadToDropbox()
+                    DropboxConnectionHeader(
                         isConnected = isConnected,
-                        isConnecting = authState is StravaAuthState.Loading,
                         onConnectClick = {
-                            StravaHelper.requestAccessToken(requireContext())
+                            Auth.startOAuth2PKCE(requireActivity(), BuildConfig.DROPBOX_APP_KEY, DbxRequestConfig(BuildConfig.DROPBOX_APP_KEY))
+                            mAwaitDropboxResult = true
                         },
                         onDisconnectClick = {
-                            TrainingApplication.deleteStravaToken()
-                            StravaDeauthorizationThread(requireActivity()).start()
-                            updateSelectiveUploadVisibility()
-                            // Force recompose since we use static call to TrainingApplication
+                            TrainingApplication.deleteDropboxCredential()
+                            TrainingApplication.setUploadToDropbox(false)
                             updateHeaderContent()
                         }
                     )
@@ -153,7 +117,6 @@ class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSha
             }
         }
     }
-
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -171,19 +134,18 @@ class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSha
         super.onResume()
         if (DEBUG) Log.i(TAG, "onResume()")
 
-        mUpdateStravaEquipment?.apply {
-            summary = TrainingApplication.getLastUpdateTimeOfStravaEquipment()
-            setOnPreferenceClickListener {
-                if (DEBUG) Log.d(TAG, "updateStravaEquipment has been clicked")
-                StravaEquipmentSynchronizeThread(requireActivity()).start()
-                false
+        if (mAwaitDropboxResult) {
+            val dbxCredential = Auth.getDbxCredential()
+            if (dbxCredential != null) {
+                TrainingApplication.storeDropboxCredential(dbxCredential)
+                TrainingApplication.setUploadToDropbox(true)
             }
+            mAwaitDropboxResult = false
         }
 
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(requireActivity())
         mSharedPreferences?.registerOnSharedPreferenceChangeListener(this)
         
-        updateSelectiveUploadVisibility()
         updateHeaderContent()
     }
 
@@ -192,28 +154,22 @@ class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSha
         mSharedPreferences?.unregisterOnSharedPreferenceChangeListener(this)
     }
 
-    private fun updateSelectiveUploadVisibility() {
-        val isConnected = TrainingApplication.getStravaAccessToken() != null
-        
-        findPreference<Preference>(TrainingApplication.UPDATE_STRAVA_EQUIPMENT)?.isVisible = isConnected
-        findPreference<Preference>("strava_selective_upload_category")?.isVisible = isConnected
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(KEY_AWAIT_DROPBOX, mAwaitDropboxResult)
     }
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
         if (DEBUG) Log.i(TAG, "onSharedPreferenceChanged: key=$key")
 
-        if (TrainingApplication.SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT == key) {
-            mUpdateStravaEquipment?.summary = TrainingApplication.getLastUpdateTimeOfStravaEquipment()
-        }
-
-        if (TrainingApplication.SP_STRAVA_TOKEN == key) {
-            updateSelectiveUploadVisibility()
+        if (TrainingApplication.SP_UPLOAD_TO_DROPBOX == key) {
             updateHeaderContent()
         }
     }
 
     companion object {
-        private val TAG = StravaUploadFragment::class.java.name
-        private val DEBUG = TrainingApplication.getDebug(true)
+        private val TAG = CloudUploadFragment::class.java.name
+        private val DEBUG = TrainingApplication.getDebug(false)
+        private const val KEY_AWAIT_DROPBOX = "KEY_AWAIT_DROPBOX"
     }
 }

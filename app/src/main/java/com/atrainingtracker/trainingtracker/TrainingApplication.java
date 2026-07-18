@@ -807,7 +807,9 @@ public class TrainingApplication extends Application {
         mNotificationSummary = getString(R.string.searching);
 
 
-        PreferenceManager.setDefaultValues(this, R.xml.prefs, false);
+        PreferenceManager.setDefaultValues(this, R.xml.prefs_search, false);
+        PreferenceManager.setDefaultValues(this, R.xml.prefs_strava, false);
+        PreferenceManager.setDefaultValues(this, R.xml.prefs_dropbox, false);
         cSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         // cSharedPreferences.registerOnSharedPreferenceChangeListener(mSharedPreferencesChangeListener);
         // setPowerSmoothing(0.5);

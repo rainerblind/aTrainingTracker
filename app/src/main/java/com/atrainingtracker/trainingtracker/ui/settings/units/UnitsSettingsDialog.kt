@@ -8,7 +8,7 @@
  * (at your option) any later version.
  */
 
-package com.atrainingtracker.trainingtracker.fragments.preferences
+package com.atrainingtracker.trainingtracker.ui.settings.units
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*

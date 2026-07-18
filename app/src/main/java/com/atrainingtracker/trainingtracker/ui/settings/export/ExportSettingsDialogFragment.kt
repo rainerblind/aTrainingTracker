@@ -16,7 +16,7 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.fragments.preferences
+package com.atrainingtracker.trainingtracker.ui.settings.export
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -27,10 +27,9 @@ import androidx.fragment.app.DialogFragment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
- * A DialogFragment that hosts the modern Composable UnitsSettingsDialog.
- * This allows triggering the unit settings directly from the navigation drawer.
+ * A DialogFragment that hosts the modern Composable ExportSettingsDialog.
  */
-class UnitsSettingsDialogFragment : DialogFragment() {
+class ExportSettingsDialogFragment : DialogFragment() {
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -40,7 +39,7 @@ class UnitsSettingsDialogFragment : DialogFragment() {
         return ComposeView(requireContext()).apply {
             setContent {
                 ATrainingTrackerTheme {
-                    UnitsSettingsDialog(
+                    ExportSettingsDialog(
                         onDismiss = { dismiss() }
                     )
                 }
@@ -50,9 +49,9 @@ class UnitsSettingsDialogFragment : DialogFragment() {
 
     companion object {
         @JvmField
-        val TAG = "UnitsSettingsDialogFragment"
+        val TAG = "ExportSettingsDialogFragment"
         
         @JvmStatic
-        fun newInstance() = UnitsSettingsDialogFragment()
+        fun newInstance() = ExportSettingsDialogFragment()
     }
 }

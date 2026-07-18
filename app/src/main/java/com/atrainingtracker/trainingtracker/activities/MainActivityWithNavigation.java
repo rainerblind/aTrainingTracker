@@ -47,7 +47,6 @@ import android.os.IBinder;
 import com.atrainingtracker.banalservice.ui.sporttype.SportTypeListFragment;
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment;
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory;
-import com.atrainingtracker.trainingtracker.fragments.preferences.PebbleScreenFragment;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents;
@@ -58,16 +57,14 @@ import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
 import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack;
 import com.atrainingtracker.trainingtracker.ui.routes.RoutesFragment;
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegmentsFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.ExportSettingsFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.SearchSettingsFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.DisplaySettingsFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.UnitsSettingsFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.DisplaySettingsDialogFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.ExportSettingsDialogFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.UnitsSettingsDialogFragment;
-import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.ActivityTypeSelectionHelper;
-import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.ConfigTrackingTabsActivity;
-import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.ConfigTrackingTabsFragment;
+import com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsDialogFragment;
+import com.atrainingtracker.trainingtracker.ui.settings.dropbox.CloudUploadFragment;
+import com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialogFragment;
+import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsFragment;
+import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaUploadFragment;
+import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ActivityTypeSelectionHelper;
+import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ConfigTrackingTabsActivity;
+import com.atrainingtracker.trainingtracker.ui.settings.units.UnitsSettingsDialogFragment;
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
 import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc;
@@ -112,12 +109,6 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
-import com.atrainingtracker.trainingtracker.fragments.preferences.CloudUploadFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.RootPrefsFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.RunkeeperUploadFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.SearchFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.TrainingpeaksUploadFragment;
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
 
 import java.util.ArrayList;
@@ -1003,17 +994,11 @@ public class MainActivityWithNavigation
         String key = preferenceScreen.getKey();
         Fragment fragment = null;
         switch (key) {
-            case "root" -> fragment = new RootPrefsFragment();
             case "sportTypes" -> fragment = new SportTypeListFragment();
             case "cloudUpload" -> fragment = new CloudUploadFragment();
             case TrainingApplication.PREFERENCE_SCREEN_STRAVA ->
                     fragment = new StravaUploadFragment();
-            case TrainingApplication.PREFERENCE_SCREEN_RUNKEEPER ->
-                    fragment = new RunkeeperUploadFragment();
-            case TrainingApplication.PREFERENCE_SCREEN_TRAINING_PEAKS ->
-                    fragment = new TrainingpeaksUploadFragment();
-            case "pebbleScreen" -> fragment = new PebbleScreenFragment();
-            case "search_settings" -> fragment = new SearchFragment();
+            case "search_settings" -> fragment = new SearchSettingsFragment();
             default -> Log.d(TAG, "WTF: unknown key");
         }
 
