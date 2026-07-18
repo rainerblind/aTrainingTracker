@@ -39,7 +39,8 @@ data class WorkoutCluster(
     val refDistance: Double,
     val hitCount: Int,
     val bSportType: BSportType = BSportType.UNKNOWN,
-    val previewPaths: List<String> = emptyList() // List of encoded polylines for preview
+    val previewPaths: List<String> = emptyList(), // List of encoded polylines for preview
+    val routePolyline: String? = null // Encoded polyline of the linked authoritative route
 )
 
 class WorkoutClusterDatabaseManager private constructor(context: Context) {
