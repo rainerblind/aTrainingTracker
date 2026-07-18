@@ -284,7 +284,12 @@ class WorkoutClusterEngine private constructor(context: Context) {
         return candidate
     }
 
-    fun assignClusterToWorkout(context: Context, workoutId: Long, clusterId: Long) {
+    /**
+     * Links a workout to a specific cluster and propagates identity (sport/equipment).
+     * @param forceIdentity If true, ignores hardware confidence and forces cluster's probable sport.
+     */
+    @JvmOverloads
+    fun assignClusterToWorkout(context: Context, workoutId: Long, clusterId: Long, forceIdentity: Boolean = false) {
         val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
         val discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(context)
         val clusterDb = WorkoutClusterDatabaseManager.getInstance(context)
@@ -313,7 +318,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
             val currentName = summariesManager.getString(workoutId, WorkoutSummaries.WORKOUT_NAME)
             val fileBaseName = summariesManager.getString(workoutId, WorkoutSummaries.FILE_BASE_NAME)
 
-            if (currentName.isNullOrEmpty() || currentName == fileBaseName) {
+            if (forceIdentity || currentName.isNullOrEmpty() || currentName == fileBaseName) {
                 // Use current cluster hitCount + 1 for the auto-name if we just linked it
                 val displayCount = if (previousClusterId == clusterId) cluster.hitCount else cluster.hitCount + 1
                 val autoName = context.getString(R.string.cluster_autoname_format, cluster.name, displayCount)
@@ -334,15 +339,15 @@ class WorkoutClusterEngine private constructor(context: Context) {
 
         val hardwareIdentity = discoveryManager.resolveIdentity(workoutId, currentBSport, avgSpeed)
 
-        if (hardwareIdentity.isHighConfidence) {
+        if (!forceIdentity && hardwareIdentity.isHighConfidence) {
             // Hardware confidence is high -> keep hardware-based sport and equipment
             summariesManager.applyInferredIdentity(workoutId, hardwareIdentity)
             if (DEBUG) Log.i(TAG, "Hardware confidence high for workout $workoutId. Vetoing cluster-based override.")
         } else {
-            // Low confidence -> let the cluster majority win
+            // Low confidence OR forced -> let the cluster majority win
             val clusterIdentity = discoveryManager.inferIdentityFromSport(cluster.probableSportId)
             summariesManager.applyInferredIdentity(workoutId, clusterIdentity)
-            if (DEBUG) Log.i(TAG, "Workout Cluster majority winning for workout $workoutId.")
+            if (DEBUG) Log.i(TAG, "Workout Cluster identity winning for workout $workoutId (forced=$forceIdentity).")
         }
     }
 

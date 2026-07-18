@@ -197,6 +197,7 @@ class WorkoutSummariesListFragment : Fragment() {
                                 }
                             } else if (selectedWorkoutIdForEdit != null) {
                                 val editViewModel: EditWorkoutViewModel = viewModel(
+                                    key = "edit_workout_$selectedWorkoutIdForEdit",
                                     factory = EditWorkoutViewModelFactory(
                                         requireActivity().application,
                                         selectedWorkoutIdForEdit!!
