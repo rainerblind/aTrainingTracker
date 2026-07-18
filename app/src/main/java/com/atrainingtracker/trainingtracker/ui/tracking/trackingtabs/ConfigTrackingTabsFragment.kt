@@ -46,52 +46,11 @@ class ConfigTrackingTabsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        showSelectActivityTypeDialog()
-    }
-
-    private fun showSelectActivityTypeDialog() {
-        val types = ActivityType.values()
-
-        val adapter = object : ArrayAdapter<ActivityType>(
-            requireContext(),
-            android.R.layout.select_dialog_item,
-            android.R.id.text1,
-            types
-        ) {
-            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-                val v = super.getView(position, convertView, parent)
-                val tv = v.findViewById<TextView>(android.R.id.text1)
-
-                val type = getItem(position)
-                if (type != null) {
-                    tv.text = getString(type.titleId)
-                    tv.setCompoundDrawablesWithIntrinsicBounds(type.logoId, 0, 0, 0)
-                    tv.compoundDrawablePadding = 32
-                }
-                return v
-            }
-        }
-
-        val titleView = TextView(requireContext()).apply {
-            setText(R.string.choose_activity_type)
-            setPadding(40, 40, 40, 40)
-            textSize = 22f
-            setTextColor(Color.WHITE)
-            setBackgroundColor(ContextCompat.getColor(context, R.color.color_primary))
-            gravity = Gravity.CENTER
-        }
-
-        AlertDialog.Builder(requireContext())
-            .setCustomTitle(titleView)
-            .setAdapter(adapter) { _, which ->
-                val selection = types[which]
-                showTrackingTabs(selection)
-            }
-            .setOnCancelListener { 
-                // Navigation logic back to home or previous
-                parentFragmentManager.popBackStack()
-            }
-            .show()
+        ActivityTypeSelectionHelper.showSelectionDialog(
+            context = requireContext(),
+            onTypeSelected = { showTrackingTabs(it) },
+            onCancel = { parentFragmentManager.popBackStack() }
+        )
     }
 
     private fun showTrackingTabs(activityType: ActivityType) {

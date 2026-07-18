@@ -19,9 +19,9 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
 import android.os.Bundle
+import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BANALService
@@ -36,66 +36,43 @@ class ConfigTrackingTabsActivity : AppCompatActivity(),
     BANALService.GetBanalServiceInterface,
     StartOrResumeInterface {
 
+    private val viewModel: TrackingTabsViewModel by viewModels {
+        TrackingTabsViewModelFactory(application)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.main_activity_without_navigation)
 
-        // Now, show an dialog to select the activity type
-        showSelectActivityTypeDialog()
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (viewModel.screenMode.value == com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode.CONFIGURATION) {
+                    viewModel.setScreenMode(com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode.PREVIEW)
+                } else {
+                    viewModel.exitConfiguration()
+                    finish()
+                }
+            }
+        })
+
+        // Now, show a dialog to select the activity type
+        ActivityTypeSelectionHelper.showSelectionDialog(
+            context = this,
+            onTypeSelected = { showTrackingTabs(it) },
+            onCancel = { finish() }
+        )
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // State cleanup is now handled in OnBackPressedCallback for immediate reset
     }
 
     // Handle the back button in the toolbar
     override fun onSupportNavigateUp(): Boolean {
         finish()
         return true
-    }
-
-    private fun showSelectActivityTypeDialog() {
-        val types = ActivityType.values()
-
-        // Define a simple ArrayAdapter with an icon
-        val adapter = object : android.widget.ArrayAdapter<ActivityType>(
-            this,
-            android.R.layout.select_dialog_item,
-            android.R.id.text1,
-            types
-        ) {
-            override fun getView(position: Int, convertView: android.view.View?, parent: android.view.ViewGroup): android.view.View {
-                val v = super.getView(position, convertView, parent)
-                val tv = v.findViewById<android.widget.TextView>(android.R.id.text1)
-
-                val type = getItem(position)
-                if (type != null) {
-                    tv.text = getString(type.titleId)
-                    // Set the icon to the left of the text
-                    tv.setCompoundDrawablesWithIntrinsicBounds(type.logoId, 0, 0, 0)
-                    // Add some padding between icon and text
-                    tv.compoundDrawablePadding = 32
-                }
-                return v
-            }
-        }
-
-        // Create a Custom Title View
-        val titleView = android.widget.TextView(this).apply {
-            setText(R.string.choose_activity_type)
-            setPadding(40, 40, 40, 40)
-            textSize = 22f
-            setTextColor(android.graphics.Color.WHITE)
-            setBackgroundColor(androidx.core.content.ContextCompat.getColor(context, R.color.color_primary))
-            gravity = android.view.Gravity.CENTER
-        }
-
-        // 3. Build the Dialog using the custom title and adapter
-        AlertDialog.Builder(this)
-            .setCustomTitle(titleView) // This replaces the standard white header
-            .setAdapter(adapter) { _, which ->
-                val selection = types[which]
-                showTrackingTabs(selection)
-            }
-            .setOnCancelListener { finish() }
-            .show()
     }
 
     private fun showTrackingTabs(activityType: ActivityType) {

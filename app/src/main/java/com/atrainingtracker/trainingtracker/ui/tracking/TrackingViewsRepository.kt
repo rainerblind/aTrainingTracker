@@ -86,15 +86,6 @@ class TrackingViewsRepository private constructor(private val context: Context) 
     // This StateFlow acts as a signal. Changing its value will trigger a refresh of the sensor field data
     private val configUpdateTrigger = MutableStateFlow(0)
 
-
-    // -- screen mode
-    private val _screenMode = MutableStateFlow(ScreenMode.TRACKING)
-    val screenMode: StateFlow<ScreenMode> = _screenMode.asStateFlow()
-
-    fun setScreenMode(mode: ScreenMode) {
-        _screenMode.value = mode
-    }
-
     /**
      * Retrieves the ActivityType associated with a specific view definition.
      */

@@ -111,7 +111,13 @@ class TrackingViewModel(
     private val _pendingAddition = MutableStateFlow<AdditionParams?>(null)
     val pendingAddition = _pendingAddition.asStateFlow()
 
-    val screenMode: StateFlow<ScreenMode> = trackingViewsRepository.screenMode
+    // Screen mode is now local and driven by the parent (ATT-245)
+    private val _screenMode = MutableStateFlow(ScreenMode.TRACKING)
+    val screenMode: StateFlow<ScreenMode> = _screenMode.asStateFlow()
+
+    fun updateScreenMode(mode: ScreenMode) {
+        _screenMode.value = mode
+    }
 
     // Filter and sort the segments from the repository:
     // TODO: also filter for activity type.

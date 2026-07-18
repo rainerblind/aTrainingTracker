@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
@@ -47,6 +48,11 @@ fun TrackingTabGridContent(
         factory = TrackingViewModelFactory(activity.application, tabViewId),
         key = "tab_$tabViewId"
     )
+
+    // Sync the local ViewModel screen mode with the parent's mode (ATT-245)
+    LaunchedEffect(screenMode) {
+        viewModel.updateScreenMode(screenMode)
+    }
 
     val uiState by viewModel.uiState.collectAsState()
     val editingFieldId by viewModel.editingFieldId.collectAsState()

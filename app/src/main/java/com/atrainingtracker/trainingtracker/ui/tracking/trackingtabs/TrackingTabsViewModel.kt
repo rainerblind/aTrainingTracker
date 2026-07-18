@@ -26,7 +26,6 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.asFlow
-
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
@@ -41,11 +40,14 @@ import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 // helper class to navigate the fragment container after adding or deletion of a tab
@@ -54,14 +56,12 @@ sealed class TabNavigationEvent {
     data class EditDevice(val deviceId: Long) : TabNavigationEvent()
 }
 
-/**
- * ViewModel for the tabbed container of tracking views.
-  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class TrackingTabsViewModel(
     application: Application,
     private val trackingViewsRepository: TrackingViewsRepository,
     private val banalServiceRepository: BANALServiceRepository,
-    private val devicesRepository: DeviceDataRepository = DeviceDataRepository.getInstance(application)
+    private val devicesRepository: DeviceDataRepository
 ) : AndroidViewModel(application) {
 
     // State to hold the explicitly selected ActivityType
@@ -93,7 +93,9 @@ class TrackingTabsViewModel(
     val lapEvent: LiveData<LapEvent?> = banalServiceRepository.lapEvent
     fun clearLapEvent() = banalServiceRepository.clearLapEvent()
 
-    val screenMode: StateFlow<ScreenMode> = trackingViewsRepository.screenMode
+    // Screen mode is now local to the ViewModel to prevent background state leakage (ATT-245)
+    private val _screenMode = MutableStateFlow(ScreenMode.TRACKING)
+    val screenMode: StateFlow<ScreenMode> = _screenMode.asStateFlow()
 
     fun onResume() {
         viewModelScope.launch {
@@ -108,23 +110,20 @@ class TrackingTabsViewModel(
     }
 
     private val _navigationEvent = MutableSharedFlow<TabNavigationEvent>()
-    val navigationEvent = _navigationEvent.asSharedFlow()
+    val navigationEvent: SharedFlow<TabNavigationEvent> = _navigationEvent.asSharedFlow()
 
-    // Note that the trackingViews depends on our "smart" activityType above,
-    // effectively decoupling it from BANALService when an explicit type is provided.
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val trackingViews: StateFlow<List<TrackingViewInfo>> = activityType
-        .flatMapLatest { currentActivityType ->
-            trackingViewsRepository.getTrackingViewsFlow(currentActivityType)
-        }
+    val trackingViews: StateFlow<List<TrackingViewInfo>> = combine(
+        activityType,
+        _screenMode // Re-trigger when screen mode changes if needed
+    ) { type, _ ->
+        trackingViewsRepository.getTrackingViewsFlow(type)
+    }.flatMapLatest { it }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
-
-    // A SingleLiveEvent to navigate away from the control tracking tab to the first tracking tab when tracking is started.
     val navigateToTrackingTab = SingleLiveEvent<Unit>()
 
     init {
@@ -144,7 +143,7 @@ class TrackingTabsViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        // Trigger the unbind logic in the repository
+        // unbind from the BANALService
         banalServiceRepository.unbindFromBANALService()
     }
 
@@ -153,13 +152,34 @@ class TrackingTabsViewModel(
         _explicitActivityType.value = type
     }
 
-    fun setScreenMode(mode: ScreenMode) = trackingViewsRepository.setScreenMode(mode)
+    fun setScreenMode(mode: ScreenMode) {
+        _screenMode.value = mode
+    }
 
     fun toggleScreenMode() {
-        when (screenMode.value) {
-            ScreenMode.TRACKING -> trackingViewsRepository.setScreenMode(ScreenMode.CONFIGURATION)  // Should never ever happen.
-            ScreenMode.CONFIGURATION -> trackingViewsRepository.setScreenMode(ScreenMode.PREVIEW)
-            ScreenMode.PREVIEW -> trackingViewsRepository.setScreenMode(ScreenMode.CONFIGURATION)
+        when (_screenMode.value) {
+            ScreenMode.TRACKING -> _screenMode.value = ScreenMode.CONFIGURATION
+            ScreenMode.CONFIGURATION -> _screenMode.value = ScreenMode.PREVIEW
+            ScreenMode.PREVIEW -> _screenMode.value = ScreenMode.CONFIGURATION
+        }
+    }
+
+    /**
+     * Exits the configuration context entirely and returns to standard tracking mode.
+     */
+    fun exitConfiguration() {
+        _screenMode.value = ScreenMode.TRACKING
+        _explicitActivityType.value = null
+    }
+
+    /**
+     * Handles back-press navigation for the tracking tab configuration flow (ATT-245).
+     * Transitions from CONFIGURATION to PREVIEW. 
+     * Higher-level exit (PREVIEW -> TRACKING/FINISH) is handled by the Activity.
+     */
+    fun handleBackPressToPreview() {
+        if (_screenMode.value == ScreenMode.CONFIGURATION) {
+            _screenMode.value = ScreenMode.PREVIEW
         }
     }
 
@@ -167,84 +187,62 @@ class TrackingTabsViewModel(
         // Only update if the name actually changed to prevent loop cycles
         viewModelScope.launch {
             val currentViews = trackingViews.value
-            val currentName = currentViews?.find { it.tabViewId == tabViewId }?.name
-
-            if (newName != currentName) {
+            val existing = currentViews.find { it.tabViewId == tabViewId }
+            if (existing != null && existing.name != newName) {
                 trackingViewsRepository.updateTabName(tabViewId, newName)
             }
         }
     }
 
-    fun onUpdateShowLapButton(tabViewId: Long, showLapButton: Boolean) {
+    fun onUpdateShowLapButton(tabViewId: Long, show: Boolean) {
         viewModelScope.launch {
-            trackingViewsRepository.updateShowLapButton(tabViewId,showLapButton)
+            trackingViewsRepository.updateShowLapButton(tabViewId, show)
         }
     }
 
-    fun onUpdateShowLiveSegments(tabViewId: Long, showLiveSegments: Boolean) {
+    fun onUpdateShowLiveSegments(tabViewId: Long, show: Boolean) {
         viewModelScope.launch {
-            trackingViewsRepository.updateShowLiveSegments(tabViewId, showLiveSegments)
+            trackingViewsRepository.updateShowLiveSegments(tabViewId, show)
         }
     }
 
-    fun onUpdateShowMap(tabViewId: Long, showMap: Boolean) {
+    fun onUpdateShowMap(tabViewId: Long, show: Boolean) {
         viewModelScope.launch {
-            trackingViewsRepository.updateShowMap(tabViewId,showMap)
+            trackingViewsRepository.updateShowMap(tabViewId, show)
         }
     }
 
-    fun onUpdateShowElevationProfile(tabViewId: Long, showElevationProfile: Boolean) {
+    fun onUpdateShowElevationProfile(tabViewId: Long, show: Boolean) {
         viewModelScope.launch {
-            trackingViewsRepository.updateShowElevationProfile(tabViewId, showElevationProfile)
+            trackingViewsRepository.updateShowElevationProfile(tabViewId, show)
         }
     }
 
-    fun onAddTabRelative(tabViewId: Long, after: Boolean) {
+    fun onAddTabRelative(tabViewId: Long, addAfter: Boolean) {
         viewModelScope.launch {
-            // 1. Get current index to calculate new index
-            val currentIndex = trackingViews.value?.indexOfFirst { it.tabViewId == tabViewId } ?: 0
-
-            // 2. Perform the database update
-            trackingViewsRepository.addEmptyTabView(tabViewId, after)
-
-            // 3. Calculate target: if 'after', target is current + 1. If 'before', target is current.
-            val targetIndex = if (after) currentIndex + 1 else currentIndex
-
-            Log.i("TrackingTabsViewModel", "Adding after=$after $currentIndex -> $targetIndex")
-
-            _navigationEvent.emit(TabNavigationEvent.NavigateTo(targetIndex))
+            trackingViewsRepository.addEmptyTabView(tabViewId, addAfter)
         }
     }
 
     fun onDeleteTab(tabViewId: Long) {
         viewModelScope.launch {
-            // 1. Get current index and total count before deletion
-            val currentViews = trackingViews.value ?: emptyList()
-            val currentIndex = currentViews.indexOfFirst { it.tabViewId == tabViewId }
-
-            // 2. Calculate the target index for the Fragment
-            // If the user deletes the last tab, we move to the new last tab (newCount).
-            // Otherwise, we stay at the same index (which is now the next tab).
-            val newCount = currentViews.size - 1
-            val targetIndex = if (currentIndex >= newCount && newCount > 0) {
-                newCount
-            } else {
-                currentIndex
+            val currentList = trackingViews.value
+            val indexToDelete = currentList.indexOfFirst { it.tabViewId == tabViewId }
+            if (indexToDelete != -1) {
+                trackingViewsRepository.deleteTab(tabViewId)
+                // If we deleted the current tab or something after it, adjust navigation
+                val newTarget = if (indexToDelete >= currentList.size - 1) {
+                    (currentList.size - 2).coerceAtLeast(0)
+                } else {
+                    indexToDelete
+                }
+                _navigationEvent.emit(TabNavigationEvent.NavigateTo(newTarget))
             }
-            // Note that we do this navigation before the update of the database due to the following reason:
-            // When we delete the last tab in the database and the pager is showing the last tab, the Pager will navigate to the first tab.
-
-            // 3. Emit the event with the safe, pre-calculated index
-            _navigationEvent.emit(TabNavigationEvent.NavigateTo(targetIndex))
-
-            // 4. Perform the database update
-            trackingViewsRepository.deleteTab(tabViewId)
         }
     }
 
 
     fun onLapButtonClick() {
-        // -> request a new lap.
         trackingViewsRepository.requestNewLap()
     }
 }
@@ -252,13 +250,24 @@ class TrackingTabsViewModel(
 class TrackingTabsViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(TrackingTabsViewModel::class.java)) {
+            val trackingViewsRepository = TrackingViewsRepository.getInstance(application)
+            val banalServiceRepository = BANALServiceRepository.Companion.getInstance(application)
+            val devicesRepository = DeviceDataRepository.getInstance(application)
+
             @Suppress("UNCHECKED_CAST")
             return TrackingTabsViewModel(
                 application,
-                TrackingViewsRepository.getInstance(application),
-                BANALServiceRepository.getInstance(application)
+                trackingViewsRepository,
+                banalServiceRepository,
+                devicesRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
+
+private fun <T1, T2, R> combine(
+    flow: kotlinx.coroutines.flow.Flow<T1>,
+    flow2: kotlinx.coroutines.flow.Flow<T2>,
+    transform: suspend (T1, T2) -> R
+): kotlinx.coroutines.flow.Flow<R> = kotlinx.coroutines.flow.combine(flow, flow2, transform)
