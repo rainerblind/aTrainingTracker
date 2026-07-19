@@ -40,13 +40,16 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   Document these risks in the implementation plan.
 
 4.  **Jira Ticket Management (Agile Phase)**:
-    *   **Automation**: Use the local utility `./tools/jira_util.py` for Jira interactions (list, show, comment, download).
+    *   **Automation**: Use the local utility `./tools/jira_util.py` for Jira interactions (list, show, comment, download, download-all).
     *   **Syntax**: All Jira comments must use **Jira Wiki Markup** (e.g., `h1.`, `{code}`, `*bold*`).
     *   **Credentials**: Authentication details are stored in `.env.jira` (not tracked in Git).
     *   **State Control**: The agent **MUST NOT** transition tickets between states (e.g., move to "In Progress" or "Done") unless explicitly instructed by the user. The user maintains sole control over the workflow state.
     *   **Selection & Focus**: Multiple tickets may be "In Bearbeitung" (In Progress). The agent works on one chosen ticket at a time. While working on a ticket, it becomes the exclusive focus of the development session. The agent MUST fully complete the current topic (including documentation and verification) before concluding. The agent is strictly FORBIDDEN from asking to start a new ticket or suggesting the next task; the user holds sole initiative for task transitions.
     *   **Contextual Awareness**: Before starting work on a ticket, the agent MUST examine its **Epic** (if linked) to understand the overall picture and vision. The agent SHOULD ask clarifying questions about the Epic to ensure the current task aligns with the long-term goals. If the Epic's description is missing or vague, the agent SHOULD propose an updated description to the user. Once the overall idea of the Epic becomes clear, the agent MUST update the Epic's description in Jira using the `update-desc` command.
     *   **Clarification & Completeness**: If a ticket selected for work lacks a **Description**, specific failure logs, or clear technical context, the agent **MUST NOT** proceed with an implementation plan. Instead, the agent must ask the user for clarification and agreement on the problem statement first.
+    *   **Type-Aware Engineering**: The agent MUST check the **Issue Type** (e.g., Bug, Task, Story) and adapt its strategy accordingly:
+        *   **Bugs**: Require a formal **Root Cause Analysis (RCA)** and inspection of all attachments (logs, screenshots). Use `jira_util.py download-all KEY` to retrieve debugging artifacts.
+        *   **Stories/Tasks**: Require detailed feature requirements and architectural impact analysis.
     *   **Documentation**: For any ticket in progress, the agent must:
         *   **Identity Disclaimer**: Every comment posted by the agent MUST start with a clear disclaimer: *"[Automated comment by AI Agent]"*.
         *   **Initial Analysis**: Immediately after moving to "In Progress", post a comment containing the **Root Cause Analysis (RCA)** (for bugs), the **Implementation Strategy**, the **Impact Analysis**, and the **Agreed Verification Criteria (Test IDs)**.
