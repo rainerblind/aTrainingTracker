@@ -1,35 +1,57 @@
 # Google Play Store Presence - German
 
-**App Title**: aTrainingTracker (ANT+ BTLE) (26/30)
+**App-Titel**: aTrainingTracker – Sport-Tracker (30/30)
 
-**Short Description**:
-Das Tracking-Cockpit für ambitionierte Athleten mit ANT+, BLE & Strava. (69/80)
+**Kurzbeschreibung**:
+Smarter Fahrradcomputer mit ANT+, BLE, Strava & Live-Segmenten. (65/80)
 
-**Full Description**:
-<b>aTrainingTracker: Das Tracking-Cockpit für ambitionierte Athleten.</b>
+**Vollständige Beschreibung**:
+<b>aTrainingTracker – Der intelligente Sport-Tracker für dein Smartphone</b>
 
-aTrainingTracker ist eine Sport-Tracking-App für Athleten, die Wert auf Präzision und Automatisierung legen. Die App bietet ein erstklassiges Tracking-Erlebnis während der Einheit sowie Tools für die grundlegende Analyse und langfristige Trainingssteuerung. Durch die Anbindung zahlreicher Sensoren (ANT+ und Bluetooth LE) verwandelt sie Ihr Smartphone in einen professionellen Trainingscomputer.
+Konzentrier dich auf dein Training. Wir kümmern uns um die Technik.
 
-<b>FOKUS AUF PERFORMANCE, MINIMIERTE INTERAKTION</b>
-Für alle, die jedes Detail ihres Trainings erfassen wollen, ohne Zeit am Handy zu verschwenden:
-• <b>Zero-Touch Automatisierung</b>: Einmal konfiguriert, genügt ein Druck auf Start. Die App erkennt Sportart (Laufen/Radfahren) und Ausrüstung (Rad oder Schuhe) automatisch anhand der erkannten Sensoren.
-• <b>Best-Sensor Logik</b>: Ein intelligentes Prioritätssystem wählt die hochwertigste Datenquelle (z. B. dedizierte ANT+- oder BTLE-Geschwindigkeitssensoren statt GPS-basierter Geschwindigkeit für höchste Präzision).
-• <b>Cloud Ready</b>: Automatische Synchronisierung mit Strava und Dropbox. Ihre Daten sind bereit für die Analyse am Computer (WKO+, Golden Cheetah), noch bevor Sie aus der Dusche kommen.
-• <b>Datenschutz zuerst</b>: Alle Daten werden exklusiv auf Ihrem Gerät gespeichert (außer bei Cloud-Upload). Ich sammle keine persönlichen Trainingsdaten auf externen Servern.
+aTrainingTracker ist ein intelligenter Sport-Tracker für Athleten, die Wert auf Automatisierung, Genauigkeit und Datenschutz legen. Er erkennt automatisch deine Sportart, wählt die richtige Ausrüstung aus und organisiert deine Lieblingsstrecken. Einfach auf Start drücken – die App erledigt den Rest im Hintergrund.
 
-<b>HAUPTMERKMALE</b>
-• <b>Umfangreiche Sensor-Unterstützung</b>:
-• ANT+: Herzfrequenz, Geschwindigkeit, Trittfrequenz, Leistungsmesser und Temperatur.
-• Bluetooth LE: Herzfrequenz, Rad-Geschwindigkeit/Trittfrequenz, Lauf-Geschwindigkeit/Trittfrequenz.
-• <b>Multi-Sensor Pairing</b>: Koppeln Sie unbegrenzt viele Sensoren; die App verbindet sich beim Start automatisch mit den verfügbaren Geräten.
-• <b>Anpassbare Cockpits</b>: Erstellen Sie Ihr perfektes Dashboard mit mehreren konfigurierbaren, sportartabhängigen Ansichten. Sehen Sie genau die Metriken, die für Ihre aktuelle Aktivität relevant sind.
-• <b>Vielseitiger Export</b>: Unterstützung für TCX-, GPX-, CSV- und Golden Cheetah-Formate.
-• <b>Social Sharing</b>: Erstellen Sie professionelle Workout-Snapshots mit Karte, Höhenprofil und Kennzahlen in einem Bild.
-• <b>Navigation & Routen</b>: Importieren Sie Routen von GPX oder Strava und folgen Sie ihnen auf der Karte während Ihrer Einheit.
-• <b>Strava Segmente</b>: Verwalten Sie Ihre markierten Segmente mit detaillierten Metriken und Höhenprofilen. Genießen Sie Echtzeit-Erkennung und Live-Feedback auf dem Segment.
-• <b>Trainingshistorie</b>: Integrierte Zusammenfassungen (Woche, Monat, Jahr) für den schnellen Überblick über Ihr Trainingsvolumen.
+Perfekt für Radfahrer, Läufer, Wanderer und andere Ausdauersportler, die eine zuverlässige Aufzeichnung, intelligentes Sensormanagement und die volle Kontrolle über ihre Daten wollen.
 
-<b>EINE 25-JÄHRIGE REISE</b>
-Dieses Projekt begann vor über zwei Jahrzehnten als Vision. Damals war ich Ingenieurstudent und Gelegenheitsläufer und erkundete die Möglichkeiten der mobilen Programmierung mit Java-Midlets. Beim Joggen träumte ich von einer Zukunft, in der das Mobiltelefon – mit seinem Speicher, Display und seiner Rechenleistung – als ultimatives Trainingstagebuch dienen und Daten von externen Sensoren sammeln könnte.
-Im Laufe der Jahre wurde aus dem Gelegenheitsläufer ein passionierter Triathlet, und als 2011 die ersten ANT+-Smartphones auf den Markt kamen, war ich bereit. Ich kaufte mir sofort eines, fand aber keine App, die leistungsstark oder automatisiert genug war, um meine Bedürfnisse zu befriedigen. Also fing ich an, selbst zu programmieren.
-Nach einer Pause zwischen 2019 und 2025 bin ich mit neuer Energie zurückgekehrt, habe die UI modernisiert und den soliden Kern bewahrt. Es ist eine Herzensangelegenheit, die ich nun mit Ihnen teile.
+<b>INTELLIGENTERES TRACKING</b>
+Verwandle dein Smartphone in einen intelligenten Fahrradcomputer, der lernt, wie du trainierst.
+• <b>Automatische Erkennung</b>: Erkennt automatisch deine Sportart und wählt basierend auf deinen verbundenen Sensoren das richtige Rad oder die richtigen Schuhe aus.
+• <b>Eigene Dashboards für jede Sportart</b>: Erlebe ein Cockpit, das sich dir anpasst. Erstelle separate Layouts für Radfahren, Laufen, Wandern und mehr. Sieh genau die Werte, die du für die jeweilige Aktivität benötigst.
+• <b>Aktivitäts-Intelligenz</b>: Hör auf, deine Trainings manuell zu organisieren. Häufig genutzte Strecken werden automatisch erkannt und benannt – so bleibt dein Trainingstagebuch ohne Aufwand ordentlich.
+
+<b>INTELLIGENTES SENSOR-MANAGEMENT</b>
+Verbinde mehrere Bluetooth® LE- und ANT+®-Sensoren gleichzeitig – einschließlich Herzfrequenz, Trittfrequenz, Geschwindigkeit, Leistung, Temperatur und mehr.
+Im Gegensatz zu Standard-Apps verbindet sich aTrainingTracker nicht nur mit Sensoren – er wählt intelligent die beste Datenquelle aus, damit du es nicht tun musst:
+• <b>Hardware-Priorität</b>: Dedizierte Geschwindigkeitssensoren werden für maximale Präzision automatisch gegenüber GPS bevorzugt.
+• <b>Nie wieder Datenverlust</b>: Falls ein Geschwindigkeitssensor die Verbindung verliert, übernimmt nahtlos das GPS, um Datenlücken zu vermeiden.
+• <b>Immer der beste Sensor</b>: Die App nutzt automatisch den genauesten verfügbaren Sensor.
+
+<b>LIEBLINGSSTRECKEN</b>
+Trainierst du regelmäßig auf den gleichen Strecken? aTrainingTracker übernimmt die Organisation. Häufig genutzte Wege werden automatisch erkannt und gruppiert, sodass du eine vollständige Historie jeder Fahrt auf dieser Strecke erhältst.
+• <b>Bestleistungen</b>: Vergleiche automatisch alle deine Leistungen auf bestimmten Strecken.
+• <b>Visueller Verlauf</b>: Sieh dir deine Trainingsentwicklung durch detaillierte Heatmap-Overlays an.
+• <b>Streckenstatistiken</b>: Erhalte umfassende Daten für deine regelmäßigen Trainingsrunden ohne manuelles Tagging.
+
+<b>LIVE-SEGMENTE & NAVIGATION</b>
+Bringe deine Leistung auf das nächste Level mit Echtzeit-Feedback und Orientierung.
+• <b>Strava Live-Segmente</b>: Verfolge deine Fortschritte gegen deine persönliche Bestzeit direkt während der Fahrt oder des Laufs.
+• <b>Routennavigation</b>: Importiere GPX-Dateien oder Strava-Routen und folge ihnen auf der interaktiven Live-Karte.
+• <b>Trainingszonen</b>: Trainiere in der richtigen Intensität mit konfigurierbaren Herzfrequenz- und Leistungszonen.
+
+<b>DETAILLIERTE ANALYSE</b>
+Sobald deine Einheit beendet ist, stehen umfassende lokale Statistiken zur Überprüfung bereit:
+• <b>Analyse-Tools</b>: Interaktive Diagramme, Heatmaps, Streckenvergleiche und Ausrüstungsstatistiken.
+• <b>Umgebungsdaten</b>: Höhenmeter, Steigung und Temperatur.
+• <b>Leistungsmetriken</b>: Distanz, Geschwindigkeit, Leistung, Herzfrequenz, Trittfrequenz.
+
+<b>DEINE DATEN, DEINE WAHL</b>
+Du entscheidest, wohin deine Daten gehen. aTrainingTracker stellt Datenschutz an erste Stelle und bietet gleichzeitig den Komfort der Cloud.
+• <b>Privat als Standard</b>: Kein Account erforderlich. Keine Cloud-Pflicht. Deine Trainings bleiben auf deinem Gerät, sofern du nichts anderes wählst.
+• <b>Optionale Cloud-Synchronisierung</b>: Lade neue Aktivitäten automatisch bei Strava oder Dropbox hoch, um sie dort weiter zu analysieren.
+• <b>Gängige Formate</b>: Exportiere deine Trainings als GPX, TCX, CSV und in andere Standardformate.
+
+<b>VON ATHLETEN FÜR ATHLETEN</b>
+Seit mehr als 15 Jahren kontinuierlich entwickelt mit einem Ziel: die Aufzeichnung so zuverlässig und automatisch wie möglich zu machen. Kein Social-Media-Lärm, keine Ablenkung – einfach exzellentes Tracking.
+
+Du konzentrierst dich auf dein Training. aTrainingTracker kümmert sich um die Aufzeichnung.
