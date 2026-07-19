@@ -125,6 +125,7 @@ fun StravaActivitySection(
 
         // --- Mandatory Branding ---
         PoweredByStrava(
+            height = 16.dp,
             modifier = Modifier.align(Alignment.End).padding(top = 4.dp)
         )
     }
