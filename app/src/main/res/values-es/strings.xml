@@ -316,7 +316,7 @@
     <string name="prefsPebbleWatchappsSummary">integrado</string>
     <string name="prefsConfigurePebbleDisplaysTitle">Configurar pantallas de Pebble</string>
 
-    <string name="prefsExportTitle">Exportación de archivos</string>
+    <string name="prefsExportTitle">Exportación</string>
     <string name="prefsExportSummary">Formatos a los que se exportan los entrenamientos</string>
 
     <string name="prefsUploadTitle">Subida</string>
@@ -506,14 +506,14 @@
     <string name="do_not_check_again">no volver a comprobar</string>
     <string name="check_ANT_installation">comprobar instalación ANT</string>
     <string name="forcePortrait">Orientación vertical</string>
-    <string name="Display">Ajustes de pantalla</string>
+    <string name="Display">Pantalla</string>
     <string name="smoothing">Suavizado de valores</string>
     <string name="powerSmoothingTitle">Factor α de suavizado de potencia</string>
     <string name="powerSmoothingTitle_format">Suavizado de potencia: α=%1$f</string>
     <string name="powerSmoothingSummary">Factor 0 &lt; α &#8804; 1 para suavizar la potencia.\nP_pantalla = α P_medida + (1-α) P_pantalla_ant\nMenor α implica mayor suavizado.</string>
     <string name="alpha_must_be_between_0_and_1">El factor α debe estar entre 0 y 1.</string>
 
-    <string name="Search_Settings">Ajustes de búsqueda</string>
+    <string name="Search_Settings">Búsqueda</string>
     <string name="prefsNumberOfSearchTriesTitle">Rondas de búsqueda</string>
     <string name="prefStartSearchTitle">Iniciar búsqueda al …</string>
     <string name="prefsStartSearchWhenAppStartsTitle">Abrir la app</string>

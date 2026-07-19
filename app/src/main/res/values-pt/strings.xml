@@ -316,7 +316,7 @@
     <string name="prefsPebbleWatchappsSummary">embutido</string>
     <string name="prefsConfigurePebbleDisplaysTitle">Configurar ecrãs Pebble</string>
 
-    <string name="prefsExportTitle">Exportação de arquivos</string>
+    <string name="prefsExportTitle">Exportação</string>
     <string name="prefsExportSummary">Formatos de exportação</string>
 
     <string name="prefsUploadTitle">Carregamento</string>
@@ -504,14 +504,14 @@
     <string name="do_not_check_again">não verificar novamente</string>
     <string name="check_ANT_installation">verificar instalação ANT</string>
     <string name="forcePortrait">Orientação vertical</string>
-    <string name="Display">Ajustes de ecrã</string>
+    <string name="Display">Ecrã</string>
     <string name="smoothing">Suavização de valores</string>
     <string name="powerSmoothingTitle">Fator α suavização potência</string>
     <string name="powerSmoothingTitle_format">Suavização potência: α=%1$f</string>
     <string name="powerSmoothingSummary">Fator 0 &lt; α &#8804; 1 para suavizar a potência.</string>
     <string name="alpha_must_be_between_0_and_1">α deve estar entre 0 e 1.</string>
 
-    <string name="Search_Settings">Ajustes de busca</string>
+    <string name="Search_Settings">Busca</string>
     <string name="prefsNumberOfSearchTriesTitle">Rondas de busca</string>
     <string name="prefStartSearchTitle">Iniciar busca quando …</string>
     <string name="prefsStartSearchWhenAppStartsTitle">App inicia</string>

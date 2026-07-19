@@ -240,15 +240,15 @@
     <string name="do_not_check_again">nie sprawdzaj ponownie</string>
     <string name="check_ANT_installation">sprawdź instalację ANT</string>
     <string name="forcePortrait">Orientacja pionowa</string>
-    <string name="Display">Ustawienia ekranu</string>
+    <string name="Display">Ekran</string>
     <string name="smoothing">Wygładzanie wartości</string>
     <string name="powerSmoothingTitle">Współczynnik wygładzania mocy α</string>
     <string name="powerSmoothingTitle_format">Wygładzanie mocy: α=%1$f</string>
     <string name="powerSmoothingSummary">Współczynnik 0 &lt; α &#8804; 1 do wygładzania mocy.</string>
     <string name="alpha_must_be_between_0_and_1">α musi być między 0 i 1.</string>
 
-    <string name="Search_Settings">Ustawienia szukania</string>
-    <string name="prefsExportTitle">Eksport plików</string>
+    <string name="Search_Settings">Szukanie</string>
+    <string name="prefsExportTitle">Eksport</string>
     <string name="prefsOnlineCommunities">Synchronizacja</string>
     <string name="prefsNumberOfSearchTriesTitle">Rundy szukania</string>
     <string name="prefStartSearchTitle">Zacznij szukać, gdy …</string>

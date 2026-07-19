@@ -316,7 +316,7 @@
     <string name="prefsPebbleWatchappsSummary">内蔵</string>
     <string name="prefsConfigurePebbleDisplaysTitle">Pebble画面設定</string>
 
-    <string name="prefsExportTitle">ファイルエクスポート</string>
+    <string name="prefsExportTitle">エクスポート</string>
     <string name="prefsExportSummary">エクスポート形式の設定</string>
 
     <string name="prefsUploadTitle">アップロード</string>
@@ -502,14 +502,14 @@
     <string name="do_not_check_again">再確認しない</string>
     <string name="check_ANT_installation">ANTのインストール状況を確認</string>
     <string name="forcePortrait">縦向き固定</string>
-    <string name="Display">画面設定</string>
+    <string name="Display">画面</string>
     <string name="smoothing">表示値の平滑化</string>
     <string name="powerSmoothingTitle">パワー平滑化係数 α</string>
     <string name="powerSmoothingTitle_format">パワー平滑化: α=%1$f</string>
     <string name="powerSmoothingSummary">パワー値を平滑化するための係数 (0 &lt; α &#8804; 1)</string>
     <string name="alpha_must_be_between_0_and_1">αは0から1の間である必要があります。</string>
 
-    <string name="Search_Settings">検索設定</string>
+    <string name="Search_Settings">検索</string>
     <string name="prefsNumberOfSearchTriesTitle">検索ラウンド数</string>
     <string name="prefStartSearchTitle">検索を開始するタイミング …</string>
     <string name="prefsStartSearchWhenAppStartsTitle">アプリ起動時</string>
