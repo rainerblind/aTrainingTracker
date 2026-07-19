@@ -71,16 +71,18 @@ def list_sprint_issues():
     print(f"Active Sprint: {sprints[0]['name']}")
 
     # 3. Get issues
-    issues = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status")["issues"]
+    issues = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype")["issues"]
     for i in issues:
-        print(f"{i['key']}: {i['fields']['summary']} [{i['fields']['status']['name']}]")
+        itype = i['fields']['issuetype']['name']
+        print(f"{i['key']}: [{itype}] {i['fields']['summary']} [{i['fields']['status']['name']}]")
 
 def show_issue(issue_key):
     config = get_config()
-    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=summary,description,comment,attachment,parent"
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=summary,description,comment,attachment,parent,issuetype"
     issue = jira_request(url)
 
-    print(f"h1. {issue['key']}: {issue['fields']['summary']}")
+    itype = issue['fields']['issuetype']['name']
+    print(f"h1. {issue['key']}: [{itype}] {issue['fields']['summary']}")
 
     # Epic/Parent context
     parent = issue['fields'].get('parent')
@@ -122,6 +124,19 @@ def download_attachment(url, filename):
         f.write(content)
     print(f"Saved to {path}")
 
+def download_all_attachments(issue_key):
+    config = get_config()
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=attachment"
+    issue = jira_request(url)
+    attachments = issue['fields'].get('attachment', [])
+    if not attachments:
+        print(f"No attachments found for {issue_key}.")
+        return
+
+    print(f"Found {len(attachments)} attachments for {issue_key}.")
+    for a in attachments:
+        download_attachment(a['content'], a['filename'])
+
 def transition_issue(issue_key, status_name):
     config = get_config()
     trans_id = TRANSITIONS.get(status_name)
@@ -154,11 +169,12 @@ def search_issues(jql):
     url = f"{config['JIRA_URL']}/rest/api/3/search/jql"
     payload = {
         "jql": jql,
-        "fields": ["summary", "status"]
+        "fields": ["summary", "status", "issuetype"]
     }
     data = jira_request(url, method="POST", payload=payload)
     for i in data.get("issues", []):
-        print(f"{i['key']}: {i['fields']['summary']} [{i['fields']['status']['name']}]")
+        itype = i['fields']['issuetype']['name']
+        print(f"{i['key']}: [{itype}] {i['fields']['summary']} [{i['fields']['status']['name']}]")
 
 def update_issue_description(issue_key, description):
     config = get_config()
@@ -188,7 +204,7 @@ def create_subtask(parent_key, summary, description):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: jira_util.py [list | show KEY | move KEY todo|in_progress|in_review|done | comment KEY TEXT | download URL FILENAME | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC]")
+        print("Usage: jira_util.py [list | show KEY | move KEY todo|in_progress|in_review|done | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC]")
         sys.exit(1)
 
     cmd = sys.argv[1]
@@ -198,6 +214,8 @@ if __name__ == "__main__":
         show_issue(sys.argv[2])
     elif cmd == "download" and len(sys.argv) == 4:
         download_attachment(sys.argv[2], sys.argv[3])
+    elif cmd == "download-all" and len(sys.argv) == 3:
+        download_all_attachments(sys.argv[2])
     elif cmd == "move" and len(sys.argv) == 4:
         transition_issue(sys.argv[2], sys.argv[3])
     elif cmd == "comment" and len(sys.argv) == 4:
