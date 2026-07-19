@@ -1,32 +1,57 @@
 # Google Play Store Presence - Dutch
 
-**App Title**: aTrainingTracker (ANT+ BTLE) (26/30)
+**App Title**: aTrainingTracker – Sport-tracker (30/30)
 
 **Short Description**:
-De cockpit voor serieuze atleten met ANT+, BLE, Strava & live segmenten. (74/80)
+Slimme fietscomputer met ANT+, BLE, Strava & Live Segmenten. (61/80)
 
 **Full Description**:
-<b>aTrainingTracker: De tracking cockpit voor de serieuze atleet.</b>
+<b>aTrainingTracker – De intelligente sport-tracker voor je smartphone</b>
 
-aTrainingTracker is een app ontworpen voor atleten die precisie en automatisering eisen. Door gebruik te maken van connectiviteit met meerdere sensoren (ANT+ en Bluetooth LE), verandert het je smartphone in een professionele trainingscomputer.
+Concentreer je op je training. Wij regelen de techniek.
 
-<b>PRESTATIES EN MINIMALE INTERACTIE</b>
-• <b>Zero-Touch Automatisering</b>: Eenmaal geconfigureerd, druk je gewoon op Start. De app bepaalt automatisch de sport en het materiaal op basis van de gedetecteerde sensoren.
-• <b>Best-Sensor Logica</b>: Intelligent systeem selecteert de hoogste kwaliteit gegevensbron (bijv. ANT+/BTLE snelheidssensoren boven GPS).
-• <b>Cloud Ready</b>: Automatische synchronisatie met Strava en Dropbox voor snelle analyse op je computer (WKO+, Golden Cheetah).
-• <b>Privacy</b>: Gegevens worden uitsluitend op je apparaat opgeslagen (tenzij upload naar cloud). Ik heb geen toegang tot je persoonlijke gegevens.
+Maak je geen zorgen meer over sensoren, uitrusting en handmatige uploads. aTrainingTracker is een intelligente sport-tracker voor atleten die waarde hechten aan automatisering, nauwkeurigheid en privacy. De app detecteert automatisch je sport, selecteert de juiste uitrusting en organiseert je favoriete routes. Druk gewoon op Start — de app regelt de rest op de achtergrond.
 
-<b>BELANGRIJKSTE KENMERKEN</b>
-• <b>Sensoren</b>: ANT+ (HS, snelheid, cadans, vermogen, temperatuur) en Bluetooth LE (HS, fiets/loop).
-• <b>Multi-Sensor</b>: Koppel onbeperkt sensoren met automatische verbinding.
-• <b>Aanpasbare Cockpits</b>: Dashboard met meerdere sporttype-afhankelijke weergaven.
-• <b>Export</b>: Ondersteuning voor TCX, GPX, CSV en Golden Cheetah formaten.
-• <b>Sociaal</b>: Professionele snapshots met kaart, hoogteprofiel en statistieken.
-• <b>Navigatie</b>: Importeer routes van GPX/Strava met live kaart.
-• <b>Strava Segmenten</b>: Beheer segmenten met real-time detectie en feedback.
-• <b>Geschiedenis</b>: Ingebouwde overzichten (week, maand, jaar) van je volume.
+Perfect voor fietsers, hardlopers, wandelaars en andere duursporters die op zoek zijn naar betrouwbare tracking, intelligent sensorbeheer en volledige controle over hun gegevens.
 
-<b>EEN REIS VAN 25 JAAR</b>
-Dit project begon meer dan twee decennia geleden als een visie. Destijds was ik een techniekstudent en recreatieve jogger, die de eerste mogelijkheden van mobiel programmeren met Java Midlets verkende. Tijdens het joggen droomde ik van een toekomst waarin de mobiele telefoon—met zijn opslag, scherm en rekenkracht—zou kunnen dienen als het ultieme trainingslogboek, dat gegevens van externe sensoren verzamelt.
-In de loop der jaren groeide ik van een recreatieve jogger uit tot een gepassioneerde triatleet, en toen de eerste ANT+ smartphones in 2011 op de markt kwamen, was ik er klaar voor. Ik kocht er meteen één, maar vond geen enkele app die krachtig of geautomatiseerd genoeg was om aan mijn behoeften te voldoen. Dus begon ik zelf te programmeren.
-Na een lange onderbreking tussen 2019 and 2025, ben ik teruggekeerd met hernieuwde energie, waarbij ik de gebruikersinterface heb gemoderniseerd terwijl de solide kern van de tracking-logica intact is gebleven. Het is een passieproject en ik ben er trots op het met u te delen.
+<b>SLIMMER TRACKEN</b>
+Verander je smartphone in een intelligente fietscomputer die leert hoe jij traint.
+• <b>Automatische Detectie</b>: Herkent automatisch je sport en selecteert de juiste fiets of schoenen op basis van je verbonden sensoren.
+• <b>Aangepaste Dashboards voor elke sport</b>: Ervaar een cockpit die zich aan jou aanpast. Pas afzonderlijke lay-outs aan voor fietsen, hardlopen, wandelen en meer. Bekijk de exacte statistieken die je nodig hebt voor elke activiteit.
+• <b>Activiteitsintelligentie</b>: Stop met het handmatig organiseren van je trainingen. Veelgebruikte routes worden automatisch herkend en benoemd, waardoor je trainingslogboek moeiteloos georganiseerd blijft.
+
+<b>INTELLIGENT SENSORBEHEER</b>
+Verbind meerdere Bluetooth® LE- en ANT+®-sensoren tegelijkertijd — inclusief hartslag, cadans, snelheid, vermogen, temperatuur en meer.
+In tegenstelling tot standaard tracking-apps maakt aTrainingTracker niet alleen verbinding met sensoren — het selecteert intelligent de beste gegevensbron, zodat jij dat niet hoeft te doen:
+• <b>Hardwareprioriteit</b>: Toegewijde snelheidssensoren krijgen automatisch de voorkeur boven GPS voor maximale precisie.
+• <b>Nooit meer snelheidsgegevens verliezen</b>: Als een wiel-sensor de verbinding verliest, neemt GPS het naadloos over om gegevenslacunes te voorkomen.
+• <b>Altijd de beste sensor</b>: De app gebruikt automatisch de meest nauwkeurige gegevensbron die beschikbaar is.
+
+<b>FAVORIETE ROUTES</b>
+Train je regelmatig op dezelfde routes? aTrainingTracker zorgt voor de organisatie. Veelgebruikte routes worden automatisch herkend en gegroepeerd, waardoor je een volledige geschiedenis krijgt van elke rit op die route.
+• <b>Persoonlijke Records</b>: Vergelijk automatisch al je inspanningen op specifieke routes.
+• <b>Visuele Evolutie</b>: Bekijk je trainingsgeschiedenis via gedetailleerde heatmap-overlays.
+• <b>Routestatistieken</b>: Ontvang uitgebreide gegevens voor je reguliere trainingsrondes zonder handmatig taggen.
+
+<b>LIVE SEGMENTEN & NAVIGATIE</b>
+Breng je prestaties naar een hoger niveau met realtime feedback en begeleiding.
+• <b>Strava Live Segmenten</b>: Bekijk je voortgang ten opzichte van je persoonlijke record in realtime terwijl je fietst of hardloopt.
+• <b>Routenavigatie</b>: Importeer GPX-bestanden of Strava-routes en volg ze op de interactieve live-kaart.
+• <b>Trainingszones</b>: Blijf in de juiste intensiteit met configureerbare hartslag- en vermogenszones.
+
+<b>GEDETAILLEERDE ANALYSE</b>
+Zodra je sessie klaar is, vind je uitgebreide lokale statistieken die klaar zijn voor beoordeling:
+• <b>Analytische Hulpmiddelen</b>: Interactieve grafieken, heatmaps, routevergelijkingen en uitrustingsstatistieken.
+• <b>Omgevingsgegevens</b>: Hoogteverschil, helling en temperatuur.
+• <b>Prestatiegegevens</b>: Afstand, snelheid, vermogen, hartslag, cadans.
+
+<b>JOUW DATA, JOUW KEUZE</b>
+Jij beslist waar je data naartoe gaat. aTrainingTracker stelt privacy voorop en biedt tegelijkertijd het gemak van de cloud.
+• <b>Privacy als Standaard</b>: Geen account vereist. Geen verplichte cloud. Je trainingen blijven op jouw toestel, tenzij je anders kiest.
+• <b>Optionele Cloudsync</b>: Upload nieuwe activiteiten automatisch naar Strava of Dropbox voor verdere analyse.
+• <b>Populaire Formaten</b>: Exporteer je trainingen als GPX, TCX, CSV en andere standaardformaten.
+
+<b>GEBOUWD VOOR SERIEUZE ATLETEN</b>
+Gedurende meer dan 15 jaar continu entwickelt met één doel: het registreren van activiteiten zo betrouwbaar en automatisch mogelijk maken. Geen sociale ruis, geen afleidingen — alleen uitstekende tracking.
+
+Jij concentreert je op je training. aTrainingTracker zorgt voor de registratie.

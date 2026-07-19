@@ -245,7 +245,8 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-NFR-001** | Deterministic EKF Timing. | The estimation loop SHALL use hardware event timestamps and dynamic Delta-T calculation to ensure mathematical robustness against Android CPU jitter. | TBD | `TST-STR-010` | Backlog |
 | **REQ-NFR-002** | Stationary Pinning. | The system SHALL detect "Not Moving" events via IMU variance and coordinate clustering to prevent stationary "Drunkard's Walk" artifacts. | TBD | `TST-FUSION-004` | Backlog |
 
-| **REQ-STP-001** | Multilingual Store Presence. | Increase global reach and accessibility by providing localized App Titles, Short Descriptions, and Full Descriptions for the Google Play Store. | `docs/store_presence/` | `TST-STP-001` | Verified |
+| **REQ-STP-001** | **Multilingual Store Presence.** | The system SHALL provide localized App Titles, Short Descriptions, and Full Descriptions for the Google Play Store in all supported languages. These descriptions SHALL emphasize core automation, sensor intelligence, and privacy features. | `docs/store_presence/` | `TST-STP-001` | Verified |
+| **REQ-STP-002** | **Modernized Product Messaging.** | The Play Store description SHALL reflect the latest architectural improvements (Route Clusters, Jetpack Compose UI) and emphasize zero-configuration tracking for serious athletes. | `docs/store_presence/` | `TST-STP-002` | Verified |
 
 ## 12. Privacy & Permissions
 
