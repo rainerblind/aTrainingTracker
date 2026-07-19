@@ -51,7 +51,7 @@ public class NumberedMovingAverageFilter
 
     @Override
     public synchronized void newValue(Number value) {
-        if (!TrainingApplication.isPaused()){
+        if (value != null && !TrainingApplication.isPaused()){
             mValues.add(mIndex, value);
             mIndex = (mIndex + 1) % mSize;
         }
@@ -64,9 +64,13 @@ public class NumberedMovingAverageFilter
         }
 
         double sum = 0;
+        int count = 0;
         for (Number value : mValues) {
-            sum += value.doubleValue();
+            if (value != null) {
+                sum += value.doubleValue();
+                count++;
+            }
         }
-        return sum / mValues.size();
+        return count == 0 ? null : sum / count;
     }
 }
