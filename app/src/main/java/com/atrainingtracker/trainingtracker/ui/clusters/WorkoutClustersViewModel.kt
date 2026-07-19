@@ -132,7 +132,9 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
 
     fun selectWorkoutForPeek(id: Long) {
         viewModelScope.launch {
-            val workout = _clusterWorkouts.value.find { it.id == id }
+            val workout = _clusterWorkouts.value.find { it.id == id } 
+                ?: _unclusteredWorkouts.value.find { it.id == id }
+
             if (workout != null) {
                 val trackPoints = repository.getWorkoutTrackPoints(id, TrackType.BEST)
                 val markers = WorkoutRepository.getInstance(getApplication()).getWorkoutMarkers(workout)
@@ -173,7 +175,7 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
     }
 
     fun moveWorkout(workout: WorkoutData, newClusterId: Long) {
-        val currentClusterId = _selectedCluster.value?.id ?: return
+        val currentClusterId = workout.clusterId
         if (currentClusterId == newClusterId) return
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -182,9 +184,12 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
             
             // Refresh state
             repository.refreshClusters()
+
+            // Update both UI lists immediately
             _selectedCluster.value?.let { current ->
                 _clusterWorkouts.value = repository.getWorkoutsForCluster(current.id)
             }
+            _unclusteredWorkouts.value = repository.getUnclusteredWorkouts()
         }
     }
 

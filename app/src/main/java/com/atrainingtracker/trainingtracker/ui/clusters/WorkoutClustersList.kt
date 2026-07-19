@@ -28,7 +28,6 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
-import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryCompact
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
 import androidx.compose.material.icons.filled.History
 
@@ -114,10 +113,10 @@ fun UnclusteredWorkoutsList(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(workouts) { workout ->
-                WorkoutSummaryCompact(
-                    workoutData = workout,
-                    onEditWorkout = { onWorkoutClick(workout) },
-                    onDeleteRequest = { /* Handle if needed */ }
+                UnclusteredWorkoutItem(
+                    workout = workout,
+                    viewModel = viewModel,
+                    onClick = { onWorkoutClick(workout) }
                 )
             }
         }
