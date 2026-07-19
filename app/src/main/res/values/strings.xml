@@ -404,7 +404,7 @@
     <string name="prefsPebbleWatchappsSummary">Built-in</string>
     <string name="prefsConfigurePebbleDisplaysTitle">Configure Pebble Displays</string>
 
-    <string name="prefsExportTitle">File Export</string>
+    <string name="prefsExportTitle">Export</string>
     <string name="prefsExportSummary">File formats the workouts are exported to</string>
 
     <string name="prefsUploadTitle">Upload</string>
@@ -650,14 +650,14 @@
     <string name="do_not_check_again">don\'t check again</string>
     <string name="check_ANT_installation">check ANT installation</string>
     <string name="forcePortrait">Portrait Orientation</string>
-    <string name="Display">Display Settings</string>
+    <string name="Display">Display</string>
     <string name="smoothing">Smoothing displayed values</string>
     <string name="powerSmoothingTitle">Power smoothing factor α</string>
     <string name="powerSmoothingTitle_format">Power smoothing: α=%1$f</string>
     <string name="powerSmoothingSummary">Factor 0 &lt; α &#8804; 1 to smooth the power value.\nP_display = α P_measured + (1-α) P_display_old\nThe smaller α, the smoother the displayed value. I.e., α=1 gives the measured power, α close to 0 results in a super smooth displayed power.</string>
     <string name="alpha_must_be_between_0_and_1">The smoothing factor α must be between 0 and 1.</string>
 
-    <string name="Search_Settings">Search Settings</string>
+    <string name="Search_Settings">Search</string>
     <string name="prefsNumberOfSearchTriesTitle">Number of search rounds</string>
     <string name="prefStartSearchTitle">Start search when …</string>
     <string name="prefsStartSearchWhenAppStartsTitle">App starts</string>

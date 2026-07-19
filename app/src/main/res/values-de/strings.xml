@@ -320,7 +320,7 @@
     <string name="prefsPebbleWatchappsSummary">Standard</string>
     <string name="prefsConfigurePebbleDisplaysTitle">Pebble Anzeigen konfigurieren</string>
 
-    <string name="prefsExportTitle">Dateiexport</string>
+    <string name="prefsExportTitle">Export</string>
     <string name="prefsExportSummary">Dateiformate zu denen die Einheiten exportiert werden</string>
 
     <string name="prefsUploadTitle">Hochladen</string>
@@ -542,14 +542,14 @@
     <string name="do_not_check_again">nicht mehr überprüfen</string>
     <string name="check_ANT_installation">Überprüfe ANT Installation</string>
     <string name="forcePortrait">Portrait Orientierung</string>
-    <string name="Display">Display Einstellungen</string>
+    <string name="Display">Display</string>
     <string name="smoothing">Glättung der Werte</string>
     <string name="powerSmoothingTitle">Faktor α zur Glättung der Leistungswerte</string>
     <string name="powerSmoothingTitle_format">Glättung der Leistung: α=%1$f</string>
     <string name="powerSmoothingSummary">Faktor 0 &lt; α &#8804; 1 zur Glättung der Leitung. P_anzeige = α P_gemessen + (1-α) P_anzeige_alt. Je kleiner α, desto glatter werden die angezeigten Werte. Z.B. ergibt α=1 den gemessenen Wert, α in Richtung 0 führt zu extrem geglätteten Werten.</string>
     <string name="alpha_must_be_between_0_and_1">Der Faktor zur Glättung α muss zwischen 0 und 1 sein.</string>
 
-    <string name="Search_Settings">Such Einstellungen</string>
+    <string name="Search_Settings">Suche</string>
     <string name="prefsNumberOfSearchTriesTitle">Anzahl der Suchrunden</string>
     <string name="prefStartSearchTitle">Starte Suche wenn …</string>
     <string name="prefsStartSearchWhenAppStartsTitle">App startet</string>

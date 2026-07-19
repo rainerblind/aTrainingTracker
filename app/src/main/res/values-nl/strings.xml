@@ -316,7 +316,7 @@
     <string name="prefsPebbleWatchappsSummary">ingebouwd</string>
     <string name="prefsConfigurePebbleDisplaysTitle">Pebble schermen configureren</string>
 
-    <string name="prefsExportTitle">Bestands-export</string>
+    <string name="prefsExportTitle">Export</string>
     <string name="prefsExportSummary">Export-formaten voor trainingen</string>
 
     <string name="prefsUploadTitle">Uploaden</string>
@@ -504,14 +504,14 @@
     <string name="do_not_check_again">niet meer controleren</string>
     <string name="check_ANT_installation">ANT installatie controleren</string>
     <string name="forcePortrait">Staande oriëntatie</string>
-    <string name="Display">Scherminstellingen</string>
+    <string name="Display">Scherm</string>
     <string name="smoothing">Smoothing waarden</string>
     <string name="powerSmoothingTitle">Vermogen smoothing factor α</string>
     <string name="powerSmoothingTitle_format">Vermogen smoothing: α=%1$f</string>
     <string name="powerSmoothingSummary">Factor 0 &lt; α &#8804; 1 om vermogen te smooth\'en.</string>
     <string name="alpha_must_be_between_0_and_1">α moet tussen 0 en 1 liggen.</string>
 
-    <string name="Search_Settings">Zoekinstellingen</string>
+    <string name="Search_Settings">Zoeken</string>
     <string name="prefsNumberOfSearchTriesTitle">Aantal zoekrondes</string>
     <string name="prefStartSearchTitle">Start zoeken wanneer …</string>
     <string name="prefsStartSearchWhenAppStartsTitle">App start</string>

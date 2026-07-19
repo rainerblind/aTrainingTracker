@@ -504,14 +504,14 @@
     <string name="do_not_check_again">ne plus vérifier</string>
     <string name="check_ANT_installation">vérifier installation ANT</string>
     <string name="forcePortrait">Orientation portrait</string>
-    <string name="Display">Réglages d\'affichage</string>
+    <string name="Display">Affichage</string>
     <string name="smoothing">Lissage des valeurs</string>
     <string name="powerSmoothingTitle">Facteur α lissage puissance</string>
     <string name="powerSmoothingTitle_format">Lissage puissance : α=%1$f</string>
     <string name="powerSmoothingSummary">Facteur 0 &lt; α &#8804; 1 pour lisser la puissance.</string>
     <string name="alpha_must_be_between_0_and_1">α doit être entre 0 et 1.</string>
 
-    <string name="Search_Settings">Réglages de recherche</string>
+    <string name="Search_Settings">Recherche</string>
     <string name="prefsNumberOfSearchTriesTitle">Nombre de tours de recherche</string>
     <string name="prefStartSearchTitle">Lancer recherche quand …</string>
     <string name="prefsStartSearchWhenAppStartsTitle">L\'app démarre</string>

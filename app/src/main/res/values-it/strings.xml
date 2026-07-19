@@ -316,7 +316,7 @@
     <string name="prefsPebbleWatchappsSummary">integrato</string>
     <string name="prefsConfigurePebbleDisplaysTitle">Configura schermi Pebble</string>
 
-    <string name="prefsExportTitle">Esportazione file</string>
+    <string name="prefsExportTitle">Esportazione</string>
     <string name="prefsExportSummary">Formati di esportazione</string>
 
     <string name="prefsUploadTitle">Caricamento</string>
@@ -504,14 +504,14 @@
     <string name="do_not_check_again">non controllare più</string>
     <string name="check_ANT_installation">controlla installazione ANT</string>
     <string name="forcePortrait">Orientamento verticale</string>
-    <string name="Display">Impostazioni schermo</string>
+    <string name="Display">Schermo</string>
     <string name="smoothing">Smoothing valori</string>
     <string name="powerSmoothingTitle">Fattore α smoothing potenza</string>
     <string name="powerSmoothingTitle_format">Smoothing potenza: α=%1$f</string>
     <string name="powerSmoothingSummary">Fattore 0 &lt; α &#8804; 1 per smoothare la potenza.</string>
     <string name="alpha_must_be_between_0_and_1">α deve essere tra 0 e 1.</string>
 
-    <string name="Search_Settings">Impostazioni ricerca</string>
+    <string name="Search_Settings">Ricerca</string>
     <string name="prefsNumberOfSearchTriesTitle">Round di ricerca</string>
     <string name="prefStartSearchTitle">Avvia ricerca quando …</string>
     <string name="prefsStartSearchWhenAppStartsTitle">L\'app si avvia</string>
