@@ -22,24 +22,24 @@ import android.view.ViewGroup
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.map.MapTrack
+import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import com.atrainingtracker.trainingtracker.ui.map.toMapTrack
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import kotlinx.coroutines.flow.collectLatest
 
@@ -61,6 +61,9 @@ class WorkoutClustersFragment : Fragment() {
             setContent {
                 ATrainingTrackerTheme {
                     val selectedCluster by viewModel.selectedCluster.collectAsState()
+                    var selectedUnclusteredWorkout by remember { mutableStateOf<WorkoutData?>(null) }
+                    val peekedWithTrack by viewModel.peekedWorkoutDataWithTrack.collectAsState()
+
                     var isTuning by remember { mutableStateOf(false) }
                     var isAdding by remember { mutableStateOf(false) }
 
@@ -103,6 +106,65 @@ class WorkoutClustersFragment : Fragment() {
                                 onBack = { viewModel.selectCluster(null) }
                             )
                         }
+                        selectedUnclusteredWorkout != null -> {
+                            val workout = selectedUnclusteredWorkout!!
+                            var workoutToCluster by remember { mutableStateOf<WorkoutData?>(null) }
+                            
+                            LaunchedEffect(workout.id) {
+                                viewModel.selectWorkoutForPeek(workout.id)
+                            }
+                            
+                            BackHandler { 
+                                viewModel.clearPeekSelection()
+                                selectedUnclusteredWorkout = null 
+                            }
+
+                            // PERFORMANCE: Immediate feedback using summarized data while high-fidelity samples load
+                            val initialTrack = remember(workout) { workout.toMapTrack() }
+                            val isDataLoaded = peekedWithTrack?.workoutData?.id == workout.id
+
+                            TrackOnMapScreen(
+                                workoutData = workout,
+                                tracks = if (isDataLoaded) {
+                                    peekedWithTrack?.trackPoints?.let { points ->
+                                        listOf(MapTrack(
+                                            id = workout.id,
+                                            type = TrackType.BEST,
+                                            bSportType = workout.bSportType,
+                                            path = points
+                                        ))
+                                    } ?: listOf(initialTrack)
+                                } else {
+                                    listOf(initialTrack)
+                                },
+                                markers = if (isDataLoaded) peekedWithTrack!!.markers else emptyList(),
+                                headerActions = {
+                                    IconButton(onClick = { workoutToCluster = workout }) {
+                                        Icon(
+                                            imageVector = Icons.Default.SwapHoriz,
+                                            contentDescription = stringResource(R.string.cluster_move_workout_title)
+                                        )
+                                    }
+                                }
+                            )
+
+                            if (workoutToCluster != null) {
+                                val candidates = remember(workoutToCluster) { viewModel.getCandidateClustersForWorkout(workoutToCluster!!) }
+                                WorkoutClusterSelectionDialog(
+                                    title = stringResource(R.string.cluster_move_workout_title),
+                                    candidates = candidates,
+                                    onSelect = { target ->
+                                        viewModel.moveWorkout(workoutToCluster!!, target.id)
+                                        workoutToCluster = null
+                                        selectedUnclusteredWorkout = null
+                                        viewModel.clearPeekSelection()
+                                    },
+                                    onDismiss = { workoutToCluster = null },
+                                    sportNameResolver = { viewModel.getSportName(it) },
+                                    bSportTypeResolver = { viewModel.getBSportType(it) }
+                                )
+                            }
+                        }
                         else -> {
                             var workoutToCluster by remember { mutableStateOf<WorkoutData?>(null) }
 
@@ -115,7 +177,7 @@ class WorkoutClustersFragment : Fragment() {
                                 otherListState = otherListState,
                                 unclusteredListState = unclusteredListState,
                                 onClusterClick = { viewModel.selectCluster(it) },
-                                onWorkoutClick = { workoutToCluster = it },
+                                onWorkoutClick = { selectedUnclusteredWorkout = it },
                                 onTuneClick = { isTuning = true },
                                 onAddClick = { isAdding = true },
                                 onDeleteRequest = { clusterToDelete = it }

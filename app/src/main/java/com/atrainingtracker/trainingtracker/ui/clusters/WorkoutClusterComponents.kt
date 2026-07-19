@@ -40,6 +40,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
@@ -313,6 +314,170 @@ fun ClusterItem(
                     },
                     leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun UnclusteredWorkoutItem(
+    workout: WorkoutData,
+    viewModel: WorkoutClustersViewModel,
+    onClick: () -> Unit
+) {
+    Box {
+        MappableListItem(
+            onClick = onClick
+        ) {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp)
+                ) {
+                    // --- 1. TOP ROW: Standard Header (Sport Icon + Workout Name) ---
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = workout.bSportType.iconResId),
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp),
+                            tint = Color.Unspecified
+                        )
+                        Text(
+                            text = workout.workoutName,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // --- 2. BOTTOM AREA: Details on left, Map on right ---
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        // LEFT SIDE: Metadata & Metrics
+                        val distanceFormatter = remember { DistanceFormatter() }
+                        Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                            MetricItem(
+                                iconRes = R.drawable.ic_distance,
+                                value = distanceFormatter.format_with_units(workout.totalDistance),
+                                isPrimary = false,
+                                valueColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                iconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = workout.sportName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            if (!workout.equipmentName.isNullOrBlank()) {
+                                Text(
+                                    text = stringResource(R.string.cluster_equipment_mapping_format, workout.equipmentName),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+                                )
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                            Text(
+                                text = workout.formattedDate,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        // RIGHT SIDE: SMALL SQUARE MAP
+                        Surface(
+                            modifier = Modifier.size(100.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ) {
+                            val context = LocalContext.current
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                val start = workout.startLatLng
+                                val end = workout.endLatLng
+                                val apex = workout.maxDisplacementLatLng
+
+                                val bounds = remember(start, end, apex) {
+                                    if (start != null && end != null && apex != null) {
+                                        LatLngBounds.Builder().include(start).include(end).include(apex).build()
+                                    } else null
+                                }
+
+                                val cameraPositionState = rememberCameraPositionState()
+                                var isMapLoaded by remember { mutableStateOf(false) }
+
+                                LaunchedEffect(bounds, isMapLoaded) {
+                                    if (isMapLoaded && bounds != null) {
+                                        cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(bounds, 40))
+                                    }
+                                }
+
+                                GoogleMap(
+                                    modifier = Modifier.fillMaxSize(),
+                                    cameraPositionState = cameraPositionState,
+                                    properties = MapProperties(mapType = MapType.TERRAIN),
+                                    onMapLoaded = { isMapLoaded = true },
+                                    uiSettings = MapUiSettings(
+                                        zoomControlsEnabled = false,
+                                        scrollGesturesEnabled = false,
+                                        zoomGesturesEnabled = false,
+                                        tiltGesturesEnabled = false,
+                                        rotationGesturesEnabled = false,
+                                        myLocationButtonEnabled = false
+                                    ),
+                                    onMapClick = { onClick() }
+                                ) {
+                                    if (workout.mapPolyline.isNotEmpty()) {
+                                        val points = remember(workout.mapPolyline) { PolyUtil.decode(workout.mapPolyline) }
+                                        if (points.isNotEmpty()) {
+                                            Polyline(
+                                                points = points,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                width = 4f,
+                                                startCap = RoundCap(),
+                                                endCap = RoundCap(),
+                                                jointType = JointType.ROUND
+                                            )
+                                        }
+                                    }
+
+                                    if (start != null) {
+                                        Marker(
+                                            state = remember(start) { MarkerState(position = start) },
+                                            icon = remember { createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint) }
+                                        )
+                                    }
+                                    if (end != null) {
+                                        Marker(
+                                            state = remember(end) { MarkerState(position = end) },
+                                            icon = remember { createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint) }
+                                        )
+                                    }
+                                    if (apex != null) {
+                                        Marker(
+                                            state = remember(apex) { MarkerState(position = apex) },
+                                            icon = remember { createSensorMarker(context, R.drawable.ic_distance, TTColor.ApexPoint) }
+                                        )
+                                    }
+                                }
+                                
+                                Box(modifier = Modifier.fillMaxSize().clickable { onClick() })
+                            }
+                        }
+                    }
+                }
             }
         }
     }
