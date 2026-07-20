@@ -72,7 +72,7 @@ class SportTypeListFragment : Fragment() {
     }
 
     companion object {
-        val TAG: String = SportTypeListFragment::class.java.name
+        const val TAG: String = "SportTypeListFragment"
 
         @JvmStatic
         fun newInstance(): SportTypeListFragment {

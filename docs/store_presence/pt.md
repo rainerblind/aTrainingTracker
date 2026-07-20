@@ -1,32 +1,57 @@
 # Google Play Store Presence - Portuguese
 
-**App Title**: aTrainingTracker (ANT+ BTLE) (26/30)
+**App Title**: aTrainingTracker – Tracker desportivo (30/30)
 
 **Short Description**:
-O cockpit para atletas sérios com ANT+, BLE, Strava e segmentos ao vivo. (74/80)
+Ciclocomputador inteligente com ANT+, BLE, Strava e segmentos live. (69/80)
 
 **Full Description**:
-<b>aTrainingTracker: O cockpit de monitoramento para o atleta sério.</b>
+<b>aTrainingTracker – O tracker desportivo inteligente para o seu smartphone</b>
 
-aTrainingTracker é uma aplicação concebida para atletas que exigem precisão e automação. Ao aproveitar a conectividade multi-sensor (ANT+ e Bluetooth LE), transforma o seu smartphone num computador de treino profissional com ferramentas de análise posterior.
+Concentre-se no seu treino. Nós tratamos da tecnologia.
 
-<b>DESEMPENHO E MÍNIMA INTERAÇÃO</b>
-• <b>Automação Zero-Touch</b>: Uma vez configurado, basta premir Iniciar. A app determina o desporto e o equipamento com base nos sensores detetados.
-• <b>Lógica do Melhor Sensor</b>: Sistema de prioridade que seleciona a fonte de dados de maior qualidade (ex: sensores ANT+/BTLE em vez de GPS).
-• <b>Pronto para a Nuvem</b>: Sincronização automática com Strava e Dropbox para análise imediata no computador (WKO+, Golden Cheetah).
-• <b>Privacidade</b>: Dados armazenados exclusivamente no seu dispositivo (salvo upload nuvem). Não tenho acesso aos seus dados pessoais.
+Pare de se preocupar com sensores, equipamento e carregamentos manuais. O aTrainingTracker é um tracker desportivo inteligente para atletas que valorizam a automatização, a precisão e a privacidade. Deteta automaticamente o seu desporto, seleciona o equipamento correto e organiza as suas rotas favoritas. Basta premir Start — a aplicação trata do resto em segundo plano.
 
-<b>CARACTERÍSTICAS PRINCIPALES</b>
-• <b>Sensores</b>: ANT+ (FC, velocidade, cadência, potência, temperatura) e Bluetooth LE (FC, bike/corrida).
-• <b>Multi-Sensor</b>: Emparelhe sensores ilimitados com ligação automática.
-• <b>Cockpits Personalizáveis</b>: Painéis configuráveis dependentes do tipo de desporto.
-• <b>Exportação</b>: Suporte para formatos TCX, GPX, CSV e Golden Cheetah.
-• <b>Social</b>: Fotos profissionais combinando mapa, perfil de elevação e métricas.
-• <b>Navegação</b>: Importe rotas GPX/Strava com seguimento no mapa ao vivo.
-• <b>Segmentos Strava</b>: Gestão de segmentos com deteção e feedback em tempo real.
-• <b>Histórico</b>: Resumos (semanais, mensais, anuários) do volume de treino.
+Perfeito para ciclistas, corredores, caminhantes e outros atletas de resistência que procuram um registo fiável, gestão inteligente de sensores e controlo total sobre os seus dados.
 
-<b>UMA JORNADA DE 25 ANOS</b>
-Este projeto começou como uma visão há mais de duas décadas. Naquela época, eu era um estudante de engenharia e um corredor casual, explorando a codificação móvel com Java Midlets. Enquanto corria, sonhava com um futuro onde o telemóvel—com o seu armazenamento, ecrã e poder computacional—pudesse atuar como o diário de treino definitivo, recolhendo dados de sensores remotos.
-Ao longo dos anos, passei de um corredor casual a um triatleta apaixonado e, quando os primeiros smartphones ANT+ chegaram em 2011, eu estava pronto. Comprei um imediatamente, mas não encontrei aplicações suficientemente poderosas ou automatizadas para satisfazer as minhas necessidades. Então, comecei a programar.
-Após uma longa pausa entre 2019 e 2025, regressei com energia renovada, modernizando a interface do utilizador, mantendo intacta a sólida lógica de monitoramento central. É um trabalho feito com paixão e orgulho-me de o partilhar consigo.
+<b>TRACKING MAIS INTELIGENTE</b>
+Transforme o seu smartphone num ciclocomputador inteligente que aprende como treina.
+• <b>Deteção Automática</b>: Reconhece automaticamente o seu desporto e atribui a bicicleta ou os sapatos corretos com base nos sensores detetados.
+• <b>Painéis Personalizados para cada desporto</b>: Experimente um cockpit que se adapta a si. Personalize layouts independentes para ciclismo, corrida, caminhada e muito mais. Veja as métricas exatas de que precisa para cada atividade.
+• <b>Inteligência de Atividade</b>: Pare de organizar os seus treinos manualmente. As rotas utilizadas com frequência são automaticamente reconhecidas e nomeadas, mantendo o seu log de treino organizado sem esforço.
+
+<b>GESTÃO INTELIGENTE DE SENSORES</b>
+Ligue simultaneamente múltiplos sensores Bluetooth® LE e ANT+® — incluindo frequência cardíaca, cadência, velocidade, potência, temperatura e muito mais.
+Ao contrário das aplicações de tracking padrão, o aTrainingTracker não se limita a ligar-se aos sensores — seleciona inteligentemente a melhor fonte de dados para que não tenha de o fazer:
+• <b>Prioridade ao Hardware</b>: Sensores de velocidade dedicados são automaticamente preferidos ao GPS para uma precisão máxima.
+• <b>Nunca perca dados de velocidade</b>: Se um sensor de roda se desligar, o GPS assume o controlo de forma transparente para garantir que não existam falhas nos datos.
+• <b>Sempre o melhor sensor</b>: A aplicação utiliza automaticamente o sensor mais preciso disponível.
+
+<b>ROTAS FAVORITAS</b>
+Treina nas mesmas rotas regularmente? O aTrainingTracker trata da organização. As rotas utilizadas com frequência são automaticamente reconhecidas e agrupadas, oferecendo-lhe um histórico completo de cada saída nessa rota.
+• <b>Recordes Pessoais</b>: Compare automaticamente todos os seus esforços em rotas específicas.
+• <b>Evolução Visual</b>: Visualize o seu histórico de treino através de mapas de calor (heatmaps) detalhados.
+• <b>Estatísticas de Rota</b>: Obtenha dados abrangentes para as suas voltas de treino regulares sem marcação manual.
+
+<b>SEGMENTOS LIVE E NAVEGAÇÃO</b>
+Leve a sua performance ao próximo nível com feedback e orientação em tempo real.
+• <b>Strava Live Segments</b>: Acompanhe o seu progresso em relação ao seu recorde pessoal em tempo real enquanto corre ou pedala.
+• <b>Navegação de Rota</b>: Importe ficheiros GPX ou rotas do Strava e siga-os no mapa interativo em direto.
+• <b>Zonas de Treino</b>: Treine na intensidade certa com zonas de frequência cardíaca e potência configuráveis.
+
+<b>ANÁLISE DETALHADA</b>
+Assim que a sua sessão terminar, encontre estatísticas locais completas prontas para revisão:
+• <b>Ferramentas Analíticas</b>: Gráficos interativos, mapas de calor, comparações de rotas e estatísticas de equipamento.
+• <b>Dados de Ambiente</b>: Ganho de elevação, inclinação e temperatura.
+• <b>Métricas de Performance</b>: Distância, velocidade, potência, frequência cardíaca, cadenza.
+
+<b>SEUS DADOS, SUA ESCOLHA</b>
+Você decide para onde vão os seus dados. O aTrainingTracker coloca a privacidade em primeiro lugar, oferecendo ao mesmo tempo a conveniência da nuvem.
+• <b>Privacidade por Defeito</b>: Sem necessidade de conta. Sem nuvem obrigatória. Os seus treinos ficam no seu dispositivo, a menos que escolha o contrário.
+• <b>Sincronização na Nuvem Opcional</b>: Carregue automaticamente as novas atividades para o Strava ou Dropbox para análise posterior.
+• <b>Formatos Populares</b>: Exporte os seus treinos como GPX, TCX, CSV e outros formatos padrão.
+
+<b>CONSTRUÍDO PARA ATLETAS SÉRIOS</b>
+Desenvolvido continuamente há mais de 15 ans com um único objetivo: tornar o registo de atividades o mais fiável e automático possível. Sem ruído social, sem distrações — apenas um registo de excelência.
+
+Você foca-se no seu treino. O aTrainingTracker cuida do registo.

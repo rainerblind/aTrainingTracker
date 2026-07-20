@@ -166,6 +166,9 @@ private fun WorkoutMediaSection(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
+            start = workoutData.startLatLng,
+            end = workoutData.endLatLng,
+            apex = workoutData.maxDisplacementLatLng,
             onMapClick = { onMapClick() }
         )
 

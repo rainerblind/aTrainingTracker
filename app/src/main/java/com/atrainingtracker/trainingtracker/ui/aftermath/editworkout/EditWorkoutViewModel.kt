@@ -13,28 +13,28 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+ * along with this program.  See the GNU General Public License for more details.
  */
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.editworkout
 
 import android.app.Application
-import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.*
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.SimpleSportTypeInfo
-import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
-import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.EquipmentData
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
-import com.atrainingtracker.trainingtracker.ui.util.Event
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,298 +42,92 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class EditWorkoutViewModel(application: Application, private val workoutId: Long) : AndroidViewModel(application) {
-    companion object {
-        private val TAG = "EditWorkoutViewModel"
-        private var DEBUG = TrainingApplication.getDebug(true)
-    }
+
     private val repository = WorkoutRepository.getInstance(application)
+    private val equipmentRepository = EquipmentRepository.getInstance(application)
+    private val sportTypesRepository = SportTypesRepository.getInstance(application)
+    private val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(application)
+    private val discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(application)
 
-    private val workoutSummariesDatabaseManager by lazy {
-        WorkoutSummariesDatabaseManager.getInstance(application) }
-    private val sportTypeDatabaseManager by lazy { SportTypeDatabaseManager.getInstance(application) }
-
-    private val discoveryManager by lazy { EquipmentAndSportTypeDiscoveryManager.getInstance(application) }
-    private val equipmentManager by lazy { EquipmentDbHelper(application) }        // TODO: replace by EquipmentRepository
-
-    private val equipmentList: List<EquipmentData> = EquipmentRepository.getInstance(application).equipmentList
-    private val sportTypesList: List<SimpleSportTypeInfo> = SportTypesRepository.getInstance(application).sportTypesList
-
-    // 1. The Single Source of Truth for the UI
+    // Using StateFlow for modern reactive UI
     private val _workoutData = MutableStateFlow<WorkoutData?>(null)
     val workoutData: StateFlow<WorkoutData?> = _workoutData.asStateFlow()
 
+    // Options for Spinners (Sport Types & Equipment)
+    private val sportTypesList: List<SimpleSportTypeInfo> = sportTypesRepository.sportTypesList
+    private val equipmentList: List<EquipmentData> = equipmentRepository.equipmentList
 
-    private lateinit var currentBSportType: BSportType
-
-    // LiveData for the SportType spinner
     private val _sportTypeNames = MutableLiveData<List<String>>()
     val sportTypeNames: LiveData<List<String>> = _sportTypeNames
-    var suggestedSportTypeName: String = ""
-    var userSelectedSportTypeName: String? = null
-    private var showAllSportTypes = false
-    private var showAbsolutelyAllSportTypes = false
-
-
-    // LifeData for the Equipment spinner
+    
     private val _equipmentNames = MutableLiveData<List<String>>()
     val equipmentNames: LiveData<List<String>> = _equipmentNames
-    var suggestedEquipmentName: String? = null
-    private var showAllEquipment = false
 
-    // Event to signal the View to open a specific spinner
-    private val _openSpinnerEvent = MutableLiveData<Event<SpinnerType>>()
-    val openSpinnerEvent: LiveData<Event<SpinnerType>> = _openSpinnerEvent
+    // Suggested values for dropdown synchronization (SCRUM-200)
+    var suggestedSportTypeName by mutableStateOf("")
+    var suggestedEquipmentName by mutableStateOf<String?>(null)
+    
+    var currentBSportType by mutableStateOf(BSportType.UNKNOWN)
 
-    enum class SpinnerType { SPORT, EQUIPMENT }
+    // Constants for special spinner items
+    val allSportTypes = application.getString(R.string.all_sports)
+    val allEquipment = application.getString(R.string.all_equipment)
+    val allShoes = application.getString(R.string.all_shoes)
+    val allBikes = application.getString(R.string.all_bikes)
+    val noEquipment = application.getString(R.string.no_equipment)
 
-    // constants for the equipment spinner
-    val NO_EQUIPMENT = application.getString(R.string.equipment_none)
-    val ALL_EQUIPMENT = application.getString(R.string.equipment_all)
-    val ALL_SHOES = application.getString(R.string.equipment_all_shoes)
-    val ALL_BIKES = application.getString(R.string.equipment_all_bikes)
-    val ALL_SPORT_TYPES = application.getString(R.string.show_all_sport_types)
-    // TODO: really all sports
-
-
-    val saveFinishedEvent: MutableLiveData<Pair<Long, Boolean>> = repository.saveFinishedEvent
-
+    // Suggested Clusters for the Auto-Name dialog (SCRUM-214)
+    private val _clusterSuggestions = MutableStateFlow<List<Pair<WorkoutCluster, Double>>>(emptyList())
+    val clusterSuggestions: StateFlow<List<Pair<WorkoutCluster, Double>>> = _clusterSuggestions.asStateFlow()
 
     init {
-        // workoutData = repository.getWorkoutById(workoutId)
+        loadWorkoutData()
+    }
 
-        // Tell the repository to load the initial data
+    private fun loadWorkoutData() {
         viewModelScope.launch {
             repository.loadWorkout(workoutId)
-        }
+            repository.initialWorkoutLoaded.asFlow().collect { data ->
+                // Guard against global events for different workouts
+                if (data.id != workoutId) return@collect
 
-        repository.initialWorkoutLoaded.observeForever { initialWorkout ->
-            initSuggestedSportAndEquipmentNames(initialWorkout)
-            _workoutData.value = initialWorkout
-        }
-
-        // Observe the single source of truth from the repository.
-        viewModelScope.launch {
-            repository.allWorkouts.collect { list ->
-                val newWorkoutData = list.find { it.id == workoutId }
-                val currentWorkoutData = workoutData.value
-
-                if (newWorkoutData != null && currentWorkoutData != null) {
-
-                    // update the workout data
-                    _workoutData.value = currentWorkoutData.copy(
-                        // only override the workoutName when it was not changed by the user
-                        workoutName = if (currentWorkoutData.workoutName == currentWorkoutData.fileBaseName) {
-                            // still the default name -> user dit not change the name -> use the (eventually) new one.
-                            newWorkoutData.workoutName
-                        } else {
-                            // user changed the name -> keep it
-                            currentWorkoutData.workoutName
-                        },
-
-                        // copy extrema status and extrema values
-                        exportStatuses = newWorkoutData.exportStatuses,
-                        extremaRows = newWorkoutData.extremaRows
-                    )
+                _workoutData.update { current ->
+                    // If we already have data and are just updating identity, merge it
+                    if (current != null) {
+                        current.copy(
+                            workoutName = data.workoutName,
+                            sportId = data.sportId,
+                            sportName = data.sportName,
+                            bSportType = data.bSportType,
+                            equipmentId = data.equipmentId,
+                            equipmentName = data.equipmentName,
+                            clusterId = data.clusterId,
+                            stravaSportName = data.stravaSportName
+                        )
+                    } else {
+                        data
+                    }
                 }
+                
+                suggestedSportTypeName = data.sportName
+                currentBSportType = data.bSportType
+                suggestedEquipmentName = data.equipmentName
+                updateSuggestedSportTypeNames(data)
+                updateSuggestedEquipmentNames(data.sportName)
+                fetchClusterSuggestions(data)
             }
         }
-    }
-
-    fun initSuggestedSportAndEquipmentNames(initialWorkout: WorkoutData) {
-
-        currentBSportType = initialWorkout.bSportType
-        suggestedSportTypeName = initialWorkout.sportName
-        suggestedEquipmentName = initialWorkout.equipmentName
-
-        // get the linked sport types
-        var suggestedSportNames = discoveryManager.getLinkedSportTypeNames(workoutId)
-        if (suggestedSportNames.isEmpty()) {
-            // when the linked sport types are empty, use the speed-based guess
-            suggestedSportNames = discoveryManager.getSpeedBasedSportTypeNames(
-                currentBSportType,
-                initialWorkout.avgSpeedMps
-            )
-        }
-
-        // The stored sport type is not in the list (this happens when the user has changed the sport type) -> show all sport types.
-        if (!suggestedSportNames.contains(suggestedSportTypeName)) {
-            showAllSportTypes = true
-            suggestedSportNames = emptySet()
-        }
-
-        // use the helper to finalize the sport names
-        finalizeSportNames(suggestedSportNames)
-
-
-        // get the set of linked equipment
-        var suggestedEquipmentNames = discoveryManager.getLinkedEquipmentNames(workoutId)
-        if (suggestedEquipmentNames.isEmpty()) {
-            // when the linked equipment is empty, try to get the equipment from the sport types
-            suggestedEquipmentNames = discoveryManager.getEquipmentNamesForSports(suggestedSportNames)
-        }
-
-        if (!suggestedEquipmentNames.contains(suggestedEquipmentName)) {
-            showAllEquipment = true
-            suggestedEquipmentNames = emptySet()
-        }
-
-        // use the helper to finalize the equipment names
-        finalizeEquipmentNames(suggestedEquipmentNames)
-    }
-
-    fun finalizeSportNames(sportNames: Set<String>) {
-        if (DEBUG) Log.i(TAG, "finalizeSportNames, {sportNames: $sportNames}")
-
-        var suggestedSportNames = sportNames
-        val allSportTypes = if (showAbsolutelyAllSportTypes) {
-            sportTypeDatabaseManager.getSportTypesUiNameList().toSet()
-        }
-        else {
-            sportTypeDatabaseManager.getSportTypesUiNameList(currentBSportType).toSet()
-        }
-
-        // when the list is empty, we should show all sport types and remember this choice
-        if (suggestedSportNames.isEmpty()) {
-            showAllSportTypes = true
-        }
-        // when we found exactly one sport, we show all sports but preselect this one.
-        else if (suggestedSportNames.size == 1) {
-            if (userSelectedSportTypeName == null) {  // but not when the user already selected one.
-                suggestedSportTypeName = suggestedSportNames.first()
-            }
-            showAllSportTypes = true
-        }
-        else if (suggestedSportNames.size == allSportTypes.size) {
-            showAllSportTypes = true  // we already show all sport types, so set this flag.
-        }
-
-        // when requested by the user or we found out that we should show all sport types, we show all
-        if (showAllSportTypes) {
-            suggestedSportNames = allSportTypes
-        }
-
-        val suggestedSportNamesList = suggestedSportNames.toMutableList()
-
-        if (!showAbsolutelyAllSportTypes) {
-            suggestedSportNamesList.add(ALL_SPORT_TYPES)
-        }
-
-        _sportTypeNames.value = suggestedSportNamesList
-    }
-
-
-    /**
-     * function to finalize the raw list of equipment names.
-     * * When there is no equipment at all, we return an empty list.
-     * * When the raw list is empty, we show all equipment.
-     * * When the list contains only one equipment, this will be selected as the suggested equipment and we show all equipment.
-     * * When the equipment list is not the full equipment list, we add the option to show all equipment.
-     * * Finally, the option to select no equipment is added.
-     */
-    fun finalizeEquipmentNames(equipmentNames: Set<String>) {
-        if (DEBUG) Log.i(TAG, "finalizeEquipmentNames(equipmentNames: $equipmentNames)" +
-                "\n bSportType: $currentBSportType" +
-                "\n suggestedEquipmentName: $suggestedEquipmentName")
-
-        var suggestedEquipmentNames = equipmentNames
-
-        val allEquipment = equipmentManager.getEquipment(currentBSportType).toSet()
-
-        // when there is no equipment, we return an empty list
-        if (allEquipment.isEmpty()) {
-            _equipmentNames.value = emptyList()
-            return
-        }
-
-        // when the suggested equipment contains only one item, we set this equipment
-        if (suggestedEquipmentNames.size == 1) {
-            if (DEBUG) Log.i(TAG, "FTW: finalizeEquipmentNames, {setting equipment to: ${suggestedEquipmentNames.first()}}")
-            suggestedEquipmentName = suggestedEquipmentNames.first()
-            suggestedEquipmentNames = allEquipment
-        }
-
-        // when requested by the user or the suggested equipment is empty, we show all equipment instead
-        if (showAllEquipment || suggestedEquipmentNames.isEmpty() ) {
-            suggestedEquipmentNames = allEquipment
-        }
-
-        val suggestedEquipmentNamesList = suggestedEquipmentNames.toMutableList()
-
-        // we should add the 'show all' option if and only if the suggestedEquipmentNames do not contain all possible equipment
-        if (suggestedEquipmentNames != allEquipment) {
-            val allEquipmentName = when (currentBSportType) {
-                BSportType.BIKE -> ALL_BIKES
-                BSportType.RUN -> ALL_SHOES
-                else -> ALL_EQUIPMENT
-            }
-            suggestedEquipmentNamesList.add(allEquipmentName)
-        }
-
-        // add the option to select no equipment
-        suggestedEquipmentNamesList.add(0, NO_EQUIPMENT)
-
-        // when the list of equipment does not contain the currently selected equipment, the suggested equipment will be NO_EQUIPMENT
-        if (!suggestedEquipmentNames.contains(suggestedEquipmentName)) {
-            suggestedEquipmentName = NO_EQUIPMENT
-        }
-
-        _equipmentNames.value = suggestedEquipmentNamesList
-    }
-
-    fun updateSuggestedSportNames(newEquipmentName: String?) {
-        if (DEBUG) Log.i(TAG, "updateSuggestedSportNames, {newEquipmentName: $newEquipmentName}")
-        if (newEquipmentName == null) {
-            return
-        }
-
-        finalizeSportNames(
-            discoveryManager.getSportNamesForEquipment(newEquipmentName),
-            )
-    }
-
-    fun updateSuggestedEquipmentNames(newSportName: String) {
-        if (DEBUG) Log.i(TAG, "updateSuggestedEquipmentNames, {newSportName: $newSportName}")
-        finalizeEquipmentNames(
-            discoveryManager.getEquipmentNamesForSport(newSportName),
-        )
-    }
-
-    fun showAllSportTypes() {
-        if (showAllSportTypes) {  // when we already show all BSportType specific sports and the user selects this option again, we show really all.
-            showAbsolutelyAllSportTypes = true
-        }
-        else {
-            showAllSportTypes = true  // remember this choice
-        }
-
-        finalizeSportNames(
-            sportTypeDatabaseManager.getSportTypesUiNameList(currentBSportType).toSet(),
-        )
-
-        // trigger the event to open the sport type spinner
-        _openSpinnerEvent.value = Event(SpinnerType.SPORT)
-    }
-
-    fun showAllEquipment() {
-        showAllEquipment = true  // remember this choice
-        finalizeEquipmentNames(
-            equipmentManager.getEquipment(currentBSportType).toSet(),
-        )
-
-        // trigger the event to open the equipment spinner
-        _openSpinnerEvent.value = Event(SpinnerType.EQUIPMENT)
     }
 
     fun updateWorkoutName(newName: String) {
         _workoutData.update { it?.copy(workoutName = newName) }
     }
 
-
-    // --- Smart handler for sport type changes ---
+    /**
+     * Smart handler for sport changes. Automatically updates bSportType and equipment suggestions.
+     */
     fun updateSportName(newSportName: String) {
-        if (DEBUG) Log.i(TAG, "updateSportName: Start with {newSportName: $newSportName}")
-
-        if (newSportName == ALL_SPORT_TYPES) {
+        if (newSportName == allSportTypes) {
             showAllSportTypes()
             return
         }
@@ -341,52 +135,116 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         if (newSportName == workoutData.value?.sportName) return
         val simpleSportTypeInfo = sportTypesList.find { it.name == newSportName }
         val newSportId = simpleSportTypeInfo?.id ?: -1
-        val newStravaSportName = sportTypeDatabaseManager.getStravaName(newSportId)
+
+        // Automatically infer equipment and Strava upload (SCRUM-200)
+        val identity = discoveryManager.inferIdentityFromSport(newSportId)
+        val inferredEquipmentName = equipmentList.find { it.id == identity.equipmentId }?.name
 
         _workoutData.update { current ->
             current?.copy(
                 sportName = newSportName,
-                bSportType = simpleSportTypeInfo?.bSportType ?: BSportType.UNKNOWN,
+                bSportType = identity.bSportType,
                 sportId = newSportId,
-                stravaSportName = newStravaSportName,
-                // Automatically disable upload if mapping is null (NONE)
-                uploadToStrava = if (newStravaSportName == null) 0 else current.uploadToStrava
+                stravaSportName = identity.stravaSportName,
+                uploadToStrava = identity.uploadToStrava,
+                equipmentName = inferredEquipmentName,
+                equipmentId = identity.equipmentId
             )
         }
+        
+        // Synchronize suggested equipment name for UI (SCRUM-200)
+        suggestedEquipmentName = inferredEquipmentName
 
         // first, get the new sportId and bSportType
         val newBSportType = sportTypeDatabaseManager.getBSportType(newSportId)
 
-        if (newSportName != suggestedSportTypeName) {
-            userSelectedSportTypeName = newSportName
-        }
 
         currentBSportType = newBSportType
         suggestedSportTypeName = newSportName
+        
+        // Use current data for sport suggestion context, but update based on new selection
+        workoutData.value?.let { current ->
+            val updatedForSuggestions = current.copy(sportName = newSportName, bSportType = identity.bSportType)
+            updateSuggestedSportTypeNames(updatedForSuggestions)
+        }
         updateSuggestedEquipmentNames(newSportName)
     }
 
     // --- Smart handler for equipment changes ---
-    fun updateEquipmentName(selectedEquipmentName: String) {
-        if (DEBUG) Log.i(TAG, "updateEquipmentName, {selectedEquipmentName: $selectedEquipmentName}")
 
-        // first, the special cases
-        // NO_EQUIPMENT means equipment name = null
-        val newEquipmentName = if (selectedEquipmentName == NO_EQUIPMENT) null else selectedEquipmentName
-
-        if (newEquipmentName == ALL_EQUIPMENT || newEquipmentName == ALL_SHOES || newEquipmentName == ALL_BIKES) {
-            showAllEquipment()
-            return
+    fun updateEquipmentName(newName: String) {
+        when (newName) {
+            allEquipment -> showAllEquipment()
+            allShoes -> showAllShoes()
+            allBikes -> showAllBikes()
+            else -> {
+                val equipment = equipmentList.find { it.name == newName }
+                val newId = equipment?.id ?: -1L
+                _workoutData.update { it?.copy(equipmentName = if (newId == -1L) null else newName, equipmentId = newId) }
+                suggestedEquipmentName = if (newId == -1L) null else newName
+            }
         }
+    }
 
-        if (newEquipmentName == workoutData.value?.equipmentName) return
-        val equipmentId = equipmentList.find { it.name == newEquipmentName }?.id ?: -1
-        _workoutData.update { it?.copy(
-            equipmentName = newEquipmentName,
-            equipmentId = equipmentId) }
+    // --- Smart handlers for suggestions (SCRUM-200) ---
 
-        suggestedEquipmentName = newEquipmentName
-        updateSuggestedSportNames(newEquipmentName)
+    private fun updateSuggestedSportTypeNames(data: WorkoutData) {
+        val suggestedSports = discoveryManager.getSpeedBasedSportTypeNames(data.bSportType, data.avgSpeedMps).toMutableList()
+        
+        // Ensure current sport is in the list
+        if (!suggestedSports.contains(data.sportName)) {
+            suggestedSports.add(0, data.sportName)
+        }
+        
+        // Add "All sports" option to allow expanding the list
+        suggestedSports.add(allSportTypes)
+        
+        _sportTypeNames.value = suggestedSports
+    }
+
+    private fun updateSuggestedEquipmentNames(sportName: String) {
+        val linkedEquipment = discoveryManager.getEquipmentNamesForSport(sportName).toList()
+        if (linkedEquipment.isNotEmpty()) {
+            val options = mutableListOf<String>()
+            options.addAll(linkedEquipment)
+            options.add(noEquipment)
+            options.add(allEquipment)
+            
+            // Add categorical filters based on BSportType
+            if (currentBSportType == BSportType.RUN) options.add(allShoes)
+            if (currentBSportType == BSportType.BIKE) options.add(allBikes)
+            
+            _equipmentNames.value = options
+        } else {
+            showAllEquipment()
+        }
+    }
+
+    private fun showAllSportTypes() {
+        _sportTypeNames.value = sportTypesList.map { it.name }
+    }
+
+    private fun showAllEquipment() {
+        val options = mutableListOf<String>()
+        options.add(noEquipment)
+        options.addAll(equipmentList.map { it.name })
+        _equipmentNames.value = options
+    }
+
+    private fun showAllShoes() {
+        val options = mutableListOf<String>()
+        options.add(noEquipment)
+        options.addAll(equipmentList.filter { it.sportType == BSportType.RUN }.map { it.name })
+        options.add(allEquipment)
+        _equipmentNames.value = options
+    }
+
+    private fun showAllBikes() {
+        val options = mutableListOf<String>()
+        options.add(noEquipment)
+        options.addAll(equipmentList.filter { it.sportType == BSportType.BIKE }.map { it.name })
+        options.add(allEquipment)
+        _equipmentNames.value = options
     }
 
 
@@ -419,24 +277,35 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     }
 
 
-    // -- fancy / auto name
-    // LiveData to hold the list of fancy names for the dialog
-    val fancyNameList: LiveData<List<String>> by lazy {
-        MutableLiveData(workoutSummariesDatabaseManager.getFancyNameList())
-    }
-
-    // This function will be called when the user selects a name from the dialog.
-    fun onFancyNameSelected(baseName: String) {
-        val fullFancyName = workoutSummariesDatabaseManager.getFancyNameAndIncrement(baseName)
-
-        updateWorkoutName(fullFancyName)
-    }
-
     /**
      * Saves the current state of the WorkoutData object to the database.
      */
     fun saveChanges() {
         repository.saveWorkout(workoutData.value)
+    }
+
+    private fun fetchClusterSuggestions(workout: WorkoutData) {
+        val start = workout.startLatLng ?: return
+        val end = workout.endLatLng ?: return
+        val apex = workout.maxDisplacementLatLng ?: return
+        
+        viewModelScope.launch {
+            val suggestions = WorkoutClusterEngine.getInstance(getApplication())
+                .getClusterScores(start, end, apex, workout.totalDistance, workout.workoutName)
+            _clusterSuggestions.value = suggestions
+        }
+    }
+
+    fun applyClusterIdentity(cluster: WorkoutCluster) {
+        repository.assignClusterToWorkout(workoutId, cluster.id)
+    }
+
+    fun getSportName(sportId: Long): String {
+        return sportTypeDatabaseManager.getUIName(sportId)
+    }
+
+    fun getBSportType(sportId: Long): BSportType {
+        return sportTypeDatabaseManager.getBSportType(sportId)
     }
 }
 

@@ -41,7 +41,8 @@ data class RouteSummary(
     val distance: Double,
     val elevationGain: Double,
     val bSportType: BSportType,
-    val source: RouteSource
+    val source: RouteSource,
+    val clusterId: Long = -1L
 )
 
 enum class RouteSource(
@@ -104,6 +105,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
                 put(RouteContract.COLUMN_ELEVATION_GAIN, summary.elevationGain)
                 put(RouteContract.COLUMN_SPORT_TYPE, summary.bSportType.name)
                 put(RouteContract.COLUMN_SOURCE, summary.source.name)
+                put(RouteContract.COLUMN_CLUSTER_ID, summary.clusterId)
             }
             val routeId = db.insert(RouteContract.TABLE_ROUTES, null, values)
 
@@ -136,6 +138,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
             put(RouteContract.COLUMN_NAME, summary.name)
             put(RouteContract.COLUMN_DESCRIPTION, summary.description)
             put(RouteContract.COLUMN_SPORT_TYPE, summary.bSportType.name)
+            put(RouteContract.COLUMN_CLUSTER_ID, summary.clusterId)
         }
 
         return db.update(
@@ -146,9 +149,6 @@ class RoutesDatabaseManager private constructor(context: Context) {
         )
     }
 
-    /**
-     * Retrieves all routes.
-     */
     fun getAllRoutes(): List<RouteWithPath> {
         val routes = mutableListOf<RouteWithPath>()
         val db = dbHelper.readableDatabase
@@ -172,6 +172,29 @@ class RoutesDatabaseManager private constructor(context: Context) {
             }
         }
         return routes
+    }
+
+    /**
+     * Retrieves a route linked to a specific cluster ID.
+     */
+    fun getRouteByClusterId(clusterId: Long): RouteWithPath? {
+        val db = dbHelper.readableDatabase
+        db.query(
+            RouteContract.TABLE_ROUTES,
+            null,
+            "${RouteContract.COLUMN_CLUSTER_ID} = ?",
+            arrayOf(clusterId.toString()),
+            null,
+            null,
+            null
+        ).use { cursor ->
+            if (cursor.moveToFirst()) {
+                val routeSummary = mapCursorToRouteSummary(cursor)
+                val pathPoints = getRoutePath(routeSummary.id)
+                return RouteWithPath(routeSummary, pathPoints)
+            }
+        }
+        return null
     }
 
     /**
@@ -240,6 +263,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
         val elevIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_ELEVATION_GAIN)
         val sportIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_SPORT_TYPE)
         val sourceIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_SOURCE)
+        val clusterIdIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_CLUSTER_ID)
 
         val sportString = cursor.getString(sportIdx)
         val sportType = try {
@@ -257,7 +281,24 @@ class RoutesDatabaseManager private constructor(context: Context) {
             distance = cursor.getDouble(distIdx),
             elevationGain = cursor.getDouble(elevIdx),
             bSportType = sportType,
-            source = RouteSource.fromString(cursor.getString(sourceIdx))
+            source = RouteSource.fromString(cursor.getString(sourceIdx)),
+            clusterId = cursor.getLong(clusterIdIdx)
+        )
+    }
+
+    /**
+     * Clears the cluster ID for any route linked to it (SCRUM-217).
+     */
+    fun clearClusterLink(clusterId: Long): Int {
+        val db = dbHelper.writableDatabase
+        val values = ContentValues().apply {
+            put(RouteContract.COLUMN_CLUSTER_ID, -1L)
+        }
+        return db.update(
+            RouteContract.TABLE_ROUTES,
+            values,
+            "${RouteContract.COLUMN_CLUSTER_ID} = ?",
+            arrayOf(clusterId.toString())
         )
     }
 
@@ -292,6 +333,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
         const val COLUMN_SPORT_TYPE = "sport_type"
         const val COLUMN_SOURCE = "source"
         const val COLUMN_IS_SELECTED = "is_selected"
+        const val COLUMN_CLUSTER_ID = "cluster_id"
         // const val COLUMN_MAP_POLYLINE = "map_polyline"
 
         const val TABLE_ROUTE_POINTS = "route_points"
@@ -312,7 +354,8 @@ class RoutesDatabaseManager private constructor(context: Context) {
             $COLUMN_ELEVATION_GAIN REAL,
             $COLUMN_SPORT_TYPE TEXT,
             $COLUMN_SOURCE TEXT,
-            $COLUMN_IS_SELECTED INTEGER
+            $COLUMN_IS_SELECTED INTEGER,
+            $COLUMN_CLUSTER_ID INTEGER
         );
     """
 
@@ -340,7 +383,8 @@ class RoutesDatabaseManager private constructor(context: Context) {
             const val DB_NAME = "Routes.db"
             // const val DB_VERSION = 2 // Storing BSportType as String.
             // const val DB_VERSION = 3    // No more storing the polyline.
-            const val DB_VERSION = 5    // Added the description
+            // const val DB_VERSION = 5    // Added the description
+            const val DB_VERSION = 6    // Added the cluster_id link (SCRUM-207)
 
             private const val TAG = "RoutesDbHelper"
             private val DEBUG = TrainingApplication.getDebug(true)
@@ -365,6 +409,10 @@ class RoutesDatabaseManager private constructor(context: Context) {
                 db.execSQL("DROP TABLE IF EXISTS ${RouteContract.TABLE_ROUTE_POINTS}")
                 db.execSQL("DROP TABLE IF EXISTS ${RouteContract.TABLE_ROUTES}")
                 onCreate(db)
+            }
+
+            if (oldVersion == 5) {
+                db.execSQL("ALTER TABLE ${RouteContract.TABLE_ROUTES} ADD COLUMN ${RouteContract.COLUMN_CLUSTER_ID} INTEGER DEFAULT -1")
             }
         }
     }

@@ -15,6 +15,8 @@ Any AI assistant working on this project **must** follow these steps for every t
         *   **MUST**: For strict technical constraints or quality attributes (e.g., "The database MUST...").
         *   **Atomic & Unambiguous**: One requirement per entry; avoid vague terms like "easy", "improved", or "better".
         *   **System-Centric**: Describe system behavior, not user desires. (Avoid "The user wants...", "I would like...").
+        *   **State-Oriented**: Requirements MUST describe the intended *behavior* or *state* of the system, NOT the *change process* or *implementation steps*. (Strictly avoid "The system SHALL change...", "The system SHALL rename...", "Update the...").
+        *   **Lifecycle Management**: When introducing new functionality, create a new requirement. When modifying existing behavior that is already documented, **update the existing requirement's description** to reflect the new state instead of adding a "change" requirement.
     *   Define the **Rationale** (the "Why") clearly.
     *   Map the requirement to the relevant **Implementation File(s)**.
 
@@ -22,8 +24,12 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   **MANDATORY HARD STOP**: After requirement synchronization, the agent MUST define the verification criteria with the user.
     *   Identify which manual or automated tests in `docs/tests.md` will prove the requirement is met.
     *   If no suitable test exists, add a new one to `docs/tests.md` immediately.
+    *   **Jira Integration**: For each identified or new test case, the agent MUST create a **Sub-task** in Jira linked to the main ticket.
+        *   The sub-task **Summary** MUST follow the format: `[Test] TST-XXX-###: Summary`.
+        *   The sub-task **Description** MUST be identical to the procedure and expected result defined in `docs/tests.md` to ensure absolute synchronization.
+        *   After creation, the agent MUST update `docs/tests.md` to include the **Jira Ticket ID** of the sub-task (e.g., `AT-123`) in the test case table for bidirectional traceability.
     *   **Iterative Refinement**: The agent must refine the test cases based on user feedback until the user explicitly agrees.
-    *   **Enforcement**: The agent is strictly FORBIDDEN from proposing an implementation plan or writing any code until the user has formally agreed to the test cases in `docs/tests.md`. This phase is used to clarify and freeze the requirements.
+    *   **Enforcement**: The agent is strictly FORBIDDEN from proposing an implementation plan or writing any code until the user has formally agreed to the test cases in `docs/tests.md` and the corresponding sub-tasks have been created in Jira. This phase is used to clarify and freeze the requirements.
 
 3.  **Impact Analysis (SWE.1.BP.5 Phase)**:
     *   Before implementation, perform a formal audit of existing code.
@@ -34,12 +40,16 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   Document these risks in the implementation plan.
 
 4.  **Jira Ticket Management (Agile Phase)**:
-    *   **Automation**: Use the local utility `./tools/jira_util.py` for Jira interactions (list, show, comment, download).
+    *   **Automation**: Use the local utility `./tools/jira_util.py` for Jira interactions (list, show, comment, download, download-all).
     *   **Syntax**: All Jira comments must use **Jira Wiki Markup** (e.g., `h1.`, `{code}`, `*bold*`).
     *   **Credentials**: Authentication details are stored in `.env.jira` (not tracked in Git).
     *   **State Control**: The agent **MUST NOT** transition tickets between states (e.g., move to "In Progress" or "Done") unless explicitly instructed by the user. The user maintains sole control over the workflow state.
     *   **Selection & Focus**: Multiple tickets may be "In Bearbeitung" (In Progress). The agent works on one chosen ticket at a time. While working on a ticket, it becomes the exclusive focus of the development session. The agent MUST fully complete the current topic (including documentation and verification) before concluding. The agent is strictly FORBIDDEN from asking to start a new ticket or suggesting the next task; the user holds sole initiative for task transitions.
+    *   **Contextual Awareness**: Before starting work on a ticket, the agent MUST examine its **Epic** (if linked) to understand the overall picture and vision. The agent SHOULD ask clarifying questions about the Epic to ensure the current task aligns with the long-term goals. If the Epic's description is missing or vague, the agent SHOULD propose an updated description to the user. Once the overall idea of the Epic becomes clear, the agent MUST update the Epic's description in Jira using the `update-desc` command.
     *   **Clarification & Completeness**: If a ticket selected for work lacks a **Description**, specific failure logs, or clear technical context, the agent **MUST NOT** proceed with an implementation plan. Instead, the agent must ask the user for clarification and agreement on the problem statement first.
+    *   **Type-Aware Engineering**: The agent MUST check the **Issue Type** (e.g., Bug, Task, Story) and adapt its strategy accordingly:
+        *   **Bugs**: Require a formal **Root Cause Analysis (RCA)** and inspection of all attachments (logs, screenshots). Use `jira_util.py download-all KEY` to retrieve debugging artifacts.
+        *   **Stories/Tasks**: Require detailed feature requirements and architectural impact analysis.
     *   **Documentation**: For any ticket in progress, the agent must:
         *   **Identity Disclaimer**: Every comment posted by the agent MUST start with a clear disclaimer: *"[Automated comment by AI Agent]"*.
         *   **Initial Analysis**: Immediately after moving to "In Progress", post a comment containing the **Root Cause Analysis (RCA)** (for bugs), the **Implementation Strategy**, the **Impact Analysis**, and the **Agreed Verification Criteria (Test IDs)**.
@@ -80,6 +90,14 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   **Technical Debt Discovery**: If the implementation revealed new constraints, legacy "code smells", or architectural weaknesses outside the current scope, the agent **MUST** document these as new Requirement entries in `docs/requirements.md` with status `Backlog`.
     *   **Sync Discovery**: Update `docs/requirements.md` and `docs/tests.md` to reflect the *actual* final state of the implemented feature.
     *   **Truth Verification**: Ensure the documentation remains a "Single Source of Truth" that accurately describes the code as it exists after implementation.
+
+10. **Localization Compliance (Mandatory Standard)**:
+    *   Whenever a new user-facing string is introduced, the agent MUST translate it to ALL supported languages (EN, DE, ES, FR, IT, PT, NL, PL, JA) before the task is considered complete.
+    *   All translations MUST be externalized in the respective `strings.xml` files.
+    *   This is a non-negotiable quality standard for a world-class application.
+
+11. **UI Visual Standards (Mandatory Design Rules)**:
+    *   **Original Sport Icons**: Sport type icons MUST always be displayed in their original colors to ensure quick identification and maintain branding. Agents are FORBIDDEN from applying theme-based tinting (e.g., `primary` color) to these icons, except when they are explicitly in a muted background state or disabled.
 
 ## New Version / Release Workflow
 Whenever preparing for a new version:

@@ -34,6 +34,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public class MySensorManager extends MyDevice {
@@ -146,19 +147,19 @@ public class MySensorManager extends MyDevice {
         return sensorList;
     }
 
-    public Set<SensorType> getAccumulatedSensorTypeSet() {
+    public synchronized Set<SensorType> getAccumulatedSensorTypeSet() {
         return mAccumulatedSensorTypeSet;
     }
 
-    public void setPriorityList(SensorType sensorType, DeviceType[] deviceTypeArray) {
+    public synchronized void setPriorityList(SensorType sensorType, DeviceType[] deviceTypeArray) {
         mDevicePriorityList.put(sensorType, new LinkedList<DeviceType>(Arrays.asList(deviceTypeArray)));
     }
 
-    protected LinkedList<DeviceType> getPriorityList(SensorType sensorType) {
+    protected synchronized LinkedList<DeviceType> getPriorityList(SensorType sensorType) {
         return mDevicePriorityList.get(sensorType);
     }
 
-    public void registerSensor(MySensor mySensor) {
+    public synchronized void registerSensor(MySensor mySensor) {
         if (DEBUG) {
             Log.d(TAG, "registerSensor(" + mySensor.getSensorType() + ")");
         }
@@ -186,19 +187,25 @@ public class MySensorManager extends MyDevice {
         if (newSensor) notifyNewSensor(mySensor);
     }
 
-    public List<MySensor> getAllButBestSensors() {
+    public synchronized List<MySensor> getAllButBestSensors() {
         LinkedList<MySensor> mySensorList = new LinkedList<>();
 
         for (SensorType sensorType : mAllSensorsMapMap.keySet()) {
-            for (DeviceType deviceType : mAllSensorsMapMap.get(sensorType).keySet()) {
-                mySensorList.addAll(mAllSensorsMapMap.get(sensorType).get(deviceType));
+            EnumMap<DeviceType, LinkedList<MySensor>> deviceMap = mAllSensorsMapMap.get(sensorType);
+            if (deviceMap != null) {
+                for (DeviceType deviceType : deviceMap.keySet()) {
+                    LinkedList<MySensor> sensors = deviceMap.get(deviceType);
+                    if (sensors != null) {
+                        mySensorList.addAll(sensors);
+                    }
+                }
             }
         }
 
         return mySensorList;
     }
 
-    public List<MySensor> getAllSensors() {
+    public synchronized List<MySensor> getAllSensors() {
         LinkedList<MySensor> mySensorList = new LinkedList<>();
 
         mySensorList.addAll(getSensors());
@@ -208,7 +215,7 @@ public class MySensorManager extends MyDevice {
     }
 
 
-    public void registerSensors(Collection<MySensor> sensorCollection) {
+    public synchronized void registerSensors(Collection<MySensor> sensorCollection) {
         if (DEBUG) Log.d(TAG, "registerSensors");
 
         for (MySensor mySensor : sensorCollection) {
@@ -216,59 +223,66 @@ public class MySensorManager extends MyDevice {
         }
     }
 
-    public void unregisterSensor(MySensor mySensor) {
+    public synchronized void unregisterSensor(MySensor mySensor) {
         if (DEBUG) Log.d(TAG, "unregisterSensor(" + mySensor.getSensorType() + ")");
 
         SensorType sensorType = mySensor.getSensorType();
         DeviceType deviceType = mySensor.getDevice().getDeviceType();
 
-        if (mAllSensorsMapMap.get(sensorType) != null
-                && mAllSensorsMapMap.get(sensorType).get(deviceType) != null) {
+        EnumMap<DeviceType, LinkedList<MySensor>> deviceMap = mAllSensorsMapMap.get(sensorType);
+        if (deviceMap != null) {
+            LinkedList<MySensor> sensorList = deviceMap.get(deviceType);
+            if (sensorList != null) {
 
-            boolean sensorRemoved = false;
-            mAllSensorsMapMap.get(sensorType).get(deviceType).remove(mySensor);
-            MySensor newBestSensor = getBestSensor(sensorType);
-            if (newBestSensor == null) {
-                if (DEBUG) Log.d(TAG, "newBestSensor == null => removeSensor");
-                removeSensor(sensorType);
-                sensorRemoved = true;
+                boolean sensorRemoved = false;
+                sensorList.remove(mySensor);
+                MySensor newBestSensor = getBestSensor(sensorType);
+                if (newBestSensor == null) {
+                    if (DEBUG) Log.d(TAG, "newBestSensor == null => removeSensor");
+                    removeSensor(sensorType);
+                    sensorRemoved = true;
+                }
+
+                setBestSensorForProxySensor(sensorType);
+
+                if (sensorRemoved) notifySensorRemoved(mySensor);
             }
-
-            setBestSensorForProxySensor(sensorType);
-
-            if (sensorRemoved) notifySensorRemoved(mySensor);
         }
 
     }
 
-    public void unregisterSensors(Collection<MySensor> sensorCollection) {
+    public synchronized void unregisterSensors(Collection<MySensor> sensorCollection) {
         for (MySensor mySensor : sensorCollection) {
             unregisterSensor(mySensor);
         }
     }
 
 
-    protected void setBestSensorForProxySensor(SensorType sensorType) {
+    protected synchronized void setBestSensorForProxySensor(SensorType sensorType) {
         if (DEBUG) Log.d(TAG, "setBestSensorForProxySensor(" + sensorType.name() + ")");
 
         MySensor bestSensor = getBestSensor(sensorType);
         if (bestSensor != null) {
-            ((ProxySensor) getSensor(sensorType)).setSourceSensor(bestSensor);
+            MySensor proxy = getSensor(sensorType);
+            if (proxy instanceof ProxySensor) {
+                ((ProxySensor) proxy).setSourceSensor(bestSensor);
+            }
         } else {
             removeSensor(sensorType);
         }
     }
 
-    protected MySensor getBestSensor(SensorType sensorType) {
+    protected synchronized MySensor getBestSensor(SensorType sensorType) {
         MySensor bestSensor = null;
 
         Collection<DeviceType> priorityList = getPriorityList(sensorType);
 
         if (priorityList == null) {
-            if (mAllSensorsMapMap.get(sensorType) == null) {
+            EnumMap<DeviceType, LinkedList<MySensor>> deviceMap = mAllSensorsMapMap.get(sensorType);
+            if (deviceMap == null) {
                 return null;  // sensorType not yet seen, so there will be no corresponding sensor
             } else {
-                priorityList = mAllSensorsMapMap.get(sensorType).keySet();
+                priorityList = deviceMap.keySet();
             }
         }
 
@@ -282,14 +296,15 @@ public class MySensorManager extends MyDevice {
         return bestSensor;
     }
 
-    protected MySensor getFirstSensor(SensorType sensorType, DeviceType deviceType) {
-        if (mAllSensorsMapMap.get(sensorType) != null
-                && mAllSensorsMapMap.get(sensorType).get(deviceType) != null
-                && mAllSensorsMapMap.get(sensorType).get(deviceType).size() != 0) {
-            return mAllSensorsMapMap.get(sensorType).get(deviceType).getFirst();
-        } else {
-            return null;
+    protected synchronized MySensor getFirstSensor(SensorType sensorType, DeviceType deviceType) {
+        EnumMap<DeviceType, LinkedList<MySensor>> deviceMap = mAllSensorsMapMap.get(sensorType);
+        if (deviceMap != null) {
+            LinkedList<MySensor> sensorList = deviceMap.get(deviceType);
+            if (sensorList != null) {
+                return sensorList.peekFirst();
+            }
         }
+        return null;
     }
 
 

@@ -37,7 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment
+import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaUploadFragment
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.toMapSegment
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentOnMapScreen

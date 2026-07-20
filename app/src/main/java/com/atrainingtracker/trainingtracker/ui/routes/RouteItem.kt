@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -59,76 +60,89 @@ fun RouteItem(
     var showContextMenu by remember { mutableStateOf(false) }
     var confirmDeletion by remember { mutableStateOf(false) }
 
-    MappableListItem(
-        modifier = modifier,
-        onClick = { onMapClick(summary.id) }
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            // 1. TOP: Route Summary Header (Title, Source, Metrics, Sport Icon, Switch)
-            RouteSummaryHeader(
-                summary = summary,
-                onToggleSelection = { onToggleSelection(summary.id, it) },
-                switchScale = 0.6f,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .combinedClickable(
-                        onClick = { onHeaderClick(summary.id) },
-                        onLongClick = { showContextMenu = true }
-                    )
-            )
+    Box {
+        MappableListItem(
+            modifier = modifier,
+            onClick = { onMapClick(summary.id) }
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // 1. TOP: Route Summary Header (Title, Source, Metrics, Sport Icon, Switch)
+                RouteSummaryHeader(
+                    summary = summary,
+                    onToggleSelection = { onToggleSelection(summary.id, it) },
+                    switchScale = 0.6f,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .combinedClickable(
+                            onClick = { onHeaderClick(summary.id) },
+                            onLongClick = { showContextMenu = true }
+                        )
+                )
 
-            // 2. MIDDLE: Map Preview
-            // We use height(200.dp) to give the route map more prominence than the small segment square
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-            ) {
-                PathPreviewMap(
-                    path = MapRoute(
-                        id = summary.id,
-                        name = summary.name,
-                        isSelected = summary.isSelected,
-                        bSportType = summary.bSportType,
-                        path = pathPoints
-                    ),
-                    modifier = Modifier.fillMaxSize(),
-                    onMapClick = { onMapClick(summary.id) }
+                // 2. MIDDLE: Map Preview
+                // We use height(200.dp) to give the route map more prominence than the small segment square
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                ) {
+                    PathPreviewMap(
+                        path = MapRoute(
+                            id = summary.id,
+                            name = summary.name,
+                            isSelected = summary.isSelected,
+                            bSportType = summary.bSportType,
+                            path = pathPoints
+                        ),
+                        modifier = Modifier.fillMaxSize(),
+                        start = pathPoints.firstOrNull()?.latLng,
+                        end = pathPoints.lastOrNull()?.latLng,
+                        onMapClick = { onMapClick(summary.id) }
+                    )
+                }
+
+                // 3. BOTTOM: Elevation Profile
+                ElevationProfile(
+                    pathPoints = pathPoints,
+                    currentDistance = null, // No seeker in list view
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onMapClick(summary.id) }
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
-
-            // 3. BOTTOM: Elevation Profile
-            ElevationProfile(
-                pathPoints = pathPoints,
-                currentDistance = null, // No seeker in list view
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onMapClick(summary.id) }
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            )
         }
 
-        // Context Menu for deletion
-        DropdownMenu(
-            expanded = showContextMenu,
-            onDismissRequest = { showContextMenu = false }
+        // Context Menu for deletion (Pinned to Top-Start to cover the header area)
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 12.dp, top = 8.dp)
         ) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.delete)) },
-                onClick = { showContextMenu = false; confirmDeletion = true },
-                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
-            )
+            DropdownMenu(
+                expanded = showContextMenu,
+                onDismissRequest = { showContextMenu = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.delete)) },
+                    onClick = {
+                        showContextMenu = false
+                        confirmDeletion = true
+                    },
+                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                )
+            }
         }
+    }
 
-        // Delete Confirmation Dialog
-        if (confirmDeletion) {
-            DeleteConfirmationDialog(
-                title = stringResource(R.string.delete),
-                message = stringResource(R.string.really_delete_format, summary.name),
-                onConfirm = { onDeleteConfirmed(summary.id) },
-                onDismiss = { confirmDeletion = false }
-            )
-        }
+    // Delete Confirmation Dialog
+    if (confirmDeletion) {
+        DeleteConfirmationDialog(
+            title = stringResource(R.string.delete),
+            message = stringResource(R.string.really_delete_format, summary.name),
+            onConfirm = { onDeleteConfirmed(summary.id) },
+            onDismiss = { confirmDeletion = false }
+        )
     }
 }
 

@@ -26,6 +26,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
@@ -34,6 +37,8 @@ import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 
@@ -41,10 +46,14 @@ import com.google.maps.android.compose.rememberCameraPositionState
 fun PathPreviewMap(
     path: MappablePath?,
     modifier: Modifier = Modifier,
+    start: LatLng? = null,
+    end: LatLng? = null,
+    apex: LatLng? = null,
     onMapClick: () -> Unit = {}
 ) {
     val cameraPositionState = rememberCameraPositionState()
     var isMapLoaded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     GoogleMap(
         modifier = modifier,
@@ -69,11 +78,39 @@ fun PathPreviewMap(
                 width = 8f
             )
 
+            // --- START, END, APEX MARKERS (SCRUM-233) ---
+            val actualStart = start ?: path.latLngs.firstOrNull()
+            val actualEnd = end ?: path.latLngs.lastOrNull()
+            val actualApex = apex
+
+            actualStart?.let {
+                Marker(
+                    state = remember(it) { MarkerState(position = it) },
+                    icon = remember { createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint) }
+                )
+            }
+            actualEnd?.let {
+                Marker(
+                    state = remember(it) { MarkerState(position = it) },
+                    icon = remember { createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint) }
+                )
+            }
+            actualApex?.let {
+                Marker(
+                    state = remember(it) { MarkerState(position = it) },
+                    icon = remember { createSensorMarker(context, R.drawable.ic_distance, TTColor.ApexPoint) }
+                )
+            }
+
             // Auto-zoom to fit the segment whenever pathPoints change
-            LaunchedEffect(path, isMapLoaded) {
+            LaunchedEffect(path, actualStart, actualEnd, actualApex, isMapLoaded) {
                 if (isMapLoaded && path.latLngs.isNotEmpty()) {
                     val boundsBuilder = LatLngBounds.Builder()
                     path.latLngs.forEach { boundsBuilder.include(it) }
+                    actualStart?.let { boundsBuilder.include(it) }
+                    actualEnd?.let { boundsBuilder.include(it) }
+                    actualApex?.let { boundsBuilder.include(it) }
+
                     try {
                         cameraPositionState.move(
                             CameraUpdateFactory.newLatLngBounds(

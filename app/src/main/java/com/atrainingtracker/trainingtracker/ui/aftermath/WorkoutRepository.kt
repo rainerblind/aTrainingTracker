@@ -29,23 +29,20 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.withContext
-
-
-
+import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
+import com.atrainingtracker.trainingtracker.database.RouteSource
+import com.atrainingtracker.trainingtracker.database.RouteSummary
+import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster
@@ -55,13 +52,23 @@ import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
+import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 /**
@@ -160,7 +167,7 @@ class WorkoutRepository private constructor(private val application: Application
                 TrackerService.WORKOUT_UPDATED_INTENT, TrackerService.TRACKING_FINISHED_INTENT -> {
                     if (workoutId != -1L) {
                         if (DEBUG) Log.d(TAG, "Workout update broadcast received for workoutId=$workoutId. Reloading.")
-                        reloadWorkoutData(workoutId)
+                        launch { reloadWorkoutData(workoutId) }
                     }
                 }
             }
@@ -240,6 +247,83 @@ class WorkoutRepository private constructor(private val application: Application
         }
         points
     }
+
+    private val extremaSensorTypes = arrayOf(
+        SensorType.ALTITUDE, SensorType.TEMPERATURE,
+        SensorType.HR, SensorType.POWER, SensorType.LINE_DISTANCE_m, SensorType.SPEED_mps
+    )
+
+    suspend fun getWorkoutMarkers(workoutData: WorkoutData): List<LocationMarker> = withContext(Dispatchers.IO) {
+        val workoutId = workoutData.id
+        val markerList = mutableListOf<LocationMarker>()
+
+        // 1. Primary spatial markers (Fast, from WorkoutData)
+        workoutData.startLatLng?.let {
+            markerList.add(LocationMarker(it, R.drawable.control_start, application.getString(R.string.Start)))
+        }
+        workoutData.endLatLng?.let {
+            markerList.add(LocationMarker(it, R.drawable.control_stop, application.getString(R.string.Stop)))
+        }
+        workoutData.maxDisplacementLatLng?.let {
+            markerList.add(LocationMarker(it, R.drawable.ic_distance, application.getString(R.string.max_line_distance)))
+        }
+
+        // 2. Sensor Max/Min Markers (from Extremum table)
+        extremaSensorTypes.forEach { sensor ->
+            // Skip line distance as it's already added as the Apex above
+            if (sensor != SensorType.LINE_DISTANCE_m) {
+                addExtremaMarkerIfPresent(workoutId, sensor, ExtremaType.MAX, markerList)
+                if (sensor == SensorType.ALTITUDE || sensor == SensorType.TEMPERATURE) {
+                    addExtremaMarkerIfPresent(workoutId, sensor, ExtremaType.MIN, markerList)
+                }
+            }
+        }
+        markerList
+    }
+
+    private fun addExtremaMarkerIfPresent(
+        workoutId: Long,
+        sensor: SensorType,
+        extremaType: ExtremaType,
+        markerList: MutableList<LocationMarker>
+    ) {
+        // Try to get both from the summary record first (efficient, new way)
+        var value: Double? = summariesManager.getExtremaValue(workoutId, sensor, extremaType)
+        var pos: LatLng? = summariesManager.getExtremaPosition(workoutId, sensor, extremaType)
+
+        // Fallback for legacy data if position is missing in the summary table
+        if (pos == null) {
+            val legacyExtrema = samplesManager.getExtremaPosition(summariesManager, workoutId, sensor, extremaType)
+            if (legacyExtrema != null) {
+                pos = legacyExtrema.latLng
+                value = legacyExtrema.value
+            }
+        }
+
+        if (value != null && pos != null) {
+            val title = application.getString(
+                R.string.location_extrema_format,
+                extremaType.toString(), // Use localized name ("Max", "Min")
+                sensor.getFullName(application),
+                sensor.myFormatter.format(value),
+                application.getString(MyHelper.getShortUnitsId(sensor))
+            )
+            markerList.add(LocationMarker(pos, getExtremaIcon(sensor, extremaType), title))
+        }
+    }
+
+    private fun getExtremaIcon(sensor: SensorType, type: ExtremaType): Int {
+        return when (sensor) {
+            SensorType.ALTITUDE -> if (type == ExtremaType.MAX) { R.drawable.ic_altitude_max} else { R.drawable.ic_altitude_min }
+            SensorType.TEMPERATURE -> if (type == ExtremaType.MAX) R.drawable.ic_temp_max else R.drawable.ic_temp_min
+            SensorType.HR -> R.drawable.ic_heart_rate
+            SensorType.POWER -> R.drawable.ic_power
+            SensorType.LINE_DISTANCE_m -> R.drawable.ic_distance
+            SensorType.SPEED_mps -> R.drawable.ic_speed
+            else -> -1
+        }
+    }
+
 
 
     init {
@@ -356,17 +440,17 @@ class WorkoutRepository private constructor(private val application: Application
         updateWorkoutInMemory(workoutId) { it.copy(workoutName = name) }
     }
 
-    fun updateExtremaValue(workoutId: Long, sensorType: SensorType, extremaType: com.atrainingtracker.trainingtracker.database.ExtremaType, value: Double, position: LatLng? = null) {
+    fun updateExtremaValue(workoutId: Long, sensorType: SensorType, extremaType: ExtremaType, value: Double, position: LatLng? = null) {
         val formattedValue = sensorType.myFormatter.format(value)
         updateWorkoutInMemory(workoutId) { workout ->
             var updated = workout
 
             // 1. Update specific raw fields
             when (sensorType) {
-                SensorType.LINE_DISTANCE_m -> if (extremaType == com.atrainingtracker.trainingtracker.database.ExtremaType.MAX) updated = updated.copy(maxDisplacement = value)
+                SensorType.LINE_DISTANCE_m -> if (extremaType == ExtremaType.MAX) updated = updated.copy(maxDisplacement = value)
                 SensorType.ALTITUDE -> {
-                    if (extremaType == com.atrainingtracker.trainingtracker.database.ExtremaType.MIN) updated = updated.copy(minAltitude = value)
-                    if (extremaType == com.atrainingtracker.trainingtracker.database.ExtremaType.MAX) updated = updated.copy(maxAltitude = value)
+                    if (extremaType == ExtremaType.MIN) updated = updated.copy(minAltitude = value)
+                    if (extremaType == ExtremaType.MAX) updated = updated.copy(maxAltitude = value)
                 }
                 else -> {}
             }
@@ -376,9 +460,9 @@ class WorkoutRepository private constructor(private val application: Application
             val updatedRows = updated.extremaRows.map { row ->
                 if (row.sensorLabel == sensorLabel) {
                     when (extremaType) {
-                        com.atrainingtracker.trainingtracker.database.ExtremaType.MIN -> row.copy(minValue = formattedValue, minLatLng = position)
-                        com.atrainingtracker.trainingtracker.database.ExtremaType.AVG -> row.copy(avgValue = formattedValue)
-                        com.atrainingtracker.trainingtracker.database.ExtremaType.MAX -> row.copy(maxValue = formattedValue, maxLatLng = position)
+                        ExtremaType.MIN -> row.copy(minValue = formattedValue, minLatLng = position)
+                        ExtremaType.AVG -> row.copy(avgValue = formattedValue)
+                        ExtremaType.MAX -> row.copy(maxValue = formattedValue, maxLatLng = position)
                         else -> row
                     }
                 } else row
@@ -461,10 +545,10 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     // Function to update the workout data from the database but keep transient metadata
-    private fun reloadWorkoutData(workoutId: Long) {
+    private suspend fun reloadWorkoutData(workoutId: Long) {
         if (DEBUG) Log.i(TAG, "reloadWorkoutData: workoutId=$workoutId")
 
-        launch(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
             summariesManager.getWorkoutCursor(workoutId).use { cursor ->
                 if (cursor?.moveToFirst() == true) {
                     // Get the fresh data from the database.
@@ -494,6 +578,33 @@ class WorkoutRepository private constructor(private val application: Application
 
             // 2. Trigger export with the new data
             exportManager.exportWorkout(userEditedWorkout)
+
+            // --- LEARNING LOOP (SCRUM-44) ---
+            if (userEditedWorkout.startLatLng != null && userEditedWorkout.endLatLng != null && userEditedWorkout.maxDisplacementLatLng != null) {
+                val finalName = userEditedWorkout.workoutName.replace(Regex(" #\\d+$"), "").trim()
+                // Only learn names that aren't the default timestamp
+                if (finalName.isNotEmpty() && finalName != userEditedWorkout.fileBaseName) {
+                    val engine = com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.getInstance(application)
+                    val learnedId = engine.learnFromWorkout(
+                        userEditedWorkout.startLatLng,
+                        userEditedWorkout.endLatLng,
+                        userEditedWorkout.maxDisplacementLatLng,
+                        userEditedWorkout.totalDistance,
+                        finalName,
+                        userEditedWorkout.sportId,
+                        userEditedWorkout.clusterId
+                    )
+                    
+                    // persist link and increment count if it's a new or changed association (SCRUM-228)
+                    if (userEditedWorkout.clusterId != learnedId) {
+                        engine.assignClusterToWorkout(application, workoutId, learnedId)
+                        // reload from DB to ensure memory and UI are in sync with inferred identity (SCRUM-254)
+                        reloadWorkoutData(workoutId)
+                        saveFinishedEvent.postValue(Pair(workoutId, true))
+                        return@launch
+                    }
+                }
+            }
 
             // 3. Update memory surgically - perform the merge ATOMICALLY inside update
             Log.i(TAG, "update from saveWorkout")
@@ -595,7 +706,7 @@ class WorkoutRepository private constructor(private val application: Application
         val points = getWorkoutTrackPoints(workout.id, TrackType.BEST)
         if (points.isEmpty()) return@withContext null
 
-        val routeSummary = com.atrainingtracker.trainingtracker.database.RouteSummary(
+        val routeSummary = RouteSummary(
             id = 0, // Auto-increment
             externalId = workout.fileBaseName ?: "",
             name = workout.workoutName,
@@ -604,10 +715,25 @@ class WorkoutRepository private constructor(private val application: Application
             distance = workout.totalDistance,
             elevationGain = workout.ascentMeters.toDouble(),
             bSportType = workout.bSportType,
-            source = com.atrainingtracker.trainingtracker.database.RouteSource.WORKOUT
+            source = RouteSource.WORKOUT
         )
 
         val routesRepo = RoutesRepository.getInstance(application)
         routesRepo.insertRoute(routeSummary, points)
     }
+
+    /**
+     * Assigns a cluster to a workout and automatically propagates sport-specific settings (SCRUM-200).
+     */
+    fun assignClusterToWorkout(workoutId: Long, clusterId: Long) {
+        launch(Dispatchers.IO) {
+            WorkoutClusterEngine.getInstance(application)
+                .assignClusterToWorkout(application, workoutId, clusterId, forceIdentity = true)
+
+            // Reload fresh data from DB to propagate inferred identity to UI
+            reloadWorkoutData(workoutId)
+            loadWorkout(workoutId)
+        }
+    }
+
 }

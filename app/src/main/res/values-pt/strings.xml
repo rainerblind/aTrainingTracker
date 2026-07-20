@@ -42,11 +42,8 @@
     <string name="Lap">Volta</string>
     <string name="Equipment">Equipamento</string>
     <string name="edit_device">editar dispositivo</string>
-    <string name="edit_location">editar local</string>
-    <string name="Edit_Location">Editar Local</string>
     <string name="edit_workout">editar treino</string>
     <string name="save_as_route">salvar como rota</string>
-    <string name="Edit_Location_Message">Editar o nome e a altitude deste local</string>
     <string name="edit_wheel_circumference">editar circunferência da roda</string>
     <string name="edit_calibration_factor">editar fator de calibração</string>
     <string name="delete">excluir</string>
@@ -58,7 +55,6 @@
     <string name="deleteWorkoutsThatAreOlderThanDays">excluir treinos com mais de … dias</string>
     <string name="delete_sensor">excluir</string>
     <string name="really_delete_workout">Deseja realmente excluir este treino?</string>
-    <string name="really_delete_location">Deseja realmente excluir este local?</string>
     <string name="really_delete_pebble_view_format">Deseja realmente excluir a visualização Pebble "%1$s"?</string>
     <string name="really_delete_view_format">Deseja realmente excluir a visualização de treino "%1$s"?</string>
     <string name="deleting_please_wait">Excluindo treino …\npor favor aguarde</string>
@@ -66,9 +62,8 @@
     <string name="calculating_extrema_values">Calculando valores mín, méd e máx…</string>
     <string name="calculating_extrema_value_for">calculando %1$s de %2$s</string>
     <string name="calculating_max_away_point">calculando ponto mais distante</string>
-    <string name="initializing">inicializando</string>
-    <string name="delete_location">excluir local</string>
-    <string name="show_HW_details">detalhes do HW</string>
+    <string name="initializing">initializing</string>
+    <string name="show_HW_details">mostrar detalhes do HW</string>
     <string name="show_google_maps_licence">Info legal do Google Maps</string>
     <string name="play_services_not_installed">Google Play services não instalado.</string>
     <string name="Preferences">Preferências</string>
@@ -160,7 +155,6 @@
     <string name="device_type_altitude_from_pressure">altitude por pressão</string>
     <string name="device_type_short_altitude_from_pressure">altitude</string>
     <string name="device_type_sensor_manager">gestor de sensores</string>
-    <string name="device_type_short_sensor_manager">gest. sensores</string>
     <string name="device_type_clock">relógio</string>
     <string name="device_type_short_clock">relógio</string>
 
@@ -322,13 +316,13 @@
     <string name="prefsPebbleWatchappsSummary">embutido</string>
     <string name="prefsConfigurePebbleDisplaysTitle">Configurar ecrãs Pebble</string>
 
-    <string name="prefsExportTitle">Exportação de arquivos</string>
+    <string name="prefsExportTitle">Exportação</string>
     <string name="prefsExportSummary">Formatos de exportação</string>
 
     <string name="prefsUploadTitle">Carregamento</string>
     <string name="prefsUploadSummary">Cloud e comunidades online</string>
     <string name="prefsOnlineStorage">Armazenamento online</string>
-    <string name="prefsOnlineCommunities">Comunidades online</string>
+    <string name="prefsOnlineCommunities">Sincronização</string>
     <string name="prefsUploadToDropboxSummary">Carregar para o Dropbox</string>
     <string name="prefsUploadToStravaSummary">Carregar treinos para o Strava</string>
     <string name="prefsUploadToRunkeeperSummary">Carregar treinos para o Runkeeper</string>
@@ -492,37 +486,11 @@
     <string name="paused_bike"> uma saída</string>
     <string name="paused_other">treino</string>
     <string name="export_status">Estado da exportação</string>
-    <string name="LocationsActivityLabel">Locais</string>
-    <string name="getting_start_locations">Buscando locais de partida.</string>
     <string name="average">média</string>
     <string name="start">partida</string>
     <string name="max_line_distance">mais distante</string>
     <string name="end">chegada</string>
-    <string name="my_locations">Meus Locais</string>
     <string name="drawer__settings">Ajustes</string>
-    <string name="get_extremaType_of_sportType_format">Obter posições %1$s dos seus %2$s treinos.</string>
-    <string name="getting_my_locations">Buscando locais conhecidos.</string>
-    <string name="editLocationName">Nome:</string>
-    <string name="LocationAltitude">Altitude:</string>
-    <string name="LocationRadius">Raio:</string>
-    <string name="edit_my_location">Editar Local</string>
-    <string name="create_new_my_location">Criando novo local conhecido.</string>
-    <string name="calc_workout_name">Calculando nome do treino.</string>
-    <string name="calc_map_polyline">Calculando traçado.</string>
-    <string name="edit_counter">editar</string>
-    <string name="edit_counter_format">Editar contador %1$s.</string>
-    <string name="editWorkoutNameCounters">Editar contadores de nome.</string>
-    <string name="StartLocation">Ponto de partida:</string>
-    <string name="EndLocation">Ponto de chegada:</string>
-    <string name="NameScheme">Esquema de nomes:</string>
-    <string name="addCounter">Adicionar contador</string>
-    <string name="addVia">Adicionar via [local distante].</string>
-    <string name="configureWorkoutNameSchemes">Configure nomes automáticos.</string>
-    <string name="via_format">&#032;via %1$s</string>
-    <string name="loop_around_format">&#032;para %1$s e volta</string>
-    <string name="really_delete_format">Deseja excluir \"%1$s\"?</string>
-    <string name="workout_name_scheme">Esquema de nome</string>
-    <string name="workout_name_schemes">Esquemas de nomes</string>
     <string name="starred_run_segments">Corrida</string>
     <string name="starred_bike_segments">Bike</string>
     <string name="segments">Segmentos Strava</string>
@@ -536,14 +504,14 @@
     <string name="do_not_check_again">não verificar novamente</string>
     <string name="check_ANT_installation">verificar instalação ANT</string>
     <string name="forcePortrait">Orientação vertical</string>
-    <string name="Display">Ajustes de ecrã</string>
+    <string name="Display">Ecrã</string>
     <string name="smoothing">Suavização de valores</string>
     <string name="powerSmoothingTitle">Fator α suavização potência</string>
     <string name="powerSmoothingTitle_format">Suavização potência: α=%1$f</string>
     <string name="powerSmoothingSummary">Fator 0 &lt; α &#8804; 1 para suavizar a potência.</string>
     <string name="alpha_must_be_between_0_and_1">α deve estar entre 0 e 1.</string>
 
-    <string name="Search_Settings">Ajustes de busca</string>
+    <string name="Search_Settings">Busca</string>
     <string name="prefsNumberOfSearchTriesTitle">Rondas de busca</string>
     <string name="prefStartSearchTitle">Iniciar busca quando …</string>
     <string name="prefsStartSearchWhenAppStartsTitle">App inicia</string>
@@ -809,7 +777,9 @@
     <!-- drawer -->
     <string name="drawer__training">Treino</string>
     <string name="drawer__maps">Mapas</string>
-    <string name="drawer__my_stuff">Meus Dados</string>
+    <string name="drawer__my_stuff">Equipamento</string>
+    <string name="drawer__ecosystem">Ecossistema</string>
+    <string name="drawer__system">Sistema</string>
 
     <!-- sensor view settings -->
     <string name="source">Origem</string>
@@ -924,6 +894,8 @@
     <string name="routes">Rotas</string>
     <string name="no_routes_available">Nenhuma rota %s.</string>
     <string name="absolutely_no_routes_available">Nenhuma rota disponível.</string>
+    <string name="no_clusters_available">Nenhum trajeto %s disponível.</string>
+    <string name="absolutely_no_clusters_available">Nenhum trajeto disponível.</string>
     <string name="routes_import_hint">Importa um GPX do \"+\" ou do gestor de arquivos.</string>
     <string name="route_edit">Modificar rota</string>
     <string name="route_sport_type">Desporto</string>
@@ -972,6 +944,10 @@
 
     <string name="strava_connected_status">Conectado ao Strava</string>
     <string name="strava_disconnected_status">Não conectado ao Strava</string>
+    <string name="dropbox_connected_status">Conectado ao Dropbox</string>
+    <string name="dropbox_disconnected_status">Não conectado ao Dropbox</string>
+    <string name="dropbox_disconnect">Desconectar do Dropbox</string>
+    <string name="dropbox_connect">Conectar ao Dropbox</string>
     <string name="strava_disconnect">Desconectar do Strava</string>
     <string name="strava_overall_rank_description">Rank global #%1$d</string>
     <string name="no_upload">- Sem carregamento -</string>
@@ -992,4 +968,79 @@
     <string name="track_type_fused">Google Fused</string>
     <string name="track_type_network">Rede</string>
     <string name="legend">Legenda</string>
+    <string name="cluster_statistics_title">Estatísticas do treino</string>
+    <string name="cluster_total_recordings">Total de gravações</string>
+    <string name="cluster_average_distance">Distância média</string>
+    <string name="cluster_recordings_format">%1$d gravações</string>
+    <string name="cluster_ref_distance_label">Ref: %1$s</string>
+    <string name="cluster_tuning_title">Parâmetros de agrupamento</string>
+    <string name="cluster_tuning_master_label">Sensibilidade de agrupamento</string>
+    <string name="cluster_tuning_strict">Rigoroso</string>
+    <string name="cluster_tuning_relaxed">Relaxado</string>
+    <string name="cluster_tuning_show_details">Mostrar parâmetros detalhados</string>
+    <string name="cluster_tuning_endpoint_label">Tolerância do ponto final</string>
+    <string name="cluster_tuning_apex_label">Tolerância do ápice (deslocamento máx.)</string>
+    <string name="cluster_tuning_distance_label">Tolerância de distância</string>
+    <string name="cluster_tuning_recalculate_button">Recalcular todos os grupos</string>
+    <string name="cluster_tuning_warning">Aviso: Recalcular apagará todos os nomes de grupos aprendidos e agrupamentos, reconstruindo-os a partir do histórico usando estes novos parâmetros.</string>
+    <string name="cluster_tuning_recalculating">Recalculando grupos…</string>
+    <string name="cluster_tuning_take_while">Isto pode demorar um pouco.</string>
+    <string name="cluster_move_workout_title">Mover treino</string>
+    <string name="cluster_move_workout_hint">Selecionar grupo de rota de destino (pontuação de similaridade entre parênteses, menor é melhor):</string>
+    <string name="cluster_score_format">Pontuação: %1$.3f | %2$d gravações</string>
+    <string name="cluster_score_format_with_dist">Pontuação: %1$.3f | %2$d gravações | %3$s</string>
+    <string name="cluster_suggestions_title">Treinos sugeridos (pontuação menor é melhor):</string>
+    <string name="cluster_manual_title">Adicionar grupo de treino</string>
+    <string name="cluster_manual_pick_start">Escolher início</string>
+    <string name="cluster_manual_pick_end">Escolher fim</string>
+    <string name="cluster_manual_pick_apex">Escolher ápice (mais distante)</string>
+    <string name="cluster_manual_distance_hint">Distância do treino (%s)</string>
+    <string name="cluster_manual_missing_points">Por favor, escolha todos os 3 pontos espaciais no mapa.</string>
+    <string name="cluster_edit_fingerprint">Editar impressão do treino</string>
+    <string name="cluster_edit_fingerprint_hint">Ajuste o início, o fim ou o ápice selecionando o tipo e tocando no mapa.</string>
+    <string name="cluster_tuning_content_desc">Ajustar agrupamento</string>
+    <string name="cluster_move_content_desc">Mover grupo</string>
+    <string name="cluster_save_fingerprint_content_desc">Guardar impressão</string>
+    <string name="cluster_edit_fingerprint_content_desc">Editar impressão</string>
+    <string name="cluster_manual_pick_hint">Escolher impressão espacial no mapa:</string>
+    <string name="cluster_manual_tap_map_format">Toque no mapa para definir %s</string>
+    <string name="cluster_clear_content_desc">Limpar</string>
+    <string name="cluster_default_name_format">Treino em %s</string>
+    <string name="cluster_equipment_mapping_format">→ %s</string>
+    <string name="cluster_score_brackets_format">(%1$.3f)</string>
+    <string name="cluster_suggestions_content_desc">Sugestões</string>
+    <string name="cluster_autoname_format">%1$s #%2$d</string>
+    <string name="cluster_delete_title">Excluir grupo de treino</string>
+    <string name="cluster_delete_message">Tem certeza de que deseja excluir este grupo de treino? Isso não excluirá os treinos associados, mas eles não serão mais agrupados neste grupo.</string>
+
+    <string name="unclustered">Aberto</string>
+    <string name="no_unclustered_workouts">Todos os treinos estão agrupados.</string>
+    <string name="error_sharing_failed">Falha na partilha. Por favor, tente novamente.</string>
+    <string name="battery_level">Nível da bateria</string>
+    <string name="calc_map_polyline">Calculando polilinha do mapa.</string>
+    <string name="config_tracking__showElevationProfile">Perfil de elevação</string>
+    <string name="current_value">Valor atual</string>
+    <string name="editLocationName">Nome:</string>
+    <string name="edit_my_location">Editar localização</string>
+    <string name="get_extremaType_of_sportType_format">Obter as %1 posições dos seus %2 treinos.</string>
+    <string name="getting_my_locations">Procurando localizações conhecidas.</string>
+    <string name="no_sport_types_available">Nenhum tipo de desporto disponível</string>
+    <string name="no_workouts_available">Nenhum treino disponível</string>
+    <string name="really_delete_format">Deseja realmente excluir "%1"?</string>
+    <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/master/privacy.md</string>
+    <string name="LocationNameText">Casa</string>
+    <string name="LocationAltitudeText">123 m</string>
+    <string name="latLongEquals">lat=%1, long=%2</string>
+    <string name="LocationsActivityLabel">Localizações</string>
+    <string name="getting_start_locations">Procurando locais de partida.</string>
+    <string name="my_locations">Trajetos favoritos</string>
+    <string name="LocationAltitude">Altitude:</string>
+    <string name="LocationRadius">Raio:</string>
+    <string name="concatenate_last_format_or">%1, ou %2</string>
+    <string name="location_permission_text_pre_Android10">Permissão de localização necessária nos ajustes do sistema</string>
+    <string name="all_sports">+ todos os desportos +</string>
+    <string name="all_equipment">+ todo o equipamento +</string>
+    <string name="all_shoes">+ todos os calçados +</string>
+    <string name="all_bikes">+ todas as bikes +</string>
+    <string name="no_equipment">- nenhum -</string>
 </resources>

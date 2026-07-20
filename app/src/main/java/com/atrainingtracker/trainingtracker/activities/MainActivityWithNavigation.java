@@ -47,16 +47,24 @@ import android.os.IBinder;
 import com.atrainingtracker.banalservice.ui.sporttype.SportTypeListFragment;
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment;
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory;
-import com.atrainingtracker.trainingtracker.fragments.preferences.PebbleScreenFragment;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents;
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsFragment;
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment;
+import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersFragment;
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
 import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack;
 import com.atrainingtracker.trainingtracker.ui.routes.RoutesFragment;
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegmentsFragment;
+import com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsDialogFragment;
+import com.atrainingtracker.trainingtracker.ui.settings.dropbox.CloudUploadFragment;
+import com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialogFragment;
+import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsFragment;
+import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaUploadFragment;
+import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ActivityTypeSelectionHelper;
+import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ConfigTrackingTabsActivity;
+import com.atrainingtracker.trainingtracker.ui.settings.units.UnitsSettingsDialogFragment;
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
 import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc;
@@ -101,13 +109,6 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
-import com.atrainingtracker.trainingtracker.fragments.preferences.CloudUploadFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.FancyWorkoutNameListFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.RootPrefsFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.RunkeeperUploadFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.SearchFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.TrainingpeaksUploadFragment;
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
 
 import java.util.ArrayList;
@@ -778,23 +779,15 @@ public class MainActivityWithNavigation
 
         mDrawerLayout.closeDrawers();
 
-        // uncheck previous menuItem
-        if (mPreviousMenuItem != null) {
-            mPreviousMenuItem.setChecked(false);
-        }
-        mPreviousMenuItem = menuItem;
-        menuItem.setChecked(true);
-
         // just for debugging
         // if (DEBUG) Toast.makeText(getApplicationContext(), menuItem.getTitle(), Toast.LENGTH_SHORT).show();
-
-        // save
-        mSelectedFragmentId = menuItem.getItemId();
 
         mFragment = null;
         String tag = null;
 
-        switch (mSelectedFragmentId) {
+        int itemId = menuItem.getItemId();
+
+        switch (itemId) {
             case R.id.drawer_start_tracking:
                 mFragment = TrackingTabsFragment.newInstance();
                 tag = TrackingTabsFragment.TAG;
@@ -839,16 +832,56 @@ public class MainActivityWithNavigation
                 mFragment = EquipmentFragment.newInstance(1);
                 tag = EquipmentFragment.TAG;
                 break;
-/* NO_MY_LOCATIONS
-            case R.id.drawer_my_locations:
-                mFragment = new MyLocationsFragment();
-                tag = MyLocationsFragment.TAG;
-                break;
- */
 
-            case R.id.drawer_settings:
-                mFragment = new RootPrefsFragment();
-                tag = RootPrefsFragment.TAG;
+            case R.id.drawer_my_locations:
+                mFragment = WorkoutClustersFragment.Companion.newInstance();
+                tag = WorkoutClustersFragment.TAG;
+                break;
+
+            case R.id.drawer_sport_types:
+                mFragment = SportTypeListFragment.newInstance();
+                tag = SportTypeListFragment.TAG;
+                break;
+
+            case R.id.drawer_training_zones:
+                mFragment = ZoneSettingsFragment.newInstance();
+                tag = ZoneSettingsFragment.TAG;
+                break;
+
+            case R.id.drawer_strava:
+                mFragment = new StravaUploadFragment();
+                tag = StravaUploadFragment.class.getName();
+                break;
+
+            case R.id.drawer_dropbox:
+                mFragment = new CloudUploadFragment();
+                tag = CloudUploadFragment.class.getName();
+                break;
+
+            case R.id.drawer_export:
+                mDrawerLayout.closeDrawer(GravityCompat.START);
+                ExportSettingsDialogFragment.newInstance().show(getSupportFragmentManager(), ExportSettingsDialogFragment.TAG);
+                return false;
+
+            case R.id.drawer_tracking_layouts:
+                mDrawerLayout.closeDrawer(GravityCompat.START);
+                Intent configIntent = new Intent(this, ConfigTrackingTabsActivity.class);
+                startActivity(configIntent);
+                return false;
+
+            case R.id.drawer_units:
+                mDrawerLayout.closeDrawer(GravityCompat.START);
+                UnitsSettingsDialogFragment.newInstance().show(getSupportFragmentManager(), UnitsSettingsDialogFragment.TAG);
+                return false;
+
+            case R.id.drawer_display_settings:
+                mDrawerLayout.closeDrawer(GravityCompat.START);
+                DisplaySettingsDialogFragment.newInstance().show(getSupportFragmentManager(), DisplaySettingsDialogFragment.TAG);
+                return false;
+
+            case R.id.drawer_search_settings:
+                mFragment = SearchSettingsFragment.newInstance();
+                tag = SearchSettingsFragment.TAG;
                 break;
 
             case R.id.drawer_privacy_policy:
@@ -862,6 +895,16 @@ public class MainActivityWithNavigation
         }
 
         if (mFragment != null) {
+            // Update the checked state ONLY if a fragment transition occurred (ATT-245)
+            if (mPreviousMenuItem != null) {
+                mPreviousMenuItem.setChecked(false);
+            }
+            mPreviousMenuItem = menuItem;
+            menuItem.setChecked(true);
+
+            // save
+            mSelectedFragmentId = itemId;
+
             // Clear the backstack before switching top-level fragments
             // This prevents Preference fragments or other sub-screens from
             // overlapping when the user presses 'Back' later.
@@ -873,6 +916,7 @@ public class MainActivityWithNavigation
             fragmentTransaction.commit();
         }
 
+        mDrawerLayout.closeDrawer(GravityCompat.START);
         return true;
     }
 
@@ -950,18 +994,11 @@ public class MainActivityWithNavigation
         String key = preferenceScreen.getKey();
         Fragment fragment = null;
         switch (key) {
-            case "root" -> fragment = new RootPrefsFragment();
             case "sportTypes" -> fragment = new SportTypeListFragment();
             case "cloudUpload" -> fragment = new CloudUploadFragment();
             case TrainingApplication.PREFERENCE_SCREEN_STRAVA ->
                     fragment = new StravaUploadFragment();
-            case TrainingApplication.PREFERENCE_SCREEN_RUNKEEPER ->
-                    fragment = new RunkeeperUploadFragment();
-            case TrainingApplication.PREFERENCE_SCREEN_TRAINING_PEAKS ->
-                    fragment = new TrainingpeaksUploadFragment();
-            case "pebbleScreen" -> fragment = new PebbleScreenFragment();
-            case "search_settings" -> fragment = new SearchFragment();
-            case "fancyWorkoutNames" -> fragment = new FancyWorkoutNameListFragment();
+            case "search_settings" -> fragment = new SearchSettingsFragment();
             default -> Log.d(TAG, "WTF: unknown key");
         }
 

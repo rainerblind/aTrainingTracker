@@ -20,15 +20,11 @@ package com.atrainingtracker.trainingtracker.ui.map
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
-import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
-import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
@@ -61,18 +57,12 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
     val uiState = _uiState.asStateFlow()
 
     // TODO: Move to WorkoutRepository.
-    private val summariesDb = WorkoutSummariesDatabaseManager.getInstance(application)
-    private val samplesDb = WorkoutSamplesDatabaseManager.getInstance(application)
 
     private val workoutRepository = WorkoutRepository.getInstance(application)
     private val segmentsRepository = SegmentsRepository.getInstance(application)
     private val routesRepository = RoutesRepository.getInstance(application)
     private val prefManager = com.atrainingtracker.trainingtracker.MyPreferenceManager(application)
 
-    private val extremaSensorTypes = arrayOf(
-        SensorType.ALTITUDE, SensorType.TEMPERATURE,
-        SensorType.HR, SensorType.POWER, SensorType.LINE_DISTANCE_m, SensorType.SPEED_mps
-    )
 
     val enabledTrackTypes: StateFlow<Set<TrackType>> = prefManager.enabledTrackTypesFlow
         .map { strings ->
@@ -147,26 +137,7 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
             }
 
             // --- PHASE 3: Calculate Extrema (Markers) ---
-            // We keep the logic for markers separate so they appear as soon as computed
-            val markerList = mutableListOf<LocationMarker>()
-
-            // Add Start/Stop Markers
-            workoutData.fileBaseName?.let { baseFile ->
-                getExtremaPos(workoutId, baseFile, ExtremaType.START)?.let {
-                    markerList.add(LocationMarker(it, R.drawable.control_start, application.getString(R.string.Start)))
-                }
-                getExtremaPos(workoutId, baseFile, ExtremaType.END)?.let {
-                    markerList.add(LocationMarker(it, R.drawable.control_stop, application.getString(R.string.Stop)))
-                }
-            }
-
-            // Add Sensor Max/Min Markers
-            extremaSensorTypes.forEach { sensor ->
-                addExtremaMarkerIfPresent(workoutId, sensor, ExtremaType.MAX, markerList)
-                if (sensor == SensorType.ALTITUDE || sensor == SensorType.TEMPERATURE) {
-                    addExtremaMarkerIfPresent(workoutId, sensor, ExtremaType.MIN, markerList)
-                }
-            }
+            val markerList = workoutRepository.getWorkoutMarkers(workoutData)
 
             withContext(Dispatchers.Main) {
                 _uiState.value = _uiState.value.copy(markers = markerList)
@@ -257,60 +228,4 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
         }
     }
 
-    private fun addExtremaMarkerIfPresent(
-        workoutId: Long,
-        sensor: SensorType,
-        type: ExtremaType,
-        markerList: MutableList<LocationMarker>
-    ) {
-        // Try to get both from the summary record first (efficient, new way)
-        var value: Double? = summariesDb.getExtremaValue(workoutId, sensor, type)
-        var pos: LatLng? = summariesDb.getExtremaPosition(workoutId, sensor, type)
-
-        // Fallback for legacy data if position is missing in the summary table
-        if (pos == null) {
-            val legacyExtrema = samplesDb.getExtremaPosition(summariesDb, workoutId, sensor, type)
-            if (legacyExtrema != null) {
-                pos = legacyExtrema.latLng
-                value = legacyExtrema.value
-            }
-        }
-
-        if (value != null && pos != null) {
-            val title = application.getString(
-                R.string.location_extrema_format,
-                type.toString(), // Use localized name ("Max", "Min")
-                sensor.getFullName(application),
-                sensor.myFormatter.format(value),
-                application.getString(MyHelper.getShortUnitsId(sensor))
-            )
-            markerList.add(LocationMarker(pos, getExtremaIcon(sensor, type), title))
-        }
-    }
-
-    private fun getExtremaIcon(sensor: SensorType, type: ExtremaType): Int {
-        return when (sensor) {
-            SensorType.ALTITUDE -> if (type == ExtremaType.MAX) { R.drawable.ic_altitude_max} else { R.drawable.ic_altitude_min }
-            SensorType.TEMPERATURE -> if (type == ExtremaType.MAX) R.drawable.ic_temp_max else R.drawable.ic_temp_min
-            SensorType.HR -> R.drawable.ic_heart_rate
-            SensorType.POWER -> R.drawable.ic_power
-            SensorType.LINE_DISTANCE_m -> R.drawable.ic_distance
-            SensorType.SPEED_mps -> R.drawable.ic_speed
-            else -> -1
-        }
-    }
-
-    private fun getExtremaPos(id: Long, file: String, type: ExtremaType): LatLng? {
-        // Try the optimized summary record first
-        return summariesDb.getExtremaPosition(id, SensorType.LATITUDE, type)
-            ?: summariesDb.getExtremaValue(id, SensorType.LATITUDE, type)?.let { lat ->
-                summariesDb.getExtremaValue(id, SensorType.LONGITUDE, type)?.let { lon ->
-                    LatLng(lat, lon)
-                }
-            } ?: samplesDb.calcExtremaValue(summariesDb, file, type, SensorType.LATITUDE)?.let { lat ->
-                samplesDb.calcExtremaValue(summariesDb, file, type, SensorType.LONGITUDE)?.let { lon ->
-                    LatLng(lat, lon)
-                }
-            }
-    }
 }

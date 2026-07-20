@@ -97,4 +97,5 @@
     <string name="devices_dialog_delete_device_title">Eliminar realmente?</string>
     <string name="devices_dialog_delete_device_message">Deseja realmente eliminar o sensor \'%1$s\'?</string>
 
+    <string name="devices_equipment_none">- nenhum -</string>
 </resources>

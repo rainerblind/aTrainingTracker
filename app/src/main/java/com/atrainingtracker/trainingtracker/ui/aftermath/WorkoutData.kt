@@ -53,7 +53,8 @@ data class WorkoutDataClassic(
 
 data class WorkoutDataWithTrack(
     val workoutData: WorkoutData?,
-    val trackPoints: List<PathPoint>
+    val trackPoints: List<PathPoint>,
+    val markers: List<com.atrainingtracker.trainingtracker.ui.map.LocationMarker> = emptyList()
 )
 
 // TODO: move the methods to update redundant data to here???
@@ -93,6 +94,8 @@ data class WorkoutData(
     val maxAltitude: Double?,
     val maxAltitudeLatLng: LatLng? = null,
     val maxDisplacementLatLng: LatLng? = null,
+    val startLatLng: LatLng? = null,
+    val endLatLng: LatLng? = null,
 
     val description: String?,
     val goal: String?,
@@ -101,6 +104,7 @@ data class WorkoutData(
     val stravaSportName: String?,
 
     val stravaActivityData: String? = null,
+    val clusterId: Long = -1,
 
     // --- 2. Heavy/Live Data ---
     val exportStatuses: List<ExportStatusGroupData> = emptyList(),

@@ -11,9 +11,6 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
 package com.atrainingtracker.banalservice.ui.sporttype
@@ -47,6 +44,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CardDefaults
@@ -57,6 +55,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Surface
@@ -79,12 +78,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
 import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
@@ -193,7 +195,7 @@ fun SportTypesTabsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -519,29 +521,35 @@ fun SportTypeCard(
             }
         }
 
-        // The Menu itself (anchored to the Card via the Box)
-        DropdownMenu(
-            expanded = showMenu,
-            onDismissRequest = { showMenu = false }
+        // Context Menu for deletion (Pinned to Top-Start to cover the header area)
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 12.dp, top = 8.dp)
         ) {
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        text = stringResource(R.string.delete)
-                    )
-                },
-                enabled = item.isEditable,
-                onClick = {
-                    showMenu = false
-                    onDelete()
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = null
-                    )
-                }
-            )
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false }
+            ) {
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = stringResource(R.string.delete)
+                        )
+                    },
+                    enabled = item.isEditable,
+                    onClick = {
+                        showMenu = false
+                        onDelete()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null
+                        )
+                    }
+                )
+            }
         }
     }
 }

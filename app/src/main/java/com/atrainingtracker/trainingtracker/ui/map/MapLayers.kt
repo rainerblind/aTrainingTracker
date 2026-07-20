@@ -20,9 +20,16 @@ package com.atrainingtracker.trainingtracker.ui.map
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
@@ -36,6 +43,8 @@ import com.google.android.gms.maps.model.PatternItem
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filter
 
 /**
  * A unified layer that can render any MappablePath (Track, Route, or Segment).
@@ -193,17 +202,60 @@ fun MarkerLayer(
     context: Context
 ) {
     markers.forEach { markerData ->
-        val icon = remember(markerData.iconResId, primaryColor) {
-            createSensorMarker(context, markerData.iconResId, primaryColor, Color.White)
+        key(markerData.title, markerData.iconResId) {
+            val icon = markerData.iconDescriptor ?: remember(markerData.iconResId, primaryColor) {
+                val color = when (markerData.iconResId) {
+                    R.drawable.control_start -> TTColor.StartPoint
+                    R.drawable.control_stop -> TTColor.EndPoint
+                    R.drawable.ic_distance -> TTColor.ApexPoint
+                    else -> primaryColor
+                }
+                createSensorMarker(context, markerData.iconResId, color, Color.White)
+            }
+            // Use a composite key for marker identity
+            val markerState = remember(markerData.title, markerData.iconResId) { MarkerState(position = markerData.position) }
+            val haptic = LocalHapticFeedback.current
+
+            // Sync marker position with external state changes (e.g. Cancel)
+            // IMPORTANT: Only sync if not dragging, to avoid snapping back during movement
+            LaunchedEffect(markerData.position) {
+                if (!markerState.isDragging && markerState.position != markerData.position) {
+                    markerState.position = markerData.position
+                }
+            }
+
+            // Haptic feedback when dragging starts
+            LaunchedEffect(markerState.isDragging) {
+                if (markerState.isDragging) {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                }
+            }
+
+            Marker(
+                state = markerState,
+                icon = icon,
+                title = markerData.title,
+                rotation = markerData.rotation,
+                flat = markerData.flat,
+                anchor = markerData.anchor,
+                draggable = markerData.draggable,
+                alpha = markerData.alpha,
+                onClick = { markerData.onClick() }
+            )
+
+            // Notify the caller when dragging stops
+            val currentOnDragEnd by rememberUpdatedState(markerData.onDragEnd)
+            LaunchedEffect(markerState) {
+                var wasDragging = false
+                snapshotFlow { markerState.isDragging }
+                    .collect { isDragging ->
+                        if (wasDragging && !isDragging) {
+                            currentOnDragEnd(markerState.position)
+                        }
+                        wasDragging = isDragging
+                    }
+            }
         }
-        Marker(
-            state = remember(markerData.position) { MarkerState(position = markerData.position) },
-            icon = icon,
-            title = markerData.title,
-            rotation = markerData.rotation,
-            flat = markerData.flat,
-            anchor = markerData.anchor
-        )
     }
 }
 
