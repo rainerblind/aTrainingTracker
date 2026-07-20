@@ -95,7 +95,8 @@ fun WorkoutClusterMetadataBlock(
     cluster: WorkoutCluster,
     viewModel: WorkoutClustersViewModel,
     modifier: Modifier = Modifier,
-    includeSpacer: Boolean = false
+    includeSpacer: Boolean = false,
+    onHitCountClick: (() -> Unit)? = null
 ) {
     val distanceFormatter = remember { DistanceFormatter() }
     val sportName = remember(cluster.probableSportId) { viewModel.getSportName(cluster.probableSportId) }
@@ -141,6 +142,11 @@ fun WorkoutClusterMetadataBlock(
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
+            modifier = if (onHitCountClick != null) {
+                Modifier.clickable { onHitCountClick() }
+            } else {
+                Modifier
+            }
         )
     }
 }
@@ -150,7 +156,8 @@ fun ClusterItem(
     cluster: WorkoutCluster,
     viewModel: WorkoutClustersViewModel,
     onClick: () -> Unit,
-    onDeleteRequest: (WorkoutCluster) -> Unit
+    onDeleteRequest: (WorkoutCluster) -> Unit,
+    onHitCountClick: (WorkoutCluster) -> Unit
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
@@ -184,7 +191,8 @@ fun ClusterItem(
                             cluster = cluster,
                             viewModel = viewModel,
                             modifier = Modifier.weight(1f).fillMaxHeight(),
-                            includeSpacer = true
+                            includeSpacer = true,
+                            onHitCountClick = { onHitCountClick(cluster) }
                         )
 
                         Spacer(modifier = Modifier.width(16.dp))

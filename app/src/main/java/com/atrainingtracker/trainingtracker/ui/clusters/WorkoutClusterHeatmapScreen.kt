@@ -18,8 +18,7 @@ package com.atrainingtracker.trainingtracker.ui.clusters
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -38,19 +37,15 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
-import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.components.DropdownSelector
-import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.map.*
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
@@ -62,7 +57,8 @@ import com.google.maps.android.PolyUtil
 fun WorkoutClusterHeatmapScreen(
     cluster: WorkoutCluster,
     viewModel: WorkoutClustersViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onHitCountClick: (WorkoutCluster) -> Unit
 ) {
     val context = LocalContext.current
     val workouts by viewModel.clusterWorkouts.collectAsState()
@@ -281,6 +277,7 @@ fun WorkoutClusterHeatmapScreen(
                         isEditingFingerprint = false
                     },
                     onDeleteRequest = { showDeleteConfirmation = true },
+                    onHitCountClick = { onHitCountClick(cluster) },
                     hasChanges = hasChanges
                 )
             },
@@ -338,6 +335,7 @@ fun WorkoutClusterSummaryHeader(
     onEditFingerprint: () -> Unit,
     onSaveFingerprint: () -> Unit,
     onDeleteRequest: () -> Unit,
+    onHitCountClick: () -> Unit,
     hasChanges: Boolean,
     modifier: Modifier = Modifier
 ) {
@@ -391,7 +389,8 @@ fun WorkoutClusterSummaryHeader(
                 if (!isEditing) {
                     WorkoutClusterMetadataBlock(
                         cluster = cluster,
-                        viewModel = viewModel
+                        viewModel = viewModel,
+                        onHitCountClick = onHitCountClick
                     )
                 } else {
                     // Editing Mode Hint
