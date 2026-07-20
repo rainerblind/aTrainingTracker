@@ -51,6 +51,7 @@ fun WorkoutClustersTabsScreen(
     unclusteredListState: LazyListState,
     onClusterClick: (WorkoutCluster) -> Unit,
     onWorkoutClick: (WorkoutData) -> Unit,
+    onHitCountClick: (WorkoutCluster) -> Unit,
     onTuneClick: () -> Unit,
     onAddClick: () -> Unit,
     onDeleteRequest: (WorkoutCluster) -> Unit
@@ -124,6 +125,7 @@ fun WorkoutClustersTabsScreen(
                         viewModel = viewModel,
                         onClusterClick = onClusterClick,
                         onDeleteRequest = onDeleteRequest,
+                        onHitCountClick = onHitCountClick,
                         scrollState = listState,
                         appBarOffsetPx = connection.appBarOffset,
                         headerHeightDp = headerHeightDp,

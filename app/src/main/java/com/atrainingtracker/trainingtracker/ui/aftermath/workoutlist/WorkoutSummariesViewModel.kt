@@ -141,18 +141,20 @@ class WorkoutSummariesViewModel(application: Application) :
         sportTypeId: Long? = null,
         equipmentId: Long? = null,
         startTimeS: Long? = null,
-        endTimeS: Long? = null
+        endTimeS: Long? = null,
+        clusterId: Long? = null
     ): Flow<List<WorkoutData>> {
         return workouts.map { list ->
             list.filter { workout ->
                 val matchesBSport = bSportType == null || workout.bSportType == bSportType
                 val matchesSportId = sportTypeId == null || workout.sportId == sportTypeId
                 val matchesEquip = equipmentId == null || workout.equipmentId == equipmentId
+                val matchesCluster = clusterId == null || workout.clusterId == clusterId
 
                 val workoutTime = workout.headerData.startTimeS
                 val matchesTime = (startTimeS == null || workoutTime >= startTimeS) && (endTimeS == null || workoutTime <= endTimeS)
 
-                matchesBSport && matchesSportId && matchesEquip && matchesTime
+                matchesBSport && matchesSportId && matchesEquip && matchesTime && matchesCluster
             }
         }
     }

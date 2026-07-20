@@ -40,6 +40,7 @@ fun WorkoutClustersList(
     viewModel: WorkoutClustersViewModel,
     onClusterClick: (WorkoutCluster) -> Unit,
     onDeleteRequest: (WorkoutCluster) -> Unit,
+    onHitCountClick: (WorkoutCluster) -> Unit,
     scrollState: LazyListState,
     appBarOffsetPx: Int,
     headerHeightDp: Dp,
@@ -71,7 +72,8 @@ fun WorkoutClustersList(
                     cluster = cluster,
                     viewModel = viewModel,
                     onClick = { onClusterClick(cluster) },
-                    onDeleteRequest = onDeleteRequest
+                    onDeleteRequest = onDeleteRequest,
+                    onHitCountClick = onHitCountClick
                 )
             }
         }

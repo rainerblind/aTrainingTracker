@@ -106,17 +106,19 @@ class WorkoutSummariesListFragment : Fragment() {
                     val equipId = arguments?.getLong(ARG_EQUIP_ID, -1)?.takeIf { it != -1L }
                     val startS = arguments?.getLong(ARG_START_S, -1L)?.takeIf { it != -1L }
                     val endS = arguments?.getLong(ARG_END_S, -1L)?.takeIf { it != -1L }
+                    val clusterId = arguments?.getLong(ARG_CLUSTER_ID, -1L)?.takeIf { it != -1L }
                     val initialScrollToId = arguments?.getLong(ARG_INITIAL_SCROLL_TO_ID, -1L)?.takeIf { it != -1L }
 
                     // 3. Observe the filtered Flow reactively
                     // We 'remember' the flow so we don't recreate the observer on every recomposition
-                    val filteredWorkoutsFlow = remember(bSportType, sportId, equipId, startS, endS) {
+                    val filteredWorkoutsFlow = remember(bSportType, sportId, equipId, startS, endS, clusterId) {
                         viewModel.getFilteredWorkouts(
                             bSportType = bSportType,
                             sportTypeId = sportId,
                             equipmentId = equipId,
                             startTimeS = startS,
-                            endTimeS = endS
+                            endTimeS = endS,
+                            clusterId = clusterId
                         )
                     }
 
@@ -340,6 +342,7 @@ class WorkoutSummariesListFragment : Fragment() {
         const val ARG_EQUIP_ID = "ARG_EQUIP_ID"
         const val ARG_START_S = "ARG_START_S"
         const val ARG_END_S = "ARG_END_S"
+        const val ARG_CLUSTER_ID = "ARG_CLUSTER_ID"
         const val ARG_INITIAL_SCROLL_TO_ID = "ARG_INITIAL_SCROLL_TO_ID"
         const val TAG = "WorkoutSummariesListFragment"
         val DEBUG = TrainingApplication.getDebug(true)
@@ -353,7 +356,8 @@ class WorkoutSummariesListFragment : Fragment() {
             equipmentId: Long? = null,
             startS: Long? = null,
             endS: Long? = null,
-            scrollToWorkoutId: Long? = null
+            scrollToWorkoutId: Long? = null,
+            clusterId: Long? = null
         ) = WorkoutSummariesListFragment().apply {
             arguments = Bundle().apply {
                 putString(ARG_PRIMARY_TITLE, primaryTitle)
@@ -364,6 +368,7 @@ class WorkoutSummariesListFragment : Fragment() {
                 startS?.let { putLong(ARG_START_S, it) }
                 endS?.let { putLong(ARG_END_S, it) }
                 scrollToWorkoutId?.let { putLong(ARG_INITIAL_SCROLL_TO_ID, it) }
+                clusterId?.let { putLong(ARG_CLUSTER_ID, it) }
             }
         }
     }
