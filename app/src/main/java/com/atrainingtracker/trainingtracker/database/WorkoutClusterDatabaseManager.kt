@@ -46,7 +46,7 @@ data class WorkoutCluster(
 class WorkoutClusterDatabaseManager private constructor(context: Context) {
 
     private val dbHelper = WorkoutClusterDbHelper(context)
-    private var database: SQLiteDatabase? = null
+    private var mDatabase: SQLiteDatabase? = null
 
     companion object {
         @Volatile
@@ -63,15 +63,15 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
     /**
      * Returns a writable database instance and ensures it remains open for debugging (SCRUM-224).
      */
-    fun getDatabase(): SQLiteDatabase {
-        return database ?: synchronized(this) {
-            database ?: dbHelper.writableDatabase.also { database = it }
+    fun provideBackupDatabase(): SQLiteDatabase {
+        return mDatabase ?: synchronized(this) {
+            mDatabase ?: dbHelper.writableDatabase.also { mDatabase = it }
         }
     }
 
     fun getAllClusters(): List<WorkoutCluster> {
         val clusters = mutableListOf<WorkoutCluster>()
-        getDatabase().query(
+        provideBackupDatabase().query(
             WorkoutClusterContract.TABLE_NAME, null, null, null, null, null, null
         ).use { cursor ->
             while (cursor.moveToNext()) {
@@ -96,7 +96,7 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         )
 
         val candidates = mutableListOf<WorkoutCluster>()
-        getDatabase().query(
+        provideBackupDatabase().query(
             WorkoutClusterContract.TABLE_NAME, null, selection, args, null, null, null
         ).use { cursor ->
             while (cursor.moveToNext()) {
@@ -108,19 +108,19 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
 
     fun insertCluster(cluster: WorkoutCluster): Long {
         val values = createContentValues(cluster)
-        return getDatabase().insert(WorkoutClusterContract.TABLE_NAME, null, values)
+        return provideBackupDatabase().insert(WorkoutClusterContract.TABLE_NAME, null, values)
     }
 
     fun updateCluster(cluster: WorkoutCluster) {
         val values = createContentValues(cluster)
-        getDatabase().update(
+        provideBackupDatabase().update(
             WorkoutClusterContract.TABLE_NAME, values,
             "${BaseColumns._ID} = ?", arrayOf(cluster.id.toString())
         )
     }
 
     fun deleteCluster(id: Long) {
-        getDatabase().delete(
+        provideBackupDatabase().delete(
             WorkoutClusterContract.TABLE_NAME,
             "${BaseColumns._ID} = ?",
             arrayOf(id.toString())
@@ -130,7 +130,7 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
     fun getClusterById(id: Long): WorkoutCluster? {
         val selection = "${BaseColumns._ID} = ?"
         val args = arrayOf(id.toString())
-        getDatabase().query(
+        provideBackupDatabase().query(
             WorkoutClusterContract.TABLE_NAME, null, selection, args, null, null, null
         ).use { cursor ->
             if (cursor.moveToFirst()) {
@@ -141,7 +141,7 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
     }
 
     fun deleteAllClusters() {
-        getDatabase().delete(WorkoutClusterContract.TABLE_NAME, null, null)
+        provideBackupDatabase().delete(WorkoutClusterContract.TABLE_NAME, null, null)
     }
 
     fun isNameTaken(name: String, excludeId: Long = -1): Boolean {
@@ -153,7 +153,7 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
             args = arrayOf(name, excludeId.toString())
         }
 
-        getDatabase().query(
+        provideBackupDatabase().query(
             WorkoutClusterContract.TABLE_NAME, arrayOf(BaseColumns._ID), selection, args, null, null, null
         ).use { cursor ->
             return cursor.count > 0

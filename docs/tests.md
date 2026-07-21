@@ -73,6 +73,14 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-MAN-001** | | **General** | All other `REQ` | Ad-hoc functional testing on a physical device. | Feature performs according to the rationale defined in requirements. | Proposed |
 | **TST-STP-001** | | **Localization** | `REQ-STP-001` | Review generated markdown files in `docs/store_presence/`. Verify that Title, Short Description and Full Description are correctly translated. | Adhere to Google Play character limits. | Verified |
 | **TST-STP-002** | `ATT-276` | **Messaging Review** | `REQ-STP-002` | 1. Compare new Play Store description with user's draft and project vision. | Description is punchy, highlights key features (Automation, Privacy, Clusters), and maintains professional tone. | Verified |
+
+### 5. Migration & Data Integrity (Epic ATT-281)
+
+| ID | Jira ID | Summary | Req ID | Procedure | Expected Result | Status |
+|:---|:---|:---|:---|:---|:---|:---|
+| **TST-MIG-001** | `ATT-117` | **Full Migration Cycle** | `REQ-MIG-001`, `002`, `004`, `006` | 1. Generate local backup. 2. Wipe app data. 3. Restore from backup. | App state (settings, history, equipment) is perfectly restored. | Proposed |
+| **TST-MIG-002** | `ATT-117` | **Deduplication Verification** | `REQ-MIG-005` | 1. Import a backup containing already existing workouts. | Duplicate workouts are identified by `FILE_BASE_NAME` and skipped. | Proposed |
+| **TST-MIG-003** | `ATT-93` | **Automated Dropbox Backup** | `REQ-MIG-003` | 1. Enable regular backups. 2. Verify archive exists in Dropbox after background task runs. | Backup is present and valid in `/Backups/` folder. | Proposed |
 | **TST-UI-035** | | **Compact Metric Row** | `REQ-UI-025` | 1. Open Route List. 2. Inspect gap between identity row and metrics row. | - | Verified |
 | **TST-UI-036** | | **Branding Audit** | `REQ-UI-026` | 1. Open Segment List. 2. Verify top logo height (e.g., 24dp). 3. Inspect individual Segment Items (if enabled). | - | Verified |
 | **TST-UI-038** | | **Detailed Metric Scale** | `REQ-UI-028` | 1. Open Periods screen. 2. Inspect sub-sport rows and \"Longest Workout\" highlight. | Verify icons are 14dp and text is bodySmall. | Verified |

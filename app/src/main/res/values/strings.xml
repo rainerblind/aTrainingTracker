@@ -1245,4 +1245,24 @@
     <string name="unclustered">Unclustered</string>
     <string name="no_unclustered_workouts">All workouts are clustered.</string>
     <string name="error_sharing_failed">Unable to generate share image. Please try again.</string>
+
+    <!-- Backup and Restore -->
+    <string name="backup_restore">Backup &amp; Restore</string>
+    <string name="backup_restore_summary">Migrate data or perform disaster recovery</string>
+    <string name="create_backup">Create Backup</string>
+    <string name="restore_backup">Full Restore (Migration)</string>
+    <string name="import_workouts">Incremental Import (Merge)</string>
+    <string name="backup_success">Backup created successfully.</string>
+    <string name="backup_failed">Failed to create backup.</string>
+    <string name="restore_success">Restore successful. The app will now restart.</string>
+    <string name="restore_failed">Restore failed. Please ensure the file is valid.</string>
+    <string name="restore_warning_title">DANGER: Full Restore</string>
+    <string name="restore_warning_message">This will PERMANENTLY WIPE all current workouts, equipment, and settings on THIS phone and replace them with the data from the backup. Are you absolutely sure?</string>
+    <string name="import_finished_format">Import finished. Added %1$d new workouts.</string>
+    <string name="import_duplicate_skipping">Skipping existing workouts…</string>
+    <string name="import_processing_format">Importing %1$s…</string>
+    <string name="automated_backups">Automated Backups</string>
+    <string name="automated_backups_summary">Regularly upload backups to Dropbox</string>
+    <string name="backup_now">Backup Now</string>
+    <string name="last_backup">Last backup: %1$s</string>
 </resources>

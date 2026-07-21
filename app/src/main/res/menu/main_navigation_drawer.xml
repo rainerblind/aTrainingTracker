@@ -124,6 +124,10 @@
                 android:icon="@drawable/ic_search"
                 android:title="@string/Search_Settings" />
             <item
+                android:id="@+id/drawer_backup_restore"
+                android:icon="@drawable/ic_save_to_disc"
+                android:title="@string/backup_restore" />
+            <item
                 android:id="@+id/drawer_privacy_policy"
                 android:icon="@drawable/ic_privacy"
                 android:title="@string/privacy_policy" />

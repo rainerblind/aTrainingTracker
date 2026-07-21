@@ -42,6 +42,8 @@ class SportTypeEquipmentLinkManager private constructor(context: Context) {
     private val dbHelper = LinkDbHelper(context)
     private val db: SQLiteDatabase get() = dbHelper.writableDatabase
 
+    fun provideBackupDatabase(): SQLiteDatabase = db
+
     companion object {
         private const val DEBUG = true
         private const val TAG = "SportTypeEquipmentLinkManager"

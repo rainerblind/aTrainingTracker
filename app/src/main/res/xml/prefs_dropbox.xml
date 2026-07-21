@@ -15,4 +15,15 @@
   -->
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Individual Drawer Item handles connection state via DropboxConnectionHeader -->
+
+    <PreferenceCategory
+        android:title="@string/automated_backups">
+
+        <SwitchPreferenceCompat
+            android:key="automated_backups"
+            android:title="@string/automated_backups"
+            android:summary="@string/automated_backups_summary"
+            android:defaultValue="false" />
+
+    </PreferenceCategory>
 </PreferenceScreen>

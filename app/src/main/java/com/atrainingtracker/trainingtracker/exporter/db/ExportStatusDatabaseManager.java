@@ -66,6 +66,10 @@ public class ExportStatusDatabaseManager {
         return sInstance;
     }
 
+    public SQLiteDatabase getDatabase() {
+        return mDbHelper.getWritableDatabase();
+    }
+
 
     public void addExportStatus(ContentValues contentValues) {
         SQLiteDatabase db = mDbHelper.getWritableDatabase();

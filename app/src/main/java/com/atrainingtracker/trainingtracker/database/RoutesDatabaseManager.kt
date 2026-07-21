@@ -73,6 +73,10 @@ class RoutesDatabaseManager private constructor(context: Context) {
 
     private val dbHelper = RoutesDbHelper(context)
 
+    fun provideBackupDatabase(): SQLiteDatabase {
+        return dbHelper.writableDatabase
+    }
+
     companion object {
         @Volatile
         private var instance: RoutesDatabaseManager? = null

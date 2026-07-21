@@ -250,6 +250,17 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-STP-001** | **Multilingual Store Presence.** | The system SHALL provide localized App Titles, Short Descriptions, and Full Descriptions for the Google Play Store in all supported languages. These descriptions SHALL emphasize core automation, sensor intelligence, and privacy features. | `docs/store_presence/` | `TST-STP-001` | Verified |
 | **REQ-STP-002** | **Modernized Product Messaging.** | The Play Store description SHALL reflect the latest architectural improvements (Route Clusters, Jetpack Compose UI) and emphasize zero-configuration tracking for serious athletes. | `docs/store_presence/` | `TST-STP-002` | Verified |
 
+### 8. Data Sovereignty & Migration (Epic ATT-281)
+
+| ID | Summary | Description | Component | Test ID | Status |
+|:---|:---|:---|:---|:---|:---|
+| **REQ-MIG-001** | **State Bundling.** | The system SHALL be able to bundle all internal SQLite databases (including high-fidelity samples) and shared preferences into a single portable archive (`.attbackup`). | `BackupManager` | `TST-MIG-001` | Proposed |
+| **REQ-MIG-002** | **Multi-Destination Backup.** | The system SHALL support both manual backup (via Android SAF) and direct upload to a linked Dropbox account. | `BackupManager`, `DropboxIntegration` | `TST-MIG-001` | Proposed |
+| **REQ-MIG-003** | **Regular Cloud Backups.** | The system SHALL optionally perform automated background backups to Dropbox to ensure disaster recovery (e.g., lost/stolen device). | `BackupWorkManager` | `TST-MIG-003` | Proposed |
+| **REQ-MIG-004** | **Full Migration Mode.** | The system SHALL support a "Full Restore" mode that replaces the entire local state with a backup, followed by a forced app restart to ensure consistency. | `MigrationEngine` | `TST-MIG-001` | Proposed |
+| **REQ-MIG-005** | **Incremental Import.** | The system SHALL support merging backups into an existing database. It MUST perform deduplication using the `FILE_BASE_NAME` as the unique identifier. | `ImportEngine` | `TST-MIG-002` | Proposed |
+| **REQ-MIG-006** | **State Lockdown.** | Backup and Restore operations SHALL ONLY be allowed when the system is in a non-tracking state to prevent data corruption. | `MigrationUI` | `TST-MIG-001` | Proposed |
+
 ## 12. Privacy & Permissions
 
 | ID | Description | Rationale | Implementation File(s) | Verification ID | Status |

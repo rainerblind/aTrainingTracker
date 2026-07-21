@@ -57,6 +57,7 @@ import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
 import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack;
 import com.atrainingtracker.trainingtracker.ui.routes.RoutesFragment;
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegmentsFragment;
+import com.atrainingtracker.trainingtracker.migration.BackupRestoreFragment;
 import com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsDialogFragment;
 import com.atrainingtracker.trainingtracker.ui.settings.dropbox.CloudUploadFragment;
 import com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialogFragment;
@@ -882,6 +883,11 @@ public class MainActivityWithNavigation
             case R.id.drawer_search_settings:
                 mFragment = SearchSettingsFragment.newInstance();
                 tag = SearchSettingsFragment.TAG;
+                break;
+
+            case R.id.drawer_backup_restore:
+                mFragment = BackupRestoreFragment.Companion.newInstance();
+                tag = "BackupRestoreFragment";
                 break;
 
             case R.id.drawer_privacy_policy:

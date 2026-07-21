@@ -802,6 +802,8 @@ public class TrainingApplication extends Application {
 
         cAppContext = getApplicationContext();
 
+        com.atrainingtracker.trainingtracker.migration.BackupWorker.Companion.schedule(this);
+
         trackOnMapHelper = new TrackOnMapHelper();
 
         mNotificationSummary = getString(R.string.searching);
