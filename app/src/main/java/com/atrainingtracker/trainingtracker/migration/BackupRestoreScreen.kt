@@ -12,6 +12,8 @@ package com.atrainingtracker.trainingtracker.migration
 
 import android.content.Intent
 import android.net.Uri
+import java.text.DateFormat
+import java.util.Date
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -27,6 +29,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -44,6 +47,7 @@ fun BackupRestoreScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
+    val lastBackupInfo by viewModel.lastBackupInfo.collectAsState()
     
     var showRestoreConfirm by remember { mutableStateOf(false) }
     var restoreUri by remember { mutableStateOf<Uri?>(null) }
@@ -142,6 +146,98 @@ fun BackupRestoreScreen(
                         Icon(Icons.Default.CloudUpload, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Upload Backup to Dropbox")
+                    }
+                }
+            }
+
+            // --- Automated Backups Card ---
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = stringResource(R.string.automated_backups),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.automated_backups))
+                            Text(
+                                text = stringResource(R.string.automated_backups_summary),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = viewModel.automatedBackupsEnabled,
+                            onCheckedChange = { viewModel.updateAutomatedBackupsEnabled(it) },
+                            modifier = Modifier.scale(0.8f)
+                        )
+                    }
+
+                    if (viewModel.automatedBackupsEnabled) {
+                        lastBackupInfo?.let { info ->
+                            Spacer(modifier = Modifier.height(12.dp))
+                            val dateStr = DateFormat.getDateTimeInstance().format(Date(info.timestamp))
+                            val isSuccess = info.status == "SUCCESS"
+                            Text(
+                                text = if (isSuccess) {
+                                    stringResource(R.string.last_backup, dateStr)
+                                } else {
+                                    "Last backup failed: ${info.status}"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (isSuccess) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(stringResource(R.string.backup_interval), style = MaterialTheme.typography.labelLarge)
+                        
+                        val intervals = listOf(1, 3, 7, 30)
+                        val labels = listOf(
+                            stringResource(R.string.backup_interval_daily),
+                            stringResource(R.string.backup_interval_3days),
+                            stringResource(R.string.backup_interval_weekly),
+                            stringResource(R.string.backup_interval_monthly)
+                        )
+
+                        var expanded by remember { mutableStateOf(false) }
+                        ExposedDropdownMenuBox(
+                            expanded = expanded,
+                            onExpandedChange = { expanded = !expanded }
+                        ) {
+                            val currentLabel = labels[intervals.indexOf(viewModel.backupIntervalDays).coerceAtLeast(0)]
+                            TextField(
+                                value = currentLabel,
+                                onValueChange = {},
+                                readOnly = true,
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                modifier = Modifier.menuAnchor().fillMaxWidth(),
+                                colors = ExposedDropdownMenuDefaults.textFieldColors()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false }
+                            ) {
+                                intervals.forEachIndexed { index, days ->
+                                    DropdownMenuItem(
+                                        text = { Text(labels[index]) },
+                                        onClick = {
+                                            viewModel.updateBackupIntervalDays(days)
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

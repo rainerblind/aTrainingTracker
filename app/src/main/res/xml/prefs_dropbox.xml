@@ -25,5 +25,14 @@
             android:summary="@string/automated_backups_summary"
             android:defaultValue="false" />
 
+        <ListPreference
+            android:key="backup_interval_days"
+            android:title="@string/backup_interval"
+            android:summary="%s"
+            android:entries="@array/backup_interval_entries"
+            android:entryValues="@array/backup_interval_values"
+            android:defaultValue="3"
+            android:dependency="automated_backups" />
+
     </PreferenceCategory>
 </PreferenceScreen>

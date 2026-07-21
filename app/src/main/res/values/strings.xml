@@ -1265,4 +1265,9 @@
     <string name="automated_backups_summary">Regularly upload backups to Dropbox</string>
     <string name="backup_now">Backup Now</string>
     <string name="last_backup">Last backup: %1$s</string>
+    <string name="backup_interval">Backup Interval</string>
+    <string name="backup_interval_daily">Daily</string>
+    <string name="backup_interval_3days">Every 3 days</string>
+    <string name="backup_interval_weekly">Weekly</string>
+    <string name="backup_interval_monthly">Monthly</string>
 </resources>

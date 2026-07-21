@@ -49,12 +49,19 @@ class BackupWorker(
             if (success) {
                 prefs.edit(commit = true) {
                     putLong("last_backup_timestamp", System.currentTimeMillis())
+                    putString("last_backup_status", "SUCCESS")
                 }
                 Result.success()
             } else {
+                prefs.edit(commit = true) {
+                    putString("last_backup_status", "Dropbox upload failed")
+                }
                 Result.retry()
             }
         } else {
+            prefs.edit(commit = true) {
+                putString("last_backup_status", "Local backup creation failed")
+            }
             Result.failure()
         }
     }
@@ -64,19 +71,28 @@ class BackupWorker(
         private const val WORK_NAME = "automated_backup_work"
 
         fun schedule(context: Context) {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+            val automatedEnabled = prefs.getBoolean("automated_backups", false)
+            val intervalDays = prefs.getString("backup_interval_days", "3")?.toLong() ?: 3L
+
+            if (!automatedEnabled) {
+                WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
+                return
+            }
+
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.UNMETERED) // Only on Wi-Fi
                 .setRequiresBatteryNotLow(true)
                 .build()
 
-            val workRequest = PeriodicWorkRequestBuilder<BackupWorker>(3, TimeUnit.DAYS)
+            val workRequest = PeriodicWorkRequestBuilder<BackupWorker>(intervalDays, TimeUnit.DAYS)
                 .setConstraints(constraints)
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.HOURS)
                 .build()
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 WORK_NAME,
-                ExistingPeriodicWorkPolicy.KEEP,
+                ExistingPeriodicWorkPolicy.REPLACE, // REPLACE to ensure interval change is applied
                 workRequest
             )
         }

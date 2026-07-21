@@ -12,13 +12,19 @@ package com.atrainingtracker.trainingtracker.migration
 
 import android.app.Application
 import android.content.Context
+import android.content.SharedPreferences
 import android.net.Uri
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.preference.PreferenceManager
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -37,6 +43,45 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState
+
+    data class LastBackupInfo(val timestamp: Long, val status: String)
+
+    private val prefs = PreferenceManager.getDefaultSharedPreferences(application)
+
+    val lastBackupInfo: StateFlow<LastBackupInfo?> = callbackFlow {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { p, key ->
+            if (key == "last_backup_timestamp" || key == "last_backup_status") {
+                trySend(readLastBackupInfo(p))
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        trySend(readLastBackupInfo(prefs))
+        awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), readLastBackupInfo(prefs))
+
+    private fun readLastBackupInfo(p: SharedPreferences): LastBackupInfo? {
+        val ts = p.getLong("last_backup_timestamp", 0L)
+        val st = p.getString("last_backup_status", null)
+        return if (ts == 0L && st == null) null else LastBackupInfo(ts, st ?: "UNKNOWN")
+    }
+
+    var automatedBackupsEnabled by mutableStateOf(prefs.getBoolean("automated_backups", false))
+        private set
+
+    var backupIntervalDays by mutableIntStateOf(prefs.getString("backup_interval_days", "3")?.toInt() ?: 3)
+        private set
+
+    fun updateAutomatedBackupsEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("automated_backups", enabled).apply()
+        automatedBackupsEnabled = enabled
+        BackupWorker.schedule(getApplication())
+    }
+
+    fun updateBackupIntervalDays(days: Int) {
+        prefs.edit().putString("backup_interval_days", days.toString()).apply()
+        backupIntervalDays = days
+        BackupWorker.schedule(getApplication())
+    }
 
     fun createBackup(context: Context, onBackupReady: (Uri) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {

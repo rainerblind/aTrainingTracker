@@ -290,4 +290,17 @@
         <item>noUnlocking</item>
     </string-array>
 
+    <string-array name="backup_interval_entries">
+        <item>@string/backup_interval_daily</item>
+        <item>@string/backup_interval_3days</item>
+        <item>@string/backup_interval_weekly</item>
+        <item>@string/backup_interval_monthly</item>
+    </string-array>
+    <string-array name="backup_interval_values">
+        <item>1</item>
+        <item>3</item>
+        <item>7</item>
+        <item>30</item>
+    </string-array>
+
 </resources>
