@@ -18,6 +18,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -108,8 +109,10 @@ fun BackupRestoreScreen(
             )
 
             // --- Backup Card ---
-            Card(
-                modifier = Modifier.fillMaxWidth()
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
@@ -151,8 +154,10 @@ fun BackupRestoreScreen(
             }
 
             // --- Automated Backups Card ---
-            Card(
-                modifier = Modifier.fillMaxWidth()
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
@@ -183,21 +188,6 @@ fun BackupRestoreScreen(
                     }
 
                     if (viewModel.automatedBackupsEnabled) {
-                        lastBackupInfo?.let { info ->
-                            Spacer(modifier = Modifier.height(12.dp))
-                            val dateStr = DateFormat.getDateTimeInstance().format(Date(info.timestamp))
-                            val isSuccess = info.status == "SUCCESS"
-                            Text(
-                                text = if (isSuccess) {
-                                    stringResource(R.string.last_backup, dateStr)
-                                } else {
-                                    "Last backup failed: ${info.status}"
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (isSuccess) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                            )
-                        }
-
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(stringResource(R.string.backup_interval), style = MaterialTheme.typography.labelLarge)
                         
@@ -221,7 +211,10 @@ fun BackupRestoreScreen(
                                 readOnly = true,
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                                 modifier = Modifier.menuAnchor().fillMaxWidth(),
-                                colors = ExposedDropdownMenuDefaults.textFieldColors()
+                                colors = ExposedDropdownMenuDefaults.textFieldColors(
+                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                )
                             )
                             ExposedDropdownMenu(
                                 expanded = expanded,
@@ -238,13 +231,31 @@ fun BackupRestoreScreen(
                                 }
                             }
                         }
+
+                        lastBackupInfo?.let { info ->
+                            Spacer(modifier = Modifier.height(12.dp))
+                            val dateStr = DateFormat.getDateTimeInstance().format(Date(info.timestamp))
+                            val isSuccess = info.status == "SUCCESS"
+                            Text(
+                                text = if (isSuccess) {
+                                    stringResource(R.string.last_backup, dateStr)
+                                } else {
+                                    "Last backup failed: ${info.status}"
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSuccess) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             }
 
             // --- Restore Card ---
-            Card(
-                modifier = Modifier.fillMaxWidth()
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
@@ -278,8 +289,10 @@ fun BackupRestoreScreen(
             }
 
             // --- Import Card ---
-            Card(
-                modifier = Modifier.fillMaxWidth()
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
@@ -325,6 +338,9 @@ fun BackupRestoreScreen(
                 }
                 else -> {}
             }
+
+            // Extra padding at the bottom to avoid conflict with the system navigation bar
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 
@@ -420,7 +436,10 @@ fun ImportMappingDialog(
                                     readOnly = true,
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                                     modifier = Modifier.menuAnchor().fillMaxWidth(),
-                                    colors = ExposedDropdownMenuDefaults.textFieldColors()
+                                    colors = ExposedDropdownMenuDefaults.textFieldColors(
+                                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    )
                                 )
                                 ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                                     localSportTypes.forEach { local ->
@@ -450,7 +469,10 @@ fun ImportMappingDialog(
                                     readOnly = true,
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                                     modifier = Modifier.menuAnchor().fillMaxWidth(),
-                                    colors = ExposedDropdownMenuDefaults.textFieldColors()
+                                    colors = ExposedDropdownMenuDefaults.textFieldColors(
+                                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    )
                                 )
                                 ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                                     DropdownMenuItem(text = { Text("None") }, onClick = {
