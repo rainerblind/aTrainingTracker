@@ -30,15 +30,20 @@ import java.util.zip.ZipInputStream
 object MigrationEngine {
     private const val TAG = "MigrationEngine"
 
+    interface ProgressListener {
+        fun onProgress(message: String)
+    }
+
     /**
      * Performs a full restore: wipes current state and replaces it with the backup content.
      * DANGER: This operation is destructive.
      */
-    fun performFullRestore(context: Context, backupFile: File): Boolean {
+    fun performFullRestore(context: Context, backupFile: File, listener: ProgressListener? = null): Boolean {
         Log.i(TAG, "Starting full restore from ${backupFile.absolutePath}")
 
         try {
             // 1. Unzip to temporary directory
+            listener?.onProgress("Unpacking archive...")
             val tempDir = File(context.cacheDir, "restore_temp")
             if (tempDir.exists()) tempDir.deleteRecursively()
             tempDir.mkdirs()
@@ -60,6 +65,7 @@ object MigrationEngine {
             }
 
             // 2. Wipe current state
+            listener?.onProgress("Wiping local data...")
             val dataDir = context.applicationInfo.dataDir
             val databasesDir = File(dataDir, "databases")
             val sharedPrefsDir = File(dataDir, "shared_prefs")
@@ -71,11 +77,13 @@ object MigrationEngine {
             datastoreDir.deleteRecursively()
 
             // 3. Move restored files into place
+            listener?.onProgress("Installing restored data...")
             File(tempDir, "databases").copyRecursively(databasesDir)
             File(tempDir, "shared_prefs").copyRecursively(sharedPrefsDir)
             File(tempDir, "datastore").copyRecursively(datastoreDir)
 
             Log.i(TAG, "Restore successful. Restarting application...")
+            listener?.onProgress("Restarting application...")
             
             // 4. Force Restart
             restartApp(context)

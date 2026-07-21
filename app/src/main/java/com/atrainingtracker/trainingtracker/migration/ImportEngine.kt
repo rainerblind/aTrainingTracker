@@ -36,6 +36,7 @@ object ImportEngine {
 
     interface ProgressListener {
         fun onProgress(current: Int, total: Int, name: String)
+        fun onStatus(message: String)
     }
 
     data class SportTypeInfo(
@@ -138,6 +139,7 @@ object ImportEngine {
 
         try {
             // 1. Unzip to temporary directory
+            listener?.onStatus("Unpacking backup...")
             val tempDir = File(context.cacheDir, "import_temp")
             if (tempDir.exists()) tempDir.deleteRecursively()
             tempDir.mkdirs()
@@ -145,6 +147,7 @@ object ImportEngine {
             unzipBackup(backupFile, tempDir)
 
             // 2. Open source databases
+            listener?.onStatus("Opening databases...")
             val srcSummariesDb = SQLiteDatabase.openDatabase(File(tempDir, "databases/WorkoutSummaries.db").absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             val srcSamplesDb = SQLiteDatabase.openDatabase(File(tempDir, "databases/WorkoutSamples.db").absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             val srcLapsDb = SQLiteDatabase.openDatabase(File(tempDir, "databases/Laps.db").absolutePath, null, SQLiteDatabase.OPEN_READONLY)
@@ -204,7 +207,7 @@ object ImportEngine {
             
             // 5. Update Clusters (SCRUM-117 refinement)
             if (importedCount > 0) {
-                Log.i(TAG, "Updating workout clusters after import...")
+                listener?.onStatus("Updating workout clusters...")
                 WorkoutClusterEngine.getInstance(context).migrateHistory(context)
             }
             

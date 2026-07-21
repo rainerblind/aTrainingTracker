@@ -50,6 +50,7 @@ fun BackupRestoreScreen(
     val uiState by viewModel.uiState.collectAsState()
     val lastBackupInfo by viewModel.lastBackupInfo.collectAsState()
     
+    val scrollState = rememberScrollState()
     var showRestoreConfirm by remember { mutableStateOf(false) }
     var restoreUri by remember { mutableStateOf<Uri?>(null) }
 
@@ -77,9 +78,14 @@ fun BackupRestoreScreen(
         if (state is BackupRestoreViewModel.UiState.MappingRequired) {
             showMappingDialog = MappingData(state.uri, state.analysis)
         }
+        // ATT-288: Scroll to top when a status card or progress appears
+        if (state !is BackupRestoreViewModel.UiState.Idle) {
+            scrollState.animateScrollTo(0)
+        }
     }
 
     Scaffold(
+        modifier = Modifier.statusBarsPadding().navigationBarsPadding(),
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.backup_restore)) },
@@ -88,21 +94,108 @@ fun BackupRestoreScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                     }
                 },
+                windowInsets = WindowInsets(0.dp),
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
-        }
+        },
+        contentWindowInsets = WindowInsets(0.dp)
     ) { padding ->
         Column(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
                 .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // --- State Overlays (ATT-288: Shown at the very top) ---
+            when (val state = uiState) {
+                is BackupRestoreViewModel.UiState.Loading -> {
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(
+                                text = state.message ?: stringResource(R.string.please_wait),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+                is BackupRestoreViewModel.UiState.Progress -> {
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            LinearProgressIndicator(
+                                progress = { state.current.toFloat() / state.total.toFloat() },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = stringResource(R.string.import_processing_format, state.name),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+                is BackupRestoreViewModel.UiState.Success -> {
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(state.message, style = MaterialTheme.typography.bodyMedium)
+                            }
+                            TextButton(onClick = { viewModel.clearState() }) {
+                                Text(stringResource(R.string.OK))
+                            }
+                        }
+                    }
+                }
+                is BackupRestoreViewModel.UiState.Error -> {
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(state.message, style = MaterialTheme.typography.bodyMedium)
+                            }
+                            TextButton(onClick = { viewModel.clearState() }) {
+                                Text(stringResource(R.string.OK))
+                            }
+                        }
+                    }
+                }
+                else -> {}
+            }
+
             Text(
                 text = stringResource(R.string.backup_restore_summary),
                 style = MaterialTheme.typography.bodyLarge
@@ -312,33 +405,6 @@ fun BackupRestoreScreen(
                 }
             }
             
-            // --- State Overlays ---
-            when (val state = uiState) {
-                is BackupRestoreViewModel.UiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-                is BackupRestoreViewModel.UiState.Progress -> {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        LinearProgressIndicator(
-                            progress = { state.current.toFloat() / state.total.toFloat() },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        Text(stringResource(R.string.import_processing_format, state.name))
-                    }
-                }
-                is BackupRestoreViewModel.UiState.Success -> {
-                    Text(state.message, color = MaterialTheme.colorScheme.primary)
-                    Button(onClick = { viewModel.clearState() }) { Text(stringResource(R.string.OK)) }
-                }
-                is BackupRestoreViewModel.UiState.Error -> {
-                    Text(state.message, color = MaterialTheme.colorScheme.error)
-                    Button(onClick = { viewModel.clearState() }) { Text(stringResource(R.string.OK)) }
-                }
-                else -> {}
-            }
-
             // Extra padding at the bottom to avoid conflict with the system navigation bar
             Spacer(modifier = Modifier.height(32.dp))
         }

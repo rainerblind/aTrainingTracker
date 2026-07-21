@@ -34,7 +34,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
 
     sealed class UiState {
         object Idle : UiState()
-        object Loading : UiState()
+        data class Loading(val message: String? = null) : UiState()
         data class Success(val message: String) : UiState()
         data class Error(val message: String) : UiState()
         data class Progress(val current: Int, val total: Int, val name: String) : UiState()
@@ -85,8 +85,12 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
 
     fun createBackup(context: Context, onBackupReady: (Uri) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            _uiState.value = UiState.Loading
-            val backupFile = BackupManager.createBackup(context)
+            _uiState.value = UiState.Loading("Preparing backup...")
+            val backupFile = BackupManager.createBackup(context, object : BackupManager.ProgressListener {
+                override fun onProgress(message: String) {
+                    _uiState.value = UiState.Loading(message)
+                }
+            })
             if (backupFile != null) {
                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", backupFile)
                 onBackupReady(uri)
@@ -99,9 +103,16 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
 
     fun uploadToDropbox(context: Context) {
         viewModelScope.launch {
-            _uiState.value = UiState.Loading
-            val backupFile = withContext(Dispatchers.IO) { BackupManager.createBackup(context) }
+            _uiState.value = UiState.Loading("Creating backup...")
+            val backupFile = withContext(Dispatchers.IO) { 
+                BackupManager.createBackup(context, object : BackupManager.ProgressListener {
+                    override fun onProgress(message: String) {
+                        _uiState.value = UiState.Loading(message)
+                    }
+                }) 
+            }
             if (backupFile != null) {
+                _uiState.value = UiState.Loading("Uploading to Dropbox...")
                 val success = DropboxBackupManager.uploadBackup(context, backupFile)
                 if (success) {
                     _uiState.value = UiState.Success("Backup uploaded to Dropbox")
@@ -116,11 +127,17 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
 
     fun restoreFromDropbox(context: Context) {
         viewModelScope.launch {
-            _uiState.value = UiState.Loading
+            _uiState.value = UiState.Loading("Downloading from Dropbox...")
             val tempFile = File(context.cacheDir, "dropbox_restore.attbackup")
             val downloadSuccess = DropboxBackupManager.downloadBackup(context, tempFile)
             if (downloadSuccess) {
-                val success = withContext(Dispatchers.IO) { MigrationEngine.performFullRestore(context, tempFile) }
+                val success = withContext(Dispatchers.IO) { 
+                    MigrationEngine.performFullRestore(context, tempFile, object : MigrationEngine.ProgressListener {
+                        override fun onProgress(message: String) {
+                            _uiState.value = UiState.Loading(message)
+                        }
+                    }) 
+                }
                 if (!success) {
                     _uiState.value = UiState.Error("Restore failed")
                 }
@@ -132,7 +149,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
 
     fun performFullRestore(context: Context, uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
-            _uiState.value = UiState.Loading
+            _uiState.value = UiState.Loading("Processing backup file...")
             val tempFile = File(context.cacheDir, "restore_upload.attbackup")
             try {
                 context.contentResolver.openInputStream(uri)?.use { input ->
@@ -141,7 +158,11 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
                     }
                 }
                 
-                val success = MigrationEngine.performFullRestore(context, tempFile)
+                val success = MigrationEngine.performFullRestore(context, tempFile, object : MigrationEngine.ProgressListener {
+                    override fun onProgress(message: String) {
+                        _uiState.value = UiState.Loading(message)
+                    }
+                })
                 if (!success) {
                     _uiState.value = UiState.Error("Restore failed")
                 }
@@ -154,7 +175,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
 
     fun analyzeImport(context: Context, uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
-            _uiState.value = UiState.Loading
+            _uiState.value = UiState.Loading("Analyzing backup content...")
             val tempFile = File(context.cacheDir, "import_analysis.attbackup")
             try {
                 context.contentResolver.openInputStream(uri)?.use { input ->
@@ -177,7 +198,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
 
     fun performIncrementalImport(context: Context, uri: Uri, sportMapping: Map<Long, Long>, equipmentMapping: Map<Long, Long>) {
         viewModelScope.launch(Dispatchers.IO) {
-            _uiState.value = UiState.Loading
+            _uiState.value = UiState.Loading("Preparing import...")
             val tempFile = File(context.cacheDir, "import_upload.attbackup")
             try {
                 context.contentResolver.openInputStream(uri)?.use { input ->
@@ -191,6 +212,9 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
                     object : ImportEngine.ProgressListener {
                         override fun onProgress(current: Int, total: Int, name: String) {
                             _uiState.value = UiState.Progress(current, total, name)
+                        }
+                        override fun onStatus(message: String) {
+                            _uiState.value = UiState.Loading(message)
                         }
                     }
                 )
