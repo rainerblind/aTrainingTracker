@@ -52,6 +52,7 @@ fun BackupRestoreScreen(
     
     val scrollState = rememberScrollState()
     var showRestoreConfirm by remember { mutableStateOf(false) }
+    var showDropboxRestoreConfirm by remember { mutableStateOf(false) }
     var restoreUri by remember { mutableStateOf<Uri?>(null) }
 
     var showMappingDialog by remember { mutableStateOf<MappingData?>(null) }
@@ -370,7 +371,7 @@ fun BackupRestoreScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedButton(
-                        onClick = { viewModel.restoreFromDropbox(context) },
+                        onClick = { showDropboxRestoreConfirm = true },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
                     ) {
@@ -428,6 +429,30 @@ fun BackupRestoreScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showRestoreConfirm = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    if (showDropboxRestoreConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDropboxRestoreConfirm = false },
+            title = { Text(stringResource(R.string.restore_warning_title)) },
+            text = { Text(stringResource(R.string.restore_warning_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDropboxRestoreConfirm = false
+                        viewModel.restoreFromDropbox(context)
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.restore_backup))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDropboxRestoreConfirm = false }) {
                     Text(stringResource(R.string.cancel))
                 }
             }

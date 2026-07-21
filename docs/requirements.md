@@ -260,6 +260,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-MIG-004** | **Full Migration Mode.** | The system SHALL support a "Full Restore" mode that replaces the entire local state with a backup, followed by a forced app restart to ensure consistency. | `MigrationEngine` | `TST-MIG-001` | Proposed |
 | **REQ-MIG-005** | **Incremental Import.** | The system SHALL support merging backups into an existing database. It MUST perform deduplication using the `FILE_BASE_NAME` as the unique identifier. | `ImportEngine` | `TST-MIG-002` | Proposed |
 | **REQ-MIG-006** | **State Lockdown.** | Backup and Restore operations SHALL ONLY be allowed when the system is in a non-tracking state to prevent data corruption. | `MigrationUI` | `TST-MIG-001` | Proposed |
+| **REQ-MIG-007** | **Full Restore Confirmation.** | The system SHALL require explicit user confirmation before initiating a "Full Restore" from Dropbox. | `BackupRestoreScreen.kt` | `TST-MIG-004` | Proposed |
 
 ## 12. Privacy & Permissions
 
