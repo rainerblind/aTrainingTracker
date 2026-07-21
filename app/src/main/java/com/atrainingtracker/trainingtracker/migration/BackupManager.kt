@@ -63,20 +63,21 @@ object BackupManager {
 
     private fun checkpointAndCloseAllDatabases(context: Context) {
         // Handle Java and Kotlin database access nuances
+        // Use TRUNCATE to flush everything to disk and clear WAL files without a hard close (ATT-289)
         val databases = listOfNotNull(
-            WorkoutSummariesDatabaseManager.getInstance(context).database,
-            WorkoutSamplesDatabaseManager.getInstance(context).database,
-            LapsDatabaseManager.getInstance(context).database,
-            RoutesDatabaseManager.getInstance(context).provideBackupDatabase(),
-            WorkoutClusterDatabaseManager.getInstance(context).provideBackupDatabase(),
-            KnownLocationsDatabaseManager.getInstance(context).database,
-            SportTypeEquipmentLinkManager.getInstance(context).provideBackupDatabase(),
-            TrackingViewsDatabaseManager.getInstance(context).database,
-            DevicesDatabaseManager.getInstance(context).database,
-            SportTypeDatabaseManager.getInstance(context).database,
+            WorkoutSummariesDatabaseManager.getInstance(context).getDatabase(),
+            WorkoutSamplesDatabaseManager.getInstance(context).getDatabase(),
+            LapsDatabaseManager.getInstance(context).getDatabase(),
+            RoutesDatabaseManager.getInstance(context).getDatabase(),
+            WorkoutClusterDatabaseManager.getInstance(context).getDatabase(),
+            KnownLocationsDatabaseManager.getInstance(context).getDatabase(),
+            SportTypeEquipmentLinkManager.getInstance(context).getDatabase(),
+            TrackingViewsDatabaseManager.getInstance(context).getDatabase(),
+            DevicesDatabaseManager.getInstance(context).getDatabase(),
+            SportTypeDatabaseManager.getInstance(context).getDatabase(),
             StravaUploadDbHelper(context).writableDatabase,
-            ExportStatusDatabaseManager.getInstance(context).database,
-            SegmentsDatabaseManager.getInstance(context).database,
+            ExportStatusDatabaseManager.getInstance(context).getDatabase(),
+            SegmentsDatabaseManager.getInstance(context).getDatabase(),
             EquipmentDbHelper(context).writableDatabase,
             ActiveDevicesDbHelper(context).writableDatabase
         )
@@ -84,11 +85,15 @@ object BackupManager {
         databases.forEach { db ->
             try {
                 if (db.isOpen) {
-                    db.rawQuery("PRAGMA wal_checkpoint(FULL);", null).use { it.moveToFirst() }
-                    db.close()
+                    // Checkpoint WAL to main file and truncate log
+                    db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE);", null).use { 
+                        if (it.moveToFirst()) {
+                            Log.v(TAG, "Checkpoint TRUNCATE result: ${it.getInt(0)}")
+                        }
+                    }
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Error closing database", e)
+                Log.w(TAG, "Error checkpointing database", e)
             }
         }
     }

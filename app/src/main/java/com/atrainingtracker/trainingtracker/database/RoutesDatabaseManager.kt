@@ -72,9 +72,25 @@ data class RouteWithPath(
 class RoutesDatabaseManager private constructor(context: Context) {
 
     private val dbHelper = RoutesDbHelper(context)
+    private var mDatabase: SQLiteDatabase? = null
 
-    fun provideBackupDatabase(): SQLiteDatabase {
-        return dbHelper.writableDatabase
+    /**
+     * Returns a writable database instance and ensures it remains open.
+     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
+     */
+    fun getDatabase(): SQLiteDatabase {
+        val db = mDatabase
+        if (db != null && db.isOpen) {
+            return db
+        }
+        return synchronized(this) {
+            val db2 = mDatabase
+            if (db2 != null && db2.isOpen) {
+                db2
+            } else {
+                dbHelper.writableDatabase.also { mDatabase = it }
+            }
+        }
     }
 
     companion object {
@@ -97,7 +113,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
      * Inserts a new route into the database.
      */
     fun insertRoute(summary: RouteSummary, path: List<PathPoint>): Long {
-        val db = dbHelper.writableDatabase
+        val db = getDatabase()
         db.beginTransaction()
         return try {
             // 1. Insert Summary
@@ -137,7 +153,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
      * @return The number of rows affected.
      */
     fun updateRouteSummary(summary: RouteSummary): Int {
-        val db = dbHelper.writableDatabase
+        val db = getDatabase()
         val values = ContentValues().apply {
             put(RouteContract.COLUMN_NAME, summary.name)
             put(RouteContract.COLUMN_DESCRIPTION, summary.description)
@@ -155,7 +171,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
 
     fun getAllRoutes(): List<RouteWithPath> {
         val routes = mutableListOf<RouteWithPath>()
-        val db = dbHelper.readableDatabase
+        val db = getDatabase()
 
         // Index for the polyline column
         db.query(
@@ -182,7 +198,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
      * Retrieves a route linked to a specific cluster ID.
      */
     fun getRouteByClusterId(clusterId: Long): RouteWithPath? {
-        val db = dbHelper.readableDatabase
+        val db = getDatabase()
         db.query(
             RouteContract.TABLE_ROUTES,
             null,
@@ -205,7 +221,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
      * Toggles whether a route is marked for detailed display on the map.
      */
     fun setRouteSelected(routeId: Long, isSelected: Boolean): Int {
-        val db = dbHelper.writableDatabase
+        val db = getDatabase()
         val values = ContentValues().apply {
             put(RouteContract.COLUMN_IS_SELECTED, if (isSelected) 1 else 0)
         }
@@ -222,7 +238,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
      */
     fun getRoutePath(routeId: Long): List<PathPoint> {
         val pathPoints = mutableListOf<PathPoint>()
-        val db = dbHelper.readableDatabase
+        val db = getDatabase()
 
         db.query(
             RouteContract.TABLE_ROUTE_POINTS,
@@ -294,7 +310,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
      * Clears the cluster ID for any route linked to it (SCRUM-217).
      */
     fun clearClusterLink(clusterId: Long): Int {
-        val db = dbHelper.writableDatabase
+        val db = getDatabase()
         val values = ContentValues().apply {
             put(RouteContract.COLUMN_CLUSTER_ID, -1L)
         }
@@ -310,7 +326,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
      * Deletes a route by its internal database ID.
      */
     fun deleteRoute(routeId: Long): Int {
-        val db = dbHelper.writableDatabase
+        val db = getDatabase()
         return db.delete(RouteContract.TABLE_ROUTES,
             "${RouteContract.COLUMN_ID} = ?",
             arrayOf(routeId.toString())

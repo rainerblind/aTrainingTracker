@@ -42,7 +42,14 @@ class SportTypeEquipmentLinkManager private constructor(context: Context) {
     private val dbHelper = LinkDbHelper(context)
     private val db: SQLiteDatabase get() = dbHelper.writableDatabase
 
-    fun provideBackupDatabase(): SQLiteDatabase = db
+    /**
+     * Returns a writable database instance and ensures it remains open.
+     */
+    fun getDatabase(): SQLiteDatabase {
+        val currentDb = db
+        if (currentDb.isOpen) return currentDb
+        return dbHelper.writableDatabase
+    }
 
     companion object {
         private const val DEBUG = true
