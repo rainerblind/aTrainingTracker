@@ -21,7 +21,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Restore
@@ -43,8 +42,7 @@ data class MappingData(val uri: Uri, val analysis: ImportEngine.AnalysisResult)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BackupRestoreScreen(
-    viewModel: BackupRestoreViewModel,
-    onBack: () -> Unit
+    viewModel: BackupRestoreViewModel
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
@@ -87,26 +85,35 @@ fun BackupRestoreScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.backup_restore)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primaryContainer,
+            ) {
+                Column(modifier = Modifier.statusBarsPadding()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(R.string.backup_restore),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        }
+                }
+            }
+        },
+        contentWindowInsets = WindowInsets(0.dp)
     ) { padding ->
         Column(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .padding(16.dp)
-                .verticalScroll(scrollState),
+                .navigationBarsPadding()
+                .verticalScroll(scrollState)
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // --- State Overlays (ATT-288: Shown at the very top) ---
@@ -402,9 +409,6 @@ fun BackupRestoreScreen(
                     }
                 }
             }
-            
-            // Extra padding at the bottom to avoid conflict with the system navigation bar
-            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 

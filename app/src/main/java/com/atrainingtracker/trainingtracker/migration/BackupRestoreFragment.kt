@@ -40,8 +40,7 @@ class BackupRestoreFragment : Fragment() {
             setContent {
                 ATrainingTrackerTheme {
                     BackupRestoreScreen(
-                        viewModel = viewModel,
-                        onBack = { parentFragmentManager.popBackStack() }
+                        viewModel = viewModel
                     )
                 }
             }
