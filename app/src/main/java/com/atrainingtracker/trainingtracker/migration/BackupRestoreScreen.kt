@@ -86,7 +86,6 @@ fun BackupRestoreScreen(
     }
 
     Scaffold(
-        modifier = Modifier.statusBarsPadding().navigationBarsPadding(),
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.backup_restore)) },
@@ -95,14 +94,12 @@ fun BackupRestoreScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                     }
                 },
-                windowInsets = WindowInsets(0.dp),
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
-        },
-        contentWindowInsets = WindowInsets(0.dp)
+        }
     ) { padding ->
         Column(
             modifier = Modifier
