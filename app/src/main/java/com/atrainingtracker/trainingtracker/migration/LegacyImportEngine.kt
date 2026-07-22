@@ -180,14 +180,12 @@ object LegacyImportEngine {
                                     currentLng = lng
                                 }
                                 "AltitudeMeters" -> if (inTrackpoint) {
-                                    val alt = parser.nextText().toDoubleOrNull()
-                                    values.put(SensorType.ALTITUDE.name, alt)
-                                    currentAlt = alt
+                                    currentAlt = parser.nextText().toDoubleOrNull()
+                                    values.put(SensorType.ALTITUDE.name, currentAlt)
                                 }
                                 "DistanceMeters" -> if (inTrackpoint) {
-                                    val dist = parser.nextText().toDoubleOrNull()
-                                    values.put(SensorType.DISTANCE_m.name, dist)
-                                    currentDist = dist
+                                    currentDist = parser.nextText().toDoubleOrNull()
+                                    values.put(SensorType.DISTANCE_m.name, currentDist)
                                 }
                                 "Value" -> if (inTrackpoint && parser.getAttributeValue(null, "xsi:type") == null) {
                                     values.put(SensorType.HR.name, parser.nextText())
@@ -198,11 +196,8 @@ object LegacyImportEngine {
                         }
                         XmlPullParser.END_TAG -> {
                             if (name == "Trackpoint") {
-                                // Only insert if we have time
                                 if (values.containsKey("time")) {
-                                    // Check if workout exists to decide if we need to insert samples
                                     if (!isWorkoutExisting(summaryDb, baseFileName)) {
-                                        // Create table if not exists (deferred until first insert)
                                         if (points.isEmpty() && altitudes.isEmpty()) {
                                             val sensorTypes = mutableListOf(SensorType.LATITUDE, SensorType.LONGITUDE, SensorType.ALTITUDE, 
                                                 SensorType.DISTANCE_m, SensorType.HR, SensorType.CADENCE, SensorType.POWER)
@@ -215,8 +210,8 @@ object LegacyImportEngine {
                                 if (currentLat != null && currentLng != null) {
                                     points.add(LatLng(currentLat!!, currentLng!!))
                                 }
-                                altitudes.add(currentAlt ?: 0.0)
-                                distances.add(currentDist ?: 0.0)
+                                currentAlt?.let { altitudes.add(it) }
+                                currentDist?.let { distances.add(it) }
                                 inTrackpoint = false
                             }
                         }
@@ -243,7 +238,6 @@ object LegacyImportEngine {
                     workoutId = summaryDb.database.insert(WorkoutSummaries.TABLE, null, summaryValues)
                 }
                 
-                // Merge info from TCX: Sport Type
                 if (sportName != null) {
                     val bSportType = when (sportName.lowercase()) {
                         "running" -> BSportType.RUN
@@ -318,7 +312,6 @@ object LegacyImportEngine {
                         }
                     }
 
-                    // Only insert if workout doesn't exist yet
                     if (values.containsKey("time") && !isWorkoutExisting(summaryDb, baseFileName)) {
                         if (points.isEmpty() && altitudes.isEmpty()) {
                             val sensorTypes = columnMap.values.filterNotNull().distinct().toMutableList()
@@ -329,8 +322,8 @@ object LegacyImportEngine {
                     }
 
                     if (lat != null && lng != null) points.add(LatLng(lat!!, lng!!))
-                    altitudes.add(alt ?: 0.0)
-                    distances.add(dist ?: 0.0)
+                    alt?.let { altitudes.add(it) }
+                    dist?.let { distances.add(it) }
                     
                     nextLine = reader.readNext()
                 }
@@ -383,64 +376,129 @@ object LegacyImportEngine {
         val summariesDb = WorkoutSummariesDatabaseManager.getInstance(context)
         val samplesDb = WorkoutSamplesDatabaseManager.getInstance(context)
         
-        val totalDistance = samplesDb.calcExtremaValue(summariesDb, baseFileName, ExtremaType.MAX, SensorType.DISTANCE_m)
-        val maxTime = samplesDb.calcExtremaValue(summariesDb, baseFileName, ExtremaType.MAX, SensorType.TIME_ACTIVE)
-        val startTime = summariesDb.getString(workoutId, WorkoutSummaries.TIME_START)
-        
-        val values = ContentValues()
-        if (totalDistance != null) values.put(WorkoutSummaries.DISTANCE_TOTAL_m, totalDistance)
-        if (maxTime != null) {
-            values.put(WorkoutSummaries.TIME_ACTIVE_s, maxTime.toInt())
-            values.put(WorkoutSummaries.TIME_TOTAL_s, maxTime.toInt())
-            if (totalDistance != null && maxTime > 0) {
-                values.put(WorkoutSummaries.SPEED_AVERAGE_mps, totalDistance / maxTime)
-            }
+        // 1. Basic Stats
+        var totalDistance = distances.lastOrNull() ?: 0.0
+        if (totalDistance == 0.0 && points.size > 1) {
+            totalDistance = calculateCumulativeDistance(points)
         }
         
+        val activeTime = (points.size.coerceAtLeast(altitudes.size)).coerceAtLeast(distances.size)
+        
+        val values = ContentValues()
+        values.put(WorkoutSummaries.DISTANCE_TOTAL_m, totalDistance)
+        values.put(WorkoutSummaries.TIME_ACTIVE_s, activeTime)
+        values.put(WorkoutSummaries.TIME_TOTAL_s, activeTime)
+        if (activeTime > 0) {
+            values.put(WorkoutSummaries.SPEED_AVERAGE_mps, totalDistance / activeTime)
+        }
+        
+        // 2. Ascent/Descent (5-minute moving average filter) (ATT-301)
+        if (altitudes.isNotEmpty()) {
+            var totalAscent = 0.0
+            var totalDescent = 0.0
+            val windowSize = 300 // 5 mins @ 1Hz
+            var windowSum = 0.0
+            val windowQueue = java.util.ArrayDeque<Double>()
+            var lastFiltered: Double? = null
+
+            altitudes.forEach { rawAlt ->
+                windowSum += rawAlt
+                windowQueue.addLast(rawAlt)
+                if (windowQueue.size > windowSize) {
+                    windowSum -= windowQueue.removeFirst()
+                }
+                val filtered = windowSum / windowQueue.size
+                if (lastFiltered != null) {
+                    val delta = filtered - lastFiltered!!
+                    if (delta > 0) totalAscent += delta
+                    else if (delta < 0) totalDescent += -delta
+                }
+                lastFiltered = filtered
+            }
+            values.put(WorkoutSummaries.ASCENDING, totalAscent.toInt())
+            values.put(WorkoutSummaries.DESCENDING, totalDescent.toInt())
+        }
+
+        // 3. Map & Streams
         val polyline = PolyUtil.encode(points)
         values.put(WorkoutSummaries.MAP_POLYLINE, polyline)
         values.put(WorkoutSummaries.ALTITUDE_STREAM, NumericalEncodingUtils.encodeDoubles(altitudes))
         values.put(WorkoutSummaries.DISTANCE_STREAM, NumericalEncodingUtils.encodeDoubles(distances))
+        // Use the static field safely
+        values.put("extremumValuesCalculated", 1)
         
         summariesDb.database.update(WorkoutSummaries.TABLE, values, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
 
-        // Workout Clustering
-        try {
-            val startPos = samplesDb.getExtremaPosition(summariesDb.database, summariesDb, workoutId, SensorType.LATITUDE, ExtremaType.START)
-            val endPos = samplesDb.getExtremaPosition(summariesDb.database, summariesDb, workoutId, SensorType.LATITUDE, ExtremaType.END)
-            val apexPos = samplesDb.getExtremaPosition(summariesDb.database, summariesDb, workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
-
-            if (startPos != null && endPos != null && apexPos != null && totalDistance != null) {
-                val clusterEngine = WorkoutClusterEngine.getInstance(context)
-                val matchingCluster = clusterEngine.suggestCluster(startPos.latLng, endPos.latLng, apexPos.latLng, totalDistance, null)
-                
-                if (matchingCluster != null) {
-                    clusterEngine.assignClusterToWorkout(context, workoutId, matchingCluster.id, false)
-                } else {
-                    // New Cluster Candidate -> Ask User
-                    val (existingClusterId, customName) = listener?.onNewClusterCandidate(
-                        date = startTime ?: baseFileName,
-                        start = startPos.latLng,
-                        end = endPos.latLng,
-                        apex = apexPos.latLng,
-                        distance = totalDistance,
-                        polyline = polyline
-                    ) ?: Pair(null, null)
-                    
-                    if (existingClusterId != null) {
-                        clusterEngine.assignClusterToWorkout(context, workoutId, existingClusterId, true)
-                    } else if (!customName.isNullOrBlank()) {
-                        val newClusterId = clusterEngine.learnFromWorkout(
-                            startPos.latLng, endPos.latLng, apexPos.latLng, totalDistance,
-                            customName, -1L, -1L
-                        )
-                        clusterEngine.assignClusterToWorkout(context, workoutId, newClusterId, true)
-                    }
+        // 4. Persistence of Extrema (ATT-299, ATT-301)
+        val sensorsToCalculate = listOf(
+            SensorType.HR, SensorType.CADENCE, SensorType.POWER, SensorType.SPEED_mps, 
+            SensorType.ALTITUDE, SensorType.TEMPERATURE
+        )
+        val extremaTypes = listOf(ExtremaType.MIN, ExtremaType.MAX, ExtremaType.AVG)
+        
+        sensorsToCalculate.forEach { sensor ->
+            extremaTypes.forEach { type ->
+                val value = samplesDb.calcExtremaValue(summariesDb, baseFileName, type, sensor)
+                if (value != null && !value.isNaN()) {
+                    summariesDb.updateExtremaValue(workoutId, sensor, type, value, null)
                 }
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Clustering failed for $baseFileName", e)
         }
+
+        // 5. Clustering (Spatial Markers)
+        if (points.isNotEmpty()) {
+            val start = points.first()
+            val end = points.last()
+            
+            var maxDisp = -1.0
+            var apex = start
+            points.forEach { pt ->
+                val d = WorkoutClusterEngine.getInstance(context).distanceBetween(start, pt).toDouble()
+                if (d > maxDisp) {
+                    maxDisp = d
+                    apex = pt
+                }
+            }
+
+            summariesDb.updateExtremaValue(workoutId, SensorType.LATITUDE, ExtremaType.START, start.latitude, start)
+            summariesDb.updateExtremaValue(workoutId, SensorType.LONGITUDE, ExtremaType.START, start.longitude, start)
+            summariesDb.updateExtremaValue(workoutId, SensorType.LATITUDE, ExtremaType.END, end.latitude, end)
+            summariesDb.updateExtremaValue(workoutId, SensorType.LONGITUDE, ExtremaType.END, end.longitude, end)
+            summariesDb.updateExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, maxDisp, apex)
+
+            val clusterEngine = WorkoutClusterEngine.getInstance(context)
+            val matchingCluster = clusterEngine.suggestCluster(start, end, apex, totalDistance, null)
+            
+            if (matchingCluster != null) {
+                clusterEngine.assignClusterToWorkout(context, workoutId, matchingCluster.id, false)
+            } else {
+                val startTime = summariesDb.getString(workoutId, WorkoutSummaries.TIME_START)
+                val (existingId, customName) = listener?.onNewClusterCandidate(
+                    date = startTime ?: baseFileName,
+                    start = start, end = end, apex = apex, 
+                    distance = totalDistance, polyline = polyline
+                ) ?: Pair(null, null)
+                
+                if (existingId != null) {
+                    clusterEngine.assignClusterToWorkout(context, workoutId, existingId, true)
+                } else if (!customName.isNullOrBlank()) {
+                    val newId = clusterEngine.learnFromWorkout(start, end, apex, totalDistance, customName, -1L, -1L)
+                    clusterEngine.assignClusterToWorkout(context, workoutId, newId, true)
+                }
+            }
+        }
+    }
+
+    private fun calculateCumulativeDistance(points: List<LatLng>): Double {
+        var totalDist = 0.0
+        val results = FloatArray(1)
+        for (i in 1 until points.size) {
+            val p1 = points[i - 1]
+            val p2 = points[i]
+            android.location.Location.distanceBetween(p1.latitude, p1.longitude, p2.latitude, p2.longitude, results)
+            totalDist += results[0]
+        }
+        return totalDist
     }
 
     private fun mapHeaderToSensorTypes(header: Array<String>): Map<Int, SensorType?> {

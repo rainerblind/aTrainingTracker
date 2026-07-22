@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.*
 import com.google.maps.android.PolyUtil
@@ -566,6 +568,7 @@ fun ClusterNamingDialog(
     onConfirm: (Long?, String?) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     var name by remember { mutableStateOf("") }
     var selectedClusterId by remember { mutableStateOf<Long?>(null) }
     
@@ -604,8 +607,21 @@ fun ClusterNamingDialog(
                             startCap = RoundCap(),
                             endCap = RoundCap()
                         )
-                        Marker(state = rememberMarkerState(position = state.start), title = "Start")
-                        Marker(state = rememberMarkerState(position = state.end), title = "End")
+                        Marker(
+                            state = rememberMarkerState(position = state.start), 
+                            title = "Start",
+                            icon = createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint)
+                        )
+                        Marker(
+                            state = rememberMarkerState(position = state.end), 
+                            title = "End",
+                            icon = createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint)
+                        )
+                        Marker(
+                            state = rememberMarkerState(position = state.apex), 
+                            title = "Apex",
+                            icon = createSensorMarker(context, R.drawable.ic_distance, TTColor.ApexPoint)
+                        )
                     }
                 }
 

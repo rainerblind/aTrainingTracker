@@ -509,7 +509,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
         return dbManager.insertCluster(newCluster)
     }
 
-    private fun distanceBetween(p1: LatLng, p2: LatLng): Float {
+    fun distanceBetween(p1: LatLng, p2: LatLng): Float {
         val results = FloatArray(1)
         Location.distanceBetween(p1.latitude, p1.longitude, p2.latitude, p2.longitude, results)
         return results[0]
