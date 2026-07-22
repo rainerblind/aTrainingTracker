@@ -256,7 +256,7 @@ object LegacyImportEngine {
                 val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
                 val targetDb = samplesDbManager.database
                 
-                val sensorTypes = columnMap.values.filterNotNull().toMutableList()
+                val sensorTypes = columnMap.values.filterNotNull().distinct().toMutableList()
                 samplesDbManager.createNewTable(baseFileName, sensorTypes)
                 
                 var firstTime: String? = null
