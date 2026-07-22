@@ -40,7 +40,7 @@ fun FastScrollbar(
     state: LazyListState,
     modifier: Modifier = Modifier,
     thumbColor: Color = MaterialTheme.colorScheme.primary,
-    trackColor: Color = Color.Transparent
+    trackColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
 ) {
     val coroutineScope = rememberCoroutineScope()
     var trackHeightPx by remember { mutableIntStateOf(0) }
@@ -52,19 +52,23 @@ fun FastScrollbar(
     // Hide if everything fits on screen or no items
     if (totalItems <= visibleItems || totalItems == 0) return
 
-    val firstVisibleIndex = state.firstVisibleItemIndex
-    val firstVisibleOffset = state.firstVisibleItemScrollOffset
-    
-    val scrollProgress by remember(state, totalItems) {
+    val scrollProgress by remember(state) {
         derivedStateOf {
-            if (totalItems == 0) 0f
+            val layoutInfo = state.layoutInfo
+            val totalItemsCount = layoutInfo.totalItemsCount
+            if (totalItemsCount == 0) 0f
             else {
-                val firstItem = state.layoutInfo.visibleItemsInfo.firstOrNull()
-                if (firstItem == null) 0f
+                val firstVisibleItem = layoutInfo.visibleItemsInfo.firstOrNull()
+                if (firstVisibleItem == null) 0f
                 else {
-                    val estimatedTotalHeight = totalItems.toFloat()
-                    val currentPosition = firstVisibleIndex.toFloat() + (firstVisibleOffset.toFloat() / firstItem.size)
-                    (currentPosition / estimatedTotalHeight).coerceIn(0f, 1f)
+                    val index = state.firstVisibleItemIndex
+                    val offset = state.firstVisibleItemScrollOffset
+                    val itemSize = firstVisibleItem.size
+                    if (itemSize == 0) 0f
+                    else {
+                        val progress = (index.toFloat() + offset.toFloat() / itemSize) / totalItemsCount.toFloat()
+                        progress.coerceIn(0f, 1f)
+                    }
                 }
             }
         }
@@ -80,21 +84,24 @@ fun FastScrollbar(
     val thumbHeightDp = 48.dp
     val thumbHeightPx = with(density) { thumbHeightDp.toPx() }
 
+    // Safety: Hide if track is smaller than thumb
+    if (trackHeightPx > 0 && trackHeightPx < thumbHeightPx) return
+
     Box(
         modifier = modifier
             .fillMaxHeight()
             .width(32.dp) // Wider touch target for better UX
             .alpha(alpha)
             .onGloballyPositioned { trackHeightPx = it.size.height }
-            .pointerInput(totalItems) {
+            .pointerInput(state) {
                 detectDragGestures(
-                    onDragStart = { },
                     onDrag = { change, dragAmount ->
                         change.consume()
-                        if (trackHeightPx > 0) {
+                        val totalItemsCount = state.layoutInfo.totalItemsCount
+                        if (trackHeightPx > 0 && totalItemsCount > 0) {
                             val deltaProgress = dragAmount.y / trackHeightPx
                             val newProgress = (scrollProgress + deltaProgress).coerceIn(0f, 1f)
-                            val targetIndex = (newProgress * totalItems).toInt().coerceIn(0, totalItems - 1)
+                            val targetIndex = (newProgress * totalItemsCount).toInt().coerceIn(0, totalItemsCount - 1)
                             coroutineScope.launch {
                                 state.scrollToItem(targetIndex)
                             }
@@ -116,8 +123,8 @@ fun FastScrollbar(
         Box(
             modifier = Modifier
                 .offset {
-                    val maxOffsetPx = trackHeightPx - thumbHeightPx
-                    IntOffset(0, (scrollProgress * maxOffsetPx).roundToInt().coerceIn(0, maxOffsetPx.toInt()))
+                    val maxOffsetPx = (trackHeightPx - thumbHeightPx).coerceAtLeast(0f)
+                    IntOffset(0, (scrollProgress * maxOffsetPx).roundToInt().coerceIn(0, maxOffsetPx.roundToInt()))
                 }
                 .padding(horizontal = 12.dp)
                 .height(thumbHeightDp)
