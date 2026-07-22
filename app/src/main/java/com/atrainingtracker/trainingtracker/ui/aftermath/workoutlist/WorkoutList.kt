@@ -31,6 +31,7 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -39,6 +40,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
+import com.atrainingtracker.trainingtracker.ui.components.FastScrollbar
 
 /**
  * The scrollable list of WorkoutSummaries.
@@ -70,42 +72,53 @@ fun WorkoutList(
             message = stringResource(R.string.no_workouts_available)
         )
     } else {
-        LazyColumn(
-            state = scrollState,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                // Calculation: The initial header height (px) + the current offset (px)
-                // convert the final result to Dp.
-                top = topPadding + 8.dp,
-                bottom = bottomPadding + 16.dp,
-                start = 8.dp,
-                end = 8.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(
-                items = workouts,
-                key = { it.id }
-            ) { workoutData ->
-                if (isCompactView) {
-                    WorkoutSummaryCompact(
-                        workoutData = workoutData,
-                        onEditWorkout = { onMapClick(workoutData) },
-                        onDeleteRequest = { onDeleteRequest(workoutData.id) },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                } else {
-                    WorkoutSummary(
-                        workoutData = workoutData,
-                        isPlayServiceAvailable = isPlayServiceAvailable,
-                        onExport = { fileFormat -> onExportWorkout(workoutData.id, fileFormat) },
-                        onSaveAsRoute = { onSaveAsRoute(workoutData) },
-                        onDeleteRequest = { onDeleteRequest(workoutData.id) },
-                        onEditWorkout = { onEditWorkout(workoutData.id) },
-                        onMapClick = { onMapClick(workoutData) }
-                    )
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                state = scrollState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    // Calculation: The initial header height (px) + the current offset (px)
+                    // convert the final result to Dp.
+                    top = topPadding + 8.dp,
+                    bottom = bottomPadding + 16.dp,
+                    start = 8.dp,
+                    end = 8.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(
+                    items = workouts,
+                    key = { it.id }
+                ) { workoutData ->
+                    if (isCompactView) {
+                        WorkoutSummaryCompact(
+                            workoutData = workoutData,
+                            onEditWorkout = { onMapClick(workoutData) },
+                            onDeleteRequest = { onDeleteRequest(workoutData.id) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        WorkoutSummary(
+                            workoutData = workoutData,
+                            isPlayServiceAvailable = isPlayServiceAvailable,
+                            onExport = { fileFormat -> onExportWorkout(workoutData.id, fileFormat) },
+                            onSaveAsRoute = { onSaveAsRoute(workoutData) },
+                            onDeleteRequest = { onDeleteRequest(workoutData.id) },
+                            onEditWorkout = { onEditWorkout(workoutData.id) },
+                            onMapClick = { onMapClick(workoutData) }
+                        )
+                    }
                 }
             }
+
+            // Fast Scroll Bar (ATT-303)
+            FastScrollbar(
+                state = scrollState,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(top = topPadding, bottom = bottomPadding)
+                    .padding(end = 4.dp)
+            )
         }
     }
 }
