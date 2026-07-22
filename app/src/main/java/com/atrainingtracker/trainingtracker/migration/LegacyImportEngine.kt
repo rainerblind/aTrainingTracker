@@ -16,6 +16,7 @@ import android.util.Log
 import android.util.Xml
 import au.com.bytecode.opencsv.CSVReader
 import com.atrainingtracker.BuildConfig
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.ExtremaType
@@ -123,16 +124,12 @@ object LegacyImportEngine {
         try {
             val baseFileName = tcxFile.nameWithoutExtension.removeSuffix("-TMP").removeSuffix("~")
             val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
-            if (isWorkoutExisting(summaryDb, baseFileName)) return false
-
+            
             val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
             val targetDb = samplesDbManager.database
 
-            val sensorTypes = mutableListOf(SensorType.LATITUDE, SensorType.LONGITUDE, SensorType.ALTITUDE, 
-                SensorType.DISTANCE_m, SensorType.HR, SensorType.CADENCE, SensorType.POWER)
-            samplesDbManager.createNewTable(baseFileName, sensorTypes)
-
             var firstTime: String? = null
+            var sportName: String? = null
             val points = mutableListOf<LatLng>()
             val altitudes = mutableListOf<Double>()
             val distances = mutableListOf<Double>()
@@ -141,95 +138,125 @@ object LegacyImportEngine {
                 val parser = Xml.newPullParser()
                 parser.setInput(fis, "UTF-8")
                 
-                targetDb.beginTransaction()
-                try {
-                    var eventType = parser.eventType
-                    var values = ContentValues()
-                    var inTrackpoint = false
-                    var currentLat: Double? = null
-                    var currentLng: Double? = null
-                    var currentAlt: Double? = null
-                    var currentDist: Double? = null
+                var eventType = parser.eventType
+                var values = ContentValues()
+                var inTrackpoint = false
+                var currentLat: Double? = null
+                var currentLng: Double? = null
+                var currentAlt: Double? = null
+                var currentDist: Double? = null
 
-                    while (eventType != XmlPullParser.END_DOCUMENT) {
-                        val name = parser.name
-                        when (eventType) {
-                            XmlPullParser.START_TAG -> {
-                                when (name) {
-                                    "Trackpoint" -> {
-                                        inTrackpoint = true
-                                        values = ContentValues()
-                                        currentLat = null
-                                        currentLng = null
-                                        currentAlt = null
-                                        currentDist = null
-                                    }
-                                    "Time" -> if (inTrackpoint) {
-                                        val rawTime = parser.nextText()
-                                        val formatted = try { 
-                                            val date = tcxTimeFormat.parse(rawTime.substring(0, 19))
-                                            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(date!!)
-                                        } catch (e: Exception) { rawTime }
-                                        values.put("time", formatted)
-                                        if (firstTime == null) firstTime = formatted
-                                    }
-                                    "LatitudeDegrees" -> if (inTrackpoint) {
-                                        val lat = parser.nextText().toDoubleOrNull()
-                                        values.put(SensorType.LATITUDE.name, lat)
-                                        currentLat = lat
-                                    }
-                                    "LongitudeDegrees" -> if (inTrackpoint) {
-                                        val lng = parser.nextText().toDoubleOrNull()
-                                        values.put(SensorType.LONGITUDE.name, lng)
-                                        currentLng = lng
-                                    }
-                                    "AltitudeMeters" -> if (inTrackpoint) {
-                                        val alt = parser.nextText().toDoubleOrNull()
-                                        values.put(SensorType.ALTITUDE.name, alt)
-                                        currentAlt = alt
-                                    }
-                                    "DistanceMeters" -> if (inTrackpoint) {
-                                        val dist = parser.nextText().toDoubleOrNull()
-                                        values.put(SensorType.DISTANCE_m.name, dist)
-                                        currentDist = dist
-                                    }
-                                    "Value" -> if (inTrackpoint && parser.getAttributeValue(null, "xsi:type") == null) {
-                                        values.put(SensorType.HR.name, parser.nextText())
-                                    }
-                                    "Cadence" -> if (inTrackpoint) values.put(SensorType.CADENCE.name, parser.nextText())
-                                    "Watts" -> if (inTrackpoint) values.put(SensorType.POWER.name, parser.nextText())
+                while (eventType != XmlPullParser.END_DOCUMENT) {
+                    val name = parser.name
+                    when (eventType) {
+                        XmlPullParser.START_TAG -> {
+                            when (name) {
+                                "Activity" -> sportName = parser.getAttributeValue(null, "Sport")
+                                "Trackpoint" -> {
+                                    inTrackpoint = true
+                                    values = ContentValues()
+                                    currentLat = null
+                                    currentLng = null
+                                    currentAlt = null
+                                    currentDist = null
                                 }
-                            }
-                            XmlPullParser.END_TAG -> {
-                                if (name == "Trackpoint") {
-                                    targetDb.insert(WorkoutSamplesDatabaseManager.getTableName(baseFileName), null, values)
-                                    if (currentLat != null && currentLng != null) {
-                                        points.add(LatLng(currentLat!!, currentLng!!))
-                                    }
-                                    altitudes.add(currentAlt ?: 0.0)
-                                    distances.add(currentDist ?: 0.0)
-                                    inTrackpoint = false
+                                "Time" -> if (inTrackpoint) {
+                                    val rawTime = parser.nextText()
+                                    val formatted = try { 
+                                        val date = tcxTimeFormat.parse(rawTime.substring(0, 19))
+                                        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(date!!)
+                                    } catch (e: Exception) { rawTime }
+                                    values.put("time", formatted)
+                                    if (firstTime == null) firstTime = formatted
                                 }
+                                "LatitudeDegrees" -> if (inTrackpoint) {
+                                    val lat = parser.nextText().toDoubleOrNull()
+                                    values.put(SensorType.LATITUDE.name, lat)
+                                    currentLat = lat
+                                }
+                                "LongitudeDegrees" -> if (inTrackpoint) {
+                                    val lng = parser.nextText().toDoubleOrNull()
+                                    values.put(SensorType.LONGITUDE.name, lng)
+                                    currentLng = lng
+                                }
+                                "AltitudeMeters" -> if (inTrackpoint) {
+                                    val alt = parser.nextText().toDoubleOrNull()
+                                    values.put(SensorType.ALTITUDE.name, alt)
+                                    currentAlt = alt
+                                }
+                                "DistanceMeters" -> if (inTrackpoint) {
+                                    val dist = parser.nextText().toDoubleOrNull()
+                                    values.put(SensorType.DISTANCE_m.name, dist)
+                                    currentDist = dist
+                                }
+                                "Value" -> if (inTrackpoint && parser.getAttributeValue(null, "xsi:type") == null) {
+                                    values.put(SensorType.HR.name, parser.nextText())
+                                }
+                                "Cadence" -> if (inTrackpoint) values.put(SensorType.CADENCE.name, parser.nextText())
+                                "Watts" -> if (inTrackpoint) values.put(SensorType.POWER.name, parser.nextText())
                             }
                         }
-                        eventType = parser.next()
+                        XmlPullParser.END_TAG -> {
+                            if (name == "Trackpoint") {
+                                // Only insert if we have time
+                                if (values.containsKey("time")) {
+                                    // Check if workout exists to decide if we need to insert samples
+                                    if (!isWorkoutExisting(summaryDb, baseFileName)) {
+                                        // Create table if not exists (deferred until first insert)
+                                        if (points.isEmpty() && altitudes.isEmpty()) {
+                                            val sensorTypes = mutableListOf(SensorType.LATITUDE, SensorType.LONGITUDE, SensorType.ALTITUDE, 
+                                                SensorType.DISTANCE_m, SensorType.HR, SensorType.CADENCE, SensorType.POWER)
+                                            samplesDbManager.createNewTable(baseFileName, sensorTypes)
+                                            targetDb.beginTransaction()
+                                        }
+                                        targetDb.insert(WorkoutSamplesDatabaseManager.getTableName(baseFileName), null, values)
+                                    }
+                                }
+                                if (currentLat != null && currentLng != null) {
+                                    points.add(LatLng(currentLat!!, currentLng!!))
+                                }
+                                altitudes.add(currentAlt ?: 0.0)
+                                distances.add(currentDist ?: 0.0)
+                                inTrackpoint = false
+                            }
+                        }
                     }
+                    eventType = parser.next()
+                }
+                if (targetDb.inTransaction()) {
                     targetDb.setTransactionSuccessful()
-                } finally {
                     targetDb.endTransaction()
                 }
             }
 
             if (firstTime != null) {
-                val summaryValues = ContentValues().apply {
-                    put(WorkoutSummaries.FILE_BASE_NAME, baseFileName)
-                    put(WorkoutSummaries.WORKOUT_NAME, baseFileName)
-                    put(WorkoutSummaries.TIME_START, firstTime)
-                    put(WorkoutSummaries.SPORT_ID, -1L)
-                    put(WorkoutSummaries.EQUIPMENT_ID, -1L)
-                    put(WorkoutSummaries.FINISHED, 1)
+                var workoutId = getWorkoutId(summaryDb, baseFileName)
+                if (workoutId == -1L) {
+                    val summaryValues = ContentValues().apply {
+                        put(WorkoutSummaries.FILE_BASE_NAME, baseFileName)
+                        put(WorkoutSummaries.WORKOUT_NAME, baseFileName)
+                        put(WorkoutSummaries.TIME_START, firstTime)
+                        put(WorkoutSummaries.SPORT_ID, -1L)
+                        put(WorkoutSummaries.EQUIPMENT_ID, -1L)
+                        put(WorkoutSummaries.FINISHED, 1)
+                    }
+                    workoutId = summaryDb.database.insert(WorkoutSummaries.TABLE, null, summaryValues)
                 }
-                val workoutId = summaryDb.database.insert(WorkoutSummaries.TABLE, null, summaryValues)
+                
+                // Merge info from TCX: Sport Type
+                if (sportName != null) {
+                    val bSportType = when (sportName.lowercase()) {
+                        "running" -> BSportType.RUN
+                        "biking" -> BSportType.BIKE
+                        else -> BSportType.UNKNOWN
+                    }
+                    val sportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
+                    val updateValues = ContentValues().apply {
+                        put(WorkoutSummaries.SPORT_ID, sportId)
+                    }
+                    summaryDb.database.update(WorkoutSummaries.TABLE, updateValues, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
+                }
+
                 recalculateStats(context, workoutId, baseFileName, points, altitudes, distances, listener)
                 return true
             }
@@ -237,6 +264,13 @@ object LegacyImportEngine {
             Log.e(TAG, "Failed to import TCX: ${tcxFile.name}", e)
         }
         return false
+    }
+
+    private fun getWorkoutId(db: WorkoutSummariesDatabaseManager, fileBaseName: String): Long {
+        db.database.query(WorkoutSummaries.TABLE, arrayOf(WorkoutSummaries.C_ID), 
+            "${WorkoutSummaries.FILE_BASE_NAME} = ?", arrayOf(fileBaseName), null, null, null).use {
+            return if (it.moveToFirst()) it.getLong(0) else -1L
+        }
     }
 
     /**
@@ -251,67 +285,75 @@ object LegacyImportEngine {
                 val baseFileName = csvFile.nameWithoutExtension.removeSuffix("-TMP")
                 val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
                 
-                if (isWorkoutExisting(summaryDb, baseFileName)) return false
-
                 val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
                 val targetDb = samplesDbManager.database
-                
-                val sensorTypes = columnMap.values.filterNotNull().distinct().toMutableList()
-                samplesDbManager.createNewTable(baseFileName, sensorTypes)
                 
                 var firstTime: String? = null
                 val points = mutableListOf<LatLng>()
                 val altitudes = mutableListOf<Double>()
                 val distances = mutableListOf<Double>()
 
-                targetDb.beginTransaction()
-                try {
-                    var nextLine: Array<String>? = reader.readNext()
-                    while (nextLine != null) {
-                        val values = ContentValues()
-                        var lat: Double? = null
-                        var lng: Double? = null
-                        var alt: Double? = null
-                        var dist: Double? = null
-                        
-                        columnMap.forEach { (index, sensorType) ->
-                            val value = nextLine?.getOrNull(index) ?: ""
-                            if (value.isNotEmpty()) {
-                                if (sensorType == null && header[index].replace("\"", "") == "time") {
-                                    val formattedTime = normalizeTimestamp(value)
-                                    values.put("time", formattedTime)
-                                    if (firstTime == null) firstTime = formattedTime
-                                } else if (sensorType != null) {
-                                    values.put(sensorType.name, value)
-                                    if (sensorType == SensorType.LATITUDE) lat = value.toDoubleOrNull()
-                                    if (sensorType == SensorType.LONGITUDE) lng = value.toDoubleOrNull()
-                                    if (sensorType == SensorType.ALTITUDE) alt = value.toDoubleOrNull()
-                                    if (sensorType == SensorType.DISTANCE_m) dist = value.toDoubleOrNull()
-                                }
+                var nextLine: Array<String>? = reader.readNext()
+                while (nextLine != null) {
+                    val values = ContentValues()
+                    var lat: Double? = null
+                    var lng: Double? = null
+                    var alt: Double? = null
+                    var dist: Double? = null
+                    
+                    columnMap.forEach { (index, sensorType) ->
+                        val value = nextLine?.getOrNull(index) ?: ""
+                        if (value.isNotEmpty()) {
+                            if (sensorType == null && header[index].replace("\"", "") == "time") {
+                                val formattedTime = normalizeTimestamp(value)
+                                values.put("time", formattedTime)
+                                if (firstTime == null) firstTime = formattedTime
+                            } else if (sensorType != null) {
+                                values.put(sensorType.name, value)
+                                if (sensorType == SensorType.LATITUDE) lat = value.toDoubleOrNull()
+                                if (sensorType == SensorType.LONGITUDE) lng = value.toDoubleOrNull()
+                                if (sensorType == SensorType.ALTITUDE) alt = value.toDoubleOrNull()
+                                if (sensorType == SensorType.DISTANCE_m) dist = value.toDoubleOrNull()
                             }
                         }
-                        targetDb.insert(WorkoutSamplesDatabaseManager.getTableName(baseFileName), null, values)
-                        if (lat != null && lng != null) points.add(LatLng(lat!!, lng!!))
-                        altitudes.add(alt ?: 0.0)
-                        distances.add(dist ?: 0.0)
-                        
-                        nextLine = reader.readNext()
                     }
+
+                    // Only insert if workout doesn't exist yet
+                    if (values.containsKey("time") && !isWorkoutExisting(summaryDb, baseFileName)) {
+                        if (points.isEmpty() && altitudes.isEmpty()) {
+                            val sensorTypes = columnMap.values.filterNotNull().distinct().toMutableList()
+                            samplesDbManager.createNewTable(baseFileName, sensorTypes)
+                            targetDb.beginTransaction()
+                        }
+                        targetDb.insert(WorkoutSamplesDatabaseManager.getTableName(baseFileName), null, values)
+                    }
+
+                    if (lat != null && lng != null) points.add(LatLng(lat!!, lng!!))
+                    altitudes.add(alt ?: 0.0)
+                    distances.add(dist ?: 0.0)
+                    
+                    nextLine = reader.readNext()
+                }
+
+                if (targetDb.inTransaction()) {
                     targetDb.setTransactionSuccessful()
-                } finally {
                     targetDb.endTransaction()
                 }
 
                 if (firstTime != null) {
-                    val summaryValues = ContentValues().apply {
-                        put(WorkoutSummaries.FILE_BASE_NAME, baseFileName)
-                        put(WorkoutSummaries.WORKOUT_NAME, baseFileName)
-                        put(WorkoutSummaries.TIME_START, firstTime)
-                        put(WorkoutSummaries.SPORT_ID, -1L)
-                        put(WorkoutSummaries.EQUIPMENT_ID, -1L)
-                        put(WorkoutSummaries.FINISHED, 1)
+                    var workoutId = getWorkoutId(summaryDb, baseFileName)
+                    if (workoutId == -1L) {
+                        val summaryValues = ContentValues().apply {
+                            put(WorkoutSummaries.FILE_BASE_NAME, baseFileName)
+                            put(WorkoutSummaries.WORKOUT_NAME, baseFileName)
+                            put(WorkoutSummaries.TIME_START, firstTime)
+                            put(WorkoutSummaries.SPORT_ID, -1L)
+                            put(WorkoutSummaries.EQUIPMENT_ID, -1L)
+                            put(WorkoutSummaries.FINISHED, 1)
+                        }
+                        workoutId = summaryDb.database.insert(WorkoutSummaries.TABLE, null, summaryValues)
                     }
-                    val workoutId = summaryDb.database.insert(WorkoutSummaries.TABLE, null, summaryValues)
+
                     recalculateStats(context, workoutId, baseFileName, points, altitudes, distances, listener)
                     return true
                 }
