@@ -29,6 +29,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -36,6 +37,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.*
+import com.google.maps.android.PolyUtil
+import com.google.maps.android.compose.*
 
 data class MappingData(val uri: Uri, val analysis: ImportEngine.AnalysisResult)
 
@@ -69,6 +75,15 @@ fun BackupRestoreScreen(
     ) { uri ->
         uri?.let {
             viewModel.analyzeImport(context, it)
+        }
+    }
+
+    val pickLegacyFileLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            val extension = if (it.toString().endsWith("csv", true)) "csv" else "tcx"
+            viewModel.importLegacyFile(context, it, extension)
         }
     }
 
@@ -421,6 +436,54 @@ fun BackupRestoreScreen(
                     }
                 }
             }
+
+            // --- Legacy Recovery Card ---
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = stringResource(R.string.legacy_recovery_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.legacy_recovery_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = { viewModel.bulkRecoverLegacyData(context, "csv") },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(stringResource(R.string.scan_csv))
+                        }
+                        OutlinedButton(
+                            onClick = { viewModel.bulkRecoverLegacyData(context, "tcx") },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(stringResource(R.string.scan_tcx))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedButton(
+                        onClick = { pickLegacyFileLauncher.launch(arrayOf("*/*")) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.CloudUpload, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.import_single_file))
+                    }
+                }
+            }
         }
     }
 
@@ -472,6 +535,15 @@ fun BackupRestoreScreen(
         )
     }
 
+    if (uiState is BackupRestoreViewModel.UiState.ClusterNamingRequired) {
+        val namingState = uiState as BackupRestoreViewModel.UiState.ClusterNamingRequired
+        ClusterNamingDialog(
+            state = namingState,
+            onConfirm = { clusterId, name -> viewModel.provideClusterDecision(clusterId, name) },
+            onDismiss = { viewModel.provideClusterDecision(null, null) }
+        )
+    }
+
     showMappingDialog?.let { data ->
         ImportMappingDialog(
             analysis = data.analysis,
@@ -485,6 +557,129 @@ fun BackupRestoreScreen(
             }
         )
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ClusterNamingDialog(
+    state: BackupRestoreViewModel.UiState.ClusterNamingRequired,
+    onConfirm: (Long?, String?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var selectedClusterId by remember { mutableStateOf<Long?>(null) }
+    
+    val decodedPoints = remember(state.polyline) { PolyUtil.decode(state.polyline) }
+    val bounds = remember(decodedPoints) {
+        val b = LatLngBounds.builder()
+        decodedPoints.forEach { b.include(it) }
+        b.build()
+    }
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(bounds.center, 12f)
+    }
+
+    LaunchedEffect(bounds) {
+        cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(bounds, 50))
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Assign Workout to Route") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Found a recurring route from ${state.date}.")
+                
+                Box(modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(8.dp))) {
+                    GoogleMap(
+                        modifier = Modifier.fillMaxSize(),
+                        cameraPositionState = cameraPositionState,
+                        uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false)
+                    ) {
+                        Polyline(
+                            points = decodedPoints,
+                            color = MaterialTheme.colorScheme.primary,
+                            width = 5f,
+                            jointType = JointType.ROUND,
+                            startCap = RoundCap(),
+                            endCap = RoundCap()
+                        )
+                        Marker(state = rememberMarkerState(position = state.start), title = "Start")
+                        Marker(state = rememberMarkerState(position = state.end), title = "End")
+                    }
+                }
+
+                Text("Select an existing route:", style = MaterialTheme.typography.labelLarge)
+                
+                var expanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
+                ) {
+                    val currentLabel = state.existingClusters.find { it.id == selectedClusterId }?.name ?: "None (Create New)"
+                    TextField(
+                        value = currentLabel,
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        colors = ExposedDropdownMenuDefaults.textFieldColors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        )
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("None (Create New)") },
+                            onClick = {
+                                selectedClusterId = null
+                                expanded = false
+                            }
+                        )
+                        state.existingClusters.forEach { cluster ->
+                            DropdownMenuItem(
+                                text = { Text(cluster.name) },
+                                onClick = {
+                                    selectedClusterId = cluster.id
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                if (selectedClusterId == null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Or give it a new name:", style = MaterialTheme.typography.labelLarge)
+                    TextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("New Route Name") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { 
+                if (selectedClusterId != null) {
+                    onConfirm(selectedClusterId, null)
+                } else {
+                    onConfirm(null, name.takeIf { it.isNotBlank() })
+                }
+            }) {
+                Text(stringResource(R.string.OK))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Leave Unclustered")
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

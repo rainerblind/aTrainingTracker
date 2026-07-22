@@ -1273,4 +1273,9 @@
     <string name="create_and_upload_to_dropbox">Create \u0026 Upload to Dropbox</string>
     <string name="full_restore_description">Wipes all local data and replaces it with the content of the backup. Forces an app restart.</string>
     <string name="incremental_import_description">Merges workouts from a backup into your current history. Workouts already present locally will be skipped.</string>
+    <string name="legacy_recovery_title">Legacy Recovery</string>
+    <string name="legacy_recovery_description">Recreate missing workouts from legacy Dropbox exports (CSV/TCX). This will skip existing records.</string>
+    <string name="scan_csv">Scan CSV</string>
+    <string name="scan_tcx">Scan TCX</string>
+    <string name="import_single_file">Import Single CSV/TCX File</string>
 </resources>

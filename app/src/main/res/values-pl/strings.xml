@@ -1068,4 +1068,9 @@ pobrano but: %1</string>
     <string name="create_and_upload_to_dropbox">Utwórz \u0026 prześlij do Dropbox</string>
     <string name="full_restore_description">Usuwa wszystkie lokalne dane i zastępuje je zawartością kopii zapasowej. Wymaga restartu aplikacji.</string>
     <string name="incremental_import_description">Scala treningi z kopii zapasowej z Twoją obecną historią. Istniejące już treningi zostaną pominięte.</string>
+    <string name="legacy_recovery_title">Odzyskiwanie starych danych</string>
+    <string name="legacy_recovery_description">Odtwórz brakujące treningi ze starych eksportów Dropbox (CSV/TCX). Istniejące rekordy zostaną pominięte.</string>
+    <string name="scan_csv">Skanuj CSV</string>
+    <string name="scan_tcx">Skanuj TCX</string>
+    <string name="import_single_file">Importuj pojedynczy plik</string>
 </resources>

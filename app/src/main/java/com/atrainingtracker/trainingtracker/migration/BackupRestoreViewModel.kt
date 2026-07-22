@@ -22,6 +22,10 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
+import com.google.android.gms.maps.model.LatLng
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
@@ -39,10 +43,25 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         data class Error(val message: String) : UiState()
         data class Progress(val current: Int, val total: Int, val name: String) : UiState()
         data class MappingRequired(val uri: Uri, val analysis: ImportEngine.AnalysisResult) : UiState()
+        data class ClusterNamingRequired(
+            val date: String,
+            val start: LatLng,
+            val end: LatLng,
+            val apex: LatLng,
+            val distance: Double,
+            val polyline: String,
+            val existingClusters: List<WorkoutCluster>
+        ) : UiState()
     }
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState
+
+    private var clusterDecision: CompletableDeferred<Pair<Long?, String?>>? = null
+
+    fun provideClusterDecision(clusterId: Long?, name: String?) {
+        clusterDecision?.complete(Pair(clusterId, name))
+    }
 
     data class LastBackupInfo(val timestamp: Long, val status: String)
 
@@ -223,6 +242,64 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             } catch (e: Exception) {
                 _uiState.value = UiState.Error("Import failed: ${e.message}")
             }
+        }
+    }
+
+    fun importLegacyFile(context: Context, uri: Uri, format: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.value = UiState.Loading("Importing legacy file...")
+            val tempFile = File(context.cacheDir, "legacy_import.$format")
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                tempFile.outputStream().use { output -> input.copyTo(output) }
+            }
+            val success = when (format.lowercase()) {
+                "csv" -> LegacyImportEngine.importFromCsv(context, tempFile, createLegacyListener())
+                "tcx" -> LegacyImportEngine.importFromTcx(context, tempFile, createLegacyListener())
+                else -> false
+            }
+            tempFile.delete()
+            if (success) {
+                _uiState.value = UiState.Success("Successfully imported workout from $format file.")
+            } else {
+                _uiState.value = UiState.Error("Failed to import workout. It might already exist or the file format is invalid.")
+            }
+        }
+    }
+
+    fun bulkRecoverLegacyData(context: Context, format: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.value = UiState.Loading("Initializing legacy recovery...")
+            val count = LegacyImportEngine.bulkRecoverFromDropbox(context, format, createLegacyListener())
+            _uiState.value = UiState.Success("Recovery finished. Imported $count new workouts from $format files.")
+        }
+    }
+
+    private fun createLegacyListener() = object : LegacyImportEngine.ProgressListener {
+        override fun onProgress(current: Int, total: Int, name: String) {
+            _uiState.value = UiState.Progress(current, total, name)
+        }
+
+        override fun onStatus(message: String) {
+            _uiState.value = UiState.Loading(message)
+        }
+
+        override suspend fun onNewClusterCandidate(
+            date: String,
+            start: LatLng,
+            end: LatLng,
+            apex: LatLng,
+            distance: Double,
+            polyline: String
+        ): Pair<Long?, String?> {
+            val deferred = CompletableDeferred<Pair<Long?, String?>>()
+            clusterDecision = deferred
+            val clusters = withContext(Dispatchers.IO) {
+                WorkoutClusterDatabaseManager.getInstance(getApplication()).getAllClusters()
+            }
+            _uiState.value = UiState.ClusterNamingRequired(date, start, end, apex, distance, polyline, clusters)
+            val decision = deferred.await()
+            clusterDecision = null
+            return decision
         }
     }
 
