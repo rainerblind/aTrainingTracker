@@ -1042,4 +1042,30 @@ pobrano but: %1</string>
 
     <!-- smartphone devices -->
     <string name="notification_tracking_a_workout">Rejestrowanie treningu</string>
+    <string name="backup_restore">Backup \u0026 Restore</string>
+    <string name="backup_restore_summary">Migruj dane lub wykonaj odzyskiwanie</string>
+    <string name="create_backup">Utwórz kopię zapasową</string>
+    <string name="restore_backup">Pełne przywracanie (Migracja)</string>
+    <string name="import_workouts">Import przyrostowy (Scalanie)</string>
+    <string name="backup_success">Kopia zapasowa utworzona pomyślnie.</string>
+    <string name="backup_failed">Nie udało się utworzyć kopii zapasowej.</string>
+    <string name="restore_success">Przywracanie zakończone sukcesem. Aplikacja zostanie uruchomiona ponownie.</string>
+    <string name="restore_failed">Przywracanie nie powiodło się. Upewnij się, że plik jest poprawny.</string>
+    <string name="restore_warning_title">NIEBEZPIECZEŃSTWO: Pełne przywracanie</string>
+    <string name="restore_warning_message">To TRWALE USUNIE wszystkie obecne treningi, sprzęt i ustawienia na TYM telefonie i zastąpi je danymi z kopii zapasowej. Czy jesteś absolutnie pewien?</string>
+    <string name="import_finished_format">Import zakończony. Dodano %1$d nowych treningów.</string>
+    <string name="import_duplicate_skipping">Pomijanie istniejących treningów…</string>
+    <string name="import_processing_format">Importowanie %1$s…</string>
+    <string name="automated_backups">Automatyczne kopie zapasowe</string>
+    <string name="automated_backups_summary">Regularnie przesyłaj kopie zapasowe do Dropbox</string>
+    <string name="backup_now">Utwórz kopię teraz</string>
+    <string name="last_backup">Ostatnia kopia: %1$s</string>
+    <string name="backup_interval">Interwał kopii</string>
+    <string name="backup_interval_daily">Codziennie</string>
+    <string name="backup_interval_3days">Co 3 dni</string>
+    <string name="backup_interval_weekly">Co tydzień</string>
+    <string name="backup_interval_monthly">Co miesiąc</string>
+    <string name="create_and_upload_to_dropbox">Utwórz \u0026 prześlij do Dropbox</string>
+    <string name="full_restore_description">Usuwa wszystkie lokalne dane i zastępuje je zawartością kopii zapasowej. Wymaga restartu aplikacji.</string>
+    <string name="incremental_import_description">Scala treningi z kopii zapasowej z Twoją obecną historią. Istniejące już treningi zostaną pominięte.</string>
 </resources>
