@@ -74,6 +74,10 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
             if (db2 != null && db2.isOpen) {
                 db2
             } else {
+                // If the database was closed, ensure the helper clears its reference
+                if (mDatabase != null) {
+                    dbHelper.close()
+                }
                 dbHelper.writableDatabase.also { mDatabase = it }
             }
         }

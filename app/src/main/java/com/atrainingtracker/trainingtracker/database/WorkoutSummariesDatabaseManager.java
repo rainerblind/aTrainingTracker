@@ -53,6 +53,7 @@ public class WorkoutSummariesDatabaseManager {
 
     private static WorkoutSummariesDbHelper cWorkoutSummariesDbHelper;
     private static volatile WorkoutSummariesDatabaseManager cInstance;
+    private SQLiteDatabase mDatabase = null;
 
     // Private constructor to prevent direct instantiation
     private WorkoutSummariesDatabaseManager(Context context) {
@@ -74,9 +75,25 @@ public class WorkoutSummariesDatabaseManager {
         return cInstance;
     }
 
-    // Let the helper manage the database object. This is thread-safe.
+    /**
+     * Returns a writable database instance and ensures it remains open.
+     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
+     */
     public SQLiteDatabase getDatabase() {
-        return cWorkoutSummariesDbHelper.getWritableDatabase();
+        if (mDatabase != null && mDatabase.isOpen()) {
+            return mDatabase;
+        }
+        synchronized (this) {
+            if (mDatabase != null && mDatabase.isOpen()) {
+                return mDatabase;
+            }
+            // If the database was closed, ensure the helper clears its reference
+            if (mDatabase != null) {
+                cWorkoutSummariesDbHelper.close();
+            }
+            mDatabase = cWorkoutSummariesDbHelper.getWritableDatabase();
+            return mDatabase;
+        }
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////

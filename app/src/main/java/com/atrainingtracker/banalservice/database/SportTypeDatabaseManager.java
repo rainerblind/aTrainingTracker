@@ -49,6 +49,7 @@ public class SportTypeDatabaseManager {
     private static volatile SportTypeDatabaseManager cInstance;
     private final SportTypeDbHelper cDbHelper;
     private final Context mContext; // Store context for operations like getting drawables
+    private SQLiteDatabase mDatabase = null;
 
     private SportTypeDatabaseManager(@NonNull Context context) {
         this.mContext = context.getApplicationContext();
@@ -68,11 +69,24 @@ public class SportTypeDatabaseManager {
     }
 
     /**
-     * Returns a writable database instance, managed by the helper.
+     * Returns a writable database instance and ensures it remains open.
+     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
      */
-    // TODO: make private
     public SQLiteDatabase getDatabase() {
-        return cDbHelper.getWritableDatabase();
+        if (mDatabase != null && mDatabase.isOpen()) {
+            return mDatabase;
+        }
+        synchronized (this) {
+            if (mDatabase != null && mDatabase.isOpen()) {
+                return mDatabase;
+            }
+            // If the database was closed, ensure the helper clears its reference
+            if (mDatabase != null) {
+                cDbHelper.close();
+            }
+            mDatabase = cDbHelper.getWritableDatabase();
+            return mDatabase;
+        }
     }
     // --- End of Singleton Pattern ---
 

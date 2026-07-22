@@ -60,6 +60,7 @@ public class DevicesDatabaseManager {
     private static volatile DevicesDatabaseManager cInstance;
     private final DevicesDbHelper cDevicesDbHelper;
     private final Context mContext;
+    private SQLiteDatabase mDatabase = null;
 
     private DevicesDatabaseManager(@NonNull Context context) {
         this.mContext = context.getApplicationContext();
@@ -78,8 +79,25 @@ public class DevicesDatabaseManager {
         return cInstance;
     }
 
+    /**
+     * Returns a writable database instance and ensures it remains open.
+     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
+     */
     public SQLiteDatabase getDatabase() {
-        return cDevicesDbHelper.getWritableDatabase();
+        if (mDatabase != null && mDatabase.isOpen()) {
+            return mDatabase;
+        }
+        synchronized (this) {
+            if (mDatabase != null && mDatabase.isOpen()) {
+                return mDatabase;
+            }
+            // If the database was closed, ensure the helper clears its reference
+            if (mDatabase != null) {
+                cDevicesDbHelper.close();
+            }
+            mDatabase = cDevicesDbHelper.getWritableDatabase();
+            return mDatabase;
+        }
     }
     // --- End of Singleton Pattern ---
 
