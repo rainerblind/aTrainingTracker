@@ -1270,4 +1270,7 @@
     <string name="backup_interval_3days">Every 3 days</string>
     <string name="backup_interval_weekly">Weekly</string>
     <string name="backup_interval_monthly">Monthly</string>
+    <string name="create_and_upload_to_dropbox">Create \u0026 Upload to Dropbox</string>
+    <string name="full_restore_description">Wipes all local data and replaces it with the content of the backup. Forces an app restart.</string>
+    <string name="incremental_import_description">Merges workouts from a backup into your current history. Workouts already present locally will be skipped.</string>
 </resources>

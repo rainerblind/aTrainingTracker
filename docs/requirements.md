@@ -261,6 +261,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-MIG-005** | **Incremental Import.** | The system SHALL support merging backups into an existing database. It MUST perform deduplication using the `FILE_BASE_NAME` as the unique identifier. | `ImportEngine` | `TST-MIG-002` | Proposed |
 | **REQ-MIG-006** | **State Lockdown.** | Backup and Restore operations SHALL ONLY be allowed when the system is in a non-tracking state to prevent data corruption. | `MigrationUI` | `TST-MIG-001` | Proposed |
 | **REQ-MIG-007** | **Full Restore Confirmation.** | The system SHALL require explicit user confirmation before initiating a "Full Restore" from Dropbox. | `BackupRestoreScreen.kt` | `TST-MIG-004` | Proposed |
+| **REQ-MIG-008** | **Informative Dashboard Labels.** | The Backup \u0026 Restore dashboard SHALL provide clear descriptive text for all operations. The Dropbox backup button SHALL be labeled \"Create \u0026 Upload Backup to Dropbox\". Destructive and merging sections SHALL feature high-level descriptions explaining their impact on local data. | `BackupRestoreScreen.kt` | `TST-MIG-005` | Proposed |
 
 ## 12. Privacy & Permissions
 

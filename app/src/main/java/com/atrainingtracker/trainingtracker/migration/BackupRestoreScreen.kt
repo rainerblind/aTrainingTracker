@@ -246,7 +246,7 @@ fun BackupRestoreScreen(
                     ) {
                         Icon(Icons.Default.CloudUpload, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Upload Backup to Dropbox")
+                        Text(stringResource(R.string.create_and_upload_to_dropbox))
                     }
                 }
             }
@@ -361,6 +361,12 @@ fun BackupRestoreScreen(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.full_restore_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedButton(
                         onClick = { pickFullRestoreLauncher.launch(arrayOf("*/*")) },
@@ -397,6 +403,12 @@ fun BackupRestoreScreen(
                         text = stringResource(R.string.import_workouts),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.incremental_import_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedButton(
