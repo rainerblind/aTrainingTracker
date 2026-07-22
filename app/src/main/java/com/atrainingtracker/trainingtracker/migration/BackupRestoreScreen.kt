@@ -16,28 +16,33 @@ import java.text.DateFormat
 import java.util.Date
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Backup
-import androidx.compose.material.icons.filled.CloudUpload
-import androidx.compose.material.icons.filled.Restore
-import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
+import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialog
+import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -568,22 +573,45 @@ fun ClusterNamingDialog(
     onConfirm: (Long?, String?) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val context = LocalContext.current
+    val localContext = LocalContext.current
     var name by remember { mutableStateOf("") }
-    var selectedClusterId by remember { mutableStateOf<Long?>(null) }
-    
+    var selectedCluster by remember { mutableStateOf<WorkoutCluster?>(null) }
+    var showSelectionDialog by remember { mutableStateOf(false) }
+
     val decodedPoints = remember(state.polyline) { PolyUtil.decode(state.polyline) }
     val bounds = remember(decodedPoints) {
+        if (decodedPoints.isEmpty()) return@remember null
         val b = LatLngBounds.builder()
         decodedPoints.forEach { b.include(it) }
         b.build()
     }
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(bounds.center, 12f)
+        position = CameraPosition.fromLatLngZoom(bounds?.center ?: LatLng(0.0, 0.0), 12f)
     }
 
     LaunchedEffect(bounds) {
-        cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(bounds, 50))
+        bounds?.let {
+            cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(it, 50))
+        }
+    }
+
+    if (showSelectionDialog) {
+        val clusterEngine = remember { WorkoutClusterEngine.getInstance(localContext) }
+        val candidatesWithScores = remember(state.existingClusters) {
+            clusterEngine.scoreClusters(state.existingClusters, state.start, state.end, state.apex, state.distance)
+        }
+
+        WorkoutClusterSelectionDialog(
+            title = "Select Existing Route",
+            candidates = candidatesWithScores,
+            onSelect = { 
+                selectedCluster = it
+                showSelectionDialog = false
+            },
+            onDismiss = { showSelectionDialog = false },
+            sportNameResolver = { SportTypeDatabaseManager.getInstance(localContext).getUIName(it) },
+            bSportTypeResolver = { SportTypeDatabaseManager.getInstance(localContext).getBSportType(it) }
+        )
     }
 
     AlertDialog(
@@ -592,6 +620,37 @@ fun ClusterNamingDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Found a recurring route from ${state.date}.")
+
+                // --- ATT-304: Show sport type & distance ---
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val distanceFormatter = remember { DistanceFormatter() }
+                    MetricItem(
+                        iconRes = R.drawable.ic_distance,
+                        value = distanceFormatter.format_with_units(state.distance),
+                        isPrimary = true
+                    )
+                    
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(
+                            painter = painterResource(id = state.bSportType.iconResId),
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = Color.Unspecified
+                        )
+                        val sportName = remember(state.bSportType) {
+                            val sportId = SportTypeDatabaseManager.getSportTypeId(state.bSportType)
+                            SportTypeDatabaseManager.getInstance(localContext).getUIName(sportId)
+                        }
+                        Text(
+                            text = sportName,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
                 
                 Box(modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(8.dp))) {
                     GoogleMap(
@@ -610,65 +669,39 @@ fun ClusterNamingDialog(
                         Marker(
                             state = rememberMarkerState(position = state.start), 
                             title = "Start",
-                            icon = createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint)
+                            icon = remember { createSensorMarker(localContext, R.drawable.control_start, TTColor.StartPoint) }
                         )
                         Marker(
                             state = rememberMarkerState(position = state.end), 
                             title = "End",
-                            icon = createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint)
+                            icon = remember { createSensorMarker(localContext, R.drawable.control_stop, TTColor.EndPoint) }
                         )
                         Marker(
                             state = rememberMarkerState(position = state.apex), 
                             title = "Apex",
-                            icon = createSensorMarker(context, R.drawable.ic_distance, TTColor.ApexPoint)
+                            icon = remember { createSensorMarker(localContext, R.drawable.ic_distance, TTColor.ApexPoint) }
                         )
                     }
                 }
 
-                Text("Select an existing route:", style = MaterialTheme.typography.labelLarge)
+                // --- ATT-305: Same dropdown (using button + dialog pattern) ---
+                Text("Route Assignment:", style = MaterialTheme.typography.labelLarge)
                 
-                var expanded by remember { mutableStateOf(false) }
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded }
-                ) {
-                    val currentLabel = state.existingClusters.find { it.id == selectedClusterId }?.name ?: "None (Create New)"
-                    TextField(
-                        value = currentLabel,
-                        onValueChange = {},
-                        readOnly = true,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth(),
-                        colors = ExposedDropdownMenuDefaults.textFieldColors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        )
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("None (Create New)") },
-                            onClick = {
-                                selectedClusterId = null
-                                expanded = false
-                            }
-                        )
-                        state.existingClusters.forEach { cluster ->
-                            DropdownMenuItem(
-                                text = { Text(cluster.name) },
-                                onClick = {
-                                    selectedClusterId = cluster.id
-                                    expanded = false
-                                }
-                            )
+                OutlinedTextField(
+                    value = selectedCluster?.name ?: "Create New...",
+                    onValueChange = {},
+                    readOnly = true,
+                    modifier = Modifier.fillMaxWidth().clickable { showSelectionDialog = true },
+                    label = { Text("Selected Route") },
+                    trailingIcon = {
+                        IconButton(onClick = { showSelectionDialog = true }) {
+                            Icon(painter = painterResource(id = R.drawable.my_locations), contentDescription = null)
                         }
                     }
-                }
+                )
 
-                if (selectedClusterId == null) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                if (selectedCluster == null) {
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text("Or give it a new name:", style = MaterialTheme.typography.labelLarge)
                     TextField(
                         value = name,
@@ -681,8 +714,8 @@ fun ClusterNamingDialog(
         },
         confirmButton = {
             Button(onClick = { 
-                if (selectedClusterId != null) {
-                    onConfirm(selectedClusterId, null)
+                if (selectedCluster != null) {
+                    onConfirm(selectedCluster!!.id, null)
                 } else {
                     onConfirm(null, name.takeIf { it.isNotBlank() })
                 }

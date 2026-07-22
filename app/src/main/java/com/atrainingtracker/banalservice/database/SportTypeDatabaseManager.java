@@ -313,6 +313,30 @@ public class SportTypeDatabaseManager {
         return result;
     }
 
+    public long getSportTypeIdFromTcxName(String tcxName) {
+        long result = -1;
+        if (tcxName == null) return result;
+
+        Cursor cursor = getDatabase().query(SportType.TABLE,
+                new String[]{SportType.C_ID},
+                SportType.TCX_NAME + "=? COLLATE NOCASE", new String[]{tcxName},
+                null, null, null);
+        if (cursor != null) {
+            if (cursor.moveToFirst()) {
+                result = cursor.getLong(0);
+            }
+            cursor.close();
+        }
+
+        if (result == -1) {
+            if (tcxName.equalsIgnoreCase("Cycling") || tcxName.equalsIgnoreCase("Ride")) {
+                return getSportTypeIdFromTcxName("Biking");
+            }
+        }
+
+        return result;
+    }
+
     private String getString(long id, String col) {
         String result = null;
 

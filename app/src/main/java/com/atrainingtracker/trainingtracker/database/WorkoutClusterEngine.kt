@@ -351,7 +351,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
         }
     }
 
-    private fun calculateSimilarity(
+    fun calculateSimilarity(
         start: LatLng, end: LatLng, apex: LatLng, distance: Double, cluster: WorkoutCluster,
         workoutName: String? = null
     ): Double {
@@ -407,7 +407,14 @@ class WorkoutClusterEngine private constructor(context: Context) {
      */
     fun getClusterScores(start: LatLng, end: LatLng, apex: LatLng, distance: Double, workoutName: String? = null): List<Pair<WorkoutCluster, Double>> {
         val allClusters = dbManager.getAllClusters()
-        return allClusters.map { cluster ->
+        return scoreClusters(allClusters, start, end, apex, distance, workoutName)
+    }
+
+    /**
+     * Scores a provided list of clusters against a workout shape.
+     */
+    fun scoreClusters(clusters: List<WorkoutCluster>, start: LatLng, end: LatLng, apex: LatLng, distance: Double, workoutName: String? = null): List<Pair<WorkoutCluster, Double>> {
+        return clusters.map { cluster ->
             cluster to calculateSimilarity(start, end, apex, distance, cluster, workoutName)
         }.sortedBy { it.second }
     }

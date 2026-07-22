@@ -53,6 +53,7 @@ object LegacyImportEngine {
             end: LatLng, 
             apex: LatLng, 
             distance: Double,
+            bSportType: BSportType,
             polyline: String
         ): Pair<Long?, String?>
     }
@@ -151,7 +152,19 @@ object LegacyImportEngine {
                     when (eventType) {
                         XmlPullParser.START_TAG -> {
                             when (name) {
-                                "Activity" -> sportName = parser.getAttributeValue(null, "Sport")
+                                "Activity" -> {
+                                    // Robust attribute extraction (ATT-306)
+                                    sportName = parser.getAttributeValue(null, "Sport")
+                                    if (sportName == null) {
+                                        for (i in 0 until parser.attributeCount) {
+                                            if (parser.getAttributeName(i).equals("Sport", ignoreCase = true)) {
+                                                sportName = parser.getAttributeValue(i)
+                                                break
+                                            }
+                                        }
+                                    }
+                                    Log.i(TAG, "TCX Import: Found Activity with Sport=$sportName")
+                                }
                                 "Trackpoint" -> {
                                     inTrackpoint = true
                                     values = ContentValues()
@@ -238,20 +251,35 @@ object LegacyImportEngine {
                     workoutId = summaryDb.database.insert(WorkoutSummaries.TABLE, null, summaryValues)
                 }
                 
+                val sportTypeManager = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(context)
+                var bSportType = BSportType.UNKNOWN
+                
                 if (sportName != null) {
-                    val bSportType = when (sportName.lowercase()) {
-                        "running" -> BSportType.RUN
-                        "biking" -> BSportType.BIKE
-                        else -> BSportType.UNKNOWN
+                    val sportId = sportTypeManager.getSportTypeIdFromTcxName(sportName!!)
+                    if (sportId != -1L) {
+                        bSportType = sportTypeManager.getBSportType(sportId)
+                        val updateValues = ContentValues().apply {
+                            put(WorkoutSummaries.SPORT_ID, sportId)
+                        }
+                        summaryDb.database.update(WorkoutSummaries.TABLE, updateValues, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
+                    } else {
+                        // Basic fallback for unknown TCX sport strings
+                        bSportType = when (sportName!!.lowercase()) {
+                            "running" -> BSportType.RUN
+                            "biking", "cycling" -> BSportType.BIKE
+                            "walking" -> BSportType.RUN
+                            else -> BSportType.UNKNOWN
+                        }
+                        if (bSportType != BSportType.UNKNOWN) {
+                            val fallbackSportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
+                            summaryDb.database.update(WorkoutSummaries.TABLE, ContentValues().apply {
+                                put(WorkoutSummaries.SPORT_ID, fallbackSportId)
+                            }, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
+                        }
                     }
-                    val sportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
-                    val updateValues = ContentValues().apply {
-                        put(WorkoutSummaries.SPORT_ID, sportId)
-                    }
-                    summaryDb.database.update(WorkoutSummaries.TABLE, updateValues, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
                 }
 
-                recalculateStats(context, workoutId, baseFileName, points, altitudes, distances, listener)
+                recalculateStats(context, workoutId, baseFileName, points, altitudes, distances, bSportType, listener)
                 return true
             }
         } catch (e: Exception) {
@@ -347,7 +375,7 @@ object LegacyImportEngine {
                         workoutId = summaryDb.database.insert(WorkoutSummaries.TABLE, null, summaryValues)
                     }
 
-                    recalculateStats(context, workoutId, baseFileName, points, altitudes, distances, listener)
+                    recalculateStats(context, workoutId, baseFileName, points, altitudes, distances, BSportType.UNKNOWN, listener)
                     return true
                 }
             }
@@ -371,6 +399,7 @@ object LegacyImportEngine {
         points: List<LatLng>,
         altitudes: List<Double>,
         distances: List<Double>,
+        bSportType: BSportType,
         listener: ProgressListener? = null
     ) {
         val summariesDb = WorkoutSummariesDatabaseManager.getInstance(context)
@@ -476,7 +505,9 @@ object LegacyImportEngine {
                 val (existingId, customName) = listener?.onNewClusterCandidate(
                     date = startTime ?: baseFileName,
                     start = start, end = end, apex = apex, 
-                    distance = totalDistance, polyline = polyline
+                    distance = totalDistance, 
+                    bSportType = bSportType,
+                    polyline = polyline
                 ) ?: Pair(null, null)
                 
                 if (existingId != null) {

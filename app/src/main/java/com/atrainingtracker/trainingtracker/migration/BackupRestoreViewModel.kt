@@ -22,6 +22,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.google.android.gms.maps.model.LatLng
@@ -49,6 +50,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             val end: LatLng,
             val apex: LatLng,
             val distance: Double,
+            val bSportType: BSportType,
             val polyline: String,
             val existingClusters: List<WorkoutCluster>
         ) : UiState()
@@ -289,6 +291,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             end: LatLng,
             apex: LatLng,
             distance: Double,
+            bSportType: BSportType,
             polyline: String
         ): Pair<Long?, String?> {
             val deferred = CompletableDeferred<Pair<Long?, String?>>()
@@ -296,7 +299,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             val clusters = withContext(Dispatchers.IO) {
                 WorkoutClusterDatabaseManager.getInstance(getApplication()).getAllClusters()
             }
-            _uiState.value = UiState.ClusterNamingRequired(date, start, end, apex, distance, polyline, clusters)
+            _uiState.value = UiState.ClusterNamingRequired(date, start, end, apex, distance, bSportType, polyline, clusters)
             val decision = deferred.await()
             clusterDecision = null
             return decision
