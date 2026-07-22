@@ -67,6 +67,8 @@ fun BackupRestoreScreen(
     var restoreUri by remember { mutableStateOf<Uri?>(null) }
 
     var showMappingDialog by remember { mutableStateOf<MappingData?>(null) }
+    
+    val isBusy = uiState is BackupRestoreViewModel.UiState.Loading || uiState is BackupRestoreViewModel.UiState.Progress
 
     val pickFullRestoreLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -253,7 +255,8 @@ fun BackupRestoreScreen(
                                 context.startActivity(Intent.createChooser(intent, chooserTitle))
                             }
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isBusy
                     ) {
                         Icon(Icons.Default.Save, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -264,7 +267,8 @@ fun BackupRestoreScreen(
 
                     Button(
                         onClick = { viewModel.uploadToDropbox(context) },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isBusy
                     ) {
                         Icon(Icons.Default.CloudUpload, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -393,7 +397,8 @@ fun BackupRestoreScreen(
                     OutlinedButton(
                         onClick = { pickFullRestoreLauncher.launch(arrayOf("*/*")) },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                        enabled = !isBusy
                     ) {
                         Icon(Icons.Default.Restore, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -405,7 +410,8 @@ fun BackupRestoreScreen(
                     OutlinedButton(
                         onClick = { showDropboxRestoreConfirm = true },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                        enabled = !isBusy
                     ) {
                         Icon(Icons.Default.CloudUpload, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -435,7 +441,8 @@ fun BackupRestoreScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedButton(
                         onClick = { pickImportLauncher.launch(arrayOf("*/*")) },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isBusy
                     ) {
                         Icon(Icons.Default.Backup, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -467,13 +474,15 @@ fun BackupRestoreScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
                             onClick = { viewModel.bulkRecoverLegacyData(context, "csv") },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            enabled = !isBusy
                         ) {
                             Text(stringResource(R.string.scan_csv))
                         }
                         OutlinedButton(
                             onClick = { viewModel.bulkRecoverLegacyData(context, "tcx") },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            enabled = !isBusy
                         ) {
                             Text(stringResource(R.string.scan_tcx))
                         }
@@ -483,7 +492,8 @@ fun BackupRestoreScreen(
 
                     OutlinedButton(
                         onClick = { pickLegacyFileLauncher.launch(arrayOf("*/*")) },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isBusy
                     ) {
                         Icon(Icons.Default.CloudUpload, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))

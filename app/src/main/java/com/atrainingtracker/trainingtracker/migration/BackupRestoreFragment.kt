@@ -24,12 +24,12 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
+import androidx.fragment.app.activityViewModels
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 class BackupRestoreFragment : Fragment() {
 
-    private val viewModel: BackupRestoreViewModel by viewModels()
+    private val viewModel: BackupRestoreViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
