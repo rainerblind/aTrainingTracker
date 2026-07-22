@@ -134,6 +134,8 @@ object LegacyImportEngine {
             val points = mutableListOf<LatLng>()
             val altitudes = mutableListOf<Double>()
             val distances = mutableListOf<Double>()
+            
+            var tableCreated = samplesDbManager.existsTable(baseFileName)
 
             FileInputStream(tcxFile).use { fis ->
                 val parser = Xml.newPullParser()
@@ -153,7 +155,6 @@ object LegacyImportEngine {
                         XmlPullParser.START_TAG -> {
                             when (name) {
                                 "Activity" -> {
-                                    // Robust attribute extraction (ATT-306)
                                     sportName = parser.getAttributeValue(null, "Sport")
                                     if (sportName == null) {
                                         for (i in 0 until parser.attributeCount) {
@@ -163,7 +164,6 @@ object LegacyImportEngine {
                                             }
                                         }
                                     }
-                                    Log.i(TAG, "TCX Import: Found Activity with Sport=$sportName")
                                 }
                                 "Trackpoint" -> {
                                     inTrackpoint = true
@@ -210,16 +210,18 @@ object LegacyImportEngine {
                         XmlPullParser.END_TAG -> {
                             if (name == "Trackpoint") {
                                 if (values.containsKey("time")) {
-                                    if (!isWorkoutExisting(summaryDb, baseFileName)) {
-                                        if (points.isEmpty() && altitudes.isEmpty()) {
+                                    if (!isWorkoutExisting(summaryDb, baseFileName) || !tableCreated) {
+                                        if (!tableCreated) {
                                             val sensorTypes = mutableListOf(SensorType.LATITUDE, SensorType.LONGITUDE, SensorType.ALTITUDE, 
                                                 SensorType.DISTANCE_m, SensorType.HR, SensorType.CADENCE, SensorType.POWER)
                                             samplesDbManager.createNewTable(baseFileName, sensorTypes)
+                                            tableCreated = true
                                             targetDb.beginTransaction()
                                         }
                                         targetDb.insert(WorkoutSamplesDatabaseManager.getTableName(baseFileName), null, values)
                                     }
                                 }
+
                                 if (currentLat != null && currentLng != null) {
                                     points.add(LatLng(currentLat!!, currentLng!!))
                                 }
@@ -263,7 +265,6 @@ object LegacyImportEngine {
                         }
                         summaryDb.database.update(WorkoutSummaries.TABLE, updateValues, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
                     } else {
-                        // Basic fallback for unknown TCX sport strings
                         bSportType = when (sportName!!.lowercase()) {
                             "running" -> BSportType.RUN
                             "biking", "cycling" -> BSportType.BIKE
@@ -310,6 +311,8 @@ object LegacyImportEngine {
                 val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
                 val targetDb = samplesDbManager.database
                 
+                var tableCreated = samplesDbManager.existsTable(baseFileName)
+
                 var firstTime: String? = null
                 val points = mutableListOf<LatLng>()
                 val altitudes = mutableListOf<Double>()
@@ -340,13 +343,16 @@ object LegacyImportEngine {
                         }
                     }
 
-                    if (values.containsKey("time") && !isWorkoutExisting(summaryDb, baseFileName)) {
-                        if (points.isEmpty() && altitudes.isEmpty()) {
-                            val sensorTypes = columnMap.values.filterNotNull().distinct().toMutableList()
-                            samplesDbManager.createNewTable(baseFileName, sensorTypes)
-                            targetDb.beginTransaction()
+                    if (values.containsKey("time")) {
+                        if (!isWorkoutExisting(summaryDb, baseFileName) || !tableCreated) {
+                            if (!tableCreated) {
+                                val sensorTypes = columnMap.values.filterNotNull().distinct().toMutableList()
+                                samplesDbManager.createNewTable(baseFileName, sensorTypes)
+                                tableCreated = true
+                                targetDb.beginTransaction()
+                            }
+                            targetDb.insert(WorkoutSamplesDatabaseManager.getTableName(baseFileName), null, values)
                         }
-                        targetDb.insert(WorkoutSamplesDatabaseManager.getTableName(baseFileName), null, values)
                     }
 
                     if (lat != null && lng != null) points.add(LatLng(lat!!, lng!!))

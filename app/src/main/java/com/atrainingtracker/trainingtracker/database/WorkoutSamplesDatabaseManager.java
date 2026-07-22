@@ -223,6 +223,10 @@ public class WorkoutSamplesDatabaseManager {
             if (DEBUG) Log.i(TAG, "querying table: " + name);
 
             SQLiteDatabase samplesDb = getDatabase();
+            if (!existsTable(name) || !existsColumnInTable(samplesDb, getTableName(name), sensorType.name())) {
+                continue;
+            }
+
             Cursor samplesCursor = samplesDb.query(getTableName(name), // Table
                     new String[]{SensorType.LATITUDE.name(), SensorType.LONGITUDE.name(), sensorType.name()}, // columns
                     SensorType.LATITUDE.name() + " > ? AND " +
@@ -329,6 +333,10 @@ public class WorkoutSamplesDatabaseManager {
             SQLiteDatabase samplesDb = getDatabase();
             Cursor cursor = null;
 
+            if (!existsTable(baseFileName) || !existsColumnInTable(samplesDb, getTableName(baseFileName), sensorType.name())) {
+                return null;
+            }
+
             // depending on the extremaType, there are two alternative ways to find the corresponding row
             switch (extremaType) {
                 case MIN:
@@ -406,6 +414,11 @@ public class WorkoutSamplesDatabaseManager {
 
     public void deleteWorkout(String baseFileName) {
         getDatabase().execSQL("drop table if exists " + getTableName(baseFileName));
+    }
+
+    public boolean existsTable(String baseFileName) {
+        if (baseFileName == null) return false;
+        return existsColumnInTable(getDatabase(), getTableName(baseFileName), WorkoutSamplesDbHelper.TIME);
     }
 
     // stolen from http://stackoverflow.com/questions/4719594/checking-if-a-column-exists-in-an-application-database-in-android

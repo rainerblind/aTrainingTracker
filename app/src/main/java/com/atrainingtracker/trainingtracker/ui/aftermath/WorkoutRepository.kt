@@ -220,6 +220,10 @@ class WorkoutRepository private constructor(private val application: Application
         val db = samplesManager.database
         val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
 
+        if (!samplesManager.existsTable(baseFileName)) {
+            return@withContext emptyList()
+        }
+
         val latName = trackType.latitudeColumn
         val lonName = trackType.longitudeColumn
 
