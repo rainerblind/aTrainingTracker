@@ -78,9 +78,17 @@ object LegacyImportEngine {
             for (path in possiblePaths) {
                 try {
                     listener?.onStatus("Scanning $path...")
-                    val result = dbxClient.files().listFolder(path)
-                    entries = result.entries.filter { it.name.lowercase().endsWith(".$format") }
-                    if (entries.isNotEmpty()) {
+                    var result = dbxClient.files().listFolder(path)
+                    val folderEntries = mutableListOf<com.dropbox.core.v2.files.Metadata>()
+                    
+                    while (true) {
+                        folderEntries.addAll(result.entries.filter { it.name.lowercase().endsWith(".$format") })
+                        if (!result.hasMore) break
+                        result = dbxClient.files().listFolderContinue(result.cursor)
+                    }
+
+                    if (folderEntries.isNotEmpty()) {
+                        entries = folderEntries
                         foundPath = path
                         break
                     }
