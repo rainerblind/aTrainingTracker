@@ -50,6 +50,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialog
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterTuningContent
@@ -60,7 +61,9 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.*
 import com.google.maps.android.PolyUtil
 import com.google.maps.android.compose.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class MappingData(val uri: Uri, val analysis: ImportEngine.AnalysisResult)
 
@@ -354,9 +357,21 @@ fun ClusterNamingDialog(
     onDismiss: () -> Unit
 ) {
     val localContext = LocalContext.current
-    var name by remember { mutableStateOf("") }
-    var selectedCluster by remember { mutableStateOf<WorkoutCluster?>(null) }
-    var showSelectionDialog by remember { mutableStateOf(false) }
+    
+    // ATT-316 Refinement: Key the internal state to the 'state' (the interaction object)
+    // to ensure the dialog resets when moving to the next item in the queue.
+    var name by remember(state) { mutableStateOf("") }
+    var selectedCluster by remember(state) { mutableStateOf<WorkoutCluster?>(null) }
+    var showSelectionDialog by remember(state) { mutableStateOf(false) }
+
+    // Fetch the LATEST clusters from the DB every time the dialog is shown/updated (ATT-316 Refined)
+    // ATT-316 Refinement: Added 'state' and 'showSelectionDialog' as keys to ensure the list is 
+    // refreshed for each queue item and whenever the user opens the selection view.
+    val existingClusters by produceState<List<WorkoutCluster>>(initialValue = emptyList(), state, showSelectionDialog) {
+        value = withContext(Dispatchers.IO) {
+            WorkoutClusterDatabaseManager.getInstance(localContext).getAllClusters()
+        }
+    }
 
     val decodedPoints = remember(state.polyline) { PolyUtil.decode(state.polyline) }
     val bounds = remember(decodedPoints) {
@@ -377,8 +392,8 @@ fun ClusterNamingDialog(
 
     if (showSelectionDialog) {
         val clusterEngine = remember { WorkoutClusterEngine.getInstance(localContext) }
-        val candidatesWithScores = remember(state.existingClusters) {
-            clusterEngine.scoreClusters(state.existingClusters, state.start, state.end, state.apex, state.distance)
+        val candidatesWithScores = remember(existingClusters, state) {
+            clusterEngine.scoreClusters(existingClusters, state.start, state.end, state.apex, state.distance)
         }
 
         WorkoutClusterSelectionDialog(

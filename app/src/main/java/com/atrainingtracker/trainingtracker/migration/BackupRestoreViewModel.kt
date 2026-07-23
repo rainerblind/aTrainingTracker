@@ -55,7 +55,6 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         val distance: Double,
         val bSportType: BSportType,
         val polyline: String,
-        val existingClusters: List<WorkoutCluster>,
         val deferred: CompletableDeferred<Pair<Long?, String?>>
     )
 
@@ -324,12 +323,10 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             polyline: String
         ): Pair<Long?, String?> {
             val deferred = CompletableDeferred<Pair<Long?, String?>>()
-            val clusters = withContext(Dispatchers.IO) {
-                WorkoutClusterDatabaseManager.getInstance(getApplication()).getAllClusters()
-            }
             
-            // ATT-316: Add to queue and wait
-            val interaction = ClusterInteraction(date, start, end, apex, distance, bSportType, polyline, clusters, deferred)
+            // ATT-316: Add to queue and wait. 
+            // We no longer pre-fetch clusters here to avoid stale data in the queue (ATT-316 Refined)
+            val interaction = ClusterInteraction(date, start, end, apex, distance, bSportType, polyline, deferred)
             _interactionQueue.update { it + interaction }
             
             val decision = deferred.await()
