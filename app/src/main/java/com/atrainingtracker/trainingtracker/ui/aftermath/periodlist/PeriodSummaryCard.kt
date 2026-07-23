@@ -407,7 +407,7 @@ private fun PeriodMultiWorkoutMap(
     }
 
     val visuals = remember(allPaths, periodType, isHeatmapEnabled) {
-        getPeriodMapVisuals(periodType, allPaths, isHeatmapEnabled)
+        getPeriodMapVisuals(periodType, allPaths, isHeatmapEnabled, isInteractive = false)
     }
 
     if (allPaths.isEmpty()) {

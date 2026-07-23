@@ -246,12 +246,24 @@ fun densifyPath(path: List<LatLng>, maxDistanceMeters: Double): List<LatLng> {
 fun createHeatmapProvider(
     allPaths: List<List<LatLng>>,
     opacity: Double = 0.8,
-    radius: Int = 10
+    radius: Int = 10,
+    densifyInterval: Double = 5.0
 ): com.google.maps.android.heatmaps.HeatmapTileProvider? {
     if (allPaths.isEmpty()) return null
 
-    val allPoints = allPaths.flatMap { path ->
-        densifyPath(path, 5.0).map { com.google.maps.android.heatmaps.WeightedLatLng(it, 2.0) }
+    // ATT-310: Use memory-efficient imperative collection to avoid OOM
+    // 1. Calculate approximate capacity to avoid frequent re-allocations
+    val totalEstimatedPoints = allPaths.sumOf { it.size } * 2 // conservative estimate
+    val allPoints = ArrayList<com.google.maps.android.heatmaps.WeightedLatLng>(totalEstimatedPoints)
+
+    // 2. Collect points directly without intermediate lists (no flatMap/map)
+    for (path in allPaths) {
+        if (path.isEmpty()) continue
+        
+        val densified = densifyPath(path, densifyInterval)
+        for (point in densified) {
+            allPoints.add(com.google.maps.android.heatmaps.WeightedLatLng(point, 2.0))
+        }
     }
 
     if (allPoints.isEmpty()) return null

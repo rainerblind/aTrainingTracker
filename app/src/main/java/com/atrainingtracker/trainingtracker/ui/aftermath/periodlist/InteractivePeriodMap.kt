@@ -71,7 +71,7 @@ fun InteractivePeriodMap(
     }
 
     val visuals = remember(allPaths, summary.periodType, isHeatmapEnabled) {
-        getPeriodMapVisuals(summary.periodType, allPaths.values.toList(), isHeatmapEnabled)
+        getPeriodMapVisuals(summary.periodType, allPaths.values.toList(), isHeatmapEnabled, isInteractive = true)
     }
 
     var isMapLoaded by remember { mutableStateOf(false) }

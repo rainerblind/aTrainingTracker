@@ -38,7 +38,8 @@ data class PeriodMapVisuals(
 fun getPeriodMapVisuals(
     periodType: PeriodType,
     allPaths: List<List<LatLng>>,
-    isHeatmapEnabled: Boolean = true
+    isHeatmapEnabled: Boolean = true,
+    isInteractive: Boolean = false
 ): PeriodMapVisuals {
     val heatmapProvider = run {
         if (allPaths.isEmpty() || periodType == PeriodType.DAY || !isHeatmapEnabled) {
@@ -51,7 +52,19 @@ fun getPeriodMapVisuals(
                 else -> 0.0
             }
 
-            createHeatmapProvider(allPaths, opacity)
+            // ATT-310: Adaptive densification based on scale and interaction
+            val interval = if (isInteractive) {
+                10.0 // High quality for zoomed interactive map
+            } else {
+                when (periodType) {
+                    PeriodType.WEEK -> 10.0
+                    PeriodType.MONTH -> 50.0
+                    PeriodType.YEAR -> 200.0
+                    else -> 10.0
+                }
+            }
+
+            createHeatmapProvider(allPaths, opacity, densifyInterval = interval)
         }
     }
 

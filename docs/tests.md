@@ -168,6 +168,12 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-STR-013** | `ATT-251` | **String Resource Integrity Check** | `REQ-UI-113` | 1. Audit all `values-*/strings.xml` files. 2. Compare the set of keys in each file with the keys in `values/strings.xml`. 3. Identify keys present in translations but missing in default. 4. Verify that after implementation, no such discrepancies exist. | Every key defined in a translation file exists in the default `strings.xml`. | Proposed |
 | **TST-STR-014** | `ATT-253` | **Missing Translation Audit** | `REQ-UI-106` | 1. Run a script to identify all translatable keys in default `values/` that are missing in any supported locale (DE, ES, FR, IT, JA, NL, PL, PT). 2. Verify that after implementation, zero translatable keys from the default locale are missing in any supported sub-locale. 3. Verify that specialized resource files (e.g., `strings_devices.xml`, `strings_filters.xml`) are also consistent across locales. | All supported locales have 100% translation coverage of the default translatable keys. | Proposed |
 
+## 5. Performance & Reliability (SWE.5)
+
+| Test ID | Jira ID | Focus | Requirement ID(s) | Procedure | Expected Result | Status |
+|:---|:---|:---|:---|:---|:---|:---|
+| **TST-PERF-001** | `ATT-319` | **Heatmap Memory Scalability** | `REQ-MAP-017` | 1. Import a large volume of workouts (e.g. 500+). 2. Navigate to the 'Periods' view and scroll through Yearly/Monthly summaries. | The application SHALL NOT crash with an `OutOfMemoryError`. Map rendering MUST remain responsive. | Proposed |
+
 ## 4. Release Verification Workflow
 
 Whenever a file is modified, the following workflow is triggered:
