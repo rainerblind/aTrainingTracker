@@ -72,8 +72,8 @@ class BackupWorker(
 
         fun schedule(context: Context) {
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-            val automatedEnabled = prefs.getBoolean("automated_backups", false)
-            val intervalDays = prefs.getString("backup_interval_days", "3")?.toLong() ?: 3L
+            val automatedEnabled = prefs.getBoolean("automated_backups", true)
+            val intervalDays = prefs.getString("backup_interval_days", "1")?.toLong() ?: 1L
 
             if (!automatedEnabled) {
                 WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)

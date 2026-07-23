@@ -86,10 +86,10 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         return if (ts == 0L && st == null) null else LastBackupInfo(ts, st ?: "UNKNOWN")
     }
 
-    var automatedBackupsEnabled by mutableStateOf(prefs.getBoolean("automated_backups", false))
+    var automatedBackupsEnabled by mutableStateOf(prefs.getBoolean("automated_backups", true))
         private set
 
-    var backupIntervalDays by mutableIntStateOf(prefs.getString("backup_interval_days", "3")?.toInt() ?: 3)
+    var backupIntervalDays by mutableIntStateOf(prefs.getString("backup_interval_days", "1")?.toInt() ?: 1)
         private set
 
     fun updateAutomatedBackupsEnabled(enabled: Boolean) {
