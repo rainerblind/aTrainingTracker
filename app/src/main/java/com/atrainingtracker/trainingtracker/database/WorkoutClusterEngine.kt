@@ -77,10 +77,18 @@ class WorkoutClusterEngine private constructor(context: Context) {
 
         return if (existingMatch != null) {
             // Update existing cluster (Moving Average logic for centroids)
-            // Ensure unique name if it changed (SCRUM-190 refinement)
+            
             val normalizedInputName = stripHitCount(userSpecifiedName)
-            val uniqueName = if (existingMatch.name == normalizedInputName) normalizedInputName 
-                             else findUniqueClusterName(normalizedInputName, existingMatch.id)
+
+            // ATT-309: Do not rename cluster if it already has a custom name 
+            // and we are just updating identity from a workout.
+            val uniqueName = if (clusterIdOverride != -1L && !isDefaultName(existingMatch.name)) {
+                existingMatch.name
+            } else {
+                // Ensure unique name if it changed (SCRUM-190 refinement)
+                if (existingMatch.name == normalizedInputName) normalizedInputName
+                else findUniqueClusterName(normalizedInputName, existingMatch.id)
+            }
 
             val updatedCluster = existingMatch.copy(
                 name = uniqueName,
@@ -520,5 +528,22 @@ class WorkoutClusterEngine private constructor(context: Context) {
         val results = FloatArray(1)
         Location.distanceBetween(p1.latitude, p1.longitude, p2.latitude, p2.longitude, results)
         return results[0]
+    }
+
+    private fun isDefaultName(name: String): Boolean {
+        val format = appContext.getString(R.string.cluster_default_name_format)
+        val parts = format.split("%s")
+        if (parts.size < 2) return name.contains(appContext.getString(R.string.unknown_manufacturer))
+
+        val prefix = parts[0]
+        val suffix = parts[1]
+
+        val isMatch = when {
+            prefix.isNotEmpty() && suffix.isNotEmpty() -> name.startsWith(prefix) && name.endsWith(suffix)
+            prefix.isNotEmpty() -> name.startsWith(prefix)
+            suffix.isNotEmpty() -> name.endsWith(suffix)
+            else -> false
+        }
+        return isMatch || name.contains(appContext.getString(R.string.unknown_manufacturer))
     }
 }
