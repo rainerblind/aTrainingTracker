@@ -23,6 +23,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.google.android.gms.maps.model.LatLng
@@ -92,6 +93,11 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
     var backupIntervalDays by mutableIntStateOf(prefs.getString("backup_interval_days", "1")?.toInt() ?: 1)
         private set
 
+    // Clustering Tolerances (ATT-315)
+    var endpointTolerance by mutableStateOf(TrainingApplication.getClusterTolEndpoints())
+    var apexTolerance by mutableStateOf(TrainingApplication.getClusterTolApex())
+    var distanceTolerance by mutableStateOf(TrainingApplication.getClusterTolDistance())
+
     fun updateAutomatedBackupsEnabled(enabled: Boolean) {
         prefs.edit().putBoolean("automated_backups", enabled).apply()
         automatedBackupsEnabled = enabled
@@ -102,6 +108,14 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         prefs.edit().putString("backup_interval_days", days.toString()).apply()
         backupIntervalDays = days
         BackupWorker.schedule(getApplication())
+    }
+
+    fun saveClusteringTolerances() {
+        prefs.edit()
+            .putFloat(TrainingApplication.SP_CLUSTER_TOL_ENDPOINTS, endpointTolerance)
+            .putFloat(TrainingApplication.SP_CLUSTER_TOL_APEX, apexTolerance)
+            .putFloat(TrainingApplication.SP_CLUSTER_TOL_DISTANCE, distanceTolerance)
+            .apply()
     }
 
     fun createBackup(context: Context, onBackupReady: (Uri) -> Unit) {
@@ -248,6 +262,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
     }
 
     fun importLegacyFile(context: Context, uri: Uri, format: String) {
+        saveClusteringTolerances()
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = UiState.Loading("Importing legacy file...")
             val tempFile = File(context.cacheDir, "legacy_import.$format")
@@ -268,6 +283,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
     }
 
     fun bulkRecoverLegacyData(context: Context, format: String) {
+        saveClusteringTolerances()
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = UiState.Loading("Initializing legacy recovery...")
             val count = LegacyImportEngine.bulkRecoverFromDropbox(context, format, createLegacyListener())

@@ -52,6 +52,7 @@ import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialog
+import com.atrainingtracker.trainingtracker.ui.clusters.ClusterTuningContent
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
@@ -85,6 +86,10 @@ fun ImportBackupTabsScreen(
     var restoreUri by remember { mutableStateOf<Uri?>(null) }
     var showMappingDialog by remember { mutableStateOf<MappingData?>(null) }
     
+    // ATT-315: Pre-import Tuning state
+    var showTuningDialogForBulk by remember { mutableStateOf(false) }
+    var pendingSingleLegacyUri by remember { mutableStateOf<Uri?>(null) }
+    
     val isBusy = uiState is BackupRestoreViewModel.UiState.Loading || uiState is BackupRestoreViewModel.UiState.Progress
 
     val createBackupChooserTitle = stringResource(R.string.create_backup)
@@ -110,7 +115,7 @@ fun ImportBackupTabsScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let {
-            viewModel.importLegacyFile(context, it, "tcx")
+            pendingSingleLegacyUri = it
         }
     }
 
@@ -174,7 +179,7 @@ fun ImportBackupTabsScreen(
                 when (pageIndex) {
                     0 -> ImportTabContent(
                         isBusy = isBusy,
-                        onBulkRecoverClick = { viewModel.bulkRecoverLegacyData(context, "tcx") },
+                        onBulkRecoverClick = { showTuningDialogForBulk = true },
                         onSingleLegacyImportClick = { pickLegacyFileLauncher.launch(arrayOf("*/*")) }
                     )
                     1 -> BackupTabContent(
@@ -274,6 +279,67 @@ fun ImportBackupTabsScreen(
             }
         )
     }
+
+    // ATT-315: Pre-import Tuning Dialogs
+    if (showTuningDialogForBulk) {
+        PreImportTuningDialog(
+            viewModel = viewModel,
+            onConfirm = {
+                showTuningDialogForBulk = false
+                viewModel.bulkRecoverLegacyData(context, "tcx")
+            },
+            onDismiss = { showTuningDialogForBulk = false }
+        )
+    }
+
+    pendingSingleLegacyUri?.let { uri ->
+        PreImportTuningDialog(
+            viewModel = viewModel,
+            onConfirm = {
+                viewModel.importLegacyFile(context, uri, "tcx")
+                pendingSingleLegacyUri = null
+            },
+            onDismiss = { pendingSingleLegacyUri = null }
+        )
+    }
+}
+
+@Composable
+fun PreImportTuningDialog(
+    viewModel: BackupRestoreViewModel,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.cluster_tuning_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                    text = "Adjust the clustering sensitivity to optimize route matching for the imported files.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                ClusterTuningContent(
+                    endpointTolerance = viewModel.endpointTolerance,
+                    onEndpointToleranceChange = { viewModel.endpointTolerance = it },
+                    apexTolerance = viewModel.apexTolerance,
+                    onApexToleranceChange = { viewModel.apexTolerance = it },
+                    distanceTolerance = viewModel.distanceTolerance,
+                    onDistanceToleranceChange = { viewModel.distanceTolerance = it }
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text(stringResource(R.string.OK))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
