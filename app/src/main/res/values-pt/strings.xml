@@ -1070,8 +1070,7 @@
     <string name="full_restore_description">Apaga todos os dados locais e os substitui pelo conteúdo do backup. Força reinicialização.</string>
     <string name="incremental_import_description">Mescla treinos de um backup no seu histórico atual. Treinos já existentes serão ignorados.</string>
     <string name="legacy_recovery_title">Recuperação de dados antigos</string>
-    <string name="legacy_recovery_description">Recrie treinos perdidos a partir de exportações antigas do Dropbox (CSV/TCX). Registos existentes serão ignorados.</string>
-    <string name="scan_csv">Procurar CSV</string>
+    <string name="legacy_recovery_description">Recrie treinos perdidos a partir de exportações antigas do Dropbox (TCX). Registos existentes serão ignorados.</string>
     <string name="scan_tcx">Procurar TCX</string>
     <string name="import_single_file">Importar ficheiro único</string>
 </resources>

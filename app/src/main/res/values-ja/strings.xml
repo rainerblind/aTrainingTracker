@@ -1057,8 +1057,7 @@
     <string name="full_restore_description">ローカルデータをすべて削除し、バックアップの内容に置き換えます。アプリの再起動が必要です。</string>
     <string name="incremental_import_description">バックアップから現在の履歴にワークアウトを統合します。既存のワークアウトはスキップされます。</string>
     <string name="legacy_recovery_title">旧データの復元</string>
-    <string name="legacy_recovery_description">旧い Dropbox エクスポート (CSV/TCX) から不足しているワークアウトを復元します。既存の記録はスキップされます。</string>
-    <string name="scan_csv">CSV をスキャン</string>
+    <string name="legacy_recovery_description">旧い Dropbox エクスポート (TCX) から不足しているワークアウトを復元します。既存の記録はスキップされます。</string>
     <string name="scan_tcx">TCX をスキャン</string>
     <string name="import_single_file">単一ファイルをインポート</string>
 </resources>

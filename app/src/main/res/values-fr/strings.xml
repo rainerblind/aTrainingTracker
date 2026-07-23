@@ -1071,8 +1071,7 @@
     <string name="full_restore_description">Efface toutes les données locales et les remplace par le contenu de la sauvegarde. Redémarre l\'application.</string>
     <string name="incremental_import_description">Fusionne les entraînements d\'une sauvegarde dans votre historique. Les doublons seront ignorés.</string>
     <string name="legacy_recovery_title">Récupération de données anciennes</string>
-    <string name="legacy_recovery_description">Recréez les entraînements manquants à partir d\'anciens exports Dropbox (CSV/TCX). Les doublons seront ignorés.</string>
-    <string name="scan_csv">Scanner CSV</string>
+    <string name="legacy_recovery_description">Recréez les entraînements manquants à partir d\'anciens exports Dropbox (TCX). Les doublons seront ignorés.</string>
     <string name="scan_tcx">Scanner TCX</string>
     <string name="import_single_file">Importer un fichier seul</string>
 </resources>

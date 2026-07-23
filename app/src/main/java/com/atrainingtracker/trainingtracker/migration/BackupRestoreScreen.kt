@@ -91,8 +91,7 @@ fun BackupRestoreScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let {
-            val extension = if (it.toString().endsWith("csv", true)) "csv" else "tcx"
-            viewModel.importLegacyFile(context, it, extension)
+            viewModel.importLegacyFile(context, it, "tcx")
         }
     }
 
@@ -473,15 +472,8 @@ fun BackupRestoreScreen(
                     
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
-                            onClick = { viewModel.bulkRecoverLegacyData(context, "csv") },
-                            modifier = Modifier.weight(1f),
-                            enabled = !isBusy
-                        ) {
-                            Text(stringResource(R.string.scan_csv))
-                        }
-                        OutlinedButton(
                             onClick = { viewModel.bulkRecoverLegacyData(context, "tcx") },
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.fillMaxWidth(),
                             enabled = !isBusy
                         ) {
                             Text(stringResource(R.string.scan_tcx))

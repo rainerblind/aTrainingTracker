@@ -1070,8 +1070,7 @@
     <string name="full_restore_description">Wist alle lokale gegevens en vervangt deze door de inhoud van de back-up. Start de app opnieuw op.</string>
     <string name="incremental_import_description">Voegt trainingen uit een back-up samen met je huidige geschiedenis. Dubbele trainingen worden overgeslagen.</string>
     <string name="legacy_recovery_title">Altdaten-herstel</string>
-    <string name="legacy_recovery_description">Herstel ontbrekende workouts uit oude Dropbox-exports (CSV/TCX). Bestaande records worden overgeslagen.</string>
-    <string name="scan_csv">CSV scannen</string>
+    <string name="legacy_recovery_description">Herstel ontbrekende workouts uit oude Dropbox-exports (TCX). Bestaande records worden overgeslagen.</string>
     <string name="scan_tcx">TCX scannen</string>
     <string name="import_single_file">Enkel bestand importeren</string>
 </resources>

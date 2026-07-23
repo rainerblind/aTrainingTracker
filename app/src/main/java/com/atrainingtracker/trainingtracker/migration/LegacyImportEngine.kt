@@ -14,7 +14,6 @@ import android.content.ContentValues
 import android.content.Context
 import android.util.Log
 import android.util.Xml
-import au.com.bytecode.opencsv.CSVReader
 import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
@@ -35,12 +34,11 @@ import org.xmlpull.v1.XmlPullParser
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.io.FileReader
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 /**
- * Handles recreation of workouts from legacy export files (CSV, TCX).
+ * Handles recreation of workouts from legacy export files (TCX).
  */
 object LegacyImportEngine {
     private const val TAG = "LegacyImportEngine"
@@ -68,7 +66,6 @@ object LegacyImportEngine {
         val dbxClient = DbxClientV2(DbxRequestConfig(BuildConfig.DROPBOX_APP_KEY), credential)
         
         val possiblePaths = when (format.lowercase()) {
-            "csv" -> listOf("/CSV", "/apps/Workouts/CSV")
             "tcx" -> listOf("/TCX", "/apps/Workouts/TCX")
             else -> return 0
         }
@@ -107,7 +104,6 @@ object LegacyImportEngine {
                 }
 
                 val success = when (format.lowercase()) {
-                    "csv" -> importFromCsv(context, tempFile, listener)
                     "tcx" -> importFromTcx(context, tempFile, listener)
                     else -> false
                 }
@@ -298,101 +294,6 @@ object LegacyImportEngine {
         }
     }
 
-    /**
-     * Recreates a workout from a CSV file.
-     */
-    suspend fun importFromCsv(context: Context, csvFile: File, listener: ProgressListener? = null): Boolean {
-        try {
-            CSVReader(FileReader(csvFile)).use { reader ->
-                val header = reader.readNext() ?: return false
-                val columnMap = mapHeaderToSensorTypes(header)
-                
-                val baseFileName = csvFile.nameWithoutExtension.removeSuffix("-TMP")
-                val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
-                
-                val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
-                val targetDb = samplesDbManager.database
-                
-                var tableCreated = samplesDbManager.existsTable(baseFileName)
-
-                var firstTime: String? = null
-                val points = mutableListOf<LatLng>()
-                val altitudes = mutableListOf<Double>()
-                val distances = mutableListOf<Double>()
-
-                var nextLine: Array<String>? = reader.readNext()
-                while (nextLine != null) {
-                    val values = ContentValues()
-                    var lat: Double? = null
-                    var lng: Double? = null
-                    var alt: Double? = null
-                    var dist: Double? = null
-                    
-                    columnMap.forEach { (index, sensorType) ->
-                        val value = nextLine?.getOrNull(index) ?: ""
-                        if (value.isNotEmpty()) {
-                            if (sensorType == null && header[index].replace("\"", "") == "time") {
-                                val formattedTime = normalizeTimestamp(value)
-                                values.put("time", formattedTime)
-                                if (firstTime == null) firstTime = formattedTime
-                            } else if (sensorType != null) {
-                                values.put(sensorType.name, value)
-                                if (sensorType == SensorType.LATITUDE) lat = value.toDoubleOrNull()
-                                if (sensorType == SensorType.LONGITUDE) lng = value.toDoubleOrNull()
-                                if (sensorType == SensorType.ALTITUDE) alt = value.toDoubleOrNull()
-                                if (sensorType == SensorType.DISTANCE_m) dist = value.toDoubleOrNull()
-                            }
-                        }
-                    }
-
-                    if (values.containsKey("time")) {
-                        if (!isWorkoutExisting(summaryDb, baseFileName) || !tableCreated) {
-                            if (!tableCreated) {
-                                val sensorTypes = columnMap.values.filterNotNull().distinct().toMutableList()
-                                samplesDbManager.createNewTable(baseFileName, sensorTypes)
-                                tableCreated = true
-                                targetDb.beginTransaction()
-                            }
-                            targetDb.insert(WorkoutSamplesDatabaseManager.getTableName(baseFileName), null, values)
-                        }
-                    }
-
-                    if (lat != null && lng != null) points.add(LatLng(lat!!, lng!!))
-                    alt?.let { altitudes.add(it) }
-                    dist?.let { distances.add(it) }
-                    
-                    nextLine = reader.readNext()
-                }
-
-                if (targetDb.inTransaction()) {
-                    targetDb.setTransactionSuccessful()
-                    targetDb.endTransaction()
-                }
-
-                if (firstTime != null) {
-                    var workoutId = getWorkoutId(summaryDb, baseFileName)
-                    if (workoutId == -1L) {
-                        val summaryValues = ContentValues().apply {
-                            put(WorkoutSummaries.FILE_BASE_NAME, baseFileName)
-                            put(WorkoutSummaries.WORKOUT_NAME, baseFileName)
-                            put(WorkoutSummaries.TIME_START, firstTime)
-                            put(WorkoutSummaries.SPORT_ID, -1L)
-                            put(WorkoutSummaries.EQUIPMENT_ID, -1L)
-                            put(WorkoutSummaries.FINISHED, 1)
-                        }
-                        workoutId = summaryDb.database.insert(WorkoutSummaries.TABLE, null, summaryValues)
-                    }
-
-                    recalculateStats(context, workoutId, baseFileName, points, altitudes, distances, BSportType.UNKNOWN, listener)
-                    return true
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to import CSV: ${csvFile.name}", e)
-        }
-        return false
-    }
-
     private fun isWorkoutExisting(db: WorkoutSummariesDatabaseManager, fileBaseName: String): Boolean {
         db.database.query(WorkoutSummaries.TABLE, arrayOf(WorkoutSummaries.C_ID), 
             "${WorkoutSummaries.FILE_BASE_NAME} = ?", arrayOf(fileBaseName), null, null, null).use {
@@ -556,42 +457,5 @@ object LegacyImportEngine {
             totalDist += results[0]
         }
         return totalDist
-    }
-
-    private fun mapHeaderToSensorTypes(header: Array<String>): Map<Int, SensorType?> {
-        val map = mutableMapOf<Int, SensorType?>()
-        header.forEachIndexed { index, colName ->
-            val cleanName = colName.replace("\"", "")
-            val sensorType = try {
-                SensorType.valueOf(cleanName)
-            } catch (e: Exception) {
-                // Handle version variations like SPEED_mps vs SPEED
-                when {
-                    cleanName.startsWith("SPEED") -> SensorType.SPEED_mps
-                    cleanName.startsWith("DISTANCE") -> SensorType.DISTANCE_m
-                    cleanName.startsWith("LATITUDE") -> SensorType.LATITUDE
-                    cleanName.startsWith("LONGITUDE") -> SensorType.LONGITUDE
-                    cleanName.startsWith("ALTITUDE") -> SensorType.ALTITUDE
-                    cleanName.startsWith("HR") -> SensorType.HR
-                    cleanName.startsWith("CADENCE") -> SensorType.CADENCE
-                    cleanName.startsWith("POWER") -> SensorType.POWER
-                    cleanName == "TIME_ACTIVE" -> SensorType.TIME_ACTIVE
-                    cleanName == "LAP_NR" -> SensorType.LAP_NR
-                    else -> null
-                }
-            }
-            map[index] = sensorType
-        }
-        return map
-    }
-
-    private fun normalizeTimestamp(raw: String): String {
-        val clean = raw.replace("\"", "")
-        return if (clean.contains("-")) {
-            clean
-        } else {
-            // Placeholder for legacy numeric handling if needed
-            clean
-        }
     }
 }

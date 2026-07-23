@@ -255,7 +255,6 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
                 tempFile.outputStream().use { output -> input.copyTo(output) }
             }
             val success = when (format.lowercase()) {
-                "csv" -> LegacyImportEngine.importFromCsv(context, tempFile, createLegacyListener())
                 "tcx" -> LegacyImportEngine.importFromTcx(context, tempFile, createLegacyListener())
                 else -> false
             }

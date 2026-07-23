@@ -1162,8 +1162,7 @@
     <string name="full_restore_description">Löscht alle lokalen Daten und ersetzt sie durch den Inhalt des Backups. Erzwingt einen App-Neustart.</string>
     <string name="incremental_import_description">Fügt Workouts aus einem Backup zu deiner aktuellen Historie hinzu. Bereits vorhandene Workouts werden übersprungen.</string>
     <string name="legacy_recovery_title">Altdaten-Wiederherstellung</string>
-    <string name="legacy_recovery_description">Stelle fehlende Workouts aus alten Dropbox-Exporten (CSV/TCX) wieder her. Bestehende Einträge werden übersprungen.</string>
-    <string name="scan_csv">CSV scannen</string>
+    <string name="legacy_recovery_description">Stelle fehlende Workouts aus alten Dropbox-Exporten (TCX) wieder her. Bestehende Einträge werden übersprungen.</string>
     <string name="scan_tcx">TCX scannen</string>
     <string name="import_single_file">Einzeldatei importieren</string>
 </resources>

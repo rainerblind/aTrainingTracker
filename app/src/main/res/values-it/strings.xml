@@ -1070,8 +1070,7 @@
     <string name="full_restore_description">Cancella tutti i dati locali e li sostituisce con il contenuto del backup. Forza il riavvio dell\'app.</string>
     <string name="incremental_import_description">Unisci gli allenamenti da un backup nella cronologia attuale. Gli allenamenti già presenti verranno saltati.</string>
     <string name="legacy_recovery_title">Recupero dati legacy</string>
-    <string name="legacy_recovery_description">Ricrea gli allenamenti mancanti dalle vecchie esportazioni Dropbox (CSV/TCX). I record esistenti verranno saltati.</string>
-    <string name="scan_csv">Scansiona CSV</string>
+    <string name="legacy_recovery_description">Ricrea gli allenamenti mancanti dalle vecchie esportazioni Dropbox (TCX). I record esistenti verranno saltati.</string>
     <string name="scan_tcx">Scansiona TCX</string>
     <string name="import_single_file">Importa file singolo</string>
 </resources>
