@@ -71,6 +71,7 @@ fun ImportBackupTabsScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
+    val activeInteraction by viewModel.activeInteraction.collectAsState()
     
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(pageCount = { 3 })
@@ -257,15 +258,6 @@ fun ImportBackupTabsScreen(
         )
     }
 
-    if (uiState is BackupRestoreViewModel.UiState.ClusterNamingRequired) {
-        val namingState = uiState as BackupRestoreViewModel.UiState.ClusterNamingRequired
-        ClusterNamingDialog(
-            state = namingState,
-            onConfirm = { clusterId, name -> viewModel.provideClusterDecision(clusterId, name) },
-            onDismiss = { viewModel.provideClusterDecision(null, null) }
-        )
-    }
-
     showMappingDialog?.let { data ->
         ImportMappingDialog(
             analysis = data.analysis,
@@ -277,6 +269,15 @@ fun ImportBackupTabsScreen(
                 showMappingDialog = null
                 viewModel.clearState()
             }
+        )
+    }
+
+    // ATT-316: Foreground Interaction Overlay
+    activeInteraction?.let { interaction ->
+        ClusterNamingDialog(
+            state = interaction,
+            onConfirm = { clusterId, name -> viewModel.provideClusterDecision(clusterId, name) },
+            onDismiss = { viewModel.provideClusterDecision(null, null) }
         )
     }
 
@@ -345,7 +346,7 @@ fun PreImportTuningDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClusterNamingDialog(
-    state: BackupRestoreViewModel.UiState.ClusterNamingRequired,
+    state: BackupRestoreViewModel.ClusterInteraction,
     onConfirm: (Long?, String?) -> Unit,
     onDismiss: () -> Unit
 ) {

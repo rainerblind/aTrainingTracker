@@ -45,20 +45,24 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         data class Error(val message: String) : UiState()
         data class Progress(val current: Int, val total: Int, val name: String) : UiState()
         data class MappingRequired(val uri: Uri, val analysis: ImportEngine.AnalysisResult) : UiState()
-        data class ClusterNamingRequired(
-            val date: String,
-            val start: LatLng,
-            val end: LatLng,
-            val apex: LatLng,
-            val distance: Double,
-            val bSportType: BSportType,
-            val polyline: String,
-            val existingClusters: List<WorkoutCluster>
-        ) : UiState()
     }
+
+    data class ClusterInteraction(
+        val date: String,
+        val start: LatLng,
+        val end: LatLng,
+        val apex: LatLng,
+        val distance: Double,
+        val bSportType: BSportType,
+        val polyline: String,
+        val existingClusters: List<WorkoutCluster>
+    )
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState
+
+    private val _activeInteraction = MutableStateFlow<ClusterInteraction?>(null)
+    val activeInteraction: StateFlow<ClusterInteraction?> = _activeInteraction.asStateFlow()
 
     private var clusterDecision: CompletableDeferred<Pair<Long?, String?>>? = null
 
@@ -314,8 +318,12 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             val clusters = withContext(Dispatchers.IO) {
                 WorkoutClusterDatabaseManager.getInstance(getApplication()).getAllClusters()
             }
-            _uiState.value = UiState.ClusterNamingRequired(date, start, end, apex, distance, bSportType, polyline, clusters)
+            
+            // ATT-316: Set active interaction without hiding the background progress
+            _activeInteraction.value = ClusterInteraction(date, start, end, apex, distance, bSportType, polyline, clusters)
+            
             val decision = deferred.await()
+            _activeInteraction.value = null
             clusterDecision = null
             return decision
         }
