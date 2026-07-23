@@ -53,8 +53,16 @@ class WorkoutClusterEngine private constructor(context: Context) {
      * Suggests a cluster match for a workout based on spatial shape metrics and optional name.
      */
     fun suggestCluster(start: LatLng, end: LatLng, apex: LatLng, distance: Double, workoutName: String? = null): WorkoutCluster? {
-        val candidates = dbManager.findCandidates(start.latitude, start.longitude, distance)
-        if (DEBUG) Log.d(TAG, "Found ${candidates.size} candidates for shape [start=$start, dist=$distance, name=$workoutName]")
+        // ATT-338 Refinement: Use dynamic tolerances for the initial DB candidate search
+        // to ensure that anything that could produce a similarity score < 1.0 is included.
+        val endpointTol = TrainingApplication.getClusterTolEndpoints().toDouble()
+        val latToleranceDegrees = endpointTol / 111000.0 // 1 deg Lat approx 111km
+        
+        // For distance, we use a generous bound (4x the tolerance used in the 0.25 weight scoring)
+        val distToleranceMeters = distance * TrainingApplication.getClusterTolDistance().toDouble() * 4.0
+
+        val candidates = dbManager.findCandidates(start.latitude, start.longitude, distance, latToleranceDegrees, distToleranceMeters)
+        if (DEBUG) Log.d(TAG, "Found ${candidates.size} candidates for shape [start=$start, dist=$distance, name=$workoutName] using tolerances [lat=$latToleranceDegrees, dist=$distToleranceMeters]")
 
         return candidates.map { cluster ->
             val score = calculateSimilarity(start, end, apex, distance, cluster, workoutName)

@@ -97,16 +97,21 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
 
     /**
      * Finds candidate clusters based on rough spatial and distance filtering.
+     * @param latToleranceDegrees The maximum latitude drift allowed for the start point.
+     * @param distToleranceMeters The maximum distance drift allowed for the total length.
      */
-    fun findCandidates(startLat: Double, startLng: Double, distance: Double): List<WorkoutCluster> {
-        val latTolerance = 0.002 // Approx 220m
-        val distTolerance = 1000.0 // 500m either way
-
+    fun findCandidates(
+        startLat: Double, 
+        startLng: Double, 
+        distance: Double,
+        latToleranceDegrees: Double,
+        distToleranceMeters: Double
+    ): List<WorkoutCluster> {
         val selection = "${WorkoutClusterContract.COLUMN_START_LAT} BETWEEN ? AND ? AND " +
                 "${WorkoutClusterContract.COLUMN_REF_DISTANCE} BETWEEN ? AND ?"
         val args = arrayOf(
-            (startLat - latTolerance).toString(), (startLat + latTolerance).toString(),
-            (distance - distTolerance).toString(), (distance + distTolerance).toString()
+            (startLat - latToleranceDegrees).toString(), (startLat + latToleranceDegrees).toString(),
+            (distance - distToleranceMeters).toString(), (distance + distToleranceMeters).toString()
         )
 
         val candidates = mutableListOf<WorkoutCluster>()
