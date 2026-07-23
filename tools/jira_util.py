@@ -6,7 +6,7 @@ import os
 import sys
 from urllib.parse import urlencode
 
-# Transitions for SCRUM project
+# Transitions for ATT project
 TRANSITIONS = {
     "todo": "11",
     "in_progress": "21",
@@ -192,7 +192,7 @@ def create_subtask(parent_key, summary, description):
     url = f"{config['JIRA_URL']}/rest/api/2/issue"
     payload = {
         "fields": {
-            "project": {"key": "SCRUM"},
+            "project": {"key": "ATT"},
             "parent": {"key": parent_key},
             "summary": summary,
             "description": description,

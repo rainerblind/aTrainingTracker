@@ -27,7 +27,7 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   **Jira Integration**: For each identified or new test case, the agent MUST create a **Sub-task** in Jira linked to the main ticket.
         *   The sub-task **Summary** MUST follow the format: `[Test] TST-XXX-###: Summary`.
         *   The sub-task **Description** MUST be identical to the procedure and expected result defined in `docs/tests.md` to ensure absolute synchronization.
-        *   After creation, the agent MUST update `docs/tests.md` to include the **Jira Ticket ID** of the sub-task (e.g., `AT-123`) in the test case table for bidirectional traceability.
+        *   After creation, the agent MUST update `docs/tests.md` to include the **Jira Ticket ID** of the sub-task (e.g., `ATT-123`) in the test case table for bidirectional traceability.
     *   **Iterative Refinement**: The agent must refine the test cases based on user feedback until the user explicitly agrees.
     *   **Enforcement**: The agent is strictly FORBIDDEN from proposing an implementation plan or writing any code until the user has formally agreed to the test cases in `docs/tests.md` and the corresponding sub-tasks have been created in Jira. This phase is used to clarify and freeze the requirements.
 
@@ -53,7 +53,9 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   **Documentation**: For any ticket in progress, the agent must:
         *   **Identity Disclaimer**: Every comment posted by the agent MUST start with a clear disclaimer: *"[Automated comment by AI Agent]"*.
         *   **Initial Analysis**: Immediately after moving to "In Progress", post a comment containing the **Root Cause Analysis (RCA)** (for bugs), the **Implementation Strategy**, the **Impact Analysis**, and the **Agreed Verification Criteria (Test IDs)**.
-        *   **Design Documentation**: Post the full text of the implementation plan as a comment on the ticket.
+        *   **Jira Sub-task Generation**: Immediately after the Initial Analysis, the agent MUST create a **Sub-task** for the implementation plan. 
+            *   The sub-task **Summary** MUST follow the format: `[Plan] ATT-XXX: Summary`.
+            *   The sub-task **Description** MUST be identical to the Implementation Plan defined in Step 6.
         *   **Verification & Closure**: When moving to "In Überprüfung", post the full text of the walkthrough as a comment. This provides a permanent record of the implemented changes and verification evidence.
 
 5.  **Architectural Integrity (SWE.2 Phase)**:
@@ -62,11 +64,12 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   Ensure that new code does not violate the established architecture (e.g., maintain clear separation between background services and UI layers).
 
 6.  **Implementation Planning (SWE.3 Phase - The Implementation Hard Stop)**:
-    *   **Plan Artifact**: Create an implementation plan at `docs/engineering/plans/SCRUM-XXX_plan.md` (where XXX is the ticket number).
+    *   **Plan Artifact**: Create an implementation plan at `docs/engineering/plans/ATT-XXX_plan.md` (where XXX is the ticket number).
     *   Every proposed change **must** explicitly reference the Requirement ID, the Component affected, and the corresponding Test ID it fulfills.
+    *   **Jira Integration**: The agent MUST create a **Sub-task** for the implementation plan with the summary `[Plan] ATT-XXX: Summary`. The full text of the plan MUST be the sub-task's description.
     *   **MANDATORY HARD STOP**: The agent MUST present the full implementation plan to the user and ask for formal approval.
     *   **Iterative Refinement**: If the user provides feedback or asks for changes to the plan, the agent **MUST** update the plan and ask for approval again.
-    *   **Jira Synchronization**: Upon presentation of the plan to the user, the agent **MUST** also post the full text of the implementation plan as a comment on the corresponding Jira ticket.
+    *   **Jira Synchronization**: Upon presentation of the plan to the user, the agent MUST update the `[Plan]` sub-task's description with the final plan.
     *   **Enforcement**: The agent is strictly FORBIDDEN from performing any code modifications (writing files or replacing content) until the user has explicitly responded with "Implementation Plan approved" or a similar clear confirmation of the *entire* plan.
 
 7.  **Execution & Multi-Stage Verification**:
@@ -82,7 +85,7 @@ Any AI assistant working on this project **must** follow these steps for every t
         > * **Scope**: SWE.4 Unit Verification
         > * **Artifact**: [Link to log/screenshot]
     *   Update the `Status` in `docs/requirements.md` to `Verified`.
-    *   **Walkthrough Artifact**: Create a summary of the fulfilled requirements at `docs/engineering/walkthroughs/SCRUM-XXX_walkthrough.md`.
+    *   **Walkthrough Artifact**: Create a summary of the fulfilled requirements at `docs/engineering/walkthroughs/ATT-XXX_walkthrough.md`.
     *   **Git Commit Message**: Provide a clear, comprehensive commit message covering all changes for the **entire ticket**, following the Conventional Commits standard. The agent SHALL use the `*` symbol for bullet points within the commit body (avoiding dots or dashes). The commit message **MUST** be presented inside a literal markdown code block to ensure formatting characters are preserved for copy-paste compatibility.
 
 9.  **Post-Implementation Review**:
