@@ -55,19 +55,29 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         val distance: Double,
         val bSportType: BSportType,
         val polyline: String,
-        val existingClusters: List<WorkoutCluster>
+        val existingClusters: List<WorkoutCluster>,
+        val deferred: CompletableDeferred<Pair<Long?, String?>>
     )
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState
 
-    private val _activeInteraction = MutableStateFlow<ClusterInteraction?>(null)
-    val activeInteraction: StateFlow<ClusterInteraction?> = _activeInteraction.asStateFlow()
+    private val _interactionQueue = MutableStateFlow<List<ClusterInteraction>>(emptyList())
+    val activeInteraction: StateFlow<ClusterInteraction?> = _interactionQueue
+        .map { it.firstOrNull() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    private var clusterDecision: CompletableDeferred<Pair<Long?, String?>>? = null
+    val pendingInteractionsCount: StateFlow<Int> = _interactionQueue
+        .map { it.size }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     fun provideClusterDecision(clusterId: Long?, name: String?) {
-        clusterDecision?.complete(Pair(clusterId, name))
+        val currentQueue = _interactionQueue.value
+        if (currentQueue.isNotEmpty()) {
+            val first = currentQueue.first()
+            first.deferred.complete(Pair(clusterId, name))
+            _interactionQueue.value = currentQueue.drop(1)
+        }
     }
 
     data class LastBackupInfo(val timestamp: Long, val status: String)
@@ -314,17 +324,15 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             polyline: String
         ): Pair<Long?, String?> {
             val deferred = CompletableDeferred<Pair<Long?, String?>>()
-            clusterDecision = deferred
             val clusters = withContext(Dispatchers.IO) {
                 WorkoutClusterDatabaseManager.getInstance(getApplication()).getAllClusters()
             }
             
-            // ATT-316: Set active interaction without hiding the background progress
-            _activeInteraction.value = ClusterInteraction(date, start, end, apex, distance, bSportType, polyline, clusters)
+            // ATT-316: Add to queue and wait
+            val interaction = ClusterInteraction(date, start, end, apex, distance, bSportType, polyline, clusters, deferred)
+            _interactionQueue.update { it + interaction }
             
             val decision = deferred.await()
-            _activeInteraction.value = null
-            clusterDecision = null
             return decision
         }
     }

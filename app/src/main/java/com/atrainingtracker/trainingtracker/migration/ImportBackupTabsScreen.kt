@@ -72,6 +72,7 @@ fun ImportBackupTabsScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val activeInteraction by viewModel.activeInteraction.collectAsState()
+    val queueCount by viewModel.pendingInteractionsCount.collectAsState()
     
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(pageCount = { 3 })
@@ -276,6 +277,7 @@ fun ImportBackupTabsScreen(
     activeInteraction?.let { interaction ->
         ClusterNamingDialog(
             state = interaction,
+            queueCount = queueCount,
             onConfirm = { clusterId, name -> viewModel.provideClusterDecision(clusterId, name) },
             onDismiss = { viewModel.provideClusterDecision(null, null) }
         )
@@ -347,6 +349,7 @@ fun PreImportTuningDialog(
 @Composable
 fun ClusterNamingDialog(
     state: BackupRestoreViewModel.ClusterInteraction,
+    queueCount: Int,
     onConfirm: (Long?, String?) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -393,7 +396,15 @@ fun ClusterNamingDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Assign Workout to Route") },
+        title = { 
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Assign Workout to Route")
+                if (queueCount > 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                    Badge { Text("$queueCount") }
+                }
+            }
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Found a recurring route from ${state.date}.")
@@ -401,7 +412,7 @@ fun ClusterNamingDialog(
                 // --- ATT-304: Show sport type & distance ---
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val distanceFormatter = remember { DistanceFormatter() }
@@ -426,6 +437,18 @@ fun ClusterNamingDialog(
                             text = sportName,
                             style = MaterialTheme.typography.bodyMedium
                         )
+                    }
+
+                    if (queueCount > 1) {
+                        Badge(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ) {
+                            Text(
+                                text = "Task 1 of $queueCount",
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                        }
                     }
                 }
                 

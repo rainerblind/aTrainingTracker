@@ -30,6 +30,12 @@ import com.dropbox.core.DbxRequestConfig
 import com.dropbox.core.v2.DbxClientV2
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.xmlpull.v1.XmlPullParser
 import java.io.File
 import java.io.FileInputStream
@@ -43,6 +49,9 @@ import java.util.Locale
 object LegacyImportEngine {
     private const val TAG = "LegacyImportEngine"
     private val tcxTimeFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
+
+    private val recalculationMutex = Mutex()
+    private val importScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     interface ProgressListener {
         fun onProgress(current: Int, total: Int, name: String)
@@ -300,7 +309,12 @@ object LegacyImportEngine {
                     }
                 }
 
-                recalculateStats(context, workoutId, baseFileName, points, altitudes, distances, bSportType, listener)
+                // ATT-316: Launch recalculation in a separate scope so the import loop can continue.
+                // Refined: We no longer hold the mutex for the entire duration to allow the queue to grow.
+                val finalBSportType = bSportType
+                importScope.launch {
+                    recalculateStats(context, workoutId, baseFileName, points, altitudes, distances, finalBSportType, listener)
+                }
                 return true
             }
         } catch (e: Exception) {
@@ -441,9 +455,13 @@ object LegacyImportEngine {
                 if (sportId == -1L && bSportType != BSportType.UNKNOWN) {
                     sportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
                 }
-                // Refine existing cluster (ATT-308: ensure sport type is propagated/stored)
-                clusterEngine.learnFromWorkout(start, end, apex, totalDistance, matchingCluster.name, sportId, matchingCluster.id)
-                clusterEngine.assignClusterToWorkout(context, workoutId, matchingCluster.id, false)
+                
+                // ATT-316 Refinement: Only lock during the actual DB write/learning phase
+                recalculationMutex.withLock {
+                    // Refine existing cluster (ATT-308: ensure sport type is propagated/stored)
+                    clusterEngine.learnFromWorkout(start, end, apex, totalDistance, matchingCluster.name, sportId, matchingCluster.id)
+                    clusterEngine.assignClusterToWorkout(context, workoutId, matchingCluster.id, false)
+                }
             } else {
                 val startTime = summariesDb.getString(workoutId, WorkoutSummaries.TIME_START)
                 val (existingId, customName) = listener?.onNewClusterCandidate(
@@ -454,23 +472,25 @@ object LegacyImportEngine {
                     polyline = polyline
                 ) ?: Pair(null, null)
                 
-                if (existingId != null) {
-                    val cluster = WorkoutClusterDatabaseManager.getInstance(context).getClusterById(existingId)
-                    var sportId = summariesDb.getLong(workoutId, WorkoutSummaries.SPORT_ID) ?: -1L
-                    if (sportId == -1L && bSportType != BSportType.UNKNOWN) {
-                        sportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
+                recalculationMutex.withLock {
+                    if (existingId != null) {
+                        val cluster = WorkoutClusterDatabaseManager.getInstance(context).getClusterById(existingId)
+                        var sportId = summariesDb.getLong(workoutId, WorkoutSummaries.SPORT_ID) ?: -1L
+                        if (sportId == -1L && bSportType != BSportType.UNKNOWN) {
+                            sportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
+                        }
+                        if (cluster != null) {
+                            clusterEngine.learnFromWorkout(start, end, apex, totalDistance, cluster.name, sportId, existingId)
+                        }
+                        clusterEngine.assignClusterToWorkout(context, workoutId, existingId, true)
+                    } else if (!customName.isNullOrBlank()) {
+                        var sportId = summariesDb.getLong(workoutId, WorkoutSummaries.SPORT_ID) ?: -1L
+                        if (sportId == -1L && bSportType != BSportType.UNKNOWN) {
+                            sportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
+                        }
+                        val newId = clusterEngine.learnFromWorkout(start, end, apex, totalDistance, customName, sportId, -1L)
+                        clusterEngine.assignClusterToWorkout(context, workoutId, newId, true)
                     }
-                    if (cluster != null) {
-                        clusterEngine.learnFromWorkout(start, end, apex, totalDistance, cluster.name, sportId, existingId)
-                    }
-                    clusterEngine.assignClusterToWorkout(context, workoutId, existingId, true)
-                } else if (!customName.isNullOrBlank()) {
-                    var sportId = summariesDb.getLong(workoutId, WorkoutSummaries.SPORT_ID) ?: -1L
-                    if (sportId == -1L && bSportType != BSportType.UNKNOWN) {
-                        sportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
-                    }
-                    val newId = clusterEngine.learnFromWorkout(start, end, apex, totalDistance, customName, sportId, -1L)
-                    clusterEngine.assignClusterToWorkout(context, workoutId, newId, true)
                 }
             }
         }

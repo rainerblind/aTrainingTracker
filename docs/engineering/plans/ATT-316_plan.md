@@ -1,26 +1,38 @@
-# Implementation Plan - ATT-316: Importing: Queue user interaction
+# Implementation Plan - ATT-316: Decouple Import Progress from User Interactions
 
-Decouple user interaction requests (e.g., cluster naming) from the primary import status to ensure progress visibility and sequential request handling.
+Establish a non-blocking import workflow where background file processing (download and raw import) continues while the system waits for user clustering decisions.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> Currently, when the system needs a cluster decision, it switches the entire UI state to `ClusterNamingRequired`, which hides the progress bar. This change will allow the progress card to stay visible behind the naming dialog.
+> This change decouples the **File Import** (downloading and parsing) from the **Clustering Workflow** (naming routes).
+> - The progress bar will reflect the speed of the background import.
+> - Clustering requests will be queued and presented sequentially without stopping the import of subsequent files.
+> - This might lead to multiple naming prompts for similar routes if the user doesn't respond quickly, as subsequent files cannot "match" a cluster that hasn't been created yet.
 
 ## Proposed Changes
 
-### State Management
+### Legacy Import Engine
+
+#### [MODIFY] [LegacyImportEngine.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/migration/LegacyImportEngine.kt)
+- Refactor `importFromTcx` to separate the raw database insertion from the `recalculateStats` logic.
+- Ensure that `bulkRecoverFromDropbox` can initiate the raw import and then delegate the clustering to a background process (or continue the loop while `recalculateStats` runs).
+- *Correction*: To maintain the "Learning Loop" benefit, `recalculateStats` should still run sequentially for each file, but it should run in a separate coroutine from the main "Download & Parse" loop.
+
+### State Management & ViewModel
 
 #### [MODIFY] [BackupRestoreViewModel.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/migration/BackupRestoreViewModel.kt)
-- Remove `ClusterNamingRequired` from the `UiState` sealed class.
-- Add `activeInteraction` StateFlow of type `ClusterInteraction?`.
-- Update `onNewClusterCandidate` listener to set `activeInteraction` and wait for completion, while keeping `_uiState` in its previous `Progress` or `Loading` state.
+- Implement a `interactionQueue: MutableStateFlow<List<ClusterInteraction>>`.
+- Refactor `onNewClusterCandidate` to:
+    1. Append the new request to the `interactionQueue`.
+    2. Wait for the decision (using a `CompletableDeferred` stored in the interaction object).
+- Update the `activeInteraction` derived state to always return the first item in the queue.
 
 ### UI Components
 
 #### [MODIFY] [ImportBackupTabsScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/migration/ImportBackupTabsScreen.kt)
-- Update the observation logic to check for `activeInteraction` independently of `uiState`.
-- Ensure the `ClusterNamingDialog` is shown as an overlay that doesn't block the rendering of the `StateOverlaySection` (progress card).
+- Update `ClusterNamingDialog` to handle the queued state.
+- Ensure the progress card (from `uiState`) remains visible and updates while the dialog is shown.
 
 ## Verification Plan
 
@@ -29,6 +41,7 @@ Decouple user interaction requests (e.g., cluster naming) from the primary impor
 
 ### Manual Verification
 - **TST-PRO-004** (Jira [ATT-333](https://atrainingtracker.atlassian.net/browse/ATT-333)):
-    1. Start a "Scan TCX" with multiple new routes in Dropbox.
-    2. Verify that when the naming dialog appears, the progress card (e.g., "Importing file 1/10...") remains visible in the background.
-    3. Verify that dismissing the dialog (or confirming) allows the progress to continue or shows the next dialog if applicable.
+    1. Start a "Scan TCX" for 10 files where the first 5 need naming.
+    2. Observe that the naming dialog for file #1 appears.
+    3. **Verify** that the progress bar behind the dialog continues to move as files 6-10 are downloaded and imported.
+    4. Complete naming for file #1 and verify that the dialog for file #2 appears immediately.
