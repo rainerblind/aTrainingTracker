@@ -39,7 +39,7 @@ class BackupRestoreFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setContent {
                 ATrainingTrackerTheme {
-                    BackupRestoreScreen(
+                    ImportBackupTabsScreen(
                         viewModel = viewModel
                     )
                 }

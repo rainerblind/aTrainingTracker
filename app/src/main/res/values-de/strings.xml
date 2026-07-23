@@ -1135,8 +1135,11 @@
     <string name="view_size_xhuge">Gigantisch</string>
     <string name="view_size_xlarge">Sehr groß</string>
     <string name="view_size_xsmall">Sehr klein</string>
-    <string name="backup_restore">Backup \u0026 Restore</string>
-    <string name="backup_restore_summary">Daten migrieren oder Notfallwiederherstellung durchführen</string>
+    <string name="import_backup">Import \u0026 Backup</string>
+    <string name="tab_import">Import</string>
+    <string name="tab_backup">Backup</string>
+    <string name="tab_restore">Wiederherstellen</string>
+    <string name="import_backup_summary">Verwalten Sie Workout-Importe, Backups und Datenwiederherstellung</string>
     <string name="create_backup">Backup erstellen</string>
     <string name="restore_backup">Vollständige Wiederherstellung (Migration)</string>
     <string name="import_workouts">Inkrementeller Import (Zusammenführen)</string>

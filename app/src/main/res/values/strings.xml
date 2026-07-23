@@ -1247,8 +1247,11 @@
     <string name="error_sharing_failed">Unable to generate share image. Please try again.</string>
 
     <!-- Backup and Restore -->
-    <string name="backup_restore">Backup &amp; Restore</string>
-    <string name="backup_restore_summary">Migrate data or perform disaster recovery</string>
+    <string name="import_backup">Import \u0026 Backup</string>
+    <string name="tab_import">Import</string>
+    <string name="tab_backup">Backup</string>
+    <string name="tab_restore">Restore</string>
+    <string name="import_backup_summary">Manage workout imports, backups, and data restoration</string>
     <string name="create_backup">Create Backup</string>
     <string name="restore_backup">Full Restore (Migration)</string>
     <string name="import_workouts">Incremental Import (Merge)</string>

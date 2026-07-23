@@ -6,6 +6,14 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
 package com.atrainingtracker.trainingtracker.migration
@@ -18,6 +26,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -36,7 +47,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
@@ -49,26 +59,35 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.*
 import com.google.maps.android.PolyUtil
 import com.google.maps.android.compose.*
+import kotlinx.coroutines.launch
 
 data class MappingData(val uri: Uri, val analysis: ImportEngine.AnalysisResult)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BackupRestoreScreen(
+fun ImportBackupTabsScreen(
     viewModel: BackupRestoreViewModel
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
-    val lastBackupInfo by viewModel.lastBackupInfo.collectAsState()
     
-    val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    val pagerState = rememberPagerState(pageCount = { 3 })
+    
+    val tabs = listOf(
+        stringResource(R.string.tab_import),
+        stringResource(R.string.tab_backup),
+        stringResource(R.string.tab_restore)
+    )
+
     var showRestoreConfirm by remember { mutableStateOf(false) }
     var showDropboxRestoreConfirm by remember { mutableStateOf(false) }
     var restoreUri by remember { mutableStateOf<Uri?>(null) }
-
     var showMappingDialog by remember { mutableStateOf<MappingData?>(null) }
     
     val isBusy = uiState is BackupRestoreViewModel.UiState.Loading || uiState is BackupRestoreViewModel.UiState.Progress
+
+    val createBackupChooserTitle = stringResource(R.string.create_backup)
 
     val pickFullRestoreLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -100,10 +119,6 @@ fun BackupRestoreScreen(
         if (state is BackupRestoreViewModel.UiState.MappingRequired) {
             showMappingDialog = MappingData(state.uri, state.analysis)
         }
-        // ATT-288: Scroll to top when a status card or progress appears
-        if (state !is BackupRestoreViewModel.UiState.Idle) {
-            scrollState.animateScrollTo(0)
-        }
     }
 
     Scaffold(
@@ -112,390 +127,83 @@ fun BackupRestoreScreen(
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.primaryContainer,
             ) {
-                Column(modifier = Modifier.statusBarsPadding()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                Column {
+                    Column(modifier = Modifier.statusBarsPadding()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.import_backup),
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                    }
+                    
+                    PrimaryScrollableTabRow(
+                        selectedTabIndex = pagerState.currentPage,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        divider = {}
                     ) {
-                        Text(
-                            text = stringResource(R.string.backup_restore),
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
+                        tabs.forEachIndexed { index, title ->
+                            Tab(
+                                selected = pagerState.currentPage == index,
+                                onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                                text = { Text(text = title) }
+                            )
+                        }
                     }
                 }
             }
         },
         contentWindowInsets = WindowInsets(0.dp)
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .navigationBarsPadding()
-                .verticalScroll(scrollState)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // --- State Overlays (ATT-288: Shown at the very top) ---
-            when (val state = uiState) {
-                is BackupRestoreViewModel.UiState.Loading -> {
-                    ElevatedCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Text(
-                                text = state.message ?: stringResource(R.string.please_wait),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-                }
-                is BackupRestoreViewModel.UiState.Progress -> {
-                    ElevatedCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer
-                        )
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            LinearProgressIndicator(
-                                progress = { state.current.toFloat() / state.total.toFloat() },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = stringResource(R.string.import_processing_format, state.name),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-                }
-                is BackupRestoreViewModel.UiState.Success -> {
-                    ElevatedCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(state.message, style = MaterialTheme.typography.bodyMedium)
-                            }
-                            TextButton(onClick = { viewModel.clearState() }) {
-                                Text(stringResource(R.string.OK))
-                            }
-                        }
-                    }
-                }
-                is BackupRestoreViewModel.UiState.Error -> {
-                    ElevatedCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(state.message, style = MaterialTheme.typography.bodyMedium)
-                            }
-                            TextButton(onClick = { viewModel.clearState() }) {
-                                Text(stringResource(R.string.OK))
-                            }
-                        }
-                    }
-                }
-                else -> {}
-            }
+        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+            // --- State Overlays (Shown at the very top of content) ---
+            StateOverlaySection(uiState, onClearState = { viewModel.clearState() })
 
-            Text(
-                text = stringResource(R.string.backup_restore_summary),
-                style = MaterialTheme.typography.bodyLarge
-            )
-
-            // --- Backup Card ---
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringResource(R.string.create_backup),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+                userScrollEnabled = true,
+                verticalAlignment = Alignment.Top
+            ) { pageIndex ->
+                when (pageIndex) {
+                    0 -> ImportTabContent(
+                        isBusy = isBusy,
+                        onBulkRecoverClick = { viewModel.bulkRecoverLegacyData(context, "tcx") },
+                        onSingleLegacyImportClick = { pickLegacyFileLauncher.launch(arrayOf("*/*")) }
                     )
-                    val chooserTitle = stringResource(R.string.create_backup)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(
-                        onClick = {
+                    1 -> BackupTabContent(
+                        viewModel = viewModel,
+                        isBusy = isBusy,
+                        onCreateBackupClick = {
                             viewModel.createBackup(context) { uri ->
                                 val intent = Intent(Intent.ACTION_SEND).apply {
                                     type = "application/octet-stream"
                                     putExtra(Intent.EXTRA_STREAM, uri)
                                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 }
-                                context.startActivity(Intent.createChooser(intent, chooserTitle))
+                                context.startActivity(Intent.createChooser(intent, createBackupChooserTitle))
                             }
                         },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !isBusy
-                    ) {
-                        Icon(Icons.Default.Save, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.create_backup))
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Button(
-                        onClick = { viewModel.uploadToDropbox(context) },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !isBusy
-                    ) {
-                        Icon(Icons.Default.CloudUpload, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.create_and_upload_to_dropbox))
-                    }
-                }
-            }
-
-            // --- Automated Backups Card ---
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringResource(R.string.automated_backups),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        onUploadToDropboxClick = { viewModel.uploadToDropbox(context) }
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.automated_backups))
-                            Text(
-                                text = stringResource(R.string.automated_backups_summary),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = viewModel.automatedBackupsEnabled,
-                            onCheckedChange = { viewModel.updateAutomatedBackupsEnabled(it) },
-                            modifier = Modifier.scale(0.8f)
-                        )
-                    }
-
-                    if (viewModel.automatedBackupsEnabled) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(stringResource(R.string.backup_interval), style = MaterialTheme.typography.labelLarge)
-                        
-                        val intervals = listOf(1, 3, 7, 30)
-                        val labels = listOf(
-                            stringResource(R.string.backup_interval_daily),
-                            stringResource(R.string.backup_interval_3days),
-                            stringResource(R.string.backup_interval_weekly),
-                            stringResource(R.string.backup_interval_monthly)
-                        )
-
-                        var expanded by remember { mutableStateOf(false) }
-                        ExposedDropdownMenuBox(
-                            expanded = expanded,
-                            onExpandedChange = { expanded = !expanded }
-                        ) {
-                            val currentLabel = labels[intervals.indexOf(viewModel.backupIntervalDays).coerceAtLeast(0)]
-                            TextField(
-                                value = currentLabel,
-                                onValueChange = {},
-                                readOnly = true,
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                modifier = Modifier.menuAnchor().fillMaxWidth(),
-                                colors = ExposedDropdownMenuDefaults.textFieldColors(
-                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                                )
-                            )
-                            ExposedDropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false }
-                            ) {
-                                intervals.forEachIndexed { index, days ->
-                                    DropdownMenuItem(
-                                        text = { Text(labels[index]) },
-                                        onClick = {
-                                            viewModel.updateBackupIntervalDays(days)
-                                            expanded = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-
-                        lastBackupInfo?.let { info ->
-                            Spacer(modifier = Modifier.height(12.dp))
-                            val dateStr = DateFormat.getDateTimeInstance().format(Date(info.timestamp))
-                            val isSuccess = info.status == "SUCCESS"
-                            Text(
-                                text = if (isSuccess) {
-                                    stringResource(R.string.last_backup, dateStr)
-                                } else {
-                                    "Last backup failed: ${info.status}"
-                                },
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isSuccess) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
-                }
-            }
-
-            // --- Restore Card ---
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringResource(R.string.restore_backup),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                    2 -> RestoreTabContent(
+                        isBusy = isBusy,
+                        onIncrementalImportClick = { pickImportLauncher.launch(arrayOf("*/*")) },
+                        onLocalRestoreClick = { pickFullRestoreLauncher.launch(arrayOf("*/*")) },
+                        onDropboxRestoreClick = { showDropboxRestoreConfirm = true }
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.full_restore_description),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedButton(
-                        onClick = { pickFullRestoreLauncher.launch(arrayOf("*/*")) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                        enabled = !isBusy
-                    ) {
-                        Icon(Icons.Default.Restore, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Local: " + stringResource(R.string.restore_backup))
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedButton(
-                        onClick = { showDropboxRestoreConfirm = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                        enabled = !isBusy
-                    ) {
-                        Icon(Icons.Default.CloudUpload, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Dropbox: " + stringResource(R.string.restore_backup))
-                    }
-                }
-            }
-
-            // --- Import Card ---
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringResource(R.string.import_workouts),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.incremental_import_description),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedButton(
-                        onClick = { pickImportLauncher.launch(arrayOf("*/*")) },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !isBusy
-                    ) {
-                        Icon(Icons.Default.Backup, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.import_workouts))
-                    }
-                }
-            }
-
-            // --- Legacy Recovery Card ---
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringResource(R.string.legacy_recovery_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.legacy_recovery_description),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(
-                            onClick = { viewModel.bulkRecoverLegacyData(context, "tcx") },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !isBusy
-                        ) {
-                            Text(stringResource(R.string.scan_tcx))
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedButton(
-                        onClick = { pickLegacyFileLauncher.launch(arrayOf("*/*")) },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !isBusy
-                    ) {
-                        Icon(Icons.Default.CloudUpload, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.import_single_file))
-                    }
                 }
             }
         }
     }
 
+    // Dialogs remain unchanged
     if (showRestoreConfirm) {
         AlertDialog(
             onDismissRequest = { showRestoreConfirm = false },
@@ -669,17 +377,17 @@ fun ClusterNamingDialog(
                             endCap = RoundCap()
                         )
                         Marker(
-                            state = rememberMarkerState(position = state.start), 
+                            state = remember(state.start) { MarkerState(position = state.start) }, 
                             title = "Start",
                             icon = remember { createSensorMarker(localContext, R.drawable.control_start, TTColor.StartPoint) }
                         )
                         Marker(
-                            state = rememberMarkerState(position = state.end), 
+                            state = remember(state.end) { MarkerState(position = state.end) }, 
                             title = "End",
                             icon = remember { createSensorMarker(localContext, R.drawable.control_stop, TTColor.EndPoint) }
                         )
                         Marker(
-                            state = rememberMarkerState(position = state.apex), 
+                            state = remember(state.apex) { MarkerState(position = state.apex) }, 
                             title = "Apex",
                             icon = remember { createSensorMarker(localContext, R.drawable.ic_distance, TTColor.ApexPoint) }
                         )
@@ -853,4 +561,237 @@ fun ImportMappingDialog(
             }
         }
     )
+}
+
+@Composable
+private fun StateOverlaySection(uiState: BackupRestoreViewModel.UiState, onClearState: () -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        when (val state = uiState) {
+            is BackupRestoreViewModel.UiState.Loading -> {
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                ) {
+                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(text = state.message ?: stringResource(R.string.please_wait), style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+            is BackupRestoreViewModel.UiState.Progress -> {
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        LinearProgressIndicator(progress = { state.current.toFloat() / state.total.toFloat() }, modifier = Modifier.fillMaxWidth())
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(text = stringResource(R.string.import_processing_format, state.name), style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+            is BackupRestoreViewModel.UiState.Success -> {
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = state.message, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                        TextButton(onClick = onClearState) { Text(stringResource(R.string.OK)) }
+                    }
+                }
+            }
+            is BackupRestoreViewModel.UiState.Error -> {
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                ) {
+                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = state.message, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                        TextButton(onClick = onClearState) { Text(stringResource(R.string.OK)) }
+                    }
+                }
+            }
+            else -> {}
+        }
+    }
+}
+
+@Composable
+private fun ImportTabContent(
+    isBusy: Boolean,
+    onBulkRecoverClick: () -> Unit,
+    onSingleLegacyImportClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.import_backup_summary),
+            style = MaterialTheme.typography.bodyLarge
+        )
+
+        // --- Legacy Recovery Card ---
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(text = stringResource(R.string.legacy_recovery_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = stringResource(R.string.legacy_recovery_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(onClick = onBulkRecoverClick, modifier = Modifier.fillMaxWidth(), enabled = !isBusy) {
+                    Text(stringResource(R.string.scan_tcx))
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(onClick = onSingleLegacyImportClick, modifier = Modifier.fillMaxWidth(), enabled = !isBusy) {
+                    Icon(Icons.Default.CloudUpload, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.import_single_file))
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BackupTabContent(
+    viewModel: BackupRestoreViewModel,
+    isBusy: Boolean,
+    onCreateBackupClick: () -> Unit,
+    onUploadToDropboxClick: () -> Unit
+) {
+    val lastBackupInfo by viewModel.lastBackupInfo.collectAsState()
+    
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // --- Backup Card ---
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(text = stringResource(R.string.create_backup), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = onCreateBackupClick, modifier = Modifier.fillMaxWidth(), enabled = !isBusy) {
+                    Icon(Icons.Default.Save, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.create_backup))
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = onUploadToDropboxClick, modifier = Modifier.fillMaxWidth(), enabled = !isBusy) {
+                    Icon(Icons.Default.CloudUpload, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.create_and_upload_to_dropbox))
+                }
+            }
+        }
+
+        // --- Automated Backups Card ---
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(text = stringResource(R.string.automated_backups), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.automated_backups))
+                        Text(text = stringResource(R.string.automated_backups_summary), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = viewModel.automatedBackupsEnabled, onCheckedChange = { viewModel.updateAutomatedBackupsEnabled(it) }, modifier = Modifier.scale(0.8f))
+                }
+
+                if (viewModel.automatedBackupsEnabled) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(stringResource(R.string.backup_interval), style = MaterialTheme.typography.labelLarge)
+                    val intervals = listOf(1, 3, 7, 30)
+                    val labels = listOf(stringResource(R.string.backup_interval_daily), stringResource(R.string.backup_interval_3days), stringResource(R.string.backup_interval_weekly), stringResource(R.string.backup_interval_monthly))
+                    var expanded by remember { mutableStateOf(false) }
+                    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+                        val currentLabel = labels[intervals.indexOf(viewModel.backupIntervalDays).coerceAtLeast(0)]
+                        TextField(value = currentLabel, onValueChange = {}, readOnly = true, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }, modifier = Modifier.menuAnchor().fillMaxWidth(), colors = ExposedDropdownMenuDefaults.textFieldColors(focusedContainerColor = MaterialTheme.colorScheme.surface, unfocusedContainerColor = MaterialTheme.colorScheme.surface))
+                        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                            intervals.forEachIndexed { index, days ->
+                                DropdownMenuItem(text = { Text(labels[index]) }, onClick = { viewModel.updateBackupIntervalDays(days); expanded = false })
+                            }
+                        }
+                    }
+                    lastBackupInfo?.let { info ->
+                        Spacer(modifier = Modifier.height(12.dp))
+                        val dateStr = DateFormat.getDateTimeInstance().format(Date(info.timestamp))
+                        val isSuccess = info.status == "SUCCESS"
+                        Text(text = if (isSuccess) stringResource(R.string.last_backup, dateStr) else "Last backup failed: ${info.status}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = if (isSuccess) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RestoreTabContent(
+    isBusy: Boolean,
+    onIncrementalImportClick: () -> Unit,
+    onLocalRestoreClick: () -> Unit,
+    onDropboxRestoreClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // --- Import Card (Moved here from Import tab) ---
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(text = stringResource(R.string.import_workouts), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = stringResource(R.string.incremental_import_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(onClick = onIncrementalImportClick, modifier = Modifier.fillMaxWidth(), enabled = !isBusy) {
+                    Icon(Icons.Default.Backup, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.import_workouts))
+                }
+            }
+        }
+
+        // --- Restore Card ---
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(text = stringResource(R.string.restore_backup), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = stringResource(R.string.full_restore_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(onClick = onLocalRestoreClick, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error), enabled = !isBusy) {
+                    Icon(Icons.Default.Restore, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Local: " + stringResource(R.string.restore_backup))
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(onClick = onDropboxRestoreClick, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error), enabled = !isBusy) {
+                    Icon(Icons.Default.CloudUpload, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Dropbox: " + stringResource(R.string.restore_backup))
+                }
+            }
+        }
+    }
 }
