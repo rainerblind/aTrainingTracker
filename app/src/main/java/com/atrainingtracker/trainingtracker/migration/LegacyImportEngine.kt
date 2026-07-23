@@ -123,6 +123,12 @@ object LegacyImportEngine {
         try {
             val baseFileName = tcxFile.nameWithoutExtension.removeSuffix("-TMP").removeSuffix("~")
             val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
+
+            // ATT-314: Early exit if workout already exists to prevent redundant processing
+            if (isWorkoutExisting(summaryDb, baseFileName)) {
+                if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
+                return false
+            }
             
             val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
             val targetDb = samplesDbManager.database
@@ -385,6 +391,13 @@ object LegacyImportEngine {
 
         // 5. Clustering (Spatial Markers)
         if (points.isNotEmpty()) {
+            // ATT-314: Skip clustering if a cluster is already assigned
+            val existingClusterId = summariesDb.getLong(workoutId, WorkoutSummaries.CLUSTER_ID) ?: -1L
+            if (existingClusterId != -1L) {
+                if (TrainingApplication.getDebug(true)) Log.d(TAG, "Workout $workoutId already has cluster $existingClusterId assigned. Skipping clustering logic.")
+                return
+            }
+
             val start = points.first()
             val end = points.last()
             
