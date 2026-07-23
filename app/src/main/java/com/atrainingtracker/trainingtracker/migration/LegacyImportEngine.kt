@@ -91,6 +91,7 @@ object LegacyImportEngine {
 
             if (foundPath == null) return 0
             
+            val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
             val tempDir = File(context.cacheDir, "legacy_recovery")
             if (tempDir.exists()) tempDir.deleteRecursively()
             tempDir.mkdirs()
@@ -98,6 +99,13 @@ object LegacyImportEngine {
             entries.forEachIndexed { index, entry ->
                 listener?.onProgress(index + 1, entries.size, entry.name)
                 
+                // ATT-335: Check if workout exists before downloading to save time/bandwidth
+                val baseFileName = entry.name.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~")
+                if (isWorkoutExisting(summaryDb, baseFileName)) {
+                    if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists (checked before download).")
+                    return@forEachIndexed
+                }
+
                 val tempFile = File(tempDir, entry.name)
                 FileOutputStream(tempFile).use { fos ->
                     dbxClient.files().download(entry.pathLower).download(fos)
