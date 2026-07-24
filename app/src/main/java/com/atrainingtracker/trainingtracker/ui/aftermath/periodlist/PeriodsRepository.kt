@@ -70,7 +70,7 @@ class PeriodsRepository private constructor(private val application: Application
         // 1. Instant load from cache (if sync was finished)
         loadFromDatabase()
 
-        // 2. Observe workouts and trigger background re-aggregation only if needed
+        // 2. Observe workouts and trigger background re-aggregation on every change.
         scope.launch {
             // Signal immediate rebuild start if cache is not ready
             val isFinished = withContext(Dispatchers.IO) { 
@@ -98,19 +98,26 @@ class PeriodsRepository private constructor(private val application: Application
 
     private fun loadFromDatabase() {
         scope.launch {
-            val isFinished = withContext(Dispatchers.IO) { dbManager.isSyncFinished() }
+            val isFinished = withContext(Dispatchers.IO) { 
+                val finished = dbManager.isSyncFinished()
+                Log.d(TAG, "loadFromDatabase check: isFinished=$finished")
+                finished
+            }
+            
             if (!isFinished) {
-                Log.d(TAG, "Sync not finished. Showing empty list while rebuild runs.")
                 return@launch
             }
 
             val workouts = workoutRepo.allWorkouts.value
             
+            Log.d(TAG, "Loading lightweight periods from DB...")
             val dailyRaw = dbManager.getPeriodsByType(PeriodType.DAY)
             val weeklyRaw = dbManager.getPeriodsByType(PeriodType.WEEK)
             val monthlyRaw = dbManager.getPeriodsByType(PeriodType.MONTH)
             val yearlyRaw = dbManager.getPeriodsByType(PeriodType.YEAR)
             
+            Log.d(TAG, "Loaded from DB: D:${dailyRaw.size} W:${weeklyRaw.size} M:${monthlyRaw.size} Y:${yearlyRaw.size}")
+
             if (workouts.isNotEmpty()) {
                 enrichAndEmit(listOf(dailyRaw, weeklyRaw, monthlyRaw, yearlyRaw), workouts)
             } else {
@@ -148,7 +155,6 @@ class PeriodsRepository private constructor(private val application: Application
                         updateMapsForWorkout(dayMap, weekMap, monthMap, yearMap, workout)
 
                         // Write to DB cache (background persistence)
-                        // Note: For extreme speed, we could batch DB writes, but O(1) upsert is fine.
                         upsertWorkoutToDB(db, workout)
 
                         // 3. PUMP UI: Every 20 workouts, emit the current RAM state to the UI
@@ -159,14 +165,12 @@ class PeriodsRepository private constructor(private val application: Application
                                 _migrationProgress.value = progress
                             }
                             
-                            // Emit currently aggregated RAM data (enriched for Map previews)
                             val currentLevels = listOf(
                                 dayMap.values.toList(),
                                 weekMap.values.toList(),
                                 monthMap.values.toList(),
                                 yearMap.values.toList()
                             )
-                            Log.v(TAG, "Emitting incremental state to UI (index=$index)")
                             enrichAndEmit(currentLevels, workouts)
                         }
                     }
@@ -216,7 +220,6 @@ class PeriodsRepository private constructor(private val application: Application
     }
 
     private fun upsertWorkoutToDB(db: android.database.sqlite.SQLiteDatabase, workout: WorkoutData) {
-        // Reuse the logic from updateWorkoutToPeriods but for DB only
         val ldt = workout.localDateTime
         val zoneOffset = OffsetDateTime.now().offset
         
@@ -281,7 +284,6 @@ class PeriodsRepository private constructor(private val application: Application
     }
 
     private fun mergeWorkoutToPeriod(p: PeriodSummary, w: WorkoutData): PeriodSummary {
-        // Update Spatial Anchors & Bounds
         var minLat = p.minLat; var maxLat = p.maxLat; var minLng = p.minLng; var maxLng = p.maxLng
         var nId = p.northId; var sId = p.southId; var eId = p.eastId; var wId = p.westId
         
@@ -292,11 +294,9 @@ class PeriodsRepository private constructor(private val application: Application
             if (pos.longitude < minLng) { minLng = pos.longitude; wId = w.id }
         }
 
-        // Longest Overall Comparison
         val longestId = if (w.activeTimeSec > p.longestDurationS) w.id else p.longestId
         val longestDuration = if (w.activeTimeSec > p.longestDurationS) w.activeTimeSec else p.longestDurationS
 
-        // Merge Sport Stats
         val newStatsMap = p.sportStats.toMutableMap()
         val currentSport = newStatsMap[w.bSportType]
         if (currentSport == null) {
@@ -309,7 +309,6 @@ class PeriodsRepository private constructor(private val application: Application
             newDetailed[w.sportName] = det.copy(count = det.count + 1, totalDurationSec = det.totalDurationSec + w.activeTimeSec, 
                 totalDistanceMeters = det.totalDistanceMeters + w.totalDistance, totalAscentMeters = det.totalAscentMeters + w.ascentMeters)
             
-            // Compare longest in sport
             val longestInSport = if (w.activeTimeSec > (currentSport.longestWorkout?.durationSec ?: 0)) {
                 LongestWorkout(w.id, w.workoutName, w.activeTimeSec, w.totalDistance, w.ascentMeters)
             } else currentSport.longestWorkout

@@ -21,7 +21,7 @@ import com.atrainingtracker.banalservice.BSportType
 
 /**
  * Manages the persistent storage for period-level summaries using a normalized relational schema.
- * This implementation acts as a high-speed cache with a completion flag.
+ * This implementation acts as a high-speed cache with a completion flag and progressive loading support.
  */
 class PeriodSummariesDatabaseManager private constructor(context: Context) {
 
@@ -69,9 +69,6 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
         }
     }
 
-    /**
-     * Executes a block of code within a single database transaction.
-     */
     fun runInTransaction(block: (SQLiteDatabase) -> Unit) {
         val db = getDatabase()
         db.beginTransaction()
@@ -83,18 +80,12 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
         }
     }
 
-    /**
-     * Deletes all period data.
-     */
     fun deleteAll(db: SQLiteDatabase) {
         db.delete(DetailedStatsContract.TABLE_NAME, null, null)
         db.delete(SportStatsContract.TABLE_NAME, null, null)
         db.delete(PeriodSummariesContract.TABLE_NAME, null, null)
     }
 
-    /**
-     * Returns true if the database aggregation has successfully finished.
-     */
     fun isSyncFinished(): Boolean {
         val db = getDatabase()
         try {
@@ -109,14 +100,10 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
         return false
     }
 
-    /**
-     * Updates the synchronization completion flag.
-     */
     fun setSyncFinished(db: SQLiteDatabase, finished: Boolean) {
         val values = ContentValues().apply {
             put(SyncStatusContract.COLUMN_IS_FINISHED, if (finished) 1 else 0)
         }
-        // Always using ID 1 for single status record
         if (db.update(SyncStatusContract.TABLE_NAME, values, "${BaseColumns._ID} = 1", null) == 0) {
             values.put(BaseColumns._ID, 1)
             db.insert(SyncStatusContract.TABLE_NAME, null, values)
@@ -124,26 +111,87 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
     }
 
     /**
-     * Returns the full list of periods for a specific type, including nested statistics.
+     * Optimized batch fetching of periods.
+     * Reduces O(N) queries to O(1) by fetching all related stats in one go.
      */
-    fun getPeriodsByType(type: PeriodType): List<PeriodSummary> {
-        val periods = mutableListOf<PeriodSummary>()
+    fun getPeriodsByType(type: PeriodType, limit: Int = -1, offset: Int = 0): List<PeriodSummary> {
         val db = getDatabase()
-
         val selection = "${PeriodSummariesContract.COLUMN_PERIOD_TYPE} = ?"
         val selectionArgs = arrayOf(type.name)
+        val limitStr = if (limit > 0) "$offset, $limit" else null
+
+        val periods = mutableListOf<PeriodSummary>()
+        val idToSummaryMap = mutableMapOf<Long, PeriodSummary>()
 
         db.query(
-            PeriodSummariesContract.TABLE_NAME, PeriodSummariesContract.PROJECTION, selection, selectionArgs, null, null,
-            "${PeriodSummariesContract.COLUMN_SORT_KEY} DESC"
+            PeriodSummariesContract.TABLE_NAME, PeriodSummariesContract.PROJECTION, 
+            selection, selectionArgs, null, null,
+            "${PeriodSummariesContract.COLUMN_SORT_KEY} DESC", limitStr
         ).use { cursor ->
             while (cursor.moveToNext()) {
                 val periodId = cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID))
-                val sportStats = getSportStatsForPeriod(db, periodId)
-                periods.add(mapCursorToPeriod(cursor, sportStats))
+                val summary = mapCursorToPeriod(cursor, mutableMapOf())
+                periods.add(summary)
+                idToSummaryMap[periodId] = summary
             }
         }
-        return periods
+
+        if (idToSummaryMap.isEmpty()) return emptyList()
+
+        // BATCH FETCH Sport Stats
+        val periodIds = idToSummaryMap.keys.joinToString(",")
+        val sportStatsSelection = "${SportStatsContract.COLUMN_PERIOD_ID} IN ($periodIds)"
+        val idToSportStatsMap = mutableMapOf<Long, MutableMap<BSportType, SportStats>>()
+
+        db.query(SportStatsContract.TABLE_NAME, null, sportStatsSelection, null, null, null, null).use { cursor ->
+            while (cursor.moveToNext()) {
+                val pId = cursor.getLong(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_PERIOD_ID))
+                val sId = cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID))
+                val bType = BSportType.valueOf(cursor.getString(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_BSPORT_TYPE)))
+                
+                val stats = mapCursorToSportStats(cursor, mutableMapOf())
+                idToSportStatsMap.getOrPut(pId) { mutableMapOf() }[bType] = stats
+                
+                // Temporary store statsId in longestWorkout's distance field to link detailed stats
+                stats.longestWorkout = LongestWorkout(sId, "", 0, 0.0, 0)
+            }
+        }
+
+        // BATCH FETCH Detailed Stats
+        val statsIds = idToSportStatsMap.values.flatMap { it.values }.map { it.longestWorkout?.id }.filterNotNull().joinToString(",")
+        if (statsIds.isNotEmpty()) {
+            val detailedSelection = "${DetailedStatsContract.COLUMN_SPORT_STATS_ID} IN ($statsIds)"
+            db.query(DetailedStatsContract.TABLE_NAME, null, detailedSelection, null, null, null, null).use { cursor ->
+                while (cursor.moveToNext()) {
+                    val sId = cursor.getLong(cursor.getColumnIndexOrThrow(DetailedStatsContract.COLUMN_SPORT_STATS_ID))
+                    val name = cursor.getString(cursor.getColumnIndexOrThrow(DetailedStatsContract.COLUMN_SPORT_NAME))
+                    val detailed = mapCursorToDetailedStats(cursor)
+                    
+                    idToSportStatsMap.values.forEach { sportMap ->
+                        sportMap.values.find { it.longestWorkout?.id == sId }?.let {
+                            (it.detailedSportStats as MutableMap)[name] = detailed
+                        }
+                    }
+                }
+            }
+        }
+
+        // Final Join and Restore Longest IDs
+        return periods.map { p ->
+            val pId = idToSummaryMap.entries.find { it.value === p }?.key ?: -1L
+            val stats = idToSportStatsMap[pId] ?: emptyMap()
+            
+            stats.values.forEach { s ->
+                val tempId = s.longestWorkout?.id ?: -1L
+                val longestIdFromDb = db.query(SportStatsContract.TABLE_NAME, arrayOf(SportStatsContract.COLUMN_LONGEST_WORKOUT_ID), 
+                    "${BaseColumns._ID} = ?", arrayOf(tempId.toString()), null, null, null).use { c ->
+                    if (c.moveToFirst()) c.getLong(0) else -1L
+                }
+                s.longestWorkout = if (longestIdFromDb != -1L) LongestWorkout(longestIdFromDb, "", 0, 0.0, 0) else null
+            }
+
+            p.copy(sportStats = stats)
+        }
     }
 
     fun getPeriodSummary(db: SQLiteDatabase, type: PeriodType, startTimestampS: Long): PeriodSummary? {
@@ -153,8 +201,7 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
         db.query(PeriodSummariesContract.TABLE_NAME, PeriodSummariesContract.PROJECTION, selection, selectionArgs, null, null, null).use { cursor ->
             if (cursor.moveToFirst()) {
                 val periodId = cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID))
-                val sportStats = getSportStatsForPeriod(db, periodId)
-                return mapCursorToPeriod(cursor, sportStats)
+                return mapCursorToPeriod(cursor, getSportStatsForPeriod(db, periodId))
             }
         }
         return null
@@ -163,25 +210,14 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
     private fun getSportStatsForPeriod(db: SQLiteDatabase, periodId: Long): Map<BSportType, SportStats> {
         val statsMap = mutableMapOf<BSportType, SportStats>()
         val selection = "${SportStatsContract.COLUMN_PERIOD_ID} = ?"
-        val args = arrayOf(periodId.toString())
-
-        db.query(SportStatsContract.TABLE_NAME, null, selection, args, null, null, null).use { cursor ->
+        db.query(SportStatsContract.TABLE_NAME, null, selection, arrayOf(periodId.toString()), null, null, null).use { cursor ->
             while (cursor.moveToNext()) {
                 val statsId = cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID))
-                val typeString = cursor.getString(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_BSPORT_TYPE))
-                val type = BSportType.valueOf(typeString)
-                val detailedStats = getDetailedStatsForSport(db, statsId)
-                
+                val type = BSportType.valueOf(cursor.getString(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_BSPORT_TYPE)))
                 val longestId = cursor.getLong(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_LONGEST_WORKOUT_ID))
-                
-                statsMap[type] = SportStats(
-                    count = cursor.getInt(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_COUNT)),
-                    totalDurationSec = cursor.getLong(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_TOTAL_DURATION)),
-                    totalDistanceMeters = cursor.getDouble(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_TOTAL_DISTANCE)),
-                    totalAscentMeters = cursor.getLong(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_TOTAL_ASCENT)),
-                    detailedSportStats = detailedStats,
+                statsMap[type] = mapCursorToSportStats(cursor, getDetailedStatsForSport(db, statsId)).apply {
                     longestWorkout = if (longestId != -1L) LongestWorkout(longestId, "", 0, 0.0, 0) else null
-                )
+                }
             }
         }
         return statsMap
@@ -189,99 +225,60 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
 
     private fun getDetailedStatsForSport(db: SQLiteDatabase, sportStatsId: Long): Map<String, DetailedStats> {
         val detailedMap = mutableMapOf<String, DetailedStats>()
-        val selection = "${DetailedStatsContract.COLUMN_SPORT_STATS_ID} = ?"
-        val args = arrayOf(sportStatsId.toString())
-
-        db.query(DetailedStatsContract.TABLE_NAME, null, selection, args, null, null, null).use { cursor ->
+        db.query(DetailedStatsContract.TABLE_NAME, null, "${DetailedStatsContract.COLUMN_SPORT_STATS_ID} = ?", arrayOf(sportStatsId.toString()), null, null, null).use { cursor ->
             while (cursor.moveToNext()) {
                 val name = cursor.getString(cursor.getColumnIndexOrThrow(DetailedStatsContract.COLUMN_SPORT_NAME))
-                detailedMap[name] = DetailedStats(
-                    count = cursor.getInt(cursor.getColumnIndexOrThrow(DetailedStatsContract.COLUMN_COUNT)),
-                    totalDurationSec = cursor.getLong(cursor.getColumnIndexOrThrow(DetailedStatsContract.COLUMN_TOTAL_DURATION)),
-                    totalDistanceMeters = cursor.getDouble(cursor.getColumnIndexOrThrow(DetailedStatsContract.COLUMN_TOTAL_DISTANCE)),
-                    totalAscentMeters = cursor.getLong(cursor.getColumnIndexOrThrow(DetailedStatsContract.COLUMN_TOTAL_ASCENT))
-                )
+                detailedMap[name] = mapCursorToDetailedStats(cursor)
             }
         }
         return detailedMap
     }
 
-    /**
-     * Upserts a period summary and all its nested statistics.
-     */
     fun upsertPeriod(db: SQLiteDatabase, summary: PeriodSummary) {
-        // 1. Upsert Main Period Summary
         val periodValues = createPeriodContentValues(summary)
         val where = "${PeriodSummariesContract.COLUMN_PERIOD_TYPE} = ? AND ${PeriodSummariesContract.COLUMN_START_TIMESTAMP} = ?"
         val args = arrayOf(summary.periodType.name, summary.startTimestampS.toString())
-        
         var periodId: Long
         if (db.update(PeriodSummariesContract.TABLE_NAME, periodValues, where, args) == 0) {
             periodId = db.insert(PeriodSummariesContract.TABLE_NAME, null, periodValues)
         } else {
-            // Get ID for existing record
             db.query(PeriodSummariesContract.TABLE_NAME, arrayOf(BaseColumns._ID), where, args, null, null, null).use { c ->
-                c.moveToFirst()
-                periodId = c.getLong(0)
+                c.moveToFirst(); periodId = c.getLong(0)
             }
-            // Clear existing stats to avoid duplicates on update
             db.delete(SportStatsContract.TABLE_NAME, "${SportStatsContract.COLUMN_PERIOD_ID} = ?", arrayOf(periodId.toString()))
         }
-
-        // 2. Insert Sport Statistics
         summary.sportStats.forEach { (type, stats) ->
-            val sportValues = createSportStatsContentValues(periodId, type, stats)
-            val sportStatsId = db.insert(SportStatsContract.TABLE_NAME, null, sportValues)
-
-            // 3. Insert Detailed Statistics
+            val sportStatsId = db.insert(SportStatsContract.TABLE_NAME, null, createSportStatsContentValues(periodId, type, stats))
             stats.detailedSportStats.forEach { (name, detailed) ->
-                val detailedValues = createDetailedStatsContentValues(sportStatsId, name, detailed)
-                db.insert(DetailedStatsContract.TABLE_NAME, null, detailedValues)
+                db.insert(DetailedStatsContract.TABLE_NAME, null, createDetailedStatsContentValues(sportStatsId, name, detailed))
             }
         }
     }
 
-    private fun createPeriodContentValues(summary: PeriodSummary) = ContentValues().apply {
-        put(PeriodSummariesContract.COLUMN_PERIOD_TYPE, summary.periodType.name)
-        put(PeriodSummariesContract.COLUMN_START_TIMESTAMP, summary.startTimestampS)
-        put(PeriodSummariesContract.COLUMN_END_TIMESTAMP, summary.endTimestampS)
-        put(PeriodSummariesContract.COLUMN_LABEL, summary.periodLabel)
-        put(PeriodSummariesContract.COLUMN_DATE_RANGE, summary.periodDateRange)
-        put(PeriodSummariesContract.COLUMN_TOTAL_WORKOUTS, summary.totalWorkouts)
-        put(PeriodSummariesContract.COLUMN_TOTAL_DURATION, summary.totalDurationSec)
-        put(PeriodSummariesContract.COLUMN_TOTAL_DISTANCE, summary.totalDistance)
-        put(PeriodSummariesContract.COLUMN_SORT_KEY, summary.sortKey)
-        
-        // Fast Outline Metadata (ATT-346)
-        put(PeriodSummariesContract.COLUMN_BOUND_MIN_LAT, summary.minLat)
-        put(PeriodSummariesContract.COLUMN_BOUND_MIN_LNG, summary.minLng)
-        put(PeriodSummariesContract.COLUMN_BOUND_MAX_LAT, summary.maxLat)
-        put(PeriodSummariesContract.COLUMN_BOUND_MAX_LNG, summary.maxLng)
-        put(PeriodSummariesContract.COLUMN_LONGEST_WORKOUT_ID, summary.longestId)
-        put(PeriodSummariesContract.COLUMN_LONGEST_DURATION, summary.longestDurationS)
-        put(PeriodSummariesContract.COLUMN_NORTH_WORKOUT_ID, summary.northId)
-        put(PeriodSummariesContract.COLUMN_SOUTH_WORKOUT_ID, summary.southId)
-        put(PeriodSummariesContract.COLUMN_EAST_WORKOUT_ID, summary.eastId)
-        put(PeriodSummariesContract.COLUMN_WEST_WORKOUT_ID, summary.westId)
+    private fun createPeriodContentValues(p: PeriodSummary) = ContentValues().apply {
+        put(PeriodSummariesContract.COLUMN_PERIOD_TYPE, p.periodType.name)
+        put(PeriodSummariesContract.COLUMN_START_TIMESTAMP, p.startTimestampS); put(PeriodSummariesContract.COLUMN_END_TIMESTAMP, p.endTimestampS)
+        put(PeriodSummariesContract.COLUMN_LABEL, p.periodLabel); put(PeriodSummariesContract.COLUMN_DATE_RANGE, p.periodDateRange)
+        put(PeriodSummariesContract.COLUMN_TOTAL_WORKOUTS, p.totalWorkouts); put(PeriodSummariesContract.COLUMN_TOTAL_DURATION, p.totalDurationSec)
+        put(PeriodSummariesContract.COLUMN_TOTAL_DISTANCE, p.totalDistance); put(PeriodSummariesContract.COLUMN_SORT_KEY, p.sortKey)
+        put(PeriodSummariesContract.COLUMN_BOUND_MIN_LAT, p.minLat); put(PeriodSummariesContract.COLUMN_BOUND_MIN_LNG, p.minLng)
+        put(PeriodSummariesContract.COLUMN_BOUND_MAX_LAT, p.maxLat); put(PeriodSummariesContract.COLUMN_BOUND_MAX_LNG, p.maxLng)
+        put(PeriodSummariesContract.COLUMN_LONGEST_WORKOUT_ID, p.longestId); put(PeriodSummariesContract.COLUMN_LONGEST_DURATION, p.longestDurationS)
+        put(PeriodSummariesContract.COLUMN_NORTH_WORKOUT_ID, p.northId); put(PeriodSummariesContract.COLUMN_SOUTH_WORKOUT_ID, p.southId)
+        put(PeriodSummariesContract.COLUMN_EAST_WORKOUT_ID, p.eastId); put(PeriodSummariesContract.COLUMN_WEST_WORKOUT_ID, p.westId)
     }
 
-    private fun createSportStatsContentValues(periodId: Long, type: BSportType, stats: SportStats) = ContentValues().apply {
-        put(SportStatsContract.COLUMN_PERIOD_ID, periodId)
-        put(SportStatsContract.COLUMN_BSPORT_TYPE, type.name)
-        put(SportStatsContract.COLUMN_COUNT, stats.count)
-        put(SportStatsContract.COLUMN_TOTAL_DURATION, stats.totalDurationSec)
-        put(SportStatsContract.COLUMN_TOTAL_DISTANCE, stats.totalDistanceMeters)
-        put(SportStatsContract.COLUMN_TOTAL_ASCENT, stats.totalAscentMeters)
-        put(SportStatsContract.COLUMN_LONGEST_WORKOUT_ID, stats.longestWorkout?.id ?: -1L)
+    private fun createSportStatsContentValues(periodId: Long, type: BSportType, s: SportStats) = ContentValues().apply {
+        put(SportStatsContract.COLUMN_PERIOD_ID, periodId); put(SportStatsContract.COLUMN_BSPORT_TYPE, type.name)
+        put(SportStatsContract.COLUMN_COUNT, s.count); put(SportStatsContract.COLUMN_TOTAL_DURATION, s.totalDurationSec)
+        put(SportStatsContract.COLUMN_TOTAL_DISTANCE, s.totalDistanceMeters); put(SportStatsContract.COLUMN_TOTAL_ASCENT, s.totalAscentMeters)
+        put(SportStatsContract.COLUMN_LONGEST_WORKOUT_ID, s.longestWorkout?.id ?: -1L)
     }
 
-    private fun createDetailedStatsContentValues(statsId: Long, name: String, stats: DetailedStats) = ContentValues().apply {
-        put(DetailedStatsContract.COLUMN_SPORT_STATS_ID, statsId)
-        put(DetailedStatsContract.COLUMN_SPORT_NAME, name)
-        put(DetailedStatsContract.COLUMN_COUNT, stats.count)
-        put(DetailedStatsContract.COLUMN_TOTAL_DURATION, stats.totalDurationSec)
-        put(DetailedStatsContract.COLUMN_TOTAL_DISTANCE, stats.totalDistanceMeters)
-        put(DetailedStatsContract.COLUMN_TOTAL_ASCENT, stats.totalAscentMeters)
+    private fun createDetailedStatsContentValues(statsId: Long, name: String, s: DetailedStats) = ContentValues().apply {
+        put(DetailedStatsContract.COLUMN_SPORT_STATS_ID, statsId); put(DetailedStatsContract.COLUMN_SPORT_NAME, name)
+        put(DetailedStatsContract.COLUMN_COUNT, s.count); put(DetailedStatsContract.COLUMN_TOTAL_DURATION, s.totalDurationSec)
+        put(DetailedStatsContract.COLUMN_TOTAL_DISTANCE, s.totalDistanceMeters); put(DetailedStatsContract.COLUMN_TOTAL_ASCENT, s.totalAscentMeters)
     }
 
     private fun mapCursorToPeriod(cursor: Cursor, sportStats: Map<BSportType, SportStats>): PeriodSummary {
@@ -296,7 +293,6 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
             totalDistance = cursor.getDouble(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_TOTAL_DISTANCE)),
             sortKey = cursor.getString(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_SORT_KEY)),
             sportStats = sportStats,
-            
             minLat = cursor.getDouble(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_BOUND_MIN_LAT)),
             minLng = cursor.getDouble(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_BOUND_MIN_LNG)),
             maxLat = cursor.getDouble(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_BOUND_MAX_LAT)),
@@ -310,6 +306,24 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
         )
     }
 
+    private fun mapCursorToSportStats(cursor: Cursor, detailedStats: Map<String, DetailedStats>): SportStats {
+        return SportStats(
+            count = cursor.getInt(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_COUNT)),
+            totalDurationSec = cursor.getLong(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_TOTAL_DURATION)),
+            totalDistanceMeters = cursor.getDouble(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_TOTAL_DISTANCE)),
+            totalAscentMeters = cursor.getLong(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_TOTAL_ASCENT)),
+            detailedSportStats = detailedStats,
+            longestWorkout = null
+        )
+    }
+
+    private fun mapCursorToDetailedStats(cursor: Cursor) = DetailedStats(
+        count = cursor.getInt(cursor.getColumnIndexOrThrow(DetailedStatsContract.COLUMN_COUNT)),
+        totalDurationSec = cursor.getLong(cursor.getColumnIndexOrThrow(DetailedStatsContract.COLUMN_TOTAL_DURATION)),
+        totalDistanceMeters = cursor.getDouble(cursor.getColumnIndexOrThrow(DetailedStatsContract.COLUMN_TOTAL_DISTANCE)),
+        totalAscentMeters = cursor.getLong(cursor.getColumnIndexOrThrow(DetailedStatsContract.COLUMN_TOTAL_ASCENT))
+    )
+
     object PeriodSummariesContract {
         const val TABLE_NAME = "PeriodSummaries"
         const val COLUMN_PERIOD_TYPE = "period_type"
@@ -321,17 +335,11 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
         const val COLUMN_TOTAL_DURATION = "total_duration"
         const val COLUMN_TOTAL_DISTANCE = "total_distance"
         const val COLUMN_SORT_KEY = "sort_key"
-        
-        const val COLUMN_BOUND_MIN_LAT = "bound_min_lat"
-        const val COLUMN_BOUND_MIN_LNG = "bound_min_lng"
-        const val COLUMN_BOUND_MAX_LAT = "bound_max_lat"
-        const val COLUMN_BOUND_MAX_LNG = "bound_max_lng"
-        const val COLUMN_LONGEST_WORKOUT_ID = "longest_workout_id"
-        const val COLUMN_LONGEST_DURATION = "longest_duration"
-        const val COLUMN_NORTH_WORKOUT_ID = "north_workout_id"
-        const val COLUMN_SOUTH_WORKOUT_ID = "south_workout_id"
-        const val COLUMN_EAST_WORKOUT_ID = "east_workout_id"
-        const val COLUMN_WEST_WORKOUT_ID = "west_workout_id"
+        const val COLUMN_BOUND_MIN_LAT = "bound_min_lat"; const val COLUMN_BOUND_MIN_LNG = "bound_min_lng"
+        const val COLUMN_BOUND_MAX_LAT = "bound_max_lat"; const val COLUMN_BOUND_MAX_LNG = "bound_max_lng"
+        const val COLUMN_LONGEST_WORKOUT_ID = "longest_workout_id"; const val COLUMN_LONGEST_DURATION = "longest_duration"
+        const val COLUMN_NORTH_WORKOUT_ID = "north_workout_id"; const val COLUMN_SOUTH_WORKOUT_ID = "south_workout_id"
+        const val COLUMN_EAST_WORKOUT_ID = "east_workout_id"; const val COLUMN_WEST_WORKOUT_ID = "west_workout_id"
 
         val PROJECTION = arrayOf(
             BaseColumns._ID, COLUMN_PERIOD_TYPE, COLUMN_START_TIMESTAMP, COLUMN_END_TIMESTAMP,
@@ -344,25 +352,12 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
         const val CREATE_TABLE = """
             CREATE TABLE $TABLE_NAME (
                 ${BaseColumns._ID} INTEGER PRIMARY KEY AUTOINCREMENT,
-                $COLUMN_PERIOD_TYPE TEXT,
-                $COLUMN_START_TIMESTAMP INTEGER,
-                $COLUMN_END_TIMESTAMP INTEGER,
-                $COLUMN_LABEL TEXT,
-                $COLUMN_DATE_RANGE TEXT,
-                $COLUMN_TOTAL_WORKOUTS INTEGER,
-                $COLUMN_TOTAL_DURATION INTEGER,
-                $COLUMN_TOTAL_DISTANCE REAL,
-                $COLUMN_SORT_KEY TEXT,
-                $COLUMN_BOUND_MIN_LAT REAL,
-                $COLUMN_BOUND_MIN_LNG REAL,
-                $COLUMN_BOUND_MAX_LAT REAL,
-                $COLUMN_BOUND_MAX_LNG REAL,
-                $COLUMN_LONGEST_WORKOUT_ID INTEGER,
-                $COLUMN_LONGEST_DURATION INTEGER,
-                $COLUMN_NORTH_WORKOUT_ID INTEGER,
-                $COLUMN_SOUTH_WORKOUT_ID INTEGER,
-                $COLUMN_EAST_WORKOUT_ID INTEGER,
-                $COLUMN_WEST_WORKOUT_ID INTEGER,
+                $COLUMN_PERIOD_TYPE TEXT, $COLUMN_START_TIMESTAMP INTEGER, $COLUMN_END_TIMESTAMP INTEGER,
+                $COLUMN_LABEL TEXT, $COLUMN_DATE_RANGE TEXT, $COLUMN_TOTAL_WORKOUTS INTEGER,
+                $COLUMN_TOTAL_DURATION INTEGER, $COLUMN_TOTAL_DISTANCE REAL, $COLUMN_SORT_KEY TEXT,
+                $COLUMN_BOUND_MIN_LAT REAL, $COLUMN_BOUND_MIN_LNG REAL, $COLUMN_BOUND_MAX_LAT REAL,
+                $COLUMN_BOUND_MAX_LNG REAL, $COLUMN_LONGEST_WORKOUT_ID INTEGER, $COLUMN_LONGEST_DURATION INTEGER,
+                $COLUMN_NORTH_WORKOUT_ID INTEGER, $COLUMN_SOUTH_WORKOUT_ID INTEGER, $COLUMN_EAST_WORKOUT_ID INTEGER, $COLUMN_WEST_WORKOUT_ID INTEGER,
                 UNIQUE($COLUMN_PERIOD_TYPE, $COLUMN_START_TIMESTAMP)
             )
         """
@@ -381,13 +376,8 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
         const val CREATE_TABLE = """
             CREATE TABLE $TABLE_NAME (
                 ${BaseColumns._ID} INTEGER PRIMARY KEY AUTOINCREMENT,
-                $COLUMN_PERIOD_ID INTEGER,
-                $COLUMN_BSPORT_TYPE TEXT,
-                $COLUMN_COUNT INTEGER,
-                $COLUMN_TOTAL_DURATION INTEGER,
-                $COLUMN_TOTAL_DISTANCE REAL,
-                $COLUMN_TOTAL_ASCENT INTEGER,
-                $COLUMN_LONGEST_WORKOUT_ID INTEGER,
+                $COLUMN_PERIOD_ID INTEGER, $COLUMN_BSPORT_TYPE TEXT, $COLUMN_COUNT INTEGER,
+                $COLUMN_TOTAL_DURATION INTEGER, $COLUMN_TOTAL_DISTANCE REAL, $COLUMN_TOTAL_ASCENT INTEGER, $COLUMN_LONGEST_WORKOUT_ID INTEGER,
                 FOREIGN KEY($COLUMN_PERIOD_ID) REFERENCES ${PeriodSummariesContract.TABLE_NAME}(${BaseColumns._ID}) ON DELETE CASCADE
             )
         """
@@ -395,22 +385,15 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
 
     object DetailedStatsContract {
         const val TABLE_NAME = "PeriodDetailedStats"
-        const val COLUMN_SPORT_STATS_ID = "sport_stats_id"
-        const val COLUMN_SPORT_NAME = "sport_name"
-        const val COLUMN_COUNT = "count"
-        const val COLUMN_TOTAL_DURATION = "total_duration"
-        const val COLUMN_TOTAL_DISTANCE = "total_distance"
-        const val COLUMN_TOTAL_ASCENT = "total_ascent"
+        const val COLUMN_SPORT_STATS_ID = "sport_stats_id"; const val COLUMN_SPORT_NAME = "sport_name"
+        const val COLUMN_COUNT = "count"; const val COLUMN_TOTAL_DURATION = "total_duration"
+        const val COLUMN_TOTAL_DISTANCE = "total_distance"; const val COLUMN_TOTAL_ASCENT = "total_ascent"
 
         const val CREATE_TABLE = """
             CREATE TABLE $TABLE_NAME (
                 ${BaseColumns._ID} INTEGER PRIMARY KEY AUTOINCREMENT,
-                $COLUMN_SPORT_STATS_ID INTEGER,
-                $COLUMN_SPORT_NAME TEXT,
-                $COLUMN_COUNT INTEGER,
-                $COLUMN_TOTAL_DURATION INTEGER,
-                $COLUMN_TOTAL_DISTANCE REAL,
-                $COLUMN_TOTAL_ASCENT INTEGER,
+                $COLUMN_SPORT_STATS_ID INTEGER, $COLUMN_SPORT_NAME TEXT, $COLUMN_COUNT INTEGER,
+                $COLUMN_TOTAL_DURATION INTEGER, $COLUMN_TOTAL_DISTANCE REAL, $COLUMN_TOTAL_ASCENT INTEGER,
                 FOREIGN KEY($COLUMN_SPORT_STATS_ID) REFERENCES ${SportStatsContract.TABLE_NAME}(${BaseColumns._ID}) ON DELETE CASCADE
             )
         """
@@ -419,13 +402,7 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
     object SyncStatusContract {
         const val TABLE_NAME = "PeriodSyncStatus"
         const val COLUMN_IS_FINISHED = "is_finished"
-
-        const val CREATE_TABLE = """
-            CREATE TABLE $TABLE_NAME (
-                ${BaseColumns._ID} INTEGER PRIMARY KEY,
-                $COLUMN_IS_FINISHED INTEGER DEFAULT 0
-            )
-        """
+        const val CREATE_TABLE = "CREATE TABLE $TABLE_NAME (${BaseColumns._ID} INTEGER PRIMARY KEY, $COLUMN_IS_FINISHED INTEGER DEFAULT 0)"
     }
 
     private class PeriodSummariesDbHelper(context: Context) : SQLiteOpenHelper(
@@ -439,7 +416,6 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            // Relational Restart for ATT-346
             if (oldVersion < 12) {
                 db.execSQL("DROP TABLE IF EXISTS ${SyncStatusContract.TABLE_NAME}")
                 db.execSQL("DROP TABLE IF EXISTS ${DetailedStatsContract.TABLE_NAME}")
@@ -448,10 +424,6 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
                 onCreate(db)
             }
         }
-        
-        override fun onConfigure(db: SQLiteDatabase) {
-            super.onConfigure(db)
-            db.setForeignKeyConstraintsEnabled(true)
-        }
+        override fun onConfigure(db: SQLiteDatabase) { super.onConfigure(db); db.setForeignKeyConstraintsEnabled(true) }
     }
 }

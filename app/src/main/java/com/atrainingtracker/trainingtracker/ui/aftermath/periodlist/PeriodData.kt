@@ -73,7 +73,7 @@ data class SportStats(
     val totalDistanceMeters: Double,
     val totalAscentMeters: Long,
     val detailedSportStats: Map<String, DetailedStats>, // Key is sportName
-    val longestWorkout: LongestWorkout?
+    var longestWorkout: LongestWorkout?
 )
 
 data class DetailedStats(
