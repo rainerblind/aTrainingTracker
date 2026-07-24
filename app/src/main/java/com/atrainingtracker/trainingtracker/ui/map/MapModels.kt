@@ -243,7 +243,8 @@ enum class MapZoomFocus {
     LOCAL_SEGMENTS,
     LOCAL_ROUTES,
     FOLLOW_ME,
-    FIT_PRIMARY
+    FIT_PRIMARY,
+    EXPLICIT_BOUNDS
 }
 
 /**

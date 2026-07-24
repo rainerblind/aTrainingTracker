@@ -51,12 +51,6 @@ fun InteractivePeriodMap(
         } else null
     }
 
-    LaunchedEffect(periodBounds) {
-        periodBounds?.let { 
-            cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(it, 50)) 
-        }
-    }
-
     // --- 2. PROGRESSIVE CONTENT ---
     // Anchor routes are already in summary.polylines (enriched by Repository RAM scan)
     val anchorPaths = remember(summary.polylines) {
@@ -69,7 +63,8 @@ fun InteractivePeriodMap(
     val fallbackColor = MaterialTheme.colorScheme.primary
 
     ATrainingTrackerMap(
-        zoomFocus = MapZoomFocus.FIT_PRIMARY,
+        zoomFocus = if (periodBounds != null) MapZoomFocus.EXPLICIT_BOUNDS else MapZoomFocus.FIT_PRIMARY,
+        initialBounds = periodBounds,
         currentLocationFlow = noLocation,
         modifier = modifier,
         shouldTakeSnapshot = shouldTakeSnapshot,

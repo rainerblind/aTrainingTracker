@@ -37,6 +37,7 @@ fun MapBoundsController(
     segments: List<MapSegment>,
     routes: List<MapRoute>,
     zoomFocus: MapZoomFocus,
+    initialBounds: LatLngBounds? = null,
     currentLocation: LatLng?,
     cameraPositionState: CameraPositionState,
     isMapLoaded: Boolean,
@@ -45,8 +46,14 @@ fun MapBoundsController(
     // Flag to ensure we only fit the bounds once per session/focus change
     var hasFittedInitialBounds by remember(zoomFocus) { mutableStateOf(false) }
 
-    LaunchedEffect(tracks, markers, segments, routes, isMapLoaded, hasFittedInitialBounds) {
+    LaunchedEffect(tracks, markers, segments, routes, isMapLoaded, hasFittedInitialBounds, initialBounds) {
         if (!isMapLoaded || hasFittedInitialBounds) return@LaunchedEffect
+
+        if (zoomFocus == MapZoomFocus.EXPLICIT_BOUNDS && initialBounds != null) {
+            cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(initialBounds, (40 * context.resources.displayMetrics.density).toInt()))
+            hasFittedInitialBounds = true
+            return@LaunchedEffect
+        }
 
         if (zoomFocus == MapZoomFocus.TRACK_AND_MARKERS || 
             zoomFocus == MapZoomFocus.LOCAL_SEGMENTS || 

@@ -17,6 +17,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -309,10 +310,12 @@ class PeriodsRepository private constructor(private val application: Application
         }
         val range = if (type == PeriodType.WEEK) "${w.formattedDate} - ${w.formattedDate}" else ""
         
-        val minLat = minOf(w.startLatLng?.latitude ?: 90.0, w.endLatLng?.latitude ?: 90.0)
-        val maxLat = maxOf(w.startLatLng?.latitude ?: -90.0, w.endLatLng?.latitude ?: -90.0)
-        val minLng = minOf(w.startLatLng?.longitude ?: 180.0, w.endLatLng?.longitude ?: 180.0)
-        val maxLng = maxOf(w.startLatLng?.longitude ?: -180.0, w.endLatLng?.longitude ?: -180.0)
+        // Calculate true bounds by decoding the polyline (ATT-346 Fix)
+        val decoded = PolyUtil.decode(w.mapPolyline)
+        val minLat = decoded.minOfOrNull { it.latitude } ?: w.startLatLng?.latitude ?: 90.0
+        val maxLat = decoded.maxOfOrNull { it.latitude } ?: w.startLatLng?.latitude ?: -90.0
+        val minLng = decoded.minOfOrNull { it.longitude } ?: w.startLatLng?.longitude ?: 180.0
+        val maxLng = decoded.maxOfOrNull { it.longitude } ?: w.startLatLng?.longitude ?: -180.0
 
         val sportStats = mapOf(w.bSportType to SportStats(
             count = 1, totalDurationSec = w.activeTimeSec, totalDistanceMeters = w.totalDistance, totalAscentMeters = w.ascentMeters,
@@ -332,16 +335,26 @@ class PeriodsRepository private constructor(private val application: Application
     }
 
     private fun mergeWorkoutToPeriod(p: PeriodSummary, w: WorkoutData): PeriodSummary {
-        var minLat = p.minLat; var maxLat = p.maxLat; var minLng = p.minLng; var maxLng = p.maxLng
-        var nId = p.northId; var sId = p.southId; var eId = p.eastId; var wId = p.westId
-        
-        listOfNotNull(w.startLatLng, w.endLatLng).forEach { pos ->
-            if (pos.latitude > maxLat) { maxLat = pos.latitude; nId = w.id }
-            if (pos.latitude < minLat) { minLat = pos.latitude; sId = w.id }
-            if (pos.longitude > maxLng) { maxLng = pos.longitude; eId = w.id }
-            if (pos.longitude < minLng) { minLng = pos.longitude; wId = w.id }
-        }
+        // Update Spatial Anchors & Bounds using true polyline bounds (ATT-346 Fix)
+        val decoded = PolyUtil.decode(w.mapPolyline)
+        val wMinLat = decoded.minOfOrNull { it.latitude } ?: w.startLatLng?.latitude ?: 90.0
+        val wMaxLat = decoded.maxOfOrNull { it.latitude } ?: w.startLatLng?.latitude ?: -90.0
+        val wMinLng = decoded.minOfOrNull { it.longitude } ?: w.startLatLng?.longitude ?: 180.0
+        val wMaxLng = decoded.maxOfOrNull { it.longitude } ?: w.startLatLng?.longitude ?: -180.0
 
+        val minLat = minOf(p.minLat, wMinLat)
+        val maxLat = maxOf(p.maxLat, wMaxLat)
+        val minLng = minOf(p.minLng, wMinLng)
+        val maxLng = maxOf(p.maxLng, wMaxLng)
+
+        // Identification of anchor workouts (simplistic but consistent)
+        var nId = p.northId; var sId = p.southId; var eId = p.eastId; var wId = p.westId
+        if (wMaxLat > p.maxLat) nId = w.id
+        if (wMinLat < p.minLat) sId = w.id
+        if (wMaxLng > p.maxLng) eId = w.id
+        if (wMinLng < p.minLng) wId = w.id
+
+        // Longest Overall Comparison
         val longestId = if (w.activeTimeSec > p.longestDurationS) w.id else p.longestId
         val longestDuration = if (w.activeTimeSec > p.longestDurationS) w.activeTimeSec else p.longestDurationS
 
