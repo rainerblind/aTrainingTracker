@@ -262,13 +262,16 @@ class PeriodsRepository private constructor(private val application: Application
         )
     }
 
-    private fun calculateWorkoutBounds(w: WorkoutData): LatLngBounds {
+    private fun calculateWorkoutBounds(w: WorkoutData): LatLngBounds? {
         val decoded = PolyUtil.decode(w.mapPolyline)
-        val minLat = decoded.minOfOrNull { it.latitude } ?: w.startLatLng?.latitude ?: 90.0
-        val maxLat = decoded.maxOfOrNull { it.latitude } ?: w.startLatLng?.latitude ?: -90.0
-        val minLng = decoded.minOfOrNull { it.longitude } ?: w.startLatLng?.longitude ?: 180.0
-        val maxLng = decoded.maxOfOrNull { it.longitude } ?: w.startLatLng?.longitude ?: -180.0
-        return LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng))
+        val minLat = decoded.minOfOrNull { it.latitude } ?: w.startLatLng?.latitude
+        val maxLat = decoded.maxOfOrNull { it.latitude } ?: w.startLatLng?.latitude
+        val minLng = decoded.minOfOrNull { it.longitude } ?: w.startLatLng?.longitude
+        val maxLng = decoded.maxOfOrNull { it.longitude } ?: w.startLatLng?.longitude
+
+        return if (minLat != null && maxLat != null && minLng != null && maxLng != null && minLat <= maxLat) {
+            LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng))
+        } else null
     }
 
     private fun updateMapsForWorkout(
@@ -277,7 +280,7 @@ class PeriodsRepository private constructor(private val application: Application
         months: MutableMap<Long, PeriodSummary>,
         years: MutableMap<Long, PeriodSummary>,
         workout: WorkoutData,
-        bounds: LatLngBounds
+        bounds: LatLngBounds?
     ) {
         val ldt = workout.localDateTime
         val zoneOffset = OffsetDateTime.now().offset
@@ -294,7 +297,7 @@ class PeriodsRepository private constructor(private val application: Application
         updateSingleMap(years, PeriodType.YEAR, yearStart, 0, workout, bounds)
     }
 
-    private fun updateSingleMap(map: MutableMap<Long, PeriodSummary>, type: PeriodType, start: Long, end: Long, w: WorkoutData, b: LatLngBounds) {
+    private fun updateSingleMap(map: MutableMap<Long, PeriodSummary>, type: PeriodType, start: Long, end: Long, w: WorkoutData, b: LatLngBounds?) {
         val existing = map[start]
         val updated = if (existing == null) {
             initPeriodFromWorkout(w, type, start, end, b)
@@ -304,7 +307,7 @@ class PeriodsRepository private constructor(private val application: Application
         map[start] = updated
     }
 
-    private fun updateWorkoutToPeriods(db: android.database.sqlite.SQLiteDatabase, workout: WorkoutData, bounds: LatLngBounds) {
+    private fun updateWorkoutToPeriods(db: android.database.sqlite.SQLiteDatabase, workout: WorkoutData, bounds: LatLngBounds?) {
         val ldt = workout.localDateTime
         val zoneOffset = OffsetDateTime.now().offset
         
@@ -329,7 +332,7 @@ class PeriodsRepository private constructor(private val application: Application
         }
     }
 
-    private fun initPeriodFromWorkout(w: WorkoutData, type: PeriodType, start: Long, end: Long, b: LatLngBounds): PeriodSummary {
+    private fun initPeriodFromWorkout(w: WorkoutData, type: PeriodType, start: Long, end: Long, b: LatLngBounds?): PeriodSummary {
         val label = when (type) {
             PeriodType.DAY -> w.localDateTime.format(dayFormatter)
             PeriodType.WEEK -> {
@@ -353,25 +356,27 @@ class PeriodsRepository private constructor(private val application: Application
             startTimestampS = start, endTimestampS = end, totalWorkouts = 1,
             totalDurationSec = w.activeTimeSec, totalDistance = w.totalDistance,
             sportStats = sportStats, sortKey = createSortKey(w, type),
-            minLat = b.southwest.latitude, minLng = b.southwest.longitude, 
-            maxLat = b.northeast.latitude, maxLng = b.northeast.longitude,
+            minLat = b?.southwest?.latitude ?: 90.0, minLng = b?.southwest?.longitude ?: 180.0, 
+            maxLat = b?.northeast?.latitude ?: -90.0, maxLng = b?.northeast?.longitude ?: -180.0,
             longestId = w.id, longestDurationS = w.activeTimeSec,
             northId = w.id, southId = w.id, eastId = w.id, westId = w.id
         )
     }
 
-    private fun mergeWorkoutToPeriod(p: PeriodSummary, w: WorkoutData, b: LatLngBounds): PeriodSummary {
-        val minLat = minOf(p.minLat, b.southwest.latitude)
-        val maxLat = maxOf(p.maxLat, b.northeast.latitude)
-        val minLng = minOf(p.minLng, b.southwest.longitude)
-        val maxLng = maxOf(p.maxLng, b.northeast.longitude)
+    private fun mergeWorkoutToPeriod(p: PeriodSummary, w: WorkoutData, b: LatLngBounds?): PeriodSummary {
+        val minLat = if (b != null) minOf(p.minLat, b.southwest.latitude) else p.minLat
+        val maxLat = if (b != null) maxOf(p.maxLat, b.northeast.latitude) else p.maxLat
+        val minLng = if (b != null) minOf(p.minLng, b.southwest.longitude) else p.minLng
+        val maxLng = if (b != null) maxOf(p.maxLng, b.northeast.longitude) else p.maxLng
 
         // Identification of anchor workouts
         var nId = p.northId; var sId = p.southId; var eId = p.eastId; var wId = p.westId
-        if (b.northeast.latitude > p.maxLat) nId = w.id
-        if (b.southwest.latitude < p.minLat) sId = w.id
-        if (b.northeast.longitude > p.maxLng) eId = w.id
-        if (b.southwest.longitude < p.minLng) wId = w.id
+        if (b != null) {
+            if (b.northeast.latitude > p.maxLat) nId = w.id
+            if (b.southwest.latitude < p.minLat) sId = w.id
+            if (b.northeast.longitude > p.maxLng) eId = w.id
+            if (b.southwest.longitude < p.minLng) wId = w.id
+        }
 
         val longestId = if (w.activeTimeSec > p.longestDurationS) w.id else p.longestId
         val longestDuration = if (w.activeTimeSec > p.longestDurationS) w.activeTimeSec else p.longestDurationS

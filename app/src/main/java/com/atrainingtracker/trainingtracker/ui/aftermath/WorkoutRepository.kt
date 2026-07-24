@@ -383,13 +383,15 @@ class WorkoutRepository private constructor(private val application: Application
             return
         }
 
-        Log.i(TAG, "loadAllWorkouts: starting full database scan.")
+        Log.i(TAG, "loadAllWorkouts: starting progressive streaming load.")
         isListLoading = true
         try {
             withContext(Dispatchers.IO) {
                 val cursor = summariesManager.getCursorForAllWorkouts()
                 val allLoadedWorkouts = mutableListOf<WorkoutData>()
+                
                 cursor.use { c ->
+                    var count = 0
                     if (c.moveToFirst()) {
                         do {
                             val workoutData = mapper.fromCursor(c)
@@ -405,10 +407,22 @@ class WorkoutRepository private constructor(private val application: Application
                             }
 
                             allLoadedWorkouts.add(workoutData.copy(exportStatuses = exportStatuses))
+                            count++
+
+                            // PROGRESSIVE UI PUMP (ATT-346 Style)
+                            // Emit the first 10 immediately, then every 50
+                            if (count == 10 || (count > 10 && count % 50 == 0)) {
+                                val currentBatch = allLoadedWorkouts.toList().sortedByDescending { it.headerData.startTimeS }
+                                Log.d(TAG, "Streaming batch to UI: $count items.")
+                                _allWorkouts.value = currentBatch
+                            }
+
                         } while (c.moveToNext())
                     }
                 }
-                // ATT-346: Emit the full list at once to avoid flooding the periods aggregator.
+                
+                // Final emission with complete list
+                Log.i(TAG, "Load complete. Total workouts: ${allLoadedWorkouts.size}")
                 _allWorkouts.value = allLoadedWorkouts.sortedByDescending { it.headerData.startTimeS }
             }
         } finally {
