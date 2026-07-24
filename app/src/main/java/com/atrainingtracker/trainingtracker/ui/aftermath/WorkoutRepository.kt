@@ -388,6 +388,7 @@ class WorkoutRepository private constructor(private val application: Application
         try {
             withContext(Dispatchers.IO) {
                 val cursor = summariesManager.getCursorForAllWorkouts()
+                val allLoadedWorkouts = mutableListOf<WorkoutData>()
                 cursor.use { c ->
                     if (c.moveToFirst()) {
                         do {
@@ -403,10 +404,12 @@ class WorkoutRepository private constructor(private val application: Application
                                 }
                             }
 
-                            addOrUpdateWorkout(workoutData.copy(exportStatuses = exportStatuses))
+                            allLoadedWorkouts.add(workoutData.copy(exportStatuses = exportStatuses))
                         } while (c.moveToNext())
                     }
                 }
+                // ATT-346: Emit the full list at once to avoid flooding the periods aggregator.
+                _allWorkouts.value = allLoadedWorkouts.sortedByDescending { it.headerData.startTimeS }
             }
         } finally {
             isListLoading = false

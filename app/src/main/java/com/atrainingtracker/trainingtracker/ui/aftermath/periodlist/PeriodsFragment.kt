@@ -57,8 +57,9 @@ class PeriodsFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setContent {
                 ATrainingTrackerTheme {
-                    // 1. Observe the periods list from ViewModel
+                    // 1. Observe the periods list and migration status from ViewModel
                     val groupedPeriods by viewModel.groupedPeriods.collectAsStateWithLifecycle()
+                    val migrationProgress by viewModel.migrationProgress.collectAsStateWithLifecycle()
                     val selectedPeriod by viewModel.selectedPeriod.collectAsStateWithLifecycle()
                     val isHeatmapEnabled by viewModel.isHeatmapEnabled.collectAsStateWithLifecycle()
                     val enabledMarkerTypes by viewModel.enabledMarkerTypes.collectAsStateWithLifecycle()
@@ -100,7 +101,8 @@ class PeriodsFragment : Fragment() {
                             isPlayServiceAvailable = isPlayAvailable,
                             tabs = groups,
                             isHeatmapEnabled = isHeatmapEnabled,
-                            onToggleHeatmapEnabled = { viewModel.toggleHeatmapEnabled() }
+                            onToggleHeatmapEnabled = { viewModel.toggleHeatmapEnabled() },
+                            migrationProgress = migrationProgress
                         )
                     }
                 }

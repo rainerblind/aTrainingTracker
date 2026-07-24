@@ -492,6 +492,7 @@ fun PreviewPeriodSummary() {
         endTimestampS = 15000,
         totalWorkouts = 5,
         totalDurationSec = 15400,
+        totalDistance = 103600.0,
         polylines = listOf("_p~iF~ps|U_ulLnnqC", "a~lF|ym|U_geC~izE"), // Mock short polylines
         sportStats = mapOf(
             BSportType.BIKE to SportStats(
@@ -545,6 +546,7 @@ fun PreviewEmptyPeriod() {
         endTimestampS = 0,
         totalWorkouts = 0,
         totalDurationSec = 0,
+        totalDistance = 0.0,
         polylines = emptyList(),
         sportStats = emptyMap(),
         sortKey = "",

@@ -11,13 +11,11 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -30,22 +28,8 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Whatshot
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryScrollableTabRow
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,29 +61,21 @@ fun PeriodsTabsScreen(
     onHeaderClick: (PeriodSummary) -> Unit,
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
-    onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit
+    onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
+    migrationProgress: Float? = null
 ) {
 
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
-    // 1. Calculate the total height of the Header (Status Bar + Heading + Tab Row)
-    // Reverted to original height since graph is moving out of collapsing area
     val appBarMaxHeightPx = with(density) { 130.dp.roundToPx() }
-
-    // 2. Initialize the Connection from the article
     val connection = remember(appBarMaxHeightPx) {
         CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
     }
 
-    // This is the root container
-    Surface(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        // 3. The NestedScroll modifier is placed on the parent Box
+    Surface(modifier = Modifier.fillMaxSize()) {
         Box(Modifier.nestedScroll(connection)) {
 
-            // THE CONTENT (Full screen)
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
@@ -110,22 +86,43 @@ fun PeriodsTabsScreen(
                 val scrollState = listStates[pageIndex]
 
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // Spacer for the collapsing header
                     Spacer(modifier = Modifier.height(with(density) { (appBarMaxHeightPx + connection.appBarOffset).toDp() }))
 
-                    // THE GRAPH (Static below tabs)
+                    // --- ATT-346: Migration Progress Feedback ---
+                    if (migrationProgress != null) {
+                        Log.v("PeriodsTabsScreen", "Rendering progress card: $migrationProgress")
+                        Surface(
+                            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    CircularProgressIndicator(
+                                        progress = { migrationProgress },
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = "Syncing training history...",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                LinearProgressIndicator(
+                                    progress = { migrationProgress },
+                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                                )
+                            }
+                        }
+                    }
+
                     PeriodBarGraph(
                         periods = periods,
                         currentScrollState = scrollState,
-                        onBarClick = { index ->
-                            scope.launch {
-                                scrollState.animateScrollToItem(index)
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(72.dp)
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                        onBarClick = { index -> scope.launch { scrollState.animateScrollToItem(index) } },
+                        modifier = Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 16.dp, vertical = 8.dp)
                     )
 
                     PeriodList(
@@ -137,29 +134,21 @@ fun PeriodsTabsScreen(
                         onMapClick = onMapClick,
                         onSportClick = onSportClick,
                         onLongestWorkoutClick = onLongestWorkoutClick,
-                        // PeriodList now only needs to handle the rest of the offset
                         appBarOffsetPx = 0,
                         headerHeightPx = 0f,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
+                        modifier = Modifier.fillMaxWidth().weight(1f)
                     )
                 }
             }
 
-            // THE HEADER (Layered on top)
+            // THE HEADER
             Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .offset { IntOffset(0, connection.appBarOffset) },
+                modifier = Modifier.fillMaxWidth().offset { IntOffset(0, connection.appBarOffset) },
                 color = MaterialTheme.colorScheme.primaryContainer,
             ) {
                 Column(modifier = Modifier.statusBarsPadding()) {
-                    // --- Heading Row with Sort Button ---
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -168,18 +157,14 @@ fun PeriodsTabsScreen(
                             style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = onToggleHeatmapEnabled) {
-                                Icon(
-                                    imageVector = Icons.Default.Whatshot,
-                                    contentDescription = if (isHeatmapEnabled) "Disable Heatmap" else "Enable Heatmap",
-                                    tint = if (isHeatmapEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = TTAlpha.Disabled)
-                                )
-                            }
+                        IconButton(onClick = onToggleHeatmapEnabled) {
+                            Icon(
+                                imageVector = Icons.Default.Whatshot,
+                                contentDescription = if (isHeatmapEnabled) "Disable Heatmap" else "Enable Heatmap",
+                                tint = if (isHeatmapEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = TTAlpha.Disabled)
+                            )
                         }
                     }
-
                     PrimaryScrollableTabRow(
                         selectedTabIndex = pagerState.currentPage,
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -207,15 +192,9 @@ fun PeriodBarGraph(
     modifier: Modifier = Modifier
 ) {
     if (periods.isEmpty()) return
-
-    val maxDuration = remember(periods) {
-        max(1L, periods.maxOfOrNull { it.totalDurationSec } ?: 1L)
-    }
-
+    val maxDuration = remember(periods) { max(1L, periods.maxOfOrNull { it.totalDurationSec } ?: 1L) }
     val graphPeriods = remember(periods) { periods.reversed() }
     val graphScrollState = rememberLazyListState()
-    
-    // Determine bar width based on PeriodType (using the first period as reference)
     val barWidth = remember(periods) {
         when (periods.firstOrNull()?.periodType) {
             PeriodType.DAY -> 16.dp
@@ -225,23 +204,13 @@ fun PeriodBarGraph(
             else -> 16.dp
         }
     }
-
-    // Identify which period is currently most visible in the list to highlight its bar
-    val firstVisibleIndex by remember {
-        derivedStateOf { currentScrollState.firstVisibleItemIndex }
-    }
-
-    // Synchronize graph scroll with list scroll
+    val firstVisibleIndex by remember { derivedStateOf { currentScrollState.firstVisibleItemIndex } }
     LaunchedEffect(firstVisibleIndex) {
         val graphIndex = graphPeriods.size - 1 - firstVisibleIndex
-        if (graphIndex in graphPeriods.indices) {
-            graphScrollState.animateScrollToItem(graphIndex)
-        }
+        if (graphIndex in graphPeriods.indices) { graphScrollState.animateScrollToItem(graphIndex) }
     }
-
     LazyRow(
-        state = graphScrollState,
-        modifier = modifier,
+        state = graphScrollState, modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.Bottom,
         contentPadding = PaddingValues(horizontal = 16.dp)
@@ -250,46 +219,26 @@ fun PeriodBarGraph(
             val originalIndex = periods.size - 1 - index
             val heightFraction = period.totalDurationSec.toFloat() / maxDuration
             val isSelected = originalIndex == firstVisibleIndex
-
             Column(
-                modifier = Modifier
-                    .width(barWidth)
-                    .fillMaxHeight(),
+                modifier = Modifier.width(barWidth).fillMaxHeight(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Bottom
             ) {
-                // The Bar
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f, fill = false)
+                    modifier = Modifier.fillMaxWidth().weight(1f, fill = false)
                         .fillMaxHeight(heightFraction.coerceAtLeast(0.1f))
                         .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                        .background(
-                            if (isSelected) MaterialTheme.colorScheme.primary 
-                            else MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Disabled)
-                        )
+                        .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Disabled))
                         .clickable { onBarClick(originalIndex) }
                 )
-
-                // The Number below the bar container
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(16.dp),
-                    contentAlignment = Alignment.BottomCenter
-                ) {
+                Box(modifier = Modifier.fillMaxWidth().height(16.dp), contentAlignment = Alignment.BottomCenter) {
                     val hours = period.totalDurationSec / 3600
                     if (hours > 0) {
                         Text(
                             text = if (barWidth >= 48.dp) "$hours h" else if (barWidth >= 24.dp) "${hours}h" else hours.toString(),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            softWrap = false,
+                            style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false,
                             modifier = Modifier.wrapContentWidth(unbounded = true),
-                            color = if (isSelected) MaterialTheme.colorScheme.onSurface 
-                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Medium)
+                            color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Medium)
                         )
                     }
                 }
