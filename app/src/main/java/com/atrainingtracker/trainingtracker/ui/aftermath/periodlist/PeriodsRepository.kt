@@ -49,6 +49,9 @@ class PeriodsRepository private constructor(private val application: Application
 
     private val rebuildMutex = Mutex()
 
+    private var lastWorkoutCount: Int = -1
+    private var lastNewestId: Long = -1L
+
     private val dayFormatter = DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.LONG)
     private val monthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy")
     private val yearFormatter = DateTimeFormatter.ofPattern("yyyy")
@@ -70,15 +73,15 @@ class PeriodsRepository private constructor(private val application: Application
         // 1. Instant load from cache (if sync was finished)
         loadFromDatabase()
 
-        // 2. Observe workouts and trigger background re-aggregation on every change.
+        // 2. Observe workouts and trigger background updates
         scope.launch {
             // Signal immediate rebuild start if cache is not ready
-            val isFinished = withContext(Dispatchers.IO) { 
+            val isFinishedOnStart = withContext(Dispatchers.IO) { 
                 val finished = dbManager.isSyncFinished()
                 Log.d(TAG, "Init sync check: isFinished=$finished")
                 finished
             }
-            if (!isFinished) {
+            if (!isFinishedOnStart) {
                 Log.d(TAG, "Sync not finished, setting migrationProgress to 0.0")
                 _migrationProgress.value = 0.0f
             }
@@ -86,13 +89,58 @@ class PeriodsRepository private constructor(private val application: Application
             workoutRepo.allWorkouts.collectLatest { workouts ->
                 Log.d(TAG, "workoutRepo.allWorkouts emitted ${workouts.size} items.")
                 if (workouts.isNotEmpty()) {
-                    val needsRebuild = withContext(Dispatchers.IO) { !dbManager.isSyncFinished() }
-                    Log.d(TAG, "Needs rebuild check: $needsRebuild")
-                    rebuildDatabase(workouts, needsRebuild)
+                    val currentCount = workouts.size
+                    val newestId = workouts.first().id
+                    
+                    val needsFullRebuild = withContext(Dispatchers.IO) { !dbManager.isSyncFinished() }
+                    
+                    if (needsFullRebuild) {
+                        Log.i(TAG, "Cache incomplete. Starting migration.")
+                        rebuildDatabase(workouts, true)
+                    } else if (lastWorkoutCount != -1 && currentCount == lastWorkoutCount + 1 && newestId != lastNewestId) {
+                        // SUGGESTED ALGORITHM: 'Add only' the latest workout
+                        Log.i(TAG, "Incremental update for newest workout: $newestId")
+                        performIncrementalUpdate(workouts.first())
+                    } else if (lastWorkoutCount != -1 && (currentCount != lastWorkoutCount || newestId != lastNewestId)) {
+                        // History changed significantly (delete, edit of old workout, or bulk import)
+                        Log.i(TAG, "History changed. Re-syncing periods.")
+                        rebuildDatabase(workouts, false)
+                    } else if (lastWorkoutCount == -1) {
+                        // First emission after app start, and DB is already finished.
+                        // Just ensure UI matches memory state (e.g. enrichment).
+                        enrichAndEmitFromMemory(workouts)
+                    }
+                    
+                    lastWorkoutCount = currentCount
+                    lastNewestId = newestId
                 } else {
-                    Log.d(TAG, "Workouts empty, skipping rebuild.")
+                    Log.d(TAG, "Workouts empty, clearing periods.")
+                    withContext(Dispatchers.IO) { dbManager.runInTransaction { db -> dbManager.deleteAll(db) } }
+                    _groupedPeriods.value = listOf(emptyList(), emptyList(), emptyList(), emptyList())
+                    lastWorkoutCount = 0
+                    lastNewestId = -1L
                 }
             }
+        }
+    }
+
+    private suspend fun performIncrementalUpdate(workout: WorkoutData) {
+        withContext(Dispatchers.IO) {
+            dbManager.runInTransaction { db ->
+                updateWorkoutToPeriods(db, workout)
+            }
+        }
+        // Instantly refresh UI by joining DB summaries with RAM enrichment
+        loadFromDatabase()
+    }
+
+    private fun enrichAndEmitFromMemory(workouts: List<WorkoutData>) {
+        scope.launch {
+            val dailyRaw = dbManager.getPeriodsByType(PeriodType.DAY)
+            val weeklyRaw = dbManager.getPeriodsByType(PeriodType.WEEK)
+            val monthlyRaw = dbManager.getPeriodsByType(PeriodType.MONTH)
+            val yearlyRaw = dbManager.getPeriodsByType(PeriodType.YEAR)
+            enrichAndEmit(listOf(dailyRaw, weeklyRaw, monthlyRaw, yearlyRaw), workouts)
         }
     }
 
@@ -155,7 +203,7 @@ class PeriodsRepository private constructor(private val application: Application
                         updateMapsForWorkout(dayMap, weekMap, monthMap, yearMap, workout)
 
                         // Write to DB cache (background persistence)
-                        upsertWorkoutToDB(db, workout)
+                        updateWorkoutToPeriods(db, workout)
 
                         // 3. PUMP UI: Every 20 workouts, emit the current RAM state to the UI
                         if (index % 20 == 0 || index == sortedWorkouts.size - 1) {
@@ -219,7 +267,7 @@ class PeriodsRepository private constructor(private val application: Application
         map[start] = updated
     }
 
-    private fun upsertWorkoutToDB(db: android.database.sqlite.SQLiteDatabase, workout: WorkoutData) {
+    private fun updateWorkoutToPeriods(db: android.database.sqlite.SQLiteDatabase, workout: WorkoutData) {
         val ldt = workout.localDateTime
         val zoneOffset = OffsetDateTime.now().offset
         
