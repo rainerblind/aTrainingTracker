@@ -134,6 +134,12 @@ public class WorkoutSummariesDatabaseManager {
         // cluster association (SCRUM-191)
         values.put(WorkoutSummaries.CLUSTER_ID, workoutData.getClusterId());
 
+        // spatial bounds (ATT-352)
+        if (workoutData.getMinLat() != null) values.put(WorkoutSummaries.BOUND_MIN_LAT, workoutData.getMinLat());
+        if (workoutData.getMinLng() != null) values.put(WorkoutSummaries.BOUND_MIN_LNG, workoutData.getMinLng());
+        if (workoutData.getMaxLat() != null) values.put(WorkoutSummaries.BOUND_MAX_LAT, workoutData.getMaxLat());
+        if (workoutData.getMaxLng() != null) values.put(WorkoutSummaries.BOUND_MAX_LNG, workoutData.getMaxLng());
+
         getDatabase().update(WorkoutSummaries.TABLE,
                 values,
                 WorkoutSummaries.C_ID + "=" + workoutData.getId(),
@@ -464,6 +470,23 @@ public class WorkoutSummariesDatabaseManager {
         values.put(WorkoutSummaries.ALTITUDE_STREAM, altitudeStream);
         values.put(WorkoutSummaries.DISTANCE_STREAM, distanceStream);
 
+        if (polyline != null && !polyline.isEmpty()) {
+            List<LatLng> decoded = PolyUtil.decode(polyline);
+            if (!decoded.isEmpty()) {
+                double minLat = 90.0, maxLat = -90.0, minLng = 180.0, maxLng = -180.0;
+                for (LatLng p : decoded) {
+                    if (p.latitude < minLat) minLat = p.latitude;
+                    if (p.latitude > maxLat) maxLat = p.latitude;
+                    if (p.longitude < minLng) minLng = p.longitude;
+                    if (p.longitude > maxLng) maxLng = p.longitude;
+                }
+                values.put(WorkoutSummaries.BOUND_MIN_LAT, minLat);
+                values.put(WorkoutSummaries.BOUND_MIN_LNG, minLng);
+                values.put(WorkoutSummaries.BOUND_MAX_LAT, maxLat);
+                values.put(WorkoutSummaries.BOUND_MAX_LNG, maxLng);
+            }
+        }
+
         getDatabase().update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
     }
 
@@ -729,6 +752,10 @@ public class WorkoutSummariesDatabaseManager {
         public static final String DISTANCE_STREAM = "distanceStream"; // added in Version 14
         public static final String ALTITUDE_STREAM = "altitudeStream"; // added in Version 14
         public static final String CLUSTER_ID = "clusterId"; // added in Version 20
+        public static final String BOUND_MIN_LAT = "boundMinLat"; // added in Version 21
+        public static final String BOUND_MIN_LNG = "boundMinLng"; // added in Version 21
+        public static final String BOUND_MAX_LAT = "boundMaxLat"; // added in Version 21
+        public static final String BOUND_MAX_LNG = "boundMaxLng"; // added in Version 21
         // new entries in version 5 of the DB
         @Deprecated
         public static final String EXTREMA_VALUES_CALCULATED = "extremumValuesCalculated";
@@ -781,7 +808,7 @@ public class WorkoutSummariesDatabaseManager {
         // public static final int DB_VERSION = 16; // upgrade to Version 16 at 08.05.2026: Added uploadToStrava
         // public static final int DB_VERSION = 17; // 08.05.2026: Bugfix: add eventually missing columns (altitude and distance stream)
         // public static final int DB_VERSION = 18; // 10.06.2026 Added lat/long to the extrema values
-        public static final int DB_VERSION = 20; // 25.02.2026 Added clusterId
+        public static final int DB_VERSION = 21; // 25.07.2026 Added bounding box for performance (ATT-352)
         
 
 
@@ -817,7 +844,11 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.DISTANCE_STREAM + " text," // added in Version 14
                 + WorkoutSummaries.ALTITUDE_STREAM + " text," // added in Version 14
                 + WorkoutSummaries.CLUSTER_ID + " int DEFAULT -1," // added in Version 20
-                + WorkoutSummaries.EXTREMA_VALUES_CALCULATED + " int)";
+                + WorkoutSummaries.EXTREMA_VALUES_CALCULATED + " int,"
+                + WorkoutSummaries.BOUND_MIN_LAT + " real,"   // added in Version 21
+                + WorkoutSummaries.BOUND_MIN_LNG + " real,"   // added in Version 21
+                + WorkoutSummaries.BOUND_MAX_LAT + " real,"   // added in Version 21
+                + WorkoutSummaries.BOUND_MAX_LNG + " real)";  // added in Version 21
 
         protected static final String CREATE_TABLE_EXTREMA_VALUES = "create table " + WorkoutSummaries.TABLE_EXTREMA_VALUES + " ("
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -1029,6 +1060,51 @@ public class WorkoutSummariesDatabaseManager {
                 db.setTransactionSuccessful(); // ensure previous changes are committed if needed? No, onUpgrade is in a transaction usually.
                 // We'll run migration logic after upgrade finished in TrainingApplication or here?
                 // It's safer to do it in RouteClusterEngine.migrateHistory
+            }
+
+            if (oldVersion < 21) {
+                Log.i(TAG, "upgrading to DB version 21 (Adding spatial bounds)");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.BOUND_MIN_LAT, "real", null);
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.BOUND_MIN_LNG, "real", null);
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.BOUND_MAX_LAT, "real", null);
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.BOUND_MAX_LNG, "real", null);
+
+                migrateSpatialBounds(db);
+            }
+        }
+
+        private void migrateSpatialBounds(SQLiteDatabase db) {
+            Log.i(TAG, "Populating spatial bounds for existing workouts...");
+            try (Cursor cursor = db.query(WorkoutSummaries.TABLE,
+                    new String[]{WorkoutSummaries.C_ID, WorkoutSummaries.MAP_POLYLINE},
+                    null, null, null, null, null)) {
+                int idIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID);
+                int polylineIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.MAP_POLYLINE);
+
+                while (cursor.moveToNext()) {
+                    long id = cursor.getLong(idIdx);
+                    String polyline = cursor.getString(polylineIdx);
+                    if (polyline != null && !polyline.isEmpty()) {
+                        List<LatLng> decoded = PolyUtil.decode(polyline);
+                        if (!decoded.isEmpty()) {
+                            double minLat = 90.0, maxLat = -90.0, minLng = 180.0, maxLng = -180.0;
+                            for (LatLng p : decoded) {
+                                if (p.latitude < minLat) minLat = p.latitude;
+                                if (p.latitude > maxLat) maxLat = p.latitude;
+                                if (p.longitude < minLng) minLng = p.longitude;
+                                if (p.longitude > maxLng) maxLng = p.longitude;
+                            }
+                            ContentValues cv = new ContentValues();
+                            cv.put(WorkoutSummaries.BOUND_MIN_LAT, minLat);
+                            cv.put(WorkoutSummaries.BOUND_MIN_LNG, minLng);
+                            cv.put(WorkoutSummaries.BOUND_MAX_LAT, maxLat);
+                            cv.put(WorkoutSummaries.BOUND_MAX_LNG, maxLng);
+                            db.update(WorkoutSummaries.TABLE, cv, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(id)});
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error migrating spatial bounds", e);
             }
         }
 

@@ -40,6 +40,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegme
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment;
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.maps.android.PolyUtil;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -162,6 +163,11 @@ public class SegmentsDatabaseManager {
             String city = cursor.getString(cursor.getColumnIndexOrThrow(Segments.CITY));
             String name = cursor.getString(cursor.getColumnIndexOrThrow(Segments.SEGMENT_NAME));
             String polyline = cursor.getString(cursor.getColumnIndexOrThrow(Segments.MAP_POLYLINE));
+            
+            Double minLat = cursor.isNull(cursor.getColumnIndexOrThrow(Segments.BOUND_MIN_LAT)) ? null : cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.BOUND_MIN_LAT));
+            Double minLng = cursor.isNull(cursor.getColumnIndexOrThrow(Segments.BOUND_MIN_LNG)) ? null : cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.BOUND_MIN_LNG));
+            Double maxLat = cursor.isNull(cursor.getColumnIndexOrThrow(Segments.BOUND_MAX_LAT)) ? null : cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.BOUND_MAX_LAT));
+            Double maxLng = cursor.isNull(cursor.getColumnIndexOrThrow(Segments.BOUND_MAX_LNG)) ? null : cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.BOUND_MAX_LNG));
 
             // 3. Format strings
             DistanceFormatter df = new DistanceFormatter();
@@ -186,7 +192,11 @@ public class SegmentsDatabaseManager {
                     af.format_with_units(elevationGain),
                     af.format_with_units(elevLow),
                     af.format_with_units(elevHigh),
-                    polyline
+                    polyline,
+                    minLat,
+                    minLng,
+                    maxLat,
+                    maxLng
             );
         }
         cursor.close();
@@ -217,6 +227,10 @@ public class SegmentsDatabaseManager {
         int city_index = cursor.getColumnIndexOrThrow(Segments.CITY);
         int name_index = cursor.getColumnIndexOrThrow(Segments.SEGMENT_NAME);
         int map_polyline_index = cursor.getColumnIndexOrThrow(Segments.MAP_POLYLINE);
+        int min_lat_index = cursor.getColumnIndexOrThrow(Segments.BOUND_MIN_LAT);
+        int min_lng_index = cursor.getColumnIndexOrThrow(Segments.BOUND_MIN_LNG);
+        int max_lat_index = cursor.getColumnIndexOrThrow(Segments.BOUND_MAX_LAT);
+        int max_lng_index = cursor.getColumnIndexOrThrow(Segments.BOUND_MAX_LNG);
 
 
         while (cursor.moveToNext()) {
@@ -238,6 +252,10 @@ public class SegmentsDatabaseManager {
                 polyline = "";
             }
 
+            Double minLat = cursor.isNull(min_lat_index) ? null : cursor.getDouble(min_lat_index);
+            Double minLng = cursor.isNull(min_lng_index) ? null : cursor.getDouble(min_lng_index);
+            Double maxLat = cursor.isNull(max_lat_index) ? null : cursor.getDouble(max_lat_index);
+            Double maxLng = cursor.isNull(max_lng_index) ? null : cursor.getDouble(max_lng_index);
 
             summaries.add(new SegmentSummary(
                             segmentId,
@@ -257,7 +275,11 @@ public class SegmentsDatabaseManager {
                             af.format_with_units(elevation_gain),
                             af.format_with_units(elevLow),
                             af.format_with_units(elevHigh),
-                            polyline
+                            polyline,
+                            minLat,
+                            minLng,
+                            maxLat,
+                            maxLng
                     )
             );
         }
@@ -294,7 +316,25 @@ public class SegmentsDatabaseManager {
 
         // Extract the polyline from the nested Map object
         if (segment.getMap() != null) {
-            cv.put(Segments.MAP_POLYLINE, segment.getMap().getPolyline());
+            String polyline = segment.getMap().getPolyline();
+            cv.put(Segments.MAP_POLYLINE, polyline);
+            
+            if (polyline != null && !polyline.isEmpty()) {
+                List<LatLng> decoded = PolyUtil.decode(polyline);
+                if (!decoded.isEmpty()) {
+                    double minLat = 90.0, maxLat = -90.0, minLng = 180.0, maxLng = -180.0;
+                    for (LatLng p : decoded) {
+                        if (p.latitude < minLat) minLat = p.latitude;
+                        if (p.latitude > maxLat) maxLat = p.latitude;
+                        if (p.longitude < minLng) minLng = p.longitude;
+                        if (p.longitude > maxLng) maxLng = p.longitude;
+                    }
+                    cv.put(Segments.BOUND_MIN_LAT, minLat);
+                    cv.put(Segments.BOUND_MIN_LNG, minLng);
+                    cv.put(Segments.BOUND_MAX_LAT, maxLat);
+                    cv.put(Segments.BOUND_MAX_LNG, maxLng);
+                }
+            }
         }
 
         // Handle LatLng arrays (Strava returns [lat, lng])
@@ -460,6 +500,10 @@ public class SegmentsDatabaseManager {
         public static final String HAZARDOUS = "Hazardous";     // hazardous: boolean
         public static final String PR_TIME = "pr_time";
         public static final String MAP_POLYLINE = "MapPolyline";
+        public static final String BOUND_MIN_LAT = "BoundMinLat"; // added in Version 7
+        public static final String BOUND_MIN_LNG = "BoundMinLng"; // added in Version 7
+        public static final String BOUND_MAX_LAT = "BoundMaxLat"; // added in Version 7
+        public static final String BOUND_MAX_LNG = "BoundMaxLng"; // added in Version 7
 
 
         // for TABLE_SEGMENT_STREAMS
@@ -479,9 +523,9 @@ public class SegmentsDatabaseManager {
         // public static final int DB_VERSION = 2; // updated 19.8.2016
         // public static final int DB_VERSION = 3; // updated 26.9.2016
         // public static final int DB_VERSION = 5; // updated 11.01.2026: add PR_TIME
-        public static final int DB_VERSION = 6; // updated 02.05.2026: add TOTAL_ELEVATION_GAIN & MAP_POLYLINE
+        public static final int DB_VERSION = 7; // updated 25.07.2026: add spatial bounds (ATT-352)
 
-        protected static final String CREATE_TABLE_STARRED_SEGMENTS_V6 = "create table " + Segments.TABLE_STARRED_SEGMENTS + " ("
+        protected static final String CREATE_TABLE_STARRED_SEGMENTS_V7 = "create table " + Segments.TABLE_STARRED_SEGMENTS + " ("
                 + Segments.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + Segments.STRAVA_SEGMENT_ID + " int, "
                 + Segments.RESOURCE_STATE + " int, "
@@ -505,7 +549,11 @@ public class SegmentsDatabaseManager {
                 + Segments.PRIVATE + " int, "
                 + Segments.STARRED + " int, "
                 + Segments.HAZARDOUS + " int, "
-                + Segments.PR_TIME + " int)";
+                + Segments.PR_TIME + " int, "
+                + Segments.BOUND_MIN_LAT + " real, "    // introduced in Version 7
+                + Segments.BOUND_MIN_LNG + " real, "    // introduced in Version 7
+                + Segments.BOUND_MAX_LAT + " real, "    // introduced in Version 7
+                + Segments.BOUND_MAX_LNG + " real)";   // introduced in Version 7
 
 
         protected static final String CREATE_TABLE_SEGMENT_STREAMS_V1 = "create table " + Segments.TABLE_SEGMENT_STREAMS + " ("
@@ -529,25 +577,68 @@ public class SegmentsDatabaseManager {
         @Override
         public void onCreate(@NonNull SQLiteDatabase db) {
 
-            db.execSQL(CREATE_TABLE_STARRED_SEGMENTS_V6);
-            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_STARRED_SEGMENTS_V6);
+            db.execSQL(CREATE_TABLE_STARRED_SEGMENTS_V7);
+            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_STARRED_SEGMENTS_V7);
 
             db.execSQL(CREATE_TABLE_SEGMENT_STREAMS_V1);
             if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_SEGMENT_STREAMS_V1);
 
         }
 
-        //Called whenever newVersion != oldVersion
         @Override
         public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
+            if (oldVersion < 6) {
+                // discard old data and start over for major changes below v6
+                db.execSQL("drop table if exists " + Segments.TABLE_STARRED_SEGMENTS);
+                db.execSQL("drop table if exists " + Segments.TABLE_SEGMENT_STREAMS);
+                onCreate(db);
+                return;
+            }
 
-            // since this database is only a cache for online data, its upgrade policy is
-            // to simply to discard the data and start over
+            if (oldVersion < 7) {
+                Log.i(TAG, "Upgrading Segments DB to Version 7 (Adding spatial bounds)");
+                db.execSQL("ALTER TABLE " + Segments.TABLE_STARRED_SEGMENTS + " ADD COLUMN " + Segments.BOUND_MIN_LAT + " real");
+                db.execSQL("ALTER TABLE " + Segments.TABLE_STARRED_SEGMENTS + " ADD COLUMN " + Segments.BOUND_MIN_LNG + " real");
+                db.execSQL("ALTER TABLE " + Segments.TABLE_STARRED_SEGMENTS + " ADD COLUMN " + Segments.BOUND_MAX_LAT + " real");
+                db.execSQL("ALTER TABLE " + Segments.TABLE_STARRED_SEGMENTS + " ADD COLUMN " + Segments.BOUND_MAX_LNG + " real");
 
-            db.execSQL("drop table if exists " + Segments.TABLE_STARRED_SEGMENTS);
-            db.execSQL("drop table if exists " + Segments.TABLE_SEGMENT_STREAMS);
+                migrateSegmentBounds(db);
+            }
+        }
 
-            onCreate(db);  // run onCreate to get new database
+        private void migrateSegmentBounds(SQLiteDatabase db) {
+            Log.i(TAG, "Populating spatial bounds for segments...");
+            try (Cursor cursor = db.query(Segments.TABLE_STARRED_SEGMENTS, 
+                    new String[]{Segments.STRAVA_SEGMENT_ID, Segments.MAP_POLYLINE}, 
+                    null, null, null, null, null)) {
+                int idIdx = cursor.getColumnIndexOrThrow(Segments.STRAVA_SEGMENT_ID);
+                int polylineIdx = cursor.getColumnIndexOrThrow(Segments.MAP_POLYLINE);
+                
+                while (cursor.moveToNext()) {
+                    long id = cursor.getLong(idIdx);
+                    String polyline = cursor.getString(polylineIdx);
+                    if (polyline != null && !polyline.isEmpty()) {
+                        List<LatLng> decoded = PolyUtil.decode(polyline);
+                        if (!decoded.isEmpty()) {
+                            double minLat = 90.0, maxLat = -90.0, minLng = 180.0, maxLng = -180.0;
+                            for (LatLng p : decoded) {
+                                if (p.latitude < minLat) minLat = p.latitude;
+                                if (p.latitude > maxLat) maxLat = p.latitude;
+                                if (p.longitude < minLng) minLng = p.longitude;
+                                if (p.longitude > maxLng) maxLng = p.longitude;
+                            }
+                            ContentValues cv = new ContentValues();
+                            cv.put(Segments.BOUND_MIN_LAT, minLat);
+                            cv.put(Segments.BOUND_MIN_LNG, minLng);
+                            cv.put(Segments.BOUND_MAX_LAT, maxLat);
+                            cv.put(Segments.BOUND_MAX_LNG, maxLng);
+                            db.update(Segments.TABLE_STARRED_SEGMENTS, cv, Segments.STRAVA_SEGMENT_ID + "=?", new String[]{String.valueOf(id)});
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error migrating segment bounds", e);
+            }
         }
     }
 }
