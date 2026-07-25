@@ -697,7 +697,7 @@ class WorkoutRepository private constructor(private val application: Application
             if (success) {
                 // --- SURGICAL PERIOD UPDATE (ATT-346) ---
                 workout?.let { 
-                    com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository.getInstance(application).onWorkoutDeleted(it)
+                    PeriodsRepository.getInstance(application).onWorkoutDeleted(it)
                 }
 
                 // Now, update the in-memory list
