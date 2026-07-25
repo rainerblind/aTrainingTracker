@@ -218,6 +218,21 @@ public class WorkoutSummariesDatabaseManager {
         );
     }
 
+    /**
+     * Returns a cursor for all workouts within a specific time range.
+     * Used for targeted period recalculations (ATT-346).
+     */
+    public Cursor getWorkoutsInRangeCursor(long startTimeS, long endTimeS) {
+        String selection = "strftime('%s', " + WorkoutSummaries.TIME_START + ") >= ? AND " +
+                "strftime('%s', " + WorkoutSummaries.TIME_START + ") <= ?";
+        String[] selectionArgs = {String.valueOf(startTimeS), String.valueOf(endTimeS)};
+        return getDatabase().query(
+                WorkoutSummaries.TABLE,
+                null, selection, selectionArgs, null, null,
+                WorkoutSummaries.TIME_START + " ASC"
+        );
+    }
+
 
     @Nullable
     public String getBaseFileName(long workoutId) {

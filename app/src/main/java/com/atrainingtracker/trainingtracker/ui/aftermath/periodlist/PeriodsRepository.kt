@@ -14,19 +14,16 @@ import android.app.Application
 import android.util.Log
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.PolyUtil
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import java.time.DayOfWeek
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
@@ -35,13 +32,14 @@ import java.time.temporal.TemporalAdjusters
 
 /**
  * Acts as the single source of truth for period-level data.
- * Orchestrates synchronization between workout history and the normalized periods database.
+ * Orchestrates hierarchical synchronization between workout history and the persistent Periods database.
  */
 class PeriodsRepository private constructor(private val application: Application) {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val dbManager = PeriodSummariesDatabaseManager.getInstance(application)
     private val workoutRepo = WorkoutRepository.getInstance(application)
+    private val workoutSummariesManager = WorkoutSummariesDatabaseManager.getInstance(application)
 
     private val _groupedPeriods = MutableStateFlow<List<List<PeriodSummary>>>(listOf(emptyList(), emptyList(), emptyList(), emptyList()))
     val groupedPeriods: StateFlow<List<List<PeriodSummary>>> = _groupedPeriods.asStateFlow()
@@ -50,9 +48,6 @@ class PeriodsRepository private constructor(private val application: Application
     val migrationProgress: StateFlow<Float?> = _migrationProgress.asStateFlow()
 
     private val rebuildMutex = Mutex()
-
-    private var lastWorkoutCount: Int = -1
-    private var lastNewestId: Long = -1L
 
     private val dayFormatter = DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.LONG)
     private val monthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy")
@@ -72,104 +67,287 @@ class PeriodsRepository private constructor(private val application: Application
     }
 
     init {
-        // 1. Instant load from cache (if sync was finished)
+        // 1. Instant load from cache
         loadFromDatabase()
 
-        // 2. Observe workouts and trigger background updates
+        // 2. Initial Migration (Prioritized Hierarchical Scan)
         scope.launch {
-            // Signal immediate rebuild start if cache is not ready
-            val isFinishedOnStart = withContext(Dispatchers.IO) { 
-                val finished = dbManager.isSyncFinished()
-                Log.d(TAG, "Init sync check: isFinished=$finished")
-                finished
+            val isFinished = withContext(Dispatchers.IO) { dbManager.isSyncFinished() }
+            if (!isFinished) {
+                performHierarchicalMigration()
             }
-            if (!isFinishedOnStart) {
-                Log.d(TAG, "Sync not finished, setting migrationProgress to 0.0")
-                _migrationProgress.value = 0.0f
-            }
+        }
+    }
 
-            workoutRepo.allWorkouts.collectLatest { workouts ->
-                Log.d(TAG, "workoutRepo.allWorkouts emitted ${workouts.size} items.")
-                if (workouts.isNotEmpty()) {
-                    val currentCount = workouts.size
-                    val newestId = workouts.first().id
-                    
-                    val needsFullRebuild = withContext(Dispatchers.IO) { !dbManager.isSyncFinished() }
-                    
-                    if (needsFullRebuild) {
-                        Log.i(TAG, "Cache incomplete. Starting migration.")
-                        rebuildDatabase(workouts, true)
-                    } else if (lastWorkoutCount != -1 && currentCount == lastWorkoutCount + 1 && newestId != lastNewestId) {
-                        // SUGGESTED ALGORITHM: 'Add only' the latest workout
-                        Log.i(TAG, "Incremental update for newest workout: $newestId")
-                        performIncrementalUpdate(workouts.first())
-                    } else if (lastWorkoutCount != -1 && (currentCount != lastWorkoutCount || newestId != lastNewestId)) {
-                        // History changed significantly (delete, edit of old workout, or bulk import)
-                        Log.i(TAG, "History changed. Re-syncing periods.")
-                        rebuildDatabase(workouts, false)
-                    } else if (lastWorkoutCount == -1) {
-                        // First emission after app start, and DB is already finished.
-                        // Just ensure UI matches memory state (e.g. enrichment).
-                        enrichAndEmitFromMemory(workouts)
+    /**
+     * ATT-346: Hierarchical aggregation (Workout -> Day -> Week/Month -> Year).
+     * Processes history in newest-first month buckets for instant UI feedback.
+     */
+    private suspend fun performHierarchicalMigration() = withContext(Dispatchers.Default) {
+        rebuildMutex.withLock {
+            _migrationProgress.value = 0.01f
+            Log.i(TAG, "Starting Hierarchical Initial Migration.")
+            val startTime = System.currentTimeMillis()
+
+            val mapper = com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper(
+                application, workoutSummariesManager,
+                com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(application),
+                com.atrainingtracker.trainingtracker.database.EquipmentDbHelper(application),
+                com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper(application)
+            )
+
+            withContext(Dispatchers.IO) {
+                val cursor = workoutSummariesManager.getCursorForAllWorkouts()
+                if (cursor.count == 0) {
+                    dbManager.runInTransaction { db -> dbManager.setSyncFinished(db, true) }
+                    cursor.close()
+                    return@withContext
+                }
+
+                val allWorkouts = mutableListOf<WorkoutData>()
+                while (cursor.moveToNext()) { allWorkouts.add(mapper.fromCursor(cursor)) }
+                cursor.close()
+
+                val monthBuckets = allWorkouts.groupBy { it.localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM")) }
+                    .toList().sortedByDescending { it.first }
+
+                dbManager.runInTransaction { db ->
+                    dbManager.deleteAll(db)
+                    dbManager.setSyncFinished(db, false)
+
+                    monthBuckets.forEachIndexed { index, (_, workouts) ->
+                        // 1. Build DAYS from Workouts
+                        val daysInMonth = workouts.groupBy { 
+                            it.localDateTime.toLocalDate().atStartOfDay().toEpochSecond(OffsetDateTime.now().offset) 
+                        }
+                        daysInMonth.forEach { (startS, dayWorkouts) ->
+                            val daySummary = aggregateWorkoutsToDay(dayWorkouts, startS)
+                            dbManager.upsertPeriod(db, daySummary)
+                        }
+
+                        // 2. Roll up WEEKs and MONTH from these DAYs
+                        val firstW = workouts.first()
+                        val monthStart = firstW.localDateTime.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay().toEpochSecond(OffsetDateTime.now().offset)
+                        val monthEnd = firstW.localDateTime.with(TemporalAdjusters.lastDayOfMonth()).toLocalDate().atTime(23, 59, 59).toEpochSecond(OffsetDateTime.now().offset)
+                        rollupDaysToParentPeriods(db, monthStart, monthEnd)
+
+                        _migrationProgress.value = (index + 1).toFloat() / monthBuckets.size.toFloat()
+                        // Periodic UI Update
+                        loadFromDatabase()
                     }
-                    
-                    lastWorkoutCount = currentCount
-                    lastNewestId = newestId
-                } else {
-                    Log.d(TAG, "Workouts empty, clearing periods.")
-                    withContext(Dispatchers.IO) { dbManager.runInTransaction { db -> dbManager.deleteAll(db) } }
-                    _groupedPeriods.value = listOf(emptyList(), emptyList(), emptyList(), emptyList())
-                    lastWorkoutCount = 0
-                    lastNewestId = -1L
+
+                    // 3. Final Step: Roll up YEARs from MONTHs
+                    rollupMonthsToYears(db)
+                    dbManager.setSyncFinished(db, true)
                 }
             }
+            Log.i(TAG, "Hierarchical Migration finished in ${System.currentTimeMillis() - startTime}ms.")
+            _migrationProgress.value = null
+            loadFromDatabase()
         }
     }
 
-    private suspend fun performIncrementalUpdate(workout: WorkoutData) {
-        val bounds = calculateWorkoutBounds(workout)
-        withContext(Dispatchers.IO) {
-            dbManager.runInTransaction { db ->
-                updateWorkoutToPeriods(db, workout, bounds)
-            }
-        }
-        // Instantly refresh UI by joining DB summaries with RAM enrichment
-        loadFromDatabase()
-    }
-
-    private fun enrichAndEmitFromMemory(workouts: List<WorkoutData>) {
+    /**
+     * O(1) Hierarchical Add: Workout -> Day -> Week/Month -> Year.
+     */
+    fun onWorkoutFinished(workout: WorkoutData) {
         scope.launch {
-            val dailyRaw = dbManager.getPeriodsByType(PeriodType.DAY)
-            val weeklyRaw = dbManager.getPeriodsByType(PeriodType.WEEK)
-            val monthlyRaw = dbManager.getPeriodsByType(PeriodType.MONTH)
-            val yearlyRaw = dbManager.getPeriodsByType(PeriodType.YEAR)
-            val groups = precalculateGroups(workouts)
-            enrichAndEmit(listOf(dailyRaw, weeklyRaw, monthlyRaw, yearlyRaw), groups)
+            val zoneOffset = OffsetDateTime.now().offset
+            val ldt = workout.localDateTime
+            val dayStart = ldt.toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
+
+            withContext(Dispatchers.IO) {
+                dbManager.runInTransaction { db ->
+                    // 1. Update Day
+                    val workoutsInDay = fetchWorkoutsInDay(dayStart)
+                    dbManager.upsertPeriod(db, aggregateWorkoutsToDay(workoutsInDay, dayStart))
+
+                    // 2. Propagate Upwards
+                    rollupDayToParents(db, ldt, zoneOffset)
+                }
+            }
+            loadFromDatabase()
         }
+    }
+
+    /**
+     * Hierarchical Deletion: Recalculate Day -> Propagate Up.
+     */
+    fun onWorkoutDeleted(workout: WorkoutData) {
+        scope.launch {
+            val zoneOffset = OffsetDateTime.now().offset
+            val ldt = workout.localDateTime
+            val dayStart = ldt.toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
+
+            withContext(Dispatchers.IO) {
+                dbManager.runInTransaction { db ->
+                    val workoutsRemaining = fetchWorkoutsInDay(dayStart)
+                    if (workoutsRemaining.isEmpty()) {
+                        dbManager.deletePeriod(db, PeriodType.DAY, dayStart)
+                    } else {
+                        dbManager.upsertPeriod(db, aggregateWorkoutsToDay(workoutsRemaining, dayStart))
+                    }
+                    rollupDayToParents(db, ldt, zoneOffset)
+                }
+            }
+            loadFromDatabase()
+        }
+    }
+
+    /**
+     * Handles sport changes by recalculating the affected hierarchy.
+     */
+    fun onWorkoutSportChanged(newW: WorkoutData, oldW: WorkoutData) {
+        onWorkoutFinished(newW) // Logic is identical: recalculate the affected Day and roll up
+    }
+
+    private fun rollupDayToParents(db: android.database.sqlite.SQLiteDatabase, ldt: java.time.LocalDateTime, offset: java.time.ZoneOffset) {
+        val weekStart = ldt.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toLocalDate().atStartOfDay().toEpochSecond(offset)
+        val monthStart = ldt.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay().toEpochSecond(offset)
+        val yearStart = ldt.with(TemporalAdjusters.firstDayOfYear()).toLocalDate().atStartOfDay().toEpochSecond(offset)
+
+        // 1. Recalculate Week from Days
+        val weekEnd = weekStart + (7 * 86400) - 1
+        val daysInWeek = dbManager.getSummariesInRange(PeriodType.DAY, weekStart, weekEnd)
+        if (daysInWeek.isEmpty()) dbManager.deletePeriod(db, PeriodType.WEEK, weekStart)
+        else dbManager.upsertPeriod(db, aggregateChildrenToParent(daysInWeek, PeriodType.WEEK, weekStart, weekEnd))
+
+        // 2. Recalculate Month from Days
+        val monthEnd = ldt.with(TemporalAdjusters.lastDayOfMonth()).toLocalDate().atTime(23, 59, 59).toEpochSecond(offset)
+        val daysInMonth = dbManager.getSummariesInRange(PeriodType.DAY, monthStart, monthEnd)
+        if (daysInMonth.isEmpty()) dbManager.deletePeriod(db, PeriodType.MONTH, monthStart)
+        else dbManager.upsertPeriod(db, aggregateChildrenToParent(daysInMonth, PeriodType.MONTH, monthStart, monthEnd))
+
+        // 3. Recalculate Year from Months
+        val yearEnd = ldt.with(TemporalAdjusters.lastDayOfYear()).toLocalDate().atTime(23, 59, 59).toEpochSecond(offset)
+        val monthsInYear = dbManager.getSummariesInRange(PeriodType.MONTH, yearStart, yearEnd)
+        if (monthsInYear.isEmpty()) dbManager.deletePeriod(db, PeriodType.YEAR, yearStart)
+        else dbManager.upsertPeriod(db, aggregateChildrenToParent(monthsInYear, PeriodType.YEAR, yearStart, yearEnd))
+    }
+
+    private fun rollupDaysToParentPeriods(db: android.database.sqlite.SQLiteDatabase, startS: Long, endS: Long) {
+        val days = dbManager.getSummariesInRange(PeriodType.DAY, startS, endS)
+        if (days.isEmpty()) return
+
+        // Month Rollup
+        dbManager.upsertPeriod(db, aggregateChildrenToParent(days, PeriodType.MONTH, startS, endS))
+
+        // Week Rollups
+        val weekStarts = days.map { OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(it.startTimestampS), java.time.ZoneId.systemDefault()).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toLocalDate().atStartOfDay().toEpochSecond(OffsetDateTime.now().offset) }.distinct()
+        weekStarts.forEach { ws ->
+            val daysInWeek = dbManager.getSummariesInRange(PeriodType.DAY, ws, ws + (7 * 86400) - 1)
+            dbManager.upsertPeriod(db, aggregateChildrenToParent(daysInWeek, PeriodType.WEEK, ws, ws + (7 * 86400) - 1))
+        }
+    }
+
+    private fun rollupMonthsToYears(db: android.database.sqlite.SQLiteDatabase) {
+        val months = dbManager.getPeriodsByType(PeriodType.MONTH)
+        val yearGroups = months.groupBy { OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(it.startTimestampS), java.time.ZoneId.systemDefault()).year }
+        yearGroups.forEach { (year, yearMonths) ->
+            val start = java.time.LocalDate.of(year, 1, 1).atStartOfDay().toEpochSecond(OffsetDateTime.now().offset)
+            val end = java.time.LocalDate.of(year, 12, 31).atTime(23, 59, 59).toEpochSecond(OffsetDateTime.now().offset)
+            dbManager.upsertPeriod(db, aggregateChildrenToParent(yearMonths, PeriodType.YEAR, start, end))
+        }
+    }
+
+    private fun aggregateWorkoutsToDay(workouts: List<WorkoutData>, startS: Long): PeriodSummary {
+        val w = workouts.first()
+        val bounds = calculateWorkoutsBounds(workouts)
+        val longest = workouts.maxBy { it.activeTimeSec }
+        
+        val sportStats = workouts.groupBy { it.bSportType }.mapValues { (_, sportWorkouts) ->
+            val detailed = sportWorkouts.groupBy { it.sportName }.mapValues { (_, detW) ->
+                DetailedStats(detW.size, detW.sumOf { it.activeTimeSec }, detW.sumOf { it.totalDistance }, detW.sumOf { it.ascentMeters })
+            }
+            val l = sportWorkouts.maxBy { it.activeTimeSec }
+            SportStats(sportWorkouts.size, sportWorkouts.sumOf { it.activeTimeSec }, sportWorkouts.sumOf { it.totalDistance }, sportWorkouts.sumOf { it.ascentMeters }, detailed, LongestWorkout(l.id, l.workoutName, l.activeTimeSec, l.totalDistance, l.ascentMeters))
+        }
+
+        return PeriodSummary(
+            periodLabel = w.localDateTime.format(dayFormatter), periodDateRange = "", periodType = PeriodType.DAY,
+            startTimestampS = startS, endTimestampS = startS + 86399, totalWorkouts = workouts.size,
+            totalDurationSec = workouts.sumOf { it.activeTimeSec }, totalDistance = workouts.sumOf { it.totalDistance },
+            sportStats = sportStats, sortKey = w.localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE),
+            minLat = bounds.southwest.latitude, minLng = bounds.southwest.longitude, maxLat = bounds.northeast.latitude, maxLng = bounds.northeast.longitude,
+            longestId = longest.id, longestDurationS = longest.activeTimeSec,
+            northId = longest.id, southId = longest.id, eastId = longest.id, westId = longest.id
+        )
+    }
+
+    private fun aggregateChildrenToParent(children: List<PeriodSummary>, type: PeriodType, start: Long, end: Long): PeriodSummary {
+        val totalWorkouts = children.sumOf { it.totalWorkouts }
+        val totalTime = children.sumOf { it.totalDurationSec }
+        val totalDist = children.sumOf { it.totalDistance }
+        
+        // Merge Sport Stats
+        val allSports = children.flatMap { it.sportStats.keys }.distinct()
+        val mergedSportStats = allSports.associateWith { sport ->
+            val sportChildren = children.mapNotNull { it.sportStats[sport] }
+            val allDetailedNames = sportChildren.flatMap { it.detailedSportStats.keys }.distinct()
+            val mergedDetailed = allDetailedNames.associateWith { name ->
+                val detChildren = sportChildren.mapNotNull { it.detailedSportStats[name] }
+                DetailedStats(detChildren.sumOf { it.count }, detChildren.sumOf { it.totalDurationSec }, detChildren.sumOf { it.totalDistanceMeters }, detChildren.sumOf { it.totalAscentMeters })
+            }
+            val longestInSport = sportChildren.mapNotNull { it.longestWorkout }.maxByOrNull { it.durationSec }
+            SportStats(sportChildren.sumOf { it.count }, sportChildren.sumOf { it.totalDurationSec }, sportChildren.sumOf { it.totalDistanceMeters }, sportChildren.sumOf { it.totalAscentMeters }, mergedDetailed, longestInSport)
+        }
+
+        val longest = children.maxBy { it.longestDurationS }
+        val minLat = children.minOf { it.minLat }; val maxLat = children.maxOf { it.maxLat }
+        val minLng = children.minOf { it.minLng }; val maxLng = children.maxOf { it.maxLng }
+
+        val label = when(type) {
+            PeriodType.WEEK -> "Week ${OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(start), java.time.ZoneId.systemDefault()).get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)}"
+            PeriodType.MONTH -> OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(start), java.time.ZoneId.systemDefault()).format(monthFormatter)
+            PeriodType.YEAR -> OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(start), java.time.ZoneId.systemDefault()).format(yearFormatter)
+            else -> ""
+        }
+
+        return PeriodSummary(
+            periodLabel = label, periodDateRange = "", periodType = type,
+            startTimestampS = start, endTimestampS = end, totalWorkouts = totalWorkouts,
+            totalDurationSec = totalTime, totalDistance = totalDist, sportStats = mergedSportStats,
+            sortKey = OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(start), java.time.ZoneId.systemDefault()).format(DateTimeFormatter.ISO_LOCAL_DATE),
+            minLat = minLat, minLng = minLng, maxLat = maxLat, maxLng = maxLng,
+            longestId = longest.longestId, longestDurationS = longest.longestDurationS,
+            northId = longest.longestId, southId = longest.longestId, eastId = longest.longestId, westId = longest.longestId
+        )
+    }
+
+    private fun fetchWorkoutsInDay(startS: Long): List<WorkoutData> {
+        val cursor = workoutSummariesManager.getWorkoutsInRangeCursor(startS, startS + 86399)
+        val mapper = com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper(
+            application, workoutSummariesManager,
+            com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(application),
+            com.atrainingtracker.trainingtracker.database.EquipmentDbHelper(application),
+            com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper(application)
+        )
+        val list = mutableListOf<WorkoutData>()
+        if (cursor.moveToFirst()) { do { list.add(mapper.fromCursor(cursor)) } while (cursor.moveToNext()) }
+        cursor.close()
+        return list
+    }
+
+    private fun calculateWorkoutsBounds(workouts: List<WorkoutData>): LatLngBounds {
+        val builder = LatLngBounds.Builder()
+        workouts.forEach { w ->
+            PolyUtil.decode(w.mapPolyline).forEach { builder.include(it) }
+            w.startLatLng?.let { builder.include(it) }
+        }
+        return try { builder.build() } catch(e: Exception) { LatLngBounds(LatLng(0.0,0.0), LatLng(0.0,0.0)) }
     }
 
     private fun loadFromDatabase() {
         scope.launch {
-            val isFinished = withContext(Dispatchers.IO) { 
-                val finished = dbManager.isSyncFinished()
-                Log.d(TAG, "loadFromDatabase check: isFinished=$finished")
-                finished
-            }
-            
-            if (!isFinished) {
-                return@launch
-            }
+            val isFinished = withContext(Dispatchers.IO) { dbManager.isSyncFinished() }
+            if (!isFinished) return@launch
 
             val workouts = workoutRepo.allWorkouts.value
-            
-            Log.d(TAG, "Loading lightweight periods from DB...")
             val dailyRaw = dbManager.getPeriodsByType(PeriodType.DAY)
             val weeklyRaw = dbManager.getPeriodsByType(PeriodType.WEEK)
             val monthlyRaw = dbManager.getPeriodsByType(PeriodType.MONTH)
             val yearlyRaw = dbManager.getPeriodsByType(PeriodType.YEAR)
             
-            Log.d(TAG, "Loaded from DB: D:${dailyRaw.size} W:${weeklyRaw.size} M:${monthlyRaw.size} Y:${yearlyRaw.size}")
-
             if (workouts.isNotEmpty()) {
                 val groups = precalculateGroups(workouts)
                 enrichAndEmit(listOf(dailyRaw, weeklyRaw, monthlyRaw, yearlyRaw), groups)
@@ -178,76 +356,6 @@ class PeriodsRepository private constructor(private val application: Application
             }
         }
     }
-
-    /**
-     * ATT-346: Rebuild the periods database using the newest-first incremental algorithm.
-     * Implements O(N) streaming UI updates so stats appear one-by-one instantly.
-     */
-    private suspend fun rebuildDatabase(workouts: List<WorkoutData>, showProgress: Boolean) = withContext(Dispatchers.Default) {
-        rebuildMutex.withLock {
-            if (showProgress) _migrationProgress.value = 0.01f
-            Log.i(TAG, "Starting newest-first O(N) streaming rebuild for ${workouts.size} workouts.")
-            val startTime = System.currentTimeMillis()
-
-            // 1. Pre-calculate groups once to avoid O(N^2) complexity in the loop
-            val workoutGroups = precalculateGroups(workouts)
-            
-            // 2. Sort workouts newest first for logical list growth
-            val sortedWorkouts = workouts.sortedByDescending { it.startTimeS }
-            
-            // 3. High-speed RAM buffer for streaming UI
-            val dayMap = LinkedHashMap<Long, PeriodSummary>()
-            val weekMap = LinkedHashMap<Long, PeriodSummary>()
-            val monthMap = LinkedHashMap<Long, PeriodSummary>()
-            val yearMap = LinkedHashMap<Long, PeriodSummary>()
-
-            withContext(Dispatchers.IO) {
-                dbManager.runInTransaction { db ->
-                    dbManager.deleteAll(db)
-                    dbManager.setSyncFinished(db, false)
-
-                    sortedWorkouts.forEachIndexed { index, workout ->
-                        // Cache decoded bounds to avoid redundant expensive PolyUtil calls
-                        val wBounds = calculateWorkoutBounds(workout)
-
-                        // Update RAM maps incrementally
-                        updateMapsForWorkout(dayMap, weekMap, monthMap, yearMap, workout, wBounds)
-
-                        // Write to DB cache (background persistence)
-                        updateWorkoutToPeriods(db, workout, wBounds)
-
-                        // 4. PUMP UI: Every 20 workouts (and at the start) emit state to UI
-                        if (index == 0 || index % 20 == 0 || index == sortedWorkouts.size - 1) {
-                            if (showProgress) {
-                                val progress = index.toFloat() / sortedWorkouts.size.toFloat()
-                                Log.v(TAG, "Rebuild progress: $progress ($index/${sortedWorkouts.size})")
-                                _migrationProgress.value = progress
-                            }
-                            
-                            val currentLevels = listOf(
-                                dayMap.values.toList(),
-                                weekMap.values.toList(),
-                                monthMap.values.toList(),
-                                yearMap.values.toList()
-                            )
-                            enrichAndEmit(currentLevels, workoutGroups)
-                        }
-                    }
-                    dbManager.setSyncFinished(db, true)
-                }
-            }
-            
-            Log.i(TAG, "Streaming rebuild finished in ${System.currentTimeMillis() - startTime}ms.")
-            if (showProgress) _migrationProgress.value = null
-        }
-    }
-
-    private data class WorkoutGroups(
-        val days: Map<String, List<WorkoutData>>,
-        val weeks: Map<String, List<WorkoutData>>,
-        val months: Map<String, List<WorkoutData>>,
-        val years: Map<String, List<WorkoutData>>
-    )
 
     private fun precalculateGroups(workouts: List<WorkoutData>): WorkoutGroups {
         return WorkoutGroups(
@@ -260,175 +368,6 @@ class PeriodsRepository private constructor(private val application: Application
             months = workouts.groupBy { it.localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM")) },
             years = workouts.groupBy { it.localDateTime.year.toString() }
         )
-    }
-
-    private fun calculateWorkoutBounds(w: WorkoutData): LatLngBounds? {
-        val decoded = PolyUtil.decode(w.mapPolyline)
-        val minLat = decoded.minOfOrNull { it.latitude } ?: w.startLatLng?.latitude
-        val maxLat = decoded.maxOfOrNull { it.latitude } ?: w.startLatLng?.latitude
-        val minLng = decoded.minOfOrNull { it.longitude } ?: w.startLatLng?.longitude
-        val maxLng = decoded.maxOfOrNull { it.longitude } ?: w.startLatLng?.longitude
-
-        return if (minLat != null && maxLat != null && minLng != null && maxLng != null && minLat <= maxLat) {
-            LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng))
-        } else null
-    }
-
-    private fun updateMapsForWorkout(
-        days: MutableMap<Long, PeriodSummary>,
-        weeks: MutableMap<Long, PeriodSummary>,
-        months: MutableMap<Long, PeriodSummary>,
-        years: MutableMap<Long, PeriodSummary>,
-        workout: WorkoutData,
-        bounds: LatLngBounds?
-    ) {
-        val ldt = workout.localDateTime
-        val zoneOffset = OffsetDateTime.now().offset
-
-        val dayStart = ldt.toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
-        val weekStart = ldt.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
-        val monthStart = ldt.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
-        val yearStart = ldt.with(TemporalAdjusters.firstDayOfYear()).toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
-
-        // Process all 4 levels in RAM
-        updateSingleMap(days, PeriodType.DAY, dayStart, dayStart + 86399, workout, bounds)
-        updateSingleMap(weeks, PeriodType.WEEK, weekStart, weekStart + (7 * 86400) - 1, workout, bounds)
-        updateSingleMap(months, PeriodType.MONTH, monthStart, 0, workout, bounds)
-        updateSingleMap(years, PeriodType.YEAR, yearStart, 0, workout, bounds)
-    }
-
-    private fun updateSingleMap(map: MutableMap<Long, PeriodSummary>, type: PeriodType, start: Long, end: Long, w: WorkoutData, b: LatLngBounds?) {
-        val existing = map[start]
-        val updated = if (existing == null) {
-            initPeriodFromWorkout(w, type, start, end, b)
-        } else {
-            mergeWorkoutToPeriod(existing, w, b)
-        }
-        map[start] = updated
-    }
-
-    private fun updateWorkoutToPeriods(db: android.database.sqlite.SQLiteDatabase, workout: WorkoutData, bounds: LatLngBounds?) {
-        val ldt = workout.localDateTime
-        val zoneOffset = OffsetDateTime.now().offset
-        
-        val dayStart = ldt.toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
-        val weekStart = ldt.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
-        val monthStart = ldt.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
-        val yearStart = ldt.with(TemporalAdjusters.firstDayOfYear()).toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
-
-        listOf(
-            Triple(PeriodType.DAY, dayStart, dayStart + 86399),
-            Triple(PeriodType.WEEK, weekStart, weekStart + (7 * 86400) - 1),
-            Triple(PeriodType.MONTH, monthStart, 0L),
-            Triple(PeriodType.YEAR, yearStart, 0L)
-        ).forEach { (type, start, end) ->
-            val existing = dbManager.getPeriodSummary(db, type, start)
-            val updated = if (existing == null) {
-                initPeriodFromWorkout(workout, type, start, end, bounds)
-            } else {
-                mergeWorkoutToPeriod(existing, workout, bounds)
-            }
-            dbManager.upsertPeriod(db, updated)
-        }
-    }
-
-    private fun initPeriodFromWorkout(w: WorkoutData, type: PeriodType, start: Long, end: Long, b: LatLngBounds?): PeriodSummary {
-        val label = when (type) {
-            PeriodType.DAY -> w.localDateTime.format(dayFormatter)
-            PeriodType.WEEK -> {
-                val week = w.localDateTime.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
-                val year = w.localDateTime.get(IsoFields.WEEK_BASED_YEAR)
-                "$year-W${week.toString().padStart(2, '0')}"
-            }
-            PeriodType.MONTH -> w.localDateTime.format(monthFormatter)
-            PeriodType.YEAR -> w.localDateTime.format(yearFormatter)
-        }
-        val range = if (type == PeriodType.WEEK) "${w.formattedDate} - ${w.formattedDate}" else ""
-        
-        val sportStats = mapOf(w.bSportType to SportStats(
-            count = 1, totalDurationSec = w.activeTimeSec, totalDistanceMeters = w.totalDistance, totalAscentMeters = w.ascentMeters,
-            detailedSportStats = mapOf(w.sportName to DetailedStats(1, w.activeTimeSec, w.totalDistance, w.ascentMeters)),
-            longestWorkout = LongestWorkout(w.id, w.workoutName, w.activeTimeSec, w.totalDistance, w.ascentMeters)
-        ))
-
-        return PeriodSummary(
-            periodLabel = label, periodDateRange = range, periodType = type,
-            startTimestampS = start, endTimestampS = end, totalWorkouts = 1,
-            totalDurationSec = w.activeTimeSec, totalDistance = w.totalDistance,
-            sportStats = sportStats, sortKey = createSortKey(w, type),
-            minLat = b?.southwest?.latitude ?: 90.0, minLng = b?.southwest?.longitude ?: 180.0, 
-            maxLat = b?.northeast?.latitude ?: -90.0, maxLng = b?.northeast?.longitude ?: -180.0,
-            longestId = w.id, longestDurationS = w.activeTimeSec,
-            northId = w.id, southId = w.id, eastId = w.id, westId = w.id
-        )
-    }
-
-    private fun mergeWorkoutToPeriod(p: PeriodSummary, w: WorkoutData, b: LatLngBounds?): PeriodSummary {
-        val minLat = if (b != null) minOf(p.minLat, b.southwest.latitude) else p.minLat
-        val maxLat = if (b != null) maxOf(p.maxLat, b.northeast.latitude) else p.maxLat
-        val minLng = if (b != null) minOf(p.minLng, b.southwest.longitude) else p.minLng
-        val maxLng = if (b != null) maxOf(p.maxLng, b.northeast.longitude) else p.maxLng
-
-        // Identification of anchor workouts
-        var nId = p.northId; var sId = p.southId; var eId = p.eastId; var wId = p.westId
-        if (b != null) {
-            if (b.northeast.latitude > p.maxLat) nId = w.id
-            if (b.southwest.latitude < p.minLat) sId = w.id
-            if (b.northeast.longitude > p.maxLng) eId = w.id
-            if (b.southwest.longitude < p.minLng) wId = w.id
-        }
-
-        val longestId = if (w.activeTimeSec > p.longestDurationS) w.id else p.longestId
-        val longestDuration = if (w.activeTimeSec > p.longestDurationS) w.activeTimeSec else p.longestDurationS
-
-        val newStatsMap = p.sportStats.toMutableMap()
-        val currentSport = newStatsMap[w.bSportType]
-        if (currentSport == null) {
-            newStatsMap[w.bSportType] = SportStats(1, w.activeTimeSec, w.totalDistance, w.ascentMeters, 
-                mapOf(w.sportName to DetailedStats(1, w.activeTimeSec, w.totalDistance, w.ascentMeters)), 
-                LongestWorkout(w.id, w.workoutName, w.activeTimeSec, w.totalDistance, w.ascentMeters))
-        } else {
-            val newDetailed = currentSport.detailedSportStats.toMutableMap()
-            val det = newDetailed[w.sportName] ?: DetailedStats(0, 0, 0.0, 0)
-            newDetailed[w.sportName] = det.copy(count = det.count + 1, totalDurationSec = det.totalDurationSec + w.activeTimeSec, 
-                totalDistanceMeters = det.totalDistanceMeters + w.totalDistance, totalAscentMeters = det.totalAscentMeters + w.ascentMeters)
-            
-            val longestInSport = if (w.activeTimeSec > (currentSport.longestWorkout?.durationSec ?: 0)) {
-                LongestWorkout(w.id, w.workoutName, w.activeTimeSec, w.totalDistance, w.ascentMeters)
-            } else currentSport.longestWorkout
-
-            newStatsMap[w.bSportType] = currentSport.copy(
-                count = currentSport.count + 1,
-                totalDurationSec = currentSport.totalDurationSec + w.activeTimeSec,
-                totalDistanceMeters = currentSport.totalDistanceMeters + w.totalDistance,
-                totalAscentMeters = currentSport.totalAscentMeters + w.ascentMeters,
-                detailedSportStats = newDetailed,
-                longestWorkout = longestInSport
-            )
-        }
-
-        return p.copy(
-            totalWorkouts = p.totalWorkouts + 1,
-            totalDurationSec = p.totalDurationSec + w.activeTimeSec,
-            totalDistance = p.totalDistance + w.totalDistance,
-            sportStats = newStatsMap,
-            minLat = minLat, maxLat = maxLat, minLng = minLng, maxLng = maxLng,
-            longestId = longestId, longestDurationS = longestDuration,
-            northId = nId, southId = sId, eastId = eId, westId = wId
-        )
-    }
-
-    private fun createSortKey(w: WorkoutData, type: PeriodType): String {
-        return when (type) {
-            PeriodType.DAY -> w.localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE)
-            PeriodType.WEEK -> {
-                val week = w.localDateTime.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
-                val year = w.localDateTime.get(IsoFields.WEEK_BASED_YEAR)
-                "$year-W${week.toString().padStart(2, '0')}"
-            }
-            PeriodType.MONTH -> w.localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM"))
-            PeriodType.YEAR -> w.localDateTime.year.toString()
-        }
     }
 
     private fun enrichAndEmit(rawLevels: List<List<PeriodSummary>>, groups: WorkoutGroups) {
@@ -444,7 +383,6 @@ class PeriodsRepository private constructor(private val application: Application
         if (groupWorkouts.isEmpty()) return summary
         val anchorIds = setOf(summary.longestId, summary.northId, summary.southId, summary.eastId, summary.westId).filter { it != -1L }
         val anchorWorkouts = groupWorkouts.filter { it.id in anchorIds }
-        
         return summary.copy(
             polylines = anchorWorkouts.map { it.mapPolyline }.filter { it.isNotEmpty() },
             workoutIdToPolylineMap = anchorWorkouts.associate { it.id to it.mapPolyline },
@@ -457,4 +395,11 @@ class PeriodsRepository private constructor(private val application: Application
             }
         )
     }
+
+    private data class WorkoutGroups(
+        val days: Map<String, List<WorkoutData>>,
+        val weeks: Map<String, List<WorkoutData>>,
+        val months: Map<String, List<WorkoutData>>,
+        val years: Map<String, List<WorkoutData>>
+    )
 }

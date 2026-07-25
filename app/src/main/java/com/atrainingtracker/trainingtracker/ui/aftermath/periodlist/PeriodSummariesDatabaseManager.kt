@@ -195,17 +195,35 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
         }
     }
 
-    fun getPeriodSummary(db: SQLiteDatabase, type: PeriodType, startTimestampS: Long): PeriodSummary? {
-        val selection = "${PeriodSummariesContract.COLUMN_PERIOD_TYPE} = ? AND ${PeriodSummariesContract.COLUMN_START_TIMESTAMP} = ?"
-        val selectionArgs = arrayOf(type.name, startTimestampS.toString())
+    /**
+     * Returns a list of summaries of a specific type within a time range.
+     * Used for hierarchical roll-ups (ATT-346).
+     */
+    fun getSummariesInRange(type: PeriodType, startS: Long, endS: Long): List<PeriodSummary> {
+        val periods = mutableListOf<PeriodSummary>()
+        val db = getDatabase()
+        val selection = "${PeriodSummariesContract.COLUMN_PERIOD_TYPE} = ? AND ${PeriodSummariesContract.COLUMN_START_TIMESTAMP} >= ? AND ${PeriodSummariesContract.COLUMN_START_TIMESTAMP} <= ?"
+        val args = arrayOf(type.name, startS.toString(), endS.toString())
 
-        db.query(PeriodSummariesContract.TABLE_NAME, PeriodSummariesContract.PROJECTION, selection, selectionArgs, null, null, null).use { cursor ->
-            if (cursor.moveToFirst()) {
+        db.query(PeriodSummariesContract.TABLE_NAME, PeriodSummariesContract.PROJECTION, selection, args, null, null, "${PeriodSummariesContract.COLUMN_SORT_KEY} ASC").use { cursor ->
+            while (cursor.moveToNext()) {
                 val periodId = cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID))
-                return mapCursorToPeriod(cursor, getSportStatsForPeriod(db, periodId))
+                val sportStats = getSportStatsForPeriod(db, periodId)
+                periods.add(mapCursorToPeriod(cursor, sportStats))
             }
         }
-        return null
+        return periods
+    }
+
+    /**
+     * Surgically deletes a single period record and its stats.
+     */
+    fun deletePeriod(db: SQLiteDatabase, type: PeriodType, startS: Long) {
+        val where = "${PeriodSummariesContract.COLUMN_PERIOD_TYPE} = ? AND ${PeriodSummariesContract.COLUMN_START_TIMESTAMP} = ?"
+        val args = arrayOf(type.name, startS.toString())
+        
+        // Cascading delete will handle stats
+        db.delete(PeriodSummariesContract.TABLE_NAME, where, args)
     }
 
     private fun getSportStatsForPeriod(db: SQLiteDatabase, periodId: Long): Map<BSportType, SportStats> {
@@ -407,7 +425,7 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
     }
 
     private class PeriodSummariesDbHelper(context: Context) : SQLiteOpenHelper(
-        context, "PeriodSummaries.db", null, 14
+        context, "PeriodSummaries.db", null, 15
     ) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(PeriodSummariesContract.CREATE_TABLE)
@@ -417,8 +435,8 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            // Relational Restart for ATT-346 (v14: Performance Optimization)
-            if (oldVersion < 14) {
+            // Relational Restart for ATT-346 (v15: Force Hierarchical Recalculation)
+            if (oldVersion < 15) {
                 db.execSQL("DROP TABLE IF EXISTS ${SyncStatusContract.TABLE_NAME}")
                 db.execSQL("DROP TABLE IF EXISTS ${DetailedStatsContract.TABLE_NAME}")
                 db.execSQL("DROP TABLE IF EXISTS ${SportStatsContract.TABLE_NAME}")

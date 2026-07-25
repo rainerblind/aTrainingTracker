@@ -575,6 +575,15 @@ class WorkoutRepository private constructor(private val application: Application
                     // Get the fresh data from the database.
                     val freshWorkoutData = mapper.fromCursor(cursor)
                     
+                    // --- SURGICAL PERIOD UPDATE (ATT-346) ---
+                    val existing = allWorkouts.value.find { it.id == workoutId }
+                    val isNewFinish = (existing == null || !existing.finished) && freshWorkoutData.finished
+                    
+                    if (isNewFinish) {
+                        com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository.getInstance(application)
+                            .onWorkoutFinished(freshWorkoutData)
+                    }
+
                     addOrUpdateWorkout(freshWorkoutData)
                 }
             }
@@ -629,9 +638,11 @@ class WorkoutRepository private constructor(private val application: Application
 
             // 3. Update memory surgically - perform the merge ATOMICALLY inside update
             Log.i(TAG, "update from saveWorkout")
+            var oldWorkout: WorkoutData? = null
             _allWorkouts.update { currentList ->
                 currentList.map { current ->
                     if (current.id == workoutId) {
+                        oldWorkout = current
                         current.copy(
                             workoutName = userEditedWorkout.workoutName,
                             sportId = userEditedWorkout.sportId,
@@ -647,6 +658,14 @@ class WorkoutRepository private constructor(private val application: Application
                             uploadToStrava = userEditedWorkout.uploadToStrava
                         )
                     } else current
+                }
+            }
+
+            // --- SURGICAL PERIOD UPDATE (ATT-346) ---
+            oldWorkout?.let { old ->
+                val periodsRepo = com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository.getInstance(application)
+                if (old.sportId != userEditedWorkout.sportId) {
+                    periodsRepo.onWorkoutSportChanged(userEditedWorkout, old)
                 }
             }
 
@@ -676,6 +695,11 @@ class WorkoutRepository private constructor(private val application: Application
             // Perform the actual deletion in the database first
             val success = deletionHelper.deleteWorkout(id)
             if (success) {
+                // --- SURGICAL PERIOD UPDATE (ATT-346) ---
+                workout?.let { 
+                    com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository.getInstance(application).onWorkoutDeleted(it)
+                }
+
                 // Now, update the in-memory list
                 _allWorkouts.update { currentList ->
                     currentList.filterNot { it.id == id }
@@ -701,6 +725,11 @@ class WorkoutRepository private constructor(private val application: Application
                     // Find the workout name from the current list to display it.
                     val workout = allWorkouts.value.find { it.id == workoutId }
                     val workoutName = workout?.headerData?.workoutName ?: "Workout ID: $workoutId"
+
+                    // --- SURGICAL PERIOD UPDATE (ATT-346) ---
+                    workout?.let { 
+                        com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository.getInstance(application).onWorkoutDeleted(it)
+                    }
 
                     // Post the detailed progress to the LiveData.
                     _deletionProgress.postValue(DeletionProgress.InProgress(workoutName, workoutId))
