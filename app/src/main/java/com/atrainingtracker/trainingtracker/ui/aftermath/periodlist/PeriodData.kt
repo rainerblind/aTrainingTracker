@@ -28,6 +28,11 @@ enum class PeriodMarkerType {
     ALTITUDE, DISTANCE, START, END
 }
 
+data class MigrationStatus(
+    val message: String,
+    val progress: Float
+)
+
 data class PeriodSummary(
     val periodLabel: String,         // e.g., "Week20, 2026" or "May 2026"
     val periodDateRange: String,     // e.g., "May 11 - May 17"
@@ -40,10 +45,10 @@ data class PeriodSummary(
     val sportStats: Map<BSportType, SportStats>,
     
     // Fast Outline Metadata (ATT-346)
-    val minLat: Double = 0.0,
-    val minLng: Double = 0.0,
-    val maxLat: Double = 0.0,
-    val maxLng: Double = 0.0,
+    val minLat: Double = 90.0,
+    val minLng: Double = 180.0,
+    val maxLat: Double = -90.0,
+    val maxLng: Double = -180.0,
     val longestId: Long = -1L,
     val longestDurationS: Long = 0,
     val northId: Long = -1L,

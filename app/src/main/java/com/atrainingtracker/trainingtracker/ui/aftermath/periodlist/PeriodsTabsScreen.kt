@@ -62,7 +62,7 @@ fun PeriodsTabsScreen(
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
     onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
-    migrationProgress: Float? = null
+    migrationStatus: MigrationStatus? = null
 ) {
 
     val scope = rememberCoroutineScope()
@@ -89,8 +89,7 @@ fun PeriodsTabsScreen(
                     Spacer(modifier = Modifier.height(with(density) { (appBarMaxHeightPx + connection.appBarOffset).toDp() }))
 
                     // --- ATT-346: Migration Progress Feedback ---
-                    if (migrationProgress != null) {
-                        Log.v("PeriodsTabsScreen", "Rendering progress card: $migrationProgress")
+                    if (migrationStatus != null) {
                         Surface(
                             modifier = Modifier.padding(16.dp).fillMaxWidth(),
                             color = MaterialTheme.colorScheme.secondaryContainer,
@@ -99,19 +98,19 @@ fun PeriodsTabsScreen(
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     CircularProgressIndicator(
-                                        progress = { migrationProgress },
+                                        progress = { migrationStatus.progress },
                                         modifier = Modifier.size(24.dp),
                                         strokeWidth = 2.dp
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Text(
-                                        text = "Syncing training history...",
+                                        text = migrationStatus.message,
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
                                 LinearProgressIndicator(
-                                    progress = { migrationProgress },
+                                    progress = { migrationStatus.progress },
                                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                                 )
                             }

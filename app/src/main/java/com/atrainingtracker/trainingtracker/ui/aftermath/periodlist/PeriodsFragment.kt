@@ -59,7 +59,7 @@ class PeriodsFragment : Fragment() {
                 ATrainingTrackerTheme {
                     // 1. Observe the periods list and migration status from ViewModel
                     val groupedPeriods by viewModel.groupedPeriods.collectAsStateWithLifecycle()
-                    val migrationProgress by viewModel.migrationProgress.collectAsStateWithLifecycle()
+                    val migrationStatus by viewModel.migrationStatus.collectAsStateWithLifecycle()
                     val selectedPeriod by viewModel.selectedPeriod.collectAsStateWithLifecycle()
                     val isHeatmapEnabled by viewModel.isHeatmapEnabled.collectAsStateWithLifecycle()
                     val enabledMarkerTypes by viewModel.enabledMarkerTypes.collectAsStateWithLifecycle()
@@ -102,7 +102,7 @@ class PeriodsFragment : Fragment() {
                             tabs = groups,
                             isHeatmapEnabled = isHeatmapEnabled,
                             onToggleHeatmapEnabled = { viewModel.toggleHeatmapEnabled() },
-                            migrationProgress = migrationProgress
+                            migrationStatus = migrationStatus
                         )
                     }
                 }

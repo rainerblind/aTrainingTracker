@@ -115,9 +115,14 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
         _selectedPeriod.value = null
     }
 
-    // Observe summarized periods and migration progress from Repository
+    // Observe summarized periods and migration status from Repository
     val groupedPeriods: StateFlow<List<List<PeriodSummary>>> = periodsRepo.groupedPeriods
-    val migrationProgress: StateFlow<Float?> = periodsRepo.migrationProgress
+    val migrationStatus: StateFlow<MigrationStatus?> = periodsRepo.migrationStatus
+    
+    @Deprecated("Use migrationStatus instead", ReplaceWith("migrationStatus.value?.progress"))
+    val migrationProgress: StateFlow<Float?> = periodsRepo.migrationStatus
+        .map { it?.progress }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     fun loadPeriods() {
         viewModelScope.launch {

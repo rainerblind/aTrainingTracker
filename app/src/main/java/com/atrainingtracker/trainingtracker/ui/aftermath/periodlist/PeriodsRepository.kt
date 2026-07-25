@@ -44,8 +44,8 @@ class PeriodsRepository private constructor(private val application: Application
     private val _groupedPeriods = MutableStateFlow<List<List<PeriodSummary>>>(listOf(emptyList(), emptyList(), emptyList(), emptyList()))
     val groupedPeriods: StateFlow<List<List<PeriodSummary>>> = _groupedPeriods.asStateFlow()
 
-    private val _migrationProgress = MutableStateFlow<Float?>(null)
-    val migrationProgress: StateFlow<Float?> = _migrationProgress.asStateFlow()
+    private val _migrationStatus = MutableStateFlow<MigrationStatus?>(null)
+    val migrationStatus: StateFlow<MigrationStatus?> = _migrationStatus.asStateFlow()
 
     private val rebuildMutex = Mutex()
 
@@ -85,7 +85,7 @@ class PeriodsRepository private constructor(private val application: Application
      */
     private suspend fun performHierarchicalMigration() = withContext(Dispatchers.Default) {
         rebuildMutex.withLock {
-            _migrationProgress.value = 0.01f
+            _migrationStatus.value = MigrationStatus("Querying training history...", 0.0f)
             Log.i(TAG, "Starting Streaming Hierarchical Migration.")
             val startTime = System.currentTimeMillis()
 
@@ -120,10 +120,12 @@ class PeriodsRepository private constructor(private val application: Application
 
                             if (currentMonthKey != null && monthKey != currentMonthKey) {
                                 // 1. Process the completed month bucket
+                                val monthLabel = currentMonthWorkouts.first().localDateTime.format(monthFormatter)
+                                _migrationStatus.value = MigrationStatus("Syncing $monthLabel...", processedCount.toFloat() / totalCount.toFloat())
+                                
                                 processMonthBucket(db, currentMonthWorkouts)
                                 
                                 // 2. Update Progress and UI
-                                _migrationProgress.value = processedCount.toFloat() / totalCount.toFloat()
                                 loadFromDatabase()
                                 
                                 currentMonthWorkouts.clear()
@@ -142,12 +144,13 @@ class PeriodsRepository private constructor(private val application: Application
                     }
 
                     // 3. Final Step: Roll up YEARs from MONTHs
+                    _migrationStatus.value = MigrationStatus("Finalizing yearly totals...", 0.99f)
                     rollupMonthsToYears(db)
                     dbManager.setSyncFinished(db, true)
                 }
             }
             Log.i(TAG, "Hierarchical Migration finished in ${System.currentTimeMillis() - startTime}ms.")
-            _migrationProgress.value = null
+            _migrationStatus.value = null
             loadFromDatabase()
         }
     }
@@ -440,7 +443,10 @@ class PeriodsRepository private constructor(private val application: Application
             startTimestampS = startS, endTimestampS = startS + 86399, totalWorkouts = workouts.size,
             totalDurationSec = workouts.sumOf { it.activeTimeSec }, totalDistance = workouts.sumOf { it.totalDistance },
             sportStats = sportStats, sortKey = w.localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE),
-            minLat = bounds.southwest.latitude, minLng = bounds.southwest.longitude, maxLat = bounds.northeast.latitude, maxLng = bounds.northeast.longitude,
+            minLat = bounds?.southwest?.latitude ?: 90.0, 
+            minLng = bounds?.southwest?.longitude ?: 180.0, 
+            maxLat = bounds?.northeast?.latitude ?: -90.0, 
+            maxLng = bounds?.northeast?.longitude ?: -180.0,
             longestId = longest.id, longestDurationS = longest.activeTimeSec,
             northId = longest.id, southId = longest.id, eastId = longest.id, westId = longest.id
         )
@@ -506,7 +512,7 @@ class PeriodsRepository private constructor(private val application: Application
         return list
     }
 
-    private fun calculateWorkoutsBounds(workouts: List<WorkoutData>): LatLngBounds {
+    private fun calculateWorkoutsBounds(workouts: List<WorkoutData>): LatLngBounds? {
         val builder = LatLngBounds.Builder()
         var hasPoints = false
         workouts.forEach { w ->
@@ -526,9 +532,9 @@ class PeriodsRepository private constructor(private val application: Application
             }
         }
         return if (hasPoints) {
-            try { builder.build() } catch(e: Exception) { LatLngBounds(LatLng(90.0,180.0), LatLng(-90.0,-180.0)) }
+            try { builder.build() } catch(e: Exception) { null }
         } else {
-            LatLngBounds(LatLng(90.0,180.0), LatLng(-90.0,-180.0))
+            null
         }
     }
 
