@@ -81,12 +81,12 @@ class PeriodsRepository private constructor(private val application: Application
 
     /**
      * ATT-346: Hierarchical aggregation (Workout -> Day -> Week/Month -> Year).
-     * Processes history in newest-first month buckets for instant UI feedback.
+     * Streams data bucket-by-bucket for instant visibility.
      */
     private suspend fun performHierarchicalMigration() = withContext(Dispatchers.Default) {
         rebuildMutex.withLock {
             _migrationProgress.value = 0.01f
-            Log.i(TAG, "Starting Hierarchical Initial Migration.")
+            Log.i(TAG, "Starting Streaming Hierarchical Migration.")
             val startTime = System.currentTimeMillis()
 
             val mapper = com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper(
@@ -97,43 +97,48 @@ class PeriodsRepository private constructor(private val application: Application
             )
 
             withContext(Dispatchers.IO) {
-                val cursor = workoutSummariesManager.getCursorForAllWorkouts()
+                val cursor = workoutSummariesManager.getCursorForAllWorkouts() // Sorted DESC
                 if (cursor.count == 0) {
                     dbManager.runInTransaction { db -> dbManager.setSyncFinished(db, true) }
                     cursor.close()
                     return@withContext
                 }
 
-                val allWorkouts = mutableListOf<WorkoutData>()
-                while (cursor.moveToNext()) { allWorkouts.add(mapper.fromCursor(cursor)) }
-                cursor.close()
-
-                val monthBuckets = allWorkouts.groupBy { it.localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM")) }
-                    .toList().sortedByDescending { it.first }
-
                 dbManager.runInTransaction { db ->
                     dbManager.deleteAll(db)
                     dbManager.setSyncFinished(db, false)
 
-                    monthBuckets.forEachIndexed { index, (_, workouts) ->
-                        // 1. Build DAYS from Workouts
-                        val daysInMonth = workouts.groupBy { 
-                            it.localDateTime.toLocalDate().atStartOfDay().toEpochSecond(OffsetDateTime.now().offset) 
-                        }
-                        daysInMonth.forEach { (startS, dayWorkouts) ->
-                            val daySummary = aggregateWorkoutsToDay(dayWorkouts, startS)
-                            dbManager.upsertPeriod(db, daySummary)
-                        }
+                    val currentMonthWorkouts = mutableListOf<WorkoutData>()
+                    var currentMonthKey: String? = null
+                    var processedCount = 0
+                    val totalCount = cursor.count
 
-                        // 2. Roll up WEEKs and MONTH from these DAYs
-                        val firstW = workouts.first()
-                        val monthStart = firstW.localDateTime.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay().toEpochSecond(OffsetDateTime.now().offset)
-                        val monthEnd = firstW.localDateTime.with(TemporalAdjusters.lastDayOfMonth()).toLocalDate().atTime(23, 59, 59).toEpochSecond(OffsetDateTime.now().offset)
-                        rollupDaysToParentPeriods(db, monthStart, monthEnd)
+                    if (cursor.moveToFirst()) {
+                        do {
+                            val workout = mapper.fromCursor(cursor)
+                            val monthKey = workout.localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM"))
 
-                        _migrationProgress.value = (index + 1).toFloat() / monthBuckets.size.toFloat()
-                        // Periodic UI Update
-                        loadFromDatabase()
+                            if (currentMonthKey != null && monthKey != currentMonthKey) {
+                                // 1. Process the completed month bucket
+                                processMonthBucket(db, currentMonthWorkouts)
+                                
+                                // 2. Update Progress and UI
+                                _migrationProgress.value = processedCount.toFloat() / totalCount.toFloat()
+                                loadFromDatabase()
+                                
+                                currentMonthWorkouts.clear()
+                            }
+
+                            currentMonthWorkouts.add(workout)
+                            currentMonthKey = monthKey
+                            processedCount++
+                        } while (cursor.moveToNext())
+                    }
+                    cursor.close()
+
+                    // Final bucket
+                    if (currentMonthWorkouts.isNotEmpty()) {
+                        processMonthBucket(db, currentMonthWorkouts)
                     }
 
                     // 3. Final Step: Roll up YEARs from MONTHs
@@ -145,6 +150,25 @@ class PeriodsRepository private constructor(private val application: Application
             _migrationProgress.value = null
             loadFromDatabase()
         }
+    }
+
+    private fun processMonthBucket(db: android.database.sqlite.SQLiteDatabase, workouts: List<WorkoutData>) {
+        if (workouts.isEmpty()) return
+        
+        // 1. Build DAYS from Workouts
+        val daysInMonth = workouts.groupBy { 
+            it.localDateTime.toLocalDate().atStartOfDay().toEpochSecond(OffsetDateTime.now().offset) 
+        }
+        daysInMonth.forEach { (startS, dayWorkouts) ->
+            val daySummary = aggregateWorkoutsToDay(dayWorkouts, startS)
+            dbManager.upsertPeriod(db, daySummary)
+        }
+
+        // 2. Roll up WEEKs and MONTH from these DAYs
+        val firstW = workouts.first()
+        val monthStart = firstW.localDateTime.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay().toEpochSecond(OffsetDateTime.now().offset)
+        val monthEnd = firstW.localDateTime.with(TemporalAdjusters.lastDayOfMonth()).toLocalDate().atTime(23, 59, 59).toEpochSecond(OffsetDateTime.now().offset)
+        rollupDaysToParentPeriods(db, monthStart, monthEnd)
     }
 
     /**
@@ -198,7 +222,8 @@ class PeriodsRepository private constructor(private val application: Application
      * Handles sport changes by recalculating the affected hierarchy.
      */
     fun onWorkoutSportChanged(newW: WorkoutData, oldW: WorkoutData) {
-        onWorkoutFinished(newW) // Logic is identical: recalculate the affected Day and roll up
+        Log.d(TAG, "onWorkoutSportChanged: ${oldW.bSportType} -> ${newW.bSportType}")
+        onWorkoutFinished(newW) 
     }
 
     private fun rollupDayToParents(db: android.database.sqlite.SQLiteDatabase, ldt: java.time.LocalDateTime, offset: java.time.ZoneOffset) {
@@ -330,11 +355,26 @@ class PeriodsRepository private constructor(private val application: Application
 
     private fun calculateWorkoutsBounds(workouts: List<WorkoutData>): LatLngBounds {
         val builder = LatLngBounds.Builder()
+        var hasPoints = false
         workouts.forEach { w ->
-            PolyUtil.decode(w.mapPolyline).forEach { builder.include(it) }
-            w.startLatLng?.let { builder.include(it) }
+            // --- ATT-352: Use persisted bounds for zero-latency aggregation ---
+            if (w.minLat != null && w.maxLat != null && w.minLng != null && w.maxLng != null) {
+                builder.include(LatLng(w.minLat, w.minLng))
+                builder.include(LatLng(w.maxLat, w.maxLng))
+                hasPoints = true
+            } else {
+                // Fallback for legacy
+                try {
+                    PolyUtil.decode(w.mapPolyline).forEach { builder.include(it); hasPoints = true }
+                } catch (e: Exception) {}
+                w.startLatLng?.let { builder.include(it); hasPoints = true }
+            }
         }
-        return try { builder.build() } catch(e: Exception) { LatLngBounds(LatLng(0.0,0.0), LatLng(0.0,0.0)) }
+        return if (hasPoints) {
+            try { builder.build() } catch(e: Exception) { LatLngBounds(LatLng(0.0,0.0), LatLng(0.0,0.0)) }
+        } else {
+            LatLngBounds(LatLng(0.0,0.0), LatLng(0.0,0.0))
+        }
     }
 
     private fun loadFromDatabase() {
