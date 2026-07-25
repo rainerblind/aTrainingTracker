@@ -385,19 +385,19 @@ class PeriodsRepository private constructor(private val application: Application
         val weekEnd = weekStart + (7 * 86400) - 1
         val daysInWeek = dbManager.getSummariesInRange(PeriodType.DAY, weekStart, weekEnd)
         if (daysInWeek.isEmpty()) dbManager.deletePeriod(db, PeriodType.WEEK, weekStart)
-        else dbManager.upsertPeriod(db, aggregateChildrenToParent(daysInWeek, PeriodType.WEEK, weekStart, weekEnd))
+        else aggregateChildrenToParent(daysInWeek, PeriodType.WEEK, weekStart, weekEnd)?.let { dbManager.upsertPeriod(db, it) }
 
         // 2. Recalculate Month from Days
         val monthEnd = ldt.with(TemporalAdjusters.lastDayOfMonth()).toLocalDate().atTime(23, 59, 59).toEpochSecond(offset)
         val daysInMonth = dbManager.getSummariesInRange(PeriodType.DAY, monthStart, monthEnd)
         if (daysInMonth.isEmpty()) dbManager.deletePeriod(db, PeriodType.MONTH, monthStart)
-        else dbManager.upsertPeriod(db, aggregateChildrenToParent(daysInMonth, PeriodType.MONTH, monthStart, monthEnd))
+        else aggregateChildrenToParent(daysInMonth, PeriodType.MONTH, monthStart, monthEnd)?.let { dbManager.upsertPeriod(db, it) }
 
         // 3. Recalculate Year from Months
         val yearEnd = ldt.with(TemporalAdjusters.lastDayOfYear()).toLocalDate().atTime(23, 59, 59).toEpochSecond(offset)
         val monthsInYear = dbManager.getSummariesInRange(PeriodType.MONTH, yearStart, yearEnd)
         if (monthsInYear.isEmpty()) dbManager.deletePeriod(db, PeriodType.YEAR, yearStart)
-        else dbManager.upsertPeriod(db, aggregateChildrenToParent(monthsInYear, PeriodType.YEAR, yearStart, yearEnd))
+        else aggregateChildrenToParent(monthsInYear, PeriodType.YEAR, yearStart, yearEnd)?.let { dbManager.upsertPeriod(db, it) }
     }
 
     private fun rollupDaysToParentPeriods(db: android.database.sqlite.SQLiteDatabase, startS: Long, endS: Long) {
@@ -405,13 +405,15 @@ class PeriodsRepository private constructor(private val application: Application
         if (days.isEmpty()) return
 
         // Month Rollup
-        dbManager.upsertPeriod(db, aggregateChildrenToParent(days, PeriodType.MONTH, startS, endS))
+        aggregateChildrenToParent(days, PeriodType.MONTH, startS, endS)?.let { dbManager.upsertPeriod(db, it) }
 
         // Week Rollups
         val weekStarts = days.map { OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(it.startTimestampS), java.time.ZoneId.systemDefault()).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toLocalDate().atStartOfDay().toEpochSecond(OffsetDateTime.now().offset) }.distinct()
         weekStarts.forEach { ws ->
             val daysInWeek = dbManager.getSummariesInRange(PeriodType.DAY, ws, ws + (7 * 86400) - 1)
-            dbManager.upsertPeriod(db, aggregateChildrenToParent(daysInWeek, PeriodType.WEEK, ws, ws + (7 * 86400) - 1))
+            if (daysInWeek.isNotEmpty()) {
+                aggregateChildrenToParent(daysInWeek, PeriodType.WEEK, ws, ws + (7 * 86400) - 1)?.let { dbManager.upsertPeriod(db, it) }
+            }
         }
     }
 
@@ -421,20 +423,20 @@ class PeriodsRepository private constructor(private val application: Application
         yearGroups.forEach { (year, yearMonths) ->
             val start = java.time.LocalDate.of(year, 1, 1).atStartOfDay().toEpochSecond(OffsetDateTime.now().offset)
             val end = java.time.LocalDate.of(year, 12, 31).atTime(23, 59, 59).toEpochSecond(OffsetDateTime.now().offset)
-            dbManager.upsertPeriod(db, aggregateChildrenToParent(yearMonths, PeriodType.YEAR, start, end))
+            aggregateChildrenToParent(yearMonths, PeriodType.YEAR, start, end)?.let { dbManager.upsertPeriod(db, it) }
         }
     }
 
     private fun aggregateWorkoutsToDay(workouts: List<WorkoutData>, startS: Long): PeriodSummary {
         val w = workouts.first()
         val bounds = calculateWorkoutsBounds(workouts)
-        val longest = workouts.maxBy { it.activeTimeSec }
+        val longest = workouts.maxByOrNull { it.activeTimeSec } ?: workouts.first()
         
         val sportStats = workouts.groupBy { it.bSportType }.mapValues { (_, sportWorkouts) ->
             val detailed = sportWorkouts.groupBy { it.sportName }.mapValues { (_, detW) ->
                 DetailedStats(detW.size, detW.sumOf { it.activeTimeSec }, detW.sumOf { it.totalDistance }, detW.sumOf { it.ascentMeters })
             }
-            val l = sportWorkouts.maxBy { it.activeTimeSec }
+            val l = sportWorkouts.maxByOrNull { it.activeTimeSec } ?: sportWorkouts.first()
             SportStats(sportWorkouts.size, sportWorkouts.sumOf { it.activeTimeSec }, sportWorkouts.sumOf { it.totalDistance }, sportWorkouts.sumOf { it.ascentMeters }, detailed, LongestWorkout(l.id, l.workoutName, l.activeTimeSec, l.totalDistance, l.ascentMeters))
         }
 
@@ -452,7 +454,9 @@ class PeriodsRepository private constructor(private val application: Application
         )
     }
 
-    private fun aggregateChildrenToParent(children: List<PeriodSummary>, type: PeriodType, start: Long, end: Long): PeriodSummary {
+    private fun aggregateChildrenToParent(children: List<PeriodSummary>, type: PeriodType, start: Long, end: Long): PeriodSummary? {
+        if (children.isEmpty()) return null
+        
         val totalWorkouts = children.sumOf { it.totalWorkouts }
         val totalTime = children.sumOf { it.totalDurationSec }
         val totalDist = children.sumOf { it.totalDistance }
@@ -470,7 +474,7 @@ class PeriodsRepository private constructor(private val application: Application
             SportStats(sportChildren.sumOf { it.count }, sportChildren.sumOf { it.totalDurationSec }, sportChildren.sumOf { it.totalDistanceMeters }, sportChildren.sumOf { it.totalAscentMeters }, mergedDetailed, longestInSport)
         }
 
-        val longest = children.maxBy { it.longestDurationS }
+        val longest = children.maxByOrNull { it.longestDurationS } ?: return null
         
         // --- ATT-352/354 Refinement: Spatial Integrity for Hierarchy ---
         // Only include children that have valid spatial data (ignore sentinels)
