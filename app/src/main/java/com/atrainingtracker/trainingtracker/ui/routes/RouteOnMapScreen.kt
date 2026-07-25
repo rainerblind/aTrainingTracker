@@ -78,9 +78,19 @@ fun RouteOnMapScreen(
         }
     }
 
+    val routeBounds = remember(routeSummary) {
+        if (routeSummary?.minLat != null && routeSummary.maxLat != null && routeSummary.minLng != null && routeSummary.maxLng != null) {
+            com.google.android.gms.maps.model.LatLngBounds(
+                LatLng(routeSummary.minLat, routeSummary.minLng),
+                LatLng(routeSummary.maxLat, routeSummary.maxLng)
+            )
+        } else null
+    }
+
     MapDetailLayout(
         bSportType = bSportType,
-        zoomFocus = MapZoomFocus.FIT_PRIMARY,
+        zoomFocus = if (routeBounds != null) MapZoomFocus.EXPLICIT_BOUNDS else MapZoomFocus.FIT_PRIMARY,
+        initialBounds = routeBounds,
         activeScrubPath = route?.path,
         useStatusBarsPadding = useStatusBarsPadding,
         showMap = showMap,

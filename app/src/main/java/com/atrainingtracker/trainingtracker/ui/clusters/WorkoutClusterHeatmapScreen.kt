@@ -221,6 +221,15 @@ fun WorkoutClusterHeatmapScreen(
 
     val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
+    val clusterBounds = remember(cluster) {
+        if (cluster.minLat != null && cluster.maxLat != null && cluster.minLng != null && cluster.maxLng != null) {
+            com.google.android.gms.maps.model.LatLngBounds(
+                LatLng(cluster.minLat, cluster.minLng),
+                LatLng(cluster.maxLat, cluster.maxLng)
+            )
+        } else null
+    }
+
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
         sheetPeekHeight = if (peekedWorkoutDataWithTrack != null && !isEditingFingerprint) 120.dp + navBarHeight else 0.dp,
@@ -251,7 +260,8 @@ fun WorkoutClusterHeatmapScreen(
     ) {
         MapDetailLayout(
             bSportType = sportType,
-            zoomFocus = MapZoomFocus.FIT_PRIMARY,
+            zoomFocus = if (clusterBounds != null) MapZoomFocus.EXPLICIT_BOUNDS else MapZoomFocus.FIT_PRIMARY,
+            initialBounds = clusterBounds,
             activeScrubPath = null,
             showElevationProfile = false,
             header = {

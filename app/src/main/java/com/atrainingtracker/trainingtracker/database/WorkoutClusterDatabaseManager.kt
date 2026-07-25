@@ -40,7 +40,14 @@ data class WorkoutCluster(
     val hitCount: Int,
     val bSportType: BSportType = BSportType.UNKNOWN,
     val previewPaths: List<String> = emptyList(), // List of encoded polylines for preview
-    val routePolyline: String? = null // Encoded polyline of the linked authoritative route
+    val routePolyline: String? = null, // Encoded polyline of the linked authoritative route
+    // Persisted spatial bounds and anchors (ATT-354)
+    val minLat: Double? = null,
+    val minLng: Double? = null,
+    val maxLat: Double? = null,
+    val maxLng: Double? = null,
+    val longestWorkoutId: Long = -1L,
+    val longestDurationS: Long = 0
 )
 
 class WorkoutClusterDatabaseManager private constructor(context: Context) {
@@ -180,6 +187,13 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
     }
 
     private fun mapCursorToCluster(cursor: Cursor): WorkoutCluster {
+        val minLatIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MIN_LAT)
+        val minLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MIN_LNG)
+        val maxLatIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MAX_LAT)
+        val maxLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MAX_LNG)
+        val longestIdIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_LONGEST_WORKOUT_ID)
+        val longestDurIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_LONGEST_DURATION)
+
         return WorkoutCluster(
             id = cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID)),
             name = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_NAME)),
@@ -192,7 +206,13 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
             maxDispLng = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_MAX_DISP_LNG)),
             refDistance = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_REF_DISTANCE)),
             hitCount = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_HIT_COUNT)),
-            bSportType = BSportType.valueOf(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_SPORT_TYPE)))
+            bSportType = BSportType.valueOf(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_SPORT_TYPE))),
+            minLat = if (minLatIdx != -1 && !cursor.isNull(minLatIdx)) cursor.getDouble(minLatIdx) else null,
+            minLng = if (minLngIdx != -1 && !cursor.isNull(minLngIdx)) cursor.getDouble(minLngIdx) else null,
+            maxLat = if (maxLatIdx != -1 && !cursor.isNull(maxLatIdx)) cursor.getDouble(maxLatIdx) else null,
+            maxLng = if (maxLngIdx != -1 && !cursor.isNull(maxLngIdx)) cursor.getDouble(maxLngIdx) else null,
+            longestWorkoutId = if (longestIdIdx != -1) cursor.getLong(longestIdIdx) else -1L,
+            longestDurationS = if (longestDurIdx != -1) cursor.getLong(longestDurIdx) else 0L
         )
     }
 
@@ -208,6 +228,13 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         put(WorkoutClusterContract.COLUMN_REF_DISTANCE, cluster.refDistance)
         put(WorkoutClusterContract.COLUMN_HIT_COUNT, cluster.hitCount)
         put(WorkoutClusterContract.COLUMN_SPORT_TYPE, cluster.bSportType.name)
+        // ATT-354
+        put(WorkoutClusterContract.COLUMN_BOUND_MIN_LAT, cluster.minLat)
+        put(WorkoutClusterContract.COLUMN_BOUND_MIN_LNG, cluster.minLng)
+        put(WorkoutClusterContract.COLUMN_BOUND_MAX_LAT, cluster.maxLat)
+        put(WorkoutClusterContract.COLUMN_BOUND_MAX_LNG, cluster.maxLng)
+        put(WorkoutClusterContract.COLUMN_LONGEST_WORKOUT_ID, cluster.longestWorkoutId)
+        put(WorkoutClusterContract.COLUMN_LONGEST_DURATION, cluster.longestDurationS)
     }
 
     object WorkoutClusterContract {
@@ -223,6 +250,12 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         const val COLUMN_REF_DISTANCE = "ref_distance"
         const val COLUMN_HIT_COUNT = "hit_count"
         const val COLUMN_SPORT_TYPE = "b_sport_type"
+        const val COLUMN_BOUND_MIN_LAT = "bound_min_lat"
+        const val COLUMN_BOUND_MIN_LNG = "bound_min_lng"
+        const val COLUMN_BOUND_MAX_LAT = "bound_max_lat"
+        const val COLUMN_BOUND_MAX_LNG = "bound_max_lng"
+        const val COLUMN_LONGEST_WORKOUT_ID = "longest_workout_id"
+        const val COLUMN_LONGEST_DURATION = "longest_duration"
 
         const val CREATE_TABLE = """
             CREATE TABLE $TABLE_NAME (
@@ -237,13 +270,19 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
                 $COLUMN_MAX_DISP_LNG REAL,
                 $COLUMN_REF_DISTANCE REAL,
                 $COLUMN_HIT_COUNT INTEGER,
-                $COLUMN_SPORT_TYPE TEXT
+                $COLUMN_SPORT_TYPE TEXT,
+                $COLUMN_BOUND_MIN_LAT REAL,
+                $COLUMN_BOUND_MIN_LNG REAL,
+                $COLUMN_BOUND_MAX_LAT REAL,
+                $COLUMN_BOUND_MAX_LNG REAL,
+                $COLUMN_LONGEST_WORKOUT_ID INTEGER,
+                $COLUMN_LONGEST_DURATION INTEGER
             )
         """
     }
 
     private class WorkoutClusterDbHelper(context: Context) : SQLiteOpenHelper(
-        context, "RouteClusters.db", null, 2
+        context, "RouteClusters.db", null, 3
     ) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(WorkoutClusterContract.CREATE_TABLE)
@@ -252,6 +291,15 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
             if (oldVersion < 2) {
                 db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_SPORT_TYPE} TEXT DEFAULT 'UNKNOWN'")
+            }
+            if (oldVersion < 3) {
+                // ATT-354: Adding spatial bounds and longest workout
+                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MIN_LAT} REAL")
+                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MIN_LNG} REAL")
+                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MAX_LAT} REAL")
+                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MAX_LNG} REAL")
+                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_LONGEST_WORKOUT_ID} INTEGER DEFAULT -1")
+                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_LONGEST_DURATION} INTEGER DEFAULT 0")
             }
         }
     }

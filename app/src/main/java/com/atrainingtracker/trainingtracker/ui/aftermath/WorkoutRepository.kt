@@ -582,6 +582,8 @@ class WorkoutRepository private constructor(private val application: Application
                     
                     if (isNewFinish) {
                         PeriodsRepository.getInstance(application).onWorkoutFinished(freshWorkoutData)
+                        // --- SURGICAL CLUSTER UPDATE (ATT-354) ---
+                        WorkoutClusterEngine.getInstance(application).onWorkoutFinished(application, freshWorkoutData)
                     }
 
                     addOrUpdateWorkout(freshWorkoutData)
@@ -661,11 +663,11 @@ class WorkoutRepository private constructor(private val application: Application
                 }
             }
 
-            // --- SURGICAL PERIOD UPDATE (ATT-346) ---
+            // --- SURGICAL UPDATES (ATT-346 / ATT-354) ---
             oldWorkout?.let { old ->
-                val periodsRepo = com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository.getInstance(application)
                 if (old.sportId != userEditedWorkout.sportId) {
-                    periodsRepo.onWorkoutSportChanged(userEditedWorkout, old)
+                    PeriodsRepository.getInstance(application).onWorkoutSportChanged(userEditedWorkout, old)
+                    WorkoutClusterEngine.getInstance(application).onWorkoutSportChanged(userEditedWorkout, old)
                 }
             }
 
@@ -695,9 +697,10 @@ class WorkoutRepository private constructor(private val application: Application
             // Perform the actual deletion in the database first
             val success = deletionHelper.deleteWorkout(id)
             if (success) {
-                // --- SURGICAL PERIOD UPDATE (ATT-346) ---
+                // --- SURGICAL UPDATES (ATT-346 / ATT-354) ---
                 workout?.let { 
                     PeriodsRepository.getInstance(application).onWorkoutDeleted(it)
+                    WorkoutClusterEngine.getInstance(application).onWorkoutDeleted(application, it)
                 }
 
                 // Now, update the in-memory list
@@ -726,9 +729,10 @@ class WorkoutRepository private constructor(private val application: Application
                     val workout = allWorkouts.value.find { it.id == workoutId }
                     val workoutName = workout?.headerData?.workoutName ?: "Workout ID: $workoutId"
 
-                    // --- SURGICAL PERIOD UPDATE (ATT-346) ---
+                    // --- SURGICAL UPDATES (ATT-346 / ATT-354) ---
                     workout?.let { 
-                        com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository.getInstance(application).onWorkoutDeleted(it)
+                        PeriodsRepository.getInstance(application).onWorkoutDeleted(it)
+                        WorkoutClusterEngine.getInstance(application).onWorkoutDeleted(application, it)
                     }
 
                     // Post the detailed progress to the LiveData.
