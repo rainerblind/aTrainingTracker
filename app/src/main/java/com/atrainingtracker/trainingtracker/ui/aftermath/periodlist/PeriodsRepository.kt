@@ -465,8 +465,14 @@ class PeriodsRepository private constructor(private val application: Application
         }
 
         val longest = children.maxBy { it.longestDurationS }
-        val minLat = children.minOf { it.minLat }; val maxLat = children.maxOf { it.maxLat }
-        val minLng = children.minOf { it.minLng }; val maxLng = children.maxOf { it.maxLng }
+        
+        // --- ATT-352/354 Refinement: Spatial Integrity for Hierarchy ---
+        // Only include children that have valid spatial data (ignore sentinels)
+        val spatialChildren = children.filter { it.minLat < 90.0 }
+        val minLat = if (spatialChildren.isNotEmpty()) spatialChildren.minOf { it.minLat } else 90.0
+        val maxLat = if (spatialChildren.isNotEmpty()) spatialChildren.maxOf { it.maxLat } else -90.0
+        val minLng = if (spatialChildren.isNotEmpty()) spatialChildren.minOf { it.minLng } else 180.0
+        val maxLng = if (spatialChildren.isNotEmpty()) spatialChildren.maxOf { it.maxLng } else -180.0
 
         val label = when(type) {
             PeriodType.WEEK -> "Week ${OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(start), java.time.ZoneId.systemDefault()).get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)}"
@@ -504,23 +510,25 @@ class PeriodsRepository private constructor(private val application: Application
         val builder = LatLngBounds.Builder()
         var hasPoints = false
         workouts.forEach { w ->
-            // --- ATT-352: Use persisted bounds for zero-latency aggregation ---
-            if (w.minLat != null && w.maxLat != null && w.minLng != null && w.maxLng != null) {
+            // --- ATT-352/354 Refinement: Spatial Integrity ---
+            if (w.minLat != null && w.maxLat != null && w.minLng != null && w.maxLng != null && w.minLat < 90.0) {
                 builder.include(LatLng(w.minLat, w.minLng))
                 builder.include(LatLng(w.maxLat, w.maxLng))
                 hasPoints = true
             } else {
-                // Fallback for legacy
-                try {
-                    PolyUtil.decode(w.mapPolyline).forEach { builder.include(it); hasPoints = true }
-                } catch (e: Exception) {}
-                w.startLatLng?.let { builder.include(it); hasPoints = true }
+                // Fallback for legacy (Only if startLatLng is reasonable)
+                w.startLatLng?.let { 
+                    if (it.latitude != 0.0 || it.longitude != 0.0) {
+                        builder.include(it)
+                        hasPoints = true
+                    }
+                }
             }
         }
         return if (hasPoints) {
-            try { builder.build() } catch(e: Exception) { LatLngBounds(LatLng(0.0,0.0), LatLng(0.0,0.0)) }
+            try { builder.build() } catch(e: Exception) { LatLngBounds(LatLng(90.0,180.0), LatLng(-90.0,-180.0)) }
         } else {
-            LatLngBounds(LatLng(0.0,0.0), LatLng(0.0,0.0))
+            LatLngBounds(LatLng(90.0,180.0), LatLng(-90.0,-180.0))
         }
     }
 

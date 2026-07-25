@@ -122,27 +122,30 @@ class WorkoutClusterEngine private constructor(context: Context) {
      * O(1) Surgical update when a workout is finished (ATT-354).
      */
     fun onWorkoutFinished(context: Context, w: WorkoutData) {
-        if (w.startLatLng == null || w.endLatLng == null || w.maxDisplacement == null) return
+        if (w.startLatLng == null || w.endLatLng == null) return // Ignore non-spatial
         
         val normalizedName = if (w.workoutName != w.fileBaseName) stripHitCount(w.workoutName) else null
         val match = suggestCluster(w.startLatLng, w.endLatLng, w.startLatLng, w.totalDistance, normalizedName)
 
         if (match != null) {
             assignClusterToWorkout(context, w.id, match.id, false)
-            // Refresh match after hitCount increment
             val currentMatch = dbManager.getClusterById(match.id) ?: return
             
-            // Centroids and Bounds update (Moving Average)
+            // --- ATT-354 Refinement: Null-Safe Bounds Update ---
+            val wMinLat = w.minLat; val wMinLng = w.minLng; val wMaxLat = w.maxLat; val wMaxLng = w.maxLng
+            
             val updated = currentMatch.copy(
                 startLat = (currentMatch.startLat * currentMatch.hitCount + w.startLatLng.latitude) / (currentMatch.hitCount + 1),
                 startLng = (currentMatch.startLng * currentMatch.hitCount + w.startLatLng.longitude) / (currentMatch.hitCount + 1),
                 endLat = (currentMatch.endLat * currentMatch.hitCount + w.endLatLng.latitude) / (currentMatch.hitCount + 1),
                 endLng = (currentMatch.endLng * currentMatch.hitCount + w.endLatLng.longitude) / (currentMatch.hitCount + 1),
                 refDistance = (currentMatch.refDistance * currentMatch.hitCount + w.totalDistance) / (currentMatch.hitCount + 1),
-                minLat = minOf(currentMatch.minLat ?: 90.0, w.minLat ?: 90.0),
-                minLng = minOf(currentMatch.minLng ?: 180.0, w.minLng ?: 180.0),
-                maxLat = maxOf(currentMatch.maxLat ?: -90.0, w.maxLat ?: -90.0),
-                maxLng = maxOf(currentMatch.maxLng ?: -180.0, w.maxLng ?: -180.0),
+                
+                minLat = if (wMinLat != null) minOf(currentMatch.minLat ?: 90.0, wMinLat) else currentMatch.minLat,
+                minLng = if (wMinLng != null) minOf(currentMatch.minLng ?: 180.0, wMinLng) else currentMatch.minLng,
+                maxLat = if (wMaxLat != null) maxOf(currentMatch.maxLat ?: -90.0, wMaxLat) else currentMatch.maxLat,
+                maxLng = if (wMaxLng != null) maxOf(currentMatch.maxLng ?: -180.0, wMaxLng) else currentMatch.maxLng,
+                
                 longestWorkoutId = if (w.activeTimeSec > currentMatch.longestDurationS) w.id else currentMatch.longestWorkoutId,
                 longestDurationS = if (w.activeTimeSec > currentMatch.longestDurationS) w.activeTimeSec else currentMatch.longestDurationS
             )
@@ -151,7 +154,6 @@ class WorkoutClusterEngine private constructor(context: Context) {
             val clusterName = normalizedName ?: context.getString(R.string.cluster_default_name_format, w.fileBaseName?.take(10) ?: "Workout")
             val newId = learnFromWorkout(w.startLatLng, w.endLatLng, w.startLatLng, w.totalDistance, clusterName, w.sportId)
             
-            // Initialize bounds and longest for the new family
             val newCluster = dbManager.getClusterById(newId)
             if (newCluster != null) {
                 dbManager.updateCluster(newCluster.copy(
