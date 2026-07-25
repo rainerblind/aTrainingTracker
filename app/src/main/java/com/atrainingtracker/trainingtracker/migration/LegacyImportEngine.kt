@@ -398,12 +398,26 @@ object LegacyImportEngine {
         values.put(WorkoutSummaries.MAP_POLYLINE, polyline)
         values.put(WorkoutSummaries.ALTITUDE_STREAM, NumericalEncodingUtils.encodeDoubles(altitudes))
         values.put(WorkoutSummaries.DISTANCE_STREAM, NumericalEncodingUtils.encodeDoubles(distances))
+
+        // --- ATT-352: Persist spatial bounds for zero-latency periods framing ---
+        if (points.isNotEmpty()) {
+            val minLat = points.minOf { it.latitude }
+            val maxLat = points.maxOf { it.latitude }
+            val minLng = points.minOf { it.longitude }
+            val maxLng = points.maxOf { it.longitude }
+            values.put(WorkoutSummaries.BOUND_MIN_LAT, minLat)
+            values.put(WorkoutSummaries.BOUND_MIN_LNG, minLng)
+            values.put(WorkoutSummaries.BOUND_MAX_LAT, maxLat)
+            values.put(WorkoutSummaries.BOUND_MAX_LNG, maxLng)
+        }
+
         // Use the static field safely
         values.put("extremumValuesCalculated", 1)
         
         summariesDb.database.update(WorkoutSummaries.TABLE, values, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
 
         // 4. Persistence of Extrema (ATT-299, ATT-301)
+        // ... (remaining sensors logic)
         val sensorsToCalculate = listOf(
             SensorType.HR, SensorType.CADENCE, SensorType.POWER, SensorType.SPEED_mps, 
             SensorType.ALTITUDE, SensorType.TEMPERATURE
@@ -494,6 +508,12 @@ object LegacyImportEngine {
                 }
             }
         }
+
+        // 6. Notify System (ATT-346 Hook)
+        // This triggers WorkoutRepository to reload memory and notify PeriodsRepository
+        val intent = android.content.Intent(com.atrainingtracker.trainingtracker.tracker.TrackerService.WORKOUT_UPDATED_INTENT)
+        intent.putExtra(com.atrainingtracker.trainingtracker.tracker.TrackerService.WORKOUT_ID, workoutId)
+        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
     }
 
     private fun calculateCumulativeDistance(points: List<LatLng>): Double {

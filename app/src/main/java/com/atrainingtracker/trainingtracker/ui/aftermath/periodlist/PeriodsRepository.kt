@@ -219,11 +219,158 @@ class PeriodsRepository private constructor(private val application: Application
     }
 
     /**
-     * Handles sport changes by recalculating the affected hierarchy.
+     * Atomic Sport Transition (ATT-346 Suggested Algorithm).
      */
-    fun onWorkoutSportChanged(newW: WorkoutData, oldW: WorkoutData) {
-        Log.d(TAG, "onWorkoutSportChanged: ${oldW.bSportType} -> ${newW.bSportType}")
-        onWorkoutFinished(newW) 
+    fun onWorkoutSportChanged(newWorkout: WorkoutData, oldWorkout: WorkoutData) {
+        scope.launch {
+            Log.d(TAG, "onWorkoutSportChanged: ${oldWorkout.bSportType} -> ${newWorkout.bSportType}")
+            val zoneOffset = OffsetDateTime.now().offset
+            
+            withContext(Dispatchers.IO) {
+                dbManager.runInTransaction { db ->
+                    getAffectedPeriodRanges(newWorkout.localDateTime, zoneOffset).forEach { (type, start, _) ->
+                        val period = dbManager.getSummariesInRange(type, start, start).firstOrNull() ?: return@forEach
+                        
+                        // Transition logic: Subtract old metrics, then recalculate the Day
+                        val subtracted = subtractWorkoutFromPeriod(period, oldWorkout)
+                        // Merging new is easier by just recalculating the Day and rolling up
+                        dbManager.upsertPeriod(db, subtracted)
+                    }
+                }
+            }
+            // Logic optimization: Just call finished logic to ensure the new state is rolled up correctly
+            onWorkoutFinished(newWorkout)
+        }
+    }
+
+    private fun mergeWorkoutToPeriod(p: PeriodSummary, w: WorkoutData, b: LatLngBounds?): PeriodSummary {
+        val minLat = if (b != null) minOf(p.minLat, b.southwest.latitude) else p.minLat
+        val maxLat = if (b != null) maxOf(p.maxLat, b.northeast.latitude) else p.maxLat
+        val minLng = if (b != null) minOf(p.minLng, b.southwest.longitude) else p.minLng
+        val maxLng = if (b != null) maxOf(p.maxLng, b.northeast.longitude) else p.maxLng
+
+        var nId = p.northId; var sId = p.southId; var eId = p.eastId; var wId = p.westId
+        if (b != null) {
+            if (b.northeast.latitude > p.maxLat) nId = w.id
+            if (b.southwest.latitude < p.minLat) sId = w.id
+            if (b.northeast.longitude > p.maxLng) eId = w.id
+            if (b.southwest.longitude < p.minLng) wId = w.id
+        }
+
+        val longestId = if (w.activeTimeSec > p.longestDurationS) w.id else p.longestId
+        val longestDuration = if (w.activeTimeSec > p.longestDurationS) w.activeTimeSec else p.longestDurationS
+
+        val newStatsMap = p.sportStats.toMutableMap()
+        val currentSport = newStatsMap[w.bSportType]
+        if (currentSport == null) {
+            newStatsMap[w.bSportType] = SportStats(1, w.activeTimeSec, w.totalDistance, w.ascentMeters, 
+                mapOf(w.sportName to DetailedStats(1, w.activeTimeSec, w.totalDistance, w.ascentMeters)), 
+                LongestWorkout(w.id, w.workoutName, w.activeTimeSec, w.totalDistance, w.ascentMeters))
+        } else {
+            val newDetailed = currentSport.detailedSportStats.toMutableMap()
+            val det = newDetailed[w.sportName] ?: DetailedStats(0, 0, 0.0, 0)
+            newDetailed[w.sportName] = det.copy(count = det.count + 1, totalDurationSec = det.totalDurationSec + w.activeTimeSec, 
+                totalDistanceMeters = det.totalDistanceMeters + w.totalDistance, totalAscentMeters = det.totalAscentMeters + w.ascentMeters)
+            
+            val longestInSport = if (w.activeTimeSec > (currentSport.longestWorkout?.durationSec ?: 0)) {
+                LongestWorkout(w.id, w.workoutName, w.activeTimeSec, w.totalDistance, w.ascentMeters)
+            } else currentSport.longestWorkout
+
+            newStatsMap[w.bSportType] = currentSport.copy(
+                count = currentSport.count + 1,
+                totalDurationSec = currentSport.totalDurationSec + w.activeTimeSec,
+                totalDistanceMeters = currentSport.totalDistanceMeters + w.totalDistance,
+                totalAscentMeters = currentSport.totalAscentMeters + w.ascentMeters,
+                detailedSportStats = newDetailed,
+                longestWorkout = longestInSport
+            )
+        }
+
+        return p.copy(
+            totalWorkouts = p.totalWorkouts + 1,
+            totalDurationSec = p.totalDurationSec + w.activeTimeSec,
+            totalDistance = p.totalDistance + w.totalDistance,
+            sportStats = newStatsMap,
+            minLat = minLat, maxLat = maxLat, minLng = minLng, maxLng = maxLng,
+            longestId = longestId, longestDurationS = longestDuration,
+            northId = nId, southId = sId, eastId = eId, westId = wId
+        )
+    }
+
+    private fun initPeriodFromWorkout(w: WorkoutData, type: PeriodType, start: Long, end: Long, b: LatLngBounds?): PeriodSummary {
+        val label = when (type) {
+            PeriodType.DAY -> w.localDateTime.format(dayFormatter)
+            PeriodType.WEEK -> {
+                val week = w.localDateTime.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+                val year = w.localDateTime.get(IsoFields.WEEK_BASED_YEAR)
+                "$year-W${week.toString().padStart(2, '0')}"
+            }
+            PeriodType.MONTH -> w.localDateTime.format(monthFormatter)
+            PeriodType.YEAR -> w.localDateTime.format(yearFormatter)
+        }
+        val range = if (type == PeriodType.WEEK) "${w.formattedDate} - ${w.formattedDate}" else ""
+        
+        val sportStats = mapOf(w.bSportType to SportStats(
+            count = 1, totalDurationSec = w.activeTimeSec, totalDistanceMeters = w.totalDistance, totalAscentMeters = w.ascentMeters,
+            detailedSportStats = mapOf(w.sportName to DetailedStats(1, w.activeTimeSec, w.totalDistance, w.ascentMeters)),
+            longestWorkout = LongestWorkout(w.id, w.workoutName, w.activeTimeSec, w.totalDistance, w.ascentMeters)
+        ))
+
+        return PeriodSummary(
+            periodLabel = label, periodDateRange = range, periodType = type,
+            startTimestampS = start, endTimestampS = end, totalWorkouts = 1,
+            totalDurationSec = w.activeTimeSec, totalDistance = w.totalDistance,
+            sportStats = sportStats, sortKey = createSortKey(w, type),
+            minLat = b?.southwest?.latitude ?: 90.0, minLng = b?.southwest?.longitude ?: 180.0, 
+            maxLat = b?.northeast?.latitude ?: -90.0, maxLng = b?.northeast?.longitude ?: -180.0,
+            longestId = w.id, longestDurationS = w.activeTimeSec,
+            northId = w.id, southId = w.id, eastId = w.id, westId = w.id
+        )
+    }
+
+    private fun createSortKey(w: WorkoutData, type: PeriodType): String {
+        return when (type) {
+            PeriodType.DAY -> w.localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE)
+            PeriodType.WEEK -> {
+                val week = w.localDateTime.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+                val year = w.localDateTime.get(IsoFields.WEEK_BASED_YEAR)
+                "$year-W${week.toString().padStart(2, '0')}"
+            }
+            PeriodType.MONTH -> w.localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM"))
+            PeriodType.YEAR -> w.localDateTime.year.toString()
+        }
+    }
+
+    private fun subtractWorkoutFromPeriod(p: PeriodSummary, w: WorkoutData): PeriodSummary {
+        val newStatsMap = p.sportStats.toMutableMap()
+        val currentSport = newStatsMap[w.bSportType]
+        
+        if (currentSport != null) {
+            val newDetailed = currentSport.detailedSportStats.toMutableMap()
+            val det = newDetailed[w.sportName] ?: DetailedStats(0, 0, 0.0, 0)
+            
+            newDetailed[w.sportName] = det.copy(
+                count = (det.count - 1).coerceAtLeast(0),
+                totalDurationSec = (det.totalDurationSec - w.activeTimeSec).coerceAtLeast(0),
+                totalDistanceMeters = (det.totalDistanceMeters - w.totalDistance).coerceAtLeast(0.0),
+                totalAscentMeters = (det.totalAscentMeters - w.ascentMeters).coerceAtLeast(0)
+            )
+
+            newStatsMap[w.bSportType] = currentSport.copy(
+                count = (currentSport.count - 1).coerceAtLeast(0),
+                totalDurationSec = (currentSport.totalDurationSec - w.activeTimeSec).coerceAtLeast(0),
+                totalDistanceMeters = (currentSport.totalDistanceMeters - w.totalDistance).coerceAtLeast(0.0),
+                totalAscentMeters = (currentSport.totalAscentMeters - w.ascentMeters).coerceAtLeast(0),
+                detailedSportStats = newDetailed
+            )
+        }
+
+        return p.copy(
+            totalWorkouts = (p.totalWorkouts - 1).coerceAtLeast(0),
+            totalDurationSec = (p.totalDurationSec - w.activeTimeSec).coerceAtLeast(0),
+            totalDistance = (p.totalDistance - w.totalDistance).coerceAtLeast(0.0),
+            sportStats = newStatsMap
+        )
     }
 
     private fun rollupDayToParents(db: android.database.sqlite.SQLiteDatabase, ldt: java.time.LocalDateTime, offset: java.time.ZoneOffset) {
@@ -377,6 +524,26 @@ class PeriodsRepository private constructor(private val application: Application
         }
     }
 
+    private fun calculateWorkoutBounds(w: WorkoutData): LatLngBounds? {
+        // --- ATT-352: Use persisted bounds for zero-latency aggregation ---
+        if (w.minLat != null && w.maxLat != null && w.minLng != null && w.maxLng != null) {
+            return if (w.minLat <= w.maxLat) {
+                LatLngBounds(LatLng(w.minLat, w.minLng), LatLng(w.maxLat, w.maxLng))
+            } else null
+        }
+
+        // Fallback for legacy
+        val decoded = try { PolyUtil.decode(w.mapPolyline) } catch (e: Exception) { emptyList<LatLng>() }
+        val minLat = decoded.minOfOrNull { it.latitude } ?: w.startLatLng?.latitude
+        val maxLat = decoded.maxOfOrNull { it.latitude } ?: w.startLatLng?.latitude
+        val minLng = decoded.minOfOrNull { it.longitude } ?: w.startLatLng?.longitude
+        val maxLng = decoded.maxOfOrNull { it.longitude } ?: w.startLatLng?.longitude
+
+        return if (minLat != null && maxLat != null && minLng != null && maxLng != null && minLat <= maxLat) {
+            LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng))
+        } else null
+    }
+
     private fun loadFromDatabase() {
         scope.launch {
             val isFinished = withContext(Dispatchers.IO) { dbManager.isSyncFinished() }
@@ -433,6 +600,20 @@ class PeriodsRepository private constructor(private val application: Application
                 workout.endLatLng?.let { markers.add(PeriodPeakMarker(workout.id, it, R.drawable.control_stop, "${workout.workoutName}: End", PeriodMarkerType.END)) }
                 markers
             }
+        )
+    }
+
+    private fun getAffectedPeriodRanges(ldt: java.time.LocalDateTime, offset: java.time.ZoneOffset): List<Triple<PeriodType, Long, Long>> {
+        val dayStart = ldt.toLocalDate().atStartOfDay().toEpochSecond(offset)
+        val weekStart = ldt.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toLocalDate().atStartOfDay().toEpochSecond(offset)
+        val monthStart = ldt.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay().toEpochSecond(offset)
+        val yearStart = ldt.with(TemporalAdjusters.firstDayOfYear()).toLocalDate().atStartOfDay().toEpochSecond(offset)
+
+        return listOf(
+            Triple(PeriodType.DAY, dayStart, dayStart + 86399),
+            Triple(PeriodType.WEEK, weekStart, weekStart + (7 * 86400) - 1),
+            Triple(PeriodType.MONTH, monthStart, ldt.with(TemporalAdjusters.lastDayOfMonth()).toLocalDate().atTime(23, 59, 59).toEpochSecond(offset)),
+            Triple(PeriodType.YEAR, yearStart, ldt.with(TemporalAdjusters.lastDayOfYear()).toLocalDate().atTime(23, 59, 59).toEpochSecond(offset))
         )
     }
 

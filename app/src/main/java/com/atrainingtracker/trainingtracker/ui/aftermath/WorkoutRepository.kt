@@ -50,6 +50,7 @@ import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
+import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
@@ -580,8 +581,7 @@ class WorkoutRepository private constructor(private val application: Application
                     val isNewFinish = (existing == null || !existing.finished) && freshWorkoutData.finished
                     
                     if (isNewFinish) {
-                        com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository.getInstance(application)
-                            .onWorkoutFinished(freshWorkoutData)
+                        PeriodsRepository.getInstance(application).onWorkoutFinished(freshWorkoutData)
                     }
 
                     addOrUpdateWorkout(freshWorkoutData)
