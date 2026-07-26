@@ -235,7 +235,7 @@ class PeriodsRepository private constructor(private val application: Application
         
         // 1. Build DAYS from Workouts
         val daysInMonth = workouts.groupBy { 
-            it.localDateTime.toLocalDate().atStartOfDay().toEpochSecond(OffsetDateTime.now().offset) 
+            it.localDateTime.toLocalDate().atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond() 
         }
         daysInMonth.forEach { (startS, dayWorkouts) ->
             aggregateWorkoutsToDay(dayWorkouts, startS)?.let {
@@ -245,8 +245,8 @@ class PeriodsRepository private constructor(private val application: Application
 
         // 2. Roll up WEEKs and MONTH from these DAYs
         val firstW = workouts.first()
-        val monthStart = firstW.localDateTime.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay().toEpochSecond(OffsetDateTime.now().offset)
-        val monthEnd = firstW.localDateTime.with(TemporalAdjusters.lastDayOfMonth()).toLocalDate().atTime(23, 59, 59).toEpochSecond(OffsetDateTime.now().offset)
+        val monthStart = firstW.localDateTime.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
+        val monthEnd = firstW.localDateTime.with(TemporalAdjusters.lastDayOfMonth()).toLocalDate().atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
         rollupDaysToParentPeriods(db, monthStart, monthEnd)
     }
 
@@ -255,9 +255,8 @@ class PeriodsRepository private constructor(private val application: Application
      */
     fun onWorkoutFinished(workout: WorkoutData) {
         scope.launch {
-            val zoneOffset = OffsetDateTime.now().offset
             val ldt = workout.localDateTime
-            val dayStart = ldt.toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
+            val dayStart = ldt.toLocalDate().atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
 
             withContext(Dispatchers.IO) {
                 dbManager.runInTransaction { db ->
@@ -268,7 +267,7 @@ class PeriodsRepository private constructor(private val application: Application
                     }
 
                     // 2. Propagate Upwards
-                    rollupDayToParents(db, ldt, zoneOffset)
+                    rollupDayToParents(db, ldt)
                 }
             }
             loadFromDatabase()
@@ -280,9 +279,8 @@ class PeriodsRepository private constructor(private val application: Application
      */
     fun onWorkoutDeleted(workout: WorkoutData) {
         scope.launch {
-            val zoneOffset = OffsetDateTime.now().offset
             val ldt = workout.localDateTime
-            val dayStart = ldt.toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
+            val dayStart = ldt.toLocalDate().atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
 
             withContext(Dispatchers.IO) {
                 dbManager.runInTransaction { db ->
@@ -294,7 +292,7 @@ class PeriodsRepository private constructor(private val application: Application
                             dbManager.upsertPeriod(db, it)
                         }
                     }
-                    rollupDayToParents(db, ldt, zoneOffset)
+                    rollupDayToParents(db, ldt)
                 }
             }
             loadFromDatabase()
@@ -307,11 +305,10 @@ class PeriodsRepository private constructor(private val application: Application
     fun onWorkoutSportChanged(newWorkout: WorkoutData, oldWorkout: WorkoutData) {
         scope.launch {
             Log.d(TAG, "onWorkoutSportChanged: ${oldWorkout.bSportType} -> ${newWorkout.bSportType}")
-            val zoneOffset = OffsetDateTime.now().offset
             
             withContext(Dispatchers.IO) {
                 dbManager.runInTransaction { db ->
-                    getAffectedPeriodRanges(newWorkout.localDateTime, zoneOffset).forEach { (type, start, _) ->
+                    getAffectedPeriodRanges(newWorkout.localDateTime).forEach { (type, start, _) ->
                         val period = dbManager.getSummariesInRange(type, start, start).firstOrNull() ?: return@forEach
                         
                         // Transition logic: Subtract old metrics, then recalculate the Day
@@ -461,10 +458,10 @@ class PeriodsRepository private constructor(private val application: Application
         )
     }
 
-    private fun rollupDayToParents(db: android.database.sqlite.SQLiteDatabase, ldt: java.time.LocalDateTime, offset: java.time.ZoneOffset) {
-        val weekStart = ldt.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toLocalDate().atStartOfDay().toEpochSecond(offset)
-        val monthStart = ldt.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay().toEpochSecond(offset)
-        val yearStart = ldt.with(TemporalAdjusters.firstDayOfYear()).toLocalDate().atStartOfDay().toEpochSecond(offset)
+    private fun rollupDayToParents(db: android.database.sqlite.SQLiteDatabase, ldt: java.time.LocalDateTime) {
+        val weekStart = ldt.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toLocalDate().atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
+        val monthStart = ldt.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
+        val yearStart = ldt.with(TemporalAdjusters.firstDayOfYear()).toLocalDate().atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
 
         // 1. Recalculate Week from Days
         val weekEnd = weekStart + (7 * 86400) - 1
@@ -473,13 +470,13 @@ class PeriodsRepository private constructor(private val application: Application
         else aggregateChildrenToParent(daysInWeek, PeriodType.WEEK, weekStart, weekEnd)?.let { dbManager.upsertPeriod(db, it) }
 
         // 2. Recalculate Month from Days
-        val monthEnd = ldt.with(TemporalAdjusters.lastDayOfMonth()).toLocalDate().atTime(23, 59, 59).toEpochSecond(offset)
+        val monthEnd = ldt.with(TemporalAdjusters.lastDayOfMonth()).toLocalDate().atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
         val daysInMonth = dbManager.getSummariesInRange(PeriodType.DAY, monthStart, monthEnd)
         if (daysInMonth.isEmpty()) dbManager.deletePeriod(db, PeriodType.MONTH, monthStart)
         else aggregateChildrenToParent(daysInMonth, PeriodType.MONTH, monthStart, monthEnd)?.let { dbManager.upsertPeriod(db, it) }
 
         // 3. Recalculate Year from Months
-        val yearEnd = ldt.with(TemporalAdjusters.lastDayOfYear()).toLocalDate().atTime(23, 59, 59).toEpochSecond(offset)
+        val yearEnd = ldt.with(TemporalAdjusters.lastDayOfYear()).toLocalDate().atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
         val monthsInYear = dbManager.getSummariesInRange(PeriodType.MONTH, yearStart, yearEnd)
         if (monthsInYear.isEmpty()) dbManager.deletePeriod(db, PeriodType.YEAR, yearStart)
         else aggregateChildrenToParent(monthsInYear, PeriodType.YEAR, yearStart, yearEnd)?.let { dbManager.upsertPeriod(db, it) }
@@ -572,7 +569,12 @@ class PeriodsRepository private constructor(private val application: Application
         val maxLng = if (spatialChildren.isNotEmpty()) spatialChildren.maxOf { it.maxLng } else -180.0
 
         val label = when(type) {
-            PeriodType.WEEK -> "Week ${OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(start), java.time.ZoneId.systemDefault()).get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)}"
+            PeriodType.WEEK -> {
+                val dt = OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(start), java.time.ZoneId.systemDefault())
+                val week = dt.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+                val year = dt.get(IsoFields.WEEK_BASED_YEAR)
+                "$year-W${week.toString().padStart(2, '0')}"
+            }
             PeriodType.MONTH -> OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(start), java.time.ZoneId.systemDefault()).format(monthFormatter)
             PeriodType.YEAR -> OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(start), java.time.ZoneId.systemDefault()).format(yearFormatter)
             else -> ""
@@ -704,17 +706,17 @@ class PeriodsRepository private constructor(private val application: Application
         )
     }
 
-    private fun getAffectedPeriodRanges(ldt: java.time.LocalDateTime, offset: java.time.ZoneOffset): List<Triple<PeriodType, Long, Long>> {
-        val dayStart = ldt.toLocalDate().atStartOfDay().toEpochSecond(offset)
-        val weekStart = ldt.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toLocalDate().atStartOfDay().toEpochSecond(offset)
-        val monthStart = ldt.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay().toEpochSecond(offset)
-        val yearStart = ldt.with(TemporalAdjusters.firstDayOfYear()).toLocalDate().atStartOfDay().toEpochSecond(offset)
+    private fun getAffectedPeriodRanges(ldt: java.time.LocalDateTime): List<Triple<PeriodType, Long, Long>> {
+        val dayStart = ldt.toLocalDate().atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
+        val weekStart = ldt.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toLocalDate().atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
+        val monthStart = ldt.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
+        val yearStart = ldt.with(TemporalAdjusters.firstDayOfYear()).toLocalDate().atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
 
         return listOf(
             Triple(PeriodType.DAY, dayStart, dayStart + 86399),
             Triple(PeriodType.WEEK, weekStart, weekStart + (7 * 86400) - 1),
-            Triple(PeriodType.MONTH, monthStart, ldt.with(TemporalAdjusters.lastDayOfMonth()).toLocalDate().atTime(23, 59, 59).toEpochSecond(offset)),
-            Triple(PeriodType.YEAR, yearStart, ldt.with(TemporalAdjusters.lastDayOfYear()).toLocalDate().atTime(23, 59, 59).toEpochSecond(offset))
+            Triple(PeriodType.MONTH, monthStart, ldt.with(TemporalAdjusters.lastDayOfMonth()).toLocalDate().atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toEpochSecond()),
+            Triple(PeriodType.YEAR, yearStart, ldt.with(TemporalAdjusters.lastDayOfYear()).toLocalDate().atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toEpochSecond())
         )
     }
 

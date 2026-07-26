@@ -56,7 +56,8 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
                "PeriodSummaries_v18.db", "PeriodSummaries_v18.db-shm", "PeriodSummaries_v18.db-wal",
                "PeriodSummaries_v19.db", "PeriodSummaries_v19.db-shm", "PeriodSummaries_v19.db-wal",
                "PeriodSummaries_v20.db", "PeriodSummaries_v20.db-shm", "PeriodSummaries_v20.db-wal",
-               "PeriodSummaries_v21.db", "PeriodSummaries_v21.db-shm", "PeriodSummaries_v21.db-wal").forEach {
+               "PeriodSummaries_v21.db", "PeriodSummaries_v21.db-shm", "PeriodSummaries_v21.db-wal",
+               "PeriodSummaries_v22.db", "PeriodSummaries_v22.db-shm", "PeriodSummaries_v22.db-wal").forEach {
             val file = context.getDatabasePath(it)
             if (file.exists()) {
                 Log.i(TAG, "Cleaning up experimental database file: $it")
@@ -433,7 +434,7 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
     }
 
     private class PeriodSummariesDbHelper(context: Context) : SQLiteOpenHelper(
-        context, "PeriodSummaries.db", null, 22
+        context, "PeriodSummaries.db", null, 23
     ) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(PeriodSummariesContract.CREATE_TABLE)
@@ -443,8 +444,8 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            // Relational Restart for ATT-346 (v22: Final Key Harmonization & Synchronous Pumping)
-            if (oldVersion < 22) {
+            // Relational Restart for ATT-346 (v23: Stabilized Zone-Aware Timestamps)
+            if (oldVersion < 23) {
                 db.execSQL("DROP TABLE IF EXISTS ${SyncStatusContract.TABLE_NAME}")
                 db.execSQL("DROP TABLE IF EXISTS ${DetailedStatsContract.TABLE_NAME}")
                 db.execSQL("DROP TABLE IF EXISTS ${SportStatsContract.TABLE_NAME}")
