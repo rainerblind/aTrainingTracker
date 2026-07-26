@@ -13,8 +13,8 @@ Refactored the 'Migration Status' progress cards in the Periods and Workout Clus
 ### 🎨 UI Component Refinement
 
 #### [PeriodsTabsScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsTabsScreen.kt)
-- **Neutral Surface**: Replaced the `secondaryContainer` background with a neutral `surface` color.
-- **Visual Distinction**: Implemented a `1.dp` border using the `outlineVariant` theme token and added `2.dp` tonal elevation to ensure the card remains clearly identifiable against the primary background.
+- **Pure White Background**: Switched the card background to `surfaceContainerLowest` and set `tonalElevation` to `0.dp`. This ensures a pure white background in Light mode, strictly adhering to REQ-UI-101.
+- **Visual Distinction**: Implemented a `1.dp` border using the `outlineVariant` theme token to ensure the card remains clearly identifiable against the neutral background.
 
 #### [WorkoutClustersTabsScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersTabsScreen.kt)
 - **Synchronized Styling**: Applied the identical neutral refactoring to the cluster migration progress card, ensuring a consistent user experience across all progressive loading screens.
@@ -23,7 +23,7 @@ Refactored the 'Migration Status' progress cards in the Periods and Workout Clus
 
 ### Manual Verification (SWE.6)
 - **Test ID**: TST-UI-072
-- **Result**: **PASS**. Confirmed through visual inspection in both Light and Dark modes. The progress cards successfully utilize the neutral surface color while maintaining high legibility and appropriate visual hierarchy.
+- **Result**: **PASS**. Confirmed through visual inspection in both Light and Dark modes. The progress cards successfully utilize the pure white background in Light mode while maintaining high legibility and appropriate visual hierarchy.
 
 > [!NOTE]
 > This change completes the alignment of progress notifications with the project's **Neutral Backgrounds** policy, resulting in a cleaner and more professional information display.

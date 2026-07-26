@@ -93,10 +93,10 @@ fun PeriodsTabsScreen(
                     if (migrationStatus != null) {
                         Surface(
                             modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.surface,
+                            color = MaterialTheme.colorScheme.surfaceContainerLowest,
                             shape = RoundedCornerShape(12.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                            tonalElevation = 2.dp
+                            tonalElevation = 0.dp
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Text(
