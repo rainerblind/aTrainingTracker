@@ -15,6 +15,7 @@ import android.content.Context
 import android.util.Log
 import android.util.Xml
 import com.atrainingtracker.BuildConfig
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -123,6 +124,7 @@ object LegacyImportEngine {
                     return@forEachIndexed
                 }
 
+                listener?.onStatus(context.getString(R.string.legacy_import__downloading_dropbox, entry.name))
                 val tempFile = File(tempDir, entry.name)
                 FileOutputStream(tempFile).use { fos ->
                     dbxClient.files().download(entry.pathLower).download(fos)
@@ -156,15 +158,15 @@ object LegacyImportEngine {
             }
             
             val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
-            val targetDb = samplesDbManager.database
-
+            
             var firstTime: String? = null
             var sportName: String? = null
             val points = mutableListOf<LatLng>()
             val altitudes = mutableListOf<Double>()
             val distances = mutableListOf<Double>()
             
-            var tableCreated = samplesDbManager.existsTable(baseFileName)
+            val foundSensors = mutableSetOf<SensorType>()
+            val bufferedSamples = mutableListOf<ContentValues>()
 
             FileInputStream(tcxFile).use { fis ->
                 val parser = Xml.newPullParser()
@@ -213,42 +215,61 @@ object LegacyImportEngine {
                                 }
                                 "LatitudeDegrees" -> if (inTrackpoint) {
                                     val lat = parser.nextText().toDoubleOrNull()
-                                    values.put(SensorType.LATITUDE.name, lat)
-                                    currentLat = lat
+                                    if (lat != null) {
+                                        values.put(SensorType.LATITUDE.name, lat)
+                                        currentLat = lat
+                                        foundSensors.add(SensorType.LATITUDE)
+                                    }
                                 }
                                 "LongitudeDegrees" -> if (inTrackpoint) {
                                     val lng = parser.nextText().toDoubleOrNull()
-                                    values.put(SensorType.LONGITUDE.name, lng)
-                                    currentLng = lng
+                                    if (lng != null) {
+                                        values.put(SensorType.LONGITUDE.name, lng)
+                                        currentLng = lng
+                                        foundSensors.add(SensorType.LONGITUDE)
+                                    }
                                 }
                                 "AltitudeMeters" -> if (inTrackpoint) {
                                     currentAlt = parser.nextText().toDoubleOrNull()
-                                    values.put(SensorType.ALTITUDE.name, currentAlt)
+                                    if (currentAlt != null) {
+                                        values.put(SensorType.ALTITUDE.name, currentAlt)
+                                        foundSensors.add(SensorType.ALTITUDE)
+                                    }
                                 }
                                 "DistanceMeters" -> if (inTrackpoint) {
                                     currentDist = parser.nextText().toDoubleOrNull()
-                                    values.put(SensorType.DISTANCE_m.name, currentDist)
+                                    if (currentDist != null) {
+                                        values.put(SensorType.DISTANCE_m.name, currentDist)
+                                        foundSensors.add(SensorType.DISTANCE_m)
+                                    }
                                 }
                                 "Value" -> if (inTrackpoint && parser.getAttributeValue(null, "xsi:type") == null) {
-                                    values.put(SensorType.HR.name, parser.nextText())
+                                    val hr = parser.nextText().toIntOrNull()
+                                    if (hr != null) {
+                                        values.put(SensorType.HR.name, hr)
+                                        foundSensors.add(SensorType.HR)
+                                    }
                                 }
-                                "Cadence" -> if (inTrackpoint) values.put(SensorType.CADENCE.name, parser.nextText())
-                                "Watts" -> if (inTrackpoint) values.put(SensorType.POWER.name, parser.nextText())
+                                "Cadence" -> if (inTrackpoint) {
+                                    val cad = parser.nextText().toIntOrNull()
+                                    if (cad != null) {
+                                        values.put(SensorType.CADENCE.name, cad)
+                                        foundSensors.add(SensorType.CADENCE)
+                                    }
+                                }
+                                "Watts" -> if (inTrackpoint) {
+                                    val pwr = parser.nextText().toIntOrNull()
+                                    if (pwr != null) {
+                                        values.put(SensorType.POWER.name, pwr)
+                                        foundSensors.add(SensorType.POWER)
+                                    }
+                                }
                             }
                         }
                         XmlPullParser.END_TAG -> {
                             if (name == "Trackpoint") {
                                 if (values.containsKey("time")) {
-                                    if (!isWorkoutExisting(summaryDb, baseFileName) || !tableCreated) {
-                                        if (!tableCreated) {
-                                            val sensorTypes = mutableListOf(SensorType.LATITUDE, SensorType.LONGITUDE, SensorType.ALTITUDE, 
-                                                SensorType.DISTANCE_m, SensorType.HR, SensorType.CADENCE, SensorType.POWER)
-                                            samplesDbManager.createNewTable(baseFileName, sensorTypes)
-                                            tableCreated = true
-                                            targetDb.beginTransaction()
-                                        }
-                                        targetDb.insert(WorkoutSamplesDatabaseManager.getTableName(baseFileName), null, values)
-                                    }
+                                    bufferedSamples.add(values)
                                 }
 
                                 if (currentLat != null && currentLng != null) {
@@ -262,8 +283,20 @@ object LegacyImportEngine {
                     }
                     eventType = parser.next()
                 }
-                if (targetDb.inTransaction()) {
+            }
+
+            // Post-parsing: Bulk insertion and dynamic table creation (ATT-357)
+            if (bufferedSamples.isNotEmpty()) {
+                samplesDbManager.createNewTable(baseFileName, foundSensors.toList())
+                val targetDb = samplesDbManager.database
+                val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+                targetDb.beginTransaction()
+                try {
+                    bufferedSamples.forEach { sampleValues ->
+                        targetDb.insert(tableName, null, sampleValues)
+                    }
                     targetDb.setTransactionSuccessful()
+                } finally {
                     targetDb.endTransaction()
                 }
             }
@@ -394,16 +427,34 @@ object LegacyImportEngine {
         }
 
         // 3. Map & Streams
-        val polyline = PolyUtil.encode(points)
+        val polyline = if (points.isNotEmpty()) PolyUtil.encode(points) else ""
         values.put(WorkoutSummaries.MAP_POLYLINE, polyline)
-        values.put(WorkoutSummaries.ALTITUDE_STREAM, NumericalEncodingUtils.encodeDoubles(altitudes))
-        values.put(WorkoutSummaries.DISTANCE_STREAM, NumericalEncodingUtils.encodeDoubles(distances))
+        if (altitudes.isNotEmpty()) {
+            values.put(WorkoutSummaries.ALTITUDE_STREAM, NumericalEncodingUtils.encodeDoubles(altitudes))
+        }
+        if (distances.isNotEmpty()) {
+            values.put(WorkoutSummaries.DISTANCE_STREAM, NumericalEncodingUtils.encodeDoubles(distances))
+        }
+
+        // --- ATT-352: Persist spatial bounds for zero-latency periods framing ---
+        if (points.isNotEmpty()) {
+            val minLat = points.minOf { it.latitude }
+            val maxLat = points.maxOf { it.latitude }
+            val minLng = points.minOf { it.longitude }
+            val maxLng = points.maxOf { it.longitude }
+            values.put(WorkoutSummaries.BOUND_MIN_LAT, minLat)
+            values.put(WorkoutSummaries.BOUND_MIN_LNG, minLng)
+            values.put(WorkoutSummaries.BOUND_MAX_LAT, maxLat)
+            values.put(WorkoutSummaries.BOUND_MAX_LNG, maxLng)
+        }
+
         // Use the static field safely
         values.put("extremumValuesCalculated", 1)
         
         summariesDb.database.update(WorkoutSummaries.TABLE, values, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
 
         // 4. Persistence of Extrema (ATT-299, ATT-301)
+        // ... (remaining sensors logic)
         val sensorsToCalculate = listOf(
             SensorType.HR, SensorType.CADENCE, SensorType.POWER, SensorType.SPEED_mps, 
             SensorType.ALTITUDE, SensorType.TEMPERATURE
@@ -448,7 +499,7 @@ object LegacyImportEngine {
             summariesDb.updateExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, maxDisp, apex)
 
             val clusterEngine = WorkoutClusterEngine.getInstance(context)
-            val matchingCluster = clusterEngine.suggestCluster(start, end, apex, totalDistance, null)
+            val matchingCluster = clusterEngine.suggestCluster(start, end, apex, totalDistance, null, bSportType)
             
             if (matchingCluster != null) {
                 var sportId = summariesDb.getLong(workoutId, WorkoutSummaries.SPORT_ID) ?: -1L
@@ -494,6 +545,12 @@ object LegacyImportEngine {
                 }
             }
         }
+
+        // 6. Notify System (ATT-346 Hook)
+        // This triggers WorkoutRepository to reload memory and notify PeriodsRepository
+        val intent = android.content.Intent(com.atrainingtracker.trainingtracker.tracker.TrackerService.WORKOUT_UPDATED_INTENT)
+        intent.putExtra(com.atrainingtracker.trainingtracker.tracker.TrackerService.WORKOUT_ID, workoutId)
+        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
     }
 
     private fun calculateCumulativeDistance(points: List<LatLng>): Double {

@@ -42,7 +42,11 @@ data class RouteSummary(
     val elevationGain: Double,
     val bSportType: BSportType,
     val source: RouteSource,
-    val clusterId: Long = -1L
+    val clusterId: Long = -1L,
+    val minLat: Double? = null,
+    val minLng: Double? = null,
+    val maxLat: Double? = null,
+    val maxLng: Double? = null
 )
 
 enum class RouteSource(
@@ -120,7 +124,21 @@ class RoutesDatabaseManager private constructor(context: Context) {
         val db = getDatabase()
         db.beginTransaction()
         return try {
-            // 1. Insert Summary
+            // 1. Calculate Bounds if missing (ATT-352)
+            var minLat = summary.minLat; var maxLat = summary.maxLat
+            var minLng = summary.minLng; var maxLng = summary.maxLng
+            
+            if (minLat == null && path.isNotEmpty()) {
+                minLat = 90.0; maxLat = -90.0; minLng = 180.0; maxLng = -180.0
+                path.forEach { p ->
+                    if (p.latLng.latitude < minLat!!) minLat = p.latLng.latitude
+                    if (p.latLng.latitude > maxLat!!) maxLat = p.latLng.latitude
+                    if (p.latLng.longitude < minLng!!) minLng = p.latLng.longitude
+                    if (p.latLng.longitude > maxLng!!) maxLng = p.latLng.longitude
+                }
+            }
+
+            // 2. Insert Summary
             val values = ContentValues().apply {
                 put(RouteContract.COLUMN_EXTERNAL_ID, summary.externalId)
                 put(RouteContract.COLUMN_NAME, summary.name)
@@ -130,6 +148,10 @@ class RoutesDatabaseManager private constructor(context: Context) {
                 put(RouteContract.COLUMN_SPORT_TYPE, summary.bSportType.name)
                 put(RouteContract.COLUMN_SOURCE, summary.source.name)
                 put(RouteContract.COLUMN_CLUSTER_ID, summary.clusterId)
+                put(RouteContract.COLUMN_BOUND_MIN_LAT, minLat)
+                put(RouteContract.COLUMN_BOUND_MIN_LNG, minLng)
+                put(RouteContract.COLUMN_BOUND_MAX_LAT, maxLat)
+                put(RouteContract.COLUMN_BOUND_MAX_LNG, maxLng)
             }
             val routeId = db.insert(RouteContract.TABLE_ROUTES, null, values)
 
@@ -163,6 +185,10 @@ class RoutesDatabaseManager private constructor(context: Context) {
             put(RouteContract.COLUMN_DESCRIPTION, summary.description)
             put(RouteContract.COLUMN_SPORT_TYPE, summary.bSportType.name)
             put(RouteContract.COLUMN_CLUSTER_ID, summary.clusterId)
+            put(RouteContract.COLUMN_BOUND_MIN_LAT, summary.minLat)
+            put(RouteContract.COLUMN_BOUND_MIN_LNG, summary.minLng)
+            put(RouteContract.COLUMN_BOUND_MAX_LAT, summary.maxLat)
+            put(RouteContract.COLUMN_BOUND_MAX_LNG, summary.maxLng)
         }
 
         return db.update(
@@ -288,6 +314,10 @@ class RoutesDatabaseManager private constructor(context: Context) {
         val sportIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_SPORT_TYPE)
         val sourceIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_SOURCE)
         val clusterIdIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_CLUSTER_ID)
+        val minLatIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_BOUND_MIN_LAT)
+        val minLngIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_BOUND_MIN_LNG)
+        val maxLatIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_BOUND_MAX_LAT)
+        val maxLngIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_BOUND_MAX_LNG)
 
         val sportString = cursor.getString(sportIdx)
         val sportType = try {
@@ -306,7 +336,11 @@ class RoutesDatabaseManager private constructor(context: Context) {
             elevationGain = cursor.getDouble(elevIdx),
             bSportType = sportType,
             source = RouteSource.fromString(cursor.getString(sourceIdx)),
-            clusterId = cursor.getLong(clusterIdIdx)
+            clusterId = cursor.getLong(clusterIdIdx),
+            minLat = if (cursor.isNull(minLatIdx)) null else cursor.getDouble(minLatIdx),
+            minLng = if (cursor.isNull(minLngIdx)) null else cursor.getDouble(minLngIdx),
+            maxLat = if (cursor.isNull(maxLatIdx)) null else cursor.getDouble(maxLatIdx),
+            maxLng = if (cursor.isNull(maxLngIdx)) null else cursor.getDouble(maxLngIdx)
         )
     }
 
@@ -358,7 +392,10 @@ class RoutesDatabaseManager private constructor(context: Context) {
         const val COLUMN_SOURCE = "source"
         const val COLUMN_IS_SELECTED = "is_selected"
         const val COLUMN_CLUSTER_ID = "cluster_id"
-        // const val COLUMN_MAP_POLYLINE = "map_polyline"
+        const val COLUMN_BOUND_MIN_LAT = "bound_min_lat"
+        const val COLUMN_BOUND_MIN_LNG = "bound_min_lng"
+        const val COLUMN_BOUND_MAX_LAT = "bound_max_lat"
+        const val COLUMN_BOUND_MAX_LNG = "bound_max_lng"
 
         const val TABLE_ROUTE_POINTS = "route_points"
         const val COLUMN_POINT_ID = "id"
@@ -379,7 +416,11 @@ class RoutesDatabaseManager private constructor(context: Context) {
             $COLUMN_SPORT_TYPE TEXT,
             $COLUMN_SOURCE TEXT,
             $COLUMN_IS_SELECTED INTEGER,
-            $COLUMN_CLUSTER_ID INTEGER
+            $COLUMN_CLUSTER_ID INTEGER,
+            $COLUMN_BOUND_MIN_LAT REAL,
+            $COLUMN_BOUND_MIN_LNG REAL,
+            $COLUMN_BOUND_MAX_LAT REAL,
+            $COLUMN_BOUND_MAX_LNG REAL
         );
     """
 
@@ -408,7 +449,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
             // const val DB_VERSION = 2 // Storing BSportType as String.
             // const val DB_VERSION = 3    // No more storing the polyline.
             // const val DB_VERSION = 5    // Added the description
-            const val DB_VERSION = 6    // Added the cluster_id link (SCRUM-207)
+            const val DB_VERSION = 7    // Added spatial bounds (ATT-352)
 
             private const val TAG = "RoutesDbHelper"
             private val DEBUG = TrainingApplication.getDebug(true)
@@ -437,6 +478,52 @@ class RoutesDatabaseManager private constructor(context: Context) {
 
             if (oldVersion == 5) {
                 db.execSQL("ALTER TABLE ${RouteContract.TABLE_ROUTES} ADD COLUMN ${RouteContract.COLUMN_CLUSTER_ID} INTEGER DEFAULT -1")
+            }
+
+            if (oldVersion < 7) {
+                try {
+                    db.execSQL("ALTER TABLE ${RouteContract.TABLE_ROUTES} ADD COLUMN ${RouteContract.COLUMN_BOUND_MIN_LAT} REAL")
+                    db.execSQL("ALTER TABLE ${RouteContract.TABLE_ROUTES} ADD COLUMN ${RouteContract.COLUMN_BOUND_MIN_LNG} REAL")
+                    db.execSQL("ALTER TABLE ${RouteContract.TABLE_ROUTES} ADD COLUMN ${RouteContract.COLUMN_BOUND_MAX_LAT} REAL")
+                    db.execSQL("ALTER TABLE ${RouteContract.TABLE_ROUTES} ADD COLUMN ${RouteContract.COLUMN_BOUND_MAX_LNG} REAL")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Bounds columns might already exist: ${e.message}")
+                }
+                migrateRouteBounds(db)
+            }
+        }
+
+        private fun migrateRouteBounds(db: SQLiteDatabase) {
+            Log.i(TAG, "Populating spatial bounds for routes...")
+            db.query(RouteContract.TABLE_ROUTES, arrayOf(RouteContract.COLUMN_ID), null, null, null, null, null).use { cursor ->
+                while (cursor.moveToNext()) {
+                    val routeId = cursor.getLong(0)
+                    db.query(RouteContract.TABLE_ROUTE_POINTS, 
+                        arrayOf(RouteContract.COLUMN_LAT, RouteContract.COLUMN_LNG), 
+                        "${RouteContract.COLUMN_ROUTE_ID_FK} = ?", 
+                        arrayOf(routeId.toString()), null, null, null).use { pointCursor ->
+                        
+                        if (pointCursor.moveToFirst()) {
+                            var minLat = 90.0; var maxLat = -90.0; var minLng = 180.0; var maxLng = -180.0
+                            do {
+                                val lat = pointCursor.getDouble(0)
+                                val lng = pointCursor.getDouble(1)
+                                if (lat < minLat) minLat = lat
+                                if (lat > maxLat) maxLat = lat
+                                if (lng < minLng) minLng = lng
+                                if (lng > maxLng) maxLng = lng
+                            } while (pointCursor.moveToNext())
+                            
+                            val cv = ContentValues().apply {
+                                put(RouteContract.COLUMN_BOUND_MIN_LAT, minLat)
+                                put(RouteContract.COLUMN_BOUND_MIN_LNG, minLng)
+                                put(RouteContract.COLUMN_BOUND_MAX_LAT, maxLat)
+                                put(RouteContract.COLUMN_BOUND_MAX_LNG, maxLng)
+                            }
+                            db.update(RouteContract.TABLE_ROUTES, cv, "${RouteContract.COLUMN_ID} = ?", arrayOf(routeId.toString()))
+                        }
+                    }
+                }
             }
         }
     }

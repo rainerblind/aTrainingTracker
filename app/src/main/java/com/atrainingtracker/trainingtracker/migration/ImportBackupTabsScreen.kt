@@ -57,6 +57,7 @@ import com.atrainingtracker.trainingtracker.ui.clusters.ClusterTuningContent
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.*
 import com.google.maps.android.PolyUtil
@@ -142,12 +143,13 @@ fun ImportBackupTabsScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                                .height(LayoutConstants.HEADER_TITLE_ROW_HEIGHT)
+                                .padding(horizontal = 16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 text = stringResource(R.string.import_backup),
-                                style = MaterialTheme.typography.headlineSmall,
+                                style = MaterialTheme.typography.titleLarge,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
                         }
@@ -331,7 +333,9 @@ fun PreImportTuningDialog(
                     apexTolerance = viewModel.apexTolerance,
                     onApexToleranceChange = { viewModel.apexTolerance = it },
                     distanceTolerance = viewModel.distanceTolerance,
-                    onDistanceToleranceChange = { viewModel.distanceTolerance = it }
+                    onDistanceToleranceChange = { viewModel.distanceTolerance = it },
+                    useSportTypeForClustering = viewModel.useSportTypeForClustering,
+                    onUseSportTypeChange = { viewModel.useSportTypeForClustering = it }
                 )
             }
         },

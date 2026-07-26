@@ -920,6 +920,10 @@
         <item quantity="other">%1$d Trainingen</item>
     </plurals>
     <string name="workout_periods__longest_workout">Langste training</string>
+    <string name="workout_periods__migration_querying">Trainingsgeschiedenis laden…</string>
+    <string name="workout_periods__migration_reading">Training %1$d van %2$d lezen…</string>
+    <string name="workout_periods__migration_syncing">Synchroniseren %1$s…</string>
+    <string name="workout_periods__migration_finalizing">Jaartotalen afronden…</string>
 
     <!-- share screenshots -->
     <string name="share">Delen</string>
@@ -1011,7 +1015,16 @@
     <string name="cluster_suggestions_content_desc">Suggesties</string>
     <string name="cluster_autoname_format">%1$s #%2$d</string>
     <string name="cluster_delete_title">Workoutcluster verwijderen</string>
-    <string name="cluster_delete_message">Weet u zeker dat u dit workoutcluster wilt verwijderen? De bijbehorende trainingen worden niet verwijderd, maar ze worden niet meer onder dit cluster gegroepeerd.</string>
+    <string name="cluster_delete_message">Weet u zeker dat u dit workoutcluster wilt verwijderen? De bijbehorende trainingen worden nicht verwijderd, maar ze worden niet meer onder dit cluster gegroepeerd.</string>
+    <string name="cluster_migration_title">Routefamilies analyseren…</string>
+    <string name="cluster_migration_loading">Routefamilies laden…</string>
+    <string name="cluster_migration_healing">Geschiedenisintegriteit controleren…</string>
+    <string name="cluster_migration_previews">Familievoorbeelden voorbereiden (%1$d van %2$d)…</string>
+    <string name="cluster_migration_processing_routes">Routes verwerken…</string>
+    <string name="cluster_migration_processing_workouts">Training %1$d van %2$d verwerken…</string>
+    <string name="legacy_import__scanning_dropbox">%1$s scannen op Dropbox…</string>
+    <string name="legacy_import__downloading_dropbox">%1$s downloaden van Dropbox…</string>
+    <string name="migration_phase_label">Fase %1$d: %2$s</string>
 
     <string name="unclustered">Open</string>
     <string name="no_unclustered_workouts">Alle trainingen zijn gegroepeerd.</string>

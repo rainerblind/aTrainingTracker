@@ -61,9 +61,19 @@ fun SegmentOnMapScreen(
 ) {
     val bSportType = segment?.bSportType ?: segmentSummary?.bSportType ?: BSportType.UNKNOWN
 
+    val segmentBounds = remember(segmentSummary) {
+        if (segmentSummary?.minLat != null && segmentSummary.maxLat != null && segmentSummary.minLng != null && segmentSummary.maxLng != null) {
+            com.google.android.gms.maps.model.LatLngBounds(
+                LatLng(segmentSummary.minLat, segmentSummary.minLng),
+                LatLng(segmentSummary.maxLat, segmentSummary.maxLng)
+            )
+        } else null
+    }
+
     MapDetailLayout(
         bSportType = bSportType,
-        zoomFocus = MapZoomFocus.FIT_PRIMARY,
+        zoomFocus = if (segmentBounds != null) MapZoomFocus.EXPLICIT_BOUNDS else MapZoomFocus.FIT_PRIMARY,
+        initialBounds = segmentBounds,
         activeScrubPath = segment?.path,
         useStatusBarsPadding = useStatusBarsPadding,
         showMap = showMap,

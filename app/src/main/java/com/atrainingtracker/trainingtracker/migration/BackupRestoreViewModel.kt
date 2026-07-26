@@ -32,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
@@ -70,6 +71,9 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         .map { it.size }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+    // Backpressure control: Limit pending UI interactions to 10 to ensure prompt naming (ATT-349)
+    private val interactionSemaphore = Semaphore(10)
+
     fun provideClusterDecision(clusterId: Long?, name: String?) {
         val currentQueue = _interactionQueue.value
         if (currentQueue.isNotEmpty()) {
@@ -106,10 +110,11 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
     var backupIntervalDays by mutableIntStateOf(prefs.getString("backup_interval_days", "1")?.toInt() ?: 1)
         private set
 
-    // Clustering Tolerances (ATT-315)
+    // Clustering Tolerances (ATT-315/350)
     var endpointTolerance by mutableStateOf(TrainingApplication.getClusterTolEndpoints())
     var apexTolerance by mutableStateOf(TrainingApplication.getClusterTolApex())
     var distanceTolerance by mutableStateOf(TrainingApplication.getClusterTolDistance())
+    var useSportTypeForClustering by mutableStateOf(TrainingApplication.useSportTypeForClustering())
 
     fun updateAutomatedBackupsEnabled(enabled: Boolean) {
         prefs.edit().putBoolean("automated_backups", enabled).apply()
@@ -128,6 +133,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             .putFloat(TrainingApplication.SP_CLUSTER_TOL_ENDPOINTS, endpointTolerance)
             .putFloat(TrainingApplication.SP_CLUSTER_TOL_APEX, apexTolerance)
             .putFloat(TrainingApplication.SP_CLUSTER_TOL_DISTANCE, distanceTolerance)
+            .putBoolean(TrainingApplication.SP_CLUSTER_USE_SPORT_TYPE, useSportTypeForClustering)
             .apply()
     }
 
@@ -322,6 +328,9 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             bSportType: BSportType,
             polyline: String
         ): Pair<Long?, String?> {
+            // ATT-349: Throttling. Pause background engine if 10 items are already pending resolution.
+            interactionSemaphore.acquire()
+
             val deferred = CompletableDeferred<Pair<Long?, String?>>()
             
             // ATT-316: Add to queue and wait. 
@@ -330,6 +339,9 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             _interactionQueue.update { it + interaction }
             
             val decision = deferred.await()
+
+            // Resolve permit once user has made a decision
+            interactionSemaphore.release()
             return decision
         }
     }

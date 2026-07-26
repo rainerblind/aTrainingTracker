@@ -923,6 +923,10 @@
         <item quantity="other">%1$d Sesiones</item>
     </plurals>
     <string name="workout_periods__longest_workout">Sesión más larga</string>
+    <string name="workout_periods__migration_querying">Cargando historial de entrenamiento…</string>
+    <string name="workout_periods__migration_reading">Leyendo entrenamiento %1$d de %2$d…</string>
+    <string name="workout_periods__migration_syncing">Sincronizando %1$s…</string>
+    <string name="workout_periods__migration_finalizing">Finalizando totales anuales…</string>
 
     <!-- share screenshots -->
     <string name="share">Compartir</string>
@@ -1015,6 +1019,15 @@
     <string name="cluster_autoname_format">%1$s #%2$d</string>
     <string name="cluster_delete_title">Eliminar grupo de entrenamiento</string>
     <string name="cluster_delete_message">¿Estás seguro de que deseas eliminar este grupo de entrenamiento? Esto no eliminará los entrenamientos asociados, pero ya no estarán agrupados bajo este grupo.</string>
+    <string name="cluster_migration_title">Analizando familias de rutas…</string>
+    <string name="cluster_migration_loading">Cargando familias de rutas…</string>
+    <string name="cluster_migration_healing">Verificando la integridad del historial…</string>
+    <string name="cluster_migration_previews">Preparando vistas previas de familias (%1$d de %2$d)…</string>
+    <string name="cluster_migration_processing_routes">Procesando rutas…</string>
+    <string name="cluster_migration_processing_workouts">Procesando entrenamiento %1$d de %2$d…</string>
+    <string name="legacy_import__scanning_dropbox">Escaneando %1$s en Dropbox…</string>
+    <string name="legacy_import__downloading_dropbox">Descargando %1$s de Dropbox…</string>
+    <string name="migration_phase_label">Fase %1$d: %2$s</string>
 
     <string name="unclustered">Abierto</string>
     <string name="no_unclustered_workouts">Todos los entrenamientos están agrupados.</string>

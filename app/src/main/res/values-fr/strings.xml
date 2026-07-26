@@ -919,6 +919,10 @@
         <item quantity="other">%1$d Séances</item>
     </plurals>
     <string name="workout_periods__longest_workout">Plus longue séance</string>
+    <string name="workout_periods__migration_querying">Chargement de l\'historique d\'entraînement…</string>
+    <string name="workout_periods__migration_reading">Lecture de l\'entraînement %1$d sur %2$d…</string>
+    <string name="workout_periods__migration_syncing">Synchronisation de %1$s…</string>
+    <string name="workout_periods__migration_finalizing">Finalisation des totaux annuels…</string>
 
     <!-- share screenshots -->
     <string name="share">Partager</string>
@@ -1011,6 +1015,15 @@
     <string name="cluster_autoname_format">%1$s #%2$d</string>
     <string name="cluster_delete_title">Supprimer le groupe d’itinéraires</string>
     <string name="cluster_delete_message">Êtes-vous sûr de vouloir supprimer ce groupe d’itinéraires ? Cela ne supprimera pas les entraînements associés, mais ils ne seront plus regroupés sous ce groupe.</string>
+    <string name="cluster_migration_title">Analyse des familles d\'itinéraires…</string>
+    <string name="cluster_migration_loading">Chargement des familles d\'itinéraires…</string>
+    <string name="cluster_migration_healing">Vérification de l\'intégrité de l\'historique…</string>
+    <string name="cluster_migration_previews">Préparation des aperçus de familles (%1$d sur %2$d)…</string>
+    <string name="cluster_migration_processing_routes">Traitement des itinéraires…</string>
+    <string name="cluster_migration_processing_workouts">Traitement de l\'entraînement %1$d sur %2$d…</string>
+    <string name="legacy_import__scanning_dropbox">Analyse de %1$s sur Dropbox…</string>
+    <string name="legacy_import__downloading_dropbox">Téléchargement de %1$s depuis Dropbox…</string>
+    <string name="migration_phase_label">Phase %1$d : %2$s</string>
 
     <string name="unclustered">Ouvert</string>
     <string name="no_unclustered_workouts">Tous les entraînements sont groupés.</string>

@@ -36,6 +36,7 @@ import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
@@ -50,6 +51,7 @@ import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
+import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
@@ -383,30 +385,83 @@ class WorkoutRepository private constructor(private val application: Application
             return
         }
 
-        Log.i(TAG, "loadAllWorkouts: starting full database scan.")
+        Log.i(TAG, "loadAllWorkouts: starting optimized progressive streaming load.")
         isListLoading = true
         try {
             withContext(Dispatchers.IO) {
                 val cursor = summariesManager.getCursorForAllWorkouts()
+                val allLoadedWorkouts = mutableListOf<WorkoutData>()
+                
                 cursor.use { c ->
-                    if (c.moveToFirst()) {
-                        do {
-                            val workoutData = mapper.fromCursor(c)
+                    if (!c.moveToFirst()) return@withContext
 
+                    val batchSize = 50
+                    var processedCount = 0
+                    val totalCount = c.count
+
+                    while (!c.isAfterLast) {
+                        // 1. Gather IDs, names, and cluster IDs for the next chunk
+                        val chunkIds = mutableListOf<Long>()
+                        val chunkNames = mutableListOf<String>()
+                        val chunkClusterIds = mutableSetOf<Long>()
+                        val currentChunkStartPos = c.position
+                        
+                        var i = 0
+                        while (i < batchSize && !c.isAfterLast) {
+                            chunkIds.add(c.getLong(c.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID)))
+                            c.getString(c.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME))?.let {
+                                chunkNames.add(it)
+                            }
+                            val clusterId = c.getLong(c.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID))
+                            if (clusterId != -1L) {
+                                chunkClusterIds.add(clusterId)
+                            }
+                            c.moveToNext()
+                            i++
+                        }
+
+                        // 2. Fetch Metadata for the chunk in vectorized queries (ATT-359/388)
+                        val extremaList = summariesManager.getExtremaForWorkouts(chunkIds)
+                        val stravaDataMap = stravaUploadDbHelper.getStravaActivityDataForWorkouts(chunkNames)
+                        val clusterNamesMap = WorkoutClusterDatabaseManager.getInstance(application).getClusterNamesForIds(chunkClusterIds)
+
+                        val batchMetadata = WorkoutDataMapper.BatchMetadata(
+                            extrema = extremaList.groupBy { it.workoutId },
+                            stravaData = stravaDataMap,
+                            clusterNames = clusterNamesMap
+                        )
+
+                        // 3. Map the chunk
+                        c.moveToPosition(currentChunkStartPos)
+                        var j = 0
+                        while (j < batchSize && !c.isAfterLast) {
+                            val workoutData = mapper.fromCursor(c, batchMetadata)
+
+                            // Add Export Statuses (Fast from memory-only providers if possible)
                             val exportStatuses: MutableList<ExportStatusGroupData> = mutableListOf()
                             if (workoutData.fileBaseName != null) {
                                 for (type in orderedExportTypes) {
                                     val groupData = exportStatusDataProvider.createGroupData(workoutData.fileBaseName, type)
-                                    if (groupData.hasContent) {
-                                        exportStatuses.add(groupData)
-                                    }
+                                    if (groupData.hasContent) exportStatuses.add(groupData)
                                 }
                             }
 
-                            addOrUpdateWorkout(workoutData.copy(exportStatuses = exportStatuses))
-                        } while (c.moveToNext())
+                            allLoadedWorkouts.add(workoutData.copy(exportStatuses = exportStatuses))
+                            processedCount++
+                            c.moveToNext()
+                            j++
+                        }
+
+                        // 4. PROGRESSIVE UI PUMP (ATT-346 Style)
+                        // Emit updates to provide immediate feedback
+                        if (processedCount <= 10 || processedCount % batchSize == 0 || processedCount == totalCount) {
+                            val currentList = allLoadedWorkouts.toList() // Copy for thread safety
+                            Log.d(TAG, "Streaming batch to UI: $processedCount items.")
+                            _allWorkouts.value = currentList
+                        }
                     }
                 }
+                Log.i(TAG, "Load complete. Total workouts: ${allLoadedWorkouts.size}")
             }
         } finally {
             isListLoading = false
@@ -549,7 +604,10 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     // Function to update the workout data from the database but keep transient metadata
-    private suspend fun reloadWorkoutData(workoutId: Long) {
+    /**
+     * Public accessor to force a reload of a single workout from the database (ATT-388).
+     */
+    suspend fun reloadWorkoutData(workoutId: Long) {
         if (DEBUG) Log.i(TAG, "reloadWorkoutData: workoutId=$workoutId")
 
         withContext(Dispatchers.IO) {
@@ -558,6 +616,16 @@ class WorkoutRepository private constructor(private val application: Application
                     // Get the fresh data from the database.
                     val freshWorkoutData = mapper.fromCursor(cursor)
                     
+                    // --- SURGICAL PERIOD UPDATE (ATT-346) ---
+                    val existing = allWorkouts.value.find { it.id == workoutId }
+                    val isNewFinish = (existing == null || !existing.finished) && freshWorkoutData.finished
+                    
+                    if (isNewFinish) {
+                        PeriodsRepository.getInstance(application).onWorkoutFinished(freshWorkoutData)
+                        // --- SURGICAL CLUSTER UPDATE (ATT-354) ---
+                        WorkoutClusterEngine.getInstance(application).onWorkoutFinished(application, freshWorkoutData)
+                    }
+
                     addOrUpdateWorkout(freshWorkoutData)
                 }
             }
@@ -612,9 +680,11 @@ class WorkoutRepository private constructor(private val application: Application
 
             // 3. Update memory surgically - perform the merge ATOMICALLY inside update
             Log.i(TAG, "update from saveWorkout")
+            var oldWorkout: WorkoutData? = null
             _allWorkouts.update { currentList ->
                 currentList.map { current ->
                     if (current.id == workoutId) {
+                        oldWorkout = current
                         current.copy(
                             workoutName = userEditedWorkout.workoutName,
                             sportId = userEditedWorkout.sportId,
@@ -630,6 +700,14 @@ class WorkoutRepository private constructor(private val application: Application
                             uploadToStrava = userEditedWorkout.uploadToStrava
                         )
                     } else current
+                }
+            }
+
+            // --- SURGICAL UPDATES (ATT-346 / ATT-354) ---
+            oldWorkout?.let { old ->
+                if (old.sportId != userEditedWorkout.sportId) {
+                    PeriodsRepository.getInstance(application).onWorkoutSportChanged(userEditedWorkout, old)
+                    WorkoutClusterEngine.getInstance(application).onWorkoutSportChanged(userEditedWorkout, old)
                 }
             }
 
@@ -659,6 +737,12 @@ class WorkoutRepository private constructor(private val application: Application
             // Perform the actual deletion in the database first
             val success = deletionHelper.deleteWorkout(id)
             if (success) {
+                // --- SURGICAL UPDATES (ATT-346 / ATT-354) ---
+                workout?.let { 
+                    PeriodsRepository.getInstance(application).onWorkoutDeleted(it)
+                    WorkoutClusterEngine.getInstance(application).onWorkoutDeleted(application, it)
+                }
+
                 // Now, update the in-memory list
                 _allWorkouts.update { currentList ->
                     currentList.filterNot { it.id == id }
@@ -684,6 +768,12 @@ class WorkoutRepository private constructor(private val application: Application
                     // Find the workout name from the current list to display it.
                     val workout = allWorkouts.value.find { it.id == workoutId }
                     val workoutName = workout?.headerData?.workoutName ?: "Workout ID: $workoutId"
+
+                    // --- SURGICAL UPDATES (ATT-346 / ATT-354) ---
+                    workout?.let { 
+                        PeriodsRepository.getInstance(application).onWorkoutDeleted(it)
+                        WorkoutClusterEngine.getInstance(application).onWorkoutDeleted(application, it)
+                    }
 
                     // Post the detailed progress to the LiveData.
                     _deletionProgress.postValue(DeletionProgress.InProgress(workoutName, workoutId))

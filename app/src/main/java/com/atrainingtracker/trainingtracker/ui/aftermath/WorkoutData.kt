@@ -105,8 +105,15 @@ data class WorkoutData(
 
     val stravaActivityData: String? = null,
     val clusterId: Long = -1,
+    val clusterName: String? = null,
 
-    // --- 2. Heavy/Live Data ---
+    // --- 2. Persisted Spatial Bounds (ATT-352) ---
+    val minLat: Double? = null,
+    val minLng: Double? = null,
+    val maxLat: Double? = null,
+    val maxLng: Double? = null,
+
+    // --- 3. Heavy/Live Data ---
     val exportStatuses: List<ExportStatusGroupData> = emptyList(),
     val extremaRows: List<ExtremaDataRow> = emptyList()
 ) {
@@ -128,7 +135,8 @@ data class WorkoutData(
             commute = commute,
             trainer = trainer,
             uploadToStrava = uploadToStrava,
-            stravaSportName = stravaSportName
+            stravaSportName = stravaSportName,
+            clusterName = clusterName
         )
 
     val detailsData: WorkoutDetailsData

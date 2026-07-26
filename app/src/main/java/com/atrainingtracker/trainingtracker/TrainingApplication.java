@@ -113,6 +113,7 @@ public class TrainingApplication extends Application {
     public static final String SP_CLUSTER_TOL_ENDPOINTS = "clusterTolEndpoints";
     public static final String SP_CLUSTER_TOL_APEX = "clusterTolApex";
     public static final String SP_CLUSTER_TOL_DISTANCE = "clusterTolDistance";
+    public static final String SP_CLUSTER_USE_SPORT_TYPE = "clusterUseSportType";
     public static final String UPDATE_STRAVA_EQUIPMENT = "updateStravaEquipment";
     public static final String SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT = "lastUpdateTimeOfStravaEquipment";
     public static final String SP_STRAVA_ATHLETE_ID = "stravaAthleteId";
@@ -570,6 +571,7 @@ public class TrainingApplication extends Application {
     public static float getClusterTolEndpoints() { return cSharedPreferences.getFloat(SP_CLUSTER_TOL_ENDPOINTS, 200f); }
     public static float getClusterTolApex() { return cSharedPreferences.getFloat(SP_CLUSTER_TOL_APEX, 400f); }
     public static float getClusterTolDistance() { return cSharedPreferences.getFloat(SP_CLUSTER_TOL_DISTANCE, 0.20f); }
+    public static boolean useSportTypeForClustering() { return cSharedPreferences.getBoolean(SP_CLUSTER_USE_SPORT_TYPE, true); }
 
     @NonNull
     public static String getLastUpdateTimeOfStravaEquipment() {

@@ -23,11 +23,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
@@ -64,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
+import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
 
@@ -92,7 +97,9 @@ fun SegmentsTabsScreen(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
-    val appBarMaxHeightPx = with(density) { 135.dp.roundToPx() }
+    val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val appBarMaxHeightPx = with(density) { (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT).roundToPx() }
+
     val connection = remember(appBarMaxHeightPx) {
         CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
     }
@@ -146,13 +153,14 @@ fun SegmentsTabsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                            .height(LayoutConstants.HEADER_TITLE_ROW_HEIGHT)
+                            .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
                             text = stringResource(R.string.segments),
-                            style = MaterialTheme.typography.headlineSmall,
+                            style = MaterialTheme.typography.titleLarge,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
 

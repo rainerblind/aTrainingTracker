@@ -76,7 +76,9 @@ fun ClusterTuningScreen(
                     apexTolerance = viewModel.apexTolerance,
                     onApexToleranceChange = { viewModel.apexTolerance = it },
                     distanceTolerance = viewModel.distanceTolerance,
-                    onDistanceToleranceChange = { viewModel.distanceTolerance = it }
+                    onDistanceToleranceChange = { viewModel.distanceTolerance = it },
+                    useSportTypeForClustering = viewModel.useSportTypeForClustering,
+                    onUseSportTypeChange = { viewModel.useSportTypeForClustering = it }
                 )
 
                 Spacer(modifier = Modifier.weight(1f))
@@ -106,7 +108,9 @@ fun ClusterTuningContent(
     apexTolerance: Float,
     onApexToleranceChange: (Float) -> Unit,
     distanceTolerance: Float,
-    onDistanceToleranceChange: (Float) -> Unit
+    onDistanceToleranceChange: (Float) -> Unit,
+    useSportTypeForClustering: Boolean,
+    onUseSportTypeChange: (Boolean) -> Unit
 ) {
     var showDetails by remember { mutableStateOf(false) }
 
@@ -197,6 +201,29 @@ fun ClusterTuningContent(
                 unit = stringResource(R.string.units_percent),
                 displayMultiplier = 100f,
                 decimalPlaces = 0
+            )
+        }
+
+        // 4. Sport Type Awareness (ATT-350)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.cluster_tuning_use_sport_type_label),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = stringResource(R.string.cluster_tuning_use_sport_type_summary),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = useSportTypeForClustering,
+                onCheckedChange = onUseSportTypeChange
             )
         }
     }

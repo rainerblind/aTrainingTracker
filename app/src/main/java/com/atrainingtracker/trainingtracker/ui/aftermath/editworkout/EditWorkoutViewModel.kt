@@ -297,6 +297,20 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     }
 
     fun applyClusterIdentity(cluster: WorkoutCluster) {
+        _workoutData.update { current ->
+            current?.copy(
+                clusterId = cluster.id,
+                clusterName = cluster.name,
+                workoutName = application.getString(R.string.cluster_autoname_format, cluster.name, cluster.hitCount + 1),
+                sportId = cluster.probableSportId,
+                bSportType = cluster.bSportType
+            )
+        }
+        // Sync secondary UI states
+        suggestedSportTypeName = sportTypeDatabaseManager.getUIName(cluster.probableSportId)
+        currentBSportType = cluster.bSportType
+
+        // ATT-388: Persist the new cluster identity immediately
         repository.assignClusterToWorkout(workoutId, cluster.id)
     }
 

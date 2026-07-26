@@ -36,6 +36,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
 
@@ -54,7 +55,8 @@ fun WorkoutClustersTabsScreen(
     onHitCountClick: (WorkoutCluster) -> Unit,
     onTuneClick: () -> Unit,
     onAddClick: () -> Unit,
-    onDeleteRequest: (WorkoutCluster) -> Unit
+    onDeleteRequest: (WorkoutCluster) -> Unit,
+    migrationStatus: com.atrainingtracker.trainingtracker.ui.util.MigrationStatus? = null
 ) {
     val clusters by viewModel.allClusters.collectAsState()
     val unclusteredWorkouts by viewModel.unclusteredWorkouts.collectAsState()
@@ -72,8 +74,8 @@ fun WorkoutClustersTabsScreen(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
-    // Header height (SCRUM-212: Synchronized with Routes/Segments at 135dp)
-    val headerHeightDp = 135.dp
+    val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val headerHeightDp = statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT
     val headerHeightPx = with(density) { headerHeightDp.roundToPx() }
 
     val connection = remember(headerHeightPx) {
@@ -136,7 +138,55 @@ fun WorkoutClustersTabsScreen(
                 }
             }
 
-            // 2. THE COLLAPSING HEADER
+            // 2. THE MIGRATION PROGRESS (ATT-361)
+            migrationStatus?.let { status ->
+                Surface(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .padding(top = headerHeightDp + 16.dp) // Below the header
+                        .fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    tonalElevation = 0.dp
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = status.title,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+                        
+                        status.phases.forEachIndexed { index, phase ->
+                            if (index > 0) Spacer(modifier = Modifier.height(16.dp))
+                            
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    CircularProgressIndicator(
+                                        progress = { phase.progress },
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = stringResource(R.string.migration_phase_label, phase.id, phase.message),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = if (phase.progress < 1.0f) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
+                                    )
+                                }
+                                LinearProgressIndicator(
+                                    progress = { phase.progress },
+                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                                    color = if (phase.progress >= 1.0f) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. THE COLLAPSING HEADER
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -148,13 +198,14 @@ fun WorkoutClustersTabsScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                                .height(LayoutConstants.HEADER_TITLE_ROW_HEIGHT)
+                                .padding(horizontal = 16.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
                                 text = stringResource(R.string.my_locations),
-                                style = MaterialTheme.typography.headlineSmall,
+                                style = MaterialTheme.typography.titleLarge,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis

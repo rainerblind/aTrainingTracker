@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
@@ -93,6 +94,7 @@ import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDial
 import com.atrainingtracker.trainingtracker.ui.components.stats.RichStatsSheet
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsSummaryBlock
+import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
 
@@ -121,8 +123,9 @@ fun SportTypesTabsScreen(
     var statsToShow by remember { mutableStateOf<Pair<String, List<StatsData>>?>(null) }
 
     val density = LocalDensity.current
-
-    val appBarMaxHeightPx = with(density) { 127.dp.roundToPx() }
+    val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val appBarMaxHeightPx = with(density) { (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT).roundToPx() }
+    
     val connection = remember(appBarMaxHeightPx) {
         CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
     }
@@ -195,13 +198,14 @@ fun SportTypesTabsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                            .height(LayoutConstants.HEADER_TITLE_ROW_HEIGHT)
+                            .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
                             text = stringResource(R.string.sport_types),
-                            style = MaterialTheme.typography.headlineSmall,
+                            style = MaterialTheme.typography.titleLarge,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
