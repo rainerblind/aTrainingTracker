@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.google.android.gms.maps.model.JointType
+import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.RoundCap
 import com.google.maps.android.PolyUtil
 import com.google.maps.android.compose.*
@@ -180,11 +181,18 @@ fun PeriodSummaryCard(
                         .fillMaxWidth()
                         .height(250.dp)
                 ) {
+                    val bounds = remember(summary.minLat, summary.maxLat, summary.minLng, summary.maxLng) {
+                        if (summary.minLat < 90.0) {
+                            LatLngBounds(LatLng(summary.minLat, summary.minLng), LatLng(summary.maxLat, summary.maxLng))
+                        } else null
+                    }
+
                     PeriodMultiWorkoutMap(
                         polylines = summary.polylines,
                         periodType = summary.periodType,
                         isHeatmapEnabled = isHeatmapEnabled,
-                        onMapClick = { onMapClick(summary) }
+                        onMapClick = { onMapClick(summary) },
+                        bounds = bounds
                     )
                     
                     // Bottom Scrim for visual transition
@@ -400,7 +408,8 @@ private fun PeriodMultiWorkoutMap(
     polylines: List<String>,
     periodType: PeriodType,
     isHeatmapEnabled: Boolean,
-    onMapClick: () -> Unit) {
+    onMapClick: () -> Unit,
+    bounds: LatLngBounds? = null) {
     // Decode all polylines once
     val allPaths = remember(polylines) {
         polylines.mapNotNull { if (it.isNotEmpty()) PolyUtil.decode(it) else null }
@@ -418,25 +427,28 @@ private fun PeriodMultiWorkoutMap(
     }
 
     // 2. Calculate the Bounds for all points in all paths
-    val bounds = remember(allPaths) {
-        val builder = LatLngBounds.Builder()
-        var hasPoints = false
-        allPaths.forEach { path ->
-            path.forEach { point ->
-                builder.include(point)
-                hasPoints = true
+    val finalBounds = remember(allPaths, bounds) {
+        if (bounds != null) bounds
+        else {
+            val builder = LatLngBounds.Builder()
+            var hasPoints = false
+            allPaths.forEach { path ->
+                path.forEach { point ->
+                    builder.include(point)
+                    hasPoints = true
+                }
             }
+            if (hasPoints) builder.build() else null
         }
-        if (hasPoints) builder.build() else null
     }
 
     val cameraPositionState = rememberCameraPositionState()
     var isMapLoaded by remember { mutableStateOf(false) }
 
     // 3. Apply the zoom as soon as the map is loaded or bounds change
-    LaunchedEffect(bounds, isMapLoaded) {
+    LaunchedEffect(finalBounds, isMapLoaded) {
         if (isMapLoaded) {
-            bounds?.let {
+            finalBounds?.let {
                 try {
                     cameraPositionState.move(
                         CameraUpdateFactory.newLatLngBounds(it, 50) // 50dp padding
