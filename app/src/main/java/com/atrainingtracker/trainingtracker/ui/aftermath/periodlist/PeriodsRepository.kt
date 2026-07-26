@@ -16,6 +16,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
 import com.atrainingtracker.trainingtracker.ui.util.ProgressPhase
@@ -112,22 +113,55 @@ class PeriodsRepository private constructor(private val application: Application
                     return@withContext emptyList<WorkoutData>()
                 }
 
-                if (cursor.moveToFirst()) {
-                    val total = cursor.count
-                    var count = 0
-                    do {
-                        list.add(mapper.fromCursor(cursor))
-                        count++
-                        if (count % 50 == 0) {
-                            val msg = application.getString(R.string.workout_periods__migration_reading, count, total)
-                            _migrationStatus.value = MigrationStatus(
-                                title,
-                                listOf(ProgressPhase(1, msg, count.toFloat() / total.toFloat()))
-                            )
+                val total = cursor.count
+                val chunkSize = 100
+                val stravaUploadDbHelper = com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper(application)
+
+                cursor.use { c ->
+                    if (!c.moveToFirst()) return@withContext emptyList<WorkoutData>()
+                    
+                    while (!c.isAfterLast) {
+                        // 1. Gather IDs and names for the next chunk
+                        val chunkIds = mutableListOf<Long>()
+                        val chunkNames = mutableListOf<String>()
+                        val currentChunkStartPos = c.position
+                        
+                        var i = 0
+                        while (i < chunkSize && !c.isAfterLast) {
+                            chunkIds.add(c.getLong(c.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID)))
+                            c.getString(c.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME))?.let {
+                                chunkNames.add(it)
+                            }
+                            c.moveToNext()
+                            i++
                         }
-                    } while (cursor.moveToNext())
+
+                        // 2. Fetch Metadata for the chunk in just 2 queries (ATT-359/382)
+                        val extremaList = workoutSummariesManager.getExtremaForWorkouts(chunkIds)
+                        val stravaDataMap = stravaUploadDbHelper.getStravaActivityDataForWorkouts(chunkNames)
+                        val batchMetadata = WorkoutDataMapper.BatchMetadata(
+                            extrema = extremaList.groupBy { it.workoutId },
+                            stravaData = stravaDataMap
+                        )
+
+                        // 3. Map the chunk using vectorized data
+                        c.moveToPosition(currentChunkStartPos)
+                        var j = 0
+                        while (j < chunkSize && !c.isAfterLast) {
+                            list.add(mapper.fromCursor(c, batchMetadata))
+                            c.moveToNext()
+                            j++
+                        }
+
+                        // 4. Update Progress
+                        val count = list.size
+                        val msg = application.getString(R.string.workout_periods__migration_reading, count, total)
+                        _migrationStatus.value = MigrationStatus(
+                            title,
+                            listOf(ProgressPhase(1, msg, count.toFloat() / total.toFloat()))
+                        )
+                    }
                 }
-                cursor.close()
                 list
             }
 
