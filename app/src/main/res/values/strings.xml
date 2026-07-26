@@ -1134,10 +1134,11 @@
         <item quantity="other">%1$d Workouts</item>
     </plurals>
     <string name="workout_periods__longest_workout">Longest Workout</string>
-    <string name="workout_periods__migration_querying">Querying training history...</string>
-    <string name="workout_periods__migration_reading">Reading workout %1$d of %2$d...</string>
-    <string name="workout_periods__migration_syncing">Syncing %1$s...</string>
-    <string name="workout_periods__migration_finalizing">Finalizing yearly totals...</string>
+    <string name="workout_periods__migration_title">Optimizing training history database…</string>
+    <string name="workout_periods__migration_querying">Querying training history…</string>
+    <string name="workout_periods__migration_reading">Reading workout %1$d of %2$d…</string>
+    <string name="workout_periods__migration_syncing">Syncing %1$s…</string>
+    <string name="workout_periods__migration_finalizing">Finalizing yearly totals…</string>
 
     <!-- share screenshots -->
     <string name="share">Share</string>
@@ -1239,9 +1240,11 @@
     <string name="cluster_autoname_format">%1$s #%2$d</string>
     <string name="cluster_delete_title">Delete Workout Cluster</string>
     <string name="cluster_delete_message">Are you sure you want to delete this workout cluster? This will not delete the associated workouts, but they will no longer be grouped under this cluster.</string>
+    <string name="cluster_migration_title">Analyzing route families…</string>
     <string name="cluster_migration_loading">Loading route families…</string>
     <string name="cluster_migration_healing">Verifying history integrity…</string>
     <string name="cluster_migration_previews">Preparing family previews (%1$d of %2$d)…</string>
+    <string name="migration_phase_label">Phase %1$d: %2$s</string>
 
     <string name="all_sports">+ all sports +</string>
     <string name="all_equipment">+ all equipment +</string>
@@ -1252,6 +1255,8 @@
     <string name="unclustered">Unclustered</string>
     <string name="no_unclustered_workouts">All workouts are clustered.</string>
     <string name="error_sharing_failed">Unable to generate share image. Please try again.</string>
+    <string name="backup_restore">Backup \u0026 Restore</string>
+    <string name="backup_restore_summary">Migrate data or perform recovery</string>
 
     <!-- Backup and Restore -->
     <string name="import_backup">Import \u0026 Backup</string>

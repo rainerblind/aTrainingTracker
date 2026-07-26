@@ -1019,6 +1019,7 @@
     <string name="cluster_migration_loading">Carregando famílias de rotas…</string>
     <string name="cluster_migration_healing">Verificando a integridade do histórico…</string>
     <string name="cluster_migration_previews">Preparando visualizações de famílias (%1$d de %2$d)…</string>
+    <string name="migration_phase_label">Fase %1$d: %2$s</string>
 
     <string name="unclustered">Aberto</string>
     <string name="no_unclustered_workouts">Todos os treinos estão agrupados.</string>

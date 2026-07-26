@@ -51,7 +51,10 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
                "PeriodSummaries_v13.db", "PeriodSummaries_v13.db-shm", "PeriodSummaries_v13.db-wal",
                "PeriodSummaries_v14.db", "PeriodSummaries_v14.db-shm", "PeriodSummaries_v14.db-wal",
                "PeriodSummaries_v15.db", "PeriodSummaries_v15.db-shm", "PeriodSummaries_v15.db-wal",
-               "PeriodSummaries_v16.db", "PeriodSummaries_v16.db-shm", "PeriodSummaries_v16.db-wal").forEach {
+               "PeriodSummaries_v16.db", "PeriodSummaries_v16.db-shm", "PeriodSummaries_v16.db-wal",
+               "PeriodSummaries_v17.db", "PeriodSummaries_v17.db-shm", "PeriodSummaries_v17.db-wal",
+               "PeriodSummaries_v18.db", "PeriodSummaries_v18.db-shm", "PeriodSummaries_v18.db-wal",
+               "PeriodSummaries_v19.db", "PeriodSummaries_v19.db-shm", "PeriodSummaries_v19.db-wal").forEach {
             val file = context.getDatabasePath(it)
             if (file.exists()) {
                 Log.i(TAG, "Cleaning up experimental database file: $it")
@@ -428,7 +431,7 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
     }
 
     private class PeriodSummariesDbHelper(context: Context) : SQLiteOpenHelper(
-        context, "PeriodSummaries.db", null, 17
+        context, "PeriodSummaries.db", null, 20
     ) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(PeriodSummariesContract.CREATE_TABLE)
@@ -438,8 +441,8 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            // Relational Restart for ATT-346 (v17: Force Aggregation with Visibility & Stability fixes)
-            if (oldVersion < 17) {
+            // Relational Restart for ATT-346 (v20: Individual Phase Progress UI)
+            if (oldVersion < 20) {
                 db.execSQL("DROP TABLE IF EXISTS ${SyncStatusContract.TABLE_NAME}")
                 db.execSQL("DROP TABLE IF EXISTS ${DetailedStatsContract.TABLE_NAME}")
                 db.execSQL("DROP TABLE IF EXISTS ${SportStatsContract.TABLE_NAME}")

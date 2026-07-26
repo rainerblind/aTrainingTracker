@@ -1002,6 +1002,7 @@
     <string name="cluster_migration_loading">ルートファミリーを読み込み中…</string>
     <string name="cluster_migration_healing">履歴の整合性を確認中…</string>
     <string name="cluster_migration_previews">ファミリーのプレビューを準備中（%1$d / %2$d）…</string>
+    <string name="migration_phase_label">フェーズ %1$d: %2$s</string>
 
     <string name="unclustered">未分類</string>
     <string name="no_unclustered_workouts">すべてのワークアウトが分類されています。</string>

@@ -99,23 +99,37 @@ fun PeriodsTabsScreen(
                             tonalElevation = 2.dp
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    CircularProgressIndicator(
-                                        progress = { migrationStatus.progress },
-                                        modifier = Modifier.size(24.dp),
-                                        strokeWidth = 2.dp
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        text = migrationStatus.message,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                LinearProgressIndicator(
-                                    progress = { migrationStatus.progress },
-                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                                Text(
+                                    text = migrationStatus.title,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(bottom = 12.dp)
                                 )
+                                
+                                migrationStatus.phases.forEachIndexed { index, phase ->
+                                    if (index > 0) Spacer(modifier = Modifier.height(16.dp))
+                                    
+                                    Column {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            CircularProgressIndicator(
+                                                progress = { phase.progress },
+                                                modifier = Modifier.size(18.dp),
+                                                strokeWidth = 2.dp
+                                            )
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Text(
+                                                text = stringResource(R.string.migration_phase_label, phase.id, phase.message),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = if (phase.progress < 1.0f) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        }
+                                        LinearProgressIndicator(
+                                            progress = { phase.progress },
+                                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                                            color = if (phase.progress >= 1.0f) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

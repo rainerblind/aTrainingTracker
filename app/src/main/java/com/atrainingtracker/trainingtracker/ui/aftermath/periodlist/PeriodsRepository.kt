@@ -18,6 +18,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
+import com.atrainingtracker.trainingtracker.ui.util.ProgressPhase
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.PolyUtil
@@ -81,13 +82,18 @@ class PeriodsRepository private constructor(private val application: Application
     }
 
     /**
-     * ATT-346/358: Hierarchical aggregation (Workout -> Day -> Week/Month -> Year).
-     * Streams data bucket-by-bucket using per-month transactions for instant visibility.
+     * ATT-379: Performs a Dual-Phase hierarchical re-aggregation of history.
+     * Phase 1: High-speed O(N) database read and global grouping.
+     * Phase 2: Prioritized hierarchical sync with Transactional Pumping.
      */
     private suspend fun performHierarchicalMigration() = withContext(Dispatchers.Default) {
         rebuildMutex.withLock {
-            _migrationStatus.value = MigrationStatus(application.getString(R.string.workout_periods__migration_querying), 0.0f)
-            Log.i(TAG, "Starting Streaming Hierarchical Migration.")
+            val title = application.getString(R.string.workout_periods__migration_title)
+            _migrationStatus.value = MigrationStatus(
+                title,
+                listOf(ProgressPhase(1, application.getString(R.string.workout_periods__migration_querying), 0.0f))
+            )
+            Log.i(TAG, "Starting Dual-Phase Hierarchical Migration.")
             val startTime = System.currentTimeMillis()
 
             val mapper = com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper(
@@ -97,81 +103,94 @@ class PeriodsRepository private constructor(private val application: Application
                 com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper(application)
             )
 
-            withContext(Dispatchers.IO) {
+            // --- PHASE 1: RAPID READ & GROUPING (O(N)) ---
+            val allWorkouts = withContext(Dispatchers.IO) {
+                val list = mutableListOf<WorkoutData>()
                 val cursor = workoutSummariesManager.getCursorForAllWorkouts() // Sorted DESC
                 if (cursor.count == 0) {
-                    dbManager.runInTransaction { db -> dbManager.setSyncFinished(db, true) }
                     cursor.close()
-                    return@withContext
+                    return@withContext emptyList<WorkoutData>()
                 }
-
-                // 1. Initial Setup Transaction
-                dbManager.runInTransaction { db ->
-                    dbManager.deleteAll(db)
-                    dbManager.setSyncFinished(db, false)
-                }
-
-                val currentMonthWorkouts = mutableListOf<WorkoutData>()
-                var currentMonthKey: String? = null
-                var processedCount = 0
-                val totalCount = cursor.count
 
                 if (cursor.moveToFirst()) {
+                    val total = cursor.count
+                    var count = 0
                     do {
-                        val workout = mapper.fromCursor(cursor)
-                        val monthKey = workout.localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM"))
-
-                        if (currentMonthKey != null && monthKey != currentMonthKey) {
-                            // 2. Process the completed month bucket in its OWN transaction (ATT-358 Visibility)
-                            if (currentMonthWorkouts.isNotEmpty()) {
-                                val monthLabel = currentMonthWorkouts.first().localDateTime.format(monthFormatter)
-                                _migrationStatus.value = MigrationStatus(
-                                    application.getString(R.string.workout_periods__migration_syncing, monthLabel), 
-                                    processedCount.toFloat() / totalCount.toFloat()
-                                )
-                                
-                                dbManager.runInTransaction { db ->
-                                    processMonthBucket(db, currentMonthWorkouts)
-                                }
-                                
-                                // 3. PUMP UI: Data is now committed and visible
-                                loadFromDatabase(forceIncremental = true)
-                            }
-                            currentMonthWorkouts.clear()
-                        }
-
-                        currentMonthWorkouts.add(workout)
-                        currentMonthKey = monthKey
-                        processedCount++
-                        
-                        if (processedCount % 50 == 0) {
+                        list.add(mapper.fromCursor(cursor))
+                        count++
+                        if (count % 50 == 0) {
+                            val msg = application.getString(R.string.workout_periods__migration_reading, count, total)
                             _migrationStatus.value = MigrationStatus(
-                                application.getString(R.string.workout_periods__migration_reading, processedCount, totalCount),
-                                (processedCount.toFloat() / totalCount.toFloat()) * 0.1f
+                                title,
+                                listOf(ProgressPhase(1, msg, count.toFloat() / total.toFloat()))
                             )
                         }
                     } while (cursor.moveToNext())
                 }
                 cursor.close()
+                list
+            }
 
-                // Final month bucket
-                if (currentMonthWorkouts.isNotEmpty()) {
-                    dbManager.runInTransaction { db ->
-                        processMonthBucket(db, currentMonthWorkouts)
-                    }
-                    loadFromDatabase(forceIncremental = true)
+            if (allWorkouts.isEmpty()) {
+                dbManager.runInTransaction { db -> dbManager.setSyncFinished(db, true) }
+                _migrationStatus.value = null
+                return@withLock
+            }
+
+            // Phase 1 Complete
+            val phase1Finished = ProgressPhase(1, application.getString(R.string.workout_periods__migration_querying), 1.0f)
+
+            // Global Pre-grouping (O(N) exactly once)
+            val globalGroups = precalculateGroups(allWorkouts)
+            val monthBuckets = allWorkouts.groupBy { it.localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM")) }
+                .toList().sortedByDescending { it.first }
+
+            // --- PHASE 2: PRIORITIZED SURGICAL SYNC ---
+            withContext(Dispatchers.IO) {
+                // Initial Reset
+                dbManager.runInTransaction { db ->
+                    dbManager.deleteAll(db)
+                    dbManager.setSyncFinished(db, false)
                 }
 
-                // 4. Final Rollup Transaction
-                _migrationStatus.value = MigrationStatus(application.getString(R.string.workout_periods__migration_finalizing), 0.99f)
+                monthBuckets.forEachIndexed { index, (_, workouts) ->
+                    val monthLabel = workouts.first().localDateTime.format(monthFormatter)
+                    val msg = application.getString(R.string.workout_periods__migration_syncing, monthLabel)
+                    _migrationStatus.value = MigrationStatus(
+                        title,
+                        listOf(
+                            phase1Finished,
+                            ProgressPhase(2, msg, index.toFloat() / monthBuckets.size.toFloat())
+                        )
+                    )
+                    
+                    // Transactional Pumping: Commit per month for immediate UI visibility
+                    dbManager.runInTransaction { db ->
+                        processMonthBucket(db, workouts)
+                    }
+                    
+                    // Push visible changes to UI instantly using pre-calculated groups
+                    loadFromDatabase(forceIncremental = true, precalculatedGroups = globalGroups)
+                }
+
+                // Final Step: Roll up YEARs from MONTHs
+                val finalMsg = application.getString(R.string.workout_periods__migration_finalizing)
+                _migrationStatus.value = MigrationStatus(
+                    title,
+                    listOf(
+                        phase1Finished,
+                        ProgressPhase(2, finalMsg, 0.99f)
+                    )
+                )
                 dbManager.runInTransaction { db ->
                     rollupMonthsToYears(db)
                     dbManager.setSyncFinished(db, true)
                 }
             }
+
             Log.i(TAG, "Hierarchical Migration finished in ${System.currentTimeMillis() - startTime}ms.")
             _migrationStatus.value = null
-            loadFromDatabase(forceIncremental = false)
+            loadFromDatabase(forceIncremental = false, precalculatedGroups = globalGroups)
         }
     }
 
@@ -589,7 +608,7 @@ class PeriodsRepository private constructor(private val application: Application
         } else null
     }
 
-    private fun loadFromDatabase(forceIncremental: Boolean = false) {
+    private fun loadFromDatabase(forceIncremental: Boolean = false, precalculatedGroups: WorkoutGroups? = null) {
         scope.launch {
             val isFinished = withContext(Dispatchers.IO) { dbManager.isSyncFinished() }
             if (!isFinished && !forceIncremental) return@launch
@@ -601,7 +620,7 @@ class PeriodsRepository private constructor(private val application: Application
             val yearlyRaw = dbManager.getPeriodsByType(PeriodType.YEAR)
             
             if (workouts.isNotEmpty()) {
-                val groups = precalculateGroups(workouts)
+                val groups = precalculatedGroups ?: precalculateGroups(workouts)
                 enrichAndEmit(listOf(dailyRaw, weeklyRaw, monthlyRaw, yearlyRaw), groups)
             } else {
                 _groupedPeriods.value = listOf(dailyRaw, weeklyRaw, monthlyRaw, yearlyRaw)

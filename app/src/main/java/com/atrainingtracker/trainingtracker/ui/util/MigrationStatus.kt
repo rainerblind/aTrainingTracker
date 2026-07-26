@@ -19,9 +19,18 @@
 package com.atrainingtracker.trainingtracker.ui.util
 
 /**
- * Standardized progress notification model (ATT-346/361).
+ * Encapsulates a single technical phase of a background process (ATT-382).
  */
-data class MigrationStatus(
+data class ProgressPhase(
+    val id: Int,
     val message: String,
     val progress: Float
+)
+
+/**
+ * Standardized progress notification model supporting multiple concurrent phases (ATT-346/361/382).
+ */
+data class MigrationStatus(
+    val title: String,
+    val phases: List<ProgressPhase>
 )

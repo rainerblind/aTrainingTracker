@@ -1019,6 +1019,7 @@
     <string name="cluster_migration_loading">Caricamento delle famiglie di percorsi…</string>
     <string name="cluster_migration_healing">Verifica dell\'integrità della cronologia…</string>
     <string name="cluster_migration_previews">Preparazione delle anteprime delle famiglie (%1$d di %2$d)…</string>
+    <string name="migration_phase_label">Fase %1$d: %2$s</string>
 
     <string name="unclustered">Aperto</string>
     <string name="no_unclustered_workouts">Tutti gli allenamenti sono raggruppati.</string>

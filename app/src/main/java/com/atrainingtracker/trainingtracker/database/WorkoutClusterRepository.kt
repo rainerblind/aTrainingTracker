@@ -26,6 +26,7 @@ import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
+import com.atrainingtracker.trainingtracker.ui.util.ProgressPhase
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.google.maps.android.PolyUtil
@@ -70,10 +71,18 @@ class WorkoutClusterRepository private constructor(private val context: Context)
     }
 
     suspend fun refreshClusters() = withContext(Dispatchers.IO) {
-        _migrationStatus.value = MigrationStatus(context.getString(R.string.cluster_migration_loading), 0.0f)
+        val title = context.getString(R.string.cluster_migration_title)
+        _migrationStatus.value = MigrationStatus(
+            title,
+            listOf(ProgressPhase(1, context.getString(R.string.cluster_migration_loading), 0.0f))
+        )
         
-        // --- SELF-HEALING HIT COUNTS (SCRUM-228) ---
-        _migrationStatus.value = MigrationStatus(context.getString(R.string.cluster_migration_healing), 0.1f)
+        // --- PHASE 1: INTEGRITY CHECK ---
+        val msgHealing = context.getString(R.string.cluster_migration_healing)
+        _migrationStatus.value = MigrationStatus(
+            title,
+            listOf(ProgressPhase(1, msgHealing, 0.1f))
+        )
         val actualCounts = mutableMapOf<Long, Int>()
         summariesManager.database.query(
             WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
@@ -91,11 +100,21 @@ class WorkoutClusterRepository private constructor(private val context: Context)
         val rawClusters = clusterDb.getAllClusters()
         val routesDb = RoutesDatabaseManager.getInstance(context)
 
+        // Phase 1 Complete
+        val phase1Finished = ProgressPhase(1, msgHealing, 1.0f)
+
+        // --- PHASE 2: PREVIEW PREPARATION ---
         val total = rawClusters.size
         val enriched = rawClusters.mapIndexed { index, cluster ->
             if (index % 5 == 0) {
                 val msg = context.getString(R.string.cluster_migration_previews, index + 1, total)
-                _migrationStatus.value = MigrationStatus(msg, 0.1f + (index.toFloat() / total.toFloat() * 0.9f))
+                _migrationStatus.value = MigrationStatus(
+                    title,
+                    listOf(
+                        phase1Finished,
+                        ProgressPhase(2, msg, index.toFloat() / total.toFloat())
+                    )
+                )
             }
 
             // Update hit count if reality differs (Self-Healing)

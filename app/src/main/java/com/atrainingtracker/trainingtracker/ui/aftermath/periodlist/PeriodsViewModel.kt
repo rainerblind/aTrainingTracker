@@ -120,9 +120,9 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     val groupedPeriods: StateFlow<List<List<PeriodSummary>>> = periodsRepo.groupedPeriods
     val migrationStatus: StateFlow<MigrationStatus?> = periodsRepo.migrationStatus
     
-    @Deprecated("Use migrationStatus instead", ReplaceWith("migrationStatus.value?.progress"))
+    @Deprecated("Use migrationStatus instead", ReplaceWith("migrationStatus.value?.phases?.lastOrNull()?.progress"))
     val migrationProgress: StateFlow<Float?> = periodsRepo.migrationStatus
-        .map { it?.progress }
+        .map { it?.phases?.lastOrNull()?.progress }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     fun loadPeriods() {

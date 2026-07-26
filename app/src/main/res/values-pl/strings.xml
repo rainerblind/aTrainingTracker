@@ -787,6 +787,7 @@
     <string name="cluster_migration_loading">Ładowanie rodzin tras…</string>
     <string name="cluster_migration_healing">Weryfikacja integralności historii…</string>
     <string name="cluster_migration_previews">Przygotowywanie podglądów rodzin (%1$d z %2$d)…</string>
+    <string name="migration_phase_label">Faza %1$d: %2$s</string>
 
     <string name="unclustered">Otwarte</string>
     <string name="no_unclustered_workouts">Wszystkie treningi są pogrupowane.</string>
