@@ -280,6 +280,7 @@ This document tracks all functional and non-functional requirements of the proje
 |:---|:---|:---|:---|:---|:---|
 | **REQ-PER-001** | The system SHALL load and display the detailed visualization (Heatmap and List) of a Workout Cluster within 1 second for route families containing up to 50 sessions. | Ensure a responsive and professional user experience when analyzing recurring routes. | `WorkoutClustersViewModel.kt`, `WorkoutClusterRepository.kt`, `WorkoutSummariesDatabaseManager.java`, `WorkoutClusterHeatmapScreen.kt` | `TST-PERF-002` | Verified |
 | **REQ-PER-002** | The system SHALL ensure that only the map state (Heatmap, Tracks, and Markers) of the most recently selected Workout Cluster is displayed, preventing race conditions during rapid navigation. | Guarantee data consistency and prevent visual artifacts during navigation. | `WorkoutClustersViewModel.kt` | `TST-BUG-001` | Verified |
+| **REQ-PER-003** | The system SHALL display a detailed progress notification (Migration Status card) during the initial loading and "self-healing" phase of Workout Clusters to inform the user about the background processing state. | Provide immediate feedback and maintain visual consistency with other progressive loading screens (e.g. Periods). | `WorkoutClustersViewModel.kt`, `WorkoutClustersTabsScreen.kt`, `WorkoutClusterRepository.kt` | `TST-PERF-003` | Verified |
 
 
 ## 12. Privacy & Permissions

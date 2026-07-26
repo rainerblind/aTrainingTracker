@@ -1239,6 +1239,9 @@
     <string name="cluster_autoname_format">%1$s #%2$d</string>
     <string name="cluster_delete_title">Delete Workout Cluster</string>
     <string name="cluster_delete_message">Are you sure you want to delete this workout cluster? This will not delete the associated workouts, but they will no longer be grouped under this cluster.</string>
+    <string name="cluster_migration_loading">Loading route families…</string>
+    <string name="cluster_migration_healing">Verifying history integrity…</string>
+    <string name="cluster_migration_previews">Preparing family previews (%1$d of %2$d)…</string>
 
     <string name="all_sports">+ all sports +</string>
     <string name="all_equipment">+ all equipment +</string>

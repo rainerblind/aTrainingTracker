@@ -1019,6 +1019,9 @@
     <string name="cluster_autoname_format">%1$s #%2$d</string>
     <string name="cluster_delete_title">Eliminar grupo de entrenamiento</string>
     <string name="cluster_delete_message">¿Estás seguro de que deseas eliminar este grupo de entrenamiento? Esto no eliminará los entrenamientos asociados, pero ya no estarán agrupados bajo este grupo.</string>
+    <string name="cluster_migration_loading">Cargando familias de rutas…</string>
+    <string name="cluster_migration_healing">Verificando la integridad del historial…</string>
+    <string name="cluster_migration_previews">Preparando vistas previas de familias (%1$d de %2$d)…</string>
 
     <string name="unclustered">Abierto</string>
     <string name="no_unclustered_workouts">Todos los entrenamientos están agrupados.</string>

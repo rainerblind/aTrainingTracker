@@ -54,7 +54,8 @@ fun WorkoutClustersTabsScreen(
     onHitCountClick: (WorkoutCluster) -> Unit,
     onTuneClick: () -> Unit,
     onAddClick: () -> Unit,
-    onDeleteRequest: (WorkoutCluster) -> Unit
+    onDeleteRequest: (WorkoutCluster) -> Unit,
+    migrationStatus: com.atrainingtracker.trainingtracker.ui.util.MigrationStatus? = null
 ) {
     val clusters by viewModel.allClusters.collectAsState()
     val unclusteredWorkouts by viewModel.unclusteredWorkouts.collectAsState()
@@ -136,7 +137,39 @@ fun WorkoutClustersTabsScreen(
                 }
             }
 
-            // 2. THE COLLAPSING HEADER
+            // 2. THE MIGRATION PROGRESS (ATT-361)
+            migrationStatus?.let { status ->
+                Surface(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .padding(top = headerHeightDp + 16.dp) // Below the header
+                        .fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(
+                                progress = { status.progress },
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = status.message,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                            )
+                        }
+                        LinearProgressIndicator(
+                            progress = { status.progress },
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                        )
+                    }
+                }
+            }
+
+            // 3. THE COLLAPSING HEADER
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()

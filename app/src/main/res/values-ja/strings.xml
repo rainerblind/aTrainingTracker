@@ -999,6 +999,9 @@
     <string name="cluster_autoname_format">%1$s #%2$d</string>
     <string name="cluster_delete_title">ワークアウトクラスターを削除</string>
     <string name="cluster_delete_message">このワークアウトクラスターを削除してもよろしいですか？関連するワークアウトは削除されませんが、このクラスターの下にはグループ化されなくなります。</string>
+    <string name="cluster_migration_loading">ルートファミリーを読み込み中…</string>
+    <string name="cluster_migration_healing">履歴の整合性を確認中…</string>
+    <string name="cluster_migration_previews">ファミリーのプレビューを準備中（%1$d / %2$d）…</string>
 
     <string name="unclustered">未分類</string>
     <string name="no_unclustered_workouts">すべてのワークアウトが分類されています。</string>

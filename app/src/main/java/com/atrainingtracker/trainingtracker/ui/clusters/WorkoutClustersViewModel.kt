@@ -38,6 +38,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.map.*
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
+import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
@@ -68,6 +69,8 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
 
     private val _clusterWorkouts = MutableStateFlow<List<WorkoutData>>(emptyList())
     val clusterWorkouts: StateFlow<List<WorkoutData>> = _clusterWorkouts.asStateFlow()
+
+    val migrationStatus: StateFlow<MigrationStatus?> = repository.migrationStatus
 
     private val _unclusteredWorkouts = MutableStateFlow<List<WorkoutData>>(emptyList())
     val unclusteredWorkouts: StateFlow<List<WorkoutData>> = _unclusteredWorkouts.asStateFlow()

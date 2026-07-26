@@ -184,6 +184,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-PERF-001** | `ATT-319` | **Heatmap Memory Scalability** | `REQ-MAP-017` | 1. Import a large volume of workouts (e.g. 500+). 2. Navigate to the 'Periods' view and scroll through Yearly/Monthly summaries. | The application SHALL NOT crash with an `OutOfMemoryError`. Map rendering MUST remain responsive. | Proposed |
 | **TST-PERF-002** | `ATT-362` | **Cluster Detail Loading Speed** | `REQ-PER-001` | 1. Identify a cluster with > 30 recordings. 2. Tap on the cluster to open its details. 3. Measure time from tap to full heatmap/list display. | UI appears and becomes interactive in < 1 second. Heatmap preparation should not block the main thread. | Verified |
 | **TST-BUG-001** | `ATT-364` | **Cluster Selection Race Condition** | `REQ-PER-002` | 1. Open Workout Cluster list. 2. Tap Cluster A. 3. Immediately go back and tap Cluster B. 4. Wait for loading to complete. | Only Cluster B's data and map are displayed. Cluster A's data does NOT overwrite Cluster B. | Verified |
+| **TST-PERF-003** | `ATT-366` | **Initial Cluster Loading Progress** | `REQ-PER-003` | 1. Clear application cache or significantly modify history. 2. Navigate to 'My Locations'. | 1. A progress card following the 'Migration Status' style appears immediately. 2. It shows granular messages like \"Self-healing hit counts...\" or \"Loading family X of Y...\". | Verified |
 
 ## 4. Release Verification Workflow
 

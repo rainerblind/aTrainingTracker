@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
 
 enum class PeriodType {
     DAY, WEEK, MONTH, YEAR
@@ -27,11 +28,6 @@ enum class PeriodType {
 enum class PeriodMarkerType {
     ALTITUDE, DISTANCE, START, END
 }
-
-data class MigrationStatus(
-    val message: String,
-    val progress: Float
-)
 
 data class PeriodSummary(
     val periodLabel: String,         // e.g., "Week20, 2026" or "May 2026"

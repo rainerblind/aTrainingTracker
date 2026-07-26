@@ -21,6 +21,7 @@ import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.flow.*
