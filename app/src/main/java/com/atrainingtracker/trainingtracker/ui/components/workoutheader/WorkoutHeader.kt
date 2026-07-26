@@ -117,7 +117,7 @@ fun WorkoutHeader(
                     modifier = Modifier.padding(start = 44.dp) // Align with text after the 32dp icon + 12dp spacer
                 ) {
                     Icon(
-                        painter = painterResource(id = R.drawable.ic_route),
+                        painter = painterResource(id = R.drawable.my_locations),
                         contentDescription = null,
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Medium)

@@ -288,20 +288,25 @@ class WorkoutClusterRepository private constructor(private val context: Context)
         ).use { cursor ->
             if (!cursor.moveToFirst()) return@withContext emptyList<WorkoutData>()
 
-            // 1. Gather IDs and FileNames for the batch
+            // 1. Gather IDs, FileNames, and Cluster IDs for the batch
             val idList = mutableListOf<Long>()
             val fileNameList = mutableListOf<String>()
+            val clusterIdList = mutableSetOf<Long>()
             do {
                 idList.add(cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID)))
                 cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME))?.let {
                     fileNameList.add(it)
+                }
+                val clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID))
+                if (clusterId != -1L) {
+                    clusterIdList.add(clusterId)
                 }
             } while (cursor.moveToNext())
 
             // 2. Perform Batch Metadata Lookups (ATT-359/388)
             val extremaList = summariesManager.getExtremaForWorkouts(idList)
             val stravaDataMap = StravaUploadDbHelper(context).getStravaActivityDataForWorkouts(fileNameList)
-            val clusterNamesMap = clusterDb.getClusterNamesForIds(idList)
+            val clusterNamesMap = clusterDb.getClusterNamesForIds(clusterIdList)
             
             val batchMetadata = WorkoutDataMapper.BatchMetadata(
                 extrema = extremaList.groupBy { it.workoutId },

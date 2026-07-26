@@ -400,9 +400,10 @@ class WorkoutRepository private constructor(private val application: Application
                     val totalCount = c.count
 
                     while (!c.isAfterLast) {
-                        // 1. Gather IDs and names for the next chunk
+                        // 1. Gather IDs, names, and cluster IDs for the next chunk
                         val chunkIds = mutableListOf<Long>()
                         val chunkNames = mutableListOf<String>()
+                        val chunkClusterIds = mutableSetOf<Long>()
                         val currentChunkStartPos = c.position
                         
                         var i = 0
@@ -411,6 +412,10 @@ class WorkoutRepository private constructor(private val application: Application
                             c.getString(c.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME))?.let {
                                 chunkNames.add(it)
                             }
+                            val clusterId = c.getLong(c.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID))
+                            if (clusterId != -1L) {
+                                chunkClusterIds.add(clusterId)
+                            }
                             c.moveToNext()
                             i++
                         }
@@ -418,7 +423,7 @@ class WorkoutRepository private constructor(private val application: Application
                         // 2. Fetch Metadata for the chunk in vectorized queries (ATT-359/388)
                         val extremaList = summariesManager.getExtremaForWorkouts(chunkIds)
                         val stravaDataMap = stravaUploadDbHelper.getStravaActivityDataForWorkouts(chunkNames)
-                        val clusterNamesMap = WorkoutClusterDatabaseManager.getInstance(application).getClusterNamesForIds(chunkIds)
+                        val clusterNamesMap = WorkoutClusterDatabaseManager.getInstance(application).getClusterNamesForIds(chunkClusterIds)
 
                         val batchMetadata = WorkoutDataMapper.BatchMetadata(
                             extrema = extremaList.groupBy { it.workoutId },
