@@ -28,6 +28,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
@@ -83,6 +84,7 @@ class WorkoutDataMapper(
 
         val workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME))
         val clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID))
+        val clusterName = WorkoutClusterDatabaseManager.getInstance(context).getClusterNameById(clusterId)
 
         // The mapper is responsible for assembling the final object from its constituent parts.
         return WorkoutData(
@@ -106,6 +108,7 @@ class WorkoutDataMapper(
             encodedAltitudes = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.ALTITUDE_STREAM)) ?: "",
             encodedDistances = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_STREAM)) ?: "",
             clusterId = clusterId,
+            clusterName = clusterName,
 
             minLat = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LAT))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LAT)),
             minLng = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LNG))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LNG)),
@@ -172,7 +175,8 @@ class WorkoutDataMapper(
      */
     data class BatchMetadata(
         val extrema: Map<Long, List<WorkoutSummariesDatabaseManager.ExtremaRecord>>,
-        val stravaData: Map<String, String>
+        val stravaData: Map<String, String>,
+        val clusterNames: Map<Long, String> = emptyMap()
     )
 
     /**
@@ -205,6 +209,7 @@ class WorkoutDataMapper(
 
         val workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME))
         val clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID))
+        val clusterName = batch.clusterNames[clusterId]
 
         return WorkoutData(
             id = workoutId,
@@ -227,6 +232,7 @@ class WorkoutDataMapper(
             encodedAltitudes = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.ALTITUDE_STREAM)) ?: "",
             encodedDistances = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_STREAM)) ?: "",
             clusterId = clusterId,
+            clusterName = clusterName,
 
             minLat = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LAT))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LAT)),
             minLng = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LNG))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LNG)),

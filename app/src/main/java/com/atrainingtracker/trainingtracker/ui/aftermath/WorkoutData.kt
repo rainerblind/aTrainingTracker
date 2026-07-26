@@ -105,6 +105,7 @@ data class WorkoutData(
 
     val stravaActivityData: String? = null,
     val clusterId: Long = -1,
+    val clusterName: String? = null,
 
     // --- 2. Persisted Spatial Bounds (ATT-352) ---
     val minLat: Double? = null,
@@ -134,7 +135,8 @@ data class WorkoutData(
             commute = commute,
             trainer = trainer,
             uploadToStrava = uploadToStrava,
-            stravaSportName = stravaSportName
+            stravaSportName = stravaSportName,
+            clusterName = clusterName
         )
 
     val detailsData: WorkoutDetailsData

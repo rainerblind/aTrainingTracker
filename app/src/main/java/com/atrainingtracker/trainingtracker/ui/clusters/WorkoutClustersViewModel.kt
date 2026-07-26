@@ -241,12 +241,19 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
             
             // Refresh state
             repository.refreshClusters()
+            
+            // Since moveWorkout in engine updates the DB directly, we must ensure memory is refreshed.
+            // WorkoutRepository handles this via its internal reload logic if assignClusterToWorkout is used,
+            // but engine.moveWorkoutToCluster also updates names.
 
             // Update both UI lists immediately
             _selectedCluster.value?.let { current ->
                 _clusterWorkouts.value = repository.getWorkoutsForCluster(current.id)
             }
             _unclusteredWorkouts.value = repository.getUnclusteredWorkouts()
+            
+            // Critical: Refresh main history list to reflect the new cluster name/association (ATT-388)
+            WorkoutRepository.getInstance(getApplication()).reloadWorkoutData(workout.id)
         }
     }
 

@@ -298,13 +298,15 @@ class WorkoutClusterRepository private constructor(private val context: Context)
                 }
             } while (cursor.moveToNext())
 
-            // 2. Perform Batch Metadata Lookups
+            // 2. Perform Batch Metadata Lookups (ATT-359/388)
             val extremaList = summariesManager.getExtremaForWorkouts(idList)
             val stravaDataMap = StravaUploadDbHelper(context).getStravaActivityDataForWorkouts(fileNameList)
+            val clusterNamesMap = clusterDb.getClusterNamesForIds(idList)
             
             val batchMetadata = WorkoutDataMapper.BatchMetadata(
                 extrema = extremaList.groupBy { it.workoutId },
-                stravaData = stravaDataMap
+                stravaData = stravaDataMap,
+                clusterNames = clusterNamesMap
             )
 
             // 3. Map everything using pre-fetched data

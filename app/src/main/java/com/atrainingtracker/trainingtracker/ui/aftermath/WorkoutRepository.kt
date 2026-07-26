@@ -36,6 +36,7 @@ import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
@@ -414,12 +415,15 @@ class WorkoutRepository private constructor(private val application: Application
                             i++
                         }
 
-                        // 2. Fetch Metadata for the chunk in just 2 queries (ATT-359)
+                        // 2. Fetch Metadata for the chunk in vectorized queries (ATT-359/388)
                         val extremaList = summariesManager.getExtremaForWorkouts(chunkIds)
                         val stravaDataMap = stravaUploadDbHelper.getStravaActivityDataForWorkouts(chunkNames)
+                        val clusterNamesMap = WorkoutClusterDatabaseManager.getInstance(application).getClusterNamesForIds(chunkIds)
+
                         val batchMetadata = WorkoutDataMapper.BatchMetadata(
                             extrema = extremaList.groupBy { it.workoutId },
-                            stravaData = stravaDataMap
+                            stravaData = stravaDataMap,
+                            clusterNames = clusterNamesMap
                         )
 
                         // 3. Map the chunk
@@ -595,7 +599,10 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     // Function to update the workout data from the database but keep transient metadata
-    private suspend fun reloadWorkoutData(workoutId: Long) {
+    /**
+     * Public accessor to force a reload of a single workout from the database (ATT-388).
+     */
+    suspend fun reloadWorkoutData(workoutId: Long) {
         if (DEBUG) Log.i(TAG, "reloadWorkoutData: workoutId=$workoutId")
 
         withContext(Dispatchers.IO) {

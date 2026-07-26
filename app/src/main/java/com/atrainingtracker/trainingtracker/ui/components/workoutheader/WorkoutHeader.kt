@@ -46,6 +46,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 
 @Composable
 fun WorkoutHeader(
@@ -106,6 +107,29 @@ fun WorkoutHeader(
 
                     // Spacer for the Menu Button area
                     Spacer(modifier = Modifier.width(32.dp))
+                }
+
+                // --- Workout Cluster Info (ATT-388): Positioned directly below the name ---
+                val clusterLabel = data.clusterName ?: stringResource(R.string.unclustered)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.padding(start = 44.dp) // Align with text after the 32dp icon + 12dp spacer
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_route),
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Medium)
+                    )
+                    Text(
+                        text = clusterLabel,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Medium),
+                        fontWeight = if (data.clusterName != null) FontWeight.Bold else FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
 
                 // 2. BOTTOM CONTENT: Organized in horizontal rows

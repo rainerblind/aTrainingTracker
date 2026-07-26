@@ -164,8 +164,48 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         return null
     }
 
+    /**
+     * Fast lookup of a cluster name by ID (ATT-388).
+     */
+    fun getClusterNameById(id: Long): String? {
+        if (id == -1L) return null
+        val selection = "${BaseColumns._ID} = ?"
+        val args = arrayOf(id.toString())
+        getDatabase().query(
+            WorkoutClusterContract.TABLE_NAME, arrayOf(WorkoutClusterContract.COLUMN_NAME), 
+            selection, args, null, null, null
+        ).use { cursor ->
+            if (cursor.moveToFirst()) {
+                return cursor.getString(0)
+            }
+        }
+        return null
+    }
+
     fun deleteAllClusters() {
         getDatabase().delete(WorkoutClusterContract.TABLE_NAME, null, null)
+    }
+
+    /**
+     * Fast lookup of cluster names for a batch of IDs (ATT-388).
+     */
+    fun getClusterNamesForIds(ids: Collection<Long>): Map<Long, String> {
+        val results = mutableMapOf<Long, String>()
+        if (ids.isEmpty()) return results
+
+        val inClause = ids.joinToString(",")
+        val selection = "${BaseColumns._ID} IN ($inClause)"
+        
+        getDatabase().query(
+            WorkoutClusterContract.TABLE_NAME, 
+            arrayOf(BaseColumns._ID, WorkoutClusterContract.COLUMN_NAME), 
+            selection, null, null, null, null
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                results[cursor.getLong(0)] = cursor.getString(1)
+            }
+        }
+        return results
     }
 
     fun isNameTaken(name: String, excludeId: Long = -1): Boolean {
