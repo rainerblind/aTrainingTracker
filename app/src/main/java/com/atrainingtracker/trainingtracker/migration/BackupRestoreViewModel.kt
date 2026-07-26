@@ -106,10 +106,11 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
     var backupIntervalDays by mutableIntStateOf(prefs.getString("backup_interval_days", "1")?.toInt() ?: 1)
         private set
 
-    // Clustering Tolerances (ATT-315)
+    // Clustering Tolerances (ATT-315/350)
     var endpointTolerance by mutableStateOf(TrainingApplication.getClusterTolEndpoints())
     var apexTolerance by mutableStateOf(TrainingApplication.getClusterTolApex())
     var distanceTolerance by mutableStateOf(TrainingApplication.getClusterTolDistance())
+    var useSportTypeForClustering by mutableStateOf(TrainingApplication.useSportTypeForClustering())
 
     fun updateAutomatedBackupsEnabled(enabled: Boolean) {
         prefs.edit().putBoolean("automated_backups", enabled).apply()
@@ -128,6 +129,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             .putFloat(TrainingApplication.SP_CLUSTER_TOL_ENDPOINTS, endpointTolerance)
             .putFloat(TrainingApplication.SP_CLUSTER_TOL_APEX, apexTolerance)
             .putFloat(TrainingApplication.SP_CLUSTER_TOL_DISTANCE, distanceTolerance)
+            .putBoolean(TrainingApplication.SP_CLUSTER_USE_SPORT_TYPE, useSportTypeForClustering)
             .apply()
     }
 

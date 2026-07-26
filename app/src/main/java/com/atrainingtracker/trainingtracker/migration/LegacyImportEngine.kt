@@ -462,7 +462,7 @@ object LegacyImportEngine {
             summariesDb.updateExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, maxDisp, apex)
 
             val clusterEngine = WorkoutClusterEngine.getInstance(context)
-            val matchingCluster = clusterEngine.suggestCluster(start, end, apex, totalDistance, null)
+            val matchingCluster = clusterEngine.suggestCluster(start, end, apex, totalDistance, null, bSportType)
             
             if (matchingCluster != null) {
                 var sportId = summariesDb.getLong(workoutId, WorkoutSummaries.SPORT_ID) ?: -1L

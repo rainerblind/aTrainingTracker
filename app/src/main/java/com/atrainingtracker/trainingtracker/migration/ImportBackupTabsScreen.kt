@@ -333,7 +333,9 @@ fun PreImportTuningDialog(
                     apexTolerance = viewModel.apexTolerance,
                     onApexToleranceChange = { viewModel.apexTolerance = it },
                     distanceTolerance = viewModel.distanceTolerance,
-                    onDistanceToleranceChange = { viewModel.distanceTolerance = it }
+                    onDistanceToleranceChange = { viewModel.distanceTolerance = it },
+                    useSportTypeForClustering = viewModel.useSportTypeForClustering,
+                    onUseSportTypeChange = { viewModel.useSportTypeForClustering = it }
                 )
             }
         },

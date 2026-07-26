@@ -1207,6 +1207,8 @@
     <string name="cluster_tuning_distance_label">Distance Tolerance</string>
     <string name="cluster_tuning_recalculate_button">Recalculate All Clusters</string>
     <string name="cluster_tuning_warning">Warning: Recalculating will wipe all learned cluster names and grouping, then rebuild them from history using these new parameters.</string>
+    <string name="cluster_tuning_use_sport_type_label">Take Sport Type into account</string>
+    <string name="cluster_tuning_use_sport_type_summary">Isolate different activities (e.g. Run vs Bike) on the same route into separate families.</string>
     <string name="cluster_tuning_recalculating">Recalculating clusters…</string>
     <string name="cluster_tuning_take_while">This might take a while.</string>
 

@@ -1067,6 +1067,8 @@
     <string name="cluster_tuning_distance_label">Distanz-Toleranz</string>
     <string name="cluster_tuning_recalculate_button">Alle Cluster neu berechnen</string>
     <string name="cluster_tuning_warning">Warnung: Durch die Neuberechnung werden alle gelernten Clusternamen und Gruppierungen gelöscht und basierend auf den neuen Parametern aus dem Verlauf neu aufgebaut.</string>
+    <string name="cluster_tuning_use_sport_type_label">Sportart berücksichtigen</string>
+    <string name="cluster_tuning_use_sport_type_summary">Verschiedene Aktivitäten (z. B. Laufen vs. Radfahren) auf derselben Route in getrennten Familien isolieren.</string>
     <string name="cluster_tuning_recalculating">Cluster werden neu berechnet…</string>
     <string name="cluster_tuning_take_while">Dies kann eine Weile dauern.</string>
 

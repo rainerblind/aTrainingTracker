@@ -96,6 +96,7 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
     var endpointTolerance by mutableStateOf(TrainingApplication.getClusterTolEndpoints())
     var apexTolerance by mutableStateOf(TrainingApplication.getClusterTolApex())
     var distanceTolerance by mutableStateOf(TrainingApplication.getClusterTolDistance())
+    var useSportTypeForClustering by mutableStateOf(TrainingApplication.useSportTypeForClustering())
 
     init {
         refresh()
@@ -118,6 +119,7 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
                 .putFloat(TrainingApplication.SP_CLUSTER_TOL_ENDPOINTS, endpointTolerance)
                 .putFloat(TrainingApplication.SP_CLUSTER_TOL_APEX, apexTolerance)
                 .putFloat(TrainingApplication.SP_CLUSTER_TOL_DISTANCE, distanceTolerance)
+                .putBoolean(TrainingApplication.SP_CLUSTER_USE_SPORT_TYPE, useSportTypeForClustering)
                 .apply()
 
             repository.recalculateClustersWithProgress()
@@ -228,7 +230,7 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
         val apex = workout.maxDisplacementLatLng ?: return emptyList()
         
         return WorkoutClusterEngine.getInstance(getApplication())
-            .getClusterScores(start, end, apex, workout.totalDistance, workout.workoutName)
+            .getClusterScores(start, end, apex, workout.totalDistance, workout.workoutName, workout.bSportType)
     }
 
     fun moveWorkout(workout: WorkoutData, newClusterId: Long) {
