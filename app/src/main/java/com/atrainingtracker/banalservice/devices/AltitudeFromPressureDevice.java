@@ -63,11 +63,6 @@ public class AltitudeFromPressureDevice extends MyDevice
     public AltitudeFromPressureDevice(Context context, MySensorManager mySensorManager) {
         super(context, mySensorManager, DeviceType.ALTITUDE_FROM_PRESSURE);
 
-        // ATT-353: Just-in-Time database registration
-        mDevicesDatabaseManager.ensureSmartphoneDeviceExists(
-                DeviceType.ALTITUDE_FROM_PRESSURE, 
-                mContext.getString(R.string.devices_altitude_from_pressure)
-        );
         mDeviceId = mDevicesDatabaseManager.getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_PRESSURE);
 
         SensorManager sensorManager = (SensorManager) mContext.getSystemService(Context.SENSOR_SERVICE);

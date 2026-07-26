@@ -117,6 +117,8 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-MIG-013** | `ATT-401` | **Interaction Queue Size Limiting** | `REQ-MIG-017` | 1. Start bulk import of > 10 unclustered workouts. 2. Verify engine pauses at 10 queued items. 3. Monitor network/parsing logs. | Interaction queue size is strictly enforced (limit: 10). The engine MUST NOT download or parse more files until space is cleared in the queue. | Verified |
 | **TST-MIG-014** | `ATT-403` | **Sparse Data Import** | `REQ-MIG-018` | 1. Import a TCX file missing HR/Power. 2. Inspect summary and DB schema. | Missing sensors are NOT displayed in summary and NOT created as columns in samples table. | Verified |
 | **TST-MIG-015** | `ATT-405` | **Dropbox Wait Feedback** | `REQ-MIG-019` | 1. Trigger 'Scan TCX' from Dropbox. 2. Observe the progress status messages. | Explicit messages like "Waiting for Dropbox..." or "Downloading [File]..." SHALL be visible during network operations. | Verified |
+| **TST-BUG-011** | `ATT-420` | **Eager Pressure Sensor Visibility** | `REQ-DAT-006` | 1. Use Database Inspector to delete the 'Altitude from Pressure' entry from the `Devices` table. 2. Restart the app on a device with a pressure sensor. 3. Navigate to 'My Sensors'. | The sensor SHALL be automatically re-registered and immediately visible in the list on the FIRST run after deletion. | Verified |
+| **TST-BUG-010** | | **Internal Sensor Iconography** | `REQ-UI-119` | 1. Open 'My Sensors'. 2. Inspect the 'Altitude from Pressure' entry. | The entry SHALL display the standard `ic_altitude` icon instead of a generic smartphone icon. | Verified |
 
 ## 3. Structural & Compliance Checks
 

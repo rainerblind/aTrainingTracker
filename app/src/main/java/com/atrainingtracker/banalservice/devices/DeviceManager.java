@@ -254,10 +254,18 @@ public class DeviceManager {
         mBanalService = banalService;
 
         mDevicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
+        
+        // ATT-353: Eager registration of the pressure sensor to ensure ID resolution works 
+        // on the very first run (Breaks the circular dependency).
+        mHavePressureSensor = HavePressureSensor.havePressureSensor(mContext);
+        if (mHavePressureSensor) {
+            mDevicesDatabaseManager.ensureSmartphoneDeviceExists(
+                    DeviceType.ALTITUDE_FROM_PRESSURE,
+                    mContext.getString(R.string.devices_altitude_from_pressure)
+            );
+        }
 
         mSensorManager = mySensorManager;
-
-        mHavePressureSensor = HavePressureSensor.havePressureSensor(mContext);
 
         mClockDevice = new ClockDevice(mContext, mSensorManager);
         

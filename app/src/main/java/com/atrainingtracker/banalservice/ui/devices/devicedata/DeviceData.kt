@@ -270,6 +270,7 @@ fun getIconId(deviceType: DeviceType, protocol: Protocol): Int {
             DeviceType.SPEED_AND_LOCATION_GPS -> R.drawable.ic_location
             DeviceType.SPEED_AND_LOCATION_NETWORK -> R.drawable.ic_cell_5_bar
             DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED -> R.drawable.ic_navigation_arrow
+            DeviceType.ALTITUDE_FROM_PRESSURE -> R.drawable.ic_altitude
             else -> protocol.iconId
         }
 
