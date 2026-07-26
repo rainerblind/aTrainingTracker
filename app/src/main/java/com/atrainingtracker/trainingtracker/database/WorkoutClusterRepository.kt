@@ -41,6 +41,7 @@ class WorkoutClusterRepository private constructor(private val context: Context)
     private val clusterDb = WorkoutClusterDatabaseManager.getInstance(context)
     private val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
     private val DEBUG = com.atrainingtracker.trainingtracker.TrainingApplication.getDebug(true)
+    private val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
     
     private val mapper by lazy {
         WorkoutDataMapper(
@@ -59,6 +60,7 @@ class WorkoutClusterRepository private constructor(private val context: Context)
     val migrationStatus: StateFlow<MigrationStatus?> = _migrationStatus.asStateFlow()
 
     companion object {
+        private const val SP_KEY_LAST_BOUNDS_REPAIR = "last_cluster_bounds_repair_v5"
         @Volatile
         private var instance: WorkoutClusterRepository? = null
 
@@ -71,6 +73,12 @@ class WorkoutClusterRepository private constructor(private val context: Context)
     }
 
     suspend fun refreshClusters() = withContext(Dispatchers.IO) {
+        // 0. Informative Enrichment Pass (ATT-371/392 Refinement)
+        val lastRepair = prefs.getInt(SP_KEY_LAST_BOUNDS_REPAIR, 0)
+        if (lastRepair < 5 && clusterDb.getAllClusters().isNotEmpty()) {
+            repairClusterMetadata()
+        }
+
         val title = context.getString(R.string.cluster_migration_title)
         _migrationStatus.value = MigrationStatus(
             title,
@@ -167,6 +175,66 @@ class WorkoutClusterRepository private constructor(private val context: Context)
     suspend fun updateCluster(cluster: WorkoutCluster) = withContext(Dispatchers.IO) {
         clusterDb.updateCluster(cluster)
         refreshClusters()
+    }
+
+    private suspend fun repairClusterMetadata() = withContext(Dispatchers.Default) {
+        val title = context.getString(R.string.cluster_migration_title)
+        val engine = WorkoutClusterEngine.getInstance(context)
+        
+        val listener = object : ClusterMigrationListener {
+            override fun onPhase1Progress(current: Int, total: Int) {
+                // Not used in repair pass
+            }
+
+            override fun onPhase2Progress(current: Int, total: Int) {
+                val msg = context.getString(R.string.cluster_migration_enriching, current, total)
+                _migrationStatus.value = MigrationStatus(
+                    title,
+                    listOf(
+                        ProgressPhase(1, context.getString(R.string.cluster_migration_healing), 1.0f),
+                        ProgressPhase(2, msg, if (total > 0) current.toFloat() / total.toFloat() else 1.0f)
+                    )
+                )
+            }
+        }
+
+        engine.enrichAllClusterMetadata(context, listener)
+        
+        prefs.edit().putInt(SP_KEY_LAST_BOUNDS_REPAIR, 5).apply()
+        _migrationStatus.value = null
+    }
+
+    suspend fun recalculateClustersWithProgress() = withContext(Dispatchers.Default) {
+        val title = context.getString(R.string.cluster_migration_title)
+        val engine = WorkoutClusterEngine.getInstance(context)
+        
+        val listener = object : ClusterMigrationListener {
+            override fun onPhase1Progress(current: Int, total: Int) {
+                val msg = context.getString(R.string.cluster_migration_processing_routes)
+                _migrationStatus.value = MigrationStatus(
+                    title,
+                    listOf(ProgressPhase(1, msg, if (total > 0) current.toFloat() / total.toFloat() else 1.0f))
+                )
+            }
+
+            override fun onPhase2Progress(current: Int, total: Int) {
+                val msg = context.getString(R.string.cluster_migration_processing_workouts, current, total)
+                _migrationStatus.value = MigrationStatus(
+                    title,
+                    listOf(
+                        ProgressPhase(1, context.getString(R.string.cluster_migration_processing_routes), 1.0f),
+                        ProgressPhase(2, msg, if (total > 0) current.toFloat() / total.toFloat() else 1.0f)
+                    )
+                )
+            }
+        }
+
+        withContext(Dispatchers.IO) {
+            engine.recalculateHistory(context, listener)
+        }
+        
+        refreshClusters()
+        _migrationStatus.value = null
     }
 
     suspend fun deleteCluster(clusterId: Long) = withContext(Dispatchers.IO) {

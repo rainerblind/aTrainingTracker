@@ -1244,6 +1244,9 @@
     <string name="cluster_migration_loading">Loading route families…</string>
     <string name="cluster_migration_healing">Verifying history integrity…</string>
     <string name="cluster_migration_previews">Preparing family previews (%1$d of %2$d)…</string>
+    <string name="cluster_migration_processing_routes">Processing routes…</string>
+    <string name="cluster_migration_processing_workouts">Processing workout %1$d of %2$d…</string>
+    <string name="cluster_migration_enriching">Enriching family metadata (%1$d of %2$d)…</string>
     <string name="migration_phase_label">Phase %1$d: %2$s</string>
 
     <string name="all_sports">+ all sports +</string>

@@ -120,11 +120,8 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
                 .putFloat(TrainingApplication.SP_CLUSTER_TOL_DISTANCE, distanceTolerance)
                 .apply()
 
-            withContext(Dispatchers.IO) {
-                WorkoutClusterEngine.getInstance(getApplication())
-                    .recalculateHistory(getApplication())
-                repository.refreshClusters()
-            }
+            repository.recalculateClustersWithProgress()
+            
             _isRecalculating.value = false
             _recalculationFinished.emit(Unit)
         }

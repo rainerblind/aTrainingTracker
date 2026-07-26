@@ -282,13 +282,14 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
     }
 
     private class WorkoutClusterDbHelper(context: Context) : SQLiteOpenHelper(
-        context, "RouteClusters.db", null, 3
+        context, "RouteClusters.db", null, 5
     ) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(WorkoutClusterContract.CREATE_TABLE)
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+            // Non-Destructive Migration for ATT-371/392 (v5: Final Spatial Alignment)
             if (oldVersion < 2) {
                 db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_SPORT_TYPE} TEXT DEFAULT 'UNKNOWN'")
             }
@@ -301,6 +302,7 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
                 db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_LONGEST_WORKOUT_ID} INTEGER DEFAULT -1")
                 db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_LONGEST_DURATION} INTEGER DEFAULT 0")
             }
+            // Note: v4 was destructive; v5 ensures everyone has a consistent schema and triggers the enrichment pass via the repository.
         }
     }
 }

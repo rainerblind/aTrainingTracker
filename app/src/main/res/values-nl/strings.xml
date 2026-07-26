@@ -1016,9 +1016,12 @@
     <string name="cluster_autoname_format">%1$s #%2$d</string>
     <string name="cluster_delete_title">Workoutcluster verwijderen</string>
     <string name="cluster_delete_message">Weet u zeker dat u dit workoutcluster wilt verwijderen? De bijbehorende trainingen worden nicht verwijderd, maar ze worden niet meer onder dit cluster gegroepeerd.</string>
+    <string name="cluster_migration_title">Routefamilies analyseren…</string>
     <string name="cluster_migration_loading">Routefamilies laden…</string>
     <string name="cluster_migration_healing">Geschiedenisintegriteit controleren…</string>
     <string name="cluster_migration_previews">Familievoorbeelden voorbereiden (%1$d van %2$d)…</string>
+    <string name="cluster_migration_processing_routes">Routes verwerken…</string>
+    <string name="cluster_migration_processing_workouts">Training %1$d van %2$d verwerken…</string>
     <string name="migration_phase_label">Fase %1$d: %2$s</string>
 
     <string name="unclustered">Open</string>

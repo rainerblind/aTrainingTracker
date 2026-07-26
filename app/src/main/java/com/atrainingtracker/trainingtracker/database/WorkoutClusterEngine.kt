@@ -71,7 +71,9 @@ class WorkoutClusterEngine private constructor(context: Context) {
     fun learnFromWorkout(
         start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
         userSpecifiedName: String, userSportId: Long, 
-        clusterIdOverride: Long = -1
+        clusterIdOverride: Long = -1,
+        minLat: Double? = null, minLng: Double? = null,
+        maxLat: Double? = null, maxLng: Double? = null
     ): Long {
         val existingMatch = if (clusterIdOverride != -1L) dbManager.getClusterById(clusterIdOverride) 
                             else suggestCluster(start, end, apex, distance, userSpecifiedName)
@@ -95,7 +97,12 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 endLng = (existingMatch.endLng * existingMatch.hitCount + end.longitude) / (existingMatch.hitCount + 1),
                 maxDispLat = (existingMatch.maxDispLat * existingMatch.hitCount + apex.latitude) / (existingMatch.hitCount + 1),
                 maxDispLng = (existingMatch.maxDispLng * existingMatch.hitCount + apex.longitude) / (existingMatch.hitCount + 1),
-                refDistance = (existingMatch.refDistance * existingMatch.hitCount + distance) / (existingMatch.hitCount + 1)
+                refDistance = (existingMatch.refDistance * existingMatch.hitCount + distance) / (existingMatch.hitCount + 1),
+                // ATT-371: Expand existing bounds
+                minLat = if (minLat != null) minOf(existingMatch.minLat ?: 90.0, minLat) else existingMatch.minLat,
+                minLng = if (minLng != null) minOf(existingMatch.minLng ?: 180.0, minLng) else existingMatch.minLng,
+                maxLat = if (maxLat != null) maxOf(existingMatch.maxLat ?: -90.0, maxLat) else existingMatch.maxLat,
+                maxLng = if (maxLng != null) maxOf(existingMatch.maxLng ?: -180.0, maxLng) else existingMatch.maxLng
             )
             dbManager.updateCluster(updatedCluster)
             updatedCluster.id
@@ -112,7 +119,9 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 maxDispLng = apex.longitude,
                 refDistance = distance,
                 hitCount = 0,
-                bSportType = SportTypeDatabaseManager.getInstance(appContext).getBSportType(userSportId)
+                bSportType = SportTypeDatabaseManager.getInstance(appContext).getBSportType(userSportId),
+                // ATT-371: Initialize bounds
+                minLat = minLat, minLng = minLng, maxLat = maxLat, maxLng = maxLng
             )
             dbManager.insertCluster(newCluster)
         }
@@ -152,15 +161,12 @@ class WorkoutClusterEngine private constructor(context: Context) {
             dbManager.updateCluster(updated)
         } else {
             val clusterName = normalizedName ?: context.getString(R.string.cluster_default_name_format, w.fileBaseName?.take(10) ?: "Workout")
-            val newId = learnFromWorkout(w.startLatLng, w.endLatLng, w.startLatLng, w.totalDistance, clusterName, w.sportId)
+            val newId = learnFromWorkout(
+                w.startLatLng, w.endLatLng, w.startLatLng, w.totalDistance, 
+                clusterName, w.sportId,
+                minLat = w.minLat, minLng = w.minLng, maxLat = w.maxLat, maxLng = w.maxLng
+            )
             
-            val newCluster = dbManager.getClusterById(newId)
-            if (newCluster != null) {
-                dbManager.updateCluster(newCluster.copy(
-                    minLat = w.minLat, minLng = w.minLng, maxLat = w.maxLat, maxLng = w.maxLng,
-                    longestWorkoutId = w.id, longestDurationS = w.activeTimeSec
-                ))
-            }
             assignClusterToWorkout(context, w.id, newId, false)
         }
     }
@@ -210,7 +216,10 @@ class WorkoutClusterEngine private constructor(context: Context) {
         onWorkoutFinished(appContext, newW)
     }
 
-    private fun recalculateClusterAnchors(context: Context, cluster: WorkoutCluster) {
+    /**
+     * Surgically recalculates the spatial anchors (Bounds and Longest) for a single cluster (ATT-354/371).
+     */
+    fun recalculateClusterAnchors(context: Context, cluster: WorkoutCluster) {
         val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
         val db = summariesManager.getDatabase()
         val cursor = db.query(WorkoutSummaries.TABLE, 
@@ -269,6 +278,17 @@ class WorkoutClusterEngine private constructor(context: Context) {
         }
     }
 
+    /**
+     * Non-destructive enrichment of all existing clusters with full spatial bounds (ATT-371).
+     */
+    fun enrichAllClusterMetadata(context: Context, listener: ClusterMigrationListener? = null) {
+        val clusters = dbManager.getAllClusters()
+        clusters.forEachIndexed { index, cluster ->
+            listener?.onPhase2Progress(index + 1, clusters.size)
+            recalculateClusterAnchors(context, cluster)
+        }
+    }
+
     fun syncRouteNameChange(clusterId: Long, newName: String) {
         if (clusterId == -1L) return
         val match = dbManager.getClusterById(clusterId)
@@ -284,35 +304,67 @@ class WorkoutClusterEngine private constructor(context: Context) {
         val start = path.first().latLng
         val end = path.last().latLng
         val distance = route.summary.distance
+        
+        var minLat = 90.0; var maxLat = -90.0; var minLng = 180.0; var maxLng = -180.0
         var maxLineDist = -1.0; var apex = start
+        
         path.forEach { point ->
+            val lat = point.latLng.latitude
+            val lon = point.latLng.longitude
+            if (lat < minLat) minLat = lat
+            if (lat > maxLat) maxLat = lat
+            if (lon < minLng) minLng = lon
+            if (lon > maxLng) maxLng = lon
+
             val dist = distanceBetween(point.latLng, start).toDouble()
             if (dist > maxLineDist) { maxLineDist = dist; apex = point.latLng }
         }
+        
         val sportId = SportTypeDatabaseManager.getSportTypeId(route.summary.bSportType)
-        return learnFromWorkout(start, end, apex, distance, route.summary.name, sportId)
+        return learnFromWorkout(
+            start, end, apex, distance, route.summary.name, sportId,
+            minLat = minLat, minLng = minLng, maxLat = maxLat, maxLng = maxLng
+        )
     }
 
-    fun migrateHistory(context: Context) {
+    /**
+     * O(1) Hierarchical sync pass for history (ATT-371/392).
+     */
+    @JvmOverloads
+    fun migrateHistory(context: Context, listener: ClusterMigrationListener? = null) {
         val routesDb = RoutesDatabaseManager.getInstance(context)
-        routesDb.getAllRoutes().forEach { routeWithPath ->
+        val routes = routesDb.getAllRoutes()
+        routes.forEachIndexed { index, routeWithPath ->
+            listener?.onPhase1Progress(index + 1, routes.size)
             val clusterId = learnFromRoute(routeWithPath)
             if (clusterId != -1L) {
                 routesDb.updateRouteSummary(routeWithPath.summary.copy(clusterId = clusterId))
             }
+        }
+        
+        // Ensure Phase 1 hits 100% if no routes existed
+        if (routes.isEmpty()) {
+            listener?.onPhase1Progress(0, 0)
         }
 
         val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
         val cursor = summariesManager.getCursorForAllWorkoutsAsc() ?: return
 
         cursor.use { c ->
+            val total = c.count
             val idIdx = c.getColumnIndexOrThrow(WorkoutSummaries.C_ID)
             val nameIdx = c.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME)
             val fileIdx = c.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME)
             val sportIdx = c.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID)
             val distIdx = c.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m)
 
+            var count = 0
             while (c.moveToNext()) {
+                count++
+                if (count % 5 == 0 || count == total) {
+                    listener?.onPhase2Progress(count, total)
+                }
+
                 val workoutId = c.getLong(idIdx)
                 val workoutName = c.getString(nameIdx)
                 val fileBaseName = c.getString(fileIdx)
@@ -367,7 +419,6 @@ class WorkoutClusterEngine private constructor(context: Context) {
                         assignClusterToWorkout(context, workoutId, updated.id)
                     } else {
                         val clusterName = if (!isDefault) normalizedName!! else context.getString(R.string.cluster_default_name_format, fileBaseName?.take(10) ?: "Workout")
-                        val newId = learnFromWorkout(start, end, apex, distance, clusterName, sportId)
                         
                         val wMinLat = summariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MIN_LAT)
                         val wMinLng = summariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MIN_LNG)
@@ -375,9 +426,13 @@ class WorkoutClusterEngine private constructor(context: Context) {
                         val wMaxLng = summariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MAX_LNG)
                         val wDuration = summariesManager.getLong(workoutId, WorkoutSummaries.TIME_ACTIVE_s) ?: 0L
 
+                        val newId = learnFromWorkout(
+                            start, end, apex, distance, clusterName, sportId,
+                            minLat = wMinLat, minLng = wMinLng, maxLat = wMaxLat, maxLng = wMaxLng
+                        )
+                        
                         dbManager.getClusterById(newId)?.let {
                             dbManager.updateCluster(it.copy(
-                                minLat = wMinLat, minLng = wMinLng, maxLat = wMaxLat, maxLng = wMaxLng,
                                 longestWorkoutId = workoutId, longestDurationS = wDuration
                             ))
                         }
@@ -439,7 +494,11 @@ class WorkoutClusterEngine private constructor(context: Context) {
 
     private fun normalizeName(name: String): String = name.replace(Regex(" (?:#|var) \\d+$", RegexOption.IGNORE_CASE), "").trim().lowercase()
     private fun stripHitCount(name: String): String = name.replace(Regex(" #\\d+$"), "").trim()
-    fun recalculateHistory(context: Context) { dbManager.deleteAllClusters(); migrateHistory(context) }
+    @JvmOverloads
+    fun recalculateHistory(context: Context, listener: ClusterMigrationListener? = null) { 
+        dbManager.deleteAllClusters()
+        migrateHistory(context, listener) 
+    }
     fun getClusterScores(start: LatLng, end: LatLng, apex: LatLng, distance: Double, workoutName: String? = null): List<Pair<WorkoutCluster, Double>> = scoreClusters(dbManager.getAllClusters(), start, end, apex, distance, workoutName)
     fun scoreClusters(clusters: List<WorkoutCluster>, start: LatLng, end: LatLng, apex: LatLng, distance: Double, workoutName: String? = null): List<Pair<WorkoutCluster, Double>> = clusters.map { it to calculateSimilarity(start, end, apex, distance, it, workoutName) }.sortedBy { it.second }
 
