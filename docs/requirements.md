@@ -274,6 +274,13 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-MIG-015** | **Efficient Legacy Recovery.** | The legacy recovery process SHALL skip already imported workouts BEFORE downloading them from remote storage to ensure optimal performance and bandwidth usage. | `LegacyImportEngine.kt` | `TST-MIG-011` | Verified |
 | **REQ-MIG-016** | **Paginated Cloud Recovery.** | The system SHALL support pagination when scanning cloud storage (Dropbox) for legacy data to ensure that all workout files are discovered, regardless of folder size. | `LegacyImportEngine.kt` | `TST-MIG-012` | Verified |
 
+## 14. Performance & Scalability
+
+| ID | Description | Rationale | Implementation File(s) | Verification ID | Status |
+|:---|:---|:---|:---|:---|:---|
+| **REQ-PER-001** | The system SHALL load and display the detailed visualization (Heatmap and List) of a Workout Cluster within 1 second for route families containing up to 50 sessions. | Ensure a responsive and professional user experience when analyzing recurring routes. | `WorkoutClustersViewModel.kt`, `WorkoutClusterRepository.kt`, `WorkoutSummariesDatabaseManager.java`, `WorkoutClusterHeatmapScreen.kt` | `TST-PERF-002` | Verified |
+
+
 ## 12. Privacy & Permissions
 
 | ID | Description | Rationale | Implementation File(s) | Verification ID | Status |

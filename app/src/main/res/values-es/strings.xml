@@ -923,6 +923,10 @@
         <item quantity="other">%1$d Sesiones</item>
     </plurals>
     <string name="workout_periods__longest_workout">Sesión más larga</string>
+    <string name="workout_periods__migration_querying">Cargando historial de entrenamiento…</string>
+    <string name="workout_periods__migration_reading">Leyendo entrenamiento %1$d de %2$d…</string>
+    <string name="workout_periods__migration_syncing">Sincronizando %1$s…</string>
+    <string name="workout_periods__migration_finalizing">Finalizando totales anuales…</string>
 
     <!-- share screenshots -->
     <string name="share">Compartir</string>

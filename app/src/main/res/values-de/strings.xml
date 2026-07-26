@@ -997,6 +997,10 @@
         <item quantity="other">%1$d Einheiten</item>
     </plurals>
     <string name="workout_periods__longest_workout">Längste Einheit</string>
+    <string name="workout_periods__migration_querying">Lade Trainingsverlauf…</string>
+    <string name="workout_periods__migration_reading">Lese Training %1$d von %2$d…</string>
+    <string name="workout_periods__migration_syncing">Synchronisiere %1$s…</string>
+    <string name="workout_periods__migration_finalizing">Berechne Jahreswerte…</string>
 
     <!-- share screenshots -->
     <string name="share">Teilen</string>

@@ -85,7 +85,7 @@ class PeriodsRepository private constructor(private val application: Application
      */
     private suspend fun performHierarchicalMigration() = withContext(Dispatchers.Default) {
         rebuildMutex.withLock {
-            _migrationStatus.value = MigrationStatus("Querying training history...", 0.0f)
+            _migrationStatus.value = MigrationStatus(application.getString(R.string.workout_periods__migration_querying), 0.0f)
             Log.i(TAG, "Starting Streaming Hierarchical Migration.")
             val startTime = System.currentTimeMillis()
 
@@ -121,7 +121,10 @@ class PeriodsRepository private constructor(private val application: Application
                             if (currentMonthKey != null && monthKey != currentMonthKey) {
                                 // 1. Process the completed month bucket
                                 val monthLabel = currentMonthWorkouts.first().localDateTime.format(monthFormatter)
-                                _migrationStatus.value = MigrationStatus("Syncing $monthLabel...", processedCount.toFloat() / totalCount.toFloat())
+                                _migrationStatus.value = MigrationStatus(
+                                    application.getString(R.string.workout_periods__migration_syncing, monthLabel), 
+                                    processedCount.toFloat() / totalCount.toFloat()
+                                )
                                 
                                 processMonthBucket(db, currentMonthWorkouts)
                                 
@@ -134,6 +137,14 @@ class PeriodsRepository private constructor(private val application: Application
                             currentMonthWorkouts.add(workout)
                             currentMonthKey = monthKey
                             processedCount++
+                            
+                            // Periodic feedback during initial read phase
+                            if (processedCount % 50 == 0) {
+                                _migrationStatus.value = MigrationStatus(
+                                    application.getString(R.string.workout_periods__migration_reading, processedCount, totalCount),
+                                    processedCount.toFloat() / totalCount.toFloat() * 0.1f // First 10% for reading
+                                )
+                            }
                         } while (cursor.moveToNext())
                     }
                     cursor.close()
@@ -144,7 +155,7 @@ class PeriodsRepository private constructor(private val application: Application
                     }
 
                     // 3. Final Step: Roll up YEARs from MONTHs
-                    _migrationStatus.value = MigrationStatus("Finalizing yearly totals...", 0.99f)
+                    _migrationStatus.value = MigrationStatus(application.getString(R.string.workout_periods__migration_finalizing), 0.99f)
                     rollupMonthsToYears(db)
                     dbManager.setSyncFinished(db, true)
                 }

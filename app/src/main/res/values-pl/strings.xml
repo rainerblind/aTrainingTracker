@@ -684,6 +684,10 @@
         <item quantity="other">%1$d Treningów</item>
     </plurals>
     <string name="workout_periods__longest_workout">Najdłuższy trening</string>
+    <string name="workout_periods__migration_querying">Ładowanie historii treningów…</string>
+    <string name="workout_periods__migration_reading">Odczytywanie treningu %1$d z %2$d…</string>
+    <string name="workout_periods__migration_syncing">Synchronizowanie %1$s…</string>
+    <string name="workout_periods__migration_finalizing">Finalizowanie sum rocznych…</string>
 
     <!-- share screenshots -->
     <string name="share">Udostępnij</string>

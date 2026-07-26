@@ -920,6 +920,10 @@
         <item quantity="other">%1$d Trainingen</item>
     </plurals>
     <string name="workout_periods__longest_workout">Langste training</string>
+    <string name="workout_periods__migration_querying">Trainingsgeschiedenis laden…</string>
+    <string name="workout_periods__migration_reading">Training %1$d van %2$d lezen…</string>
+    <string name="workout_periods__migration_syncing">Synchroniseren %1$s…</string>
+    <string name="workout_periods__migration_finalizing">Jaartotalen afronden…</string>
 
     <!-- share screenshots -->
     <string name="share">Delen</string>

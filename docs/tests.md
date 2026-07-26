@@ -182,6 +182,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | Test ID | Jira ID | Focus | Requirement ID(s) | Procedure | Expected Result | Status |
 |:---|:---|:---|:---|:---|:---|:---|
 | **TST-PERF-001** | `ATT-319` | **Heatmap Memory Scalability** | `REQ-MAP-017` | 1. Import a large volume of workouts (e.g. 500+). 2. Navigate to the 'Periods' view and scroll through Yearly/Monthly summaries. | The application SHALL NOT crash with an `OutOfMemoryError`. Map rendering MUST remain responsive. | Proposed |
+| **TST-PERF-002** | `ATT-362` | **Cluster Detail Loading Speed** | `REQ-PER-001` | 1. Identify a cluster with > 30 recordings. 2. Tap on the cluster to open its details. 3. Measure time from tap to full heatmap/list display. | UI appears and becomes interactive in < 1 second. Heatmap preparation should not block the main thread. | Verified |
 
 ## 4. Release Verification Workflow
 
