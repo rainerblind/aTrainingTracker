@@ -764,6 +764,22 @@ public class DevicesDatabaseManager {
         return  deviceId;
     }
 
+    /**
+     * ATT-353: Ensures an internal smartphone device exists in the DB.
+     * Surgically inserts the record if missing, without duplicates.
+     */
+    public void ensureSmartphoneDeviceExists(DeviceType type, String name) {
+        if (getSmartphoneDeviceId(type) != -1L) return;
+
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(DevicesDbHelper.PROTOCOL, Protocol.SMARTPHONE.name());
+        contentValues.put(DevicesDbHelper.DEVICE_TYPE, type.name());
+        contentValues.put(DevicesDbHelper.PAIRED, 1); // Default to paired
+        contentValues.put(DevicesDbHelper.NAME, name);
+        contentValues.put(DevicesDbHelper.MANUFACTURER_NAME, android.os.Build.BRAND);
+        getDatabase().insert(DevicesDbHelper.DEVICES, null, contentValues);
+    }
+
     public int deleteDevice(long deviceId) {
         if (DEBUG) Log.d(TAG, "deleteDevice: deviceId=" + deviceId);
 

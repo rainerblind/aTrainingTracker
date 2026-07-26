@@ -260,7 +260,9 @@ public class DeviceManager {
         mHavePressureSensor = HavePressureSensor.havePressureSensor(mContext);
 
         mClockDevice = new ClockDevice(mContext, mSensorManager);
-        if (mHavePressureSensor) {
+        
+        long altitudePressureId = mDevicesDatabaseManager.getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_PRESSURE);
+        if (mHavePressureSensor && mDevicesDatabaseManager.isPaired(altitudePressureId)) {
             mAltitudeFromPressureDevice = new AltitudeFromPressureDevice(mContext, mSensorManager);
         }
 
@@ -383,6 +385,17 @@ public class DeviceManager {
                     mSpeedAndLocationDevice_Network.shutDown();
                     mSpeedAndLocationDevice_Network = null;
                 }
+            }
+            return;
+        }
+
+        long altitudePressureId = devicesDatabaseManager.getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_PRESSURE);
+        if (deviceId == altitudePressureId) {
+            if (paired && mAltitudeFromPressureDevice == null) {
+                mAltitudeFromPressureDevice = new AltitudeFromPressureDevice(mContext, mSensorManager);
+            } else if (!paired && mAltitudeFromPressureDevice != null) {
+                mAltitudeFromPressureDevice.shutDown();
+                mAltitudeFromPressureDevice = null;
             }
             return;
         }
