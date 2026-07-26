@@ -55,6 +55,7 @@ class PeriodsRepository private constructor(private val application: Application
     private val dayFormatter = DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.LONG)
     private val monthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy")
     private val yearFormatter = DateTimeFormatter.ofPattern("yyyy")
+    private val rangeDateFormatter = DateTimeFormatter.ofPattern("MMM d")
 
     companion object {
         private const val TAG = "PeriodsRepository"
@@ -388,7 +389,11 @@ class PeriodsRepository private constructor(private val application: Application
             PeriodType.MONTH -> w.localDateTime.format(monthFormatter)
             PeriodType.YEAR -> w.localDateTime.format(yearFormatter)
         }
-        val range = if (type == PeriodType.WEEK) "${w.formattedDate} - ${w.formattedDate}" else ""
+        val range = if (type == PeriodType.WEEK) {
+            val weekStart = w.localDateTime.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+            val weekEnd = weekStart.plusDays(6)
+            "${weekStart.format(rangeDateFormatter)} - ${weekEnd.format(rangeDateFormatter)}"
+        } else ""
         
         val sportStats = mapOf(w.bSportType to SportStats(
             count = 1, totalDurationSec = w.activeTimeSec, totalDistanceMeters = w.totalDistance, totalAscentMeters = w.ascentMeters,
@@ -580,8 +585,14 @@ class PeriodsRepository private constructor(private val application: Application
             else -> ""
         }
 
+        val range = if (type == PeriodType.WEEK) {
+            val weekStart = OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(start), java.time.ZoneId.systemDefault())
+            val weekEnd = OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(end), java.time.ZoneId.systemDefault())
+            "${weekStart.format(rangeDateFormatter)} - ${weekEnd.format(rangeDateFormatter)}"
+        } else ""
+
         return PeriodSummary(
-            periodLabel = label, periodDateRange = "", periodType = type,
+            periodLabel = label, periodDateRange = range, periodType = type,
             startTimestampS = start, endTimestampS = end, totalWorkouts = totalWorkouts,
             totalDurationSec = totalTime, totalDistance = totalDist, sportStats = mergedSportStats,
             sortKey = getPeriodSortKey(start, type),

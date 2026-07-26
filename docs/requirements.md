@@ -97,6 +97,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-SET-042** | **Markers in Previews.** | The system SHALL display Start, End, and Apex markers in the mini-map previews for Workouts. For Routes, ONLY Start and End markers SHALL be displayed to provide spatial context without clutter. | `PathPreviewMap.kt`, `WorkoutSummary.kt`, `RouteItem.kt` | `TST-SET-032` | Verified |
 | **REQ-SET-043** | **Fingerprint Parity.** | To ensure 100% matching accuracy, the system SHALL calculate Route spatial fingerprints using 'Max Displacement from Start', matching the live tracking engine's logic. | `WorkoutClusterEngine.kt` | `TST-SET-033` | Verified |
 | **REQ-SET-044** | **Manual Name Isolation.** | Renaming a workout session in the Edit Workout screen SHALL NOT trigger a rename of the associated Workout Cluster, preserving the route's permanent identity. | `WorkoutRepository.kt`, `WorkoutClusterEngine.kt` | `TST-SET-042` | Verified |
+| **REQ-UI-062** | **Weekly Period Date Range.** | The system SHALL display the explicit start and end dates (e.g., "May 11 - May 17") below the title for weekly period summaries in the Periods screen to provide precise temporal context. | `PeriodsRepository.kt`, `PeriodSummaryCard.kt` | `TST-UI-074` | Proposed |
 
 ## 5. Data Storage & Post-Processing
 
@@ -218,6 +219,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-UI-112** | **Navigation Drawer Terminology.** | The system SHALL use professional and standardized terminology for all navigation drawer labels across all supported languages. Specifically, the management hub SHALL be labeled \"Equipment\" (English) / \"Ausrüstung\" (German), the cloud integration section SHALL be labeled \"Synchronization\" (English) / \"Synchronisation\" (German), and the file export item SHALL be labeled \"Export\" (English / German). | `main_navigation_drawer.xml`, `strings.xml` | `TST-NAV-002` | Verified |
 | **REQ-UI-114** | **Original Sport Icons.** | The system SHALL display sport type icons in their original colors to ensure quick identification and preserve visual identity. These icons SHALL NOT be subject to theme-based tinting unless they are explicitly in a \"muted\" or \"disabled\" state (e.g. background layers). | `ActivityTypeSelectionDialog.kt`, `SportTypeListFragment.kt` | `TST-INT-007` | Verified |
 | **REQ-UI-115** | **Concise Settings Terminology.** | The system SHALL use concise and direct terminology for settings-related navigation items by omitting redundant qualifiers such as \"Settings\", \"Configuration\", \"Einstellungen\", or \"Konfiguration\". | `strings.xml`, `main_navigation_drawer.xml` | `TST-UI-075` | Verified |
+| **REQ-UI-116** | **Weekly Period Date Range.** | The system SHALL display the explicit start and end dates (e.g., \"May 11 - May 17\") below the title for weekly period summaries in the Periods screen to provide precise temporal context. | `PeriodsRepository.kt`, `PeriodSummaryCard.kt` | `TST-UI-074` | Verified |
 
 ## 11. Wearable Integration
 
