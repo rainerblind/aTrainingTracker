@@ -68,6 +68,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
     /**
      * Records user feedback (name/sport edit) or route seeding to update or create clusters.
      */
+    @JvmOverloads
     fun learnFromWorkout(
         start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
         userSpecifiedName: String, userSportId: Long, 
@@ -153,10 +154,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 minLat = if (wMinLat != null) minOf(currentMatch.minLat ?: 90.0, wMinLat) else currentMatch.minLat,
                 minLng = if (wMinLng != null) minOf(currentMatch.minLng ?: 180.0, wMinLng) else currentMatch.minLng,
                 maxLat = if (wMaxLat != null) maxOf(currentMatch.maxLat ?: -90.0, wMaxLat) else currentMatch.maxLat,
-                maxLng = if (wMaxLng != null) maxOf(currentMatch.maxLng ?: -180.0, wMaxLng) else currentMatch.maxLng,
-                
-                longestWorkoutId = if (w.activeTimeSec > currentMatch.longestDurationS) w.id else currentMatch.longestWorkoutId,
-                longestDurationS = if (w.activeTimeSec > currentMatch.longestDurationS) w.activeTimeSec else currentMatch.longestDurationS
+                maxLng = if (wMaxLng != null) maxOf(currentMatch.maxLng ?: -180.0, wMaxLng) else currentMatch.maxLng
             )
             dbManager.updateCluster(updated)
         } else {
@@ -195,12 +193,11 @@ class WorkoutClusterEngine private constructor(context: Context) {
             refDistance = (cluster.refDistance * cluster.hitCount - w.totalDistance) / newHitCount
         )
 
-        val isAnchor = w.id == cluster.longestWorkoutId || 
-                       w.minLat == cluster.minLat || w.maxLat == cluster.maxLat ||
+        val isAnchor = w.minLat == cluster.minLat || w.maxLat == cluster.maxLat ||
                        w.minLng == cluster.minLng || w.maxLng == cluster.maxLng
 
         if (isAnchor) {
-            Log.i(TAG, "Surgical Recalc: Deleting anchor ${w.id} from cluster ${cluster.name}. Recalculating family anchors.")
+            Log.i(TAG, "Surgical Recalc: Deleting spatial anchor ${w.id} from cluster ${cluster.name}. Recalculating family envelope.")
             recalculateClusterAnchors(context, updated)
         } else {
             dbManager.updateCluster(updated)
@@ -217,7 +214,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
     }
 
     /**
-     * Surgically recalculates the spatial anchors (Bounds and Longest) for a single cluster (ATT-354/371).
+     * Surgically recalculates the spatial anchors (Bounds) for a single cluster (ATT-354/371).
      */
     fun recalculateClusterAnchors(context: Context, cluster: WorkoutCluster) {
         val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
@@ -229,20 +226,15 @@ class WorkoutClusterEngine private constructor(context: Context) {
             "${WorkoutSummaries.CLUSTER_ID} = ?", arrayOf(cluster.id.toString()), null, null, null)
 
         var minLat = 90.0; var maxLat = -90.0; var minLng = 180.0; var maxLng = -180.0
-        var longestId = -1L; var longestDuration = 0L
         var hasPoints = false
 
         cursor.use { c ->
-            val idIdx = c.getColumnIndexOrThrow(WorkoutSummaries.C_ID)
-            val durIdx = c.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s)
             val minLatIdx = c.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LAT)
             val minLngIdx = c.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LNG)
             val maxLatIdx = c.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LAT)
             val maxLngIdx = c.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LNG)
 
             while (c.moveToNext()) {
-                val id = c.getLong(idIdx)
-                val dur = c.getLong(durIdx)
                 val wMinLat = if (c.isNull(minLatIdx)) null else c.getDouble(minLatIdx)
                 val wMinLng = if (c.isNull(minLngIdx)) null else c.getDouble(minLngIdx)
                 val wMaxLat = if (c.isNull(maxLatIdx)) null else c.getDouble(maxLatIdx)
@@ -253,11 +245,6 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 if (wMinLng != null && wMinLng < minLng) minLng = wMinLng
                 if (wMaxLng != null && wMaxLng > maxLng) maxLng = wMaxLng
                 if (wMinLat != null) hasPoints = true
-
-                if (dur > longestDuration) {
-                    longestDuration = dur
-                    longestId = id
-                }
             }
         }
 
@@ -265,9 +252,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
             minLat = if (hasPoints) minLat else null,
             minLng = if (hasPoints) minLng else null,
             maxLat = if (hasPoints) maxLat else null,
-            maxLng = if (hasPoints) maxLng else null,
-            longestWorkoutId = longestId,
-            longestDurationS = longestDuration
+            maxLng = if (hasPoints) maxLng else null
         )
         dbManager.updateCluster(refreshed)
         
@@ -385,21 +370,16 @@ class WorkoutClusterEngine private constructor(context: Context) {
                         val finalName = if (match.name == rawName) rawName else findUniqueClusterName(rawName, match.id)
                         val finalSport = if (!isDefault) sportId else match.probableSportId
 
-                        // ATT-354: Migrate bounds and longest
+                        // ATT-354: Migrate bounds
                         val wMinLat = summariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MIN_LAT)
                         val wMinLng = summariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MIN_LNG)
                         val wMaxLat = summariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MAX_LAT)
                         val wMaxLng = summariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MAX_LNG)
-                        val wDuration = summariesManager.getLong(workoutId, WorkoutSummaries.TIME_ACTIVE_s) ?: 0L
 
                         val minLat = if (wMinLat != null) minOf(match.minLat ?: 90.0, wMinLat) else match.minLat
                         val minLng = if (wMinLng != null) minOf(match.minLng ?: 180.0, wMinLng) else match.minLng
                         val maxLat = if (wMaxLat != null) maxOf(match.maxLat ?: -90.0, wMaxLat) else match.maxLat
                         val maxLng = if (wMaxLng != null) maxOf(match.maxLng ?: -180.0, wMaxLng) else match.maxLng
-                        
-                        val isLonger = wDuration > match.longestDurationS
-                        val longestId = if (isLonger) workoutId else match.longestWorkoutId
-                        val longestDuration = if (isLonger) wDuration else match.longestDurationS
 
                         val updated = match.copy(
                             name = finalName, probableSportId = finalSport,
@@ -412,7 +392,6 @@ class WorkoutClusterEngine private constructor(context: Context) {
                             refDistance = (match.refDistance * match.hitCount + distance) / (match.hitCount + 1),
                             bSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(finalSport),
                             minLat = minLat, minLng = minLng, maxLat = maxLat, maxLng = maxLng,
-                            longestWorkoutId = longestId, longestDurationS = longestDuration,
                             hitCount = match.hitCount + 1
                         )
                         dbManager.updateCluster(updated)
@@ -424,18 +403,11 @@ class WorkoutClusterEngine private constructor(context: Context) {
                         val wMinLng = summariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MIN_LNG)
                         val wMaxLat = summariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MAX_LAT)
                         val wMaxLng = summariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MAX_LNG)
-                        val wDuration = summariesManager.getLong(workoutId, WorkoutSummaries.TIME_ACTIVE_s) ?: 0L
 
                         val newId = learnFromWorkout(
                             start, end, apex, distance, clusterName, sportId,
                             minLat = wMinLat, minLng = wMinLng, maxLat = wMaxLat, maxLng = wMaxLng
                         )
-                        
-                        dbManager.getClusterById(newId)?.let {
-                            dbManager.updateCluster(it.copy(
-                                longestWorkoutId = workoutId, longestDurationS = wDuration
-                            ))
-                        }
                         assignClusterToWorkout(context, workoutId, newId)
                     }
                 }
