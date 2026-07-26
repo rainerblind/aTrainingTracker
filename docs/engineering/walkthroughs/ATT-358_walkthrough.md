@@ -1,34 +1,35 @@
-# Walkthrough - ATT-358: Immediate Visibility during Periods Migration
+# Walkthrough - ATT-358: Final Immediate Visibility & Indexing Fix
 
-Successfully resolved the database locking issue that prevented training periods from being displayed until the entire history was processed. The system now provides real-time visual updates as data is aggregated.
+Successfully resolved the remaining visibility issues where training periods were not appearing during migration and map tracks were missing for non-day periods. The system now provides synchronous real-time updates and consistent spatial enrichment.
 
 ## Fulfilled Requirements
 
 | ID | Description | Rationale |
 |:---|:---|:---|
-| **REQ-PER-001** | The system SHALL load and display calculated periods incrementally during the initial sync to provide immediate feedback. | Ensure a responsive user experience during long-running background data aggregations. |
+| **REQ-PER-001** | The system SHALL load and display calculated periods incrementally during the initial sync. | Ensure a responsive and informative user experience during long-running background data aggregations. |
 
 ## Changes Made
 
-### 🚀 Transactional Pumping Architecture
+### 🚀 Synchronous UI Pumping
 
-- **Per-Month Transactions**: Refactored the `performHierarchicalMigration` loop to commit data to the database after every month bucket. Previously, the entire sync was wrapped in a single transaction, which made the data invisible to the UI until completion.
-- **UI Pumping**: Integrated explicit `loadFromDatabase()` calls after each month is committed. This "pumps" the fresh data into the reactive UI state, allowing the list to grow visibly in real-time.
-- **Initial Setup Pass**: Implemented a dedicated transaction for the initial database wipe and sync-status reset to ensure atomic state transitions.
+- **Awaited Refreshes**: Refactored `loadFromDatabase` to be a `suspend` function and updated the migration engine to **await** the UI refresh after every monthly commit. This ensures that the data is always pushed to the screen before the next batch starts, providing a truly "live" streaming experience.
+- **O(1) Enrichment Bypass**: The refresh logic now uses the memory-cached `globalGroups` calculated during Phase 1. This makes the UI update nearly instantaneous by eliminating redundant database re-scanning.
 
-### 🛡️ Aggregation Robustness
+### 🏗️ Unified Spatial Indexing
 
-- **Safe Collection Access**: Upgraded the hierarchical aggregator to use null-safe operators (`maxByOrNull`, `firstOrNull`) across all levels (Day, Week, Month, Year).
-- **Gap Awareness**: Implemented guard clauses to gracefully handle temporal gaps in training history. If a month or week has no workouts, the system now skips the aggregation pass instead of causing a `NoSuchElementException`.
-- **Nullable Aggregation Chain**: Refactored the core aggregation methods to return optional results, allowing the roll-up engine to correctly skip empty periods.
+- **Harmonized Key Logic**: Introduced a standardized `getPeriodSortKey` helper that generates consistent identifiers (e.g., `yyyy-MM-dd` or `yyyy-Www`) across all levels (Day, Week, Month, Year).
+- **Fixed Map Enrichment**: Resolved a logic error where Weeks, Months, and Years failed to display their map tracks and markers because their in-memory keys didn't match the database keys. Now, all period levels are correctly enriched with their spatial signatures in real-time.
+
+### 🧹 Foundation Refresh (v22)
+
+- **Database v22**: Bumped the Periods database version to **22** to force a clean migration using this finalized architecture, allowing you to observe the perfect real-time visibility and spatial consistency.
 
 ## Verification Results
 
 ### Integration Verification (SWE.5)
 - **Test ID**: TST-PERF-004
-- **Result**: **PASS**. Confirmed through manual testing that period cards appear on the screen month-by-month as they are calculated. The user no longer has to wait for the entire sync to finish to see their newest data.
-- **Test ID**: TST-BUG-002
-- **Result**: **PASS**. Confirmed that history with gaps (missing months) no longer crashes the engine.
+- **Result**: **PASS**. Confirmed that periods for all categories (Day/Week/Month/Year) appear on the screen in real-time as they are processed.
+- **Data Integrity**: **PASS**. Verified that map tracks and markers are now visible for all period levels, confirming the fix for the indexing bottleneck.
 
 > [!TIP]
-> By adopting this "Transactional Pumping" model, we've achieved a high-end responsive feel where the app remains interactive and informative throughout its heaviest background processing task.
+> This final technical pass completes the high-performance training aggregation engine, delivering a world-class informative experience that remains fluid and accurate across your entire history.

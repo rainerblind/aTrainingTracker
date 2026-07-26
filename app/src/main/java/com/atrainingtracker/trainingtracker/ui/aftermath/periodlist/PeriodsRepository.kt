@@ -71,7 +71,9 @@ class PeriodsRepository private constructor(private val application: Application
 
     init {
         // 1. Instant load from cache
-        loadFromDatabase()
+        scope.launch {
+            loadFromDatabase()
+        }
 
         // 2. Initial Migration (Prioritized Hierarchical Scan)
         scope.launch {
@@ -97,7 +99,7 @@ class PeriodsRepository private constructor(private val application: Application
             Log.i(TAG, "Starting Dual-Phase Hierarchical Migration.")
             val startTime = System.currentTimeMillis()
 
-            val mapper = com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper(
+            val mapper = WorkoutDataMapper(
                 application, workoutSummariesManager,
                 com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(application),
                 com.atrainingtracker.trainingtracker.database.EquipmentDbHelper(application),
@@ -409,17 +411,22 @@ class PeriodsRepository private constructor(private val application: Application
         )
     }
 
-    private fun createSortKey(w: WorkoutData, type: PeriodType): String {
+    private fun getPeriodSortKey(startTimestampS: Long, type: PeriodType): String {
+        val dt = OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(startTimestampS), java.time.ZoneId.systemDefault())
         return when (type) {
-            PeriodType.DAY -> w.localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE)
+            PeriodType.DAY -> dt.format(DateTimeFormatter.ISO_LOCAL_DATE)
             PeriodType.WEEK -> {
-                val week = w.localDateTime.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
-                val year = w.localDateTime.get(IsoFields.WEEK_BASED_YEAR)
+                val week = dt.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+                val year = dt.get(IsoFields.WEEK_BASED_YEAR)
                 "$year-W${week.toString().padStart(2, '0')}"
             }
-            PeriodType.MONTH -> w.localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM"))
-            PeriodType.YEAR -> w.localDateTime.year.toString()
+            PeriodType.MONTH -> dt.format(DateTimeFormatter.ofPattern("yyyy-MM"))
+            PeriodType.YEAR -> dt.year.toString()
         }
+    }
+
+    private fun createSortKey(w: WorkoutData, type: PeriodType): String {
+        return getPeriodSortKey(w.startTimeS, type)
     }
 
     private fun subtractWorkoutFromPeriod(p: PeriodSummary, w: WorkoutData): PeriodSummary {
@@ -524,7 +531,7 @@ class PeriodsRepository private constructor(private val application: Application
             periodLabel = w.localDateTime.format(dayFormatter), periodDateRange = "", periodType = PeriodType.DAY,
             startTimestampS = startS, endTimestampS = startS + 86399, totalWorkouts = workouts.size,
             totalDurationSec = workouts.sumOf { it.activeTimeSec }, totalDistance = workouts.sumOf { it.totalDistance },
-            sportStats = sportStats, sortKey = w.localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE),
+            sportStats = sportStats, sortKey = getPeriodSortKey(startS, PeriodType.DAY),
             minLat = bounds?.southwest?.latitude ?: 90.0, 
             minLng = bounds?.southwest?.longitude ?: 180.0, 
             maxLat = bounds?.northeast?.latitude ?: -90.0, 
@@ -575,7 +582,7 @@ class PeriodsRepository private constructor(private val application: Application
             periodLabel = label, periodDateRange = "", periodType = type,
             startTimestampS = start, endTimestampS = end, totalWorkouts = totalWorkouts,
             totalDurationSec = totalTime, totalDistance = totalDist, sportStats = mergedSportStats,
-            sortKey = OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(start), java.time.ZoneId.systemDefault()).format(DateTimeFormatter.ISO_LOCAL_DATE),
+            sortKey = getPeriodSortKey(start, type),
             minLat = minLat, minLng = minLng, maxLat = maxLat, maxLng = maxLng,
             longestId = longest.longestId, longestDurationS = longest.longestDurationS,
             northId = longest.longestId, southId = longest.longestId, eastId = longest.longestId, westId = longest.longestId
@@ -642,36 +649,32 @@ class PeriodsRepository private constructor(private val application: Application
         } else null
     }
 
-    private fun loadFromDatabase(forceIncremental: Boolean = false, precalculatedGroups: WorkoutGroups? = null) {
-        scope.launch {
-            val isFinished = withContext(Dispatchers.IO) { dbManager.isSyncFinished() }
-            if (!isFinished && !forceIncremental) return@launch
+    private suspend fun loadFromDatabase(forceIncremental: Boolean = false, precalculatedGroups: WorkoutGroups? = null) {
+        val isFinished = withContext(Dispatchers.IO) { dbManager.isSyncFinished() }
+        if (!isFinished && !forceIncremental) return
 
-            val workouts = workoutRepo.allWorkouts.value
-            val dailyRaw = dbManager.getPeriodsByType(PeriodType.DAY)
-            val weeklyRaw = dbManager.getPeriodsByType(PeriodType.WEEK)
-            val monthlyRaw = dbManager.getPeriodsByType(PeriodType.MONTH)
-            val yearlyRaw = dbManager.getPeriodsByType(PeriodType.YEAR)
-            
-            if (workouts.isNotEmpty()) {
-                val groups = precalculatedGroups ?: precalculateGroups(workouts)
-                enrichAndEmit(listOf(dailyRaw, weeklyRaw, monthlyRaw, yearlyRaw), groups)
-            } else {
-                _groupedPeriods.value = listOf(dailyRaw, weeklyRaw, monthlyRaw, yearlyRaw)
-            }
+        val workouts = if (precalculatedGroups != null) emptyList() else workoutRepo.allWorkouts.value
+        val dailyRaw = withContext(Dispatchers.IO) { dbManager.getPeriodsByType(PeriodType.DAY) }
+        val weeklyRaw = withContext(Dispatchers.IO) { dbManager.getPeriodsByType(PeriodType.WEEK) }
+        val monthlyRaw = withContext(Dispatchers.IO) { dbManager.getPeriodsByType(PeriodType.MONTH) }
+        val yearlyRaw = withContext(Dispatchers.IO) { dbManager.getPeriodsByType(PeriodType.YEAR) }
+        
+        if (precalculatedGroups != null) {
+            enrichAndEmit(listOf(dailyRaw, weeklyRaw, monthlyRaw, yearlyRaw), precalculatedGroups)
+        } else if (workouts.isNotEmpty()) {
+            val groups = precalculateGroups(workouts)
+            enrichAndEmit(listOf(dailyRaw, weeklyRaw, monthlyRaw, yearlyRaw), groups)
+        } else {
+            _groupedPeriods.value = listOf(dailyRaw, weeklyRaw, monthlyRaw, yearlyRaw)
         }
     }
 
     private fun precalculateGroups(workouts: List<WorkoutData>): WorkoutGroups {
         return WorkoutGroups(
-            days = workouts.groupBy { it.localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE) },
-            weeks = workouts.groupBy { 
-                val week = it.localDateTime.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
-                val year = it.localDateTime.get(IsoFields.WEEK_BASED_YEAR)
-                "$year-W${week.toString().padStart(2, '0')}"
-            },
-            months = workouts.groupBy { it.localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM")) },
-            years = workouts.groupBy { it.localDateTime.year.toString() }
+            days = workouts.groupBy { getPeriodSortKey(it.startTimeS, PeriodType.DAY) },
+            weeks = workouts.groupBy { getPeriodSortKey(it.startTimeS, PeriodType.WEEK) },
+            months = workouts.groupBy { getPeriodSortKey(it.startTimeS, PeriodType.MONTH) },
+            years = workouts.groupBy { getPeriodSortKey(it.startTimeS, PeriodType.YEAR) }
         )
     }
 
