@@ -277,6 +277,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-MIG-010** | **Enable Backups by Default.** | The system SHALL enable the automated backup feature by default for new installations. | `prefs_dropbox.xml`, `BackupWorker.kt` | `TST-MIG-007` | Verified |
 | **REQ-MIG-015** | **Efficient Legacy Recovery.** | The legacy recovery process SHALL skip already imported workouts BEFORE downloading them from remote storage to ensure optimal performance and bandwidth usage. | `LegacyImportEngine.kt` | `TST-MIG-011` | Verified |
 | **REQ-MIG-016** | **Paginated Cloud Recovery.** | The system SHALL support pagination when scanning cloud storage (Dropbox) for legacy data to ensure that all workout files are discovered, regardless of folder size. | `LegacyImportEngine.kt` | `TST-MIG-012` | Verified |
+| **REQ-MIG-017** | **Limited Interaction Queue.** | The system SHALL limit the number of pending UI interactions (e.g., cluster naming requests) during a bulk import to a maximum of 10 to prevent excessive memory usage and ensure that new clusters are named promptly, allowing subsequent workouts to be automatically assigned correctly. | `BackupRestoreViewModel.kt`, `LegacyImportEngine.kt` | `TST-MIG-013` | Verified |
 
 ## 14. Performance & Scalability
 

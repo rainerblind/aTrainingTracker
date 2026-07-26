@@ -32,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
@@ -69,6 +70,9 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
     val pendingInteractionsCount: StateFlow<Int> = _interactionQueue
         .map { it.size }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    // Backpressure control: Limit pending UI interactions to 10 to ensure prompt naming (ATT-349)
+    private val interactionSemaphore = Semaphore(10)
 
     fun provideClusterDecision(clusterId: Long?, name: String?) {
         val currentQueue = _interactionQueue.value
@@ -324,6 +328,9 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             bSportType: BSportType,
             polyline: String
         ): Pair<Long?, String?> {
+            // ATT-349: Throttling. Pause background engine if 10 items are already pending resolution.
+            interactionSemaphore.acquire()
+
             val deferred = CompletableDeferred<Pair<Long?, String?>>()
             
             // ATT-316: Add to queue and wait. 
@@ -332,6 +339,9 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             _interactionQueue.update { it + interaction }
             
             val decision = deferred.await()
+
+            // Resolve permit once user has made a decision
+            interactionSemaphore.release()
             return decision
         }
     }
