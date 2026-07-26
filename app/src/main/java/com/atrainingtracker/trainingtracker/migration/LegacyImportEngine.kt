@@ -52,7 +52,6 @@ object LegacyImportEngine {
     private val tcxTimeFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
 
     private val recalculationMutex = Mutex()
-    private val importScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     interface ProgressListener {
         fun onProgress(current: Int, total: Int, name: String)
@@ -342,12 +341,10 @@ object LegacyImportEngine {
                     }
                 }
 
-                // ATT-316: Launch recalculation in a separate scope so the import loop can continue.
-                // Refined: We no longer hold the mutex for the entire duration to allow the queue to grow.
-                val finalBSportType = bSportType
-                importScope.launch {
-                    recalculateStats(context, workoutId, baseFileName, points, altitudes, distances, finalBSportType, listener)
-                }
+                // ATT-316: Synchronous post-processing to support backpressure (ATT-349).
+                // Refined: We no longer hold the mutex for the entire duration to allow the queue to grow,
+                // but we await the recalculation to ensure the engine pauses if the UI queue is full.
+                recalculateStats(context, workoutId, baseFileName, points, altitudes, distances, bSportType, listener)
                 return true
             }
         } catch (e: Exception) {
