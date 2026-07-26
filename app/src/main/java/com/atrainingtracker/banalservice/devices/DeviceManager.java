@@ -552,6 +552,9 @@ public class DeviceManager {
 
         result.addAll(getActiveRemoteDevices());
         result.addAll(getActiveSpeedAndLocationDevices());
+        if (mAltitudeFromPressureDevice != null) {
+            result.add(mAltitudeFromPressureDevice);
+        }
 
         return result;
     }

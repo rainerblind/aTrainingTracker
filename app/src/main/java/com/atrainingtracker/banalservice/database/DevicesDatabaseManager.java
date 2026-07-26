@@ -747,7 +747,7 @@ public class DevicesDatabaseManager {
         return getSmartphoneDeviceId(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
     }
 
-    protected long getSmartphoneDeviceId(DeviceType deviceType) {
+    public long getSmartphoneDeviceId(DeviceType deviceType) {
         Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
                 new String[]{DevicesDbHelper.C_ID},
                 DevicesDbHelper.PROTOCOL + "=? AND " + DevicesDbHelper.DEVICE_TYPE + "=?",

@@ -63,6 +63,8 @@ public class AltitudeFromPressureDevice extends MyDevice
     public AltitudeFromPressureDevice(Context context, MySensorManager mySensorManager) {
         super(context, mySensorManager, DeviceType.ALTITUDE_FROM_PRESSURE);
 
+        mDeviceId = mDevicesDatabaseManager.getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_PRESSURE);
+
         SensorManager sensorManager = (SensorManager) mContext.getSystemService(Context.SENSOR_SERVICE);
         mPressureSensor = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE);
         if (mPressureSensor != null) {
@@ -83,6 +85,7 @@ public class AltitudeFromPressureDevice extends MyDevice
         if (DEBUG) Log.d(TAG, "addSensors");
 
         mAltitudeSensor = new MySensor<Number>(this, SensorType.ALTITUDE);
+        addSensor(mAltitudeSensor);
     }
 
     @Override
@@ -155,7 +158,6 @@ public class AltitudeFromPressureDevice extends MyDevice
         if (!mPressureSensorRegistered) {
             mPressureSensorRegistered = true;
 
-            addSensor(mAltitudeSensor);
             registerSensors();
         }
 
