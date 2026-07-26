@@ -113,19 +113,18 @@ fun WorkoutHeader(
                 val clusterLabel = data.clusterName ?: stringResource(R.string.unclustered)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.padding(start = 44.dp) // Align with text after the 32dp icon + 12dp spacer
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.my_locations),
                         contentDescription = null,
                         modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Medium)
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
                     )
                     Text(
                         text = clusterLabel,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Medium),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
                         fontWeight = if (data.clusterName != null) FontWeight.Bold else FontWeight.Normal,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
