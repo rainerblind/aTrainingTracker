@@ -19,6 +19,7 @@ This document defines the verification procedures for all project requirements. 
 | **TST-UNT-009** | | `WorkoutDataMapper` | `REQ-UI-011` | Verify that the extrema rows only include the "Big 6" performance metrics: HR, Speed/Pace, Cadence, Power, Altitude, and Temperature. | Verified |
 | **TST-UNT-010** | | `MappablePath` | `REQ-MAP-007` | Verify that coordinate projection (latLngs) is lazy and only occurs once. | Proposed |
 | **TST-UNT-011** | | `TrackingViewsDb` | `REQ-PRO-005` | 1. Simulated fresh install (Wipe data): Verify schema contains ShowElevationProfile. 2. Simulated upgrade (v9->v10): Verify ShowElevationProfile is added. | Verified |
+| **TST-FIL-002** | | `WorkoutSamplesDb` | `REQ-DAT-003` | Verify that `calcExtremaValue` returns `null` (not 0.0) when querying a sensor that has only NULL values or does not exist in the table. | Verified |
 
 ## 2. Regression & Manual Verification (SWE.5 / SWE.6)
 
@@ -111,6 +112,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-UI-073** | `ATT-376` | **Bar Graph Synchronization** | `REQ-UI-104` | 1. Clear application data to trigger a Periods migration. 2. Navigate to the 'Periods' screen. 3. Observe the bar graph as the newest months are aggregated first. 4. Scroll the period list. | 1. During migration, the graph SHALL display the most recent months (right side of the graph) by default. 2. As the list grows into the past, the "Current" selection in the graph SHALL remain synchronized with the top-most visible period in the list. | Verified |
 | **TST-BUG-006** | `ATT-397` | **Adaptive Header Framing** | `REQ-UI-117` | 1. Open the app on a device with a large status bar (e.g. Pixel 10). 2. Navigate to Workouts, Periods, and My Locations. | The top of the list SHALL NOT be overlapped by the header. No unexpected empty space SHALL exist between the header and the list. | Verified |
 | **TST-MIG-013** | `ATT-401` | **Interaction Queue Size Limiting** | `REQ-MIG-017` | 1. Start bulk import of > 10 unclustered workouts. 2. Verify engine pauses at 10 queued items. | Interaction queue size is strictly enforced (limit: 10); background processing waits for user resolution to maintain clustering accuracy. | Verified |
+| **TST-MIG-014** | `ATT-403` | **Sparse Data Import** | `REQ-MIG-018` | 1. Import a TCX file missing HR/Power. 2. Inspect summary and DB schema. | Missing sensors are NOT displayed in summary and NOT created as columns in samples table. | Verified |
 
 ## 3. Structural & Compliance Checks
 

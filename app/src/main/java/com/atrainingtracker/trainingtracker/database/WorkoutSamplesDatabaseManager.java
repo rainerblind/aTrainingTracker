@@ -138,8 +138,9 @@ public class WorkoutSamplesDatabaseManager {
                             null, // new String[] {sensorType.name()}, // selectionArgs,
                             null, null, null); // groupBy, having, orderBy)
 
-                    cursor.moveToFirst();
-                    extremaValue = cursor.getDouble(0);
+                    if (cursor.moveToFirst() && !cursor.isNull(0)) {
+                        extremaValue = cursor.getDouble(0);
+                    }
                     break;
 
                 case START:
