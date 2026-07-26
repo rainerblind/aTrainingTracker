@@ -104,7 +104,7 @@ This document tracks all functional and non-functional requirements of the proje
 |:---|:---|:---|:---|:---|:---|
 | **REQ-DAT-001** | Store per-second sensor samples and extrema. | Granular data and peak performance insights. | `WorkoutSamplesDatabaseManager.java`| `TST-STR-001` | Verified |
 | **REQ-DAT-002** | Support automatic deletion of old workouts. | Manage device storage automatically. | `WorkoutDeletionHelper.java` | `TST-MAN-001` | Verified |
-| **REQ-DAT-003** | Provide period-based statistics (W/M/Y). | Enable long-term training volume analysis. | `PeriodsViewModel.kt` | `TST-MAN-001` | Verified |
+| **REQ-DAT-003** | Provide period-based statistics (W/M/Y). | Enable long-term training volume analysis. | `PeriodsViewModel.kt`, `PeriodsRepository.kt` | `TST-MAN-001`, `TST-PERF-004`, `TST-BUG-002` | Verified |
 | **REQ-DAT-004** | Encoded polylines and streams for storage/map. | Optimize database size and UI performance. | `NumericalEncodingUtils.kt` | `TST-UNT-001` | Verified |
 | **REQ-DAT-005** | Dynamic database schema evolution. | Support future hardware without migrations. | `TrackerService.java` | `TST-STR-001` | Verified |
 

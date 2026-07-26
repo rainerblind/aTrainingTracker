@@ -81,8 +81,8 @@ class PeriodsRepository private constructor(private val application: Application
     }
 
     /**
-     * ATT-346: Hierarchical aggregation (Workout -> Day -> Week/Month -> Year).
-     * Streams data bucket-by-bucket for instant visibility.
+     * ATT-346/358: Hierarchical aggregation (Workout -> Day -> Week/Month -> Year).
+     * Streams data bucket-by-bucket using per-month transactions for instant visibility.
      */
     private suspend fun performHierarchicalMigration() = withContext(Dispatchers.Default) {
         rebuildMutex.withLock {
@@ -105,65 +105,73 @@ class PeriodsRepository private constructor(private val application: Application
                     return@withContext
                 }
 
+                // 1. Initial Setup Transaction
                 dbManager.runInTransaction { db ->
                     dbManager.deleteAll(db)
                     dbManager.setSyncFinished(db, false)
+                }
 
-                    val currentMonthWorkouts = mutableListOf<WorkoutData>()
-                    var currentMonthKey: String? = null
-                    var processedCount = 0
-                    val totalCount = cursor.count
+                val currentMonthWorkouts = mutableListOf<WorkoutData>()
+                var currentMonthKey: String? = null
+                var processedCount = 0
+                val totalCount = cursor.count
 
-                    if (cursor.moveToFirst()) {
-                        do {
-                            val workout = mapper.fromCursor(cursor)
-                            val monthKey = workout.localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM"))
+                if (cursor.moveToFirst()) {
+                    do {
+                        val workout = mapper.fromCursor(cursor)
+                        val monthKey = workout.localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM"))
 
-                            if (currentMonthKey != null && monthKey != currentMonthKey) {
-                                // 1. Process the completed month bucket
+                        if (currentMonthKey != null && monthKey != currentMonthKey) {
+                            // 2. Process the completed month bucket in its OWN transaction (ATT-358 Visibility)
+                            if (currentMonthWorkouts.isNotEmpty()) {
                                 val monthLabel = currentMonthWorkouts.first().localDateTime.format(monthFormatter)
                                 _migrationStatus.value = MigrationStatus(
                                     application.getString(R.string.workout_periods__migration_syncing, monthLabel), 
                                     processedCount.toFloat() / totalCount.toFloat()
                                 )
                                 
-                                processMonthBucket(db, currentMonthWorkouts)
+                                dbManager.runInTransaction { db ->
+                                    processMonthBucket(db, currentMonthWorkouts)
+                                }
                                 
-                                // 2. Update Progress and UI
-                                loadFromDatabase()
-                                
-                                currentMonthWorkouts.clear()
+                                // 3. PUMP UI: Data is now committed and visible
+                                loadFromDatabase(forceIncremental = true)
                             }
+                            currentMonthWorkouts.clear()
+                        }
 
-                            currentMonthWorkouts.add(workout)
-                            currentMonthKey = monthKey
-                            processedCount++
-                            
-                            // Periodic feedback during initial read phase
-                            if (processedCount % 50 == 0) {
-                                _migrationStatus.value = MigrationStatus(
-                                    application.getString(R.string.workout_periods__migration_reading, processedCount, totalCount),
-                                    processedCount.toFloat() / totalCount.toFloat() * 0.1f // First 10% for reading
-                                )
-                            }
-                        } while (cursor.moveToNext())
-                    }
-                    cursor.close()
+                        currentMonthWorkouts.add(workout)
+                        currentMonthKey = monthKey
+                        processedCount++
+                        
+                        if (processedCount % 50 == 0) {
+                            _migrationStatus.value = MigrationStatus(
+                                application.getString(R.string.workout_periods__migration_reading, processedCount, totalCount),
+                                (processedCount.toFloat() / totalCount.toFloat()) * 0.1f
+                            )
+                        }
+                    } while (cursor.moveToNext())
+                }
+                cursor.close()
 
-                    // Final bucket
-                    if (currentMonthWorkouts.isNotEmpty()) {
+                // Final month bucket
+                if (currentMonthWorkouts.isNotEmpty()) {
+                    dbManager.runInTransaction { db ->
                         processMonthBucket(db, currentMonthWorkouts)
                     }
+                    loadFromDatabase(forceIncremental = true)
+                }
 
-                    // 3. Final Step: Roll up YEARs from MONTHs
-                    _migrationStatus.value = MigrationStatus(application.getString(R.string.workout_periods__migration_finalizing), 0.99f)
+                // 4. Final Rollup Transaction
+                _migrationStatus.value = MigrationStatus(application.getString(R.string.workout_periods__migration_finalizing), 0.99f)
+                dbManager.runInTransaction { db ->
                     rollupMonthsToYears(db)
                     dbManager.setSyncFinished(db, true)
                 }
             }
             Log.i(TAG, "Hierarchical Migration finished in ${System.currentTimeMillis() - startTime}ms.")
             _migrationStatus.value = null
-            loadFromDatabase()
+            loadFromDatabase(forceIncremental = false)
         }
     }
 
@@ -175,8 +183,9 @@ class PeriodsRepository private constructor(private val application: Application
             it.localDateTime.toLocalDate().atStartOfDay().toEpochSecond(OffsetDateTime.now().offset) 
         }
         daysInMonth.forEach { (startS, dayWorkouts) ->
-            val daySummary = aggregateWorkoutsToDay(dayWorkouts, startS)
-            dbManager.upsertPeriod(db, daySummary)
+            aggregateWorkoutsToDay(dayWorkouts, startS)?.let {
+                dbManager.upsertPeriod(db, it)
+            }
         }
 
         // 2. Roll up WEEKs and MONTH from these DAYs
@@ -199,7 +208,9 @@ class PeriodsRepository private constructor(private val application: Application
                 dbManager.runInTransaction { db ->
                     // 1. Update Day
                     val workoutsInDay = fetchWorkoutsInDay(dayStart)
-                    dbManager.upsertPeriod(db, aggregateWorkoutsToDay(workoutsInDay, dayStart))
+                    aggregateWorkoutsToDay(workoutsInDay, dayStart)?.let { 
+                        dbManager.upsertPeriod(db, it)
+                    }
 
                     // 2. Propagate Upwards
                     rollupDayToParents(db, ldt, zoneOffset)
@@ -224,7 +235,9 @@ class PeriodsRepository private constructor(private val application: Application
                     if (workoutsRemaining.isEmpty()) {
                         dbManager.deletePeriod(db, PeriodType.DAY, dayStart)
                     } else {
-                        dbManager.upsertPeriod(db, aggregateWorkoutsToDay(workoutsRemaining, dayStart))
+                        aggregateWorkoutsToDay(workoutsRemaining, dayStart)?.let {
+                            dbManager.upsertPeriod(db, it)
+                        }
                     }
                     rollupDayToParents(db, ldt, zoneOffset)
                 }
@@ -439,10 +452,12 @@ class PeriodsRepository private constructor(private val application: Application
         }
     }
 
-    private fun aggregateWorkoutsToDay(workouts: List<WorkoutData>, startS: Long): PeriodSummary {
+    private fun aggregateWorkoutsToDay(workouts: List<WorkoutData>, startS: Long): PeriodSummary? {
+        if (workouts.isEmpty()) return null
+        
         val w = workouts.first()
         val bounds = calculateWorkoutsBounds(workouts)
-        val longest = workouts.maxByOrNull { it.activeTimeSec } ?: workouts.first()
+        val longest = workouts.maxByOrNull { it.activeTimeSec } ?: w
         
         val sportStats = workouts.groupBy { it.bSportType }.mapValues { (_, sportWorkouts) ->
             val detailed = sportWorkouts.groupBy { it.sportName }.mapValues { (_, detW) ->
@@ -574,10 +589,10 @@ class PeriodsRepository private constructor(private val application: Application
         } else null
     }
 
-    private fun loadFromDatabase() {
+    private fun loadFromDatabase(forceIncremental: Boolean = false) {
         scope.launch {
             val isFinished = withContext(Dispatchers.IO) { dbManager.isSyncFinished() }
-            if (!isFinished) return@launch
+            if (!isFinished && !forceIncremental) return@launch
 
             val workouts = workoutRepo.allWorkouts.value
             val dailyRaw = dbManager.getPeriodsByType(PeriodType.DAY)
