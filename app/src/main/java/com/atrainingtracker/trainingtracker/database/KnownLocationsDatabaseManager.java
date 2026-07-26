@@ -45,6 +45,7 @@ public class KnownLocationsDatabaseManager {
     // --- Modern Singleton Pattern ---
     private static volatile KnownLocationsDatabaseManager cInstance;
     private final KnownLocationsDbHelper cDbHelper;
+    private SQLiteDatabase mDatabase = null;
 
     // Private constructor
     private KnownLocationsDatabaseManager(@NonNull Context context) {
@@ -64,10 +65,24 @@ public class KnownLocationsDatabaseManager {
     }
 
     /**
-     * Returns a writable database instance, managed safely by the helper.
+     * Returns a writable database instance and ensures it remains open.
+     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
      */
     public SQLiteDatabase getDatabase() {
-        return cDbHelper.getWritableDatabase();
+        if (mDatabase != null && mDatabase.isOpen()) {
+            return mDatabase;
+        }
+        synchronized (this) {
+            if (mDatabase != null && mDatabase.isOpen()) {
+                return mDatabase;
+            }
+            // If the database was closed, ensure the helper clears its reference
+            if (mDatabase != null) {
+                cDbHelper.close();
+            }
+            mDatabase = cDbHelper.getWritableDatabase();
+            return mDatabase;
+        }
     }
     // --- End of Singleton Pattern ---
 

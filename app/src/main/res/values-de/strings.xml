@@ -997,6 +997,11 @@
         <item quantity="other">%1$d Einheiten</item>
     </plurals>
     <string name="workout_periods__longest_workout">Längste Einheit</string>
+    <string name="workout_periods__migration_title">Optimiere Verlaufs-Datenbank…</string>
+    <string name="workout_periods__migration_querying">Lade Trainingsverlauf…</string>
+    <string name="workout_periods__migration_reading">Lese Training %1$d von %2$d…</string>
+    <string name="workout_periods__migration_syncing">Synchronisiere %1$s…</string>
+    <string name="workout_periods__migration_finalizing">Berechne Jahreswerte…</string>
 
     <!-- share screenshots -->
     <string name="share">Teilen</string>
@@ -1062,6 +1067,8 @@
     <string name="cluster_tuning_distance_label">Distanz-Toleranz</string>
     <string name="cluster_tuning_recalculate_button">Alle Cluster neu berechnen</string>
     <string name="cluster_tuning_warning">Warnung: Durch die Neuberechnung werden alle gelernten Clusternamen und Gruppierungen gelöscht und basierend auf den neuen Parametern aus dem Verlauf neu aufgebaut.</string>
+    <string name="cluster_tuning_use_sport_type_label">Sportart berücksichtigen</string>
+    <string name="cluster_tuning_use_sport_type_summary">Verschiedene Aktivitäten (z. B. Laufen vs. Radfahren) auf derselben Route in getrennten Familien isolieren.</string>
     <string name="cluster_tuning_recalculating">Cluster werden neu berechnet…</string>
     <string name="cluster_tuning_take_while">Dies kann eine Weile dauern.</string>
 
@@ -1095,6 +1102,16 @@
     <string name="cluster_autoname_format">%1$s #%2$d</string>
     <string name="cluster_delete_title">Workout-Cluster löschen</string>
     <string name="cluster_delete_message">Sind Sie sicher, dass Sie diesen Workout-Cluster löschen möchten? Die zugehörigen Einheiten werden nicht gelöscht, aber sie werden nicht mehr unter diesem Cluster gruppiert.</string>
+    <string name="cluster_migration_title">Analysiere Streckenfamilien…</string>
+    <string name="cluster_migration_loading">Lade Streckenfamilien…</string>
+    <string name="cluster_migration_healing">Prüfe Verlaufsintegrität…</string>
+    <string name="cluster_migration_previews">Bereite Vorschaubilder vor (%1$d von %2$d)…</string>
+    <string name="cluster_migration_processing_routes">Verarbeite Routen…</string>
+    <string name="cluster_migration_processing_workouts">Verarbeite Training %1$d von %2$d…</string>
+    <string name="cluster_migration_enriching">Erweitere Metadaten (%1$d von %2$d)…</string>
+    <string name="legacy_import__scanning_dropbox">Scanne %1$s auf Dropbox…</string>
+    <string name="legacy_import__downloading_dropbox">Lade %1$s von Dropbox herunter…</string>
+    <string name="migration_phase_label">Phase %1$d: %2$s</string>
 
     <string name="all_sports">+ Alle Sportarten +</string>
     <string name="all_equipment">+ Alle Ausrüstungen +</string>
@@ -1135,4 +1152,37 @@
     <string name="view_size_xhuge">Gigantisch</string>
     <string name="view_size_xlarge">Sehr groß</string>
     <string name="view_size_xsmall">Sehr klein</string>
+    <string name="import_backup">Import \u0026 Backup</string>
+    <string name="tab_import">Import</string>
+    <string name="tab_backup">Backup</string>
+    <string name="tab_restore">Wiederherstellen</string>
+    <string name="import_backup_summary">Verwalten Sie Workout-Importe, Backups und Datenwiederherstellung</string>
+    <string name="create_backup">Backup erstellen</string>
+    <string name="restore_backup">Vollständige Wiederherstellung (Migration)</string>
+    <string name="import_workouts">Inkrementeller Import (Zusammenführen)</string>
+    <string name="backup_success">Backup erfolgreich erstellt.</string>
+    <string name="backup_failed">Backup-Erstellung fehlgeschlagen.</string>
+    <string name="restore_success">Wiederherstellung erfolgreich. Die App wird nun neu gestartet.</string>
+    <string name="restore_failed">Wiederherstellung fehlgeschlagen. Bitte stellen Sie sicher, dass die Datei gültig ist.</string>
+    <string name="restore_warning_title">GEFAHR: Vollständige Wiederherstellung</string>
+    <string name="restore_warning_message">Dies wird ALLE aktuellen Workouts, Ausrüstungen und Einstellungen auf DIESEM Telefon UNWIDERRUFLICH LÖSCHEN und durch die Daten aus dem Backup ersetzen. Sind Sie absolut sicher?</string>
+    <string name="import_finished_format">Import abgeschlossen. %1$d neue Workouts hinzugefügt.</string>
+    <string name="import_duplicate_skipping">Überspringe vorhandene Workouts…</string>
+    <string name="import_processing_format">Importiere %1$s…</string>
+    <string name="automated_backups">Automatisierte Backups</string>
+    <string name="automated_backups_summary">Regelmäßig Backups zu Dropbox hochladen</string>
+    <string name="backup_now">Jetzt sichern</string>
+    <string name="last_backup">Letztes Backup: %1$s</string>
+    <string name="backup_interval">Sicherungsintervall</string>
+    <string name="backup_interval_daily">Täglich</string>
+    <string name="backup_interval_3days">Alle 3 Tage</string>
+    <string name="backup_interval_weekly">Wöchentlich</string>
+    <string name="backup_interval_monthly">Monatlich</string>
+    <string name="create_and_upload_to_dropbox">Erstellen \u0026 Dropbox-Upload</string>
+    <string name="full_restore_description">Löscht alle lokalen Daten und ersetzt sie durch den Inhalt des Backups. Erzwingt einen App-Neustart.</string>
+    <string name="incremental_import_description">Fügt Workouts aus einem Backup zu deiner aktuellen Historie hinzu. Bereits vorhandene Workouts werden übersprungen.</string>
+    <string name="legacy_recovery_title">Altdaten-Wiederherstellung</string>
+    <string name="legacy_recovery_description">Stelle fehlende Workouts aus alten Dropbox-Exporten (TCX) wieder her. Bestehende Einträge werden übersprungen.</string>
+    <string name="scan_tcx">TCX scannen</string>
+    <string name="import_single_file">Einzeldatei importieren</string>
 </resources>

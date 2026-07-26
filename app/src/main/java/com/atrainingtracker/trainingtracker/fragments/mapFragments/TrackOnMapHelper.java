@@ -68,8 +68,12 @@ public class TrackOnMapHelper {
                 .zIndex(5);
 
         WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance(context);
+        if (!databaseManager.existsTable(baseFileName)) {
+            return null;
+        }
+
         SQLiteDatabase db = databaseManager.getDatabase();
-        Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(baseFileName),          // TODO: on some devices, an exception is thrown here
+        Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(baseFileName),
                 null,
                 null,
                 null,

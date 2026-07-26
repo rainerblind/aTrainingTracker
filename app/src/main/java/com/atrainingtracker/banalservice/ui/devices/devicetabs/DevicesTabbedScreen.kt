@@ -47,6 +47,7 @@ import com.atrainingtracker.banalservice.helpers.UIHelper
 import com.atrainingtracker.banalservice.ui.devices.devicelist.*
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialog
+import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
 
@@ -67,7 +68,9 @@ fun DevicesTabbedScreen(
     var menuExpanded by remember { mutableStateOf(false) }
 
     val density = LocalDensity.current
-    val appBarMaxHeightPx = with(density) { 135.dp.roundToPx() }
+    val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val appBarMaxHeightPx = with(density) { (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT).roundToPx() }
+    
     val connection = remember(appBarMaxHeightPx) {
         CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
     }
@@ -126,7 +129,8 @@ fun DevicesTabbedScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                                        .height(LayoutConstants.HEADER_TITLE_ROW_HEIGHT)
+                                        .padding(horizontal = 16.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
@@ -142,7 +146,7 @@ fun DevicesTabbedScreen(
                                         }
 
                                         if (headerIcon != null) {
-                                            val headerIconSize = if (protocol == Protocol.ANT_PLUS) 38.dp else 42.dp
+                                            val headerIconSize = if (protocol == Protocol.ANT_PLUS) 28.dp else 32.dp
                                             Icon(
                                                 painter = painterResource(id = headerIcon),
                                                 contentDescription = null,
@@ -164,7 +168,7 @@ fun DevicesTabbedScreen(
 
                                         Text(
                                             text = title,
-                                            style = MaterialTheme.typography.headlineSmall,
+                                            style = MaterialTheme.typography.titleLarge,
                                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis

@@ -67,7 +67,7 @@ fun PeriodList(
     ) {
         items(
             items = periods,
-            key = { it.periodLabel }
+            key = { "${it.periodType.name}_${it.startTimestampS}" }
         ) { periodSummary ->
             PeriodSummaryCard(
                 summary = periodSummary,

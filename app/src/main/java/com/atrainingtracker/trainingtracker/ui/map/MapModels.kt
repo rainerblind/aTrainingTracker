@@ -141,6 +141,10 @@ interface MappablePath {
     val bSportType: BSportType
     val path: List<PathPoint>
     val latLngs: List<LatLng>
+    val minLat: Double? get() = null
+    val minLng: Double? get() = null
+    val maxLat: Double? get() = null
+    val maxLng: Double? get() = null
     val color: Color
     val width: Float
     val zIndex: Float
@@ -158,6 +162,10 @@ data class MapTrack(
     val type: TrackType,
     override val bSportType: BSportType,
     override val path: List<PathPoint>,
+    override val minLat: Double? = null,
+    override val minLng: Double? = null,
+    override val maxLat: Double? = null,
+    override val maxLng: Double? = null,
     val isVisible: Boolean = true,
     override val onClick: ((Long) -> Unit)? = null
 ) : MappablePath
@@ -180,6 +188,10 @@ data class MapSegment(
     val name: String,
     override val bSportType: BSportType,
     override val path: List<PathPoint>,
+    override val minLat: Double? = null,
+    override val minLng: Double? = null,
+    override val maxLat: Double? = null,
+    override val maxLng: Double? = null,
     val showStartAndFinishText: Boolean = true,
     override val onClick: ((Long) -> Unit)? = null
 ) : MappablePath {
@@ -199,6 +211,10 @@ data class MapRoute(
     val isSelected: Boolean,
     override val bSportType: BSportType,
     override val path: List<PathPoint>,
+    override val minLat: Double? = null,
+    override val minLng: Double? = null,
+    override val maxLat: Double? = null,
+    override val maxLng: Double? = null,
     override val onClick: ((Long) -> Unit)? = null
 ) : MappablePath {
     override val latLngs: List<LatLng> by lazy { path.map { it.latLng } }
@@ -220,7 +236,11 @@ fun RouteWithPath.toMapRoute(): MapRoute {
         name = this.summary.name,
         isSelected = this.summary.isSelected,
         path = this.path,
-        bSportType = this.summary.bSportType
+        bSportType = this.summary.bSportType,
+        minLat = this.summary.minLat,
+        minLng = this.summary.minLng,
+        maxLat = this.summary.maxLat,
+        maxLng = this.summary.maxLng
     )
 }
 
@@ -234,6 +254,10 @@ fun SegmentWithPath.toMapSegment(showStartAndFinishText: Boolean = true): MapSeg
         name = this.summary.name,
         bSportType = this.summary.bSportType,
         path = this.path,
+        minLat = this.summary.minLat,
+        minLng = this.summary.minLng,
+        maxLat = this.summary.maxLat,
+        maxLng = this.summary.maxLng,
         showStartAndFinishText = showStartAndFinishText
     )
 }
@@ -243,7 +267,8 @@ enum class MapZoomFocus {
     LOCAL_SEGMENTS,
     LOCAL_ROUTES,
     FOLLOW_ME,
-    FIT_PRIMARY
+    FIT_PRIMARY,
+    EXPLICIT_BOUNDS
 }
 
 /**
@@ -259,6 +284,10 @@ fun WorkoutData.toMapTrack(): MapTrack {
         id = this.id,
         type = TrackType.BEST,
         bSportType = this.bSportType,
-        path = finalPoints.map { PathPoint(0.0, it, 0.0) }
+        path = finalPoints.map { PathPoint(0.0, it, 0.0) },
+        minLat = this.minLat,
+        minLng = this.minLng,
+        maxLat = this.maxLat,
+        maxLng = this.maxLng
     )
 }

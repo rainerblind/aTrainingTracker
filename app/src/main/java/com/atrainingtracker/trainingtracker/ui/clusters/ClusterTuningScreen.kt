@@ -39,20 +39,6 @@ fun ClusterTuningScreen(
     onBack: () -> Unit
 ) {
     val isRecalculating by viewModel.isRecalculating.collectAsState()
-    var showDetails by remember { mutableStateOf(false) }
-
-    // Constants for mapping
-    val endRange = 10f..500f
-    val apexRange = 10f..500f
-    val distRange = 0.01f..0.2f
-
-    // Derived master sensitivity (average of normalized values)
-    val currentMasterValue = remember(viewModel.endpointTolerance, viewModel.apexTolerance, viewModel.distanceTolerance) {
-        val nEnd = (viewModel.endpointTolerance - endRange.start) / (endRange.endInclusive - endRange.start)
-        val nApex = (viewModel.apexTolerance - apexRange.start) / (apexRange.endInclusive - apexRange.start)
-        val nDist = (viewModel.distanceTolerance - distRange.start) / (distRange.endInclusive - distRange.start)
-        (nEnd + nApex + nDist) / 3f
-    }
 
     Scaffold(
         topBar = {
@@ -84,81 +70,16 @@ fun ClusterTuningScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                // 1. Master Slider
-                Column {
-                    Text(
-                        text = stringResource(R.string.cluster_tuning_master_label),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Slider(
-                        value = currentMasterValue,
-                        onValueChange = { sensitivity ->
-                            viewModel.endpointTolerance = endRange.start + (endRange.endInclusive - endRange.start) * sensitivity
-                            viewModel.apexTolerance = apexRange.start + (apexRange.endInclusive - apexRange.start) * sensitivity
-                            viewModel.distanceTolerance = distRange.start + (distRange.endInclusive - distRange.start) * sensitivity
-                        },
-                        valueRange = 0f..1f
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(stringResource(R.string.cluster_tuning_strict), style = MaterialTheme.typography.labelSmall)
-                        Text(stringResource(R.string.cluster_tuning_relaxed), style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-
-                // 2. Details Toggle
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(stringResource(R.string.cluster_tuning_show_details), style = MaterialTheme.typography.bodyMedium)
-                    Switch(
-                        checked = showDetails,
-                        onCheckedChange = { showDetails = it }
-                    )
-                }
-
-                // 3. Individual Sliders (Optional)
-                if (showDetails) {
-                    val isImperial = TrainingApplication.getUnit() == MyUnits.IMPERIAL
-                    val lengthUnit = stringResource(if (isImperial) R.string.units_distance_imperial else R.string.units_distance_metric)
-                    val lengthMultiplier = if (isImperial) (1.0 / BANALService.METER_PER_MILE).toFloat() else 0.001f
-
-                    TuningSlider(
-                        label = stringResource(R.string.cluster_tuning_endpoint_label),
-                        value = viewModel.endpointTolerance,
-                        onValueChange = { viewModel.endpointTolerance = it },
-                        valueRange = endRange,
-                        unit = lengthUnit,
-                        displayMultiplier = lengthMultiplier,
-                        decimalPlaces = 3
-                    )
-
-                    TuningSlider(
-                        label = stringResource(R.string.cluster_tuning_apex_label),
-                        value = viewModel.apexTolerance,
-                        onValueChange = { viewModel.apexTolerance = it },
-                        valueRange = apexRange,
-                        unit = lengthUnit,
-                        displayMultiplier = lengthMultiplier,
-                        decimalPlaces = 3
-                    )
-
-                    TuningSlider(
-                        label = stringResource(R.string.cluster_tuning_distance_label),
-                        value = viewModel.distanceTolerance,
-                        onValueChange = { viewModel.distanceTolerance = it },
-                        valueRange = distRange,
-                        unit = stringResource(R.string.units_percent),
-                        displayMultiplier = 100f,
-                        decimalPlaces = 0
-                    )
-                }
+                ClusterTuningContent(
+                    endpointTolerance = viewModel.endpointTolerance,
+                    onEndpointToleranceChange = { viewModel.endpointTolerance = it },
+                    apexTolerance = viewModel.apexTolerance,
+                    onApexToleranceChange = { viewModel.apexTolerance = it },
+                    distanceTolerance = viewModel.distanceTolerance,
+                    onDistanceToleranceChange = { viewModel.distanceTolerance = it },
+                    useSportTypeForClustering = viewModel.useSportTypeForClustering,
+                    onUseSportTypeChange = { viewModel.useSportTypeForClustering = it }
+                )
 
                 Spacer(modifier = Modifier.weight(1f))
 
@@ -176,6 +97,134 @@ fun ClusterTuningScreen(
                     color = MaterialTheme.colorScheme.error
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun ClusterTuningContent(
+    endpointTolerance: Float,
+    onEndpointToleranceChange: (Float) -> Unit,
+    apexTolerance: Float,
+    onApexToleranceChange: (Float) -> Unit,
+    distanceTolerance: Float,
+    onDistanceToleranceChange: (Float) -> Unit,
+    useSportTypeForClustering: Boolean,
+    onUseSportTypeChange: (Boolean) -> Unit
+) {
+    var showDetails by remember { mutableStateOf(false) }
+
+    // Constants for mapping
+    val endRange = 10f..500f
+    val apexRange = 10f..500f
+    val distRange = 0.01f..0.2f
+
+    // Derived master sensitivity (average of normalized values)
+    val currentMasterValue = remember(endpointTolerance, apexTolerance, distanceTolerance) {
+        val nEnd = (endpointTolerance - endRange.start) / (endRange.endInclusive - endRange.start)
+        val nApex = (apexTolerance - apexRange.start) / (apexRange.endInclusive - apexRange.start)
+        val nDist = (distanceTolerance - distRange.start) / (distRange.endInclusive - distRange.start)
+        (nEnd + nApex + nDist) / 3f
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+        // 1. Master Slider
+        Column {
+            Text(
+                text = stringResource(R.string.cluster_tuning_master_label),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Slider(
+                value = currentMasterValue,
+                onValueChange = { sensitivity ->
+                    onEndpointToleranceChange(endRange.start + (endRange.endInclusive - endRange.start) * sensitivity)
+                    onApexToleranceChange(apexRange.start + (apexRange.endInclusive - apexRange.start) * sensitivity)
+                    onDistanceToleranceChange(distRange.start + (distRange.endInclusive - distRange.start) * sensitivity)
+                },
+                valueRange = 0f..1f
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(stringResource(R.string.cluster_tuning_strict), style = MaterialTheme.typography.labelSmall)
+                Text(stringResource(R.string.cluster_tuning_relaxed), style = MaterialTheme.typography.labelSmall)
+            }
+        }
+
+        // 2. Details Toggle
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(stringResource(R.string.cluster_tuning_show_details), style = MaterialTheme.typography.bodyMedium)
+            Switch(
+                checked = showDetails,
+                onCheckedChange = { showDetails = it }
+            )
+        }
+
+        // 3. Individual Sliders (Optional)
+        if (showDetails) {
+            val isImperial = TrainingApplication.getUnit() == MyUnits.IMPERIAL
+            val lengthUnit = stringResource(if (isImperial) R.string.units_distance_imperial else R.string.units_distance_metric)
+            val lengthMultiplier = if (isImperial) (1.0 / BANALService.METER_PER_MILE).toFloat() else 0.001f
+
+            TuningSlider(
+                label = stringResource(R.string.cluster_tuning_endpoint_label),
+                value = endpointTolerance,
+                onValueChange = onEndpointToleranceChange,
+                valueRange = endRange,
+                unit = lengthUnit,
+                displayMultiplier = lengthMultiplier,
+                decimalPlaces = 3
+            )
+
+            TuningSlider(
+                label = stringResource(R.string.cluster_tuning_apex_label),
+                value = apexTolerance,
+                onValueChange = onApexToleranceChange,
+                valueRange = apexRange,
+                unit = lengthUnit,
+                displayMultiplier = lengthMultiplier,
+                decimalPlaces = 3
+            )
+
+            TuningSlider(
+                label = stringResource(R.string.cluster_tuning_distance_label),
+                value = distanceTolerance,
+                onValueChange = onDistanceToleranceChange,
+                valueRange = distRange,
+                unit = stringResource(R.string.units_percent),
+                displayMultiplier = 100f,
+                decimalPlaces = 0
+            )
+        }
+
+        // 4. Sport Type Awareness (ATT-350)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.cluster_tuning_use_sport_type_label),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = stringResource(R.string.cluster_tuning_use_sport_type_summary),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = useSportTypeForClustering,
+                onCheckedChange = onUseSportTypeChange
+            )
         }
     }
 }

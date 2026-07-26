@@ -33,6 +33,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import kotlin.getValue
@@ -57,8 +58,9 @@ class PeriodsFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setContent {
                 ATrainingTrackerTheme {
-                    // 1. Observe the periods list from ViewModel
+                    // 1. Observe the periods list and migration status from ViewModel
                     val groupedPeriods by viewModel.groupedPeriods.collectAsStateWithLifecycle()
+                    val migrationStatus by viewModel.migrationStatus.collectAsStateWithLifecycle()
                     val selectedPeriod by viewModel.selectedPeriod.collectAsStateWithLifecycle()
                     val isHeatmapEnabled by viewModel.isHeatmapEnabled.collectAsStateWithLifecycle()
                     val enabledMarkerTypes by viewModel.enabledMarkerTypes.collectAsStateWithLifecycle()
@@ -100,7 +102,8 @@ class PeriodsFragment : Fragment() {
                             isPlayServiceAvailable = isPlayAvailable,
                             tabs = groups,
                             isHeatmapEnabled = isHeatmapEnabled,
-                            onToggleHeatmapEnabled = { viewModel.toggleHeatmapEnabled() }
+                            onToggleHeatmapEnabled = { viewModel.toggleHeatmapEnabled() },
+                            migrationStatus = migrationStatus
                         )
                     }
                 }

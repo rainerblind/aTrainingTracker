@@ -209,12 +209,16 @@ fun ClusterItem(
                                 val end = LatLng(cluster.endLat, cluster.endLng)
                                 val apex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
 
-                                val bounds = remember(start, end, apex) {
-                                    LatLngBounds.Builder()
-                                        .include(start)
-                                        .include(end)
-                                        .include(apex)
-                                        .build()
+                                val bounds = remember(cluster.minLat, cluster.maxLat, cluster.minLng, cluster.maxLng, start, end, apex) {
+                                    if (cluster.minLat != null && cluster.maxLat != null && cluster.minLng != null && cluster.maxLng != null && cluster.minLat < 90.0) {
+                                        LatLngBounds(LatLng(cluster.minLat, cluster.minLng), LatLng(cluster.maxLat, cluster.maxLng))
+                                    } else {
+                                        LatLngBounds.Builder()
+                                            .include(start)
+                                            .include(end)
+                                            .include(apex)
+                                            .build()
+                                    }
                                 }
 
                                 val cameraPositionState = rememberCameraPositionState()
@@ -417,8 +421,10 @@ fun UnclusteredWorkoutItem(
                                 val end = workout.endLatLng
                                 val apex = workout.maxDisplacementLatLng
 
-                                val bounds = remember(start, end, apex) {
-                                    if (start != null && end != null && apex != null) {
+                                val bounds = remember(workout.minLat, workout.maxLat, workout.minLng, workout.maxLng, start, end, apex) {
+                                    if (workout.minLat != null && workout.maxLat != null && workout.minLng != null && workout.maxLng != null && workout.minLat < 90.0) {
+                                        LatLngBounds(LatLng(workout.minLat, workout.minLng), LatLng(workout.maxLat, workout.maxLng))
+                                    } else if (start != null && end != null && apex != null) {
                                         LatLngBounds.Builder().include(start).include(end).include(apex).build()
                                     } else null
                                 }

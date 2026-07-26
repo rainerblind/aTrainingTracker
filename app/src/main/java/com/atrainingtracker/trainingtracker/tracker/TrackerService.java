@@ -987,7 +987,7 @@ public class TrackerService extends Service {
 
         if (startPosRaw != null && endPosRaw != null && maxDispPos != null) {
             WorkoutClusterEngine engine = WorkoutClusterEngine.Companion.getInstance(this);
-            WorkoutCluster suggestion = engine.suggestCluster(startPosRaw, endPosRaw, maxDispPos, mDistanceTotal_m, null);
+            WorkoutCluster suggestion = engine.suggestCluster(startPosRaw, endPosRaw, maxDispPos, mDistanceTotal_m, null, mBanalService.getBSportType());
             if (suggestion != null) {
                 // If hardware confidence is high, we only take the name from the cluster
                 if (identity.isHighConfidence()) {

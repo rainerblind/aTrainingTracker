@@ -40,6 +40,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
 import com.atrainingtracker.trainingtracker.ui.components.MinimumDragHandle
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
@@ -53,6 +54,7 @@ fun MapDetailLayout(
     bSportType: BSportType,
     zoomFocus: MapZoomFocus,
     activeScrubPath: List<PathPoint>?,
+    initialBounds: LatLngBounds? = null,
     minAltitudeOverride: Double? = null,
     maxAltitudeOverride: Double? = null,
     header: @Composable () -> Unit,
@@ -106,6 +108,7 @@ fun MapDetailLayout(
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 ATrainingTrackerMap(
                     zoomFocus = zoomFocus,
+                    initialBounds = initialBounds,
                     bSportType = bSportType,
                     currentLocationFlow = noLocation,
                     selectedDistance = selectedDistance,

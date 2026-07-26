@@ -56,6 +56,7 @@ import kotlinx.coroutines.flow.StateFlow
 fun ATrainingTrackerMap(
     // Global State & Behavior
     zoomFocus: MapZoomFocus = MapZoomFocus.TRACK_AND_MARKERS,
+    initialBounds: com.google.android.gms.maps.model.LatLngBounds? = null,
     userBearing: Float = 0f,
     userSpeed: Float = 0f,
     bSportType: BSportType = BSportType.UNKNOWN,
@@ -118,7 +119,7 @@ fun ATrainingTrackerMap(
     scope.collect(content)
 
     val currentZoom = cameraPositionState.position.zoom
-    MapBoundsController(scope.tracks, scope.markers, scope.segments, scope.routes, zoomFocus, currentLocation, cameraPositionState, isMapLoaded, context)
+    MapBoundsController(scope.tracks, scope.markers, scope.segments, scope.routes, zoomFocus, initialBounds, currentLocation, cameraPositionState, isMapLoaded, context)
     
     // Render Preview Check
     if (LocalInspectionMode.current) {

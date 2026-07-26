@@ -118,7 +118,7 @@
         </activity>
 
         <activity
-            android:name=".trainingtracker.ui.tracking.trackingtabs.ConfigTrackingTabsActivity"
+            android:name=".trainingtracker.ui.settings.trackingtabs.ConfigTrackingTabsActivity"
             android:exported="true"
             android:label="@string/TrackingFragmentConfigActivityLabel"
             android:launchMode="singleTask"

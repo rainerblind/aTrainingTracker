@@ -37,6 +37,7 @@ fun MapBoundsController(
     segments: List<MapSegment>,
     routes: List<MapRoute>,
     zoomFocus: MapZoomFocus,
+    initialBounds: LatLngBounds? = null,
     currentLocation: LatLng?,
     cameraPositionState: CameraPositionState,
     isMapLoaded: Boolean,
@@ -45,8 +46,15 @@ fun MapBoundsController(
     // Flag to ensure we only fit the bounds once per session/focus change
     var hasFittedInitialBounds by remember(zoomFocus) { mutableStateOf(false) }
 
-    LaunchedEffect(tracks, markers, segments, routes, isMapLoaded, hasFittedInitialBounds) {
+    LaunchedEffect(tracks, markers, segments, routes, isMapLoaded, hasFittedInitialBounds, initialBounds) {
         if (!isMapLoaded || hasFittedInitialBounds) return@LaunchedEffect
+
+        // --- ATT-352 Refinement: Use persisted bounds if available ---
+        if (zoomFocus == MapZoomFocus.EXPLICIT_BOUNDS && initialBounds != null) {
+            cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(initialBounds, (40 * context.resources.displayMetrics.density).toInt()))
+            hasFittedInitialBounds = true
+            return@LaunchedEffect
+        }
 
         if (zoomFocus == MapZoomFocus.TRACK_AND_MARKERS || 
             zoomFocus == MapZoomFocus.LOCAL_SEGMENTS || 
@@ -71,17 +79,37 @@ fun MapBoundsController(
 
             when (zoomFocus) {
                 MapZoomFocus.TRACK_AND_MARKERS, MapZoomFocus.FIT_PRIMARY -> {
+                    // Optimized: Use persisted bounds where available
                     tracks.forEach { track ->
-                        track.path.forEach { builder.include(it.latLng); hasPoints = true }
+                        if (track.minLat != null && track.maxLat != null && track.minLng != null && track.maxLng != null) {
+                            builder.include(LatLng(track.minLat, track.minLng))
+                            builder.include(LatLng(track.maxLat, track.maxLng))
+                            hasPoints = true
+                        } else {
+                            // Fallback for legacy
+                            track.path.forEach { builder.include(it.latLng); hasPoints = true }
+                        }
                     }
                     markers.forEach { marker -> builder.include(marker.position); hasPoints = true }
                     
                     if (zoomFocus == MapZoomFocus.FIT_PRIMARY) {
                         segments.forEach { segment ->
-                            segment.path.forEach { builder.include(it.latLng); hasPoints = true }
+                            if (segment.minLat != null && segment.maxLat != null && segment.minLng != null && segment.maxLng != null) {
+                                builder.include(LatLng(segment.minLat, segment.minLng))
+                                builder.include(LatLng(segment.maxLat, segment.maxLng))
+                                hasPoints = true
+                            } else {
+                                segment.path.forEach { builder.include(it.latLng); hasPoints = true }
+                            }
                         }
                         routes.forEach { route ->
-                            route.path.forEach { builder.include(it.latLng); hasPoints = true }
+                            if (route.minLat != null && route.maxLat != null && route.minLng != null && route.maxLng != null) {
+                                builder.include(LatLng(route.minLat, route.minLng))
+                                builder.include(LatLng(route.maxLat, route.maxLng))
+                                hasPoints = true
+                            } else {
+                                route.path.forEach { builder.include(it.latLng); hasPoints = true }
+                            }
                         }
                     }
                 }
