@@ -207,9 +207,19 @@ fun PeriodBarGraph(
         }
     }
     val firstVisibleIndex by remember { derivedStateOf { currentScrollState.firstVisibleItemIndex } }
-    LaunchedEffect(firstVisibleIndex) {
+    
+    // --- ATT-375: Synchronize focus with list growth ---
+    LaunchedEffect(firstVisibleIndex, graphPeriods.size) {
         val graphIndex = graphPeriods.size - 1 - firstVisibleIndex
-        if (graphIndex in graphPeriods.indices) { graphScrollState.animateScrollToItem(graphIndex) }
+        if (graphIndex in graphPeriods.indices) {
+            // Use snap (scrollToItem) during migration to keep up with high-frequency updates,
+            // or animate if the size is stable (user scrolling).
+            if (currentScrollState.isScrollInProgress) {
+                graphScrollState.animateScrollToItem(graphIndex)
+            } else {
+                graphScrollState.scrollToItem(graphIndex)
+            }
+        }
     }
     LazyRow(
         state = graphScrollState, modifier = modifier,
