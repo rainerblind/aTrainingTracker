@@ -203,7 +203,7 @@ This document tracks all functional and non-functional requirements of the proje
 
 | ID | Description | Rationale | Implementation File(s) | Verification ID | Status |
 |:---|:---|:---|:---|:---|:---|
-| **REQ-UI-101** | Neutral Backgrounds. | The system SHALL use neutral white backgrounds (Light) or Material Surface (Dark) for all content areas. Branding colors MUST be isolated strictly to navigation elements (e.g., TabRow backgrounds). | `Theme.kt`, `periods/PeriodsTabsScreen.kt` | `TST-MAN-001` | Verified |
+| **REQ-UI-101** | Neutral Backgrounds. The system SHALL use neutral white backgrounds (Light) or Material Surface (Dark) for all content areas, including progress notifications and migration status cards. Branding colors MUST be isolated strictly to navigation elements (e.g., TabRow backgrounds). | Maintain a clean, professional aesthetic and emphasize content over branding. | `Theme.kt`, `PeriodsTabsScreen.kt`, `WorkoutClustersTabsScreen.kt` | `TST-MAN-001`, `TST-UI-072` | Verified |
 | **REQ-UI-102** | **Bold Primary Metrics.** | The Workout Summary SHALL display primary metrics in boldface to emphasize key training volume data. | `WorkoutSummary.kt` | `TST-MAN-001` | Verified |
 | **REQ-UI-103** | **Customizable Cockpits.** | The system SHALL provide deeply customizable tracking cockpits, allowing users to configure their own data visualization dashboards. | `ConfigTrackingTabsActivity.kt` | `TST-MAN-001` | Verified |
 | **REQ-UI-104** | **Volume Bar Graph.** | The system SHALL feature a scrollable bar graph for period volume to enhance historical navigation and trend analysis. | `PeriodsTabsScreen.kt` | `TST-MAN-001` | Verified |

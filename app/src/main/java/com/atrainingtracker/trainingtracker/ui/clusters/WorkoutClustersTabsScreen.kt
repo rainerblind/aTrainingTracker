@@ -144,8 +144,10 @@ fun WorkoutClustersTabsScreen(
                         .padding(horizontal = 16.dp)
                         .padding(top = headerHeightDp + 16.dp) // Below the header
                         .fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    tonalElevation = 2.dp
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {

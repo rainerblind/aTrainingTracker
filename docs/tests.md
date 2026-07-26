@@ -106,6 +106,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-UI-051** | | **Grade Legend Visibility** | `REQ-MAP-010` | 1. Open any Elevation Profile (e.g., in Aftermath). 2. Tap the info icon. | The grade color legend SHALL appear. Tap again to hide. | Verified |
 | **TST-UI-050** | | **Sensor Identity Logic** | `REQ-UI-050` | Open `SensorSourceDialog`, `EditDeviceDialog`, and `DeviceItem`. | Both SHALL feature identical Row 1/2 blocks. `EditDeviceDialog` SHALL include Row 3 (Manufacturer). The LED dot and the Battery icon SHALL be perfectly aligned on their vertical centers. | Verified |
 | **TST-UI-071** | `ATT-237` | **Branding** | `REQ-UI-062` | 1. Open the app to the main tracking screen. 2. Inspect the header area. | Hamburger menu is visible on the very left. Tapping it opens the navigation drawer. | Verified |
+| **TST-UI-072** | `ATT-369` | **Progress Notification Neutrality** | `REQ-UI-101` | 1. Trigger a Periods sync or Cluster initial load. 2. Inspect the background color of the progress card. | The card background SHALL be the neutral *surface* color. Branding colors (e.g. secondaryContainer) MUST NOT be used for the card background. | Verified |
 
 ## 3. Structural & Compliance Checks
 
