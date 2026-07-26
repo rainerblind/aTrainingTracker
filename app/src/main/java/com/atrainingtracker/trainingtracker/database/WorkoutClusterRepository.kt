@@ -72,10 +72,20 @@ class WorkoutClusterRepository private constructor(private val context: Context)
         }
     }
 
-    suspend fun refreshClusters() = withContext(Dispatchers.IO) {
+    suspend fun refreshClusters(): Unit = withContext(Dispatchers.IO) {
+        val currentClusters = clusterDb.getAllClusters()
+        
+        // --- SELF-HEALING BOOTSTRAPPER (ATT-392 Refinement) ---
+        // If the DB is empty (e.g. after a destructive upgrade), automatically repopulate from history.
+        if (currentClusters.isEmpty() && _migrationStatus.value == null) {
+            if (DEBUG) android.util.Log.i("WorkoutClusterRepo", "Database empty. Triggering self-healing bootstrap...")
+            recalculateClustersWithProgress()
+            return@withContext
+        }
+
         // 0. Informative Enrichment Pass (ATT-371/392 Refinement)
         val lastRepair = prefs.getInt(SP_KEY_LAST_BOUNDS_REPAIR, 0)
-        if (lastRepair < 5 && clusterDb.getAllClusters().isNotEmpty()) {
+        if (lastRepair < 5 && currentClusters.isNotEmpty()) {
             repairClusterMetadata()
         }
 
@@ -204,7 +214,7 @@ class WorkoutClusterRepository private constructor(private val context: Context)
         _migrationStatus.value = null
     }
 
-    suspend fun recalculateClustersWithProgress() = withContext(Dispatchers.Default) {
+    suspend fun recalculateClustersWithProgress(): Unit = withContext(Dispatchers.Default) {
         val title = context.getString(R.string.cluster_migration_title)
         val engine = WorkoutClusterEngine.getInstance(context)
         

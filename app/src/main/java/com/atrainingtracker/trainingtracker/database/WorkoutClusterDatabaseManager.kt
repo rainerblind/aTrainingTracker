@@ -270,56 +270,32 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
     }
 
     private class WorkoutClusterDbHelper(context: Context) : SQLiteOpenHelper(
-        context, "RouteClusters.db", null, 6
+        context, "RouteClusters.db", null, 7
     ) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(WorkoutClusterContract.CREATE_TABLE)
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            // Non-Destructive Migration for ATT-371/392 (v5: Final Spatial Alignment)
-            if (oldVersion < 5) {
-                // Ensure schema is up to date before reconstruction
-                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_SPORT_TYPE} TEXT DEFAULT 'UNKNOWN'") } catch (e: Exception) {}
-                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN bound_min_lat REAL") } catch (e: Exception) {}
-                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN bound_min_lng REAL") } catch (e: Exception) {}
-                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN bound_max_lat REAL") } catch (e: Exception) {}
-                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN bound_max_lng REAL") } catch (e: Exception) {}
+            // Relational Integrity Migration (v7: Ensuring consistent schema after v4 drop)
+            if (oldVersion < 2) {
+                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_SPORT_TYPE} TEXT DEFAULT 'UNKNOWN'")
             }
-
-            if (oldVersion < 6) {
-                // Table Reconstruction to drop longest_workout_id and longest_duration
-                val tempTable = "RouteClusters_temp"
-                db.execSQL("CREATE TABLE $tempTable (" +
-                        "${BaseColumns._ID} INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                        "${WorkoutClusterContract.COLUMN_NAME} TEXT, " +
-                        "${WorkoutClusterContract.COLUMN_PROBABLE_SPORT_ID} INTEGER, " +
-                        "${WorkoutClusterContract.COLUMN_START_LAT} REAL, " +
-                        "${WorkoutClusterContract.COLUMN_START_LNG} REAL, " +
-                        "${WorkoutClusterContract.COLUMN_END_LAT} REAL, " +
-                        "${WorkoutClusterContract.COLUMN_END_LNG} REAL, " +
-                        "${WorkoutClusterContract.COLUMN_MAX_DISP_LAT} REAL, " +
-                        "${WorkoutClusterContract.COLUMN_MAX_DISP_LNG} REAL, " +
-                        "${WorkoutClusterContract.COLUMN_REF_DISTANCE} REAL, " +
-                        "${WorkoutClusterContract.COLUMN_HIT_COUNT} INTEGER, " +
-                        "${WorkoutClusterContract.COLUMN_SPORT_TYPE} TEXT, " +
-                        "${WorkoutClusterContract.COLUMN_BOUND_MIN_LAT} REAL, " +
-                        "${WorkoutClusterContract.COLUMN_BOUND_MIN_LNG} REAL, " +
-                        "${WorkoutClusterContract.COLUMN_BOUND_MAX_LAT} REAL, " +
-                        "${WorkoutClusterContract.COLUMN_BOUND_MAX_LNG} REAL)")
-
-                val cols = "${BaseColumns._ID}, ${WorkoutClusterContract.COLUMN_NAME}, ${WorkoutClusterContract.COLUMN_PROBABLE_SPORT_ID}, " +
-                        "${WorkoutClusterContract.COLUMN_START_LAT}, ${WorkoutClusterContract.COLUMN_START_LNG}, " +
-                        "${WorkoutClusterContract.COLUMN_END_LAT}, ${WorkoutClusterContract.COLUMN_END_LNG}, " +
-                        "${WorkoutClusterContract.COLUMN_MAX_DISP_LAT}, ${WorkoutClusterContract.COLUMN_MAX_DISP_LNG}, " +
-                        "${WorkoutClusterContract.COLUMN_REF_DISTANCE}, ${WorkoutClusterContract.COLUMN_HIT_COUNT}, " +
-                        "${WorkoutClusterContract.COLUMN_SPORT_TYPE}, ${WorkoutClusterContract.COLUMN_BOUND_MIN_LAT}, " +
-                        "${WorkoutClusterContract.COLUMN_BOUND_MIN_LNG}, ${WorkoutClusterContract.COLUMN_BOUND_MAX_LAT}, " +
-                        "${WorkoutClusterContract.COLUMN_BOUND_MAX_LNG}"
-
-                db.execSQL("INSERT INTO $tempTable ($cols) SELECT $cols FROM ${WorkoutClusterContract.TABLE_NAME}")
-                db.execSQL("DROP TABLE IF EXISTS ${WorkoutClusterContract.TABLE_NAME}")
-                db.execSQL("ALTER TABLE $tempTable RENAME TO ${WorkoutClusterContract.TABLE_NAME}")
+            if (oldVersion < 3) {
+                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MIN_LAT} REAL")
+                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MIN_LNG} REAL")
+                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MAX_LAT} REAL")
+                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MAX_LNG} REAL")
+            }
+            // v4 was destructive (dropped table). 
+            // v5/v6 tried to reconstruct.
+            // v7 ensures all columns exist and triggers a repository-led re-aggregation if empty.
+            if (oldVersion < 7) {
+                // Final safety check: ensure all spatial columns exist without dropping
+                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MIN_LAT} REAL") } catch (e: Exception) {}
+                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MIN_LNG} REAL") } catch (e: Exception) {}
+                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MAX_LAT} REAL") } catch (e: Exception) {}
+                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MAX_LNG} REAL") } catch (e: Exception) {}
             }
         }
     }
