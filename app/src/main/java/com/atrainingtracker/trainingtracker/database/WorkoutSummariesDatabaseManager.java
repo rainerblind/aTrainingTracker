@@ -441,6 +441,66 @@ public class WorkoutSummariesDatabaseManager {
         return position;
     }
 
+    /**
+     * DTO for batch extrema lookups (ATT-359).
+     */
+    public static class ExtremaRecord {
+        public final long workoutId;
+        public final SensorType sensorType;
+        public final ExtremaType extremaType;
+        public final double value;
+        public final LatLng position;
+
+        public ExtremaRecord(long workoutId, SensorType sensorType, ExtremaType extremaType, double value, LatLng position) {
+            this.workoutId = workoutId;
+            this.sensorType = sensorType;
+            this.extremaType = extremaType;
+            this.value = value;
+            this.position = position;
+        }
+    }
+
+    /**
+     * Fetches all extrema records for a batch of workout IDs in a single query (ATT-359).
+     * Reduces O(N) queries to O(1).
+     */
+    public List<ExtremaRecord> getExtremaForWorkouts(java.util.Collection<Long> workoutIds) {
+        List<ExtremaRecord> records = new ArrayList<>();
+        if (workoutIds.isEmpty()) return records;
+
+        StringBuilder inClause = new StringBuilder();
+        for (Long id : workoutIds) {
+            if (inClause.length() > 0) inClause.append(",");
+            inClause.append(id);
+        }
+
+        String selection = WorkoutSummaries.WORKOUT_ID + " IN (" + inClause + ")";
+        
+        try (Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE_EXTREMA_VALUES, null, selection, null, null, null, null)) {
+            int wIdIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_ID);
+            int sensorIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.SENSOR_TYPE);
+            int typeIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.EXTREMA_TYPE);
+            int valIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.VALUE);
+            int latIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.LATITUDE);
+            int lonIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.LONGITUDE);
+
+            while (cursor.moveToNext()) {
+                LatLng pos = null;
+                if (!cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
+                    pos = new LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx));
+                }
+                records.add(new ExtremaRecord(
+                        cursor.getLong(wIdIdx),
+                        SensorType.valueOf(cursor.getString(sensorIdx)),
+                        ExtremaType.valueOf(cursor.getString(typeIdx)),
+                        cursor.getDouble(valIdx),
+                        pos
+                ));
+            }
+        }
+        return records;
+    }
+
     public void updateExtremaValue(long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType, double value, @Nullable LatLng position) {
         updateExtremaValue(getDatabase(), workoutId, sensorType, extremaType, value, position);
     }

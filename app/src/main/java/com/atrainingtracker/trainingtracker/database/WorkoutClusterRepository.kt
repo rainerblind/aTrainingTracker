@@ -150,34 +150,56 @@ class WorkoutClusterRepository private constructor(private val context: Context)
     }
 
     suspend fun getWorkoutsForCluster(clusterId: Long): List<WorkoutData> = withContext(Dispatchers.IO) {
-        val workouts = mutableListOf<WorkoutData>()
         val selection = "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = ?"
         val args = arrayOf(clusterId.toString())
         
-        summariesManager.getDatabase().query(
+        loadWorkoutsWithBatchMetadata(selection, args)
+    }
+
+    suspend fun getUnclusteredWorkouts(): List<WorkoutData> = withContext(Dispatchers.IO) {
+        val selection = "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = -1"
+        loadWorkoutsWithBatchMetadata(selection, null)
+    }
+
+    /**
+     * Efficiently loads workouts and their associated metadata in batches (ATT-359).
+     * Reduces hundreds of sequential DB queries to just 3 per batch.
+     */
+    private suspend fun loadWorkoutsWithBatchMetadata(selection: String, args: Array<String>?): List<WorkoutData> = withContext(Dispatchers.IO) {
+        val workouts = mutableListOf<WorkoutData>()
+        val db = summariesManager.getDatabase()
+        
+        db.query(
             WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
             null, selection, args, null, null, 
             "${WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START} DESC"
         ).use { cursor ->
-            while (cursor.moveToNext()) {
-                workouts.add(mapper.fromCursor(cursor))
-            }
-        }
-        workouts
-    }
+            if (!cursor.moveToFirst()) return@withContext emptyList<WorkoutData>()
 
-    suspend fun getUnclusteredWorkouts(): List<WorkoutData> = withContext(Dispatchers.IO) {
-        val workouts = mutableListOf<WorkoutData>()
-        val selection = "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = -1"
+            // 1. Gather IDs and FileNames for the batch
+            val idList = mutableListOf<Long>()
+            val fileNameList = mutableListOf<String>()
+            do {
+                idList.add(cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID)))
+                cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME))?.let {
+                    fileNameList.add(it)
+                }
+            } while (cursor.moveToNext())
 
-        summariesManager.getDatabase().query(
-            WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
-            null, selection, null, null, null,
-            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START} DESC"
-        ).use { cursor ->
-            while (cursor.moveToNext()) {
-                workouts.add(mapper.fromCursor(cursor))
-            }
+            // 2. Perform Batch Metadata Lookups
+            val extremaList = summariesManager.getExtremaForWorkouts(idList)
+            val stravaDataMap = StravaUploadDbHelper(context).getStravaActivityDataForWorkouts(fileNameList)
+            
+            val batchMetadata = WorkoutDataMapper.BatchMetadata(
+                extrema = extremaList.groupBy { it.workoutId },
+                stravaData = stravaDataMap
+            )
+
+            // 3. Map everything using pre-fetched data
+            cursor.moveToFirst()
+            do {
+                workouts.add(mapper.fromCursor(cursor, batchMetadata))
+            } while (cursor.moveToNext())
         }
         workouts
     }

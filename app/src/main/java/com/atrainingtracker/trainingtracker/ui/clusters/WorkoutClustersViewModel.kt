@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
@@ -34,17 +35,24 @@ import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
-import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import com.atrainingtracker.trainingtracker.ui.map.*
 import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/**
+ * Encapsulates the UI state for the cluster detail map (ATT-359).
+ * Pre-calculating this in the background prevents main-thread jank.
+ */
+data class ClusterMapState(
+    val tracks: List<MapTrack> = emptyList(),
+    val heatmapPaths: List<List<LatLng>> = emptyList(),
+    val memberMarkers: List<LocationMarker> = emptyList(),
+    val isLoading: Boolean = false
+)
 
 class WorkoutClustersViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -64,6 +72,9 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
 
     private val _linkedRoute = MutableStateFlow<RouteWithPath?>(null)
     val linkedRoute: StateFlow<RouteWithPath?> = _linkedRoute.asStateFlow()
+
+    private val _mapState = MutableStateFlow(ClusterMapState())
+    val mapState: StateFlow<ClusterMapState> = _mapState.asStateFlow()
 
     private val _selectedCluster = MutableStateFlow<WorkoutCluster?>(null)
     val selectedCluster: StateFlow<WorkoutCluster?> = _selectedCluster.asStateFlow()
@@ -116,12 +127,45 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
         _selectedCluster.value = cluster
         if (cluster != null) {
             viewModelScope.launch {
-                _clusterWorkouts.value = repository.getWorkoutsForCluster(cluster.id)
+                _mapState.update { it.copy(isLoading = true) }
+                val workouts = repository.getWorkoutsForCluster(cluster.id)
+                _clusterWorkouts.value = workouts
                 _linkedRoute.value = routesRepository.getRouteByClusterId(cluster.id)
+                
+                // --- ATT-359: Background Map Processing ---
+                withContext(Dispatchers.Default) {
+                    val tracks = workouts.map { it.toMapTrack().copy(isVisible = true) }
+                    val heatmapPaths = workouts.mapNotNull { 
+                        if (it.mapPolyline.isNotEmpty()) PolyUtil.decode(it.mapPolyline) else null 
+                    }
+                    
+                    // Pre-calculate markers to avoid UI jank (SCRUM-199)
+                    val memberAlpha = 0.3f
+                    val markers = workouts.flatMap { w ->
+                        val list = mutableListOf<LocationMarker>()
+                        val onMarkerClick: () -> Boolean = {
+                            selectWorkoutForPeek(w.id)
+                            true
+                        }
+
+                        w.startLatLng?.let { list.add(LocationMarker(it, R.drawable.control_start, alpha = memberAlpha, onClick = onMarkerClick)) }
+                        w.endLatLng?.let { list.add(LocationMarker(it, R.drawable.control_stop, alpha = memberAlpha, onClick = onMarkerClick)) }
+                        w.maxDisplacementLatLng?.let { list.add(LocationMarker(it, R.drawable.ic_distance, alpha = memberAlpha, onClick = onMarkerClick)) }
+                        list
+                    }
+
+                    _mapState.value = ClusterMapState(
+                        tracks = tracks,
+                        heatmapPaths = heatmapPaths,
+                        memberMarkers = markers,
+                        isLoading = false
+                    )
+                }
             }
         } else {
             _clusterWorkouts.value = emptyList()
             _linkedRoute.value = null
+            _mapState.value = ClusterMapState()
             clearPeekSelection()
         }
     }

@@ -384,7 +384,7 @@ class WorkoutRepository private constructor(private val application: Application
             return
         }
 
-        Log.i(TAG, "loadAllWorkouts: starting progressive streaming load.")
+        Log.i(TAG, "loadAllWorkouts: starting optimized progressive streaming load.")
         isListLoading = true
         try {
             withContext(Dispatchers.IO) {
@@ -392,39 +392,67 @@ class WorkoutRepository private constructor(private val application: Application
                 val allLoadedWorkouts = mutableListOf<WorkoutData>()
                 
                 cursor.use { c ->
-                    var count = 0
-                    if (c.moveToFirst()) {
-                        do {
-                            val workoutData = mapper.fromCursor(c)
+                    if (!c.moveToFirst()) return@withContext
 
+                    val batchSize = 50
+                    var processedCount = 0
+                    val totalCount = c.count
+
+                    while (!c.isAfterLast) {
+                        // 1. Gather IDs and names for the next chunk
+                        val chunkIds = mutableListOf<Long>()
+                        val chunkNames = mutableListOf<String>()
+                        val currentChunkStartPos = c.position
+                        
+                        var i = 0
+                        while (i < batchSize && !c.isAfterLast) {
+                            chunkIds.add(c.getLong(c.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID)))
+                            c.getString(c.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME))?.let {
+                                chunkNames.add(it)
+                            }
+                            c.moveToNext()
+                            i++
+                        }
+
+                        // 2. Fetch Metadata for the chunk in just 2 queries (ATT-359)
+                        val extremaList = summariesManager.getExtremaForWorkouts(chunkIds)
+                        val stravaDataMap = stravaUploadDbHelper.getStravaActivityDataForWorkouts(chunkNames)
+                        val batchMetadata = WorkoutDataMapper.BatchMetadata(
+                            extrema = extremaList.groupBy { it.workoutId },
+                            stravaData = stravaDataMap
+                        )
+
+                        // 3. Map the chunk
+                        c.moveToPosition(currentChunkStartPos)
+                        var j = 0
+                        while (j < batchSize && !c.isAfterLast) {
+                            val workoutData = mapper.fromCursor(c, batchMetadata)
+
+                            // Add Export Statuses (Fast from memory-only providers if possible)
                             val exportStatuses: MutableList<ExportStatusGroupData> = mutableListOf()
                             if (workoutData.fileBaseName != null) {
                                 for (type in orderedExportTypes) {
                                     val groupData = exportStatusDataProvider.createGroupData(workoutData.fileBaseName, type)
-                                    if (groupData.hasContent) {
-                                        exportStatuses.add(groupData)
-                                    }
+                                    if (groupData.hasContent) exportStatuses.add(groupData)
                                 }
                             }
 
                             allLoadedWorkouts.add(workoutData.copy(exportStatuses = exportStatuses))
-                            count++
+                            processedCount++
+                            c.moveToNext()
+                            j++
+                        }
 
-                            // PROGRESSIVE UI PUMP (ATT-346 Style)
-                            // Emit the first 10 immediately, then every 50
-                            if (count == 10 || (count > 10 && count % 50 == 0)) {
-                                val currentBatch = allLoadedWorkouts.toList().sortedByDescending { it.headerData.startTimeS }
-                                Log.d(TAG, "Streaming batch to UI: $count items.")
-                                _allWorkouts.value = currentBatch
-                            }
-
-                        } while (c.moveToNext())
+                        // 4. PROGRESSIVE UI PUMP (ATT-346 Style)
+                        // Emit updates to provide immediate feedback
+                        if (processedCount <= 10 || processedCount % batchSize == 0 || processedCount == totalCount) {
+                            val currentList = allLoadedWorkouts.toList() // Copy for thread safety
+                            Log.d(TAG, "Streaming batch to UI: $processedCount items.")
+                            _allWorkouts.value = currentList
+                        }
                     }
                 }
-                
-                // Final emission with complete list
                 Log.i(TAG, "Load complete. Total workouts: ${allLoadedWorkouts.size}")
-                _allWorkouts.value = allLoadedWorkouts.sortedByDescending { it.headerData.startTimeS }
             }
         } finally {
             isListLoading = false

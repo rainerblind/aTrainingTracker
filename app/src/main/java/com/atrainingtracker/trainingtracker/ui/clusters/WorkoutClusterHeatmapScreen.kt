@@ -16,6 +16,7 @@
 package com.atrainingtracker.trainingtracker.ui.clusters
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,15 +62,11 @@ fun WorkoutClusterHeatmapScreen(
     onHitCountClick: (WorkoutCluster) -> Unit
 ) {
     val context = LocalContext.current
-    val workouts by viewModel.clusterWorkouts.collectAsState()
     val linkedRoute by viewModel.linkedRoute.collectAsState()
     val peekedWorkoutDataWithTrack by viewModel.peekedWorkoutDataWithTrack.collectAsState()
+    val mapState by viewModel.mapState.collectAsState()
     
     val sportType = remember(cluster.probableSportId) { viewModel.getBSportType(cluster.probableSportId) }
-
-    val mapTracks = remember(workouts) {
-        workouts.map { it.toMapTrack().copy(isVisible = true) }
-    }
 
     // --- FINGERPRINT EDIT STATE (SCRUM-197 Refined) ---
     var isEditingFingerprint by remember { mutableStateOf(false) }
@@ -117,32 +114,7 @@ fun WorkoutClusterHeatmapScreen(
     }
 
     // --- ALL WORKOUT MARKERS (SCRUM-199) ---
-    val memberAlpha = 0.3f
-    val memberMarkers = remember(workouts, context) {
-        // Shared descriptors (Solid colors, alpha handled by Marker property)
-        val startIcon = createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint)
-        val endIcon = createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint)
-        val apexIcon = createSensorMarker(context, R.drawable.ic_distance, TTColor.ApexPoint)
-
-        workouts.flatMap { w ->
-            val list = mutableListOf<LocationMarker>()
-            val onMarkerClick: () -> Boolean = {
-                if (!isEditingFingerprint) {
-                    viewModel.selectWorkoutForPeek(w.id)
-                    true
-                } else false
-            }
-
-            w.startLatLng?.let { list.add(LocationMarker(it, R.drawable.control_start, iconDescriptor = startIcon, alpha = memberAlpha, onClick = onMarkerClick)) }
-            w.endLatLng?.let { list.add(LocationMarker(it, R.drawable.control_stop, iconDescriptor = endIcon, alpha = memberAlpha, onClick = onMarkerClick)) }
-            w.maxDisplacementLatLng?.let { list.add(LocationMarker(it, R.drawable.ic_distance, iconDescriptor = apexIcon, alpha = memberAlpha, onClick = onMarkerClick)) }
-            list
-        }
-    }
-
-    val clusterPaths = remember(workouts) {
-        workouts.mapNotNull { if (it.mapPolyline.isNotEmpty()) PolyUtil.decode(it.mapPolyline) else null }
-    }
+    // memberMarkers are now pre-calculated in the ViewModel to prevent UI jank
 
     // Adaptive heatmap parameters based on workout count
     val heatmapOpacity = when {
@@ -291,8 +263,20 @@ fun WorkoutClusterHeatmapScreen(
                     hasChanges = hasChanges
                 )
             },
+            overlay = {
+                if (mapState.isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            },
             mapContent = {
-                heatmap(clusterPaths, opacity = heatmapOpacity)
+                heatmap(mapState.heatmapPaths, opacity = heatmapOpacity)
 
                 // 1. Authoritative Route (If linked - SCRUM-216)
                 linkedRoute?.let { route ->
@@ -301,8 +285,8 @@ fun WorkoutClusterHeatmapScreen(
 
                 // 2. Member traces
                 // Only allow path clicks if not editing fingerprint
-                mapTracks.forEach { track ->
-                    path(track, alpha = memberAlpha, onPathClick = { id ->
+                mapState.tracks.forEach { track ->
+                    path(track, alpha = 0.3f, onPathClick = { id ->
                         if (!isEditingFingerprint) {
                             viewModel.selectWorkoutForPeek(id)
                         }
@@ -311,7 +295,7 @@ fun WorkoutClusterHeatmapScreen(
                 
                 // 3. Show distribution of markers for all cluster members (SCRUM-199)
                 if (!isEditingFingerprint) {
-                    markers(memberMarkers)
+                    markers(mapState.memberMarkers)
                 }
                 
                 // Primary cluster signature
