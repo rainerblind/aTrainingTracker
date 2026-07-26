@@ -173,11 +173,13 @@ fun WorkoutHeader(
                 ) {
                     IconTextRow(
                         iconRes = R.drawable.ic_date_start,
-                        text = data.formattedDate
+                        text = data.formattedDate,
+                        color = MaterialTheme.colorScheme.primary
                     )
                     IconTextRow(
                         iconRes = R.drawable.ic_time_start,
-                        text = data.formattedTime
+                        text = data.formattedTime,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -298,17 +300,19 @@ fun WorkoutHeader(
  * Helper to mimic the drawableStart + drawablePadding behavior from your XML
  */
 @Composable
-private fun IconTextRow(iconRes: Int, text: String) {
+private fun IconTextRow(iconRes: Int, text: String, color: Color = MaterialTheme.colorScheme.onSurfaceVariant) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             painter = painterResource(id = iconRes),
             contentDescription = null,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(18.dp),
+            tint = color
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = text,
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.bodyMedium,
+            color = color
         )
     }
 }
