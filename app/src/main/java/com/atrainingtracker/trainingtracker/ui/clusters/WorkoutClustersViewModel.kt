@@ -39,6 +39,8 @@ import com.atrainingtracker.trainingtracker.ui.map.*
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -69,6 +71,8 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
 
     private val _unclusteredWorkouts = MutableStateFlow<List<WorkoutData>>(emptyList())
     val unclusteredWorkouts: StateFlow<List<WorkoutData>> = _unclusteredWorkouts.asStateFlow()
+
+    private var selectionJob: Job? = null
 
     private val _linkedRoute = MutableStateFlow<RouteWithPath?>(null)
     val linkedRoute: StateFlow<RouteWithPath?> = _linkedRoute.asStateFlow()
@@ -124,24 +128,33 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
     }
 
     fun selectCluster(cluster: WorkoutCluster?) {
+        selectionJob?.cancel()
         _selectedCluster.value = cluster
+
         if (cluster != null) {
-            viewModelScope.launch {
+            selectionJob = viewModelScope.launch {
                 _mapState.update { it.copy(isLoading = true) }
                 val workouts = repository.getWorkoutsForCluster(cluster.id)
+                ensureActive()
+
                 _clusterWorkouts.value = workouts
                 _linkedRoute.value = routesRepository.getRouteByClusterId(cluster.id)
                 
                 // --- ATT-359: Background Map Processing ---
                 withContext(Dispatchers.Default) {
-                    val tracks = workouts.map { it.toMapTrack().copy(isVisible = true) }
+                    val tracks = workouts.map { 
+                        ensureActive()
+                        it.toMapTrack().copy(isVisible = true) 
+                    }
                     val heatmapPaths = workouts.mapNotNull { 
+                        ensureActive()
                         if (it.mapPolyline.isNotEmpty()) PolyUtil.decode(it.mapPolyline) else null 
                     }
                     
                     // Pre-calculate markers to avoid UI jank (SCRUM-199)
                     val memberAlpha = 0.3f
                     val markers = workouts.flatMap { w ->
+                        ensureActive()
                         val list = mutableListOf<LocationMarker>()
                         val onMarkerClick: () -> Boolean = {
                             selectWorkoutForPeek(w.id)
