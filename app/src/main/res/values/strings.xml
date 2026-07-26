@@ -1249,6 +1249,8 @@
     <string name="cluster_migration_processing_routes">Processing routes…</string>
     <string name="cluster_migration_processing_workouts">Processing workout %1$d of %2$d…</string>
     <string name="cluster_migration_enriching">Enriching family metadata (%1$d of %2$d)…</string>
+    <string name="legacy_import__scanning_dropbox">Scanning %1$s on Dropbox…</string>
+    <string name="legacy_import__downloading_dropbox">Downloading %1$s from Dropbox…</string>
     <string name="migration_phase_label">Phase %1$d: %2$s</string>
 
     <string name="all_sports">+ all sports +</string>

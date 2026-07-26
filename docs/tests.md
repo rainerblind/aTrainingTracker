@@ -113,6 +113,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-BUG-006** | `ATT-397` | **Adaptive Header Framing** | `REQ-UI-117` | 1. Open the app on a device with a large status bar (e.g. Pixel 10). 2. Navigate to Workouts, Periods, and My Locations. | The top of the list SHALL NOT be overlapped by the header. No unexpected empty space SHALL exist between the header and the list. | Verified |
 | **TST-MIG-013** | `ATT-401` | **Interaction Queue Size Limiting** | `REQ-MIG-017` | 1. Start bulk import of > 10 unclustered workouts. 2. Verify engine pauses at 10 queued items. | Interaction queue size is strictly enforced (limit: 10); background processing waits for user resolution to maintain clustering accuracy. | Verified |
 | **TST-MIG-014** | `ATT-403` | **Sparse Data Import** | `REQ-MIG-018` | 1. Import a TCX file missing HR/Power. 2. Inspect summary and DB schema. | Missing sensors are NOT displayed in summary and NOT created as columns in samples table. | Verified |
+| **TST-MIG-015** | `ATT-405` | **Dropbox Wait Feedback** | `REQ-MIG-019` | 1. Trigger 'Scan TCX' from Dropbox. 2. Observe the progress status messages. | Explicit messages like "Waiting for Dropbox..." or "Downloading [File]..." SHALL be visible during network operations. | Verified |
 
 ## 3. Structural & Compliance Checks
 

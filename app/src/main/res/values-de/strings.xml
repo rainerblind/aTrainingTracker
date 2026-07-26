@@ -1109,6 +1109,8 @@
     <string name="cluster_migration_processing_routes">Verarbeite Routen…</string>
     <string name="cluster_migration_processing_workouts">Verarbeite Training %1$d von %2$d…</string>
     <string name="cluster_migration_enriching">Erweitere Metadaten (%1$d von %2$d)…</string>
+    <string name="legacy_import__scanning_dropbox">Scanne %1$s auf Dropbox…</string>
+    <string name="legacy_import__downloading_dropbox">Lade %1$s von Dropbox herunter…</string>
     <string name="migration_phase_label">Phase %1$d: %2$s</string>
 
     <string name="all_sports">+ Alle Sportarten +</string>

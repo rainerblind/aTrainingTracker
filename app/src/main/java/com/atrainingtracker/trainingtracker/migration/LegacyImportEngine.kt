@@ -15,6 +15,7 @@ import android.content.Context
 import android.util.Log
 import android.util.Xml
 import com.atrainingtracker.BuildConfig
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -123,6 +124,7 @@ object LegacyImportEngine {
                     return@forEachIndexed
                 }
 
+                listener?.onStatus(context.getString(R.string.legacy_import__downloading_dropbox, entry.name))
                 val tempFile = File(tempDir, entry.name)
                 FileOutputStream(tempFile).use { fos ->
                     dbxClient.files().download(entry.pathLower).download(fos)

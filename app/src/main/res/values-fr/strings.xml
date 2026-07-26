@@ -1021,6 +1021,8 @@
     <string name="cluster_migration_previews">Préparation des aperçus de familles (%1$d sur %2$d)…</string>
     <string name="cluster_migration_processing_routes">Traitement des itinéraires…</string>
     <string name="cluster_migration_processing_workouts">Traitement de l\'entraînement %1$d sur %2$d…</string>
+    <string name="legacy_import__scanning_dropbox">Analyse de %1$s sur Dropbox…</string>
+    <string name="legacy_import__downloading_dropbox">Téléchargement de %1$s depuis Dropbox…</string>
     <string name="migration_phase_label">Phase %1$d : %2$s</string>
 
     <string name="unclustered">Ouvert</string>

@@ -1022,6 +1022,8 @@
     <string name="cluster_migration_previews">Preparando visualizações de famílias (%1$d de %2$d)…</string>
     <string name="cluster_migration_processing_routes">Processando rotas…</string>
     <string name="cluster_migration_processing_workouts">Processando treino %1$d de %2$d…</string>
+    <string name="legacy_import__scanning_dropbox">Varrendo %1$s no Dropbox…</string>
+    <string name="legacy_import__downloading_dropbox">Descarregando %1$s do Dropbox…</string>
     <string name="migration_phase_label">Fase %1$d: %2$s</string>
 
     <string name="unclustered">Aberto</string>
