@@ -36,6 +36,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
 
@@ -73,8 +74,8 @@ fun WorkoutClustersTabsScreen(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
-    // Header height (SCRUM-212: Synchronized with Routes/Segments at 135dp)
-    val headerHeightDp = 135.dp
+    val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val headerHeightDp = statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT
     val headerHeightPx = with(density) { headerHeightDp.roundToPx() }
 
     val connection = remember(headerHeightPx) {
@@ -197,13 +198,14 @@ fun WorkoutClustersTabsScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                                .height(LayoutConstants.HEADER_TITLE_ROW_HEIGHT)
+                                .padding(horizontal = 16.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
                                 text = stringResource(R.string.my_locations),
-                                style = MaterialTheme.typography.headlineSmall,
+                                style = MaterialTheme.typography.titleLarge,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
