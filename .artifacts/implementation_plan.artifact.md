@@ -1,38 +1,36 @@
-# Implementation Plan - ATT-440 Final Bliss: Reactive Visual Enrichment
+# Implementation Plan - ATT-440 Final Refinement: Exhaustive Period Synchronization
 
-Address the missing bar graphs and summary maps in the Periods view by ensuring the repository reactively enriches period data as workout history arrives, and refining the layout for persistent visibility.
+Address the issue where workouts are missing from period maps by implementing an exhaustive enrichment strategy in the repository and fixing the race conditions in the reactive data pipeline.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Guaranteed Visuals**: I am refactoring the repository to ensure that as soon as your workouts are loaded from the database, the Period summaries (Mini-maps and Graphs) are automatically updated. No more empty cards.
-> - **Layout Stability**: I am refining the padding logic to ensure that the Bar Graph is always visible in the "un-collapsed" state and correctly follows the header during scrolling.
-> - **Total Data Sync**: The "Periods" view will now be a perfect, real-time reflection of your entire workout history.
+> - **Total Data Visibility**: Every workout in your history will now be correctly included in your period summaries. I am removing the restriction that limited the background loading to only a few "anchor" sessions.
+> - **Zero Race Conditions**: I am refactoring the background engine to ensure that fast-loading batches of data no longer "interrupt" each other, guaranteeing that every path is processed to completion.
+> - **Instant Heatmaps**: The full-screen period maps will now load much faster by utilizing the pre-simplified polylines already present in the repository, rather than re-querying the heavy raw samples database.
 
 ## Proposed Changes
 
-### 1. Repository Layer: Robust Reactive Enrichment
+### 1. Repository Layer: Global Polyline Mapping
 Fulfills REQ-PER-007 | Test: TST-PERF-008
 
 #### [MODIFY] [PeriodsRepository.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsRepository.kt)
-- **Refactor `init`**:
-    - Ensure `loadFromDatabase` is called as soon as the app starts to show cached data.
-    - Synchronize the `allWorkouts` observer to trigger a re-enrichment pass (`loadFromDatabase(forceIncremental = true)`) whenever new sessions are discovered.
-- **Enrichment Logic**: Ensure `enrich()` is called even if `allWorkouts` is initially small, and updates as it grows.
+- **Refactor `enrich`**:
+    - Populate `workoutIdToPolylineMap` with **ALL** workouts in the period that have spatial data.
+    - Keep the `polylines` list limited to anchors for instant rendering in the list view.
+    - This provides a high-performance "directory" of all paths that the ViewModel can decode reactively.
 
-### 2. UI Layer: Header & Graph Visibility
-Fulfills REQ-UI-104 | Test: TST-UI-076
-
-#### [MODIFY] [PeriodsTabsScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsTabsScreen.kt)
-- **Correct Padding**:
-    - The content `Column` must use the *un-collapsed* header height for its initial padding.
-    - As the user scrolls, the `Column` should move up, but we must ensure the `PeriodBarGraph` is not immediately swallowed by the header.
-- **Z-Index Check**: Ensure the header `Surface` is correctly positioned on top of the content.
+### 2. UI Logic Layer: Fast Reactive Aggregation
+#### [MODIFY] [PeriodsViewModel.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsViewModel.kt)
+- **Safe Pipeline**: Use a `flatMapLatest` pattern combined with a non-cancelling loop to aggregate paths.
+- **Data Source Shift**: Decode paths directly from the `summary.workoutIdToPolylineMap`. This eliminates the heavy database I/O previously used for the "remainder" loading.
+- **Completion Guarantee**: Ensure the buffer is strictly cumulative for the active period, preventing data loss during progressive history loads.
 
 ## Verification Plan
 
-### Manual Verification (TST-UI-076 Refined)
-1. Open the 'Periods' screen.
-2. **Verify** that the summary cards show their mini-maps as the history loads.
-3. **Verify** that the Bar Graph is visible at the top of the list.
-4. **Scroll Audit**: Ensure the graph and list move together and transition smoothly into the collapsed header state.
+### Manual Verification (TST-PERF-008 Refined)
+1. Clear app cache or trigger a full history sync.
+2. Open a Year period map *immediately*.
+3. **Verify** that the 5 anchor routes appear instantly.
+4. **Observe** the heatmap. It should grow steadily until the number of sessions on the map matches the count shown on the period card.
+5. Cross-reference the workout count on the card with the number of visible traces on the map to ensure zero omissions.

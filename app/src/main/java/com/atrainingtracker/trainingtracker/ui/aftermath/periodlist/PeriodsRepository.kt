@@ -724,12 +724,20 @@ class PeriodsRepository private constructor(private val application: Application
 
     private fun enrich(summary: PeriodSummary, groupWorkouts: List<WorkoutData>): PeriodSummary {
         if (groupWorkouts.isEmpty()) return summary
+        
+        // 1. Identify spatial anchors for instant framing
         val anchorIds = setOf(summary.longestId, summary.northId, summary.southId, summary.eastId, summary.westId).filter { it != -1L }
         val anchorWorkouts = groupWorkouts.filter { it.id in anchorIds }
+        
+        // 2. Map ALL available workout polylines for the full heatmap (ATT-440 Refinement)
+        val allPolylineMap = groupWorkouts
+            .filter { it.mapPolyline.isNotEmpty() }
+            .associate { it.id to it.mapPolyline }
+
         return summary.copy(
             polylines = anchorWorkouts.map { it.mapPolyline }.filter { it.isNotEmpty() },
-            workoutIdToPolylineMap = anchorWorkouts.associate { it.id to it.mapPolyline },
-            workoutIdToSportMap = anchorWorkouts.associate { it.id to it.bSportType },
+            workoutIdToPolylineMap = allPolylineMap,
+            workoutIdToSportMap = groupWorkouts.associate { it.id to it.bSportType },
             extremaMarkers = anchorWorkouts.flatMap { workout ->
                 val markers = mutableListOf<PeriodPeakMarker>()
                 workout.startLatLng?.let { markers.add(PeriodPeakMarker(workout.id, it, R.drawable.control_start, "${workout.workoutName}: Start", PeriodMarkerType.START)) }

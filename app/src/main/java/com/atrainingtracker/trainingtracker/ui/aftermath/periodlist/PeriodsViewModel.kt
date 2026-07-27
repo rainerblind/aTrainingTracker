@@ -74,42 +74,30 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     init {
-        // --- REACTIVE PATH AGGREGATION (ATT-440) ---
+        // --- REACTIVE PATH AGGREGATION (ATT-440 Refinement) ---
+        // We observe the selected period and the global grouped periods from the repository.
+        // As the repository enriches the summaries in background, we decode the new polylines.
         viewModelScope.launch {
-            combine(_selectedPeriod, workoutRepo.allWorkouts) { selected, allWorkouts ->
-                selected to allWorkouts
-            }.collectLatest { (selected, allWorkouts) ->
-                if (selected == null) {
+            combine(_selectedPeriod, periodsRepo.groupedPeriods) { selected, allGroups ->
+                if (selected == null) return@combine null
+                // Find the LATEST version of our selected period in the enriched groups
+                allGroups.flatten().find { 
+                    it.periodType == selected.periodType && it.startTimestampS == selected.startTimestampS 
+                }
+            }.collectLatest { enriched ->
+                if (enriched == null) {
                     _periodPaths.value = emptyMap()
                     return@collectLatest
-                }
-
-                val workoutsInPeriod = allWorkouts.filter { w ->
-                    w.startTimeS >= selected.startTimestampS && w.startTimeS <= selected.endTimestampS
                 }
 
                 val currentPaths = _periodPaths.value.toMutableMap()
                 var changed = false
 
-                workoutsInPeriod.forEach { workout ->
-                    if (!currentPaths.containsKey(workout.id)) {
-                        // PERFORMANCE: Fetch and simplify in background
-                        val fullPath = workoutRepo.getWorkoutTrackPoints(workout.id, TrackType.BEST)
-                        val simplified = if (fullPath.size > 800) {
-                            val latLngs = fullPath.map { it.latLng }
-                            var tolerance = 1.0
-                            var simplifiedPath = PolyUtil.simplify(latLngs, tolerance)
-                            var iterations = 0
-                            while (simplifiedPath.size > 1000 && iterations < 5) {
-                                tolerance *= 2.0
-                                simplifiedPath = PolyUtil.simplify(latLngs, tolerance)
-                                iterations++
-                            }
-                            simplifiedPath
-                        } else {
-                            fullPath.map { it.latLng }
-                        }
-                        currentPaths[workout.id] = simplified
+                // Decode ALL polylines available in the enriched summary
+                enriched.workoutIdToPolylineMap.forEach { (id, polyline) ->
+                    if (!currentPaths.containsKey(id)) {
+                        // PERFORMANCE: Polyline decoding is much faster than DB re-sampling
+                        currentPaths[id] = PolyUtil.decode(polyline)
                         changed = true
                     }
                 }
