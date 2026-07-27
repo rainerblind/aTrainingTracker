@@ -251,7 +251,7 @@ fun createHeatmapProvider(
     opacity: Double = 0.8,
     radius: Int = 10,
     densifyInterval: Double = 5.0,
-    maxPoints: Int = 20000,
+    maxPoints: Int = 10000,
     weight: Double = 1.0,
     startIntensity: Float = 0.55f
 ): com.google.maps.android.heatmaps.HeatmapTileProvider? {

@@ -132,13 +132,13 @@ internal class MapContentScopeImpl(
                     steppedZoom < 14 -> 50.0
                     else -> 10.0
                 }
-                val effectiveMaxPoints = data.maxPoints ?: 100000
+                val effectiveMaxPoints = data.maxPoints ?: 40000
                 
-                // ATT-342: Granular zoom-adaptive styling schedule
+                // ATT-342 Refinement: Ultra-thin styling schedule for OOM and visibility
                 val (effectiveWeight, startIntensity, opacityOffset) = when {
-                    steppedZoom < 10 -> Triple(0.1, 0.75f, -0.2)
-                    steppedZoom <= 12 -> Triple(0.2, 0.70f, -0.1)
-                    steppedZoom <= 14 -> Triple(0.7, 0.60f, 0.0)
+                    steppedZoom < 10 -> Triple(0.02, 0.85f, -0.3)
+                    steppedZoom <= 12 -> Triple(0.05, 0.80f, -0.2)
+                    steppedZoom <= 14 -> Triple(0.5, 0.65f, -0.1)
                     else -> Triple(1.5, 0.55f, 0.0)
                 }
 
