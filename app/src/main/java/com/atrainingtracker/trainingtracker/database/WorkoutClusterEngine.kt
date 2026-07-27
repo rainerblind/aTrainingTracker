@@ -397,8 +397,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
                             maxDispLng = (match.maxDispLng * match.hitCount + apex.longitude) / (match.hitCount + 1),
                             refDistance = (match.refDistance * match.hitCount + distance) / (match.hitCount + 1),
                             bSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(finalSport),
-                            minLat = minLat, minLng = minLng, maxLat = maxLat, maxLng = maxLng,
-                            hitCount = match.hitCount + 1
+                            minLat = minLat, minLng = minLng, maxLat = maxLat, maxLng = maxLng
                         )
                         dbManager.updateCluster(updated)
                         assignClusterToWorkout(context, workoutId, updated.id)

@@ -50,6 +50,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialog
@@ -368,13 +369,13 @@ fun ClusterNamingDialog(
     var selectedCluster by remember(state) { mutableStateOf<WorkoutCluster?>(null) }
     var showSelectionDialog by remember(state) { mutableStateOf(false) }
 
-    // Fetch the LATEST clusters from the DB every time the dialog is shown/updated (ATT-316 Refined)
-    // ATT-316 Refinement: Added 'state' and 'showSelectionDialog' as keys to ensure the list is 
-    // refreshed for each queue item and whenever the user opens the selection view.
-    val existingClusters by produceState<List<WorkoutCluster>>(initialValue = emptyList(), state, showSelectionDialog) {
-        value = withContext(Dispatchers.IO) {
-            WorkoutClusterDatabaseManager.getInstance(localContext).getAllClusters()
-        }
+    val clusterRepo = remember { WorkoutClusterRepository.getInstance(localContext) }
+    val existingClusters by clusterRepo.allClusters.collectAsState()
+
+    // ATT-413: Trigger the repository's self-healing refresh when the dialog is shown
+    // or when the user opens the selection sub-dialog.
+    LaunchedEffect(state, showSelectionDialog) {
+        clusterRepo.refreshClusters()
     }
 
     val decodedPoints = remember(state.polyline) { PolyUtil.decode(state.polyline) }
