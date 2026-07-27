@@ -116,15 +116,45 @@ internal class MapContentScopeImpl(
 
     @Composable
     override fun Render(currentZoom: Float) {
-        // ATT-342 Refinement: Determine if we are currently waiting for any heatmaps to load.
+        val steppedZoom = remember(currentZoom) { currentZoom.toInt().toFloat() }
+
+        // ATT-342 Final Refinement: Total Path Priority & Marker Culling
+        val trackAlpha: Float
+        val markerAlphaMult: Float
+        val heatmapWeight: Double
+        val heatmapStartIntensity: Float
+        val heatmapMaxIntensity: Double
+
+        when {
+            steppedZoom < 13 -> {
+                trackAlpha = 0.4f; markerAlphaMult = 0.0f; heatmapWeight = 0.005; heatmapStartIntensity = 0.2f; heatmapMaxIntensity = 20.0
+            }
+            steppedZoom <= 14 -> {
+                trackAlpha = 0.8f; markerAlphaMult = 0.0f; heatmapWeight = 0.001; heatmapStartIntensity = 0.4f; heatmapMaxIntensity = 60.0
+            }
+            steppedZoom <= 16 -> {
+                trackAlpha = 1.0f; markerAlphaMult = 0.0f; heatmapWeight = 0.0005; heatmapStartIntensity = 0.5f; heatmapMaxIntensity = 100.0
+            }
+            else -> {
+                trackAlpha = 1.0f; markerAlphaMult = 0.1f; heatmapWeight = 0.0002; heatmapStartIntensity = 0.6f; heatmapMaxIntensity = 200.0
+            }
+        }
+
         var anyHeatmapLoading = false
         val providers = heatmaps.map { data ->
-            // Use stepped zoom for heatmap parameters to avoid frequent recalculations.
-            val steppedZoom = remember(currentZoom) { currentZoom.toInt().toFloat() }
-
             // Async generation of the heatmap provider to keep UI responsive.
-            val provider by produceState<HeatmapTileProvider?>(initialValue = null, data.allPaths, data.opacity, steppedZoom, data.radius, data.densifyInterval, data.maxPoints) {
-                // Formula starts at 10px (API minimum) and stays there until zoom 12.
+            val provider by produceState<HeatmapTileProvider?>(
+                initialValue = null, 
+                data.allPaths, 
+                data.opacity, 
+                steppedZoom, 
+                data.radius, 
+                data.densifyInterval, 
+                data.maxPoints,
+                heatmapWeight,
+                heatmapStartIntensity,
+                heatmapMaxIntensity
+            ) {
                 val effectiveRadius = data.radius ?: (10 + (steppedZoom - 12).coerceAtLeast(0f) * 4.0f).toInt().coerceIn(10, 50)
                 val effectiveInterval = data.densifyInterval ?: when {
                     steppedZoom < 10 -> 200.0
@@ -132,11 +162,8 @@ internal class MapContentScopeImpl(
                     steppedZoom < 14 -> 50.0
                     else -> 10.0
                 }
-                val effectiveMaxPoints = data.maxPoints ?: 100000
+                val effectiveMaxPoints = data.maxPoints ?: 15000
                 
-                // Use lower weight when zoomed out to reduce 'bloat' intensity.
-                val effectiveWeight = if (steppedZoom < 10) 0.3 else 1.5
-
                 value = withContext(Dispatchers.Default) {
                     createHeatmapProvider(
                         data.allPaths,
@@ -144,7 +171,9 @@ internal class MapContentScopeImpl(
                         radius = effectiveRadius,
                         densifyInterval = effectiveInterval,
                         maxPoints = effectiveMaxPoints,
-                        weight = effectiveWeight
+                        weight = heatmapWeight,
+                        startIntensity = heatmapStartIntensity,
+                        maxIntensity = heatmapMaxIntensity
                     )
                 }
             }
@@ -194,12 +223,11 @@ internal class MapContentScopeImpl(
 
         // 4. Tracks
         trackData.forEach { data ->
-            // ATT-342 Refinement: If heatmaps are loading, temporarily boost the visibility 
-            // of individual tracks so the user doesn't see an empty map.
+            // ATT-342 Refinement: Use dynamic trackAlpha for better blending as we zoom in.
             val effectiveAlpha = if (anyHeatmapLoading && heatmaps.isNotEmpty()) {
                 (data.alpha * 2.5f).coerceAtMost(0.9f)
             } else {
-                data.alpha
+                data.alpha * trackAlpha
             }
 
             MappablePathLayer(
@@ -214,7 +242,13 @@ internal class MapContentScopeImpl(
 
         // 5. Markers
         if (markers.isNotEmpty()) {
-            MarkerLayer(markers, primaryColor, context)
+            // ATT-342 Refinement: Dynamically adjust member marker visibility
+            val adjustedMarkers = markers.map { marker ->
+                if (marker.alpha < 1.0f) {
+                    marker.copy(alpha = marker.alpha * markerAlphaMult)
+                } else marker
+            }
+            MarkerLayer(adjustedMarkers, primaryColor, context)
         }
 
         // 6. Live Tracks
