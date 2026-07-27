@@ -90,11 +90,17 @@ fun PeriodsTabsScreen(
                 val scrollState = listStates[pageIndex]
 
                 Box(modifier = Modifier.fillMaxSize()) {
-                    Column(modifier = Modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(top = with(density) { (appBarMaxHeightPx + connection.appBarOffset).toDp() })
+                    ) {
                         // --- ATT-346: Migration Progress Feedback ---
                         if (migrationStatus != null) {
                             Surface(
-                                modifier = Modifier.padding(horizontal = 16.dp).padding(top = with(density) { (appBarMaxHeightPx + connection.appBarOffset).toDp() + 16.dp }).fillMaxWidth(),
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp, vertical = 16.dp)
+                                    .fillMaxWidth(),
                                 color = MaterialTheme.colorScheme.surfaceContainerLowest,
                                 shape = RoundedCornerShape(12.dp),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
@@ -152,8 +158,6 @@ fun PeriodsTabsScreen(
                             onMapClick = onMapClick,
                             onSportClick = onSportClick,
                             onLongestWorkoutClick = onLongestWorkoutClick,
-                            appBarOffsetPx = connection.appBarOffset,
-                            headerHeightPx = appBarMaxHeightPx.toFloat(),
                             modifier = Modifier.fillMaxWidth().weight(1f)
                         )
                     }

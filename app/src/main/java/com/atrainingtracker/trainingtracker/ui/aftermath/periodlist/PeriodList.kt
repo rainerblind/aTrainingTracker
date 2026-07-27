@@ -26,7 +26,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BSportType
 
@@ -45,20 +44,15 @@ fun PeriodList(
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
     onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
-    appBarOffsetPx: Int,
-    headerHeightPx: Float,
     modifier: Modifier = Modifier
 ) {
-    val density = LocalDensity.current
     val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
     LazyColumn(
         state = scrollState,
         modifier = modifier,
         contentPadding = PaddingValues(
-            // Calculation: The initial header height (px) + the current offset (px)
-            // convert the final result to Dp.
-            top = with(density) { (headerHeightPx + appBarOffsetPx).toDp() + 8.dp },
+            top = 8.dp,
             bottom = bottomPadding + 16.dp,
             start = 8.dp,
             end = 8.dp
