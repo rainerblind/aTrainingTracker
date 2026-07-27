@@ -118,7 +118,7 @@ internal class MapContentScopeImpl(
     override fun Render(currentZoom: Float) {
         val steppedZoom = remember(currentZoom) { currentZoom.toInt().toFloat() }
 
-        // ATT-342 Refinement: Inverse Blending & Weighting schedule
+        // ATT-342 Final Refinement: Total Path Priority & Marker Culling
         val trackAlpha: Float
         val markerAlphaMult: Float
         val heatmapWeight: Double
@@ -129,14 +129,14 @@ internal class MapContentScopeImpl(
             steppedZoom < 13 -> {
                 trackAlpha = 0.4f; markerAlphaMult = 0.0f; heatmapWeight = 0.005; heatmapStartIntensity = 0.2f; heatmapMaxIntensity = 20.0
             }
-            steppedZoom < 15 -> {
-                trackAlpha = 0.7f; markerAlphaMult = 0.0f; heatmapWeight = 0.002; heatmapStartIntensity = 0.4f; heatmapMaxIntensity = 40.0
+            steppedZoom <= 14 -> {
+                trackAlpha = 0.8f; markerAlphaMult = 0.0f; heatmapWeight = 0.001; heatmapStartIntensity = 0.4f; heatmapMaxIntensity = 60.0
             }
-            steppedZoom < 17 -> {
-                trackAlpha = 0.9f; markerAlphaMult = 0.1f; heatmapWeight = 0.001; heatmapStartIntensity = 0.5f; heatmapMaxIntensity = 60.0
+            steppedZoom <= 16 -> {
+                trackAlpha = 1.0f; markerAlphaMult = 0.0f; heatmapWeight = 0.0005; heatmapStartIntensity = 0.5f; heatmapMaxIntensity = 100.0
             }
             else -> {
-                trackAlpha = 1.0f; markerAlphaMult = 0.5f; heatmapWeight = 0.0005; heatmapStartIntensity = 0.6f; heatmapMaxIntensity = 100.0
+                trackAlpha = 1.0f; markerAlphaMult = 0.1f; heatmapWeight = 0.0002; heatmapStartIntensity = 0.6f; heatmapMaxIntensity = 200.0
             }
         }
 
