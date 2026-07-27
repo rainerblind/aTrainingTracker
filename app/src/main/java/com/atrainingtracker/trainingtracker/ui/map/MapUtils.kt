@@ -252,7 +252,8 @@ fun createHeatmapProvider(
     radius: Int = 10,
     densifyInterval: Double = 5.0,
     maxPoints: Int = 20000,
-    weight: Double = 1.0
+    weight: Double = 1.0,
+    startIntensity: Float = 0.55f
 ): com.google.maps.android.heatmaps.HeatmapTileProvider? {
     if (allPaths.isEmpty()) return null
 
@@ -291,7 +292,7 @@ fun createHeatmapProvider(
         0xFF0000FF.toInt(), // Medium: The "Identity" Blue
         0xFF311B92.toInt()  // High density: Deep Indigo
     )
-    val startPoints = floatArrayOf(0.55f, 0.8f, 1.0f)
+    val startPoints = floatArrayOf(startIntensity, 0.8f, 1.0f)
     val gradient = com.google.maps.android.heatmaps.Gradient(colors, startPoints)
 
     return com.google.maps.android.heatmaps.HeatmapTileProvider.Builder()

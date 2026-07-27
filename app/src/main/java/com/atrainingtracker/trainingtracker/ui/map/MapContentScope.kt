@@ -134,17 +134,23 @@ internal class MapContentScopeImpl(
                 }
                 val effectiveMaxPoints = data.maxPoints ?: 100000
                 
-                // Use lower weight when zoomed out to reduce 'bloat' intensity.
-                val effectiveWeight = if (steppedZoom < 10) 0.3 else 1.5
+                // ATT-342: Granular zoom-adaptive styling schedule
+                val (effectiveWeight, startIntensity, opacityOffset) = when {
+                    steppedZoom < 10 -> Triple(0.1, 0.75f, -0.2)
+                    steppedZoom <= 12 -> Triple(0.2, 0.70f, -0.1)
+                    steppedZoom <= 14 -> Triple(0.7, 0.60f, 0.0)
+                    else -> Triple(1.5, 0.55f, 0.0)
+                }
 
                 value = withContext(Dispatchers.Default) {
                     createHeatmapProvider(
                         data.allPaths,
-                        data.opacity,
+                        (data.opacity + opacityOffset).coerceIn(0.1, 1.0),
                         radius = effectiveRadius,
                         densifyInterval = effectiveInterval,
                         maxPoints = effectiveMaxPoints,
-                        weight = effectiveWeight
+                        weight = effectiveWeight,
+                        startIntensity = startIntensity
                     )
                 }
             }
