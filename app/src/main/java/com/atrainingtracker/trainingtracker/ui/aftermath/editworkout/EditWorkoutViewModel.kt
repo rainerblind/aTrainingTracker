@@ -291,7 +291,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         
         viewModelScope.launch {
             val suggestions = WorkoutClusterEngine.getInstance(getApplication())
-                .getClusterScores(start, end, apex, workout.totalDistance, workout.workoutName)
+                .getClusterScores(start, end, apex, workout.totalDistance, workout.workoutName, workout.bSportType)
             _clusterSuggestions.value = suggestions
         }
     }

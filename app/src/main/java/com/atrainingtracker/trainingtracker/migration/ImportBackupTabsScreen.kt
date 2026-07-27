@@ -397,7 +397,7 @@ fun ClusterNamingDialog(
     if (showSelectionDialog) {
         val clusterEngine = remember { WorkoutClusterEngine.getInstance(localContext) }
         val candidatesWithScores = remember(existingClusters, state) {
-            clusterEngine.scoreClusters(existingClusters, state.start, state.end, state.apex, state.distance)
+            clusterEngine.scoreClusters(existingClusters, state.start, state.end, state.apex, state.distance, workoutSportType = state.bSportType)
         }
 
         WorkoutClusterSelectionDialog(

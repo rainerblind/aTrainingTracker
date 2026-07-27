@@ -469,10 +469,11 @@ class WorkoutClusterEngine private constructor(context: Context) {
         val s4 = (Math.abs(distance - cluster.refDistance) / cluster.refDistance / TrainingApplication.getClusterTolDistance()) * 0.25
         var totalScore = s1 + s2 + s3 + s4
         
-        // ATT-350: Sport Type Awareness
-        if (TrainingApplication.useSportTypeForClustering() && workoutSportType != BSportType.UNKNOWN && cluster.bSportType != BSportType.UNKNOWN) {
+        // ATT-412: Tiered Sport Type Awareness
+        if (TrainingApplication.useSportTypeForClustering()) {
             if (workoutSportType != cluster.bSportType) {
-                totalScore += 2.0 // Heavy penalty for mismatched sports
+                val penalty = if (workoutSportType != BSportType.UNKNOWN && cluster.bSportType != BSportType.UNKNOWN) 5.0 else 2.0
+                totalScore += penalty
             }
         }
 
