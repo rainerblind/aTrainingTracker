@@ -132,25 +132,26 @@ internal class MapContentScopeImpl(
                     steppedZoom < 14 -> 50.0
                     else -> 10.0
                 }
-                val effectiveMaxPoints = data.maxPoints ?: 40000
+                val effectiveMaxPoints = data.maxPoints ?: 15000
                 
-                // ATT-342 Refinement: Ultra-thin styling schedule for OOM and visibility
-                val (effectiveWeight, startIntensity, opacityOffset) = when {
-                    steppedZoom < 10 -> Triple(0.02, 0.85f, -0.3)
-                    steppedZoom <= 12 -> Triple(0.05, 0.80f, -0.2)
-                    steppedZoom <= 14 -> Triple(0.5, 0.65f, -0.1)
-                    else -> Triple(1.5, 0.55f, 0.0)
+                // ATT-342 Refinement: Precision styling schedule for visual sharpening and OOM safety
+                val (effectiveWeight, startIntensity, maxIntensity) = when {
+                    steppedZoom < 10 -> Triple(0.005, 0.2f, 20.0)
+                    steppedZoom <= 12 -> Triple(0.01, 0.2f, 10.0)
+                    steppedZoom <= 14 -> Triple(0.5, 0.4f, 1.0)
+                    else -> Triple(1.5, 0.5f, 1.0)
                 }
 
                 value = withContext(Dispatchers.Default) {
                     createHeatmapProvider(
                         data.allPaths,
-                        (data.opacity + opacityOffset).coerceIn(0.1, 1.0),
+                        data.opacity,
                         radius = effectiveRadius,
                         densifyInterval = effectiveInterval,
                         maxPoints = effectiveMaxPoints,
                         weight = effectiveWeight,
-                        startIntensity = startIntensity
+                        startIntensity = startIntensity,
+                        maxIntensity = maxIntensity
                     )
                 }
             }
