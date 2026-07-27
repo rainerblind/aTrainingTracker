@@ -128,7 +128,7 @@ public class AltitudeFromPressureDevice extends MyDevice
     /**
      * set the field mAltitudeCorrection
      */
-    private void setAltitudeCorrection(int correctAltitude) {
+    private void setAltitudeCorrection(double correctAltitude) {
         if (DEBUG) Log.d(TAG, "setAltitudeCorrection");
 
         mAltitudeCorrection = correctAltitude - mAltitudeSensor.getValue().doubleValue();
