@@ -83,6 +83,16 @@ class PeriodsRepository private constructor(private val application: Application
                 performHierarchicalMigration()
             }
         }
+
+        // 3. Reactive Enrichment (ATT-440 Refinement)
+        // Observe workout history and re-enrich periods whenever data arrives.
+        scope.launch {
+            workoutRepo.allWorkouts.collectLatest {
+                // Always try to reload/enrich when history changes.
+                // This ensures maps pop in as soon as the first few workouts are loaded.
+                loadFromDatabase(forceIncremental = true)
+            }
+        }
     }
 
     /**
@@ -517,10 +527,15 @@ class PeriodsRepository private constructor(private val application: Application
     private fun aggregateWorkoutsToDay(workouts: List<WorkoutData>, startS: Long): PeriodSummary? {
         if (workouts.isEmpty()) return null
         
-        val w = workouts.first()
         val bounds = calculateWorkoutsBounds(workouts)
-        val longest = workouts.maxByOrNull { it.activeTimeSec } ?: w
+        val longest = workouts.maxByOrNull { it.activeTimeSec } ?: workouts.first()
         
+        // Find spatial anchors (N/S/E/W) for outline framing (ATT-440 Refinement)
+        val north = workouts.maxByOrNull { it.maxLat ?: -90.0 } ?: longest
+        val south = workouts.minByOrNull { it.minLat ?: 90.0 } ?: longest
+        val east = workouts.maxByOrNull { it.maxLng ?: -180.0 } ?: longest
+        val west = workouts.minByOrNull { it.minLng ?: 180.0 } ?: longest
+
         val sportStats = workouts.groupBy { it.bSportType }.mapValues { (_, sportWorkouts) ->
             val detailed = sportWorkouts.groupBy { it.sportName }.mapValues { (_, detW) ->
                 DetailedStats(detW.size, detW.sumOf { it.activeTimeSec }, detW.sumOf { it.totalDistance }, detW.sumOf { it.ascentMeters })
@@ -530,7 +545,7 @@ class PeriodsRepository private constructor(private val application: Application
         }
 
         return PeriodSummary(
-            periodLabel = w.localDateTime.format(dayFormatter), periodDateRange = "", periodType = PeriodType.DAY,
+            periodLabel = workouts.first().localDateTime.format(dayFormatter), periodDateRange = "", periodType = PeriodType.DAY,
             startTimestampS = startS, endTimestampS = startS + 86399, totalWorkouts = workouts.size,
             totalDurationSec = workouts.sumOf { it.activeTimeSec }, totalDistance = workouts.sumOf { it.totalDistance },
             sportStats = sportStats, sortKey = getPeriodSortKey(startS, PeriodType.DAY),
@@ -539,7 +554,7 @@ class PeriodsRepository private constructor(private val application: Application
             maxLat = bounds?.northeast?.latitude ?: -90.0, 
             maxLng = bounds?.northeast?.longitude ?: -180.0,
             longestId = longest.id, longestDurationS = longest.activeTimeSec,
-            northId = longest.id, southId = longest.id, eastId = longest.id, westId = longest.id
+            northId = north.id, southId = south.id, eastId = east.id, westId = west.id
         )
     }
 
@@ -564,6 +579,10 @@ class PeriodsRepository private constructor(private val application: Application
         }
 
         val longest = children.maxByOrNull { it.longestDurationS } ?: return null
+        val north = children.maxByOrNull { it.maxLat } ?: longest
+        val south = children.minByOrNull { it.minLat } ?: longest
+        val east = children.maxByOrNull { it.maxLng } ?: longest
+        val west = children.minByOrNull { it.minLng } ?: longest
         
         // --- ATT-352/354 Refinement: Spatial Integrity for Hierarchy ---
         // Only include children that have valid spatial data (ignore sentinels)
@@ -598,7 +617,7 @@ class PeriodsRepository private constructor(private val application: Application
             sortKey = getPeriodSortKey(start, type),
             minLat = minLat, minLng = minLng, maxLat = maxLat, maxLng = maxLng,
             longestId = longest.longestId, longestDurationS = longest.longestDurationS,
-            northId = longest.longestId, southId = longest.longestId, eastId = longest.longestId, westId = longest.longestId
+            northId = north.northId, southId = south.southId, eastId = east.eastId, westId = west.westId
         )
     }
 
@@ -666,7 +685,9 @@ class PeriodsRepository private constructor(private val application: Application
         val isFinished = withContext(Dispatchers.IO) { dbManager.isSyncFinished() }
         if (!isFinished && !forceIncremental) return
 
+        // Fetch workouts for enrichment
         val workouts = if (precalculatedGroups != null) emptyList() else workoutRepo.allWorkouts.value
+        
         val dailyRaw = withContext(Dispatchers.IO) { dbManager.getPeriodsByType(PeriodType.DAY) }
         val weeklyRaw = withContext(Dispatchers.IO) { dbManager.getPeriodsByType(PeriodType.WEEK) }
         val monthlyRaw = withContext(Dispatchers.IO) { dbManager.getPeriodsByType(PeriodType.MONTH) }
@@ -678,6 +699,7 @@ class PeriodsRepository private constructor(private val application: Application
             val groups = precalculateGroups(workouts)
             enrichAndEmit(listOf(dailyRaw, weeklyRaw, monthlyRaw, yearlyRaw), groups)
         } else {
+            // Even if workouts are empty, we MUST emit the raw levels to show the graphs (ATT-440 Refinement)
             _groupedPeriods.value = listOf(dailyRaw, weeklyRaw, monthlyRaw, yearlyRaw)
         }
     }

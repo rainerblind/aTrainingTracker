@@ -1,42 +1,38 @@
-# Implementation Plan - ATT-342 Final Refinement: Total Path Priority & Marker Culling
+# Implementation Plan - ATT-440 Final Bliss: Reactive Visual Enrichment
 
-Address the visual heaviness of the heatmap and the OOM crash caused by marker overload. This refinement ensures that as you zoom in, the heatmap recedes to a subtle background glow while individual workout traces become fully opaque and clean.
+Address the missing bar graphs and summary maps in the Periods view by ensuring the repository reactively enriches period data as workout history arrives, and refining the layout for persistent visibility.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Crash Fix (Marker Culling)**: I identified that the "points along the paths" are the hundreds of marker pins for every member workout. Rendering these is what caused the app to crash. I will now **completely hide member markers** by default to ensure 100% stability and a clean look.
-> - **Subtle Heatmap**: At high zoom levels, the heatmap weight will be reduced by another 90%. It will become a faint "density shadow" rather than a dominant blue band.
-> - **Opaque Paths**: Individual workout lines will become **100% opaque** as soon as you zoom in (level 14+), ensuring your data is the primary focus.
+> - **Guaranteed Visuals**: I am refactoring the repository to ensure that as soon as your workouts are loaded from the database, the Period summaries (Mini-maps and Graphs) are automatically updated. No more empty cards.
+> - **Layout Stability**: I am refining the padding logic to ensure that the Bar Graph is always visible in the "un-collapsed" state and correctly follows the header during scrolling.
+> - **Total Data Sync**: The "Periods" view will now be a perfect, real-time reflection of your entire workout history.
 
 ## Proposed Changes
 
-### 1. Map DSL Layer: Data-First Blending
-Fulfills REQ-MAP-016 (Refinement) | Test: TST-MAP-010
+### 1. Repository Layer: Robust Reactive Enrichment
+Fulfills REQ-PER-007 | Test: TST-PERF-008
 
-#### [MODIFY] [MapContentScope.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapContentScope.kt)
-- **Refine `Render` loop**:
-    - Implement a "Receding Heatmap" schedule that aggressively favors individual traces:
-        | Zoom | Track Alpha | Heatmap Weight | Max Intensity | Member Marker Alpha |
-        |:---|:---|:---|:---|:---|
-        | < 13 | 0.4f | 0.005 | 20.0 | 0.0 (Hidden) |
-        | 13-14 | **0.8f** | **0.001** | **60.0** | **0.0** (Hidden) |
-        | 15-16 | **1.0f** | **0.0005**| **100.0**| **0.0** (Hidden) |
-        | 17+ | **1.0f** | **0.0002**| **200.0**| **0.1** (Faint Ghost) |
-- **Rationale**:
-    - By zoom level 15, the tracks are 100% opaque.
-    - The heatmap weight is so low that it only highlights the "core" of your most popular routes as a subtle glow.
-    - Member markers are kept hidden to prevent visual clutter and OOM crashes.
+#### [MODIFY] [PeriodsRepository.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsRepository.kt)
+- **Refactor `init`**:
+    - Ensure `loadFromDatabase` is called as soon as the app starts to show cached data.
+    - Synchronize the `allWorkouts` observer to trigger a re-enrichment pass (`loadFromDatabase(forceIncremental = true)`) whenever new sessions are discovered.
+- **Enrichment Logic**: Ensure `enrich()` is called even if `allWorkouts` is initially small, and updates as it grows.
 
-### 2. Map Layer Foundation: Stable Markers
-#### [MODIFY] [MapLayers.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapLayers.kt)
-- **Refinement**: Ensure the primary cluster signature (Start/End/Apex) always stays at 100% alpha and is rendered on top of everything else to maintain navigational reference.
+### 2. UI Layer: Header & Graph Visibility
+Fulfills REQ-UI-104 | Test: TST-UI-076
+
+#### [MODIFY] [PeriodsTabsScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsTabsScreen.kt)
+- **Correct Padding**:
+    - The content `Column` must use the *un-collapsed* header height for its initial padding.
+    - As the user scrolls, the `Column` should move up, but we must ensure the `PeriodBarGraph` is not immediately swallowed by the header.
+- **Z-Index Check**: Ensure the header `Surface` is correctly positioned on top of the content.
 
 ## Verification Plan
 
-### Manual Verification (TST-MAP-010 Refined)
-1. Open the 'Solitude Runde' cluster heatmap.
-2. **Verify** that at zoom level 11/12, the overview is thin and sharp.
-3. Zoom in to level 14/15. **Verify** that the individual workout lines are now clearly the dominant element and look like clean, solid traces.
-4. **Verify** that there are no "points" (pins) cluttering the path at these levels.
-5. **Stability Audit**: Rapidly zoom in and out to verify that the `OutOfMemoryError` is permanently resolved.
+### Manual Verification (TST-UI-076 Refined)
+1. Open the 'Periods' screen.
+2. **Verify** that the summary cards show their mini-maps as the history loads.
+3. **Verify** that the Bar Graph is visible at the top of the list.
+4. **Scroll Audit**: Ensure the graph and list move together and transition smoothly into the collapsed header state.

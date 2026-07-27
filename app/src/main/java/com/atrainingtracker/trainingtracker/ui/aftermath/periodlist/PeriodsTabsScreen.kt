@@ -146,7 +146,10 @@ fun PeriodsTabsScreen(
                             periods = periods,
                             currentScrollState = scrollState,
                             onBarClick = { index -> scope.launch { scrollState.animateScrollToItem(index) } },
-                            modifier = Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 16.dp, vertical = 8.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(80.dp)
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
                         )
 
                         PeriodList(
