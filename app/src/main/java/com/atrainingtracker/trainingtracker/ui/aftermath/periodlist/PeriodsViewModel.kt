@@ -41,7 +41,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     )
 
     private val _selectedPeriod = MutableStateFlow<PeriodSummary?>(null)
-    val selectedPeriod = _selectedPeriod.asStateFlow()
+    private val _periodPaths = MutableStateFlow<Map<Long, List<com.google.android.gms.maps.model.LatLng>>>(emptyMap())
 
     val isHeatmapEnabled: StateFlow<Boolean> = prefManager.isHeatmapEnabledFlow
         .stateIn(
@@ -53,7 +53,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     val enabledMarkerTypes: StateFlow<Set<PeriodMarkerType>> = prefManager.enabledPeriodMarkerTypesFlow
         .map { strings -> 
             strings.mapNotNull { 
-                try { PeriodMarkerType.valueOf(it) } catch(e: Exception) { null } 
+                try { PeriodMarkerType.valueOf(it) } catch(_: Exception) { null } 
             }.toSet()
         }
         .stateIn(
@@ -61,6 +61,65 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = setOf(PeriodMarkerType.ALTITUDE, PeriodMarkerType.DISTANCE)
         )
+
+    /**
+     * ATT-440: Reactive pipeline that provides the selected period summary enriched with
+     * simplified path data that "grows" as background loading progresses.
+     */
+    val selectedPeriod: StateFlow<PeriodSummary?> = combine(
+        _selectedPeriod,
+        _periodPaths
+    ) { selected, paths ->
+        selected?.copy(workoutIdToPathMap = paths)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    init {
+        // --- REACTIVE PATH AGGREGATION (ATT-440) ---
+        viewModelScope.launch {
+            combine(_selectedPeriod, workoutRepo.allWorkouts) { selected, allWorkouts ->
+                selected to allWorkouts
+            }.collectLatest { (selected, allWorkouts) ->
+                if (selected == null) {
+                    _periodPaths.value = emptyMap()
+                    return@collectLatest
+                }
+
+                val workoutsInPeriod = allWorkouts.filter { w ->
+                    w.startTimeS >= selected.startTimestampS && w.startTimeS <= selected.endTimestampS
+                }
+
+                val currentPaths = _periodPaths.value.toMutableMap()
+                var changed = false
+
+                workoutsInPeriod.forEach { workout ->
+                    if (!currentPaths.containsKey(workout.id)) {
+                        // PERFORMANCE: Fetch and simplify in background
+                        val fullPath = workoutRepo.getWorkoutTrackPoints(workout.id, TrackType.BEST)
+                        val simplified = if (fullPath.size > 800) {
+                            val latLngs = fullPath.map { it.latLng }
+                            var tolerance = 1.0
+                            var simplifiedPath = PolyUtil.simplify(latLngs, tolerance)
+                            var iterations = 0
+                            while (simplifiedPath.size > 1000 && iterations < 5) {
+                                tolerance *= 2.0
+                                simplifiedPath = PolyUtil.simplify(latLngs, tolerance)
+                                iterations++
+                            }
+                            simplifiedPath
+                        } else {
+                            fullPath.map { it.latLng }
+                        }
+                        currentPaths[workout.id] = simplified
+                        changed = true
+                    }
+                }
+
+                if (changed) {
+                    _periodPaths.value = currentPaths
+                }
+            }
+        }
+    }
 
     fun toggleHeatmapEnabled() {
         viewModelScope.launch {
@@ -77,43 +136,11 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
 
     fun showPeriodMap(summary: PeriodSummary) {
         _selectedPeriod.value = summary
-
-        // Lazy-loading of full heatmap polylines
-        viewModelScope.launch {
-            val workoutIdList = workoutRepo.allWorkouts.value.filter { w ->
-                w.startTimeS >= summary.startTimestampS && w.startTimeS <= summary.endTimestampS
-            }.map { it.id }
-
-            val richPaths = workoutIdList.associateWith { id ->
-                val fullPath = workoutRepo.getWorkoutTrackPoints(id, TrackType.BEST)
-                
-                // PERFORMANCE: Simplify for map
-                if (fullPath.size > 800) {
-                    val latLngs = fullPath.map { it.latLng }
-                    var tolerance = 1.0
-                    var simplified = PolyUtil.simplify(latLngs, tolerance)
-                    var iterations = 0
-                    while (simplified.size > 1000 && iterations < 5) {
-                        tolerance *= 2.0
-                        simplified = PolyUtil.simplify(latLngs, tolerance)
-                        iterations++
-                    }
-                    simplified
-                } else {
-                    fullPath.map { it.latLng }
-                }
-            }
-            
-            val current = _selectedPeriod.value
-            if (current != null && current.startTimestampS == summary.startTimestampS && 
-                current.periodType == summary.periodType) {
-                _selectedPeriod.value = current.copy(workoutIdToPathMap = richPaths)
-            }
-        }
     }
 
     fun dismissPeriodMap() {
         _selectedPeriod.value = null
+        _periodPaths.value = emptyMap()
     }
 
     // Observe summarized periods and migration status from Repository
