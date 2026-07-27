@@ -118,24 +118,43 @@ internal class MapContentScopeImpl(
     override fun Render(currentZoom: Float) {
         val steppedZoom = remember(currentZoom) { currentZoom.toInt().toFloat() }
 
-        // ATT-342 Refinement: Precision blending schedule
-        val trackAlpha = when {
-            steppedZoom < 13 -> 0.3f
-            steppedZoom < 15 -> 0.5f
-            steppedZoom < 17 -> 0.7f
-            else -> 0.9f
-        }
-        val markerAlphaMult = when {
-            steppedZoom < 13 -> 0.0f
-            steppedZoom < 15 -> 0.1f
-            steppedZoom < 17 -> 0.4f
-            else -> 1.0f
+        // ATT-342 Refinement: Inverse Blending & Weighting schedule
+        val trackAlpha: Float
+        val markerAlphaMult: Float
+        val heatmapWeight: Double
+        val heatmapStartIntensity: Float
+        val heatmapMaxIntensity: Double
+
+        when {
+            steppedZoom < 13 -> {
+                trackAlpha = 0.4f; markerAlphaMult = 0.0f; heatmapWeight = 0.005; heatmapStartIntensity = 0.2f; heatmapMaxIntensity = 20.0
+            }
+            steppedZoom < 15 -> {
+                trackAlpha = 0.7f; markerAlphaMult = 0.0f; heatmapWeight = 0.002; heatmapStartIntensity = 0.4f; heatmapMaxIntensity = 40.0
+            }
+            steppedZoom < 17 -> {
+                trackAlpha = 0.9f; markerAlphaMult = 0.1f; heatmapWeight = 0.001; heatmapStartIntensity = 0.5f; heatmapMaxIntensity = 60.0
+            }
+            else -> {
+                trackAlpha = 1.0f; markerAlphaMult = 0.5f; heatmapWeight = 0.0005; heatmapStartIntensity = 0.6f; heatmapMaxIntensity = 100.0
+            }
         }
 
         var anyHeatmapLoading = false
         val providers = heatmaps.map { data ->
             // Async generation of the heatmap provider to keep UI responsive.
-            val provider by produceState<HeatmapTileProvider?>(initialValue = null, data.allPaths, data.opacity, steppedZoom, data.radius, data.densifyInterval, data.maxPoints) {
+            val provider by produceState<HeatmapTileProvider?>(
+                initialValue = null, 
+                data.allPaths, 
+                data.opacity, 
+                steppedZoom, 
+                data.radius, 
+                data.densifyInterval, 
+                data.maxPoints,
+                heatmapWeight,
+                heatmapStartIntensity,
+                heatmapMaxIntensity
+            ) {
                 val effectiveRadius = data.radius ?: (10 + (steppedZoom - 12).coerceAtLeast(0f) * 4.0f).toInt().coerceIn(10, 50)
                 val effectiveInterval = data.densifyInterval ?: when {
                     steppedZoom < 10 -> 200.0
@@ -145,14 +164,6 @@ internal class MapContentScopeImpl(
                 }
                 val effectiveMaxPoints = data.maxPoints ?: 15000
                 
-                // ATT-342 Refinement: Precision styling schedule for visual sharpening and OOM safety
-                val (effectiveWeight, startIntensity, maxIntensity) = when {
-                    steppedZoom < 10 -> Triple(0.005, 0.2f, 20.0)
-                    steppedZoom <= 12 -> Triple(0.01, 0.2f, 10.0)
-                    steppedZoom <= 14 -> Triple(0.5, 0.4f, 1.0)
-                    else -> Triple(1.5, 0.5f, 1.0)
-                }
-
                 value = withContext(Dispatchers.Default) {
                     createHeatmapProvider(
                         data.allPaths,
@@ -160,9 +171,9 @@ internal class MapContentScopeImpl(
                         radius = effectiveRadius,
                         densifyInterval = effectiveInterval,
                         maxPoints = effectiveMaxPoints,
-                        weight = effectiveWeight,
-                        startIntensity = startIntensity,
-                        maxIntensity = maxIntensity
+                        weight = heatmapWeight,
+                        startIntensity = heatmapStartIntensity,
+                        maxIntensity = heatmapMaxIntensity
                     )
                 }
             }

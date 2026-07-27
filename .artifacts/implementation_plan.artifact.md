@@ -1,37 +1,37 @@
-# Implementation Plan - ATT-342 Refinement: Zoom-Adaptive Alpha & Precision Blending
+# Implementation Plan - ATT-342 Refinement: Inverse Heatmap Scaling & Path Priority
 
-Address the visual "heaviness" and "pointiness" of the cluster view by implementing a dynamic blending system that transitions from a high-level heatmap to prominent individual workout traces as the user zooms in.
+Refine the visual blending of workout clusters to ensure the heatmap recedes into a faint background layer as the user zooms in, while individual workout traces become fully prominent and clear. Also further reduce marker clutter to eliminate "pointiness."
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Smooth Transition**: When you zoom in (level 13+), the "bloody" heatmap will automatically fade into the background, and the **individual workout paths** will become more solid and opaque.
-> - **Zero Pointiness**: I identified that the "points along the paths" are the hundreds of marker pins for every member workout. I will now **hide these markers** at medium zoom levels and only show them when you zoom in very close (level 16+), ensuring a clean and professional look.
-> - **Balanced Clarity**: By increasing the alpha of individual workouts as you zoom in, you can see exactly where each session went, while the heatmap provides a subtle "density glow" in the background.
+> - **Inverse Scaling**: The heatmap will now **fade away** at higher zoom levels, becoming a subtle "shadow" rather than a dominant band.
+> - **Path Dominance**: Individual workout lines will become sharper and more opaque (Alpha up to 1.0) as you zoom in, becoming the primary visual element for detailed analysis.
+> - **Clean Traces**: I am further delaying the appearance of member marker pins. They will now remain ghostly faint until you zoom in extremely close (level 17+), ensuring your paths look like clean lines instead of "pointy" tracks.
 
 ## Proposed Changes
 
-### 1. Map DSL Layer: Intelligent Blending Schedule
+### 1. Map DSL Layer: Inverse Blending & Marker Culling
 Fulfills REQ-MAP-016 (Refinement) | Test: TST-MAP-010
 
 #### [MODIFY] [MapContentScope.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapContentScope.kt)
 - **Refine `Render` loop**:
-    - Implement a multi-stage schedule for blending Heatmaps, Tracks, and Member Markers:
-        | Zoom | Track Alpha | Heatmap Weight | Start Intensity | Member Marker Alpha |
+    - Implement the "Receding Heatmap & Clean Path" schedule:
+        | Zoom | Track Alpha | Heatmap Weight | Max Intensity | Marker Mult |
         |:---|:---|:---|:---|:---|
-        | < 12 | 0.3f | 0.01 | 0.2f | 0.0f (Hidden) |
-        | 13-14 | **0.5f** | **0.05** | **0.5f** | **0.1f** (Very Faint) |
-        | 15-16 | **0.7f** | **0.10** | **0.6f** | **0.4f** |
-        | 17+ | **0.9f** | **0.20** | **0.6f** | **1.0f** |
-- **Logic Refinement**:
-    - Apply the `trackAlpha` multiplier to all items in `trackData`.
-    - Apply the `markerAlpha` multiplier to all `markers`.
-    - Ensure the "Source" cluster signature (Start/End/Apex) always remains at 100% visibility for reference.
+        | < 12 | 0.4f | 0.005 | 20.0 | 0.0 (Hidden) |
+        | 13-14 | **0.7f** | **0.002** | **40.0** | **0.0** (Hidden) |
+        | 15-16 | **0.9f** | **0.001** | **60.0** | **0.1** (Faint) |
+        | 17+ | **1.0f** | **0.0005**| **100.0**| **0.5** (Subtle)|
+- **Rationale**:
+    - Dramatically decreasing weight and increasing `maxIntensity` as zoom increases forces the heatmap to recede, preventing visual saturation.
+    - Increasing `trackAlpha` faster ensures that individual session data takes priority.
+    - Keeping `markerAlphaMult` at 0.0/0.1 for longer eliminates the "pointy" artifacts on the paths.
 
 ## Verification Plan
 
 ### Manual Verification (TST-MAP-010 Refined)
 1. Open the 'Solitude Runde' cluster heatmap.
-2. **Verify** that at zoom level 11/12, no marker pins are visible along the path, resulting in a clean line.
-3. Zoom in to level 14. **Verify** that individual workout lines become more visible and the heatmap "glow" is subtle.
-4. Zoom in to level 17+. **Verify** that individual traces are prominent and the member marker pins appear clearly for detailed analysis.
+2. **Verify** that at zoom level 11/12, the overview remains a sharp, thin trace with no points.
+3. Zoom in to level 14/15. **Verify** that individual workout lines are prominent and clean, with NO marker pins visible.
+4. Zoom in to level 18. **Verify** that individual tracks are solid (100% visible) and the heatmap is almost invisible.
