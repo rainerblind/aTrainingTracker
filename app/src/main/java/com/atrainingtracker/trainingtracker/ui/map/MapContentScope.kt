@@ -116,15 +116,26 @@ internal class MapContentScopeImpl(
 
     @Composable
     override fun Render(currentZoom: Float) {
-        // ATT-342 Refinement: Determine if we are currently waiting for any heatmaps to load.
+        val steppedZoom = remember(currentZoom) { currentZoom.toInt().toFloat() }
+
+        // ATT-342 Refinement: Precision blending schedule
+        val trackAlpha = when {
+            steppedZoom < 13 -> 0.3f
+            steppedZoom < 15 -> 0.5f
+            steppedZoom < 17 -> 0.7f
+            else -> 0.9f
+        }
+        val markerAlphaMult = when {
+            steppedZoom < 13 -> 0.0f
+            steppedZoom < 15 -> 0.1f
+            steppedZoom < 17 -> 0.4f
+            else -> 1.0f
+        }
+
         var anyHeatmapLoading = false
         val providers = heatmaps.map { data ->
-            // Use stepped zoom for heatmap parameters to avoid frequent recalculations.
-            val steppedZoom = remember(currentZoom) { currentZoom.toInt().toFloat() }
-
             // Async generation of the heatmap provider to keep UI responsive.
             val provider by produceState<HeatmapTileProvider?>(initialValue = null, data.allPaths, data.opacity, steppedZoom, data.radius, data.densifyInterval, data.maxPoints) {
-                // Formula starts at 10px (API minimum) and stays there until zoom 12.
                 val effectiveRadius = data.radius ?: (10 + (steppedZoom - 12).coerceAtLeast(0f) * 4.0f).toInt().coerceIn(10, 50)
                 val effectiveInterval = data.densifyInterval ?: when {
                     steppedZoom < 10 -> 200.0
@@ -201,12 +212,11 @@ internal class MapContentScopeImpl(
 
         // 4. Tracks
         trackData.forEach { data ->
-            // ATT-342 Refinement: If heatmaps are loading, temporarily boost the visibility 
-            // of individual tracks so the user doesn't see an empty map.
+            // ATT-342 Refinement: Use dynamic trackAlpha for better blending as we zoom in.
             val effectiveAlpha = if (anyHeatmapLoading && heatmaps.isNotEmpty()) {
                 (data.alpha * 2.5f).coerceAtMost(0.9f)
             } else {
-                data.alpha
+                data.alpha * trackAlpha
             }
 
             MappablePathLayer(
@@ -221,7 +231,13 @@ internal class MapContentScopeImpl(
 
         // 5. Markers
         if (markers.isNotEmpty()) {
-            MarkerLayer(markers, primaryColor, context)
+            // ATT-342 Refinement: Dynamically adjust member marker visibility
+            val adjustedMarkers = markers.map { marker ->
+                if (marker.alpha < 1.0f) {
+                    marker.copy(alpha = marker.alpha * markerAlphaMult)
+                } else marker
+            }
+            MarkerLayer(adjustedMarkers, primaryColor, context)
         }
 
         // 6. Live Tracks
