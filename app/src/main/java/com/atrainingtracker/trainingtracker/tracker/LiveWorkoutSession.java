@@ -150,6 +150,28 @@ public class LiveWorkoutSession {
     }
 
     /**
+     * ATT-38: Shifts all altitude-related data by the given offset.
+     * This is used when a barometric altitude correction is triggered mid-workout.
+     */
+    public void applyAltitudeCorrection(double offset) {
+        // 1. Shift RunningStats
+        RunningStats altStats = sensorStats.get(SensorType.ALTITUDE);
+        if (altStats != null) {
+            if (altStats.min != Double.MAX_VALUE) altStats.min += offset;
+            if (altStats.max != -Double.MAX_VALUE) altStats.max += offset;
+            altStats.sum += (offset * altStats.count);
+        }
+
+        // 2. Shift Sampled Altitudes
+        for (int i = 0; i < sampledAltitudes.size(); i++) {
+            sampledAltitudes.set(i, sampledAltitudes.get(i) + offset);
+        }
+
+        // 3. Update Anchor for next delta encoding
+        lastAltE2 += Math.round(offset * 100);
+    }
+
+    /**
      * Inner class to track running stats for a single sensor.
      */
     public static class RunningStats {

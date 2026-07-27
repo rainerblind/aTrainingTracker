@@ -160,17 +160,35 @@ public class TrackerService extends Service {
         @Override
         public void onReceive(Context context, @NonNull Intent intent) {
             double altitudeCorrection = intent.getDoubleExtra(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE, 0.0);
+            if (altitudeCorrection == 0.0) return;
 
             if (DEBUG)
-                Log.i(TAG, "updating all previous altitude measurements by " + altitudeCorrection);
-            String operator = altitudeCorrection >= 0 ? " + " : " - ";
+                Log.i(TAG, "Triggering atomic altitude correction by " + altitudeCorrection);
 
-            WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance(TrackerService.this);
-            SQLiteDatabase samplesDb = databaseManager.getDatabase();
-            samplesDb.execSQL("UPDATE " + mSamplesTableName
-                    + " set " + SensorType.ALTITUDE.name() + " = " + SensorType.ALTITUDE.name() + operator + Math.abs(altitudeCorrection));
-            // + " where " + Keys.Key_SKU + " = " + SKU + " and " + Keys.Key_STATUS + " = 0");
-            // no where statement required because we want to update all previous ones.
+            final long workoutId = mWorkoutID;
+            final String samplesTable = mSamplesTableName;
+
+            // 1. Live Session Update
+            if (mLiveSession != null) {
+                mLiveSession.applyAltitudeCorrection(altitudeCorrection);
+            }
+
+            // 2. Database Synchronization (offloaded to DB executor)
+            mDbExecutor.submit(() -> {
+                WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(TrackerService.this);
+                WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(TrackerService.this);
+
+                // 2a. Raw Samples shift
+                String operator = altitudeCorrection >= 0 ? " + " : " - ";
+                samplesManager.getDatabase().execSQL("UPDATE " + samplesTable
+                        + " set " + SensorType.ALTITUDE.name() + " = " + SensorType.ALTITUDE.name() + operator + Math.abs(altitudeCorrection));
+
+                // 2b. Summary Extrema and Elevation Stream shift (ATT-38)
+                summariesManager.shiftAltitudeData(workoutId, altitudeCorrection);
+
+                // 3. Notify UI/Repository to refresh from DB
+                LocalBroadcastManager.getInstance(TrackerService.this).sendBroadcast(new Intent(WORKOUT_UPDATED_INTENT).putExtra(WORKOUT_ID, workoutId));
+            });
         }
     };
     // private long   mLapNr           = BANALService.INIT_LAP_NR-1;
