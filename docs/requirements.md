@@ -23,7 +23,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-FIL-001** | Flexible filtering (Moving Avg, Exponential Smoothing). | Allow for smooth visualization of noisy sensor data. | `FilterManager.java` | `TST-UNT-004` | Verified |
 | **REQ-FIL-002** | Configurable smoothing factors (α) for Power. | Balance responsiveness vs. stability. | `ExponentialSmoothingFilter.java` | `TST-UNT-005` | Verified |
 | **REQ-FIL-003** | Calculate derived metrics (VAM, slope, pace). | Provide advanced metrics for climbing and analysis. | `VerticalSpeedAndSlopeDevice.java` | `TST-UNT-002` | Verified |
-| **REQ-FIL-004** | Support "Altitude Correction" via known locations. | Eliminate barometric drift and ensure consistency. | `KnownLocationsDatabaseManager.java` | `TST-MAN-001` | Verified |
+| **REQ-FIL-004** | **Atomic Altitude Correction.** | The system SHALL apply altitude corrections from known locations atomically across all data structures. This MUST include shifting previous sample points, updating summary extrema (Min/Max), and recalculating total ascent/descent for the active workout to ensure 100% data consistency. | `TrackerService.java`, `KnownLocationsDatabaseManager.java` | `TST-FIL-003` | Verified |
 | **REQ-FIL-005** | Implement "Proxy Sensors" and "Accumulator Sensors". | Extensible architecture for complex multi-sensor data. | `ProxySensor.java` | `TST-STR-001` | Verified |
 | **REQ-FIL-006** | Geographical rolling averages for start altitude. | Filter out momentary GPS or barometric jitter. | `WorkoutSamplesDatabaseManager.java`| `TST-STR-001` | Verified |
 

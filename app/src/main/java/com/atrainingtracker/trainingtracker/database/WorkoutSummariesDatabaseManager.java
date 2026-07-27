@@ -559,6 +559,39 @@ public class WorkoutSummariesDatabaseManager {
         getDatabase().execSQL(sql, new Object[]{polylineSuffix, distanceSuffix, altitudeSuffix, workoutId});
     }
 
+    /**
+     * ATT-38: Shifts all altitude-related summary data by the given offset.
+     * This includes shifting existing extrema and re-encoding the altitude stream.
+     */
+    public void shiftAltitudeData(long workoutId, double offset) {
+        SQLiteDatabase db = getDatabase();
+        db.beginTransaction();
+        try {
+            // 1. Shift Extrema Table
+            String extremaSql = "UPDATE " + WorkoutSummaries.TABLE_EXTREMA_VALUES +
+                    " SET " + WorkoutSummaries.VALUE + " = " + WorkoutSummaries.VALUE + " + ?" +
+                    " WHERE " + WorkoutSummaries.WORKOUT_ID + " = ? AND " +
+                    WorkoutSummaries.SENSOR_TYPE + " = ?";
+            db.execSQL(extremaSql, new Object[]{offset, workoutId, SensorType.ALTITUDE.name()});
+
+            // 2. Shift Altitude Stream
+            String stream = getString(workoutId, WorkoutSummaries.ALTITUDE_STREAM);
+            if (stream != null && !stream.isEmpty()) {
+                List<Double> alts = NumericalEncodingUtils.INSTANCE.decodeDoubles(stream);
+                List<Double> shiftedAlts = new ArrayList<>(alts.size());
+                for (Double a : alts) shiftedAlts.add(a + offset);
+
+                ContentValues streamValues = new ContentValues();
+                streamValues.put(WorkoutSummaries.ALTITUDE_STREAM, NumericalEncodingUtils.INSTANCE.encodeDoubles(shiftedAlts));
+                db.update(WorkoutSummaries.TABLE, streamValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
+            }
+
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
 
     public void saveAccumulatedSensorTypes(long workoutId, @NonNull Iterable<SensorType> sensorTypes) {
         if (DEBUG) Log.i(TAG, "saveAccumulatedSensors for workoutId: " + workoutId);
