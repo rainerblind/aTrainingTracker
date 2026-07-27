@@ -738,11 +738,6 @@ private fun ImportTabContent(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            text = stringResource(R.string.import_backup_summary),
-            style = MaterialTheme.typography.bodyLarge
-        )
-
         // --- Legacy Recovery Card ---
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),

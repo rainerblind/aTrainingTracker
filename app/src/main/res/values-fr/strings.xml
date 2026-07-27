@@ -1083,8 +1083,8 @@
     <string name="create_and_upload_to_dropbox">Créer \u0026 envoyer vers Dropbox</string>
     <string name="full_restore_description">Efface toutes les données locales et les remplace par le contenu de la sauvegarde. Redémarre l\'application.</string>
     <string name="incremental_import_description">Fusionne les entraînements d\'une sauvegarde dans votre historique. Les doublons seront ignorés.</string>
-    <string name="legacy_recovery_title">Récupération de données anciennes</string>
-    <string name="legacy_recovery_description">Recréez les entraînements manquants à partir d\'anciens exports Dropbox (TCX). Les doublons seront ignorés.</string>
-    <string name="scan_tcx">Scanner TCX</string>
-    <string name="import_single_file">Importer un fichier seul</string>
+    <string name="legacy_recovery_title">Importation d\'entraînements</string>
+    <string name="legacy_recovery_description">Importez votre historique d\'entraînement à partir de fichiers TCX (par ex. depuis un ancien appareil). Les doublons seront ignorés.</string>
+    <string name="scan_tcx">Scanner Dropbox</string>
+    <string name="import_single_file">Importer un fichier TCX</string>
 </resources>
