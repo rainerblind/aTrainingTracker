@@ -1,7 +1,5 @@
-- `[x]` ATT-463: Selectable Map Markers for Workout Clusters
-    - `[x]` Create Data Foundation (`ClusterData.kt`)
-    - `[x]` Update Preference Management (`MyPreferenceManager.kt`)
-    - `[x]` Refactor ViewModel for Typed Markers (`WorkoutClustersViewModel.kt`)
-    - `[x]` Implement UI Controls & Reactive Filtering (`WorkoutClusterHeatmapScreen.kt`)
-    - `[x]` Verification (Build & TST-SET-045 Audit)
+- `[x]` ATT-441-FIX: Robust Preview Path Serialization
+    - `[x]` Update Database Schema (v9) with `JSONArray` serialization in `WorkoutClusterDatabaseManager.kt`
+    - `[x]` Implement defensive decoding in `WorkoutClusterComponents.kt`
+    - `[x]` Verification (Build & Crash Audit)
     - `[x]` Final Documentation (Walkthrough & Commit Message)

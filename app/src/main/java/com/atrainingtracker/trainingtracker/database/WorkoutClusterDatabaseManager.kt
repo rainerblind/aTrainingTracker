@@ -25,6 +25,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.provider.BaseColumns
 import com.atrainingtracker.banalservice.BSportType
+import org.json.JSONArray
 
 data class WorkoutCluster(
     val id: Long = 0,
@@ -229,6 +230,8 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         val minLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MIN_LNG)
         val maxLatIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MAX_LAT)
         val maxLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MAX_LNG)
+        val previewIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_PREVIEW_PATHS)
+        val routeIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_ROUTE_POLYLINE)
 
         return WorkoutCluster(
             id = cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID)),
@@ -243,6 +246,8 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
             refDistance = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_REF_DISTANCE)),
             hitCount = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_HIT_COUNT)),
             bSportType = BSportType.valueOf(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_SPORT_TYPE))),
+            previewPaths = if (previewIdx != -1 && !cursor.isNull(previewIdx)) deserializePreviewPaths(cursor.getString(previewIdx)) else emptyList(),
+            routePolyline = if (routeIdx != -1 && !cursor.isNull(routeIdx)) cursor.getString(routeIdx) else null,
             minLat = if (minLatIdx != -1 && !cursor.isNull(minLatIdx)) cursor.getDouble(minLatIdx) else null,
             minLng = if (minLngIdx != -1 && !cursor.isNull(minLngIdx)) cursor.getDouble(minLngIdx) else null,
             maxLat = if (maxLatIdx != -1 && !cursor.isNull(maxLatIdx)) cursor.getDouble(maxLatIdx) else null,
@@ -262,11 +267,34 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         put(WorkoutClusterContract.COLUMN_REF_DISTANCE, cluster.refDistance)
         put(WorkoutClusterContract.COLUMN_HIT_COUNT, cluster.hitCount)
         put(WorkoutClusterContract.COLUMN_SPORT_TYPE, cluster.bSportType.name)
+        // ATT-441
+        put(WorkoutClusterContract.COLUMN_PREVIEW_PATHS, serializePreviewPaths(cluster.previewPaths))
+        put(WorkoutClusterContract.COLUMN_ROUTE_POLYLINE, cluster.routePolyline)
         // ATT-354
         put(WorkoutClusterContract.COLUMN_BOUND_MIN_LAT, cluster.minLat)
         put(WorkoutClusterContract.COLUMN_BOUND_MIN_LNG, cluster.minLng)
         put(WorkoutClusterContract.COLUMN_BOUND_MAX_LAT, cluster.maxLat)
         put(WorkoutClusterContract.COLUMN_BOUND_MAX_LNG, cluster.maxLng)
+    }
+
+    private fun serializePreviewPaths(paths: List<String>): String {
+        val array = JSONArray()
+        paths.forEach { array.put(it) }
+        return array.toString()
+    }
+
+    private fun deserializePreviewPaths(serialized: String): List<String> {
+        if (serialized.isEmpty()) return emptyList()
+        return try {
+            val array = JSONArray(serialized)
+            val list = mutableListOf<String>()
+            for (i in 0 until array.length()) {
+                list.add(array.getString(i))
+            }
+            list
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
     object WorkoutClusterContract {
@@ -282,6 +310,8 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         const val COLUMN_REF_DISTANCE = "ref_distance"
         const val COLUMN_HIT_COUNT = "hit_count"
         const val COLUMN_SPORT_TYPE = "b_sport_type"
+        const val COLUMN_PREVIEW_PATHS = "preview_paths" // added in Version 8
+        const val COLUMN_ROUTE_POLYLINE = "route_polyline" // added in Version 8
         const val COLUMN_BOUND_MIN_LAT = "bound_min_lat"
         const val COLUMN_BOUND_MIN_LNG = "bound_min_lng"
         const val COLUMN_BOUND_MAX_LAT = "bound_max_lat"
@@ -301,6 +331,8 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
                 $COLUMN_REF_DISTANCE REAL,
                 $COLUMN_HIT_COUNT INTEGER,
                 $COLUMN_SPORT_TYPE TEXT,
+                $COLUMN_PREVIEW_PATHS TEXT,
+                $COLUMN_ROUTE_POLYLINE TEXT,
                 $COLUMN_BOUND_MIN_LAT REAL,
                 $COLUMN_BOUND_MIN_LNG REAL,
                 $COLUMN_BOUND_MAX_LAT REAL,
@@ -310,7 +342,7 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
     }
 
     private class WorkoutClusterDbHelper(context: Context) : SQLiteOpenHelper(
-        context, "RouteClusters.db", null, 7
+        context, "RouteClusters.db", null, 9
     ) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(WorkoutClusterContract.CREATE_TABLE)
@@ -336,6 +368,16 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
                 try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MIN_LNG} REAL") } catch (e: Exception) {}
                 try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MAX_LAT} REAL") } catch (e: Exception) {}
                 try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MAX_LNG} REAL") } catch (e: Exception) {}
+            }
+            
+            if (oldVersion < 8) {
+                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_PREVIEW_PATHS} TEXT")
+                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_ROUTE_POLYLINE} TEXT")
+            }
+
+            if (oldVersion < 9) {
+                // Clear corrupted piped-strings from v8 to force clean JSON re-enrichment
+                db.execSQL("UPDATE ${WorkoutClusterContract.TABLE_NAME} SET ${WorkoutClusterContract.COLUMN_PREVIEW_PATHS} = NULL")
             }
         }
     }

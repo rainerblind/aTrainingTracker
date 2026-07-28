@@ -436,7 +436,17 @@ class WorkoutClusterEngine private constructor(context: Context) {
             if (oldCluster != null) clusterDb.updateCluster(oldCluster.copy(hitCount = (oldCluster.hitCount - 1).coerceAtLeast(0)))
         }
         val cluster = clusterDb.getClusterById(clusterId) ?: return
-        if (previousClusterId != clusterId) clusterDb.updateCluster(cluster.copy(hitCount = cluster.hitCount + 1))
+
+        // --- ATT-441: Unified Atomic Update (HitCount + Previews) ---
+        val polyline = summariesManager.getString(workoutId, WorkoutSummaries.MAP_POLYLINE)
+        val newHitCount = if (previousClusterId != clusterId) cluster.hitCount + 1 else cluster.hitCount
+        val newPreviews = if (!polyline.isNullOrEmpty() && !cluster.previewPaths.contains(polyline)) {
+            (listOf(polyline) + cluster.previewPaths).take(5)
+        } else cluster.previewPaths
+        
+        val refreshedCluster = cluster.copy(hitCount = newHitCount, previewPaths = newPreviews)
+        clusterDb.updateCluster(refreshedCluster)
+
         val values = android.content.ContentValues().apply {
             put(WorkoutSummaries.CLUSTER_ID, clusterId)
             val currentName = summariesManager.getString(workoutId, WorkoutSummaries.WORKOUT_NAME)
@@ -447,6 +457,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
             }
         }
         summariesManager.database.update(WorkoutSummaries.TABLE, values, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
+
         val sportStr = summariesManager.getString(workoutId, WorkoutSummaries.B_SPORT)
         val currentBSport = if (sportStr != null) BSportType.valueOf(sportStr) else BSportType.UNKNOWN
         val avgSpeed = summariesManager.getDouble(workoutId, WorkoutSummaries.SPEED_AVERAGE_mps) ?: 0.0

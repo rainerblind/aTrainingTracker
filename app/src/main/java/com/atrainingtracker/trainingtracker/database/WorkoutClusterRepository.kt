@@ -72,7 +72,7 @@ class WorkoutClusterRepository private constructor(private val context: Context)
         }
     }
 
-    suspend fun refreshClusters(): Unit = withContext(Dispatchers.IO) {
+    suspend fun refreshClusters(forceShowProgress: Boolean = false): Unit = withContext(Dispatchers.IO) {
         val currentClusters = clusterDb.getAllClusters()
         
         // --- SELF-HEALING BOOTSTRAPPER (ATT-392 Refinement) ---
@@ -89,18 +89,33 @@ class WorkoutClusterRepository private constructor(private val context: Context)
             repairClusterMetadata()
         }
 
-        val title = context.getString(R.string.cluster_migration_title)
-        _migrationStatus.value = MigrationStatus(
-            title,
-            listOf(ProgressPhase(1, context.getString(R.string.cluster_migration_loading), 0.0f))
-        )
+        // --- ATT-441: Optimized Refresh Logic ---
+        // If data is already persistent, load silently.
+        val needsEnrichment = currentClusters.any { it.previewPaths.isEmpty() && it.hitCount > 0 }
+        val showProgress = forceShowProgress || (needsEnrichment && _allClusters.value.isEmpty())
         
+        val title = context.getString(R.string.cluster_migration_title)
+
+        if (showProgress) {
+            _migrationStatus.value = MigrationStatus(
+                title,
+                listOf(ProgressPhase(1, context.getString(R.string.cluster_migration_loading), 0.0f))
+            )
+        }
+        
+        if (!needsEnrichment && !forceShowProgress) {
+            _allClusters.value = currentClusters.sortedByDescending { it.hitCount }
+            return@withContext
+        }
+
         // --- PHASE 1: INTEGRITY CHECK ---
         val msgHealing = context.getString(R.string.cluster_migration_healing)
-        _migrationStatus.value = MigrationStatus(
-            title,
-            listOf(ProgressPhase(1, msgHealing, 0.1f))
-        )
+        if (showProgress) {
+            _migrationStatus.value = MigrationStatus(
+                title,
+                listOf(ProgressPhase(1, msgHealing, 0.1f))
+            )
+        }
         val actualCounts = mutableMapOf<Long, Int>()
         summariesManager.database.query(
             WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
@@ -124,7 +139,7 @@ class WorkoutClusterRepository private constructor(private val context: Context)
         // --- PHASE 2: PREVIEW PREPARATION ---
         val total = rawClusters.size
         val enriched = rawClusters.mapIndexed { index, cluster ->
-            if (index % 5 == 0) {
+            if (showProgress && index % 5 == 0) {
                 val msg = context.getString(R.string.cluster_migration_previews, index + 1, total)
                 _migrationStatus.value = MigrationStatus(
                     title,
@@ -139,47 +154,57 @@ class WorkoutClusterRepository private constructor(private val context: Context)
             val realCount = actualCounts[cluster.id] ?: 0
             val updatedCluster = if (cluster.hitCount != realCount) {
                 if (DEBUG) android.util.Log.i("WorkoutClusterRepo", "Correcting hit count for ${cluster.name}: ${cluster.hitCount} -> $realCount")
-                val fixed = cluster.copy(hitCount = realCount)
-                clusterDb.updateCluster(fixed)
-                fixed
+                cluster.copy(hitCount = realCount)
             } else cluster
 
-            // --- POPULATE PREVIEW PATHS (SCRUM-224) ---
-            val previewPaths = mutableListOf<String>()
+            // --- POPULATE PREVIEW PATHS (SCRUM-224 / ATT-441) ---
+            var previewPaths = updatedCluster.previewPaths.toMutableList()
+            var routePolyline = updatedCluster.routePolyline
             
-            // 1. Check for linked route
-            val linkedRoute = routesDb.getRouteByClusterId(updatedCluster.id)
-            val routePolyline = if (linkedRoute != null && linkedRoute.path.isNotEmpty()) {
-                PolyUtil.encode(linkedRoute.path.map { it.latLng })
-            } else null
+            if (previewPaths.isEmpty() && updatedCluster.hitCount > 0) {
+                // 1. Check for linked route
+                val linkedRoute = routesDb.getRouteByClusterId(updatedCluster.id)
+                routePolyline = if (linkedRoute != null && linkedRoute.path.isNotEmpty()) {
+                    PolyUtil.encode(linkedRoute.path.map { it.latLng })
+                } else null
 
-            // 2. Fetch 5 most recent workout paths
-            val selection = "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = ?"
-            val args = arrayOf(updatedCluster.id.toString())
-            val projection = arrayOf(WorkoutSummariesDatabaseManager.WorkoutSummaries.MAP_POLYLINE)
+                // 2. Fetch 5 most recent workout paths
+                val selection = "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = ?"
+                val args = arrayOf(updatedCluster.id.toString())
+                val projection = arrayOf(WorkoutSummariesDatabaseManager.WorkoutSummaries.MAP_POLYLINE)
             
-            summariesManager.database.query(
-                WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
-                projection, selection, args, null, null,
-                "${WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START} DESC",
-                "5" // Limit to 5
-            ).use { cursor ->
-                while (cursor.moveToNext()) {
-                    val polyline = cursor.getString(0)
-                    if (!polyline.isNullOrEmpty()) {
-                        previewPaths.add(polyline)
+                summariesManager.database.query(
+                    WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                    projection, selection, args, null, null,
+                    "${WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START} DESC",
+                    "5" // Limit to 5
+                ).use { cursor ->
+                    while (cursor.moveToNext()) {
+                        val polyline = cursor.getString(0)
+                        if (!polyline.isNullOrEmpty()) {
+                            previewPaths.add(polyline)
+                        }
                     }
                 }
             }
 
-            updatedCluster.copy(
+            val finalCluster = updatedCluster.copy(
                 bSportType = getBSportType(updatedCluster.probableSportId),
                 previewPaths = previewPaths,
                 routePolyline = routePolyline
             )
+            
+            // Persist the enrichment (ATT-441)
+            if (finalCluster != cluster) {
+                clusterDb.updateCluster(finalCluster)
+            }
+            finalCluster
         }
+        
         _allClusters.value = enriched.sortedByDescending { it.hitCount }
-        _migrationStatus.value = null
+        if (showProgress) {
+            _migrationStatus.value = null
+        }
     }
 
     suspend fun updateCluster(cluster: WorkoutCluster) = withContext(Dispatchers.IO) {

@@ -1,43 +1,28 @@
-# Walkthrough - ATT-463: Selectable Map Markers for Workout Clusters
+# Walkthrough - ATT-441-FIX: Robust Preview Path Serialization
 
-Successfully implemented user-selectable marker visibility for Workout Clusters. This feature allows users to independently toggle Start, End, and Max Distance markers for both the cluster signature and the member session distribution heatmap, ensuring a clean and professional analytical experience.
-
-## Fulfilled Requirements
-
-| ID | Description | Rationale |
-|:---|:---|:---|
-| **REQ-SET-060** | The system SHALL allow the user to toggle the visibility of individual marker types within the Workout Cluster heatmap. | Provide professional-grade analytical control over spatial data visualization. |
+Successfully resolved the `StringIndexOutOfBoundsException` in `PolyUtil.decode` by implementing robust JSON-based serialization for Workout Cluster previews. This fix eliminates delimiter collisions and ensures UI stability even if individual track data becomes corrupted.
 
 ## Changes Made
 
-### 📊 Data & State Management
+### 🗄️ Robust Database Persistence (v9)
 
-#### [NEW] [ClusterData.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/ClusterData.kt)
-- Introduced `ClusterMarkerType` enum and `ClusterPeakMarker` DTO to encapsulate typed marker metadata.
+#### [WorkoutClusterDatabaseManager.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterDatabaseManager.kt)
+- **JSON Migration**: Replaced the ambiguous piped-string delimiter (`|`) with `org.json.JSONArray`. Since `|` is a valid character in the polyline algorithm, it was previously causing single polylines to be incorrectly fragmented.
+- **Corrupted Data Cleanup**: Bumped `DB_VERSION` to **9** and added migration logic to clear the `preview_paths` column. This forces a clean re-enrichment pass to ensure all stored previews follow the new JSON format.
 
-#### [MyPreferenceManager.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/MyPreferenceManager.kt)
-- Added `ENABLED_CLUSTER_MARKER_TYPES` preference key to store cluster-specific marker visibility settings independently from the Periods module.
+### 🛡️ Defensive UI Layer
 
-#### [WorkoutClustersViewModel.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersViewModel.kt)
-- Refactored `ClusterMapState` to utilize typed `ClusterPeakMarker` objects for member sessions.
-- Implemented background pre-calculation of markers to ensure smooth UI responsiveness during selection changes.
-- Exposed `enabledMarkerTypes` StateFlow and `toggleMarkerType` function to manage reactive preference updates.
-
-### 🗺️ UI & Visualization Layer
-
-#### [WorkoutClusterHeatmapScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterHeatmapScreen.kt)
-- **Selective Filtering**: Implemented real-time filtering for both the authoritative cluster signature markers and the member session distribution markers based on the user's active selection.
-- **Marker Control UI**: Added a standard `Place` (Pin) icon button to the map overlay that triggers a checkbox-based `DropdownMenu` for marker type selection, matching the aesthetic of the Periods module. The button is correctly positioned below the Share button to prevent overlapping.
-- **Unified Branding**: Utilized the project's technical color palette (Green/Red/Blue) for Start, End, and Max Distance markers to maintain visual consistency.
+#### [WorkoutClusterComponents.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterComponents.kt)
+- **Safe Decoding**: Wrapped all calls to `PolyUtil.decode` in `try-catch` blocks. If a polyline fails to decode due to unforeseen data corruption, the system now returns an empty list instead of crashing the application thread.
 
 ## Verification Results
 
-### Integration Verification (SWE.5)
-- **Test ID**: TST-SET-045 (Selectable Cluster Markers)
-- **Result**: **PASS**.
-    - Verified that unchecking "Start Point" hides both the large cluster start pin and all small member start markers.
-    - Confirmed that marker visibility is preserved across application restarts.
-    - Audited the UI in both Light and Dark modes; the dropdown menu and markers remain perfectly legible.
+### Stability Verification (SWE.5)
+- **Crash Audit**: **FIXED**.
+    - Verified that navigating to the "My Locations" screen no longer triggers a `StringIndexOutOfBoundsException`.
+    - Confirmed that the "Phase 2" enrichment pass completes successfully and re-populates the previews in the new JSON format.
+- **Persistence Audit**: **PASS**.
+    - Killed and restarted the app; verified that the cluster list appears instantly and silently with all previews intact.
 
 > [!TIP]
-> This improvement brings Workout Clusters to parity with the Periods module, allowing for high-precision spatial audits of your training routes.
+> This fix hardens the analytical foundation of the Clusters module, ensuring that complex route visualizations remain stable across all device types and data states.

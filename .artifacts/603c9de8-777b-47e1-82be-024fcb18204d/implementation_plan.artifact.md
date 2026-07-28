@@ -1,56 +1,35 @@
-# Implementation Plan - ATT-463: Selectable Map Markers for Workout Clusters
+# Implementation Plan - ATT-441-FIX: Robust Preview Path Serialization
 
-Introduce user-selectable marker visibility for Workout Clusters, mirroring the professional analytical functionality of the Periods module. This allows users to toggle Start, End, and Max Line Distance (Apex) markers independently for both cluster signatures and member distribution heatmaps.
+Correct the `StringIndexOutOfBoundsException` in `PolyUtil.decode` by replacing the ambiguous piped-string serialization with a robust JSON-based format. This ensures that polylines containing the `|` character (a valid character in the polyline algorithm) do not cause data corruption and application crashes.
 
 ## User Review Required
 
-> [!IMPORTANT]
-> - **Independent Preferences**: As requested, marker preferences for Workout Clusters will be stored separately from Periods. Changes in one module will not affect the other.
-> - **Unified Iconography**: I will use the established technical markers: Green Pins (Start), Red Pins (End), and Blue Pins (Apex/Distance) to maintain project-wide visual parity.
-> - **Signature Filtering**: By default, toggling a marker type (e.g., "Start") will hide both the cluster's authoritative start point AND the start points of all associated member sessions to ensure a clean analytical view.
+> [!CAUTION]
+> - **Database Refresh (v9)**: To fix the existing corrupted data, I will bump the database version to **9** and clear the `preview_paths` column.
+> - **Impact**: The "Analyzing route families..." progress notification will appear **one last time** on your next visit to the clusters screen to re-generate the correctly formatted previews. After this, it will remain silent as intended.
 
 ## Proposed Changes
 
-### 1. Data Foundation & Models
-#### [NEW] [ClusterData.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/ClusterData.kt)
-- Define `ClusterMarkerType` enum: `START`, `END`, `DISTANCE`.
-- Define `ClusterPeakMarker` DTO to encapsulate marker metadata (workoutId, position, type).
+### 1. Data Layer: JSON Serialization (v9)
+#### [MODIFY] [WorkoutClusterDatabaseManager.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterDatabaseManager.kt)
+- **Bump `DB_VERSION`** to **9**.
+- **Refactor Serialization**:
+    - Use `org.json.JSONArray` to store and retrieve preview paths.
+    - This eliminates delimiter collisions with the polyline character set `[63, 126]`.
+- **Migration Logic**:
+    - In `onUpgrade(v8 -> v9)`, execute `UPDATE RouteClusters SET preview_paths = NULL` to clear corrupted data.
 
-### 2. Preference Management
-#### [MODIFY] [MyPreferenceManager.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/MyPreferenceManager.kt)
-- Add `ENABLED_CLUSTER_MARKER_TYPES` key.
-- Implement `enabledClusterMarkerTypesFlow` (Default: All enabled).
-- Implement `setClusterMarkerTypeEnabled` function.
-
-### 3. ViewModel Logic
-#### [MODIFY] [WorkoutClustersViewModel.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersViewModel.kt)
-- Update `ClusterMapState` to utilize `List<ClusterPeakMarker>` for `memberMarkers`.
-- Expose `enabledMarkerTypes: StateFlow<Set<ClusterMarkerType>>`.
-- Implement `toggleMarkerType(type: ClusterMarkerType)`.
-- Refactor `selectCluster` background processing to generate `ClusterPeakMarker` objects for member workouts.
-
-### 4. UI Layer: Reactive Filtering & Controls
-#### [MODIFY] [WorkoutClusterHeatmapScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterHeatmapScreen.kt)
-- **Implement Marker Filtering**:
-    - Filter `fingerprintMarkers` (Signature) based on `enabledMarkerTypes`.
-    - Filter `memberMarkers` (Distribution) based on `enabledMarkerTypes`.
-- **Add Controls**:
-    - Add a `Place` (Pin) icon button to the map overlay.
-    - Implement a `DropdownMenu` with checkboxes for Start, End, and Max Distance, matching the `PeriodMapScreen` aesthetic.
-- **Conversion**: Map the filtered `ClusterPeakMarker` list to `LocationMarker` for the `ATrainingTrackerMap` content DSL.
+### 2. UI Layer: Defensive Decoding
+#### [MODIFY] [WorkoutClusterComponents.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterComponents.kt)
+- Wrap `PolyUtil.decode` in a `try-catch` block inside `ClusterItem`.
+- If a string fails to decode, return an empty list instead of crashing the entire UI thread.
 
 ## Verification Plan
 
-### Automated Tests
-#### [NEW] [TST-SET-045](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/tests.md)
-- **Procedure**:
-    1. Open a Workout Cluster heatmap.
-    2. Tap the Marker Options button.
-    3. Uncheck "Start Point".
-    4. **Verify** that all green pins (both large signature and small member markers) disappear from the map.
-    5. Re-check and **Verify** reappearance.
-    6. Close app and reopen; **Verify** preference persistence.
-
 ### Manual Verification
-- Audit the UI on both Light and Dark modes to ensure the dropdown menu and markers remain legible.
-- Verify that toggling markers does not interrupt the background loading of workout tracks.
+1. Launch the app after the update.
+2. Navigate to "My Locations".
+3. **Verify** that the "Analyzing route families..." notification appears and completes successfully.
+4. **Verify** that NO CRASH occurs when rendering the cluster list.
+5. Kill and restart the app.
+6. **Verify** that the list appears instantly and silently, with all previews intact.
