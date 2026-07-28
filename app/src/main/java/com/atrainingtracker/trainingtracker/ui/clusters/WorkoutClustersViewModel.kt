@@ -30,6 +30,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
@@ -53,7 +54,7 @@ import kotlinx.coroutines.withContext
 data class ClusterMapState(
     val tracks: List<MapTrack> = emptyList(),
     val heatmapPaths: List<List<LatLng>> = emptyList(),
-    val memberMarkers: List<LocationMarker> = emptyList(),
+    val memberMarkers: List<ClusterPeakMarker> = emptyList(),
     val isLoading: Boolean = false
 )
 
@@ -63,6 +64,7 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
     private val routesRepository = RoutesRepository.getInstance(application)
     private val banalRepository = BANALServiceRepository.getInstance(application)
     private val discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(application)
+    private val preferenceManager = MyPreferenceManager(application)
 
     val allClusters: StateFlow<List<WorkoutCluster>> = repository.allClusters
     val currentLocation: StateFlow<LatLng?> = banalRepository.currentLocation
@@ -88,6 +90,21 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
 
     private val _isRecalculating = MutableStateFlow(false)
     val isRecalculating: StateFlow<Boolean> = _isRecalculating.asStateFlow()
+
+    val enabledMarkerTypes: StateFlow<Set<ClusterMarkerType>> = preferenceManager.enabledClusterMarkerTypesFlow
+        .map { strings ->
+            strings.mapNotNull {
+                try { ClusterMarkerType.valueOf(it) } catch (e: Exception) { null }
+            }.toSet()
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ClusterMarkerType.entries.toSet())
+
+    fun toggleMarkerType(type: ClusterMarkerType) {
+        viewModelScope.launch {
+            val enabled = enabledMarkerTypes.value.contains(type)
+            preferenceManager.setClusterMarkerTypeEnabled(type.name, !enabled)
+        }
+    }
 
     private val _recalculationFinished = MutableSharedFlow<Unit>()
     val recalculationFinished: SharedFlow<Unit> = _recalculationFinished.asSharedFlow()
@@ -154,18 +171,14 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
                     }
                     
                     // Pre-calculate markers to avoid UI jank (SCRUM-199)
-                    val memberAlpha = 0.5f
                     val markers = workouts.flatMap { w ->
                         ensureActive()
-                        val list = mutableListOf<LocationMarker>()
-                        val onMarkerClick: () -> Boolean = {
-                            selectWorkoutForPeek(w.id)
-                            true
-                        }
+                        val list = mutableListOf<ClusterPeakMarker>()
 
-                        w.startLatLng?.let { list.add(LocationMarker(it, R.drawable.control_start, alpha = memberAlpha, onClick = onMarkerClick)) }
-                        w.endLatLng?.let { list.add(LocationMarker(it, R.drawable.control_stop, alpha = memberAlpha, onClick = onMarkerClick)) }
-                        w.maxDisplacementLatLng?.let { list.add(LocationMarker(it, R.drawable.ic_distance, alpha = memberAlpha, onClick = onMarkerClick)) }
+                        val application = getApplication<Application>()
+                        w.startLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.control_start, application.getString(R.string.start), ClusterMarkerType.START)) }
+                        w.endLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.control_stop, application.getString(R.string.end), ClusterMarkerType.END)) }
+                        w.maxDisplacementLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.ic_distance, application.getString(R.string.max_line_distance), ClusterMarkerType.DISTANCE)) }
                         list
                     }
 
