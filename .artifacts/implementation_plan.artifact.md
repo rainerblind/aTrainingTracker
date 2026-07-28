@@ -1,42 +1,46 @@
-# Implementation Plan - ATT-342 Final Refinement: Total Path Priority & Marker Culling
+# Implementation Plan - ATT-455: Restore Sport Filtering on Period Map
 
-Address the visual heaviness of the heatmap and the OOM crash caused by marker overload. This refinement ensures that as you zoom in, the heatmap recedes to a subtle background glow while individual workout traces become fully opaque and clean.
+Restore functional sport-type filtering within the Period Detail Map while maintaining the established UI layout. Tapping a sport summary row will correctly filter all map components: anchor tracks, dynamically loaded member tracks, technical markers, and heatmaps.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Crash Fix (Marker Culling)**: I identified that the "points along the paths" are the hundreds of marker pins for every member workout. Rendering these is what caused the app to crash. I will now **completely hide member markers** by default to ensure 100% stability and a clean look.
-> - **Subtle Heatmap**: At high zoom levels, the heatmap weight will be reduced by another 90%. It will become a faint "density shadow" rather than a dominant blue band.
-> - **Opaque Paths**: Individual workout lines will become **100% opaque** as soon as you zoom in (level 14+), ensuring your data is the primary focus.
+> **Deep Filtering (REQ-PER-009)**: Tapping the sport summary rows (positioned below the period header) will now act as a primary filter for the entire map visualization. This ensures that only the relevant activities (tracks, markers, and heatmap density) are displayed, providing a focused analytical context without altering the screen's visual structure.
 
 ## Proposed Changes
 
-### 1. Map DSL Layer: Data-First Blending
-Fulfills REQ-MAP-016 (Refinement) | Test: TST-MAP-010
+### [Component] Architecture & Data Layer
 
-#### [MODIFY] [MapContentScope.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapContentScope.kt)
-- **Refine `Render` loop**:
-    - Implement a "Receding Heatmap" schedule that aggressively favors individual traces:
-        | Zoom | Track Alpha | Heatmap Weight | Max Intensity | Member Marker Alpha |
-        |:---|:---|:---|:---|:---|
-        | < 13 | 0.4f | 0.005 | 20.0 | 0.0 (Hidden) |
-        | 13-14 | **0.8f** | **0.001** | **60.0** | **0.0** (Hidden) |
-        | 15-16 | **1.0f** | **0.0005**| **100.0**| **0.0** (Hidden) |
-        | 17+ | **1.0f** | **0.0002**| **200.0**| **0.1** (Faint Ghost) |
-- **Rationale**:
-    - By zoom level 15, the tracks are 100% opaque.
-    - The heatmap weight is so low that it only highlights the "core" of your most popular routes as a subtle glow.
-    - Member markers are kept hidden to prevent visual clutter and OOM crashes.
+#### [MODIFY] [PeriodData.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodData.kt)
+- **Update** `PeriodSummary`: Add `anchorIdToPolylineMap: Map<Long, String>` (or use `workoutIdToPolylineMap` for anchors as well) to allow sport-aware filtering of instant anchor tracks.
+- **Update** `PeriodMapState`: Change `heatmapPaths: List<List<LatLng>>` to `workoutIdToHeatmapPathMap: Map<Long, List<LatLng>>` to enable ID-based filtering of the heatmap layer.
 
-### 2. Map Layer Foundation: Stable Markers
-#### [MODIFY] [MapLayers.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapLayers.kt)
-- **Refinement**: Ensure the primary cluster signature (Start/End/Apex) always stays at 100% alpha and is rendered on top of everything else to maintain navigational reference.
+#### [MODIFY] [PeriodsRepository.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsRepository.kt)
+- **Update** `enrich` to ensure all spatial data is mapped to workout IDs.
+
+### [Component] Logic Layer (ViewModel)
+
+#### [MODIFY] [PeriodsViewModel.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsViewModel.kt)
+- **Update** `showPeriodMap` to populate the ID-mapped paths in `PeriodMapState`.
+
+### [Component] UI & Map Layer
+
+#### [MODIFY] [PeriodMapScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodMapScreen.kt)
+- **Retain** the existing header layout (Period details above Sport rows).
+- **Refine Filtering**: Ensure `InteractivePeriodMap` receives only the data that matches the user's `selectedSports`.
+- **Pass** filtered tracks, markers, and heatmap paths to the map component.
+
+#### [MODIFY] [InteractivePeriodMap.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/InteractivePeriodMap.kt)
+- **Update** to render only the filtered data provided by the screen layer.
+- **Ensure** anchor tracks utilize the correct sport-type colors/styling.
 
 ## Verification Plan
 
-### Manual Verification (TST-MAP-010 Refined)
-1. Open the 'Solitude Runde' cluster heatmap.
-2. **Verify** that at zoom level 11/12, the overview is thin and sharp.
-3. Zoom in to level 14/15. **Verify** that the individual workout lines are now clearly the dominant element and look like clean, solid traces.
-4. **Verify** that there are no "points" (pins) cluttering the path at these levels.
-5. **Stability Audit**: Rapidly zoom in and out to verify that the `OutOfMemoryError` is permanently resolved.
+### Manual Verification
+- **TST-PER-012 (Jira: ATT-466)**:
+    1. Open a **Period Detail Map**.
+    2. **Verify** sport rows are at the top.
+    3. **Tap** "Cycling" -> Map shows only bike paths.
+    4. **Tap** "Running" -> Map shows only run paths.
+    5. **Toggle Both** -> Map shows all.
+    6. **Verify** heatmap intensity changes as sports are filtered.

@@ -58,8 +58,6 @@ fun PeriodsTabsScreen(
     pagerState: PagerState,
     listStates: List<LazyListState>,
     isPlayServiceAvailable: Boolean,
-    isHeatmapEnabled: Boolean,
-    onToggleHeatmapEnabled: () -> Unit,
     onHeaderClick: (PeriodSummary) -> Unit,
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
@@ -90,11 +88,17 @@ fun PeriodsTabsScreen(
                 val scrollState = listStates[pageIndex]
 
                 Box(modifier = Modifier.fillMaxSize()) {
-                    Column(modifier = Modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(top = with(density) { (appBarMaxHeightPx + connection.appBarOffset).toDp() })
+                    ) {
                         // --- ATT-346: Migration Progress Feedback ---
                         if (migrationStatus != null) {
                             Surface(
-                                modifier = Modifier.padding(horizontal = 16.dp).padding(top = with(density) { (appBarMaxHeightPx + connection.appBarOffset).toDp() + 16.dp }).fillMaxWidth(),
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp, vertical = 16.dp)
+                                    .fillMaxWidth(),
                                 color = MaterialTheme.colorScheme.surfaceContainerLowest,
                                 shape = RoundedCornerShape(12.dp),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
@@ -140,20 +144,20 @@ fun PeriodsTabsScreen(
                             periods = periods,
                             currentScrollState = scrollState,
                             onBarClick = { index -> scope.launch { scrollState.animateScrollToItem(index) } },
-                            modifier = Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 16.dp, vertical = 8.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(80.dp)
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
                         )
 
                         PeriodList(
                             periods = periods,
                             scrollState = scrollState,
                             isPlayServiceAvailable = isPlayServiceAvailable,
-                            isHeatmapEnabled = isHeatmapEnabled,
                             onHeaderClick = onHeaderClick,
                             onMapClick = onMapClick,
                             onSportClick = onSportClick,
                             onLongestWorkoutClick = onLongestWorkoutClick,
-                            appBarOffsetPx = connection.appBarOffset,
-                            headerHeightPx = appBarMaxHeightPx.toFloat(),
                             modifier = Modifier.fillMaxWidth().weight(1f)
                         )
                     }
@@ -179,13 +183,6 @@ fun PeriodsTabsScreen(
                             style = MaterialTheme.typography.titleLarge,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
-                        IconButton(onClick = onToggleHeatmapEnabled) {
-                            Icon(
-                                imageVector = Icons.Default.Whatshot,
-                                contentDescription = if (isHeatmapEnabled) "Disable Heatmap" else "Enable Heatmap",
-                                tint = if (isHeatmapEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = TTAlpha.Disabled)
-                            )
-                        }
                     }
                     PrimaryScrollableTabRow(
                         selectedTabIndex = pagerState.currentPage,

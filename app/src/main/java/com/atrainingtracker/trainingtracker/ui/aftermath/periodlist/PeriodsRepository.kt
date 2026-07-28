@@ -83,6 +83,16 @@ class PeriodsRepository private constructor(private val application: Application
                 performHierarchicalMigration()
             }
         }
+
+        // 3. Reactive Enrichment (ATT-440 Refinement)
+        // Observe workout history and re-enrich periods whenever data arrives.
+        scope.launch {
+            workoutRepo.allWorkouts.collectLatest {
+                // Always try to reload/enrich when history changes.
+                // This ensures maps pop in as soon as the first few workouts are loaded.
+                loadFromDatabase(forceIncremental = true)
+            }
+        }
     }
 
     /**
@@ -517,10 +527,15 @@ class PeriodsRepository private constructor(private val application: Application
     private fun aggregateWorkoutsToDay(workouts: List<WorkoutData>, startS: Long): PeriodSummary? {
         if (workouts.isEmpty()) return null
         
-        val w = workouts.first()
         val bounds = calculateWorkoutsBounds(workouts)
-        val longest = workouts.maxByOrNull { it.activeTimeSec } ?: w
+        val longest = workouts.maxByOrNull { it.activeTimeSec } ?: workouts.first()
         
+        // Find spatial anchors (N/S/E/W) for outline framing (ATT-440 Refinement)
+        val north = workouts.maxByOrNull { it.maxLat ?: -90.0 } ?: longest
+        val south = workouts.minByOrNull { it.minLat ?: 90.0 } ?: longest
+        val east = workouts.maxByOrNull { it.maxLng ?: -180.0 } ?: longest
+        val west = workouts.minByOrNull { it.minLng ?: 180.0 } ?: longest
+
         val sportStats = workouts.groupBy { it.bSportType }.mapValues { (_, sportWorkouts) ->
             val detailed = sportWorkouts.groupBy { it.sportName }.mapValues { (_, detW) ->
                 DetailedStats(detW.size, detW.sumOf { it.activeTimeSec }, detW.sumOf { it.totalDistance }, detW.sumOf { it.ascentMeters })
@@ -530,7 +545,7 @@ class PeriodsRepository private constructor(private val application: Application
         }
 
         return PeriodSummary(
-            periodLabel = w.localDateTime.format(dayFormatter), periodDateRange = "", periodType = PeriodType.DAY,
+            periodLabel = workouts.first().localDateTime.format(dayFormatter), periodDateRange = "", periodType = PeriodType.DAY,
             startTimestampS = startS, endTimestampS = startS + 86399, totalWorkouts = workouts.size,
             totalDurationSec = workouts.sumOf { it.activeTimeSec }, totalDistance = workouts.sumOf { it.totalDistance },
             sportStats = sportStats, sortKey = getPeriodSortKey(startS, PeriodType.DAY),
@@ -539,7 +554,7 @@ class PeriodsRepository private constructor(private val application: Application
             maxLat = bounds?.northeast?.latitude ?: -90.0, 
             maxLng = bounds?.northeast?.longitude ?: -180.0,
             longestId = longest.id, longestDurationS = longest.activeTimeSec,
-            northId = longest.id, southId = longest.id, eastId = longest.id, westId = longest.id
+            northId = north.id, southId = south.id, eastId = east.id, westId = west.id
         )
     }
 
@@ -564,6 +579,10 @@ class PeriodsRepository private constructor(private val application: Application
         }
 
         val longest = children.maxByOrNull { it.longestDurationS } ?: return null
+        val north = children.maxByOrNull { it.maxLat } ?: longest
+        val south = children.minByOrNull { it.minLat } ?: longest
+        val east = children.maxByOrNull { it.maxLng } ?: longest
+        val west = children.minByOrNull { it.minLng } ?: longest
         
         // --- ATT-352/354 Refinement: Spatial Integrity for Hierarchy ---
         // Only include children that have valid spatial data (ignore sentinels)
@@ -598,12 +617,20 @@ class PeriodsRepository private constructor(private val application: Application
             sortKey = getPeriodSortKey(start, type),
             minLat = minLat, minLng = minLng, maxLat = maxLat, maxLng = maxLng,
             longestId = longest.longestId, longestDurationS = longest.longestDurationS,
-            northId = longest.longestId, southId = longest.longestId, eastId = longest.longestId, westId = longest.longestId
+            northId = north.northId, southId = south.southId, eastId = east.eastId, westId = west.westId
         )
     }
 
     private fun fetchWorkoutsInDay(startS: Long): List<WorkoutData> {
-        val cursor = workoutSummariesManager.getWorkoutsInRangeCursor(startS, startS + 86399)
+        return getWorkoutsForRange(startS, startS + 86399)
+    }
+
+    /**
+     * ATT-440: Direct database-driven workout fetching for a specific time range.
+     * Guaranteed "Source of Truth" independent of progressive history scans.
+     */
+    fun getWorkoutsForRange(startS: Long, endS: Long): List<WorkoutData> {
+        val cursor = workoutSummariesManager.getWorkoutsInRangeCursor(startS, endS)
         val mapper = com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper(
             application, workoutSummariesManager,
             com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(application),
@@ -611,8 +638,13 @@ class PeriodsRepository private constructor(private val application: Application
             com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper(application)
         )
         val list = mutableListOf<WorkoutData>()
-        if (cursor.moveToFirst()) { do { list.add(mapper.fromCursor(cursor)) } while (cursor.moveToNext()) }
-        cursor.close()
+        cursor?.use { c ->
+            if (c.moveToFirst()) {
+                do {
+                    list.add(mapper.fromCursor(c))
+                } while (c.moveToNext())
+            }
+        }
         return list
     }
 
@@ -666,7 +698,9 @@ class PeriodsRepository private constructor(private val application: Application
         val isFinished = withContext(Dispatchers.IO) { dbManager.isSyncFinished() }
         if (!isFinished && !forceIncremental) return
 
+        // Fetch workouts for enrichment
         val workouts = if (precalculatedGroups != null) emptyList() else workoutRepo.allWorkouts.value
+        
         val dailyRaw = withContext(Dispatchers.IO) { dbManager.getPeriodsByType(PeriodType.DAY) }
         val weeklyRaw = withContext(Dispatchers.IO) { dbManager.getPeriodsByType(PeriodType.WEEK) }
         val monthlyRaw = withContext(Dispatchers.IO) { dbManager.getPeriodsByType(PeriodType.MONTH) }
@@ -678,6 +712,7 @@ class PeriodsRepository private constructor(private val application: Application
             val groups = precalculateGroups(workouts)
             enrichAndEmit(listOf(dailyRaw, weeklyRaw, monthlyRaw, yearlyRaw), groups)
         } else {
+            // Even if workouts are empty, we MUST emit the raw levels to show the graphs (ATT-440 Refinement)
             _groupedPeriods.value = listOf(dailyRaw, weeklyRaw, monthlyRaw, yearlyRaw)
         }
     }
@@ -702,16 +737,26 @@ class PeriodsRepository private constructor(private val application: Application
 
     private fun enrich(summary: PeriodSummary, groupWorkouts: List<WorkoutData>): PeriodSummary {
         if (groupWorkouts.isEmpty()) return summary
+        
+        // 1. Identify spatial anchors for instant framing
         val anchorIds = setOf(summary.longestId, summary.northId, summary.southId, summary.eastId, summary.westId).filter { it != -1L }
         val anchorWorkouts = groupWorkouts.filter { it.id in anchorIds }
+        
+        // 2. Map ALL available workout polylines for the full heatmap (ATT-440 Refinement)
+        val allPolylineMap = groupWorkouts
+            .filter { it.mapPolyline.isNotEmpty() }
+            .associate { it.id to it.mapPolyline }
+
         return summary.copy(
             polylines = anchorWorkouts.map { it.mapPolyline }.filter { it.isNotEmpty() },
-            workoutIdToPolylineMap = anchorWorkouts.associate { it.id to it.mapPolyline },
-            workoutIdToSportMap = anchorWorkouts.associate { it.id to it.bSportType },
+            workoutIdToPolylineMap = allPolylineMap,
+            workoutIdToSportMap = groupWorkouts.associate { it.id to it.bSportType },
             extremaMarkers = anchorWorkouts.flatMap { workout ->
                 val markers = mutableListOf<PeriodPeakMarker>()
                 workout.startLatLng?.let { markers.add(PeriodPeakMarker(workout.id, it, R.drawable.control_start, "${workout.workoutName}: Start", PeriodMarkerType.START)) }
                 workout.endLatLng?.let { markers.add(PeriodPeakMarker(workout.id, it, R.drawable.control_stop, "${workout.workoutName}: End", PeriodMarkerType.END)) }
+                workout.maxDisplacementLatLng?.let { markers.add(PeriodPeakMarker(workout.id, it, R.drawable.ic_distance, "${workout.workoutName}: Apex", PeriodMarkerType.DISTANCE)) }
+                workout.maxAltitudeLatLng?.let { markers.add(PeriodPeakMarker(workout.id, it, R.drawable.ic_altitude, "${workout.workoutName}: Max Altitude", PeriodMarkerType.ALTITUDE)) }
                 markers
             }
         )

@@ -279,7 +279,10 @@ public class WorkoutSummariesDatabaseManager {
                 null, null, null)) {
 
             if (cursor.moveToFirst()) {
-                value = cursor.getDouble(cursor.getColumnIndexOrThrow(key));
+                int index = cursor.getColumnIndexOrThrow(key);
+                if (!cursor.isNull(index)) {
+                    value = cursor.getDouble(index);
+                }
             }
         } // Cursor is closed here, even if an exception occurs.
 

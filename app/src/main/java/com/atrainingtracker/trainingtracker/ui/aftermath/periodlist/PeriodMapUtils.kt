@@ -39,12 +39,11 @@ data class PeriodMapVisuals(
 fun getPeriodMapVisuals(
     periodType: PeriodType,
     allPaths: List<List<LatLng>>,
-    isHeatmapEnabled: Boolean = true,
     isInteractive: Boolean = false,
     zoom: Float? = null
 ): PeriodMapVisuals {
     val heatmapProvider = run {
-        if (allPaths.isEmpty() || periodType == PeriodType.DAY || !isHeatmapEnabled) {
+        if (allPaths.isEmpty() || periodType == PeriodType.DAY) {
             null
         } else {
             val opacity = when (periodType) {
@@ -96,7 +95,6 @@ fun getPeriodMapVisuals(
     }
 
     val polylineAlpha = when {
-        !isHeatmapEnabled -> 1.0f
         periodType == PeriodType.DAY -> 1.0f
         periodType == PeriodType.WEEK -> 0.9f
         periodType == PeriodType.MONTH -> 0.8f
@@ -105,7 +103,6 @@ fun getPeriodMapVisuals(
     }
 
     val polylineWidth = when {
-        !isHeatmapEnabled -> 8f
         periodType == PeriodType.DAY -> 8f
         periodType == PeriodType.WEEK -> 8f
         periodType == PeriodType.MONTH -> 7f

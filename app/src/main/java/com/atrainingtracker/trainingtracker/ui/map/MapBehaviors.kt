@@ -43,18 +43,23 @@ fun MapBoundsController(
     isMapLoaded: Boolean,
     context: Context
 ) {
-    // Flag to ensure we only fit the bounds once per session/focus change
-    var hasFittedInitialBounds by remember(zoomFocus) { mutableStateOf(false) }
+    // Flag to ensure we only fit the bounds once per session/focus change.
+    // ATT-440 Refinement: We key this by initialBounds so that if they arrive late 
+    // (via enrichment), the camera will try to fit them even if it previously gave up.
+    var hasFittedInitialBounds by remember(zoomFocus, initialBounds != null) { mutableStateOf(false) }
 
     LaunchedEffect(tracks, markers, segments, routes, isMapLoaded, hasFittedInitialBounds, initialBounds) {
-        if (!isMapLoaded || hasFittedInitialBounds) return@LaunchedEffect
+        if (hasFittedInitialBounds) return@LaunchedEffect
 
         // --- ATT-352 Refinement: Use persisted bounds if available ---
         if (zoomFocus == MapZoomFocus.EXPLICIT_BOUNDS && initialBounds != null) {
+            // Accelerated fitting: Don't wait for isMapLoaded if we have explicit bounds
             cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(initialBounds, (40 * context.resources.displayMetrics.density).toInt()))
             hasFittedInitialBounds = true
             return@LaunchedEffect
         }
+        
+        if (!isMapLoaded) return@LaunchedEffect
 
         if (zoomFocus == MapZoomFocus.TRACK_AND_MARKERS || 
             zoomFocus == MapZoomFocus.LOCAL_SEGMENTS || 

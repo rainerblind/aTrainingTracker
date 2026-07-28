@@ -27,12 +27,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -66,7 +61,6 @@ import com.google.android.gms.maps.model.LatLngBounds
 fun PeriodSummaryCard(
     summary: PeriodSummary,
     isPlayServiceAvailable: Boolean,
-    isHeatmapEnabled: Boolean,
     onHeaderClick: (PeriodSummary) -> Unit,
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
@@ -188,9 +182,7 @@ fun PeriodSummaryCard(
                     }
 
                     PeriodMultiWorkoutMap(
-                        polylines = summary.polylines,
-                        periodType = summary.periodType,
-                        isHeatmapEnabled = isHeatmapEnabled,
+                        summary = summary,
                         onMapClick = { onMapClick(summary) },
                         bounds = bounds
                     )
@@ -405,18 +397,18 @@ fun CompactMetricRow(label: String, count: Int, distance: String, duration: Stri
 
 @Composable
 private fun PeriodMultiWorkoutMap(
-    polylines: List<String>,
-    periodType: PeriodType,
-    isHeatmapEnabled: Boolean,
+    summary: PeriodSummary,
     onMapClick: () -> Unit,
-    bounds: LatLngBounds? = null) {
-    // Decode all polylines once
-    val allPaths = remember(polylines) {
-        polylines.mapNotNull { if (it.isNotEmpty()) PolyUtil.decode(it) else null }
+    bounds: LatLngBounds? = null
+) {
+    // --- TIER 1: INSTANT ANCHORS ---
+    // Only render anchors in the summary card to prevent OOM when many maps exist in a list (ATT-440 Refinement)
+    val allPaths = remember(summary.polylines) {
+        summary.polylines.mapNotNull { if (it.isNotEmpty()) PolyUtil.decode(it) else null }
     }
 
-    val visuals = remember(allPaths, periodType, isHeatmapEnabled) {
-        getPeriodMapVisuals(periodType, allPaths, isHeatmapEnabled, isInteractive = false)
+    val visuals = remember(allPaths, summary.periodType) {
+        getPeriodMapVisuals(summary.periodType, allPaths, isInteractive = false)
     }
 
     if (allPaths.isEmpty()) {
@@ -538,7 +530,6 @@ fun PreviewPeriodSummary() {
         PeriodSummaryCard(
             summary = mockSummary,
             isPlayServiceAvailable = true,
-            isHeatmapEnabled = true,
             onHeaderClick = {},
             onMapClick = {},
             onSportClick = { _, _ ->},
@@ -570,7 +561,6 @@ fun PreviewEmptyPeriod() {
         PeriodSummaryCard(
             summary = emptySummary,
             isPlayServiceAvailable = false,
-            isHeatmapEnabled = true,
             onHeaderClick = {},
             onMapClick = {},
             onSportClick = { _, _ ->},

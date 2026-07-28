@@ -74,6 +74,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.google.android.gms.maps.model.LatLng
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
@@ -92,8 +93,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun PeriodMapScreen(
     summary: PeriodSummary,
-    isHeatmapEnabled: Boolean,
-    onToggleHeatmapEnabled: () -> Unit,
+    mapState: PeriodMapState, // ATT-440: Adoption of discrete MapState
     enabledMarkerTypes: Set<PeriodMarkerType>,
     onToggleMarkerType: (PeriodMarkerType) -> Unit,
     onWorkoutClick: (Long) -> Unit,
@@ -105,9 +105,19 @@ fun PeriodMapScreen(
     val tf = TimeFormatter()
     val af = AltitudeFormatter()
 
+    // Result DTO for filtering (to avoid Quadruple or component ambiguity)
+    data class FilteredMapContent(
+        val workouts: Map<Long, String>,
+        val paths: Map<Long, List<LatLng>>,
+        val anchorMarkers: List<PeriodPeakMarker>,
+        val memberMarkers: List<PeriodPeakMarker>,
+        val memberTracks: List<MapTrack>,
+        val heatmapPaths: List<List<LatLng>>
+    )
+
     // Track multiple selected sports
     var selectedSports by rememberSaveable { mutableStateOf(setOf<BSportType>()) }
-    val (filteredWorkouts, filteredPaths, filteredMarkers) = remember(summary, selectedSports, enabledMarkerTypes) {
+    val filteredContent = remember(summary, mapState.memberMarkers, mapState.tracks, mapState.workoutIdToHeatmapPathMap, selectedSports, enabledMarkerTypes) {
         val workouts = if (selectedSports.isEmpty()) {
             summary.workoutIdToPolylineMap
         } else {
@@ -126,13 +136,36 @@ fun PeriodMapScreen(
             }
         }
 
-        val markers = summary.extremaMarkers.filter { marker ->
+        val anchorMarkers = summary.extremaMarkers.filter { marker ->
             val sportMatch = selectedSports.isEmpty() || selectedSports.contains(summary.workoutIdToSportMap[marker.workoutId])
             val typeMatch = enabledMarkerTypes.contains(marker.markerType)
             sportMatch && typeMatch
         }
+
+        val memberMarkers = mapState.memberMarkers.filter { marker ->
+            val sportMatch = selectedSports.isEmpty() || selectedSports.contains(summary.workoutIdToSportMap[marker.workoutId])
+            val typeMatch = enabledMarkerTypes.contains(marker.markerType)
+            sportMatch && typeMatch
+        }
+
+        val memberTracks = if (selectedSports.isEmpty()) {
+            mapState.tracks
+        } else {
+            mapState.tracks.filter { track ->
+                selectedSports.contains(track.bSportType)
+            }
+        }
+
+        val heatmapPaths = if (selectedSports.isEmpty()) {
+            mapState.workoutIdToHeatmapPathMap.values.toList()
+        } else {
+            mapState.workoutIdToHeatmapPathMap.filterKeys { id ->
+                val sport = summary.workoutIdToSportMap[id]
+                selectedSports.contains(sport)
+            }.values.toList()
+        }
         
-        Triple(workouts, paths, markers)
+        FilteredMapContent(workouts, paths, anchorMarkers, memberMarkers, memberTracks, heatmapPaths)
     }
 
     // Prepare Map data for the TrackOnMapScreen
@@ -303,11 +336,14 @@ fun PeriodMapScreen(
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 InteractivePeriodMap(
                     summary = summary.copy(
-                        workoutIdToPolylineMap = filteredWorkouts,
-                        workoutIdToPathMap = filteredPaths,
-                        extremaMarkers = filteredMarkers
+                        workoutIdToPolylineMap = filteredContent.workouts,
+                        workoutIdToPathMap = filteredContent.paths,
+                        extremaMarkers = filteredContent.anchorMarkers
                     ),
-                    isHeatmapEnabled = isHeatmapEnabled,
+                    mapState = mapState,
+                    memberMarkers = filteredContent.memberMarkers,
+                    memberTracks = filteredContent.memberTracks,
+                    heatmapPaths = filteredContent.heatmapPaths,
                     onWorkoutClick = onWorkoutClick,
                     modifier = Modifier.fillMaxSize(),
                     shouldTakeSnapshot = mapSnapshotTrigger,
@@ -392,25 +428,6 @@ fun PeriodMapScreen(
                                     onClick = { onToggleMarkerType(type) }
                                 )
                             }
-                        }
-                    }
-
-                    // MODE TOGGLE BUTTON
-                    Surface(
-                        onClick = onToggleHeatmapEnabled,
-                        modifier = Modifier.size(44.dp),
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
-                        shadowElevation = 6.dp,
-                        tonalElevation = 2.dp
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Whatshot,
-                                contentDescription = if (isHeatmapEnabled) "Disable Heatmap" else "Enable Heatmap",
-                                modifier = Modifier.size(22.dp),
-                                tint = if (isHeatmapEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Disabled)
-                            )
                         }
                     }
                 }

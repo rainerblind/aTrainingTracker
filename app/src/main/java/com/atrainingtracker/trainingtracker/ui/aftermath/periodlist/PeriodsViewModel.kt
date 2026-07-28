@@ -22,10 +22,25 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
-import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import com.atrainingtracker.trainingtracker.ui.map.*
+import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/**
+ * Encapsulates the UI state for the period detail map (ATT-440).
+ * Matches the robust loading pattern used in Workout Clusters.
+ */
+data class PeriodMapState(
+    val tracks: List<MapTrack> = emptyList(),
+    val workoutIdToHeatmapPathMap: Map<Long, List<LatLng>> = emptyMap(),
+    val memberMarkers: List<PeriodPeakMarker> = emptyList(),
+    val isLoading: Boolean = false,
+)
 
 class PeriodsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -43,17 +58,15 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     private val _selectedPeriod = MutableStateFlow<PeriodSummary?>(null)
     val selectedPeriod = _selectedPeriod.asStateFlow()
 
-    val isHeatmapEnabled: StateFlow<Boolean> = prefManager.isHeatmapEnabledFlow
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = true
-        )
+    private val _mapState = MutableStateFlow(PeriodMapState())
+    val mapState = _mapState.asStateFlow()
+
+    private var selectionJob: Job? = null
 
     val enabledMarkerTypes: StateFlow<Set<PeriodMarkerType>> = prefManager.enabledPeriodMarkerTypesFlow
         .map { strings -> 
             strings.mapNotNull { 
-                try { PeriodMarkerType.valueOf(it) } catch(e: Exception) { null } 
+                try { PeriodMarkerType.valueOf(it) } catch(_: Exception) { null } 
             }.toSet()
         }
         .stateIn(
@@ -61,12 +74,6 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = setOf(PeriodMarkerType.ALTITUDE, PeriodMarkerType.DISTANCE)
         )
-
-    fun toggleHeatmapEnabled() {
-        viewModelScope.launch {
-            prefManager.setHeatmapEnabled(!isHeatmapEnabled.value)
-        }
-    }
 
     fun toggleMarkerTypeEnabled(type: PeriodMarkerType) {
         viewModelScope.launch {
@@ -76,44 +83,57 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun showPeriodMap(summary: PeriodSummary) {
+        selectionJob?.cancel()
         _selectedPeriod.value = summary
-
-        // Lazy-loading of full heatmap polylines
-        viewModelScope.launch {
-            val workoutIdList = workoutRepo.allWorkouts.value.filter { w ->
-                w.startTimeS >= summary.startTimestampS && w.startTimeS <= summary.endTimestampS
-            }.map { it.id }
-
-            val richPaths = workoutIdList.associateWith { id ->
-                val fullPath = workoutRepo.getWorkoutTrackPoints(id, TrackType.BEST)
-                
-                // PERFORMANCE: Simplify for map
-                if (fullPath.size > 800) {
-                    val latLngs = fullPath.map { it.latLng }
-                    var tolerance = 1.0
-                    var simplified = PolyUtil.simplify(latLngs, tolerance)
-                    var iterations = 0
-                    while (simplified.size > 1000 && iterations < 5) {
-                        tolerance *= 2.0
-                        simplified = PolyUtil.simplify(latLngs, tolerance)
-                        iterations++
-                    }
-                    simplified
-                } else {
-                    fullPath.map { it.latLng }
-                }
+        
+        selectionJob = viewModelScope.launch {
+            _mapState.value = PeriodMapState(isLoading = true)
+            
+            // ATT-440: Adoption of Cluster loading algorithm
+            // 1. Fetch Source of Truth for the range (Guaranteed completeness)
+            val workouts = withContext(Dispatchers.IO) {
+                periodsRepo.getWorkoutsForRange(summary.startTimestampS, summary.endTimestampS)
             }
             
-            val current = _selectedPeriod.value
-            if (current != null && current.startTimestampS == summary.startTimestampS && 
-                current.periodType == summary.periodType) {
-                _selectedPeriod.value = current.copy(workoutIdToPathMap = richPaths)
+            // 2. Background Processing
+            withContext(Dispatchers.Default) {
+                val tracks = workouts.map { it.toMapTrack().copy(isVisible = true) }
+                val heatmapPathMap = workouts.associate { w ->
+                    w.id to if (w.mapPolyline.isNotEmpty()) PolyUtil.decode(w.mapPolyline) else emptyList()
+                }.filterValues { it.isNotEmpty() }
+                
+                // Pre-calculate member markers (SCRUM-199 style)
+                val markers = workouts.flatMap { w ->
+                    val list = mutableListOf<PeriodPeakMarker>()
+                    w.startLatLng?.let { 
+                        list.add(PeriodPeakMarker(w.id, it, R.drawable.control_start, "${w.workoutName}: Start", PeriodMarkerType.START)) 
+                    }
+                    w.endLatLng?.let { 
+                        list.add(PeriodPeakMarker(w.id, it, R.drawable.control_stop, "${w.workoutName}: End", PeriodMarkerType.END)) 
+                    }
+                    w.maxDisplacementLatLng?.let { 
+                        list.add(PeriodPeakMarker(w.id, it, R.drawable.ic_distance, "${w.workoutName}: Apex", PeriodMarkerType.DISTANCE)) 
+                    }
+                    w.maxAltitudeLatLng?.let {
+                        list.add(PeriodPeakMarker(w.id, it, R.drawable.ic_altitude, "${w.workoutName}: Max Altitude", PeriodMarkerType.ALTITUDE))
+                    }
+                    list
+                }
+
+                _mapState.value = PeriodMapState(
+                    tracks = tracks,
+                    workoutIdToHeatmapPathMap = heatmapPathMap,
+                    memberMarkers = markers,
+                    isLoading = false
+                )
             }
         }
     }
 
     fun dismissPeriodMap() {
+        selectionJob?.cancel()
         _selectedPeriod.value = null
+        _mapState.value = PeriodMapState()
     }
 
     // Observe summarized periods and migration status from Repository
