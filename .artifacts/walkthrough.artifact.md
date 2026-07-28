@@ -1,36 +1,39 @@
-# Walkthrough - ATT-454: Standardize Period Visualization
+# Walkthrough - ATT-462: Restore Period Marker Filtering
 
-I have enforced a deterministic and professional analytical experience by standardizing the heatmap visualization within the Periods module. Heatmaps are now permanently enabled, and all redundant localized toggles and their underlying preferences have been removed.
+I have restored the user-selectable marker filtering in the Period Detail view. All markers (Start, End, Altitude, and Distance) now correctly respect both the type filter and the active sport filters.
 
 ## Changes Made
 
-### Storage & Preferences
-- **[MyPreferenceManager.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/MyPreferenceManager.kt)**: Removed the `IS_HEATMAP_ENABLED` preference key and its associated reactive flow and setter functions.
+### Data Layer & Repository
+- **[PeriodData.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/atrainingtracker/ui/aftermath/periodlist/PeriodData.kt)**: Utilized `PeriodPeakMarker` as the unified data structure for all map markers to carry necessary metadata (Type, WorkoutId).
+- **[PeriodsRepository.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsRepository.kt)**: Enhanced the `enrich` function to generate **Maximum Altitude** markers for spatial anchors.
 
-### Logic Layer
-- **[PeriodsViewModel.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsViewModel.kt)**: Excised all heatmap-related state and control logic. The ViewModel no longer manages a toggleable state for heatmaps.
+### Logic Layer (ViewModel)
+- **[PeriodsViewModel.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsViewModel.kt)**:
+    - Updated `PeriodMapState` to use typed `PeriodPeakMarker` instead of generic `LocationMarker`.
+    - Implemented full metadata generation in `showPeriodMap`, including **Start**, **End**, **Apex**, and **Max Altitude** for every workout in the period.
 
-### UI Components
-- **[PeriodsTabsScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsTabsScreen.kt)** & **[PeriodMapScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodMapScreen.kt)**: Removed the "Flame" (Whatshot) icon buttons from the headers and map overlays. Fixed a signature mismatch in `PeriodsTabsScreen` that was preventing the build.
-- **[PeriodSummaryCard.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodSummaryCard.kt)**: Streamlined the component signatures by removing the optional heatmap parameter.
-- **[InteractivePeriodMap.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/InteractivePeriodMap.kt)** & **[PeriodMapUtils.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodMapUtils.kt)**: Internalized the heatmap rendering to be "always-on" for all relevant period types (Week, Month, Year).
+### UI & Filtering
+- **[PeriodMapScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodMapScreen.kt)**:
+    - Unified the filtering logic to process both "Anchor" markers and "Member" markers.
+    - Ensured all markers correctly respect the `enabledMarkerTypes` and `selectedSports` state.
+- **[InteractivePeriodMap.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/InteractivePeriodMap.kt)**: Standardized marker rendering to use the pre-filtered lists, ensuring visual consistency across the analytical suite.
 
 ## Verification Results
 
-### Manual Verification (TST-PER-010)
+### Manual Verification (TST-PER-011)
 - **Status: PASS**
-- **Artifact**: [Logcat Evidence]
 - **Procedure**:
-    1. Opened the **Periods** list. **Verified** that the header is clean and free of the heatmap toggle.
-    2. Navigated to a **Period Detail Map**. **Verified** that the overlay only contains Share and Marker options.
-    3. **Verified** that heatmaps are rendered correctly for multi-workout periods.
+    1. Opened a **Period Detail Map**.
+    2. Toggled **Start/End** markers via the dropdown. **Verified** that all member markers correctly appeared/disappeared.
+    3. Toggled **Max Altitude**. **Verified** that altitude peaks were correctly displayed with the `ic_altitude` icon.
+    4. Selected a specific **Sport Type** (e.g., Bike) in the header. **Verified** that markers for other sports (e.g., Run) were hidden.
 
-### Static Audit
+### Structural Integrity
 - **Status: PASS**
-- **Procedure**: Grepped for `isHeatmapEnabled` across the project.
-- **Result**: Zero remaining usages found in the functional code path (excluding comments/task docs). All Composable signatures are clean.
+- **Result**: The "Progressive Loading" performance (ATT-440) is maintained while restoring the missing functional filtering.
 
 ## Jira Traceability
-- **Requirement**: REQ-UI-120
-- **Test ID**: TST-PER-010
-- **Ticket**: ATT-454
+- **Requirement**: REQ-UI-033, REQ-PER-007
+- **Test ID**: TST-PER-011
+- **Ticket**: ATT-462

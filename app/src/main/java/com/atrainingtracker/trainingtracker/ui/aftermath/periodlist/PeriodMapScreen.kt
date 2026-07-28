@@ -74,6 +74,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.google.android.gms.maps.model.LatLng
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
@@ -104,9 +105,17 @@ fun PeriodMapScreen(
     val tf = TimeFormatter()
     val af = AltitudeFormatter()
 
+    // Result DTO for filtering (to avoid Quadruple or component ambiguity)
+    data class FilteredMapContent(
+        val workouts: Map<Long, String>,
+        val paths: Map<Long, List<LatLng>>,
+        val anchorMarkers: List<PeriodPeakMarker>,
+        val memberMarkers: List<PeriodPeakMarker>
+    )
+
     // Track multiple selected sports
     var selectedSports by rememberSaveable { mutableStateOf(setOf<BSportType>()) }
-    val (filteredWorkouts, filteredPaths, filteredMarkers) = remember(summary, selectedSports, enabledMarkerTypes) {
+    val filteredContent = remember(summary, mapState.memberMarkers, selectedSports, enabledMarkerTypes) {
         val workouts = if (selectedSports.isEmpty()) {
             summary.workoutIdToPolylineMap
         } else {
@@ -125,13 +134,19 @@ fun PeriodMapScreen(
             }
         }
 
-        val markers = summary.extremaMarkers.filter { marker ->
+        val anchorMarkers = summary.extremaMarkers.filter { marker ->
+            val sportMatch = selectedSports.isEmpty() || selectedSports.contains(summary.workoutIdToSportMap[marker.workoutId])
+            val typeMatch = enabledMarkerTypes.contains(marker.markerType)
+            sportMatch && typeMatch
+        }
+
+        val memberMarkers = mapState.memberMarkers.filter { marker ->
             val sportMatch = selectedSports.isEmpty() || selectedSports.contains(summary.workoutIdToSportMap[marker.workoutId])
             val typeMatch = enabledMarkerTypes.contains(marker.markerType)
             sportMatch && typeMatch
         }
         
-        Triple(workouts, paths, markers)
+        FilteredMapContent(workouts, paths, anchorMarkers, memberMarkers)
     }
 
     // Prepare Map data for the TrackOnMapScreen
@@ -302,11 +317,12 @@ fun PeriodMapScreen(
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 InteractivePeriodMap(
                     summary = summary.copy(
-                        workoutIdToPolylineMap = filteredWorkouts,
-                        workoutIdToPathMap = filteredPaths,
-                        extremaMarkers = filteredMarkers
+                        workoutIdToPolylineMap = filteredContent.workouts,
+                        workoutIdToPathMap = filteredContent.paths,
+                        extremaMarkers = filteredContent.anchorMarkers
                     ),
                     mapState = mapState,
+                    memberMarkers = filteredContent.memberMarkers,
                     onWorkoutClick = onWorkoutClick,
                     modifier = Modifier.fillMaxSize(),
                     shouldTakeSnapshot = mapSnapshotTrigger,

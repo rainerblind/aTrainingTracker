@@ -36,6 +36,7 @@ fun InteractivePeriodMap(
     mapState: PeriodMapState, // ATT-440: Adoption of discrete MapState
     onWorkoutClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    memberMarkers: List<PeriodPeakMarker> = emptyList(),
     cameraPositionState: CameraPositionState = rememberCameraPositionState(),
     shouldTakeSnapshot: Boolean = false,
     onSnapshotReady: (Bitmap) -> Unit = {}
@@ -99,8 +100,22 @@ fun InteractivePeriodMap(
                     path(track, alpha = 0.3f, onPathClick = { onWorkoutClick(it) })
                 }
                 
-                // Add member markers
-                markers(mapState.memberMarkers)
+                // Add filtered member markers
+                val memberMarkersList = memberMarkers.map { marker ->
+                    val color = when (marker.markerType) {
+                        PeriodMarkerType.START -> TTColor.StartPoint
+                        PeriodMarkerType.END -> TTColor.EndPoint
+                        PeriodMarkerType.DISTANCE -> TTColor.ApexPoint
+                        else -> fallbackColor
+                    }
+                    LocationMarker(
+                        position = marker.pos, iconResId = marker.iconResId, title = marker.title,
+                        iconDescriptor = createSensorMarker(context, marker.iconResId, color, Color.White),
+                        alpha = 0.5f,
+                        onClick = { onWorkoutClick(marker.workoutId); true }
+                    )
+                }
+                markers(memberMarkersList)
             }
 
             // 4. Render full heatmap as it becomes ready in the background

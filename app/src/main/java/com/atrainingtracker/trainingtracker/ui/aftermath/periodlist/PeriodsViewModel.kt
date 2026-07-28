@@ -38,7 +38,7 @@ import kotlinx.coroutines.withContext
 data class PeriodMapState(
     val tracks: List<MapTrack> = emptyList(),
     val heatmapPaths: List<List<LatLng>> = emptyList(),
-    val memberMarkers: List<LocationMarker> = emptyList(),
+    val memberMarkers: List<PeriodPeakMarker> = emptyList(),
     val isLoading: Boolean = false,
 )
 
@@ -104,14 +104,19 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
                 
                 // Pre-calculate member markers (SCRUM-199 style)
                 val markers = workouts.flatMap { w ->
-                    val list = mutableListOf<LocationMarker>()
-                    val onMarkerClick: () -> Boolean = {
-                        selectWorkoutForPeek(w.id)
-                        true
+                    val list = mutableListOf<PeriodPeakMarker>()
+                    w.startLatLng?.let { 
+                        list.add(PeriodPeakMarker(w.id, it, R.drawable.control_start, "${w.workoutName}: Start", PeriodMarkerType.START)) 
                     }
-                    w.startLatLng?.let { list.add(LocationMarker(it, R.drawable.control_start, alpha = 0.5f, onClick = onMarkerClick)) }
-                    w.endLatLng?.let { list.add(LocationMarker(it, R.drawable.control_stop, alpha = 0.5f, onClick = onMarkerClick)) }
-                    w.maxDisplacementLatLng?.let { list.add(LocationMarker(it, R.drawable.ic_distance, alpha = 0.5f, onClick = onMarkerClick)) }
+                    w.endLatLng?.let { 
+                        list.add(PeriodPeakMarker(w.id, it, R.drawable.control_stop, "${w.workoutName}: End", PeriodMarkerType.END)) 
+                    }
+                    w.maxDisplacementLatLng?.let { 
+                        list.add(PeriodPeakMarker(w.id, it, R.drawable.ic_distance, "${w.workoutName}: Apex", PeriodMarkerType.DISTANCE)) 
+                    }
+                    w.maxAltitudeLatLng?.let {
+                        list.add(PeriodPeakMarker(w.id, it, R.drawable.ic_altitude, "${w.workoutName}: Max Altitude", PeriodMarkerType.ALTITUDE))
+                    }
                     list
                 }
 
