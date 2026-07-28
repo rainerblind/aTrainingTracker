@@ -1,5 +1,6 @@
-- `[x]` ATT-447: Reactive Cluster Suggestions with Sport-Type Penalty
-    - `[x]` Implement Reactive Suggestion Flow in `EditWorkoutViewModel.kt`
-    - `[x]` Cleanup redundant static suggestion calls
-    - `[ ]` Verification (Build & TST-SET-046 Audit)
+- `[x]` ATT-441: Persistent Cluster Previews
+    - `[x]` Update Database Schema (v8) and `WorkoutCluster` DTO
+    - `[x]` Refactor `refreshClusters` to utilize persistent previews
+    - `[x]` Implement silent preview updates in `WorkoutClusterEngine`
+    - `[ ]` Verification (TST-PERF-010: Restart Audit)
     - `[ ]` Final Documentation (Walkthrough & Commit Message)

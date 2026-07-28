@@ -1,31 +1,41 @@
-# Walkthrough - ATT-447: Reactive Cluster Suggestions with Sport-Type Penalty
+# Walkthrough - ATT-441: Persistent Cluster Previews & Silent Restart
 
-Successfully implemented reactive cluster suggestions in the Edit Workout screen. This ensures that similarity scores and sport-specific penalties (+2.0 or +5.0) are dynamically recalculated whenever the user toggles the sport type or edits the workout name, providing immediate and accurate organizational feedback.
+Successfully implemented relational persistence for Workout Cluster previews. This ensures that the heavy spatial enrichment pass (calculating preview paths and linking routes) runs exactly once. Once completed, results are stored in the database, allowing for near-instant, silent refreshes even after an app restart.
 
 ## Fulfilled Requirements
 
 | ID | Description | Rationale |
 |:---|:---|:---|
-| **REQ-SET-018** | The system SHALL provide a list of spatially similar cluster candidates when editing a workout's name. | Ensure users can easily organize activities with accurate similarity feedback. |
+| **REQ-PER-006** | The system SHALL display a detailed progress notification during the full recalculation or migration of Workout Clusters. | Provide technical transparency for heavy operations while maintaining silent routine navigation. |
 
 ## Changes Made
 
-### 🧠 Reactive ViewModel Logic
+### 🗄️ Database Persistence (v8)
 
-#### [EditWorkoutViewModel.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/editworkout/EditWorkoutViewModel.kt)
-- **Dynamic Observation**: Introduced a reactive observer using Kotlin Flows in the ViewModel's `init` block.
-- **Smart Filtering**: The observer specifically monitors changes to the `workoutName` and `bSportType` fields, as these are the primary non-spatial inputs for the similarity engine.
-- **Debounced Refresh**: Implemented a **500ms debounce** to prevent redundant calculations during rapid text entry, ensuring UI fluidity and database efficiency.
-- **Redundancy Cleanup**: Removed manual, static calls to `fetchClusterSuggestions`, allowing the reactive flow to handle both the initial load and all subsequent updates.
+#### [WorkoutClusterDatabaseManager.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterDatabaseManager.kt)
+- **Schema Update**: Bumped `DB_VERSION` to **8** and introduced `preview_paths` (TEXT) and `route_polyline` (TEXT) columns to the `RouteClusters` table.
+- **Serialization**: Implemented piped-string serialization (`path1|path2|...`) to efficiently store multiple encoded polylines in a single TEXT field.
+
+### 🚀 Optimized Repository Refresh
+
+#### [WorkoutClusterRepository.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterRepository.kt)
+- **Persistent Data First**: Refactored `refreshClusters()` to check for existing preview data in the database.
+- **Conditional Enrichment**: The "Phase 2: Previews" analysis now only triggers if the database columns are empty. Once completed, the results are persisted back to the DB.
+- **Silent Restart**: Upon app restart, the repository finds the cached data and displays the cluster list instantly, bypassing the `migrationStatus` UI entirely.
+
+### 🔄 Real-Time Preview Maintenance
+
+#### [WorkoutClusterEngine.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterEngine.kt)
+- **Surgical Updates**: Updated `assignClusterToWorkout` to perform a silent, O(1) preview refresh whenever a new workout is recorded. This keeps the "Last 5" previews current in the database without ever showing a progress card.
 
 ## Verification Results
 
-### Integration Verification (SWE.5)
-- **Test ID**: TST-SET-046 (Reactive Editor Suggestions)
+### Performance Verification (SWE.5)
+- **Test ID**: TST-PERF-010 (Persistent Previews Audit)
 - **Result**: **PASS**.
-    - Verified that changing the sport from 'Running' to 'Cycling' on a 'Cycling' path immediately removes the +5.0 penalty in the suggestion list (score drops < 1.0).
-    - Confirmed that typing in the Name field triggers a recalculated suggestion list after the 500ms pause.
-    - Verified that the system remains responsive during background recalculations.
+    - **Fresh Load**: Progress notification appears once to analyze history.
+    - **Restart**: After force-closing and restarting, the "My Locations" screen opens **instantly** with all map previews populated and **zero notification flickering**.
+    - **Live Update**: Recorded a new session; verified that the cluster preview updated silently to include the latest track.
 
 > [!TIP]
-> This fix ensures that the "Select Existing Route" dialog is always a source of truth for your current edit state, making it easier than ever to keep your training history perfectly organized.
+> This optimization completes the "Auto Name / Route Clusters" vision by providing a solid, stable analytical foundation that respects the user's time and device resources.
