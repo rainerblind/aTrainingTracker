@@ -37,6 +37,7 @@ fun InteractivePeriodMap(
     onWorkoutClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
     memberMarkers: List<PeriodPeakMarker> = emptyList(),
+    memberTracks: List<MapTrack> = emptyList(),
     heatmapPaths: List<List<LatLng>> = emptyList(),
     cameraPositionState: CameraPositionState = rememberCameraPositionState(),
     shouldTakeSnapshot: Boolean = false,
@@ -101,8 +102,8 @@ fun InteractivePeriodMap(
             
             // 3. Render Additional Detail from MapState (ATT-440 Cluster algorithm)
             if (!mapState.isLoading) {
-                // Add member traces
-                mapState.tracks.forEach { track ->
+                // Add filtered member traces
+                memberTracks.forEach { track ->
                     path(track, alpha = 0.3f, onPathClick = { onWorkoutClick(it) })
                 }
                 

@@ -111,12 +111,13 @@ fun PeriodMapScreen(
         val paths: Map<Long, List<LatLng>>,
         val anchorMarkers: List<PeriodPeakMarker>,
         val memberMarkers: List<PeriodPeakMarker>,
+        val memberTracks: List<MapTrack>,
         val heatmapPaths: List<List<LatLng>>
     )
 
     // Track multiple selected sports
     var selectedSports by rememberSaveable { mutableStateOf(setOf<BSportType>()) }
-    val filteredContent = remember(summary, mapState.memberMarkers, mapState.workoutIdToHeatmapPathMap, selectedSports, enabledMarkerTypes) {
+    val filteredContent = remember(summary, mapState.memberMarkers, mapState.tracks, mapState.workoutIdToHeatmapPathMap, selectedSports, enabledMarkerTypes) {
         val workouts = if (selectedSports.isEmpty()) {
             summary.workoutIdToPolylineMap
         } else {
@@ -147,6 +148,14 @@ fun PeriodMapScreen(
             sportMatch && typeMatch
         }
 
+        val memberTracks = if (selectedSports.isEmpty()) {
+            mapState.tracks
+        } else {
+            mapState.tracks.filter { track ->
+                selectedSports.contains(track.bSportType)
+            }
+        }
+
         val heatmapPaths = if (selectedSports.isEmpty()) {
             mapState.workoutIdToHeatmapPathMap.values.toList()
         } else {
@@ -156,7 +165,7 @@ fun PeriodMapScreen(
             }.values.toList()
         }
         
-        FilteredMapContent(workouts, paths, anchorMarkers, memberMarkers, heatmapPaths)
+        FilteredMapContent(workouts, paths, anchorMarkers, memberMarkers, memberTracks, heatmapPaths)
     }
 
     // Prepare Map data for the TrackOnMapScreen
@@ -333,6 +342,7 @@ fun PeriodMapScreen(
                     ),
                     mapState = mapState,
                     memberMarkers = filteredContent.memberMarkers,
+                    memberTracks = filteredContent.memberTracks,
                     heatmapPaths = filteredContent.heatmapPaths,
                     onWorkoutClick = onWorkoutClick,
                     modifier = Modifier.fillMaxSize(),

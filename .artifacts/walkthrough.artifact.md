@@ -12,10 +12,10 @@ I have restored and enhanced the sport-type filtering functionality within the P
 ### UI & Filtering
 - **[PeriodMapScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodMapScreen.kt)**:
     - Refined the reactive filtering logic in the `FilteredMapContent` DTO.
-    - It now correctly calculates filtered lists for **Tracks**, **Markers**, and **Heatmaps** based on the `selectedSports` state.
+    - It now correctly calculates filtered lists for **Tracks (both Anchors and dynamically loaded Members)**, **Markers**, and **Heatmaps** based on the `selectedSports` state.
     - Maintained the existing UI layout as requested, keeping the Period details above the Sport rows.
 - **[InteractivePeriodMap.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/InteractivePeriodMap.kt)**:
-    - Updated to use the pre-filtered heatmap paths provided by the screen layer.
+    - Updated to use the pre-filtered member tracks and heatmap paths provided by the screen layer.
     - Enhanced anchor track rendering to use actual workout IDs and sport types, ensuring correct path coloring and interactivity for instant tracks.
 
 ## Verification Results

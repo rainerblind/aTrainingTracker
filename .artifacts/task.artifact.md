@@ -5,8 +5,8 @@
     - `[x]` Update `showPeriodMap` to populate this map
 - `[x]` **UI & Filtering Layer**
     - `[x]` Update `PeriodMapScreen.kt` header interaction
-    - `[x]` Refine filtering logic in `PeriodMapScreen.kt` for tracks, markers, and heatmaps
-    - `[x]` Update `InteractivePeriodMap.kt` to handle filtered heatmap data
+    - `[x]` Refine filtering logic in `PeriodMapScreen.kt` for tracks (anchors and members), markers, and heatmaps
+    - `[x]` Update `InteractivePeriodMap.kt` to handle filtered member tracks and heatmap data
 - `[ ]` **Verification & Documentation**
     - `[ ]` Verify sport filtering on map (Tracks/Markers/Heatmap)
     - `[ ]` Create walkthrough artifact
