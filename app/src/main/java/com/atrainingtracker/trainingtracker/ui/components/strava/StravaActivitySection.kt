@@ -58,7 +58,7 @@ fun StravaActivitySection(
             .clickable(enabled = activity.id != null) {
                 activity.id?.let { StravaHelper.openActivity(context, it) }
             }
-            .padding(horizontal = 16.dp, vertical = 2.dp),
+            .padding(horizontal = 12.dp, vertical = 2.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // --- Header Row ---
