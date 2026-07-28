@@ -1,45 +1,33 @@
-# Implementation Plan - ATT-440: Robust Map Zoom & Null Safety
+# Implementation Plan - ATT-440: Instant Map Zoom Optimization
 
-Address the issue where the Period Details map fails to zoom into the training area by fixing incorrect null-handling in the database layers and refining the camera's initialization logic.
+Address the delay in zooming to period map details by optimizing the camera initialization logic and removing bottlenecks in the data-fitting pipeline.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Accurate Map Focus**: I identified a technical "blind spot" where missing map data was being incorrectly interpreted as the coordinate `(0,0)` (the ocean). I am fixing this so the app correctly recognizes missing data and instead uses your actual workout paths to focus the map.
-> - **Immediate Visibility**: This ensures that as soon as you open a period's map, it will be perfectly centered and zoomed on your training area.
+> - **Instant Focus**: I identified that the map was waiting for every single background tile to load before zooming in. I am refactoring this to zoom **immediately** as soon as the map is created.
+> - **Stable Rendering**: I am fixing a bug where background data updates were accidentally resetting the map's zoom state. The map will now stay locked on your training area even as more data "streams in" in the background.
 
 ## Proposed Changes
 
-### 1. Data Layer: Precision Null-Handling
-Fulfills REQ-DAT-001 (Refinement)
-
-#### [MODIFY] [PeriodSummariesDatabaseManager.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodSummariesDatabaseManager.kt)
-- **Refactor `mapCursorToPeriod`**:
-    - Use `cursor.isNull()` checks for all spatial columns (`minLat`, `maxLat`, `minLng`, `maxLng`).
-    - Explicitly return sentinel values (`90.0`, `-90.0`, etc.) when data is null, ensuring the UI can distinguish between "Zero" and "Missing."
-
-#### [MODIFY] [WorkoutSummariesDatabaseManager.java](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutSummariesDatabaseManager.java)
-- **Refactor `getDouble`**:
-    - Add `cursor.isNull()` check. If null, return a literal `null` instead of the primitive `0.0`.
-    - This fixes coordinate lookups across the entire application.
-
-### 2. UI Layer: Reliable Camera Initialization
+### 1. UI Layer: Reactive Camera Optimization
 Fulfills REQ-MAP-004 (Refinement)
 
-#### [MODIFY] [MapBehaviors.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapBehaviors.kt)
-- **Refine `MapBoundsController`**:
-    - Key the `hasFittedInitialBounds` state by both `zoomFocus` AND `initialBounds`.
-    - **Rationale**: If the bounds are initially missing (null) but then arrive via the reactive enrichment pipeline, the camera must "try again" to fit the new valid bounds.
+#### [MODIFY] [ATrainingTrackerMap.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/ATrainingTrackerMap.kt)
+- **Accelerated Zoom**: Add `MapEffect` inside the `GoogleMap` block to fit `initialBounds` as soon as the map object is created, bypassing the slow `onMapLoaded` callback.
+- **State Preservation**: Ensure `MapBoundsController` correctly distinguishes between the initial fit and subsequent dynamic updates.
 
 #### [MODIFY] [InteractivePeriodMap.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/InteractivePeriodMap.kt)
-- **Refine `periodBounds`**:
-    - Add a safety check: `if (summary.minLat < 90.0 && summary.minLat != 0.0)`.
-    - This prevents the "Ocean Trap" by ignoring invalid zero-coordinate bounds.
+- **Key Stability**: Update `remember(summary)` to `remember(summary.periodType, summary.startTimestampS)`. This prevents the map state from resetting when non-spatial properties (like the background path list) are updated during progressive loading.
+
+### 2. UI Layer: Bounds Controller Refinement
+#### [MODIFY] [MapBehaviors.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapBehaviors.kt)
+- **Aggressive Fitting**: Allow `MapBoundsController` to attempt fitting even if `isMapLoaded` is false, provided that valid tracks or markers are available.
 
 ## Verification Plan
 
 ### Manual Verification
 1. Open the 'Periods' screen.
-2. Tap the map icon for a period recorded at a known location (e.g., your home area).
-3. **Verify** that the map zooms into the correct area immediately upon opening.
-4. **Verify** that the map does not show a world view or center on the Atlantic Ocean.
+2. Tap the map icon for any period.
+3. **Verify** that the map zooms into the training area **instantly** (within milliseconds), even before all map tiles are fully rendered.
+4. **Verify** that the zoom does not jump or reset as more workouts are loaded into the heatmap.

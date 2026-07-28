@@ -49,14 +49,17 @@ fun MapBoundsController(
     var hasFittedInitialBounds by remember(zoomFocus, initialBounds != null) { mutableStateOf(false) }
 
     LaunchedEffect(tracks, markers, segments, routes, isMapLoaded, hasFittedInitialBounds, initialBounds) {
-        if (!isMapLoaded || hasFittedInitialBounds) return@LaunchedEffect
+        if (hasFittedInitialBounds) return@LaunchedEffect
 
         // --- ATT-352 Refinement: Use persisted bounds if available ---
         if (zoomFocus == MapZoomFocus.EXPLICIT_BOUNDS && initialBounds != null) {
+            // Accelerated fitting: Don't wait for isMapLoaded if we have explicit bounds
             cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(initialBounds, (40 * context.resources.displayMetrics.density).toInt()))
             hasFittedInitialBounds = true
             return@LaunchedEffect
         }
+        
+        if (!isMapLoaded) return@LaunchedEffect
 
         if (zoomFocus == MapZoomFocus.TRACK_AND_MARKERS || 
             zoomFocus == MapZoomFocus.LOCAL_SEGMENTS || 

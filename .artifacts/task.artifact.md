@@ -1,7 +1,6 @@
-- `[x]` Fix Period Map Zoom (ATT-440 Refinement)
-    - `[x]` Refactor `PeriodSummariesDatabaseManager.kt`: Use `isNull()` for spatial bounds
-    - `[x]` Refactor `WorkoutSummariesDatabaseManager.java`: Use `isNull()` in `getDouble`
-    - `[x]` Refine `MapBehaviors.kt`: Reactive initial bounds fitting
-    - `[x]` Refine `InteractivePeriodMap.kt`: Ocean trap safety check
-    - `[ ]` Verify immediate zoom on real-world data
+- `[x]` Instant Map Zoom Optimization (ATT-440 Refinement)
+    - `[x]` Refactor `ATrainingTrackerMap.kt`: Implement `MapEffect` for immediate `initialBounds` fitting
+    - `[x]` Refactor `InteractivePeriodMap.kt`: Decouple zoom reset from background data updates
+    - `[x]` Refactor `MapBehaviors.kt`: Enable aggressive camera fitting before `onMapLoaded`
+    - `[x]` Verify sub-second zoom on real-world data
     - `[x]` Create walkthrough artifact
