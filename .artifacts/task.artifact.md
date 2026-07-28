@@ -1,8 +1,7 @@
-# Tasks - ATT-342 Refinement: Total Path Priority & Marker Culling
-
-- `[x]` Refactor `MapContentScope.kt`:
-    - `[x]` Implement inverse heatmap weighting schedule in `Render`
-    - `[x]` Implement high-priority `trackAlpha` scaling
-    - `[x]` Implement aggressive marker culling for member pins
-- `[x]` Verify clean, opaque path visualization at high zoom (TST-MAP-010)
-- `[x]` Create walkthrough artifact
+- `[x]` Fix Period Map Zoom (ATT-440 Refinement)
+    - `[x]` Refactor `PeriodSummariesDatabaseManager.kt`: Use `isNull()` for spatial bounds
+    - `[x]` Refactor `WorkoutSummariesDatabaseManager.java`: Use `isNull()` in `getDouble`
+    - `[x]` Refine `MapBehaviors.kt`: Reactive initial bounds fitting
+    - `[x]` Refine `InteractivePeriodMap.kt`: Ocean trap safety check
+    - `[ ]` Verify immediate zoom on real-world data
+    - `[x]` Create walkthrough artifact

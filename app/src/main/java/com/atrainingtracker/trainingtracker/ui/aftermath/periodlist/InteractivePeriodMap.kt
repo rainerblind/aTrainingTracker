@@ -45,8 +45,9 @@ fun InteractivePeriodMap(
     
     // --- 1. INSTANT MAP SETUP (ATT-346 Relational) ---
     // Immediately fit the map to pre-calculated bounds from the database
+    // ATT-440 Refinement: Added safety check to ignore invalid (0.0) coordinates (Ocean Trap).
     val periodBounds = remember(summary) {
-        if (summary.minLat < 90.0) {
+        if (summary.minLat < 90.0 && summary.minLat != 0.0) {
             LatLngBounds(LatLng(summary.minLat, summary.minLng), LatLng(summary.maxLat, summary.maxLng))
         } else null
     }

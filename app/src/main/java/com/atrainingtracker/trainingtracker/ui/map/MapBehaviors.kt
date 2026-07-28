@@ -43,8 +43,10 @@ fun MapBoundsController(
     isMapLoaded: Boolean,
     context: Context
 ) {
-    // Flag to ensure we only fit the bounds once per session/focus change
-    var hasFittedInitialBounds by remember(zoomFocus) { mutableStateOf(false) }
+    // Flag to ensure we only fit the bounds once per session/focus change.
+    // ATT-440 Refinement: We key this by initialBounds so that if they arrive late 
+    // (via enrichment), the camera will try to fit them even if it previously gave up.
+    var hasFittedInitialBounds by remember(zoomFocus, initialBounds != null) { mutableStateOf(false) }
 
     LaunchedEffect(tracks, markers, segments, routes, isMapLoaded, hasFittedInitialBounds, initialBounds) {
         if (!isMapLoaded || hasFittedInitialBounds) return@LaunchedEffect
