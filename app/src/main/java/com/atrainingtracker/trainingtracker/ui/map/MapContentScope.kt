@@ -129,14 +129,14 @@ internal class MapContentScopeImpl(
             steppedZoom < 13 -> {
                 trackAlpha = 0.4f; markerAlphaMult = 0.0f; heatmapWeight = 0.005; heatmapStartIntensity = 0.2f; heatmapMaxIntensity = 20.0
             }
-            steppedZoom <= 14 -> {
-                trackAlpha = 0.8f; markerAlphaMult = 0.0f; heatmapWeight = 0.001; heatmapStartIntensity = 0.4f; heatmapMaxIntensity = 60.0
+            steppedZoom <= 15 -> {
+                trackAlpha = 0.8f; markerAlphaMult = 0.2f; heatmapWeight = 0.001; heatmapStartIntensity = 0.4f; heatmapMaxIntensity = 60.0
             }
             steppedZoom <= 16 -> {
-                trackAlpha = 1.0f; markerAlphaMult = 0.0f; heatmapWeight = 0.0005; heatmapStartIntensity = 0.5f; heatmapMaxIntensity = 100.0
+                trackAlpha = 1.0f; markerAlphaMult = 0.6f; heatmapWeight = 0.0005; heatmapStartIntensity = 0.5f; heatmapMaxIntensity = 100.0
             }
             else -> {
-                trackAlpha = 1.0f; markerAlphaMult = 0.1f; heatmapWeight = 0.0002; heatmapStartIntensity = 0.6f; heatmapMaxIntensity = 200.0
+                trackAlpha = 1.0f; markerAlphaMult = 1.0f; heatmapWeight = 0.0002; heatmapStartIntensity = 0.6f; heatmapMaxIntensity = 200.0
             }
         }
 

@@ -154,7 +154,7 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
                     }
                     
                     // Pre-calculate markers to avoid UI jank (SCRUM-199)
-                    val memberAlpha = 0.3f
+                    val memberAlpha = 0.5f
                     val markers = workouts.flatMap { w ->
                         ensureActive()
                         val list = mutableListOf<LocationMarker>()
