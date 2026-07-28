@@ -312,7 +312,7 @@ fun WorkoutClusterHeatmapScreen(
                 if (!isEditingFingerprint) {
                     Box(modifier = Modifier
                         .fillMaxSize()
-                        .padding(16.dp), contentAlignment = Alignment.TopEnd) {
+                        .padding(top = 76.dp, end = 16.dp), contentAlignment = Alignment.TopEnd) {
                         var showMarkerMenu by remember { mutableStateOf(false) }
                         Box {
                             Surface(

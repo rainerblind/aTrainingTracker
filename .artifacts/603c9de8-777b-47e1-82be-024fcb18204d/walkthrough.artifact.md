@@ -27,7 +27,7 @@ Successfully implemented user-selectable marker visibility for Workout Clusters.
 
 #### [WorkoutClusterHeatmapScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterHeatmapScreen.kt)
 - **Selective Filtering**: Implemented real-time filtering for both the authoritative cluster signature markers and the member session distribution markers based on the user's active selection.
-- **Marker Control UI**: Added a standard `Place` (Pin) icon button to the map overlay that triggers a checkbox-based `DropdownMenu` for marker type selection, matching the aesthetic of the Periods module.
+- **Marker Control UI**: Added a standard `Place` (Pin) icon button to the map overlay that triggers a checkbox-based `DropdownMenu` for marker type selection, matching the aesthetic of the Periods module. The button is correctly positioned below the Share button to prevent overlapping.
 - **Unified Branding**: Utilized the project's technical color palette (Green/Red/Blue) for Start, End, and Max Distance markers to maintain visual consistency.
 
 ## Verification Results
