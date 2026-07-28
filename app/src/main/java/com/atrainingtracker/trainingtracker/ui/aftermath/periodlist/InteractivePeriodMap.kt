@@ -34,7 +34,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 fun InteractivePeriodMap(
     summary: PeriodSummary,
     mapState: PeriodMapState, // ATT-440: Adoption of discrete MapState
-    isHeatmapEnabled: Boolean = true,
     onWorkoutClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
     cameraPositionState: CameraPositionState = rememberCameraPositionState(),
@@ -105,7 +104,7 @@ fun InteractivePeriodMap(
             }
 
             // 4. Render full heatmap as it becomes ready in the background
-            if (isHeatmapEnabled && mapState.heatmapPaths.isNotEmpty()) {
+            if (mapState.heatmapPaths.isNotEmpty()) {
                 heatmap(mapState.heatmapPaths, opacity = 0.8)
             }
         }

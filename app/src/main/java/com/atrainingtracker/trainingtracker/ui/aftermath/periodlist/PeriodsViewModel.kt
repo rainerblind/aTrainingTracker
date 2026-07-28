@@ -63,13 +63,6 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
 
     private var selectionJob: Job? = null
 
-    val isHeatmapEnabled: StateFlow<Boolean> = prefManager.isHeatmapEnabledFlow
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = true
-        )
-
     val enabledMarkerTypes: StateFlow<Set<PeriodMarkerType>> = prefManager.enabledPeriodMarkerTypesFlow
         .map { strings -> 
             strings.mapNotNull { 
@@ -81,12 +74,6 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = setOf(PeriodMarkerType.ALTITUDE, PeriodMarkerType.DISTANCE)
         )
-
-    fun toggleHeatmapEnabled() {
-        viewModelScope.launch {
-            prefManager.setHeatmapEnabled(!isHeatmapEnabled.value)
-        }
-    }
 
     fun toggleMarkerTypeEnabled(type: PeriodMarkerType) {
         viewModelScope.launch {

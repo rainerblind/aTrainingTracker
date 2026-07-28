@@ -58,8 +58,6 @@ fun PeriodsTabsScreen(
     pagerState: PagerState,
     listStates: List<LazyListState>,
     isPlayServiceAvailable: Boolean,
-    isHeatmapEnabled: Boolean,
-    onToggleHeatmapEnabled: () -> Unit,
     onHeaderClick: (PeriodSummary) -> Unit,
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
@@ -156,7 +154,6 @@ fun PeriodsTabsScreen(
                             periods = periods,
                             scrollState = scrollState,
                             isPlayServiceAvailable = isPlayServiceAvailable,
-                            isHeatmapEnabled = isHeatmapEnabled,
                             onHeaderClick = onHeaderClick,
                             onMapClick = onMapClick,
                             onSportClick = onSportClick,
@@ -186,13 +183,6 @@ fun PeriodsTabsScreen(
                             style = MaterialTheme.typography.titleLarge,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
-                        IconButton(onClick = onToggleHeatmapEnabled) {
-                            Icon(
-                                imageVector = Icons.Default.Whatshot,
-                                contentDescription = if (isHeatmapEnabled) "Disable Heatmap" else "Enable Heatmap",
-                                tint = if (isHeatmapEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = TTAlpha.Disabled)
-                            )
-                        }
                     }
                     PrimaryScrollableTabRow(
                         selectedTabIndex = pagerState.currentPage,

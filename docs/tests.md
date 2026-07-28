@@ -19,6 +19,8 @@ This document defines the verification procedures for all project requirements. 
 | **TST-UNT-009** | | `WorkoutDataMapper` | `REQ-UI-011` | Verify that the extrema rows only include the "Big 6" performance metrics: HR, Speed/Pace, Cadence, Power, Altitude, and Temperature. | Verified |
 | **TST-UNT-010** | | `MappablePath` | `REQ-MAP-007` | Verify that coordinate projection (latLngs) is lazy and only occurs once. | Proposed |
 | **TST-UNT-011** | | `TrackingViewsDb` | `REQ-PRO-005` | 1. Simulated fresh install (Wipe data): Verify schema contains ShowElevationProfile. 2. Simulated upgrade (v9->v10): Verify ShowElevationProfile is added. | Verified |
+| **TST-UNT-012** | `ATT-457` | `WorkoutSummariesViewModel` | `REQ-PER-008` | Verify `getFilteredWorkouts` correctly filters by `sportId` (Sub-Sport) when provided. | Proposed |
+| **TST-UNT-013** | `ATT-458` | `WorkoutSummariesViewModel` | `REQ-PER-008` | Verify `getFilteredWorkouts` correctly filters by `bSportType` (Base Sport) when `sportId` is null. | Proposed |
 | **TST-FIL-002** | | `WorkoutSamplesDb` | `REQ-DAT-003` | Verify that `calcExtremaValue` returns `null` (not 0.0) when querying a sensor that has only NULL values or does not exist in the table. | Verified |
 
 ## 2. Regression & Manual Verification (SWE.5 / SWE.6)
@@ -212,6 +214,8 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-PERF-006** | `ATT-383` | **Multi-Phase Progress Feedback** | `REQ-PER-005` | 1. Trigger a Periods sync. 2. Inspect the progress card UI. | 1. A bold title ('Introducing Periods Database...') SHALL be visible. 2. Status messages during the reading phase SHALL be prefixed with 'Phase 1:'. 3. Status messages during the aggregation phase SHALL be prefixed with 'Phase 2:'. | Verified |
 | **TST-PERF-007** | `ATT-393` | **Workout Cluster Migration Progress** | `REQ-PER-006` | 1. Trigger a Workout Cluster recalculation. 2. Observe the progress card. | 1. The progress card SHALL show 'Phase 1: Processing routes...' and 'Phase 2: Processing workout X of Y...'. 2. Progress bars SHALL update accurately. | Verified |
 | **TST-PERF-008** | `ATT-442` | **Reactive Period Detail Verification** | `REQ-PER-007` | 1. Open the 'Periods' screen. 2. Tap the map icon for a period *immediately* before the background loading completes. 3. Observe the heatmap as it grows. | All workouts belonging to the period SHALL eventually appear on the map as they are loaded from the database. | Verified |
+| **TST-PER-009** | `ATT-459` | **Precise Sport Filtering** | `REQ-PER-008` | 1. Open a Period Summary. 2. Click a Sub-Sport row (e.g. MTB). 3. Verify the resulting list only contains MTB workouts for that period. | List is correctly filtered by specific Sport ID. | Proposed |
+| **TST-PER-010** | `ATT-460` | **Heatmap Toggle Removal** | `REQ-UI-120` | 1. Open Periods screen and Period Map. 2. Verify `Whatshot` toggle is gone. 3. Verify heatmap still reacts to global settings. | Toggle is removed, global consistency maintained. | Proposed |
 | **TST-UI-076** | `ATT-444` | **Period UI Layout Integrity** | `REQ-UI-104` | 1. Open the 'Periods' screen. 2. Inspect the visibility of the Bar Graph. 3. Scroll the period list downwards. | 1. The Bar Graph SHALL be immediately visible below the tabs. 2. The Bar Graph SHALL move up and down in synchronization with the list as the header collapses/expands. | Verified |
 
 ## 4. Release Verification Workflow

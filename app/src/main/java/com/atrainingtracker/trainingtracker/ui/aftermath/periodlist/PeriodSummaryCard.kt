@@ -61,7 +61,6 @@ import com.google.android.gms.maps.model.LatLngBounds
 fun PeriodSummaryCard(
     summary: PeriodSummary,
     isPlayServiceAvailable: Boolean,
-    isHeatmapEnabled: Boolean,
     onHeaderClick: (PeriodSummary) -> Unit,
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
@@ -184,7 +183,6 @@ fun PeriodSummaryCard(
 
                     PeriodMultiWorkoutMap(
                         summary = summary,
-                        isHeatmapEnabled = isHeatmapEnabled,
                         onMapClick = { onMapClick(summary) },
                         bounds = bounds
                     )
@@ -400,7 +398,6 @@ fun CompactMetricRow(label: String, count: Int, distance: String, duration: Stri
 @Composable
 private fun PeriodMultiWorkoutMap(
     summary: PeriodSummary,
-    isHeatmapEnabled: Boolean,
     onMapClick: () -> Unit,
     bounds: LatLngBounds? = null
 ) {
@@ -410,8 +407,8 @@ private fun PeriodMultiWorkoutMap(
         summary.polylines.mapNotNull { if (it.isNotEmpty()) PolyUtil.decode(it) else null }
     }
 
-    val visuals = remember(allPaths, summary.periodType, isHeatmapEnabled) {
-        getPeriodMapVisuals(summary.periodType, allPaths, isHeatmapEnabled, isInteractive = false)
+    val visuals = remember(allPaths, summary.periodType) {
+        getPeriodMapVisuals(summary.periodType, allPaths, isInteractive = false)
     }
 
     if (allPaths.isEmpty()) {
@@ -533,7 +530,6 @@ fun PreviewPeriodSummary() {
         PeriodSummaryCard(
             summary = mockSummary,
             isPlayServiceAvailable = true,
-            isHeatmapEnabled = true,
             onHeaderClick = {},
             onMapClick = {},
             onSportClick = { _, _ ->},
@@ -565,7 +561,6 @@ fun PreviewEmptyPeriod() {
         PeriodSummaryCard(
             summary = emptySummary,
             isPlayServiceAvailable = false,
-            isHeatmapEnabled = true,
             onHeaderClick = {},
             onMapClick = {},
             onSportClick = { _, _ ->},

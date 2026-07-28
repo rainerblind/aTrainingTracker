@@ -39,7 +39,6 @@ fun PeriodList(
     scrollState: LazyListState,
     periods: List<PeriodSummary>,
     isPlayServiceAvailable: Boolean,
-    isHeatmapEnabled: Boolean,
     onHeaderClick: (PeriodSummary) -> Unit,
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
@@ -66,7 +65,6 @@ fun PeriodList(
             PeriodSummaryCard(
                 summary = periodSummary,
                 isPlayServiceAvailable = isPlayServiceAvailable,
-                isHeatmapEnabled = isHeatmapEnabled,
                 onHeaderClick = onHeaderClick,
                 onMapClick = { onMapClick(periodSummary) },
                 onSportClick = onSportClick,

@@ -62,7 +62,6 @@ class PeriodsFragment : Fragment() {
                     val groupedPeriods by viewModel.groupedPeriods.collectAsStateWithLifecycle()
                     val migrationStatus by viewModel.migrationStatus.collectAsStateWithLifecycle()
                     val selectedPeriod by viewModel.selectedPeriod.collectAsStateWithLifecycle()
-                    val isHeatmapEnabled by viewModel.isHeatmapEnabled.collectAsStateWithLifecycle()
                     val enabledMarkerTypes by viewModel.enabledMarkerTypes.collectAsStateWithLifecycle()
                     val groups = viewModel.groups
 
@@ -80,8 +79,6 @@ class PeriodsFragment : Fragment() {
                         PeriodMapScreen(
                             summary = selectedPeriod!!,
                             mapState = mapState,
-                            isHeatmapEnabled = isHeatmapEnabled,
-                            onToggleHeatmapEnabled = { viewModel.toggleHeatmapEnabled() },
                             enabledMarkerTypes = enabledMarkerTypes,
                             onToggleMarkerType = { viewModel.toggleMarkerTypeEnabled(it) },
                             onWorkoutClick = { id -> viewModel.selectWorkoutForPeek(id) },
@@ -103,8 +100,6 @@ class PeriodsFragment : Fragment() {
                             },
                             isPlayServiceAvailable = isPlayAvailable,
                             tabs = groups,
-                            isHeatmapEnabled = isHeatmapEnabled,
-                            onToggleHeatmapEnabled = { viewModel.toggleHeatmapEnabled() },
                             migrationStatus = migrationStatus
                         )
                     }

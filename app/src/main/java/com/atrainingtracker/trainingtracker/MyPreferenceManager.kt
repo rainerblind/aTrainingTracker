@@ -34,7 +34,6 @@ class MyPreferenceManager(context: Context) {
 
     companion object {
         val IS_COMPACT_VIEW = booleanPreferencesKey("is_compact_view")
-        val IS_HEATMAP_ENABLED = booleanPreferencesKey("is_heatmap_enabled")
         val ENABLED_PERIOD_MARKER_TYPES = stringSetPreferencesKey("enabled_period_marker_types")
         val ENABLED_TRACK_TYPES = stringSetPreferencesKey("enabled_track_types")
     }
@@ -46,16 +45,6 @@ class MyPreferenceManager(context: Context) {
     suspend fun setCompactView(isCompact: Boolean) {
         dataStore.edit { preferences ->
             preferences[IS_COMPACT_VIEW] = isCompact
-        }
-    }
-
-    val isHeatmapEnabledFlow: Flow<Boolean> = dataStore.data.map { preferences ->
-        preferences[IS_HEATMAP_ENABLED] ?: true // Default to enabled
-    }
-
-    suspend fun setHeatmapEnabled(enabled: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[IS_HEATMAP_ENABLED] = enabled
         }
     }
 

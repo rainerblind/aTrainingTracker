@@ -1,41 +1,54 @@
-# Implementation Plan - ATT-440 Final Refinement: Synchronized Marker Alpha & Blending
+# Implementation Plan - ATT-454: Standardize Period Visualization
 
-Address the issue where technical markers are almost invisible in the Period Detail view by standardizing base alpha values and refining the zoom-adaptive multiplier schedule.
+Enforce a deterministic analytical experience by ALWAYS displaying heatmaps within the Periods module, eliminating redundant localized toggles and their underlying preferences.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Visible Markers**: I identified a mathematical error where the marker transparency was being reduced twice, making them almost invisible. I am fixing the blending engine to ensure markers are clearly visible when you zoom in.
-> - **Cohesive Look**: As requested, I am standardizing all "Member" markers (Start, Stop, Apex) to use the exact same alpha value across both Workout Clusters and Periods, ensuring a consistent professional aesthetic.
-> - **Clean Overview**: Markers will still be hidden when you are zoomed out to maintain a clean overview, but they will now fade in much more prominently as you approach the ground.
+> **Always-On Heatmaps (REQ-UI-120)**: The Periods module SHALL ALWAYS display heatmaps to provide a consistent analytical experience. Heatmap visibility is governed exclusively by this permanent state, ensuring professional and data-rich visualization across all analytical views. The corresponding preferences are removed to minimize system complexity.
 
 ## Proposed Changes
 
-### 1. Map DSL Layer: Robust Blending Schedule
-Fulfills REQ-MAP-016 (Refinement) | Test: TST-MAP-010
+### [Component] Storage & Preferences
 
-#### [MODIFY] [MapContentScope.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapContentScope.kt)
-- **Refine `markerAlphaMult` Schedule**:
-    - Current: level 17+ = 0.1 (Too faint).
-    - **New Schedule**:
-        | Zoom | Multiplier | Resulting Alpha (at base 0.5) |
-        |:---|:---|:---|
-        | < 13 | 0.0 | 0.0 (Hidden) |
-        | 14-15 | **0.2** | **0.1** (Faint Context) |
-        | 16 | **0.6** | **0.3** (Visible) |
-        | 17+ | **1.0** | **0.5** (Standard Detail) |
+#### [MODIFY] [MyPreferenceManager.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/MyPreferenceManager.kt)
+- **Delete** `IS_HEATMAP_ENABLED` key.
+- **Delete** `isHeatmapEnabledFlow`.
+- **Delete** `setHeatmapEnabled` function.
 
-### 2. UI Logic Layer: Standardized Base Alpha
+### [Component] Periods Module UI & Logic
+
 #### [MODIFY] [PeriodsViewModel.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsViewModel.kt)
-#### [MODIFY] [WorkoutClustersViewModel.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersViewModel.kt)
-#### [MODIFY] [InteractivePeriodMap.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/InteractivePeriodMap.kt)
-- Standardize all non-primary markers to `alpha = 0.5f`.
-- **Rationale**: This ensures that every technical "Member" marker in the entire application participates in the same blending logic and has the same visual weight.
+- **Remove** `toggleHeatmapEnabled()`.
+- **Remove** `isHeatmapEnabled` state flow.
+
+#### [MODIFY] [PeriodsTabsScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsTabsScreen.kt)
+- **Remove** `isHeatmapEnabled` and `onToggleHeatmapEnabled` from parameters.
+- **Delete** the `Whatshot` `IconButton` from the header.
+- **Hardcode** `isHeatmapEnabled = true` when calling `PeriodList` and `PeriodSummaryCard`.
+
+#### [MODIFY] [PeriodMapScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodMapScreen.kt)
+- **Remove** `isHeatmapEnabled` and `onToggleHeatmapEnabled` from parameters.
+- **Delete** the `Whatshot` (MODE TOGGLE) `Surface` button from the map overlay.
+- **Hardcode** `isHeatmapEnabled = true` when calling `InteractivePeriodMap`.
+
+#### [MODIFY] [PeriodsFragment.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsFragment.kt)
+- **Update** Composable calls to reflect the removed parameters.
+
+#### [MODIFY] [PeriodSummaryCard.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodSummaryCard.kt)
+- **Remove** `isHeatmapEnabled` from `PeriodSummaryCard` and `PeriodMultiWorkoutMap` parameters.
+- **Hardcode** `isHeatmapEnabled = true` in the internal map logic.
 
 ## Verification Plan
 
-### Manual Verification (TST-MAP-010 Refined)
-1. Open the 'Solitude Runde' cluster heatmap or any Period Map.
-2. **Verify** that at zoom level 11/12, no marker pins are visible.
-3. Zoom in to level 17+. **Verify** that all technical markers (Start, End, Apex) are clearly visible and share the same transparency level.
-4. **Compare** Workout Clusters and Period Maps to ensure visual parity.
+### Manual Verification
+- **TST-PER-010 (Jira: ATT-460)**:
+    1. Open the **Periods** screen.
+    2. **Verify** that the flame icon (Heatmap toggle) is no longer visible in the header.
+    3. Navigate to a specific **Period Map**.
+    4. **Verify** that the toggle button in the map overlay is gone.
+    5. Navigate to **Map Settings** and toggle "Show Heatmap".
+    6. Return to Periods and **Verify** the map correctly reflects the global change.
+
+### Automated Checks
+- Static audit to ensure no unused `onToggleHeatmapEnabled` lambda parameters remain in the `periodlist` package.

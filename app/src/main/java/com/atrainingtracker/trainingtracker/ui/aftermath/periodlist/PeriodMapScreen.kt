@@ -93,8 +93,6 @@ import kotlinx.coroutines.launch
 fun PeriodMapScreen(
     summary: PeriodSummary,
     mapState: PeriodMapState, // ATT-440: Adoption of discrete MapState
-    isHeatmapEnabled: Boolean,
-    onToggleHeatmapEnabled: () -> Unit,
     enabledMarkerTypes: Set<PeriodMarkerType>,
     onToggleMarkerType: (PeriodMarkerType) -> Unit,
     onWorkoutClick: (Long) -> Unit,
@@ -309,7 +307,6 @@ fun PeriodMapScreen(
                         extremaMarkers = filteredMarkers
                     ),
                     mapState = mapState,
-                    isHeatmapEnabled = isHeatmapEnabled,
                     onWorkoutClick = onWorkoutClick,
                     modifier = Modifier.fillMaxSize(),
                     shouldTakeSnapshot = mapSnapshotTrigger,
@@ -394,25 +391,6 @@ fun PeriodMapScreen(
                                     onClick = { onToggleMarkerType(type) }
                                 )
                             }
-                        }
-                    }
-
-                    // MODE TOGGLE BUTTON
-                    Surface(
-                        onClick = onToggleHeatmapEnabled,
-                        modifier = Modifier.size(44.dp),
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
-                        shadowElevation = 6.dp,
-                        tonalElevation = 2.dp
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Whatshot,
-                                contentDescription = if (isHeatmapEnabled) "Disable Heatmap" else "Enable Heatmap",
-                                modifier = Modifier.size(22.dp),
-                                tint = if (isHeatmapEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Disabled)
-                            )
                         }
                     }
                 }
