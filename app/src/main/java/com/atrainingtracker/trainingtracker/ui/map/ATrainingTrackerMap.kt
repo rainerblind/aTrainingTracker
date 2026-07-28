@@ -142,7 +142,8 @@ fun ATrainingTrackerMap(
             // ATT-440: Instant Zoom Fit. 
             // We use MapEffect to fit bounds as soon as the map object is available, 
             // without waiting for all tiles to render (onMapLoaded).
-            MapEffect(initialBounds, isMapLoaded) { map ->
+            // ATT-469: Added shouldTakeSnapshot to keys to trigger callback immediately.
+            MapEffect(initialBounds, isMapLoaded, shouldTakeSnapshot) { map ->
                 if (zoomFocus == MapZoomFocus.EXPLICIT_BOUNDS && initialBounds != null && !isMapLoaded) {
                     val padding = (40 * context.resources.displayMetrics.density).toInt()
                     map.moveCamera(com.google.android.gms.maps.CameraUpdateFactory.newLatLngBounds(initialBounds, padding))
