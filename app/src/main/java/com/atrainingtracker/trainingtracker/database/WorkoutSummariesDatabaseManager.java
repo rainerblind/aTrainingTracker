@@ -1072,11 +1072,8 @@ public class WorkoutSummariesDatabaseManager {
 
             if (oldVersion < 11) {
                 Log.i(TAG, "upgrading to DB version 11");
-                db.beginTransaction();
                 addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.SPORT_ID, "int", "0");
                 // addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.B_SPORT,  "text");
-                db.setTransactionSuccessful();
-                db.endTransaction();
 
                 Cursor cursor = db.query(WorkoutSummaries.TABLE,
                         new String[]{WorkoutSummaries.C_ID, "sport"},
@@ -1151,9 +1148,8 @@ public class WorkoutSummariesDatabaseManager {
             if (oldVersion < 20) {
                 Log.i(TAG, "upgrading to DB version 20");
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.CLUSTER_ID, "int", "-1");
-                
+
                 // Trigger re-learning to populate clusterIds
-                db.setTransactionSuccessful(); // ensure previous changes are committed if needed? No, onUpgrade is in a transaction usually.
                 // We'll run migration logic after upgrade finished in TrainingApplication or here?
                 // It's safer to do it in RouteClusterEngine.migrateHistory
             }

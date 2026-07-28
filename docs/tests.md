@@ -21,6 +21,7 @@ This document defines the verification procedures for all project requirements. 
 | **TST-UNT-011** | | `TrackingViewsDb` | `REQ-PRO-005` | 1. Simulated fresh install (Wipe data): Verify schema contains ShowElevationProfile. 2. Simulated upgrade (v9->v10): Verify ShowElevationProfile is added. | Verified |
 | **TST-UNT-012** | `ATT-457` | `WorkoutSummariesViewModel` | `REQ-PER-008` | Verify `getFilteredWorkouts` correctly filters by `sportId` (Sub-Sport) when provided. | Proposed |
 | **TST-UNT-013** | `ATT-458` | `WorkoutSummariesViewModel` | `REQ-PER-008` | Verify `getFilteredWorkouts` correctly filters by `bSportType` (Base Sport) when `sportId` is null. | Proposed |
+| **TST-UNT-014** | `ATT-476` | `WorkoutSummariesDbHelper` | `REQ-DAT-008` | Verify that `onUpgrade` does not call `setTransactionSuccessful()` explicitly, which would conflict with `SQLiteOpenHelper`'s internal transaction management. | Verified |
 | **TST-FIL-002** | | `WorkoutSamplesDb` | `REQ-DAT-003` | Verify that `calcExtremaValue` returns `null` (not 0.0) when querying a sensor that has only NULL values or does not exist in the table. | Verified |
 
 ## 2. Regression & Manual Verification (SWE.5 / SWE.6)
