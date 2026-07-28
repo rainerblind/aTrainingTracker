@@ -37,6 +37,7 @@ fun InteractivePeriodMap(
     onWorkoutClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
     memberMarkers: List<PeriodPeakMarker> = emptyList(),
+    heatmapPaths: List<List<LatLng>> = emptyList(),
     cameraPositionState: CameraPositionState = rememberCameraPositionState(),
     shouldTakeSnapshot: Boolean = false,
     onSnapshotReady: (Bitmap) -> Unit = {}
@@ -56,9 +57,14 @@ fun InteractivePeriodMap(
     }
 
     // --- 2. PROGRESSIVE CONTENT ---
-    // Anchor routes are already in summary.polylines (enriched by Repository RAM scan)
-    val anchorPaths = remember(summary.polylines) {
-        summary.polylines.map { PolyUtil.decode(it) }
+    // Anchor routes (instantly available)
+    val anchorTracks = remember(summary.workoutIdToPolylineMap) {
+        summary.workoutIdToPolylineMap.mapNotNull { (id, polyline) ->
+            if (polyline.isEmpty()) return@mapNotNull null
+            val path = PolyUtil.decode(polyline)
+            val sport = summary.workoutIdToSportMap[id] ?: BSportType.UNKNOWN
+            MapTrack(id, TrackType.BEST, sport, path.map { PathPoint(0.0, it, 0.0) })
+        }
     }
     
     val fallbackColor = MaterialTheme.colorScheme.primary
@@ -72,8 +78,8 @@ fun InteractivePeriodMap(
         onSnapshotReady = onSnapshotReady,
         content = {
             // 1. Render Anchor Tracks (North/South/East/West/Longest) instantly
-            anchorPaths.forEach { path ->
-                path(MapTrack(-1, TrackType.BEST, BSportType.UNKNOWN, path.map { PathPoint(0.0, it, 0.0) }), alpha = 0.5f)
+            anchorTracks.forEach { track ->
+                path(track, alpha = 0.5f, onPathClick = { onWorkoutClick(it) })
             }
 
             // 2. Extrema Markers (Markers for anchors are already in summary.extremaMarkers)
@@ -119,8 +125,8 @@ fun InteractivePeriodMap(
             }
 
             // 4. Render full heatmap as it becomes ready in the background
-            if (mapState.heatmapPaths.isNotEmpty()) {
-                heatmap(mapState.heatmapPaths, opacity = 0.8)
+            if (heatmapPaths.isNotEmpty()) {
+                heatmap(heatmapPaths, opacity = 0.8)
             }
         }
     )

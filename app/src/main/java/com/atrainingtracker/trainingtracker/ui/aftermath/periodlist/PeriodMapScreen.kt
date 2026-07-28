@@ -110,12 +110,13 @@ fun PeriodMapScreen(
         val workouts: Map<Long, String>,
         val paths: Map<Long, List<LatLng>>,
         val anchorMarkers: List<PeriodPeakMarker>,
-        val memberMarkers: List<PeriodPeakMarker>
+        val memberMarkers: List<PeriodPeakMarker>,
+        val heatmapPaths: List<List<LatLng>>
     )
 
     // Track multiple selected sports
     var selectedSports by rememberSaveable { mutableStateOf(setOf<BSportType>()) }
-    val filteredContent = remember(summary, mapState.memberMarkers, selectedSports, enabledMarkerTypes) {
+    val filteredContent = remember(summary, mapState.memberMarkers, mapState.workoutIdToHeatmapPathMap, selectedSports, enabledMarkerTypes) {
         val workouts = if (selectedSports.isEmpty()) {
             summary.workoutIdToPolylineMap
         } else {
@@ -145,8 +146,17 @@ fun PeriodMapScreen(
             val typeMatch = enabledMarkerTypes.contains(marker.markerType)
             sportMatch && typeMatch
         }
+
+        val heatmapPaths = if (selectedSports.isEmpty()) {
+            mapState.workoutIdToHeatmapPathMap.values.toList()
+        } else {
+            mapState.workoutIdToHeatmapPathMap.filterKeys { id ->
+                val sport = summary.workoutIdToSportMap[id]
+                selectedSports.contains(sport)
+            }.values.toList()
+        }
         
-        FilteredMapContent(workouts, paths, anchorMarkers, memberMarkers)
+        FilteredMapContent(workouts, paths, anchorMarkers, memberMarkers, heatmapPaths)
     }
 
     // Prepare Map data for the TrackOnMapScreen
@@ -323,6 +333,7 @@ fun PeriodMapScreen(
                     ),
                     mapState = mapState,
                     memberMarkers = filteredContent.memberMarkers,
+                    heatmapPaths = filteredContent.heatmapPaths,
                     onWorkoutClick = onWorkoutClick,
                     modifier = Modifier.fillMaxSize(),
                     shouldTakeSnapshot = mapSnapshotTrigger,

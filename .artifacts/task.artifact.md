@@ -1,16 +1,13 @@
-# Task List - ATT-462: Restore Period Marker Filtering
+# Task List - ATT-455: Restore Sport Filtering on Period Map
 
-- `[x]` **Repository & Data Layer**
-    - `[x]` Update `PeriodMapState` to use `PeriodPeakMarker` in `PeriodsViewModel.kt`
-    - `[x]` Add Altitude marker generation to `enrich` in `PeriodsRepository.kt`
 - `[x]` **Logic Layer (ViewModel)**
-    - `[x]` Update `showPeriodMap` to generate typed `PeriodPeakMarker` for members
-    - `[x]` Implement Maximum Altitude detection for member markers
+    - `[x]` Update `PeriodMapState` to use `workoutIdToPathMap` for heatmaps
+    - `[x]` Update `showPeriodMap` to populate this map
 - `[x]` **UI & Filtering Layer**
-    - `[x]` Update `PeriodMapScreen.kt` to filter member markers reactively
-    - `[x]` Update `InteractivePeriodMap.kt` to handle standard markers
+    - `[x]` Update `PeriodMapScreen.kt` header interaction
+    - `[x]` Refine filtering logic in `PeriodMapScreen.kt` for tracks, markers, and heatmaps
+    - `[x]` Update `InteractivePeriodMap.kt` to handle filtered heatmap data
 - `[ ]` **Verification & Documentation**
-    - `[ ]` Verify marker filtering (Start/End/Altitude/Distance)
-    - `[ ]` Verify sport-type exclusion for markers
+    - `[ ]` Verify sport filtering on map (Tracks/Markers/Heatmap)
     - `[ ]` Create walkthrough artifact
     - `[ ]` Update Jira ticket status

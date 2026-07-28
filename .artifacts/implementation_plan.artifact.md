@@ -1,54 +1,46 @@
-# Implementation Plan - ATT-454: Standardize Period Visualization
+# Implementation Plan - ATT-455: Restore Sport Filtering on Period Map
 
-Enforce a deterministic analytical experience by ALWAYS displaying heatmaps within the Periods module, eliminating redundant localized toggles and their underlying preferences.
+Restore functional sport-type filtering within the Period Detail Map while maintaining the established UI layout. Tapping a sport summary row will correctly filter all map components: anchor tracks, dynamically loaded member tracks, technical markers, and heatmaps.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Always-On Heatmaps (REQ-UI-120)**: The Periods module SHALL ALWAYS display heatmaps to provide a consistent analytical experience. Heatmap visibility is governed exclusively by this permanent state, ensuring professional and data-rich visualization across all analytical views. The corresponding preferences are removed to minimize system complexity.
+> **Deep Filtering (REQ-PER-009)**: Tapping the sport summary rows (positioned below the period header) will now act as a primary filter for the entire map visualization. This ensures that only the relevant activities (tracks, markers, and heatmap density) are displayed, providing a focused analytical context without altering the screen's visual structure.
 
 ## Proposed Changes
 
-### [Component] Storage & Preferences
+### [Component] Architecture & Data Layer
 
-#### [MODIFY] [MyPreferenceManager.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/MyPreferenceManager.kt)
-- **Delete** `IS_HEATMAP_ENABLED` key.
-- **Delete** `isHeatmapEnabledFlow`.
-- **Delete** `setHeatmapEnabled` function.
+#### [MODIFY] [PeriodData.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodData.kt)
+- **Update** `PeriodSummary`: Add `anchorIdToPolylineMap: Map<Long, String>` (or use `workoutIdToPolylineMap` for anchors as well) to allow sport-aware filtering of instant anchor tracks.
+- **Update** `PeriodMapState`: Change `heatmapPaths: List<List<LatLng>>` to `workoutIdToHeatmapPathMap: Map<Long, List<LatLng>>` to enable ID-based filtering of the heatmap layer.
 
-### [Component] Periods Module UI & Logic
+#### [MODIFY] [PeriodsRepository.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsRepository.kt)
+- **Update** `enrich` to ensure all spatial data is mapped to workout IDs.
+
+### [Component] Logic Layer (ViewModel)
 
 #### [MODIFY] [PeriodsViewModel.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsViewModel.kt)
-- **Remove** `toggleHeatmapEnabled()`.
-- **Remove** `isHeatmapEnabled` state flow.
+- **Update** `showPeriodMap` to populate the ID-mapped paths in `PeriodMapState`.
 
-#### [MODIFY] [PeriodsTabsScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsTabsScreen.kt)
-- **Remove** `isHeatmapEnabled` and `onToggleHeatmapEnabled` from parameters.
-- **Delete** the `Whatshot` `IconButton` from the header.
-- **Hardcode** `isHeatmapEnabled = true` when calling `PeriodList` and `PeriodSummaryCard`.
+### [Component] UI & Map Layer
 
 #### [MODIFY] [PeriodMapScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodMapScreen.kt)
-- **Remove** `isHeatmapEnabled` and `onToggleHeatmapEnabled` from parameters.
-- **Delete** the `Whatshot` (MODE TOGGLE) `Surface` button from the map overlay.
-- **Hardcode** `isHeatmapEnabled = true` when calling `InteractivePeriodMap`.
+- **Retain** the existing header layout (Period details above Sport rows).
+- **Refine Filtering**: Ensure `InteractivePeriodMap` receives only the data that matches the user's `selectedSports`.
+- **Pass** filtered tracks, markers, and heatmap paths to the map component.
 
-#### [MODIFY] [PeriodsFragment.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsFragment.kt)
-- **Update** Composable calls to reflect the removed parameters.
-
-#### [MODIFY] [PeriodSummaryCard.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodSummaryCard.kt)
-- **Remove** `isHeatmapEnabled` from `PeriodSummaryCard` and `PeriodMultiWorkoutMap` parameters.
-- **Hardcode** `isHeatmapEnabled = true` in the internal map logic.
+#### [MODIFY] [InteractivePeriodMap.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/InteractivePeriodMap.kt)
+- **Update** to render only the filtered data provided by the screen layer.
+- **Ensure** anchor tracks utilize the correct sport-type colors/styling.
 
 ## Verification Plan
 
 ### Manual Verification
-- **TST-PER-010 (Jira: ATT-460)**:
-    1. Open the **Periods** screen.
-    2. **Verify** that the flame icon (Heatmap toggle) is no longer visible in the header.
-    3. Navigate to a specific **Period Map**.
-    4. **Verify** that the toggle button in the map overlay is gone.
-    5. Navigate to **Map Settings** and toggle "Show Heatmap".
-    6. Return to Periods and **Verify** the map correctly reflects the global change.
-
-### Automated Checks
-- Static audit to ensure no unused `onToggleHeatmapEnabled` lambda parameters remain in the `periodlist` package.
+- **TST-PER-012 (Jira: ATT-466)**:
+    1. Open a **Period Detail Map**.
+    2. **Verify** sport rows are at the top.
+    3. **Tap** "Cycling" -> Map shows only bike paths.
+    4. **Tap** "Running" -> Map shows only run paths.
+    5. **Toggle Both** -> Map shows all.
+    6. **Verify** heatmap intensity changes as sports are filtered.

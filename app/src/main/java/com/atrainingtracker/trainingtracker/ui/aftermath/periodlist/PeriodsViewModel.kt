@@ -37,7 +37,7 @@ import kotlinx.coroutines.withContext
  */
 data class PeriodMapState(
     val tracks: List<MapTrack> = emptyList(),
-    val heatmapPaths: List<List<LatLng>> = emptyList(),
+    val workoutIdToHeatmapPathMap: Map<Long, List<LatLng>> = emptyMap(),
     val memberMarkers: List<PeriodPeakMarker> = emptyList(),
     val isLoading: Boolean = false,
 )
@@ -98,9 +98,9 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             // 2. Background Processing
             withContext(Dispatchers.Default) {
                 val tracks = workouts.map { it.toMapTrack().copy(isVisible = true) }
-                val heatmapPaths = workouts.mapNotNull { 
-                    if (it.mapPolyline.isNotEmpty()) PolyUtil.decode(it.mapPolyline) else null 
-                }
+                val heatmapPathMap = workouts.associate { w ->
+                    w.id to if (w.mapPolyline.isNotEmpty()) PolyUtil.decode(w.mapPolyline) else emptyList()
+                }.filterValues { it.isNotEmpty() }
                 
                 // Pre-calculate member markers (SCRUM-199 style)
                 val markers = workouts.flatMap { w ->
@@ -122,7 +122,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
 
                 _mapState.value = PeriodMapState(
                     tracks = tracks,
-                    heatmapPaths = heatmapPaths,
+                    workoutIdToHeatmapPathMap = heatmapPathMap,
                     memberMarkers = markers,
                     isLoading = false
                 )
