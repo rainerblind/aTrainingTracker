@@ -64,10 +64,10 @@ import com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDia
 import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsFragment;
 import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaUploadFragment;
 import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ActivityTypeSelectionHelper;
-import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ConfigTrackingTabsActivity;
 import com.atrainingtracker.trainingtracker.ui.settings.units.UnitsSettingsDialogFragment;
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
+import kotlin.Unit;
 import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
@@ -866,8 +866,17 @@ public class MainActivityWithNavigation
 
             case R.id.drawer_tracking_layouts:
                 mDrawerLayout.closeDrawer(GravityCompat.START);
-                Intent configIntent = new Intent(this, ConfigTrackingTabsActivity.class);
-                startActivity(configIntent);
+                ActivityTypeSelectionHelper.showSelectionDialog(
+                        getSupportFragmentManager(),
+                        activityType -> {
+                            mFragment = TrackingTabsFragment.newInstance(activityType);
+                            getSupportFragmentManager().beginTransaction()
+                                    .replace(R.id.content, mFragment, TrackingTabsFragment.TAG)
+                                    .addToBackStack(null)
+                                    .commit();
+                            return Unit.INSTANCE;
+                        }
+                );
                 return false;
 
             case R.id.drawer_units:

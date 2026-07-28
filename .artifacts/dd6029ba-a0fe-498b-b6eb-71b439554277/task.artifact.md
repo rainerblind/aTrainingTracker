@@ -1,6 +1,7 @@
-- `[x]` Fix Database Upgrade Crash (ATT-283)
-    - `[x]` Remove redundant `setTransactionSuccessful()` in `onUpgrade` v20
-    - `[x]` Cleanup redundant nested transaction in `onUpgrade` v11
-    - `[x]` Verify changes via static audit and build
+- `[x]` Fix Navigation ActivityNotFoundException (ATT-409)
+    - `[x]` Refactor `MainActivityWithNavigation.java` drawer selection
+    - `[x]` Delete redundant navigation classes
+    - `[x]` Update `AndroidManifest.xml`
+    - `[x]` Verify via manual audit and build
     - `[x]` Document verification results in Jira
     - `[x]` Create final walkthrough and commit message
