@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 @Composable
 fun InteractivePeriodMap(
     summary: PeriodSummary,
+    mapState: PeriodMapState, // ATT-440: Adoption of discrete MapState
     isHeatmapEnabled: Boolean = true,
     onWorkoutClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
@@ -60,9 +61,6 @@ fun InteractivePeriodMap(
         summary.polylines.map { PolyUtil.decode(it) }
     }
     
-    // Remaining heatmap data (workoutIdToPathMap) is populated lazily by ViewModel background task
-    val fullPaths = summary.workoutIdToPathMap.values.toList()
-
     val fallbackColor = MaterialTheme.colorScheme.primary
 
     ATrainingTrackerMap(
@@ -93,10 +91,21 @@ fun InteractivePeriodMap(
                 )
             }
             markers(markersList)
+            
+            // 3. Render Additional Detail from MapState (ATT-440 Cluster algorithm)
+            if (!mapState.isLoading) {
+                // Add member traces
+                mapState.tracks.forEach { track ->
+                    path(track, alpha = 0.3f, onPathClick = { onWorkoutClick(it) })
+                }
+                
+                // Add member markers
+                markers(mapState.memberMarkers)
+            }
 
-            // 3. Render full heatmap as it becomes ready in the background
-            if (isHeatmapEnabled && fullPaths.isNotEmpty()) {
-                heatmap(fullPaths, opacity = 0.8)
+            // 4. Render full heatmap as it becomes ready in the background
+            if (isHeatmapEnabled && mapState.heatmapPaths.isNotEmpty()) {
+                heatmap(mapState.heatmapPaths, opacity = 0.8)
             }
         }
     )

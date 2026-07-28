@@ -1,6 +1,6 @@
-- `[x]` Instant Map Zoom Optimization (ATT-440 Refinement)
-    - `[x]` Refactor `ATrainingTrackerMap.kt`: Implement `MapEffect` for immediate `initialBounds` fitting
-    - `[x]` Refactor `InteractivePeriodMap.kt`: Decouple zoom reset from background data updates
-    - `[x]` Refactor `MapBehaviors.kt`: Enable aggressive camera fitting before `onMapLoaded`
-    - `[x]` Verify sub-second zoom on real-world data
+- `[x]` Direct Source Synchronization (ATT-440 Final Refinement)
+    - `[x]` Refactor `PeriodsViewModel.kt`: Switch path aggregation to direct workout history observation
+    - `[x]` Refactor `PeriodsViewModel.kt`: Implement non-cancelling incremental aggregation loop
+    - `[x]` Verify zoom behavior is preserved in `InteractivePeriodMap.kt`
+    - `[x]` Manual verification of complete heatmap population (TST-PERF-008)
     - `[x]` Create walkthrough artifact

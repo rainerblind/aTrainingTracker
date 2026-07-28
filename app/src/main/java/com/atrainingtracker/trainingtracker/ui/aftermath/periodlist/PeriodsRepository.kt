@@ -622,7 +622,15 @@ class PeriodsRepository private constructor(private val application: Application
     }
 
     private fun fetchWorkoutsInDay(startS: Long): List<WorkoutData> {
-        val cursor = workoutSummariesManager.getWorkoutsInRangeCursor(startS, startS + 86399)
+        return getWorkoutsForRange(startS, startS + 86399)
+    }
+
+    /**
+     * ATT-440: Direct database-driven workout fetching for a specific time range.
+     * Guaranteed "Source of Truth" independent of progressive history scans.
+     */
+    fun getWorkoutsForRange(startS: Long, endS: Long): List<WorkoutData> {
+        val cursor = workoutSummariesManager.getWorkoutsInRangeCursor(startS, endS)
         val mapper = com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper(
             application, workoutSummariesManager,
             com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(application),
@@ -630,8 +638,13 @@ class PeriodsRepository private constructor(private val application: Application
             com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper(application)
         )
         val list = mutableListOf<WorkoutData>()
-        if (cursor.moveToFirst()) { do { list.add(mapper.fromCursor(cursor)) } while (cursor.moveToNext()) }
-        cursor.close()
+        cursor?.use { c ->
+            if (c.moveToFirst()) {
+                do {
+                    list.add(mapper.fromCursor(c))
+                } while (c.moveToNext())
+            }
+        }
         return list
     }
 

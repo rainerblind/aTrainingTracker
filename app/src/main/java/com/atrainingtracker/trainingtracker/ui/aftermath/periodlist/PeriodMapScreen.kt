@@ -92,6 +92,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun PeriodMapScreen(
     summary: PeriodSummary,
+    mapState: PeriodMapState, // ATT-440: Adoption of discrete MapState
     isHeatmapEnabled: Boolean,
     onToggleHeatmapEnabled: () -> Unit,
     enabledMarkerTypes: Set<PeriodMarkerType>,
@@ -307,6 +308,7 @@ fun PeriodMapScreen(
                         workoutIdToPathMap = filteredPaths,
                         extremaMarkers = filteredMarkers
                     ),
+                    mapState = mapState,
                     isHeatmapEnabled = isHeatmapEnabled,
                     onWorkoutClick = onWorkoutClick,
                     modifier = Modifier.fillMaxSize(),

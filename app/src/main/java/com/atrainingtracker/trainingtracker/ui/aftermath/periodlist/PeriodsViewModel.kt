@@ -22,10 +22,25 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
-import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import com.atrainingtracker.trainingtracker.ui.map.*
+import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/**
+ * Encapsulates the UI state for the period detail map (ATT-440).
+ * Matches the robust loading pattern used in Workout Clusters.
+ */
+data class PeriodMapState(
+    val tracks: List<MapTrack> = emptyList(),
+    val heatmapPaths: List<List<LatLng>> = emptyList(),
+    val memberMarkers: List<LocationMarker> = emptyList(),
+    val isLoading: Boolean = false,
+)
 
 class PeriodsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -41,7 +56,12 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     )
 
     private val _selectedPeriod = MutableStateFlow<PeriodSummary?>(null)
-    private val _periodPaths = MutableStateFlow<Map<Long, List<com.google.android.gms.maps.model.LatLng>>>(emptyMap())
+    val selectedPeriod = _selectedPeriod.asStateFlow()
+
+    private val _mapState = MutableStateFlow(PeriodMapState())
+    val mapState = _mapState.asStateFlow()
+
+    private var selectionJob: Job? = null
 
     val isHeatmapEnabled: StateFlow<Boolean> = prefManager.isHeatmapEnabledFlow
         .stateIn(
@@ -62,53 +82,6 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             initialValue = setOf(PeriodMarkerType.ALTITUDE, PeriodMarkerType.DISTANCE)
         )
 
-    /**
-     * ATT-440: Reactive pipeline that provides the selected period summary enriched with
-     * simplified path data that "grows" as background loading progresses.
-     */
-    val selectedPeriod: StateFlow<PeriodSummary?> = combine(
-        _selectedPeriod,
-        _periodPaths
-    ) { selected, paths ->
-        selected?.copy(workoutIdToPathMap = paths)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-
-    init {
-        // --- REACTIVE PATH AGGREGATION (ATT-440 Refinement) ---
-        // We observe the selected period and the global grouped periods from the repository.
-        // As the repository enriches the summaries in background, we decode the new polylines.
-        viewModelScope.launch {
-            combine(_selectedPeriod, periodsRepo.groupedPeriods) { selected, allGroups ->
-                if (selected == null) return@combine null
-                // Find the LATEST version of our selected period in the enriched groups
-                allGroups.flatten().find { 
-                    it.periodType == selected.periodType && it.startTimestampS == selected.startTimestampS 
-                }
-            }.collectLatest { enriched ->
-                if (enriched == null) {
-                    _periodPaths.value = emptyMap()
-                    return@collectLatest
-                }
-
-                val currentPaths = _periodPaths.value.toMutableMap()
-                var changed = false
-
-                // Decode ALL polylines available in the enriched summary
-                enriched.workoutIdToPolylineMap.forEach { (id, polyline) ->
-                    if (!currentPaths.containsKey(id)) {
-                        // PERFORMANCE: Polyline decoding is much faster than DB re-sampling
-                        currentPaths[id] = PolyUtil.decode(polyline)
-                        changed = true
-                    }
-                }
-
-                if (changed) {
-                    _periodPaths.value = currentPaths
-                }
-            }
-        }
-    }
-
     fun toggleHeatmapEnabled() {
         viewModelScope.launch {
             prefManager.setHeatmapEnabled(!isHeatmapEnabled.value)
@@ -123,12 +96,51 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun showPeriodMap(summary: PeriodSummary) {
+        selectionJob?.cancel()
         _selectedPeriod.value = summary
+        
+        selectionJob = viewModelScope.launch {
+            _mapState.value = PeriodMapState(isLoading = true)
+            
+            // ATT-440: Adoption of Cluster loading algorithm
+            // 1. Fetch Source of Truth for the range (Guaranteed completeness)
+            val workouts = withContext(Dispatchers.IO) {
+                periodsRepo.getWorkoutsForRange(summary.startTimestampS, summary.endTimestampS)
+            }
+            
+            // 2. Background Processing
+            withContext(Dispatchers.Default) {
+                val tracks = workouts.map { it.toMapTrack().copy(isVisible = true) }
+                val heatmapPaths = workouts.mapNotNull { 
+                    if (it.mapPolyline.isNotEmpty()) PolyUtil.decode(it.mapPolyline) else null 
+                }
+                
+                // Pre-calculate member markers (SCRUM-199 style)
+                val markers = workouts.flatMap { w ->
+                    val list = mutableListOf<LocationMarker>()
+                    val onMarkerClick: () -> Boolean = {
+                        selectWorkoutForPeek(w.id)
+                        true
+                    }
+                    w.startLatLng?.let { list.add(LocationMarker(it, R.drawable.control_start, alpha = 0.3f, onClick = onMarkerClick)) }
+                    w.endLatLng?.let { list.add(LocationMarker(it, R.drawable.control_stop, alpha = 0.3f, onClick = onMarkerClick)) }
+                    list
+                }
+
+                _mapState.value = PeriodMapState(
+                    tracks = tracks,
+                    heatmapPaths = heatmapPaths,
+                    memberMarkers = markers,
+                    isLoading = false
+                )
+            }
+        }
     }
 
     fun dismissPeriodMap() {
+        selectionJob?.cancel()
         _selectedPeriod.value = null
-        _periodPaths.value = emptyMap()
+        _mapState.value = PeriodMapState()
     }
 
     // Observe summarized periods and migration status from Repository

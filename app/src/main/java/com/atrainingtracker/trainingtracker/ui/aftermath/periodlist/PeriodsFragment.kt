@@ -76,8 +76,10 @@ class PeriodsFragment : Fragment() {
                     val listStates = List(groups.size) { rememberLazyListState() }
 
                     if (selectedPeriod != null) {
+                        val mapState by viewModel.mapState.collectAsStateWithLifecycle()
                         PeriodMapScreen(
                             summary = selectedPeriod!!,
+                            mapState = mapState,
                             isHeatmapEnabled = isHeatmapEnabled,
                             onToggleHeatmapEnabled = { viewModel.toggleHeatmapEnabled() },
                             enabledMarkerTypes = enabledMarkerTypes,
