@@ -122,8 +122,9 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
                         selectWorkoutForPeek(w.id)
                         true
                     }
-                    w.startLatLng?.let { list.add(LocationMarker(it, R.drawable.control_start, alpha = 0.3f, onClick = onMarkerClick)) }
-                    w.endLatLng?.let { list.add(LocationMarker(it, R.drawable.control_stop, alpha = 0.3f, onClick = onMarkerClick)) }
+                    w.startLatLng?.let { list.add(LocationMarker(it, R.drawable.control_start, alpha = 0.5f, onClick = onMarkerClick)) }
+                    w.endLatLng?.let { list.add(LocationMarker(it, R.drawable.control_stop, alpha = 0.5f, onClick = onMarkerClick)) }
+                    w.maxDisplacementLatLng?.let { list.add(LocationMarker(it, R.drawable.ic_distance, alpha = 0.5f, onClick = onMarkerClick)) }
                     list
                 }
 

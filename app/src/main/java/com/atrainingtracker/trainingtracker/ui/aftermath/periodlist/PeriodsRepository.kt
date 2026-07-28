@@ -755,6 +755,7 @@ class PeriodsRepository private constructor(private val application: Application
                 val markers = mutableListOf<PeriodPeakMarker>()
                 workout.startLatLng?.let { markers.add(PeriodPeakMarker(workout.id, it, R.drawable.control_start, "${workout.workoutName}: Start", PeriodMarkerType.START)) }
                 workout.endLatLng?.let { markers.add(PeriodPeakMarker(workout.id, it, R.drawable.control_stop, "${workout.workoutName}: End", PeriodMarkerType.END)) }
+                workout.maxDisplacementLatLng?.let { markers.add(PeriodPeakMarker(workout.id, it, R.drawable.ic_distance, "${workout.workoutName}: Apex", PeriodMarkerType.DISTANCE)) }
                 markers
             }
         )

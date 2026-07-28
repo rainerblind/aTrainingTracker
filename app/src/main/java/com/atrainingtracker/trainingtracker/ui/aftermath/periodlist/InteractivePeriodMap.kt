@@ -87,6 +87,7 @@ fun InteractivePeriodMap(
                 LocationMarker(
                     position = marker.pos, iconResId = marker.iconResId, title = marker.title,
                     iconDescriptor = createSensorMarker(context, marker.iconResId, color, Color.White),
+                    alpha = 0.5f, // ATT-440: Align alpha with member markers for consistent zoom blending
                     onClick = { onWorkoutClick(marker.workoutId); true }
                 )
             }
