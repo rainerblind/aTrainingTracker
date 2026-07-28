@@ -250,7 +250,9 @@ fun ClusterItem(
                                     val isHeatmap = cluster.previewPaths.size > 1
 
                                     cluster.previewPaths.forEach { polyline ->
-                                        val points = remember(polyline) { PolyUtil.decode(polyline) }
+                                        val points = remember(polyline) { 
+                                            try { PolyUtil.decode(polyline) } catch (e: Exception) { emptyList() }
+                                        }
                                         if (points.isNotEmpty()) {
                                             Polyline(
                                                 points = points,
@@ -265,7 +267,9 @@ fun ClusterItem(
 
                                     // --- RENDER AUTHORITATIVE ROUTE (ATT-255) ---
                                     cluster.routePolyline?.let { polyline ->
-                                        val points = remember(polyline) { PolyUtil.decode(polyline) }
+                                        val points = remember(polyline) { 
+                                            try { PolyUtil.decode(polyline) } catch (e: Exception) { emptyList() }
+                                        }
                                         if (points.isNotEmpty()) {
                                             Polyline(
                                                 points = points,

@@ -1,6 +1,5 @@
-- `[x]` ATT-441: Persistent Cluster Previews
-    - `[x]` Update Database Schema (v8) and `WorkoutCluster` DTO
-    - `[x]` Refactor `refreshClusters` to utilize persistent previews
-    - `[x]` Implement silent preview updates in `WorkoutClusterEngine`
-    - `[ ]` Verification (TST-PERF-010: Restart Audit)
-    - `[ ]` Final Documentation (Walkthrough & Commit Message)
+- `[x]` ATT-441-FIX: Robust Preview Path Serialization
+    - `[x]` Update Database Schema (v9) with `JSONArray` serialization in `WorkoutClusterDatabaseManager.kt`
+    - `[x]` Implement defensive decoding in `WorkoutClusterComponents.kt`
+    - `[x]` Verification (Build & Crash Audit)
+    - `[x]` Final Documentation (Walkthrough & Commit Message)

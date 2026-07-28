@@ -25,6 +25,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.provider.BaseColumns
 import com.atrainingtracker.banalservice.BSportType
+import org.json.JSONArray
 
 data class WorkoutCluster(
     val id: Long = 0,
@@ -276,8 +277,25 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         put(WorkoutClusterContract.COLUMN_BOUND_MAX_LNG, cluster.maxLng)
     }
 
-    private fun serializePreviewPaths(paths: List<String>): String = paths.joinToString("|")
-    private fun deserializePreviewPaths(serialized: String): List<String> = if (serialized.isEmpty()) emptyList() else serialized.split("|")
+    private fun serializePreviewPaths(paths: List<String>): String {
+        val array = JSONArray()
+        paths.forEach { array.put(it) }
+        return array.toString()
+    }
+
+    private fun deserializePreviewPaths(serialized: String): List<String> {
+        if (serialized.isEmpty()) return emptyList()
+        return try {
+            val array = JSONArray(serialized)
+            val list = mutableListOf<String>()
+            for (i in 0 until array.length()) {
+                list.add(array.getString(i))
+            }
+            list
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
 
     object WorkoutClusterContract {
         const val TABLE_NAME = "RouteClusters" // Keep existing table name to avoid migration for now
@@ -324,7 +342,7 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
     }
 
     private class WorkoutClusterDbHelper(context: Context) : SQLiteOpenHelper(
-        context, "RouteClusters.db", null, 8
+        context, "RouteClusters.db", null, 9
     ) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(WorkoutClusterContract.CREATE_TABLE)
@@ -355,6 +373,11 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
             if (oldVersion < 8) {
                 db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_PREVIEW_PATHS} TEXT")
                 db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_ROUTE_POLYLINE} TEXT")
+            }
+
+            if (oldVersion < 9) {
+                // Clear corrupted piped-strings from v8 to force clean JSON re-enrichment
+                db.execSQL("UPDATE ${WorkoutClusterContract.TABLE_NAME} SET ${WorkoutClusterContract.COLUMN_PREVIEW_PATHS} = NULL")
             }
         }
     }

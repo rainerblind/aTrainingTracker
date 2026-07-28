@@ -1,41 +1,28 @@
-# Walkthrough - ATT-441: Persistent Cluster Previews & Silent Restart
+# Walkthrough - ATT-441-FIX: Robust Preview Path Serialization
 
-Successfully implemented relational persistence for Workout Cluster previews. This ensures that the heavy spatial enrichment pass (calculating preview paths and linking routes) runs exactly once. Once completed, results are stored in the database, allowing for near-instant, silent refreshes even after an app restart.
-
-## Fulfilled Requirements
-
-| ID | Description | Rationale |
-|:---|:---|:---|
-| **REQ-PER-006** | The system SHALL display a detailed progress notification during the full recalculation or migration of Workout Clusters. | Provide technical transparency for heavy operations while maintaining silent routine navigation. |
+Successfully resolved the `StringIndexOutOfBoundsException` in `PolyUtil.decode` by implementing robust JSON-based serialization for Workout Cluster previews. This fix eliminates delimiter collisions and ensures UI stability even if individual track data becomes corrupted.
 
 ## Changes Made
 
-### 🗄️ Database Persistence (v8)
+### 🗄️ Robust Database Persistence (v9)
 
 #### [WorkoutClusterDatabaseManager.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterDatabaseManager.kt)
-- **Schema Update**: Bumped `DB_VERSION` to **8** and introduced `preview_paths` (TEXT) and `route_polyline` (TEXT) columns to the `RouteClusters` table.
-- **Serialization**: Implemented piped-string serialization (`path1|path2|...`) to efficiently store multiple encoded polylines in a single TEXT field.
+- **JSON Migration**: Replaced the ambiguous piped-string delimiter (`|`) with `org.json.JSONArray`. Since `|` is a valid character in the polyline algorithm, it was previously causing single polylines to be incorrectly fragmented.
+- **Corrupted Data Cleanup**: Bumped `DB_VERSION` to **9** and added migration logic to clear the `preview_paths` column. This forces a clean re-enrichment pass to ensure all stored previews follow the new JSON format.
 
-### 🚀 Optimized Repository Refresh
+### 🛡️ Defensive UI Layer
 
-#### [WorkoutClusterRepository.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterRepository.kt)
-- **Persistent Data First**: Refactored `refreshClusters()` to check for existing preview data in the database.
-- **Conditional Enrichment**: The "Phase 2: Previews" analysis now only triggers if the database columns are empty. Once completed, the results are persisted back to the DB.
-- **Silent Restart**: Upon app restart, the repository finds the cached data and displays the cluster list instantly, bypassing the `migrationStatus` UI entirely.
-
-### 🔄 Real-Time Preview Maintenance
-
-#### [WorkoutClusterEngine.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterEngine.kt)
-- **Surgical Updates**: Updated `assignClusterToWorkout` to perform a silent, O(1) preview refresh whenever a new workout is recorded. This keeps the "Last 5" previews current in the database without ever showing a progress card.
+#### [WorkoutClusterComponents.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterComponents.kt)
+- **Safe Decoding**: Wrapped all calls to `PolyUtil.decode` in `try-catch` blocks. If a polyline fails to decode due to unforeseen data corruption, the system now returns an empty list instead of crashing the application thread.
 
 ## Verification Results
 
-### Performance Verification (SWE.5)
-- **Test ID**: TST-PERF-010 (Persistent Previews Audit)
-- **Result**: **PASS**.
-    - **Fresh Load**: Progress notification appears once to analyze history.
-    - **Restart**: After force-closing and restarting, the "My Locations" screen opens **instantly** with all map previews populated and **zero notification flickering**.
-    - **Live Update**: Recorded a new session; verified that the cluster preview updated silently to include the latest track.
+### Stability Verification (SWE.5)
+- **Crash Audit**: **FIXED**.
+    - Verified that navigating to the "My Locations" screen no longer triggers a `StringIndexOutOfBoundsException`.
+    - Confirmed that the "Phase 2" enrichment pass completes successfully and re-populates the previews in the new JSON format.
+- **Persistence Audit**: **PASS**.
+    - Killed and restarted the app; verified that the cluster list appears instantly and silently with all previews intact.
 
 > [!TIP]
-> This optimization completes the "Auto Name / Route Clusters" vision by providing a solid, stable analytical foundation that respects the user's time and device resources.
+> This fix hardens the analytical foundation of the Clusters module, ensuring that complex route visualizations remain stable across all device types and data states.
