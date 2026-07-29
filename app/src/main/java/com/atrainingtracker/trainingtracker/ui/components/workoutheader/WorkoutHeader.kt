@@ -46,6 +46,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 
 @Composable
 fun WorkoutHeader(
@@ -81,7 +82,7 @@ fun WorkoutHeader(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 12.dp, top = 8.dp, bottom = 4.dp, end = 4.dp),
+                    .padding(start = 12.dp, top = 8.dp, bottom = 4.dp, end = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 // 1. TOP ROW: Sport Icon and Workout Name
@@ -106,6 +107,28 @@ fun WorkoutHeader(
 
                     // Spacer for the Menu Button area
                     Spacer(modifier = Modifier.width(32.dp))
+                }
+
+                // --- Workout Cluster Info (ATT-388): Positioned directly below the name ---
+                val clusterLabel = data.clusterName ?: stringResource(R.string.unclustered)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.my_locations),
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+                    )
+                    Text(
+                        text = clusterLabel,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
+                        fontWeight = if (data.clusterName != null) FontWeight.Bold else FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
 
                 // 2. BOTTOM CONTENT: Organized in horizontal rows
@@ -150,11 +173,13 @@ fun WorkoutHeader(
                 ) {
                     IconTextRow(
                         iconRes = R.drawable.ic_date_start,
-                        text = data.formattedDate
+                        text = data.formattedDate,
+                        color = MaterialTheme.colorScheme.primary
                     )
                     IconTextRow(
                         iconRes = R.drawable.ic_time_start,
-                        text = data.formattedTime
+                        text = data.formattedTime,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -275,17 +300,19 @@ fun WorkoutHeader(
  * Helper to mimic the drawableStart + drawablePadding behavior from your XML
  */
 @Composable
-private fun IconTextRow(iconRes: Int, text: String) {
+private fun IconTextRow(iconRes: Int, text: String, color: Color = MaterialTheme.colorScheme.onSurfaceVariant) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             painter = painterResource(id = iconRes),
             contentDescription = null,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(18.dp),
+            tint = color
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = text,
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.bodyMedium,
+            color = color
         )
     }
 }

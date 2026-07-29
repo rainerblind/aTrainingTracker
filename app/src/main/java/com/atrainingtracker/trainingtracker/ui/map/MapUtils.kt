@@ -242,33 +242,74 @@ fun densifyPath(path: List<LatLng>, maxDistanceMeters: Double): List<LatLng> {
 
 /**
  * Creates a HeatmapTileProvider with the standard training heatmap styling.
+ * @param radius The radius of the heatmap points in pixels.
+ * @param maxPoints The maximum number of points to process. If exceeded, the path will be thinned.
+ * @param weight The weight assigned to each point. Lower weights result in 'thinner' looking lines.
  */
 fun createHeatmapProvider(
     allPaths: List<List<LatLng>>,
     opacity: Double = 0.8,
-    radius: Int = 10
+    radius: Int = 10,
+    densifyInterval: Double = 5.0,
+    maxPoints: Int = 10000,
+    weight: Double = 1.0,
+    startIntensity: Float = 0.55f,
+    maxIntensity: Double? = null
 ): com.google.maps.android.heatmaps.HeatmapTileProvider? {
     if (allPaths.isEmpty()) return null
 
-    val allPoints = allPaths.flatMap { path ->
-        densifyPath(path, 5.0).map { com.google.maps.android.heatmaps.WeightedLatLng(it, 2.0) }
+    // 1. Calculate raw point count to determine thinning factor
+    val rawPointCount = allPaths.sumOf { it.size }
+    
+    // ATT-342 Refinement: Use a more aggressive thinning factor calculation
+    // to ensure we always stay well within the maxPoints budget.
+    val thinningFactor = if (rawPointCount > maxPoints) {
+        (rawPointCount / (maxPoints * 0.9)).toInt().coerceAtLeast(1)
+    } else 1
+
+    // 2. Collect points with strictly enforced thinning (ATT-342)
+    val allPoints = ArrayList<com.google.maps.android.heatmaps.WeightedLatLng>()
+
+    for (path in allPaths) {
+        if (path.isEmpty()) continue
+        
+        // ATT-342: If we are thinning, we MUST NOT densify as it adds more points.
+        val processedPath = if (thinningFactor > 1) {
+            path.filterIndexed { index, _ -> index % thinningFactor == 0 }
+        } else {
+            densifyPath(path, densifyInterval)
+        }
+
+        for (point in processedPath) {
+            if (allPoints.size >= maxPoints) break
+            allPoints.add(com.google.maps.android.heatmaps.WeightedLatLng(point, weight))
+        }
+        if (allPoints.size >= maxPoints) break
     }
 
     if (allPoints.isEmpty()) return null
 
     // Modern sequential Blue gradient (Cyan -> Blue -> Deep Indigo)
+    // ATT-342 Fix: Ensure startPoints are ALWAYS in increasing order to avoid IllegalArgumentException.
     val colors = intArrayOf(
         0xFF00E5FF.toInt(), // Low density: Vibrant Cyan
         0xFF0000FF.toInt(), // Medium: The "Identity" Blue
         0xFF311B92.toInt()  // High density: Deep Indigo
     )
-    val startPoints = floatArrayOf(0.2f, 0.6f, 1.0f)
+    
+    // Dynamically calculate intermediate points based on the provided startIntensity
+    val midPoint = (startIntensity + 1.0f) / 2f
+    val startPoints = floatArrayOf(startIntensity.coerceIn(0.01f, 0.9f), midPoint, 1.0f)
     val gradient = com.google.maps.android.heatmaps.Gradient(colors, startPoints)
 
-    return com.google.maps.android.heatmaps.HeatmapTileProvider.Builder()
+    val builder = com.google.maps.android.heatmaps.HeatmapTileProvider.Builder()
         .weightedData(allPoints)
         .opacity(opacity)
         .radius(radius)
         .gradient(gradient)
-        .build()
+    
+    // ATT-342: Support manual max intensity for visual sharpening
+    maxIntensity?.let { builder.maxIntensity(it) }
+
+    return builder.build()
 }

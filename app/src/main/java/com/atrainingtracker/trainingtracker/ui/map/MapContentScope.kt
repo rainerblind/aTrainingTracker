@@ -16,10 +16,15 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import com.atrainingtracker.banalservice.BSportType
 import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.heatmaps.HeatmapTileProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * A DSL scope for defining the content of the ATrainingTrackerMap.
@@ -51,7 +56,13 @@ interface MapContentScope {
 
     fun markers(markers: List<LocationMarker>)
     fun liveTrack(path: List<LatLng>)
-    fun heatmap(allPaths: List<List<LatLng>>, opacity: Double = 0.8)
+    fun heatmap(
+        allPaths: List<List<LatLng>>, 
+        opacity: Double = 0.8, 
+        radius: Int? = null,
+        densifyInterval: Double? = null,
+        maxPoints: Int? = null
+    )
 
     @Composable
     fun Render(currentZoom: Float)
@@ -80,7 +91,13 @@ internal class MapContentScopeImpl(
     val markers = mutableStateListOf<LocationMarker>()
     val currentTracks = mutableStateListOf<List<LatLng>>()
 
-    private data class HeatmapData(val allPaths: List<List<LatLng>>, val opacity: Double)
+    private data class HeatmapData(
+        val allPaths: List<List<LatLng>>, 
+        val opacity: Double, 
+        val radius: Int?,
+        val densifyInterval: Double?,
+        val maxPoints: Int?
+    )
     private val heatmaps = mutableStateListOf<HeatmapData>()
 
     private data class ContextualPathData(val path: MappablePath, val alpha: Float)
@@ -99,6 +116,71 @@ internal class MapContentScopeImpl(
 
     @Composable
     override fun Render(currentZoom: Float) {
+        val steppedZoom = remember(currentZoom) { currentZoom.toInt().toFloat() }
+
+        // ATT-342 Final Refinement: Total Path Priority & Marker Culling
+        val trackAlpha: Float
+        val markerAlphaMult: Float
+        val heatmapWeight: Double
+        val heatmapStartIntensity: Float
+        val heatmapMaxIntensity: Double
+
+        when {
+            steppedZoom < 13 -> {
+                trackAlpha = 0.4f; markerAlphaMult = 0.0f; heatmapWeight = 0.005; heatmapStartIntensity = 0.2f; heatmapMaxIntensity = 20.0
+            }
+            steppedZoom <= 15 -> {
+                trackAlpha = 0.8f; markerAlphaMult = 0.2f; heatmapWeight = 0.001; heatmapStartIntensity = 0.4f; heatmapMaxIntensity = 60.0
+            }
+            steppedZoom <= 16 -> {
+                trackAlpha = 1.0f; markerAlphaMult = 0.6f; heatmapWeight = 0.0005; heatmapStartIntensity = 0.5f; heatmapMaxIntensity = 100.0
+            }
+            else -> {
+                trackAlpha = 1.0f; markerAlphaMult = 1.0f; heatmapWeight = 0.0002; heatmapStartIntensity = 0.6f; heatmapMaxIntensity = 200.0
+            }
+        }
+
+        var anyHeatmapLoading = false
+        val providers = heatmaps.map { data ->
+            // Async generation of the heatmap provider to keep UI responsive.
+            val provider by produceState<HeatmapTileProvider?>(
+                initialValue = null, 
+                data.allPaths, 
+                data.opacity, 
+                steppedZoom, 
+                data.radius, 
+                data.densifyInterval, 
+                data.maxPoints,
+                heatmapWeight,
+                heatmapStartIntensity,
+                heatmapMaxIntensity
+            ) {
+                val effectiveRadius = data.radius ?: (10 + (steppedZoom - 12).coerceAtLeast(0f) * 4.0f).toInt().coerceIn(10, 50)
+                val effectiveInterval = data.densifyInterval ?: when {
+                    steppedZoom < 10 -> 200.0
+                    steppedZoom < 12 -> 100.0
+                    steppedZoom < 14 -> 50.0
+                    else -> 10.0
+                }
+                val effectiveMaxPoints = data.maxPoints ?: 15000
+                
+                value = withContext(Dispatchers.Default) {
+                    createHeatmapProvider(
+                        data.allPaths,
+                        data.opacity,
+                        radius = effectiveRadius,
+                        densifyInterval = effectiveInterval,
+                        maxPoints = effectiveMaxPoints,
+                        weight = heatmapWeight,
+                        startIntensity = heatmapStartIntensity,
+                        maxIntensity = heatmapMaxIntensity
+                    )
+                }
+            }
+            if (provider == null) anyHeatmapLoading = true
+            provider
+        }
+
         // 1. Contextual Paths (Background)
         contextualPaths.forEach { data ->
             MappablePathLayer(
@@ -141,9 +223,16 @@ internal class MapContentScopeImpl(
 
         // 4. Tracks
         trackData.forEach { data ->
+            // ATT-342 Refinement: Use dynamic trackAlpha for better blending as we zoom in.
+            val effectiveAlpha = if (anyHeatmapLoading && heatmaps.isNotEmpty()) {
+                (data.alpha * 2.5f).coerceAtMost(0.9f)
+            } else {
+                data.alpha * trackAlpha
+            }
+
             MappablePathLayer(
                 path = data.path,
-                alpha = data.alpha,
+                alpha = effectiveAlpha,
                 currentZoom = currentZoom,
                 context = context,
                 directionIcons = directionIcons,
@@ -153,7 +242,13 @@ internal class MapContentScopeImpl(
 
         // 5. Markers
         if (markers.isNotEmpty()) {
-            MarkerLayer(markers, primaryColor, context)
+            // ATT-342 Refinement: Dynamically adjust member marker visibility
+            val adjustedMarkers = markers.map { marker ->
+                if (marker.alpha < 1.0f) {
+                    marker.copy(alpha = marker.alpha * markerAlphaMult)
+                } else marker
+            }
+            MarkerLayer(adjustedMarkers, primaryColor, context)
         }
 
         // 6. Live Tracks
@@ -162,10 +257,7 @@ internal class MapContentScopeImpl(
         }
 
         // 7. Heatmaps
-        heatmaps.forEach { data ->
-            val provider = remember(data.allPaths, data.opacity) {
-                createHeatmapProvider(data.allPaths, data.opacity)
-            }
+        providers.forEach { provider ->
             provider?.let {
                 com.google.maps.android.compose.TileOverlay(tileProvider = it)
             }
@@ -224,7 +316,7 @@ internal class MapContentScopeImpl(
         this.currentTracks.add(path)
     }
 
-    override fun heatmap(allPaths: List<List<LatLng>>, opacity: Double) {
-        this.heatmaps.add(HeatmapData(allPaths, opacity))
+    override fun heatmap(allPaths: List<List<LatLng>>, opacity: Double, radius: Int?, densifyInterval: Double?, maxPoints: Int?) {
+        this.heatmaps.add(HeatmapData(allPaths, opacity, radius, densifyInterval, maxPoints))
     }
 }

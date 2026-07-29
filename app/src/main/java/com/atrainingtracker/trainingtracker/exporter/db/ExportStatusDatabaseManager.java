@@ -48,6 +48,7 @@ public class ExportStatusDatabaseManager {
     private static final String TAG = "ExportStatusRepo";
     private static ExportStatusDatabaseManager sInstance;
     private final ExportStatusDbHelper mDbHelper;
+    private SQLiteDatabase mDatabase = null;
 
 
     public static final String FORMAT = "Format";
@@ -64,6 +65,27 @@ public class ExportStatusDatabaseManager {
             sInstance = new ExportStatusDatabaseManager(context.getApplicationContext());
         }
         return sInstance;
+    }
+
+    /**
+     * Returns a writable database instance and ensures it remains open.
+     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
+     */
+    public SQLiteDatabase getDatabase() {
+        if (mDatabase != null && mDatabase.isOpen()) {
+            return mDatabase;
+        }
+        synchronized (this) {
+            if (mDatabase != null && mDatabase.isOpen()) {
+                return mDatabase;
+            }
+            // If the database was closed, ensure the helper clears its reference
+            if (mDatabase != null) {
+                mDbHelper.close();
+            }
+            mDatabase = mDbHelper.getWritableDatabase();
+            return mDatabase;
+        }
     }
 
 

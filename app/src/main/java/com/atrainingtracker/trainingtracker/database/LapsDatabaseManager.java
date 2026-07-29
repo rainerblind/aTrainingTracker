@@ -40,6 +40,7 @@ public class LapsDatabaseManager {
 
     private static LapsDbHelper cLapsDbHelper;
     private static volatile LapsDatabaseManager cInstance;
+    private SQLiteDatabase mDatabase = null;
 
     // Private constructor to prevent direct instantiation
     private LapsDatabaseManager(@NonNull Context context) {
@@ -67,13 +68,24 @@ public class LapsDatabaseManager {
     }
 
     /**
-     * Returns a writable database instance, managed by the helper.
-     * This is the only method that should be used to get a database object.
-     * It's thread-safe.
-     * @return A thread-safe SQLiteDatabase instance.
+     * Returns a writable database instance and ensures it remains open.
+     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
      */
     public SQLiteDatabase getDatabase() {
-        return cLapsDbHelper.getWritableDatabase();
+        if (mDatabase != null && mDatabase.isOpen()) {
+            return mDatabase;
+        }
+        synchronized (this) {
+            if (mDatabase != null && mDatabase.isOpen()) {
+                return mDatabase;
+            }
+            // If the database was closed, ensure the helper clears its reference
+            if (mDatabase != null) {
+                cLapsDbHelper.close();
+            }
+            mDatabase = cLapsDbHelper.getWritableDatabase();
+            return mDatabase;
+        }
     }
 
     // --- End of Singleton Pattern ---

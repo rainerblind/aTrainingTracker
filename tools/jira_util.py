@@ -6,7 +6,7 @@ import os
 import sys
 from urllib.parse import urlencode
 
-# Transitions for SCRUM project
+# Transitions for ATT project
 TRANSITIONS = {
     "todo": "11",
     "in_progress": "21",
@@ -192,7 +192,7 @@ def create_subtask(parent_key, summary, description):
     url = f"{config['JIRA_URL']}/rest/api/2/issue"
     payload = {
         "fields": {
-            "project": {"key": "SCRUM"},
+            "project": {"key": "ATT"},
             "parent": {"key": parent_key},
             "summary": summary,
             "description": description,
@@ -202,9 +202,25 @@ def create_subtask(parent_key, summary, description):
     data = jira_request(url, method="POST", payload=payload)
     print(f"Sub-task {data['key']} created for parent {parent_key}.")
 
+def create_issue(summary, description, issuetype_id="10005", parent_key=None):
+    config = get_config()
+    url = f"{config['JIRA_URL']}/rest/api/2/issue"
+    fields = {
+        "project": {"key": "ATT"},
+        "summary": summary,
+        "description": description,
+        "issuetype": {"id": issuetype_id}
+    }
+    if parent_key:
+        fields["parent"] = {"key": parent_key}
+
+    payload = {"fields": fields}
+    data = jira_request(url, method="POST", payload=payload)
+    print(f"Issue {data['key']} created.")
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: jira_util.py [list | show KEY | move KEY todo|in_progress|in_review|done | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC]")
+        print("Usage: jira_util.py [list | show KEY | move KEY todo|in_progress|in_review|done | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY]]")
         sys.exit(1)
 
     cmd = sys.argv[1]
@@ -226,5 +242,11 @@ if __name__ == "__main__":
         update_issue_description(sys.argv[2], sys.argv[3])
     elif cmd == "create-subtask" and len(sys.argv) == 5:
         create_subtask(sys.argv[2], sys.argv[3], sys.argv[4])
+    elif cmd == "create-issue" and len(sys.argv) >= 4:
+        summary = sys.argv[2]
+        desc = sys.argv[3]
+        type_id = sys.argv[4] if len(sys.argv) >= 5 else "10005"
+        parent = sys.argv[5] if len(sys.argv) == 6 else None
+        create_issue(summary, desc, type_id, parent)
     else:
         print("Invalid command or arguments.")

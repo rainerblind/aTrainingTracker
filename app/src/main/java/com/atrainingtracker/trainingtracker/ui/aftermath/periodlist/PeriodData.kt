@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
 
 enum class PeriodType {
     DAY, WEEK, MONTH, YEAR
@@ -36,11 +37,25 @@ data class PeriodSummary(
     val endTimestampS: Long,         // End of the period in seconds
     val totalWorkouts: Int,
     val totalDurationSec: Long,
+    val totalDistance: Double,
     val sportStats: Map<BSportType, SportStats>,
-    val polylines: List<String>, // List of encoded polylines for the map
-    val workoutIdToPolylineMap: Map<Long, String>, // ID -> Encoded Polyline
+    
+    // Fast Outline Metadata (ATT-346)
+    val minLat: Double = 90.0,
+    val minLng: Double = 180.0,
+    val maxLat: Double = -90.0,
+    val maxLng: Double = -180.0,
+    val longestId: Long = -1L,
+    val longestDurationS: Long = 0,
+    val northId: Long = -1L,
+    val southId: Long = -1L,
+    val eastId: Long = -1L,
+    val westId: Long = -1L,
+
+    val polylines: List<String> = emptyList(), // List of encoded polylines for the map
+    val workoutIdToPolylineMap: Map<Long, String> = emptyMap(), // ID -> Encoded Polyline
     val workoutIdToPathMap: Map<Long, List<com.google.android.gms.maps.model.LatLng>> = emptyMap(), // ID -> Rich Path
-    val workoutIdToSportMap: Map<Long, BSportType>,
+    val workoutIdToSportMap: Map<Long, BSportType> = emptyMap(),
     val extremaMarkers: List<PeriodPeakMarker> = emptyList(),
     val sortKey: String // Used for sorting
 )
@@ -59,7 +74,7 @@ data class SportStats(
     val totalDistanceMeters: Double,
     val totalAscentMeters: Long,
     val detailedSportStats: Map<String, DetailedStats>, // Key is sportName
-    val longestWorkout: LongestWorkout?
+    var longestWorkout: LongestWorkout?
 )
 
 data class DetailedStats(

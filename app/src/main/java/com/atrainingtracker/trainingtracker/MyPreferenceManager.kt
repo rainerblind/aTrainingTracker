@@ -24,6 +24,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMarkerType
+import com.atrainingtracker.trainingtracker.ui.clusters.ClusterMarkerType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -34,8 +35,8 @@ class MyPreferenceManager(context: Context) {
 
     companion object {
         val IS_COMPACT_VIEW = booleanPreferencesKey("is_compact_view")
-        val IS_HEATMAP_ENABLED = booleanPreferencesKey("is_heatmap_enabled")
         val ENABLED_PERIOD_MARKER_TYPES = stringSetPreferencesKey("enabled_period_marker_types")
+        val ENABLED_CLUSTER_MARKER_TYPES = stringSetPreferencesKey("enabled_cluster_marker_types")
         val ENABLED_TRACK_TYPES = stringSetPreferencesKey("enabled_track_types")
     }
 
@@ -46,16 +47,6 @@ class MyPreferenceManager(context: Context) {
     suspend fun setCompactView(isCompact: Boolean) {
         dataStore.edit { preferences ->
             preferences[IS_COMPACT_VIEW] = isCompact
-        }
-    }
-
-    val isHeatmapEnabledFlow: Flow<Boolean> = dataStore.data.map { preferences ->
-        preferences[IS_HEATMAP_ENABLED] ?: true // Default to enabled
-    }
-
-    suspend fun setHeatmapEnabled(enabled: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[IS_HEATMAP_ENABLED] = enabled
         }
     }
 
@@ -74,6 +65,26 @@ class MyPreferenceManager(context: Context) {
             )
             val updated = if (enabled) current + type else current - type
             preferences[ENABLED_PERIOD_MARKER_TYPES] = updated
+        }
+    }
+
+    val enabledClusterMarkerTypesFlow: Flow<Set<String>> = dataStore.data.map { preferences ->
+        preferences[ENABLED_CLUSTER_MARKER_TYPES] ?: setOf(
+            ClusterMarkerType.START.name,
+            ClusterMarkerType.END.name,
+            ClusterMarkerType.DISTANCE.name
+        )
+    }
+
+    suspend fun setClusterMarkerTypeEnabled(type: String, enabled: Boolean) {
+        dataStore.edit { preferences ->
+            val current = preferences[ENABLED_CLUSTER_MARKER_TYPES] ?: setOf(
+                ClusterMarkerType.START.name,
+                ClusterMarkerType.END.name,
+                ClusterMarkerType.DISTANCE.name
+            )
+            val updated = if (enabled) current + type else current - type
+            preferences[ENABLED_CLUSTER_MARKER_TYPES] = updated
         }
     }
 

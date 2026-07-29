@@ -1,0 +1,5 @@
+- `[x]` ATT-441-FIX: Robust Preview Path Serialization
+    - `[x]` Update Database Schema (v9) with `JSONArray` serialization in `WorkoutClusterDatabaseManager.kt`
+    - `[x]` Implement defensive decoding in `WorkoutClusterComponents.kt`
+    - `[x]` Verification (Build & Crash Audit)
+    - `[x]` Final Documentation (Walkthrough & Commit Message)

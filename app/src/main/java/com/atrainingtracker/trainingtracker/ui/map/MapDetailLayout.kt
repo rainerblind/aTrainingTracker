@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.R
@@ -40,8 +41,11 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
 import com.atrainingtracker.trainingtracker.ui.components.MinimumDragHandle
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * A unified layout for screen-level map details (Aftermath, Routes, Segments).
@@ -53,6 +57,7 @@ fun MapDetailLayout(
     bSportType: BSportType,
     zoomFocus: MapZoomFocus,
     activeScrubPath: List<PathPoint>?,
+    initialBounds: LatLngBounds? = null,
     minAltitudeOverride: Double? = null,
     maxAltitudeOverride: Double? = null,
     header: @Composable () -> Unit,
@@ -106,6 +111,7 @@ fun MapDetailLayout(
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 ATrainingTrackerMap(
                     zoomFocus = zoomFocus,
+                    initialBounds = initialBounds,
                     bSportType = bSportType,
                     currentLocationFlow = noLocation,
                     selectedDistance = selectedDistance,
@@ -116,11 +122,15 @@ fun MapDetailLayout(
                     onSnapshotReady = { mapBitmap ->
                         scope.launch {
                             val hBmp = if (headerLayer.size.width > 0 && headerLayer.size.height > 0) {
-                                headerLayer.toImageBitmap().asAndroidBitmap()
+                                withContext(Dispatchers.Default) {
+                                    headerLayer.toImageBitmap().asAndroidBitmap()
+                                }
                             } else null
                             
                             val eBmp = if (elevationLayer.size.width > 0 && elevationLayer.size.height > 0) {
-                                elevationLayer.toImageBitmap().asAndroidBitmap()
+                                withContext(Dispatchers.Default) {
+                                    elevationLayer.toImageBitmap().asAndroidBitmap()
+                                }
                             } else null
 
                             combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp)
@@ -138,7 +148,7 @@ fun MapDetailLayout(
 
                 // SHARE BUTTON
                 Surface(
-                    onClick = { isSharing = true },
+                    onClick = { if (!isSharing) isSharing = true },
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(16.dp)
@@ -149,12 +159,20 @@ fun MapDetailLayout(
                     tonalElevation = 2.dp
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Share",
-                            modifier = Modifier.size(22.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                        if (isSharing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = stringResource(R.string.share),
+                                modifier = Modifier.size(22.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
             }

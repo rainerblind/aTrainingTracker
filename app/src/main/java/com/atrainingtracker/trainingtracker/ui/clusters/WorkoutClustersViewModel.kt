@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
@@ -29,22 +30,33 @@ import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
-import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import com.atrainingtracker.trainingtracker.ui.map.*
 import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.PolyUtil
+import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/**
+ * Encapsulates the UI state for the cluster detail map (ATT-359).
+ * Pre-calculating this in the background prevents main-thread jank.
+ */
+data class ClusterMapState(
+    val tracks: List<MapTrack> = emptyList(),
+    val heatmapPaths: List<List<LatLng>> = emptyList(),
+    val memberMarkers: List<ClusterPeakMarker> = emptyList(),
+    val isLoading: Boolean = false
+)
 
 class WorkoutClustersViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -52,6 +64,7 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
     private val routesRepository = RoutesRepository.getInstance(application)
     private val banalRepository = BANALServiceRepository.getInstance(application)
     private val discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(application)
+    private val preferenceManager = MyPreferenceManager(application)
 
     val allClusters: StateFlow<List<WorkoutCluster>> = repository.allClusters
     val currentLocation: StateFlow<LatLng?> = banalRepository.currentLocation
@@ -59,17 +72,39 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
     private val _clusterWorkouts = MutableStateFlow<List<WorkoutData>>(emptyList())
     val clusterWorkouts: StateFlow<List<WorkoutData>> = _clusterWorkouts.asStateFlow()
 
+    val migrationStatus: StateFlow<MigrationStatus?> = repository.migrationStatus
+
     private val _unclusteredWorkouts = MutableStateFlow<List<WorkoutData>>(emptyList())
     val unclusteredWorkouts: StateFlow<List<WorkoutData>> = _unclusteredWorkouts.asStateFlow()
 
+    private var selectionJob: Job? = null
+
     private val _linkedRoute = MutableStateFlow<RouteWithPath?>(null)
     val linkedRoute: StateFlow<RouteWithPath?> = _linkedRoute.asStateFlow()
+
+    private val _mapState = MutableStateFlow(ClusterMapState())
+    val mapState: StateFlow<ClusterMapState> = _mapState.asStateFlow()
 
     private val _selectedCluster = MutableStateFlow<WorkoutCluster?>(null)
     val selectedCluster: StateFlow<WorkoutCluster?> = _selectedCluster.asStateFlow()
 
     private val _isRecalculating = MutableStateFlow(false)
     val isRecalculating: StateFlow<Boolean> = _isRecalculating.asStateFlow()
+
+    val enabledMarkerTypes: StateFlow<Set<ClusterMarkerType>> = preferenceManager.enabledClusterMarkerTypesFlow
+        .map { strings ->
+            strings.mapNotNull {
+                try { ClusterMarkerType.valueOf(it) } catch (e: Exception) { null }
+            }.toSet()
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ClusterMarkerType.entries.toSet())
+
+    fun toggleMarkerType(type: ClusterMarkerType) {
+        viewModelScope.launch {
+            val enabled = enabledMarkerTypes.value.contains(type)
+            preferenceManager.setClusterMarkerTypeEnabled(type.name, !enabled)
+        }
+    }
 
     private val _recalculationFinished = MutableSharedFlow<Unit>()
     val recalculationFinished: SharedFlow<Unit> = _recalculationFinished.asSharedFlow()
@@ -78,6 +113,7 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
     var endpointTolerance by mutableStateOf(TrainingApplication.getClusterTolEndpoints())
     var apexTolerance by mutableStateOf(TrainingApplication.getClusterTolApex())
     var distanceTolerance by mutableStateOf(TrainingApplication.getClusterTolDistance())
+    var useSportTypeForClustering by mutableStateOf(TrainingApplication.useSportTypeForClustering())
 
     init {
         refresh()
@@ -100,28 +136,64 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
                 .putFloat(TrainingApplication.SP_CLUSTER_TOL_ENDPOINTS, endpointTolerance)
                 .putFloat(TrainingApplication.SP_CLUSTER_TOL_APEX, apexTolerance)
                 .putFloat(TrainingApplication.SP_CLUSTER_TOL_DISTANCE, distanceTolerance)
+                .putBoolean(TrainingApplication.SP_CLUSTER_USE_SPORT_TYPE, useSportTypeForClustering)
                 .apply()
 
-            withContext(Dispatchers.IO) {
-                WorkoutClusterEngine.getInstance(getApplication())
-                    .recalculateHistory(getApplication())
-                repository.refreshClusters()
-            }
+            repository.recalculateClustersWithProgress()
+            
             _isRecalculating.value = false
             _recalculationFinished.emit(Unit)
         }
     }
 
     fun selectCluster(cluster: WorkoutCluster?) {
+        selectionJob?.cancel()
         _selectedCluster.value = cluster
+
         if (cluster != null) {
-            viewModelScope.launch {
-                _clusterWorkouts.value = repository.getWorkoutsForCluster(cluster.id)
+            selectionJob = viewModelScope.launch {
+                _mapState.update { it.copy(isLoading = true) }
+                val workouts = repository.getWorkoutsForCluster(cluster.id)
+                ensureActive()
+
+                _clusterWorkouts.value = workouts
                 _linkedRoute.value = routesRepository.getRouteByClusterId(cluster.id)
+                
+                // --- ATT-359: Background Map Processing ---
+                withContext(Dispatchers.Default) {
+                    val tracks = workouts.map { 
+                        ensureActive()
+                        it.toMapTrack().copy(isVisible = true) 
+                    }
+                    val heatmapPaths = workouts.mapNotNull { 
+                        ensureActive()
+                        if (it.mapPolyline.isNotEmpty()) PolyUtil.decode(it.mapPolyline) else null 
+                    }
+                    
+                    // Pre-calculate markers to avoid UI jank (SCRUM-199)
+                    val markers = workouts.flatMap { w ->
+                        ensureActive()
+                        val list = mutableListOf<ClusterPeakMarker>()
+
+                        val application = getApplication<Application>()
+                        w.startLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.control_start, application.getString(R.string.start), ClusterMarkerType.START)) }
+                        w.endLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.control_stop, application.getString(R.string.end), ClusterMarkerType.END)) }
+                        w.maxDisplacementLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.ic_distance, application.getString(R.string.max_line_distance), ClusterMarkerType.DISTANCE)) }
+                        list
+                    }
+
+                    _mapState.value = ClusterMapState(
+                        tracks = tracks,
+                        heatmapPaths = heatmapPaths,
+                        memberMarkers = markers,
+                        isLoading = false
+                    )
+                }
             }
         } else {
             _clusterWorkouts.value = emptyList()
             _linkedRoute.value = null
+            _mapState.value = ClusterMapState()
             clearPeekSelection()
         }
     }
@@ -171,7 +243,7 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
         val apex = workout.maxDisplacementLatLng ?: return emptyList()
         
         return WorkoutClusterEngine.getInstance(getApplication())
-            .getClusterScores(start, end, apex, workout.totalDistance, workout.workoutName)
+            .getClusterScores(start, end, apex, workout.totalDistance, workout.workoutName, workout.bSportType)
     }
 
     fun moveWorkout(workout: WorkoutData, newClusterId: Long) {
@@ -184,12 +256,19 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
             
             // Refresh state
             repository.refreshClusters()
+            
+            // Since moveWorkout in engine updates the DB directly, we must ensure memory is refreshed.
+            // WorkoutRepository handles this via its internal reload logic if assignClusterToWorkout is used,
+            // but engine.moveWorkoutToCluster also updates names.
 
             // Update both UI lists immediately
             _selectedCluster.value?.let { current ->
                 _clusterWorkouts.value = repository.getWorkoutsForCluster(current.id)
             }
             _unclusteredWorkouts.value = repository.getUnclusteredWorkouts()
+            
+            // Critical: Refresh main history list to reflect the new cluster name/association (ATT-388)
+            WorkoutRepository.getInstance(getApplication()).reloadWorkoutData(workout.id)
         }
     }
 

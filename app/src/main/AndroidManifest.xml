@@ -117,18 +117,6 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".trainingtracker.ui.tracking.trackingtabs.ConfigTrackingTabsActivity"
-            android:exported="true"
-            android:label="@string/TrackingFragmentConfigActivityLabel"
-            android:launchMode="singleTask"
-            android:theme="@style/Theme.aTrainingTracker"
-            android:windowSoftInputMode="stateHidden">
-            <intent-filter>
-                <action android:name="com.atrainingtracker.trainingtracker.intent.action.ConfigureAllTrackingViews" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
 
         <activity
             android:name=".trainingtracker.activities.ZonesSettingsActivity"

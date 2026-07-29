@@ -68,6 +68,11 @@ data class SegmentSummary(
     val elevationMin: String,
     val elevationMax: String,
     val map_polyline: String,
+    // Persisted spatial bounds (ATT-352)
+    val minLat: Double? = null,
+    val minLng: Double? = null,
+    val maxLat: Double? = null,
+    val maxLng: Double? = null
 )
 
 data class SegmentWithPath(

@@ -38,9 +38,13 @@ import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+@OptIn(kotlinx.coroutines.FlowPreview::class)
 class EditWorkoutViewModel(application: Application, private val workoutId: Long) : AndroidViewModel(application) {
 
     private val repository = WorkoutRepository.getInstance(application)
@@ -82,6 +86,19 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     init {
         loadWorkoutData()
+
+        // Reactive Cluster Suggestions (ATT-447)
+        viewModelScope.launch {
+            _workoutData
+                .filterNotNull()
+                .distinctUntilChanged { old, new ->
+                    old.workoutName == new.workoutName && old.bSportType == new.bSportType
+                }
+                .debounce(500)
+                .collect { data ->
+                    fetchClusterSuggestions(data)
+                }
+        }
     }
 
     private fun loadWorkoutData() {
@@ -114,7 +131,6 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                 suggestedEquipmentName = data.equipmentName
                 updateSuggestedSportTypeNames(data)
                 updateSuggestedEquipmentNames(data.sportName)
-                fetchClusterSuggestions(data)
             }
         }
     }
@@ -291,12 +307,26 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         
         viewModelScope.launch {
             val suggestions = WorkoutClusterEngine.getInstance(getApplication())
-                .getClusterScores(start, end, apex, workout.totalDistance, workout.workoutName)
+                .getClusterScores(start, end, apex, workout.totalDistance, workout.workoutName, workout.bSportType)
             _clusterSuggestions.value = suggestions
         }
     }
 
     fun applyClusterIdentity(cluster: WorkoutCluster) {
+        _workoutData.update { current ->
+            current?.copy(
+                clusterId = cluster.id,
+                clusterName = cluster.name,
+                workoutName = application.getString(R.string.cluster_autoname_format, cluster.name, cluster.hitCount + 1),
+                sportId = cluster.probableSportId,
+                bSportType = cluster.bSportType
+            )
+        }
+        // Sync secondary UI states
+        suggestedSportTypeName = sportTypeDatabaseManager.getUIName(cluster.probableSportId)
+        currentBSportType = cluster.bSportType
+
+        // ATT-388: Persist the new cluster identity immediately
         repository.assignClusterToWorkout(workoutId, cluster.id)
     }
 

@@ -254,13 +254,23 @@ public class DeviceManager {
         mBanalService = banalService;
 
         mDevicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
+        
+        // ATT-353: Eager registration of the pressure sensor to ensure ID resolution works 
+        // on the very first run (Breaks the circular dependency).
+        mHavePressureSensor = HavePressureSensor.havePressureSensor(mContext);
+        if (mHavePressureSensor) {
+            mDevicesDatabaseManager.ensureSmartphoneDeviceExists(
+                    DeviceType.ALTITUDE_FROM_PRESSURE,
+                    mContext.getString(R.string.devices_altitude_from_pressure)
+            );
+        }
 
         mSensorManager = mySensorManager;
 
-        mHavePressureSensor = HavePressureSensor.havePressureSensor(mContext);
-
         mClockDevice = new ClockDevice(mContext, mSensorManager);
-        if (mHavePressureSensor) {
+        
+        long altitudePressureId = mDevicesDatabaseManager.getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_PRESSURE);
+        if (mHavePressureSensor && mDevicesDatabaseManager.isPaired(altitudePressureId)) {
             mAltitudeFromPressureDevice = new AltitudeFromPressureDevice(mContext, mSensorManager);
         }
 
@@ -383,6 +393,17 @@ public class DeviceManager {
                     mSpeedAndLocationDevice_Network.shutDown();
                     mSpeedAndLocationDevice_Network = null;
                 }
+            }
+            return;
+        }
+
+        long altitudePressureId = devicesDatabaseManager.getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_PRESSURE);
+        if (deviceId == altitudePressureId) {
+            if (paired && mAltitudeFromPressureDevice == null) {
+                mAltitudeFromPressureDevice = new AltitudeFromPressureDevice(mContext, mSensorManager);
+            } else if (!paired && mAltitudeFromPressureDevice != null) {
+                mAltitudeFromPressureDevice.shutDown();
+                mAltitudeFromPressureDevice = null;
             }
             return;
         }
@@ -552,6 +573,9 @@ public class DeviceManager {
 
         result.addAll(getActiveRemoteDevices());
         result.addAll(getActiveSpeedAndLocationDevices());
+        if (mAltitudeFromPressureDevice != null) {
+            result.add(mAltitudeFromPressureDevice);
+        }
 
         return result;
     }

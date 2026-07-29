@@ -268,6 +268,7 @@ class WorkoutClustersFragment : Fragment() {
                         }
                         else -> {
                             var workoutToCluster by remember { mutableStateOf<WorkoutData?>(null) }
+                            val migrationStatus by viewModel.migrationStatus.collectAsStateWithLifecycle()
 
                             WorkoutClustersTabsScreen(
                                 viewModel = viewModel,
@@ -282,7 +283,8 @@ class WorkoutClustersFragment : Fragment() {
                                 onHitCountClick = { viewingWorkoutsForCluster = it },
                                 onTuneClick = { isTuning = true },
                                 onAddClick = { isAdding = true },
-                                onDeleteRequest = { clusterToDelete = it }
+                                onDeleteRequest = { clusterToDelete = it },
+                                migrationStatus = migrationStatus
                             )
 
                             if (workoutToCluster != null) {

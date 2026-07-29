@@ -27,12 +27,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -48,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.google.android.gms.maps.model.JointType
+import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.RoundCap
 import com.google.maps.android.PolyUtil
 import com.google.maps.android.compose.*
@@ -65,7 +61,6 @@ import com.google.android.gms.maps.model.LatLngBounds
 fun PeriodSummaryCard(
     summary: PeriodSummary,
     isPlayServiceAvailable: Boolean,
-    isHeatmapEnabled: Boolean,
     onHeaderClick: (PeriodSummary) -> Unit,
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
@@ -180,11 +175,16 @@ fun PeriodSummaryCard(
                         .fillMaxWidth()
                         .height(250.dp)
                 ) {
+                    val bounds = remember(summary.minLat, summary.maxLat, summary.minLng, summary.maxLng) {
+                        if (summary.minLat < 90.0) {
+                            LatLngBounds(LatLng(summary.minLat, summary.minLng), LatLng(summary.maxLat, summary.maxLng))
+                        } else null
+                    }
+
                     PeriodMultiWorkoutMap(
-                        polylines = summary.polylines,
-                        periodType = summary.periodType,
-                        isHeatmapEnabled = isHeatmapEnabled,
-                        onMapClick = { onMapClick(summary) }
+                        summary = summary,
+                        onMapClick = { onMapClick(summary) },
+                        bounds = bounds
                     )
                     
                     // Bottom Scrim for visual transition
@@ -397,17 +397,18 @@ fun CompactMetricRow(label: String, count: Int, distance: String, duration: Stri
 
 @Composable
 private fun PeriodMultiWorkoutMap(
-    polylines: List<String>,
-    periodType: PeriodType,
-    isHeatmapEnabled: Boolean,
-    onMapClick: () -> Unit) {
-    // Decode all polylines once
-    val allPaths = remember(polylines) {
-        polylines.mapNotNull { if (it.isNotEmpty()) PolyUtil.decode(it) else null }
+    summary: PeriodSummary,
+    onMapClick: () -> Unit,
+    bounds: LatLngBounds? = null
+) {
+    // --- TIER 1: INSTANT ANCHORS ---
+    // Only render anchors in the summary card to prevent OOM when many maps exist in a list (ATT-440 Refinement)
+    val allPaths = remember(summary.polylines) {
+        summary.polylines.mapNotNull { if (it.isNotEmpty()) PolyUtil.decode(it) else null }
     }
 
-    val visuals = remember(allPaths, periodType, isHeatmapEnabled) {
-        getPeriodMapVisuals(periodType, allPaths, isHeatmapEnabled)
+    val visuals = remember(allPaths, summary.periodType) {
+        getPeriodMapVisuals(summary.periodType, allPaths, isInteractive = false)
     }
 
     if (allPaths.isEmpty()) {
@@ -418,25 +419,28 @@ private fun PeriodMultiWorkoutMap(
     }
 
     // 2. Calculate the Bounds for all points in all paths
-    val bounds = remember(allPaths) {
-        val builder = LatLngBounds.Builder()
-        var hasPoints = false
-        allPaths.forEach { path ->
-            path.forEach { point ->
-                builder.include(point)
-                hasPoints = true
+    val finalBounds = remember(allPaths, bounds) {
+        if (bounds != null) bounds
+        else {
+            val builder = LatLngBounds.Builder()
+            var hasPoints = false
+            allPaths.forEach { path ->
+                path.forEach { point ->
+                    builder.include(point)
+                    hasPoints = true
+                }
             }
+            if (hasPoints) builder.build() else null
         }
-        if (hasPoints) builder.build() else null
     }
 
     val cameraPositionState = rememberCameraPositionState()
     var isMapLoaded by remember { mutableStateOf(false) }
 
     // 3. Apply the zoom as soon as the map is loaded or bounds change
-    LaunchedEffect(bounds, isMapLoaded) {
+    LaunchedEffect(finalBounds, isMapLoaded) {
         if (isMapLoaded) {
-            bounds?.let {
+            finalBounds?.let {
                 try {
                     cameraPositionState.move(
                         CameraUpdateFactory.newLatLngBounds(it, 50) // 50dp padding
@@ -492,6 +496,7 @@ fun PreviewPeriodSummary() {
         endTimestampS = 15000,
         totalWorkouts = 5,
         totalDurationSec = 15400,
+        totalDistance = 103600.0,
         polylines = listOf("_p~iF~ps|U_ulLnnqC", "a~lF|ym|U_geC~izE"), // Mock short polylines
         sportStats = mapOf(
             BSportType.BIKE to SportStats(
@@ -525,7 +530,6 @@ fun PreviewPeriodSummary() {
         PeriodSummaryCard(
             summary = mockSummary,
             isPlayServiceAvailable = true,
-            isHeatmapEnabled = true,
             onHeaderClick = {},
             onMapClick = {},
             onSportClick = { _, _ ->},
@@ -545,6 +549,7 @@ fun PreviewEmptyPeriod() {
         endTimestampS = 0,
         totalWorkouts = 0,
         totalDurationSec = 0,
+        totalDistance = 0.0,
         polylines = emptyList(),
         sportStats = emptyMap(),
         sortKey = "",
@@ -556,7 +561,6 @@ fun PreviewEmptyPeriod() {
         PeriodSummaryCard(
             summary = emptySummary,
             isPlayServiceAvailable = false,
-            isHeatmapEnabled = true,
             onHeaderClick = {},
             onMapClick = {},
             onSportClick = { _, _ ->},

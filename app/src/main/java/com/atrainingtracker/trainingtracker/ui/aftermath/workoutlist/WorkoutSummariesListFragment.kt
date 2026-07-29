@@ -46,6 +46,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,8 +54,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
@@ -129,10 +130,8 @@ class WorkoutSummariesListFragment : Fragment() {
                     }
 
                     // 4. Implement Collapsing Header Logic for the Titles
-                    val density = LocalDensity.current
-
-                    val headerHeightDp = 110.dp
-                    val headerHeightPx = with(density) { headerHeightDp.roundToPx() }
+                    // ATT-446: Use dynamic height measurement for the header content
+                    var headerHeightPx by remember { mutableIntStateOf(0) }
 
                     val connection = remember(headerHeightPx) {
                         CollapsingAppBarNestedScrollConnection(headerHeightPx)
@@ -283,7 +282,13 @@ class WorkoutSummariesListFragment : Fragment() {
                                     Surface(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .offset { IntOffset(0, connection.appBarOffset) },
+                                            .offset { IntOffset(0, connection.appBarOffset) }
+                                            .onGloballyPositioned { 
+                                                // Only update if it significantly changed to avoid loops
+                                                if (headerHeightPx == 0) {
+                                                    headerHeightPx = it.size.height
+                                                }
+                                            },
                                         color = MaterialTheme.colorScheme.primaryContainer,
                                     ) {
                                         Row(

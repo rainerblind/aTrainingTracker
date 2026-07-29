@@ -31,13 +31,15 @@ import androidx.core.content.FileProvider
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import com.atrainingtracker.R
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 
 /**
  * Shares a summary consisting of a Header and a Map.
  */
-fun combineAndShare(context: Context, header: Bitmap, map: Bitmap) {
+suspend fun combineAndShare(context: Context, header: Bitmap, map: Bitmap) = withContext(Dispatchers.Default) {
     val sHeader = ensureSoftwareBitmap(header)
     val sMap = ensureSoftwareBitmap(map)
 
@@ -63,7 +65,7 @@ fun combineAndShare(context: Context, header: Bitmap, map: Bitmap) {
 /**
  * Shares a detailed workout consisting of a Header, Map, and Elevation profile.
  */
-fun combineWorkoutAndShare(context: Context, header: Bitmap?, map: Bitmap, elevation: Bitmap?) {
+suspend fun combineWorkoutAndShare(context: Context, header: Bitmap?, map: Bitmap, elevation: Bitmap?) = withContext(Dispatchers.Default) {
     val sHeader = header?.let { ensureSoftwareBitmap(it) }
     val sMap = ensureSoftwareBitmap(map)
     val sElevation = elevation?.let { ensureSoftwareBitmap(it) }
@@ -138,7 +140,7 @@ private fun drawFooter(context: Context, canvas: Canvas, width: Int, top: Float,
     canvas.drawText(appName, margin + logoSize + 20f, textY, textPaint)
 }
 
-private fun saveAndShare(context: Context, bitmap: Bitmap, fileName: String) {
+private suspend fun saveAndShare(context: Context, bitmap: Bitmap, fileName: String) = withContext(Dispatchers.IO) {
     val imagesFolder = File(context.cacheDir, "images")
     if (!imagesFolder.exists()) imagesFolder.mkdirs()
 
@@ -152,5 +154,7 @@ private fun saveAndShare(context: Context, bitmap: Bitmap, fileName: String) {
         clipData = ClipData.newRawUri("Summary", uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    context.startActivity(Intent.createChooser(intent, "Share with"))
+    withContext(Dispatchers.Main) {
+        context.startActivity(Intent.createChooser(intent, "Share with"))
+    }
 }

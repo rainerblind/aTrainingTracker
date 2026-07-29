@@ -1,32 +1,34 @@
-# Implementation Plan - SCRUM-129: Fix Database Schema Inconsistency
+# Implementation Plan: Direct Tracking Tab Selection (ATT-409)
 
-Resolve the `SQLiteException` by correcting the database `onCreate` and `onUpgrade` logic for the `ViewsTable`.
+Refactor the navigation drawer to show the Activity Type selection dialog directly, fulfilling REQ-SET-051 and resolving the fatal `ActivityNotFoundException` when launching the configuration cockpit.
 
-## 1. Requirements Mapping
-- **Requirement**: `REQ-PRO-005` (Database Schema Integrity)
-- **Test ID**: `TST-UNT-011` (TrackingViewsDb Integrity)
+## User Review Required
 
-## 2. Impact Analysis
-- **Core Component**: `TrackingViewsDatabaseManager.java`.
-- **Root Cause**: The `onCreate` method incorrectly uses `CREATE_VIEWS_TABLE_V9`, which is missing the `ShowElevationProfile` column introduced in Version 10. Fresh installations or certain upgrade paths results in a query crash when `TrackingViewsRepository.kt` expects this column.
-- **Risk**: Critical (Fatal crash on tracking screen).
-- **Side Effects**: This fix will stabilize all future installations and attempt to repair existing broken installations.
+> [!IMPORTANT]
+> - **Navigation Change**: This change will remove the intermediate `ConfigTrackingTabsActivity` from the drawer flow. Instead, a modal dialog will appear over the current screen to select the sport type.
+> - **In-App Configuration**: Selecting a sport will now replace the current fragment with the `TrackingTabsFragment` in configuration mode, keeping the user within `MainActivityWithNavigation` instead of jumping to a separate Activity.
 
-## 3. Proposed Changes
+## Proposed Changes
 
-### 3.1 Correct Schema Definitions (`TrackingViewsDatabaseManager.java`)
-- Define `CREATE_VIEWS_TABLE_V10` which includes `ShowElevationProfile`.
-- Update `onCreate` to use `CREATE_VIEWS_TABLE_V10`.
+### 1. UI Layer: Navigation Drawer Refactor
+#### [MODIFY] [MainActivityWithNavigation.java](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/activities/MainActivityWithNavigation.java)
+- **Requirement**: `REQ-SET-051` (Direct Tracking Tab Selection)
+- **Test**: `TST-NAV-003` (Direct Config Navigation)
+- **Changes**:
+    - Update the `drawer_tracking_layouts` case in `onNavigationItemSelected` to call `ActivityTypeSelectionHelper.showSelectionDialog()`.
+    - In the `onTypeSelected` callback, replace the current fragment with `TrackingTabsFragment.newInstance(activityType)`.
 
-### 3.2 Robust Migration (`TrackingViewsDatabaseManager.java`)
-- Refine the `onUpgrade` block for version 10:
-    - Use a helper method to check if the column exists before attempting to add it (idempotent migration).
-    - If the column is missing, execute the `ALTER TABLE` command and synchronize the default value with `ShowMap`.
+### 2. Cleanup: Remove Redundant Components
+#### [DELETE] [ConfigTrackingTabsActivity.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/trackingtabs/ConfigTrackingTabsActivity.kt)
+#### [DELETE] [ConfigTrackingTabsFragment.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/trackingtabs/ConfigTrackingTabsFragment.kt)
+#### [MODIFY] [AndroidManifest.xml](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/AndroidManifest.xml)
+- Remove the `<activity>` registration for `ConfigTrackingTabsActivity`.
 
-## 4. Verification Plan
-- **Unit Verification (v10 Fresh Install)**:
-    - Wipe data / Fresh install simulation.
-    - Verify that `ViewsTable` contains `ShowElevationProfile`.
-- **Integration Verification**:
-    - Launch the app and enter the Tracking screen.
-    - Verify that the query for tracking views no longer throws an exception.
+## Verification Plan
+
+### Manual Verification
+1.  **Drawer Interaction**: Open the navigation drawer and tap "Tracking Layouts".
+2.  **Dialog Visibility**: Verify that the "Select Activity Type" dialog appears immediately.
+3.  **Selection Flow**: Select "Cycling".
+4.  **Fragment Transition**: Verify that the screen switches to the tracking configuration cockpit for Cycling.
+5.  **Navigation Consistency**: Verify that pressing "Back" returns to the previous top-level fragment correctly.

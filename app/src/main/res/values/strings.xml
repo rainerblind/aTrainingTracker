@@ -1134,6 +1134,11 @@
         <item quantity="other">%1$d Workouts</item>
     </plurals>
     <string name="workout_periods__longest_workout">Longest Workout</string>
+    <string name="workout_periods__migration_title">Optimizing training history database…</string>
+    <string name="workout_periods__migration_querying">Querying training history…</string>
+    <string name="workout_periods__migration_reading">Reading workout %1$d of %2$d…</string>
+    <string name="workout_periods__migration_syncing">Syncing %1$s…</string>
+    <string name="workout_periods__migration_finalizing">Finalizing yearly totals…</string>
 
     <!-- share screenshots -->
     <string name="share">Share</string>
@@ -1202,6 +1207,8 @@
     <string name="cluster_tuning_distance_label">Distance Tolerance</string>
     <string name="cluster_tuning_recalculate_button">Recalculate All Clusters</string>
     <string name="cluster_tuning_warning">Warning: Recalculating will wipe all learned cluster names and grouping, then rebuild them from history using these new parameters.</string>
+    <string name="cluster_tuning_use_sport_type_label">Take Sport Type into account</string>
+    <string name="cluster_tuning_use_sport_type_summary">Isolate different activities (e.g. Run vs Bike) on the same route into separate families.</string>
     <string name="cluster_tuning_recalculating">Recalculating clusters…</string>
     <string name="cluster_tuning_take_while">This might take a while.</string>
 
@@ -1235,6 +1242,16 @@
     <string name="cluster_autoname_format">%1$s #%2$d</string>
     <string name="cluster_delete_title">Delete Workout Cluster</string>
     <string name="cluster_delete_message">Are you sure you want to delete this workout cluster? This will not delete the associated workouts, but they will no longer be grouped under this cluster.</string>
+    <string name="cluster_migration_title">Analyzing route families…</string>
+    <string name="cluster_migration_loading">Loading route families…</string>
+    <string name="cluster_migration_healing">Verifying history integrity…</string>
+    <string name="cluster_migration_previews">Preparing family previews (%1$d of %2$d)…</string>
+    <string name="cluster_migration_processing_routes">Processing routes…</string>
+    <string name="cluster_migration_processing_workouts">Processing workout %1$d of %2$d…</string>
+    <string name="cluster_migration_enriching">Enriching family metadata (%1$d of %2$d)…</string>
+    <string name="legacy_import__scanning_dropbox">Scanning %1$s on Dropbox…</string>
+    <string name="legacy_import__downloading_dropbox">Downloading %1$s from Dropbox…</string>
+    <string name="migration_phase_label">Phase %1$d: %2$s</string>
 
     <string name="all_sports">+ all sports +</string>
     <string name="all_equipment">+ all equipment +</string>
@@ -1245,4 +1262,41 @@
     <string name="unclustered">Unclustered</string>
     <string name="no_unclustered_workouts">All workouts are clustered.</string>
     <string name="error_sharing_failed">Unable to generate share image. Please try again.</string>
+    <string name="backup_restore">Backup \u0026 Restore</string>
+    <string name="backup_restore_summary">Migrate data or perform recovery</string>
+
+    <!-- Backup and Restore -->
+    <string name="import_backup">Import \u0026 Backup</string>
+    <string name="tab_import">Import</string>
+    <string name="tab_backup">Backup</string>
+    <string name="tab_restore">Restore</string>
+    <string name="import_backup_summary">Manage workout imports, backups, and data restoration</string>
+    <string name="create_backup">Create Backup</string>
+    <string name="restore_backup">Full Restore (Migration)</string>
+    <string name="import_workouts">Incremental Import (Merge)</string>
+    <string name="backup_success">Backup created successfully.</string>
+    <string name="backup_failed">Failed to create backup.</string>
+    <string name="restore_success">Restore successful. The app will now restart.</string>
+    <string name="restore_failed">Restore failed. Please ensure the file is valid.</string>
+    <string name="restore_warning_title">DANGER: Full Restore</string>
+    <string name="restore_warning_message">This will PERMANENTLY WIPE all current workouts, equipment, and settings on THIS phone and replace them with the data from the backup. Are you absolutely sure?</string>
+    <string name="import_finished_format">Import finished. Added %1$d new workouts.</string>
+    <string name="import_duplicate_skipping">Skipping existing workouts…</string>
+    <string name="import_processing_format">Importing %1$s…</string>
+    <string name="automated_backups">Automated Backups</string>
+    <string name="automated_backups_summary">Regularly upload backups to Dropbox</string>
+    <string name="backup_now">Backup Now</string>
+    <string name="last_backup">Last backup: %1$s</string>
+    <string name="backup_interval">Backup Interval</string>
+    <string name="backup_interval_daily">Daily</string>
+    <string name="backup_interval_3days">Every 3 days</string>
+    <string name="backup_interval_weekly">Weekly</string>
+    <string name="backup_interval_monthly">Monthly</string>
+    <string name="create_and_upload_to_dropbox">Create \u0026 Upload to Dropbox</string>
+    <string name="full_restore_description">Wipes all local data and replaces it with the content of the backup. Forces an app restart.</string>
+    <string name="incremental_import_description">Merges workouts from a backup into your current history. Workouts already present locally will be skipped.</string>
+    <string name="legacy_recovery_title">Workout Import</string>
+    <string name="legacy_recovery_description">Import your training history from TCX files (e.g., from a former device). This will skip existing records.</string>
+    <string name="scan_tcx">Scan Dropbox</string>
+    <string name="import_single_file">Import TCX File</string>
 </resources>

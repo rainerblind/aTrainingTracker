@@ -207,4 +207,33 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
 
         return activityData;
     }
+
+    /**
+     * Fetches Strava activity JSON data for a batch of workout filenames (ATT-359).
+     * Reduces O(N) queries to O(1).
+     */
+    public java.util.Map<String, String> getStravaActivityDataForWorkouts(java.util.Collection<String> fileNames) {
+        java.util.Map<String, String> results = new java.util.HashMap<>();
+        if (fileNames.isEmpty()) return results;
+
+        StringBuilder inClause = new StringBuilder();
+        for (String name : fileNames) {
+            if (inClause.length() > 0) inClause.append(",");
+            inClause.append("'").append(name).append("'");
+        }
+
+        String selection = WorkoutSummaries.FILE_BASE_NAME + " IN (" + inClause + ")";
+        
+        try (Cursor cursor = getReadableDatabase().query(TABLE, new String[]{WorkoutSummaries.FILE_BASE_NAME, STRAVA_ACTIVITY_DATA}, selection, null, null, null, null)) {
+            int nameIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME);
+            int dataIdx = cursor.getColumnIndexOrThrow(STRAVA_ACTIVITY_DATA);
+
+            while (cursor.moveToNext()) {
+                if (!cursor.isNull(dataIdx)) {
+                    results.put(cursor.getString(nameIdx), cursor.getString(dataIdx));
+                }
+            }
+        }
+        return results;
+    }
 }

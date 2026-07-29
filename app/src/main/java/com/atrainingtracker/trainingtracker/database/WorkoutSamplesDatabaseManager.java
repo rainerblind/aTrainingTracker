@@ -41,6 +41,7 @@ public class WorkoutSamplesDatabaseManager {
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
     private static volatile WorkoutSamplesDatabaseManager cInstance;
     private final WorkoutSamplesDbHelper cDbHelper;
+    private SQLiteDatabase mDatabase = null;
 
     private WorkoutSamplesDatabaseManager(@NonNull Context context) {
         this.cDbHelper = new WorkoutSamplesDbHelper(context);
@@ -59,10 +60,24 @@ public class WorkoutSamplesDatabaseManager {
     }
 
     /**
-     * Returns a writable database instance for the MAIN samples.db, managed by the helper.
+     * Returns a writable database instance and ensures it remains open.
+     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
      */
     public SQLiteDatabase getDatabase() {
-        return cDbHelper.getWritableDatabase();
+        if (mDatabase != null && mDatabase.isOpen()) {
+            return mDatabase;
+        }
+        synchronized (this) {
+            if (mDatabase != null && mDatabase.isOpen()) {
+                return mDatabase;
+            }
+            // If the database was closed, ensure the helper clears its reference
+            if (mDatabase != null) {
+                cDbHelper.close();
+            }
+            mDatabase = cDbHelper.getWritableDatabase();
+            return mDatabase;
+        }
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -123,8 +138,9 @@ public class WorkoutSamplesDatabaseManager {
                             null, // new String[] {sensorType.name()}, // selectionArgs,
                             null, null, null); // groupBy, having, orderBy)
 
-                    cursor.moveToFirst();
-                    extremaValue = cursor.getDouble(0);
+                    if (cursor.moveToFirst() && !cursor.isNull(0)) {
+                        extremaValue = cursor.getDouble(0);
+                    }
                     break;
 
                 case START:
@@ -208,6 +224,10 @@ public class WorkoutSamplesDatabaseManager {
             if (DEBUG) Log.i(TAG, "querying table: " + name);
 
             SQLiteDatabase samplesDb = getDatabase();
+            if (!existsTable(name) || !existsColumnInTable(samplesDb, getTableName(name), sensorType.name())) {
+                continue;
+            }
+
             Cursor samplesCursor = samplesDb.query(getTableName(name), // Table
                     new String[]{SensorType.LATITUDE.name(), SensorType.LONGITUDE.name(), sensorType.name()}, // columns
                     SensorType.LATITUDE.name() + " > ? AND " +
@@ -314,6 +334,10 @@ public class WorkoutSamplesDatabaseManager {
             SQLiteDatabase samplesDb = getDatabase();
             Cursor cursor = null;
 
+            if (!existsTable(baseFileName) || !existsColumnInTable(samplesDb, getTableName(baseFileName), sensorType.name())) {
+                return null;
+            }
+
             // depending on the extremaType, there are two alternative ways to find the corresponding row
             switch (extremaType) {
                 case MIN:
@@ -391,6 +415,11 @@ public class WorkoutSamplesDatabaseManager {
 
     public void deleteWorkout(String baseFileName) {
         getDatabase().execSQL("drop table if exists " + getTableName(baseFileName));
+    }
+
+    public boolean existsTable(String baseFileName) {
+        if (baseFileName == null) return false;
+        return existsColumnInTable(getDatabase(), getTableName(baseFileName), WorkoutSamplesDbHelper.TIME);
     }
 
     // stolen from http://stackoverflow.com/questions/4719594/checking-if-a-column-exists-in-an-application-database-in-android

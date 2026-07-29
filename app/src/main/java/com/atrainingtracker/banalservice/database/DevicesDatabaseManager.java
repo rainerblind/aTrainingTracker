@@ -60,6 +60,7 @@ public class DevicesDatabaseManager {
     private static volatile DevicesDatabaseManager cInstance;
     private final DevicesDbHelper cDevicesDbHelper;
     private final Context mContext;
+    private SQLiteDatabase mDatabase = null;
 
     private DevicesDatabaseManager(@NonNull Context context) {
         this.mContext = context.getApplicationContext();
@@ -78,8 +79,25 @@ public class DevicesDatabaseManager {
         return cInstance;
     }
 
+    /**
+     * Returns a writable database instance and ensures it remains open.
+     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
+     */
     public SQLiteDatabase getDatabase() {
-        return cDevicesDbHelper.getWritableDatabase();
+        if (mDatabase != null && mDatabase.isOpen()) {
+            return mDatabase;
+        }
+        synchronized (this) {
+            if (mDatabase != null && mDatabase.isOpen()) {
+                return mDatabase;
+            }
+            // If the database was closed, ensure the helper clears its reference
+            if (mDatabase != null) {
+                cDevicesDbHelper.close();
+            }
+            mDatabase = cDevicesDbHelper.getWritableDatabase();
+            return mDatabase;
+        }
     }
     // --- End of Singleton Pattern ---
 
@@ -729,7 +747,7 @@ public class DevicesDatabaseManager {
         return getSmartphoneDeviceId(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
     }
 
-    protected long getSmartphoneDeviceId(DeviceType deviceType) {
+    public long getSmartphoneDeviceId(DeviceType deviceType) {
         Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
                 new String[]{DevicesDbHelper.C_ID},
                 DevicesDbHelper.PROTOCOL + "=? AND " + DevicesDbHelper.DEVICE_TYPE + "=?",
@@ -744,6 +762,22 @@ public class DevicesDatabaseManager {
         cursor.close();
 
         return  deviceId;
+    }
+
+    /**
+     * ATT-353: Ensures an internal smartphone device exists in the DB.
+     * Surgically inserts the record if missing, without duplicates.
+     */
+    public void ensureSmartphoneDeviceExists(DeviceType type, String name) {
+        if (getSmartphoneDeviceId(type) != -1L) return;
+
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(DevicesDbHelper.PROTOCOL, Protocol.SMARTPHONE.name());
+        contentValues.put(DevicesDbHelper.DEVICE_TYPE, type.name());
+        contentValues.put(DevicesDbHelper.PAIRED, 1); // Default to paired
+        contentValues.put(DevicesDbHelper.NAME, name);
+        contentValues.put(DevicesDbHelper.MANUFACTURER_NAME, android.os.Build.BRAND);
+        getDatabase().insert(DevicesDbHelper.DEVICES, null, contentValues);
     }
 
     public int deleteDevice(long deviceId) {

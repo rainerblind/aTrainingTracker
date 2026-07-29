@@ -905,6 +905,10 @@
         <item quantity="other">%1$d 回のトレーニング</item>
     </plurals>
     <string name="workout_periods__longest_workout">最長セッション</string>
+    <string name="workout_periods__migration_querying">トレーニング履歴を読み込み中…</string>
+    <string name="workout_periods__migration_reading">トレーニング %1$d / %2$d を読み込み中…</string>
+    <string name="workout_periods__migration_syncing">%1$s を同期中…</string>
+    <string name="workout_periods__migration_finalizing">年間の統計を計算中…</string>
 
     <!-- share screenshots -->
     <string name="share">共有</string>
@@ -995,6 +999,15 @@
     <string name="cluster_autoname_format">%1$s #%2$d</string>
     <string name="cluster_delete_title">ワークアウトクラスターを削除</string>
     <string name="cluster_delete_message">このワークアウトクラスターを削除してもよろしいですか？関連するワークアウトは削除されませんが、このクラスターの下にはグループ化されなくなります。</string>
+    <string name="cluster_migration_title">ルートファミリーを分析中…</string>
+    <string name="cluster_migration_loading">ルートファミリーを読み込み中…</string>
+    <string name="cluster_migration_healing">履歴の整合性を確認中…</string>
+    <string name="cluster_migration_previews">ファミリーのプレビューを準備中（%1$d / %2$d）…</string>
+    <string name="cluster_migration_processing_routes">ルートを処理中…</string>
+    <string name="cluster_migration_processing_workouts">トレーニング %1$d / %2$d を処理中…</string>
+    <string name="legacy_import__scanning_dropbox">Dropbox の %1$s をスキャン中…</string>
+    <string name="legacy_import__downloading_dropbox">Dropbox から %1$s をダウンロード中…</string>
+    <string name="migration_phase_label">フェーズ %1$d: %2$s</string>
 
     <string name="unclustered">未分類</string>
     <string name="no_unclustered_workouts">すべてのワークアウトが分類されています。</string>
@@ -1030,4 +1043,47 @@
     <string name="all_shoes">+ すべてのシューズ +</string>
     <string name="all_bikes">+ すべてのバイク +</string>
     <string name="no_equipment">- なし -</string>
+    <string name="backup_restore">Backup \u0026 Restore</string>
+    <string name="backup_restore_summary">データの移行やリカバリを実行</string>
+    <string name="create_backup">バックアップを作成</string>
+    <string name="restore_backup">全復元（移行）</string>
+    <string name="import_workouts">差分インポート（統合）</string>
+    <string name="backup_success">バックアップを作成しました。</string>
+    <string name="backup_failed">バックアップの作成に失敗しました。</string>
+    <string name="restore_success">復元が完了しました。アプリを再起動します。</string>
+    <string name="restore_failed">復元の実行に失敗しました。ファイルが有効か確認してください。</string>
+    <string name="restore_warning_title">危険: 全復元</string>
+    <string name="restore_warning_message">この操作により、この端末にあるすべてのワークアウト、装備、設定がバックアップデータで上書きされ、永久に削除されます。本当によろしいですか？</string>
+    <string name="import_finished_format">インポート完了。%1$d 件のワークアウトを追加しました。</string>
+    <string name="import_duplicate_skipping">既存のワークアウトをスキップ中…</string>
+    <string name="import_processing_format">%1$s をインポート中…</string>
+    <string name="automated_backups">自動バックアップ</string>
+    <string name="automated_backups_summary">定期的に Dropbox へバックアップをアップロード</string>
+    <string name="backup_now">今すぐバックアップ</string>
+    <string name="last_backup">最終バックアップ: %1$s</string>
+    <string name="backup_interval">バックアップ間隔</string>
+    <string name="backup_interval_daily">毎日</string>
+    <string name="backup_interval_3days">3日ごと</string>
+    <string name="backup_interval_weekly">毎週</string>
+    <string name="backup_interval_monthly">毎月</string>
+
+    <string name="cluster_migration_enriching">ファミリーメタデータを強化中（%1$d/%2$d）…</string>
+    <string name="cluster_tuning_use_sport_type_label">スポーツタイプを考慮する</string>
+    <string name="cluster_tuning_use_sport_type_summary">同じルート上の異なるアクティビティ（例：ランニング対サイクリング）を別々のファミリーに隔離します。</string>
+
+    <string name="workout_periods__migration_title">トレーニング履歴データベースを最適化中…</string>
+
+    <string name="import_backup">インポートとバックアップ</string>
+    <string name="tab_import">インポート</string>
+    <string name="tab_backup">バックアップ</string>
+    <string name="tab_restore">復元</string>
+    <string name="import_backup_summary">ワークアウトのインポート、バックアップ、データの復元を管理します</string>
+
+    <string name="create_and_upload_to_dropbox">作成 \u0026 Dropboxへ送る</string>
+    <string name="full_restore_description">ローカルデータをすべて削除し、バックアップの内容に置き換えます。アプリの再起動が必要です。</string>
+    <string name="incremental_import_description">バックアップから現在の履歴にワークアウトを統合します。既存のワークアウトはスキップされます。</string>
+    <string name="legacy_recovery_title">ワークアウトのインポート</string>
+    <string name="legacy_recovery_description">以前のデバイスなどから TCX ファイルを使用してトレーニング履歴をインポートします。既存の記録はスキップされます。</string>
+    <string name="scan_tcx">Dropbox をスキャン</string>
+    <string name="import_single_file">TCX ファイルをインポート</string>
 </resources>

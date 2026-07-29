@@ -28,6 +28,7 @@ object ActivityTypeSelectionHelper {
      * Consistent with modern Material 3 dialog style (ATT-267).
      */
     @JvmStatic
+    @JvmOverloads
     fun showSelectionDialog(
         fragmentManager: FragmentManager,
         onTypeSelected: (ActivityType) -> Unit,

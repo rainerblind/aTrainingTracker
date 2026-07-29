@@ -11,9 +11,6 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
@@ -22,25 +19,33 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
-import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
+import com.atrainingtracker.trainingtracker.ui.map.*
+import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.time.format.DateTimeFormatter
-import java.time.temporal.IsoFields
+import kotlinx.coroutines.withContext
+
+/**
+ * Encapsulates the UI state for the period detail map (ATT-440).
+ * Matches the robust loading pattern used in Workout Clusters.
+ */
+data class PeriodMapState(
+    val tracks: List<MapTrack> = emptyList(),
+    val workoutIdToHeatmapPathMap: Map<Long, List<LatLng>> = emptyMap(),
+    val memberMarkers: List<PeriodPeakMarker> = emptyList(),
+    val isLoading: Boolean = false,
+)
 
 class PeriodsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val workoutRepo = WorkoutRepository.getInstance(application)
+    private val periodsRepo = PeriodsRepository.getInstance(application)
     private val prefManager = com.atrainingtracker.trainingtracker.MyPreferenceManager(application)
 
     val groups = listOf(
@@ -53,17 +58,15 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     private val _selectedPeriod = MutableStateFlow<PeriodSummary?>(null)
     val selectedPeriod = _selectedPeriod.asStateFlow()
 
-    val isHeatmapEnabled: StateFlow<Boolean> = prefManager.isHeatmapEnabledFlow
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = true
-        )
+    private val _mapState = MutableStateFlow(PeriodMapState())
+    val mapState = _mapState.asStateFlow()
+
+    private var selectionJob: Job? = null
 
     val enabledMarkerTypes: StateFlow<Set<PeriodMarkerType>> = prefManager.enabledPeriodMarkerTypesFlow
         .map { strings -> 
             strings.mapNotNull { 
-                try { PeriodMarkerType.valueOf(it) } catch(e: Exception) { null } 
+                try { PeriodMarkerType.valueOf(it) } catch(_: Exception) { null } 
             }.toSet()
         }
         .stateIn(
@@ -71,12 +74,6 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = setOf(PeriodMarkerType.ALTITUDE, PeriodMarkerType.DISTANCE)
         )
-
-    fun toggleHeatmapEnabled() {
-        viewModelScope.launch {
-            prefManager.setHeatmapEnabled(!isHeatmapEnabled.value)
-        }
-    }
 
     fun toggleMarkerTypeEnabled(type: PeriodMarkerType) {
         viewModelScope.launch {
@@ -86,306 +83,89 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun showPeriodMap(summary: PeriodSummary) {
+        selectionJob?.cancel()
         _selectedPeriod.value = summary
-
-        // Launch background loading for originally sampled points (SCRUM-159)
-        viewModelScope.launch {
-            val richPaths = summary.workoutIdToPolylineMap.keys.associateWith { id ->
-                val fullPath = workoutRepo.getWorkoutTrackPoints(id, TrackType.BEST)
-                
-                // PERFORMANCE: Simplify for the map to prevent lag, but keep high fidelity
-                if (fullPath.size > 800) {
-                    val latLngs = fullPath.map { it.latLng }
-                    var tolerance = 1.0
-                    var simplified = PolyUtil.simplify(latLngs, tolerance)
-                    var iterations = 0
-                    while (simplified.size > 1000 && iterations < 5) {
-                        tolerance *= 2.0
-                        simplified = PolyUtil.simplify(latLngs, tolerance)
-                        iterations++
-                    }
-                    simplified
-                } else {
-                    fullPath.map { it.latLng }
-                }
+        
+        selectionJob = viewModelScope.launch {
+            _mapState.value = PeriodMapState(isLoading = true)
+            
+            // ATT-440: Adoption of Cluster loading algorithm
+            // 1. Fetch Source of Truth for the range (Guaranteed completeness)
+            val workouts = withContext(Dispatchers.IO) {
+                periodsRepo.getWorkoutsForRange(summary.startTimestampS, summary.endTimestampS)
             }
             
-            // Update the selected period with rich data if it's still the one active
-            val current = _selectedPeriod.value
-            if (current != null && current.startTimestampS == summary.startTimestampS && 
-                current.periodType == summary.periodType) {
-                _selectedPeriod.value = current.copy(workoutIdToPathMap = richPaths)
+            // 2. Background Processing
+            withContext(Dispatchers.Default) {
+                val tracks = workouts.map { it.toMapTrack().copy(isVisible = true) }
+                val heatmapPathMap = workouts.associate { w ->
+                    w.id to if (w.mapPolyline.isNotEmpty()) PolyUtil.decode(w.mapPolyline) else emptyList()
+                }.filterValues { it.isNotEmpty() }
+                
+                // Pre-calculate member markers (SCRUM-199 style)
+                val markers = workouts.flatMap { w ->
+                    val list = mutableListOf<PeriodPeakMarker>()
+                    w.startLatLng?.let { 
+                        list.add(PeriodPeakMarker(w.id, it, R.drawable.control_start, "${w.workoutName}: Start", PeriodMarkerType.START)) 
+                    }
+                    w.endLatLng?.let { 
+                        list.add(PeriodPeakMarker(w.id, it, R.drawable.control_stop, "${w.workoutName}: End", PeriodMarkerType.END)) 
+                    }
+                    w.maxDisplacementLatLng?.let { 
+                        list.add(PeriodPeakMarker(w.id, it, R.drawable.ic_distance, "${w.workoutName}: Apex", PeriodMarkerType.DISTANCE)) 
+                    }
+                    w.maxAltitudeLatLng?.let {
+                        list.add(PeriodPeakMarker(w.id, it, R.drawable.ic_altitude, "${w.workoutName}: Max Altitude", PeriodMarkerType.ALTITUDE))
+                    }
+                    list
+                }
+
+                _mapState.value = PeriodMapState(
+                    tracks = tracks,
+                    workoutIdToHeatmapPathMap = heatmapPathMap,
+                    memberMarkers = markers,
+                    isLoading = false
+                )
             }
         }
     }
 
     fun dismissPeriodMap() {
+        selectionJob?.cancel()
         _selectedPeriod.value = null
+        _mapState.value = PeriodMapState()
     }
 
-    // Formatters for labels
-    private val dayFormatter = DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.LONG)
-    private val monthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy")
-    private val yearFormatter = DateTimeFormatter.ofPattern("yyyy")
-
-    // 1. Observe raw workouts from Repository
-    private val _rawWorkouts = workoutRepo.allWorkouts
-
-    // 2. The Main StateFlow: A list containing 4 lists (one for each grouping level)
-    val groupedPeriods: StateFlow<List<List<PeriodSummary>>> = _rawWorkouts
-        .map { workouts: List<WorkoutData> ->
-            if (workouts.isEmpty()) {
-                // Explicitly return the nested list type
-                listOf<List<PeriodSummary>>(emptyList(), emptyList(), emptyList(), emptyList())
-            } else {
-                listOf<List<PeriodSummary>>(
-                    // Tab 0: Daily
-                    groupWorkouts(workouts, PeriodType.DAY) {
-                        it.localDateTime.format(
-                            DateTimeFormatter.ISO_LOCAL_DATE
-                        )
-                    },
-
-                    // Tab 1: Weekly (ISO Week based)
-                    groupWorkouts(workouts, PeriodType.WEEK) {
-                        val week = it.localDateTime.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
-                        val year = it.localDateTime.get(IsoFields.WEEK_BASED_YEAR)
-                        "$year-${week.toString().padStart(2, '0')}"
-                    },
-
-                    // Tab 2: Monthly
-                    groupWorkouts(workouts, PeriodType.MONTH) {
-                        it.localDateTime.format(
-                            DateTimeFormatter.ofPattern("yyyy-MM")
-                        )
-                    },
-
-                    // Tab 3: Yearly
-                    groupWorkouts(
-                        workouts,
-                        PeriodType.YEAR
-                    ) { it.localDateTime.year.toString() }
-                )
-            }
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = listOf(emptyList(), emptyList(), emptyList(), emptyList())
-        )
-
-    /**
-     * Generic grouping and aggregation logic
-     */
-    private fun groupWorkouts(
-        workouts: List<WorkoutData>,
-        level: PeriodType,
-        keySelector: (WorkoutData) -> String
-    ): List<PeriodSummary> {
-        return workouts.groupBy(keySelector)
-            .map { (key, items) ->
-                aggregateToPeriod(key, items, level)
-            }
-            // Ensure periods are shown in descending order (newest first)
-            .sortedByDescending { it.sortKey }
-    }
-
-    private fun aggregateToPeriod(
-        key: String,
-        items: List<WorkoutData>,
-        level: PeriodType
-    ): PeriodSummary {
-        val firstItem = items.first()
-
-        // Generate nice labels based on the key type
-        val (label, range) = when (level) {
-            PeriodType.DAY -> { // Daily
-                Pair(firstItem.localDateTime.format(dayFormatter), "")
-            }
-
-            PeriodType.WEEK -> { // Weekly
-                Pair(key, "${items.last().formattedDate} - ${items.first().formattedDate}")
-            }
-
-            PeriodType.MONTH -> { // Monthly
-                Pair(firstItem.localDateTime.format(monthFormatter), "")
-            }
-
-            PeriodType.YEAR -> { // Yearly
-                Pair(firstItem.localDateTime.format(yearFormatter), "")
-            }
-        }
-
-        // CREATE THE MAPPINGS FOR THE INTERACTIVE MAP
-        // This allows the map to filter polylines based on ID and SportType
-        val workoutIdToPolylineMap = items.associate { it.id to it.mapPolyline }
-        val workoutIdToSportMap = items.associate { it.id to it.bSportType }
-
-        // Aggregate Sport Stats
-        val sportStatsMap = items.groupBy { it.bSportType }.mapValues { (_, sportWorkouts) ->
-            // Group by detailed sport name
-            val detailedStats = sportWorkouts.groupBy { it.sportName }.mapValues { (_, detailedWorkouts) ->
-                DetailedStats(
-                    count = detailedWorkouts.size,
-                    totalDurationSec = detailedWorkouts.sumOf { it.detailsData.activeTimeSec.toLong() },
-                    totalDistanceMeters = detailedWorkouts.sumOf { it.detailsData.totalDistance },
-                    totalAscentMeters = detailedWorkouts.sumOf { it.ascentMeters }
-                )
-            }
-
-            // Find Longest Workout by Time
-            val longestWorkout = sportWorkouts.maxByOrNull { it.detailsData.activeTimeSec }?.let {
-                LongestWorkout(
-                    id = it.id,
-                    name = it.workoutName,
-                    durationSec = it.detailsData.activeTimeSec.toLong(),
-                    distanceMeters = it.detailsData.totalDistance,
-                    ascentMeters = it.ascentMeters
-                )
-            }
-
-            SportStats(
-                count = sportWorkouts.size,
-                totalDurationSec = sportWorkouts.sumOf { it.detailsData.activeTimeSec.toLong() },
-                totalDistanceMeters = sportWorkouts.sumOf { it.detailsData.totalDistance },
-                totalAscentMeters = sportWorkouts.sumOf { it.ascentMeters },
-                detailedSportStats = detailedStats,
-                longestWorkout = longestWorkout
-            )
-        }
-            // Convert to list to sort by specific sport priority
-            .toList()
-            .sortedBy { (sport, _) ->
-                when (sport) {
-                    BSportType.BIKE -> 0
-                    BSportType.RUN -> 1
-                    else -> 2 // OTHER or any new types
-                }
-            }
-            .toMap() // Converts back to a LinkedHashMap which preserves this order
-
-        // Calculate the start/end based on the period type
-        val ldt = firstItem.localDateTime
-        val zoneOffset = java.time.OffsetDateTime.now().offset
-
-        val (startS, endS) = when (level) {
-            PeriodType.DAY -> {
-                val s = ldt.toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
-                Pair(s, s + 86399) // + 23:59:59
-            }
-            PeriodType.WEEK -> {
-                // Find Monday of this week
-                val s = ldt.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
-                    .toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
-                Pair(s, s + (7 * 86400) - 1)
-            }
-            PeriodType.MONTH -> {
-                val s = ldt.with(java.time.temporal.TemporalAdjusters.firstDayOfMonth())
-                    .toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
-                val e = ldt.with(java.time.temporal.TemporalAdjusters.lastDayOfMonth())
-                    .toLocalDate().atTime(23, 59, 59).toEpochSecond(zoneOffset)
-                Pair(s, e)
-            }
-            PeriodType.YEAR -> {
-                val s = ldt.with(java.time.temporal.TemporalAdjusters.firstDayOfYear())
-                    .toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
-                val e = ldt.with(java.time.temporal.TemporalAdjusters.lastDayOfYear())
-                    .toLocalDate().atTime(23, 59, 59).toEpochSecond(zoneOffset)
-                Pair(s, e)
-            }
-        }
-
-        // Aggregate Peak Markers for the Map
-        val extremaMarkers = items.flatMap { workout ->
-            val markers = mutableListOf<PeriodPeakMarker>()
-            workout.maxAltitudeLatLng?.let { pos ->
-                markers.add(PeriodPeakMarker(
-                    workoutId = workout.id,
-                    pos = pos,
-                    iconResId = R.drawable.ic_altitude_max,
-                    title = "${workout.workoutName}: Max Alt",
-                    markerType = PeriodMarkerType.ALTITUDE
-                ))
-            }
-            workout.maxDisplacementLatLng?.let { pos ->
-                markers.add(PeriodPeakMarker(
-                    workoutId = workout.id,
-                    pos = pos,
-                    iconResId = R.drawable.ic_distance,
-                    title = "${workout.workoutName}: Max Dist",
-                    markerType = PeriodMarkerType.DISTANCE
-                ))
-            }
-            
-            // Add Start and End markers (SCRUM-154)
-            if (workout.mapPolyline.isNotEmpty()) {
-                val points = PolyUtil.decode(workout.mapPolyline)
-                if (points.isNotEmpty()) {
-                    markers.add(PeriodPeakMarker(
-                        workoutId = workout.id,
-                        pos = points.first(),
-                        iconResId = R.drawable.control_start,
-                        title = "${workout.workoutName}: Start",
-                        markerType = PeriodMarkerType.START
-                    ))
-                    markers.add(PeriodPeakMarker(
-                        workoutId = workout.id,
-                        pos = points.last(),
-                        iconResId = R.drawable.control_stop,
-                        title = "${workout.workoutName}: End",
-                        markerType = PeriodMarkerType.END
-                    ))
-                }
-            }
-
-            markers
-        }
-
-        return PeriodSummary(
-            periodLabel = label,
-            periodDateRange = range,
-            periodType = level,
-            startTimestampS = startS,
-            endTimestampS = endS,
-            totalWorkouts = items.size,
-            totalDurationSec = items.sumOf { it.detailsData.activeTimeSec.toLong() },
-            sportStats = sportStatsMap,
-            polylines = items.mapNotNull { it.mapPolyline }.filter { it.isNotEmpty() },
-            workoutIdToPolylineMap = workoutIdToPolylineMap,
-            workoutIdToSportMap = workoutIdToSportMap,
-            extremaMarkers = extremaMarkers,
-            sortKey = key // Used for descending sort
-        )
-    }
+    // Observe summarized periods and migration status from Repository
+    val groupedPeriods: StateFlow<List<List<PeriodSummary>>> = periodsRepo.groupedPeriods
+    val migrationStatus: StateFlow<MigrationStatus?> = periodsRepo.migrationStatus
+    
+    @Deprecated("Use migrationStatus instead", ReplaceWith("migrationStatus.value?.phases?.lastOrNull()?.progress"))
+    val migrationProgress: StateFlow<Float?> = periodsRepo.migrationStatus
+        .map { it?.phases?.lastOrNull()?.progress }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     fun loadPeriods() {
-        // This triggers the repository to refresh from DB if necessary
         viewModelScope.launch {
             workoutRepo.loadAllWorkouts()
         }
     }
 
-    // states for the "Peek" (BottomSheet) functionality
     private val _peekedWorkoutDataWithTrack = MutableStateFlow<WorkoutDataWithTrack?>(null)
     val peekedWorkoutDataWithTrack = _peekedWorkoutDataWithTrack.asStateFlow()
 
-    /**
-     * Called when a polyline is clicked. Handles the background loading
-     * so the UI doesn't have to deal with coroutines or suspend functions.
-     */
     fun selectWorkoutForPeek(id: Long) {
         viewModelScope.launch {
-            // 1. Get the basic workout data from memory
-            _peekedWorkoutDataWithTrack.value = WorkoutDataWithTrack(
-                workoutRepo.allWorkouts.value.find { it.id == id },
-                 workoutRepo.getWorkoutTrackPoints(id, TrackType.BEST)
-            )
+            val workout = workoutRepo.allWorkouts.value.find { it.id == id }
+            if (workout != null) {
+                _peekedWorkoutDataWithTrack.value = WorkoutDataWithTrack(
+                    workoutData = workout,
+                    trackPoints = workoutRepo.getWorkoutTrackPoints(id, TrackType.BEST)
+                )
+            }
         }
     }
 
-    /**
-     * Clears the selection when the bottom sheet is hidden
-     */
     fun clearPeekSelection() {
         _peekedWorkoutDataWithTrack.value = null
     }

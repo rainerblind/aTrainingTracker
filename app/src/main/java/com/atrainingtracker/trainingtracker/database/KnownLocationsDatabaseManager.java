@@ -45,6 +45,7 @@ public class KnownLocationsDatabaseManager {
     // --- Modern Singleton Pattern ---
     private static volatile KnownLocationsDatabaseManager cInstance;
     private final KnownLocationsDbHelper cDbHelper;
+    private SQLiteDatabase mDatabase = null;
 
     // Private constructor
     private KnownLocationsDatabaseManager(@NonNull Context context) {
@@ -64,10 +65,24 @@ public class KnownLocationsDatabaseManager {
     }
 
     /**
-     * Returns a writable database instance, managed safely by the helper.
+     * Returns a writable database instance and ensures it remains open.
+     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
      */
     public SQLiteDatabase getDatabase() {
-        return cDbHelper.getWritableDatabase();
+        if (mDatabase != null && mDatabase.isOpen()) {
+            return mDatabase;
+        }
+        synchronized (this) {
+            if (mDatabase != null && mDatabase.isOpen()) {
+                return mDatabase;
+            }
+            // If the database was closed, ensure the helper clears its reference
+            if (mDatabase != null) {
+                cDbHelper.close();
+            }
+            mDatabase = cDbHelper.getWritableDatabase();
+            return mDatabase;
+        }
     }
     // --- End of Singleton Pattern ---
 
@@ -91,9 +106,9 @@ public class KnownLocationsDatabaseManager {
     }
 
     @Nullable
-    public MyLocation addNewLocation(String name, int altitude, int radius, double latitude, double longitude) {
+    public MyLocation addNewLocation(String name, int altitude, int radius, double latitude, double longitude, @NonNull ExtremaType type) {
         if (DEBUG)
-            Log.d(TAG, "addNewLocation: " + name + " " + altitude + " m" + ", radius=" + radius);
+            Log.d(TAG, "addNewLocation: " + name + " " + altitude + " m" + ", radius=" + radius + ", type=" + type);
 
         MyLocation myLocation = null;
 
@@ -104,10 +119,12 @@ public class KnownLocationsDatabaseManager {
         values.put(KnownLocationsDbHelper.RADIUS, radius);
         values.put(KnownLocationsDbHelper.LONGITUDE, longitude);
         values.put(KnownLocationsDbHelper.LATITUDE, latitude);
+        values.put(KnownLocationsDbHelper.EXTREMA_TYPE, type.name());
+        values.put(KnownLocationsDbHelper.HIT_COUNT, 1);
 
         try {
             long id = getDatabase().insert(KnownLocationsDbHelper.TABLE, null, values);
-            myLocation = new MyLocation(id, latitude, longitude, name, altitude, radius);
+            myLocation = new MyLocation(id, latitude, longitude, name, altitude, radius, 1);
         } catch (SQLException e) {
             Log.e(TAG, "Error while writing" + e);
         }
@@ -150,8 +167,9 @@ public class KnownLocationsDatabaseManager {
                             cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.LATITUDE)),
                             cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.LONGITUDE)),
                             cursor.getString(cursor.getColumnIndex(KnownLocationsDbHelper.NAME)),
-                            cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.ALTITUDE)),
-                            cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.RADIUS)));
+                            cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.ALTITUDE)),
+                            cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.RADIUS)),
+                            cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.HIT_COUNT)));
                 }
             }
         }
@@ -182,6 +200,7 @@ public class KnownLocationsDatabaseManager {
         contentValues.put(KnownLocationsDbHelper.LATITUDE, myLocation.latLng.latitude);
         contentValues.put(KnownLocationsDbHelper.LONGITUDE, myLocation.latLng.longitude);
         contentValues.put(KnownLocationsDbHelper.RADIUS, myLocation.radius);
+        contentValues.put(KnownLocationsDbHelper.HIT_COUNT, myLocation.hitCount);
 
         updateId(id, contentValues);
     }
@@ -211,14 +230,41 @@ public class KnownLocationsDatabaseManager {
                     cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.LATITUDE)),
                     cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.LONGITUDE)),
                     cursor.getString(cursor.getColumnIndex(KnownLocationsDbHelper.NAME)),
-                    cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.ALTITUDE)),
-                    cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.RADIUS)));
+                    cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.ALTITUDE)),
+                    cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.RADIUS)),
+                    cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.HIT_COUNT)));
 
         }
 
         cursor.close();
 
         return myLocation;
+    }
+
+    /**
+     * ATT-39: Automatically learns or refines a location's altitude.
+     * Uses a weighted average to improve estimate over time.
+     */
+    public void learnLocation(@Nullable LatLng pos, @Nullable Double altitude, @NonNull ExtremaType type) {
+        if (pos == null || altitude == null || altitude.isNaN()) return;
+
+        synchronized (this) {
+            MyLocation existing = getMyLocation(pos);
+            if (existing != null) {
+                // Weighted average refinement
+                double refinedAlt = (existing.altitude * existing.hitCount + altitude) / (existing.hitCount + 1);
+                ContentValues values = new ContentValues();
+                values.put(KnownLocationsDbHelper.ALTITUDE, refinedAlt);
+                values.put(KnownLocationsDbHelper.HIT_COUNT, existing.hitCount + 1);
+                updateId(existing.id, values);
+                if (DEBUG) Log.d(TAG, "Refined altitude for '" + existing.name + "': " + refinedAlt + "m (hits: " + (existing.hitCount + 1) + ")");
+            } else {
+                // New discovery
+                String name = "Auto-learned " + type.name().toLowerCase();
+                addNewLocation(name, (int) Math.round(altitude), DEFAULT_RADIUS, pos.latitude, pos.longitude, type);
+                if (DEBUG) Log.d(TAG, "Discovered new location at " + pos + " with altitude " + altitude + "m");
+            }
+        }
     }
 
     @NonNull
@@ -274,15 +320,17 @@ public class KnownLocationsDatabaseManager {
         @NonNull
         public final LatLng latLng;
         public String name;
-        public int altitude;
+        public double altitude;
         public int radius;
+        public int hitCount;
 
-        public MyLocation(long id, double lat, double lng, String name, int altitude, int radius) {
+        public MyLocation(long id, double lat, double lng, String name, double altitude, int radius, int hitCount) {
             this.id = id;
             latLng = new LatLng(lat, lng);
             this.name = name;
             this.altitude = altitude;
             this.radius = radius;
+            this.hitCount = hitCount;
         }
     }
 
@@ -296,7 +344,7 @@ public class KnownLocationsDatabaseManager {
 
     public static class KnownLocationsDbHelper extends SQLiteOpenHelper {
         public static final String DB_NAME = "StartLocation2Altitude.db";
-        public static final int DB_VERSION = 3;
+        public static final int DB_VERSION = 4;
         public static final String TABLE = "StartLocation2Altitude";
         public static final String C_ID = BaseColumns._ID;
         public static final String NAME = "name";
@@ -305,31 +353,18 @@ public class KnownLocationsDatabaseManager {
         public static final String LONGITUDE = "longitude";
         public static final String LATITUDE = "latitude";
         public static final String RADIUS = "radius";
+        public static final String HIT_COUNT = "hitCount";
         protected static final String TAG = KnownLocationsDbHelper.class.getName();
         protected static final boolean DEBUG = BANALService.getDebug(false);
-        protected static final String CREATE_TABLE_V1 = "create table " + TABLE + " ("
+        protected static final String CREATE_TABLE_V4 = "create table " + TABLE + " ("
                 + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + NAME + " text,"
-                + ALTITUDE + " int,"
-                + LONGITUDE + " real,"
-                + LATITUDE + " real)";
-
-        protected static final String CREATE_TABLE_V2 = "create table " + TABLE + " ("
-                + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + NAME + " text,"
-                + ALTITUDE + " int,"
+                + EXTREMA_TYPE + " text,"
+                + ALTITUDE + " real,"
                 + LONGITUDE + " real,"
                 + LATITUDE + " real,"
-                + RADIUS + " int)";               // new in version 2
-
-        protected static final String CREATE_TABLE_V3 = "create table " + TABLE + " ("
-                + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + NAME + " text,"
-                + EXTREMA_TYPE + " text,"          // new in version 3 but not yet used!
-                + ALTITUDE + " int,"
-                + LONGITUDE + " real,"
-                + LATITUDE + " real,"
-                + RADIUS + " int)";
+                + RADIUS + " int,"
+                + HIT_COUNT + " int)";
 
         // Constructor
         public KnownLocationsDbHelper(Context context) {
@@ -339,24 +374,8 @@ public class KnownLocationsDatabaseManager {
         // Called only once, first time the DB is created
         @Override
         public void onCreate(@NonNull SQLiteDatabase db) {
-
-            switch (DB_VERSION) {
-                case 1:
-                    db.execSQL(CREATE_TABLE_V1);
-                    if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_TABLE_V1);
-                    break;
-
-                case 2:
-                    db.execSQL(CREATE_TABLE_V2);
-                    if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_TABLE_V2);
-                    break;
-
-                case 3:
-                    db.execSQL(CREATE_TABLE_V3);
-                    if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_TABLE_V3);
-                    break;
-
-            }
+            db.execSQL(CREATE_TABLE_V4);
+            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_TABLE_V4);
         }
 
         private void addColumn(@NonNull SQLiteDatabase db, String column, String type) {
@@ -381,6 +400,15 @@ public class KnownLocationsDatabaseManager {
                 ContentValues contentValues = new ContentValues();
                 contentValues.put(EXTREMA_TYPE, ExtremaType.START.name());
                 db.update(TABLE, contentValues, null, null);
+            }
+
+            if (oldVersion < 4) {
+                addColumn(db, HIT_COUNT, "int");
+                db.execSQL("ALTER TABLE " + TABLE + " RENAME TO tmp_" + TABLE + ";");
+                db.execSQL(CREATE_TABLE_V4);
+                db.execSQL("INSERT INTO " + TABLE + " (" + C_ID + ", " + NAME + ", " + EXTREMA_TYPE + ", " + ALTITUDE + ", " + LONGITUDE + ", " + LATITUDE + ", " + RADIUS + ", " + HIT_COUNT + ") " +
+                        "SELECT " + C_ID + ", " + NAME + ", " + EXTREMA_TYPE + ", CAST(" + ALTITUDE + " AS REAL), " + LONGITUDE + ", " + LATITUDE + ", " + RADIUS + ", 1 FROM tmp_" + TABLE + ";");
+                db.execSQL("DROP TABLE tmp_" + TABLE + ";");
             }
         }
     }

@@ -48,6 +48,7 @@ Assim que a sua sessão terminar, encontre estatísticas locais completas pronta
 <b>SEUS DADOS, SUA ESCOLHA</b>
 Você decide para onde vão os seus dados. O aTrainingTracker coloca a privacidade em primeiro lugar, oferecendo ao mesmo tempo a conveniência da nuvem.
 • <b>Privacidade por Defeito</b>: Sem necessidade de conta. Sem nuvem obrigatória. Os seus treinos ficam no seu dispositivo, a menos que escolha o contrário.
+• <b>Importação de treinos</b>: migre facilmente seu histórico de treino de dispositivos anteriores importando ficheiros TCX.
 • <b>Sincronização na Nuvem Opcional</b>: Carregue automaticamente as novas atividades para o Strava ou Dropbox para análise posterior.
 • <b>Formatos Populares</b>: Exporte os seus treinos como GPX, TCX, CSV e outros formatos padrão.
 

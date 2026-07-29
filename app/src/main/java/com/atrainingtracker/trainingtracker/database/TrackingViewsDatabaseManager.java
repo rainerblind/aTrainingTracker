@@ -51,6 +51,7 @@ public class TrackingViewsDatabaseManager {
     // singleton pattern
     private static volatile TrackingViewsDatabaseManager cInstance;
     private final TrackingViewsDbHelper cDbHelper;
+    private SQLiteDatabase mDatabase = null;
 
     private TrackingViewsDatabaseManager(@NonNull Context context) {
         this.cDbHelper = new TrackingViewsDbHelper(context.getApplicationContext());
@@ -68,8 +69,25 @@ public class TrackingViewsDatabaseManager {
         return cInstance;
     }
 
+    /**
+     * Returns a writable database instance and ensures it remains open.
+     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
+     */
     public SQLiteDatabase getDatabase() {
-        return cDbHelper.getWritableDatabase();
+        if (mDatabase != null && mDatabase.isOpen()) {
+            return mDatabase;
+        }
+        synchronized (this) {
+            if (mDatabase != null && mDatabase.isOpen()) {
+                return mDatabase;
+            }
+            // If the database is closed, ensure the helper clears its reference
+            if (mDatabase != null) {
+                cDbHelper.close();
+            }
+            mDatabase = cDbHelper.getWritableDatabase();
+            return mDatabase;
+        }
     }
 
 

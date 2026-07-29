@@ -923,6 +923,10 @@
         <item quantity="other">%1$d Sesiones</item>
     </plurals>
     <string name="workout_periods__longest_workout">Sesión más larga</string>
+    <string name="workout_periods__migration_querying">Cargando historial de entrenamiento…</string>
+    <string name="workout_periods__migration_reading">Leyendo entrenamiento %1$d de %2$d…</string>
+    <string name="workout_periods__migration_syncing">Sincronizando %1$s…</string>
+    <string name="workout_periods__migration_finalizing">Finalizando totales anuales…</string>
 
     <!-- share screenshots -->
     <string name="share">Compartir</string>
@@ -1015,6 +1019,15 @@
     <string name="cluster_autoname_format">%1$s #%2$d</string>
     <string name="cluster_delete_title">Eliminar grupo de entrenamiento</string>
     <string name="cluster_delete_message">¿Estás seguro de que deseas eliminar este grupo de entrenamiento? Esto no eliminará los entrenamientos asociados, pero ya no estarán agrupados bajo este grupo.</string>
+    <string name="cluster_migration_title">Analizando familias de rutas…</string>
+    <string name="cluster_migration_loading">Cargando familias de rutas…</string>
+    <string name="cluster_migration_healing">Verificando la integridad del historial…</string>
+    <string name="cluster_migration_previews">Preparando vistas previas de familias (%1$d de %2$d)…</string>
+    <string name="cluster_migration_processing_routes">Procesando rutas…</string>
+    <string name="cluster_migration_processing_workouts">Procesando entrenamiento %1$d de %2$d…</string>
+    <string name="legacy_import__scanning_dropbox">Escaneando %1$s en Dropbox…</string>
+    <string name="legacy_import__downloading_dropbox">Descargando %1$s de Dropbox…</string>
+    <string name="migration_phase_label">Fase %1$d: %2$s</string>
 
     <string name="unclustered">Abierto</string>
     <string name="no_unclustered_workouts">Todos los entrenamientos están agrupados.</string>
@@ -1046,4 +1059,47 @@
     <string name="all_bikes">+ todas las bicis +</string>
     <string name="no_equipment">- ninguno -</string>
     <string name="devices_sensors_title">Sensores</string>
+    <string name="backup_restore">Backup \u0026 Restore</string>
+    <string name="backup_restore_summary">Migrar datos o realizar recuperación de desastres</string>
+    <string name="create_backup">Crear copia</string>
+    <string name="restore_backup">Restauración total (Migración)</string>
+    <string name="import_workouts">Importación incremental (Fusión)</string>
+    <string name="backup_success">Copia creada con éxito.</string>
+    <string name="backup_failed">Error al crear la copia.</string>
+    <string name="restore_success">Restauración con éxito. La aplicación se reiniciará.</string>
+    <string name="restore_failed">Error de restauración. Asegúrese de que el archivo es válido.</string>
+    <string name="restore_warning_title">PELIGRO: Restauración total</string>
+    <string name="restore_warning_message">Esto ELIMINARÁ PERMANENTEMENTE todos los entrenamientos, equipo y ajustes en ESTE teléfono y los reemplazará con los datos de la copia. ¿Está seguro?</string>
+    <string name="import_finished_format">Importación finalizada. %1$d entrenamientos añadidos.</string>
+    <string name="import_duplicate_skipping">Omitiendo entrenamientos existentes…</string>
+    <string name="import_processing_format">Importando %1$s…</string>
+    <string name="automated_backups">Copias automáticas</string>
+    <string name="automated_backups_summary">Subir copias a Dropbox periódicamente</string>
+    <string name="backup_now">Hacer copia ahora</string>
+    <string name="last_backup">Última copia: %1$s</string>
+    <string name="backup_interval">Intervalo de copia</string>
+    <string name="backup_interval_daily">Diario</string>
+    <string name="backup_interval_3days">Cada 3 días</string>
+    <string name="backup_interval_weekly">Semanal</string>
+    <string name="backup_interval_monthly">Mensual</string>
+
+    <string name="cluster_migration_enriching">Enriqueciendo los metadatos de la familia (%1$d de %2$d)…</string>
+    <string name="cluster_tuning_use_sport_type_label">Tener en cuenta el tipo de deporte</string>
+    <string name="cluster_tuning_use_sport_type_summary">Aislar diferentes actividades (por ejemplo, carrera frente a ciclismo) en la misma ruta en familias separadas.</string>
+
+    <string name="workout_periods__migration_title">Optimizando la base de datos del historial de entrenamiento…</string>
+
+    <string name="import_backup">Importación y copia de seguridad</string>
+    <string name="tab_import">Importar</string>
+    <string name="tab_backup">Copia de seguridad</string>
+    <string name="tab_restore">Restablecer</string>
+    <string name="import_backup_summary">Gestione las importaciones de entrenamientos, las copias de seguridad y la restauración de datos</string>
+
+    <string name="create_and_upload_to_dropbox">Crear \u0026 subir a Dropbox</string>
+    <string name="full_restore_description">Borra todos los datos locales y los reemplaza con el contenido de la copia. Reinicia la aplicación.</string>
+    <string name="incremental_import_description">Combina entrenamientos de una copia con tu historial actual. Se omitirán los entrenamientos ya presentes.</string>
+    <string name="legacy_recovery_title">Importación de entrenamientos</string>
+    <string name="legacy_recovery_description">Importa tu historial de entrenamiento desde archivos TCX (p. ej., de un dispositivo anterior). Se omitirán los registros existentes.</string>
+    <string name="scan_tcx">Escanear Dropbox</string>
+    <string name="import_single_file">Importar archivo TCX</string>
 </resources>

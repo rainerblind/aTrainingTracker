@@ -56,6 +56,7 @@ import kotlinx.coroutines.flow.StateFlow
 fun ATrainingTrackerMap(
     // Global State & Behavior
     zoomFocus: MapZoomFocus = MapZoomFocus.TRACK_AND_MARKERS,
+    initialBounds: com.google.android.gms.maps.model.LatLngBounds? = null,
     userBearing: Float = 0f,
     userSpeed: Float = 0f,
     bSportType: BSportType = BSportType.UNKNOWN,
@@ -118,7 +119,7 @@ fun ATrainingTrackerMap(
     scope.collect(content)
 
     val currentZoom = cameraPositionState.position.zoom
-    MapBoundsController(scope.tracks, scope.markers, scope.segments, scope.routes, zoomFocus, currentLocation, cameraPositionState, isMapLoaded, context)
+    MapBoundsController(scope.tracks, scope.markers, scope.segments, scope.routes, zoomFocus, initialBounds, currentLocation, cameraPositionState, isMapLoaded, context)
     
     // Render Preview Check
     if (LocalInspectionMode.current) {
@@ -138,7 +139,16 @@ fun ATrainingTrackerMap(
             uiSettings = MapUiSettings(zoomControlsEnabled = false, tiltGesturesEnabled = true),
             onMapLoaded = { isMapLoaded = true }
         ) {
-            MapEffect(shouldTakeSnapshot) { map ->
+            // ATT-440: Instant Zoom Fit. 
+            // We use MapEffect to fit bounds as soon as the map object is available, 
+            // without waiting for all tiles to render (onMapLoaded).
+            // ATT-469: Added shouldTakeSnapshot to keys to trigger callback immediately.
+            MapEffect(initialBounds, isMapLoaded, shouldTakeSnapshot) { map ->
+                if (zoomFocus == MapZoomFocus.EXPLICIT_BOUNDS && initialBounds != null && !isMapLoaded) {
+                    val padding = (40 * context.resources.displayMetrics.density).toInt()
+                    map.moveCamera(com.google.android.gms.maps.CameraUpdateFactory.newLatLngBounds(initialBounds, padding))
+                }
+                
                 if (shouldTakeSnapshot) {
                     map.snapshot { bitmap ->
                         if (bitmap != null) {

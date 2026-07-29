@@ -57,16 +57,17 @@ import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
 import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack;
 import com.atrainingtracker.trainingtracker.ui.routes.RoutesFragment;
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegmentsFragment;
+import com.atrainingtracker.trainingtracker.migration.BackupRestoreFragment;
 import com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsDialogFragment;
 import com.atrainingtracker.trainingtracker.ui.settings.dropbox.CloudUploadFragment;
 import com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialogFragment;
 import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsFragment;
 import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaUploadFragment;
 import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ActivityTypeSelectionHelper;
-import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ConfigTrackingTabsActivity;
 import com.atrainingtracker.trainingtracker.ui.settings.units.UnitsSettingsDialogFragment;
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
+import kotlin.Unit;
 import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
@@ -865,8 +866,17 @@ public class MainActivityWithNavigation
 
             case R.id.drawer_tracking_layouts:
                 mDrawerLayout.closeDrawer(GravityCompat.START);
-                Intent configIntent = new Intent(this, ConfigTrackingTabsActivity.class);
-                startActivity(configIntent);
+                ActivityTypeSelectionHelper.showSelectionDialog(
+                        getSupportFragmentManager(),
+                        activityType -> {
+                            mFragment = TrackingTabsFragment.newInstance(activityType);
+                            getSupportFragmentManager().beginTransaction()
+                                    .replace(R.id.content, mFragment, TrackingTabsFragment.TAG)
+                                    .addToBackStack(null)
+                                    .commit();
+                            return Unit.INSTANCE;
+                        }
+                );
                 return false;
 
             case R.id.drawer_units:
@@ -882,6 +892,11 @@ public class MainActivityWithNavigation
             case R.id.drawer_search_settings:
                 mFragment = SearchSettingsFragment.newInstance();
                 tag = SearchSettingsFragment.TAG;
+                break;
+
+            case R.id.drawer_backup_restore:
+                mFragment = BackupRestoreFragment.Companion.newInstance();
+                tag = "BackupRestoreFragment";
                 break;
 
             case R.id.drawer_privacy_policy:
