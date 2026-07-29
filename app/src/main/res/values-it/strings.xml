@@ -1079,6 +1079,19 @@
     <string name="backup_interval_3days">Ogni 3 giorni</string>
     <string name="backup_interval_weekly">Settimanale</string>
     <string name="backup_interval_monthly">Mensile</string>
+
+    <string name="cluster_migration_enriching">Arricchimento dei metadati della famiglia (%1$d di %2$d)…</string>
+    <string name="cluster_tuning_use_sport_type_label">Considera il tipo di sport</string>
+    <string name="cluster_tuning_use_sport_type_summary">Isolare diverse attività (es. corsa vs bici) sullo stesso percorso in famiglie separate.</string>
+
+    <string name="workout_periods__migration_title">Ottimizzazione del database della cronologia degli allenamenti…</string>
+
+    <string name="import_backup">Importazione e backup</string>
+    <string name="tab_import">Importa</string>
+    <string name="tab_backup">Backup</string>
+    <string name="tab_restore">Ripristina</string>
+    <string name="import_backup_summary">Gestire le importazioni di allenamenti, i backup e il ripristino dei dati</string>
+
     <string name="create_and_upload_to_dropbox">Crea \u0026 carica su Dropbox</string>
     <string name="full_restore_description">Cancella tutti i dati locali e li sostituisce con il contenuto del backup. Forza il riavvio dell\'app.</string>
     <string name="incremental_import_description">Unisci gli allenamenti da un backup nella cronologia attuale. Gli allenamenti già presenti verranno saltati.</string>

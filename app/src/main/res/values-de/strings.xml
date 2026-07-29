@@ -1122,6 +1122,8 @@
     <string name="unclustered">Offen</string>
     <string name="no_unclustered_workouts">Alle Einheiten sind gruppiert.</string>
     <string name="error_sharing_failed">Teilen fehlgeschlagen. Bitte erneut versuchen.</string>
+    <string name="backup_restore">Sicherung \u0026 Wiederherstellung</string>
+    <string name="backup_restore_summary">Daten migrieren oder Wiederherstellung durchführen</string>
 
     <string name="Edit">Bearbeiten</string>
     <string name="LocationAltitude">Höhe:</string>

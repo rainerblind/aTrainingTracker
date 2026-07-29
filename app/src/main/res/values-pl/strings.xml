@@ -1078,6 +1078,19 @@ pobrano but: %1</string>
     <string name="backup_interval_3days">Co 3 dni</string>
     <string name="backup_interval_weekly">Co tydzień</string>
     <string name="backup_interval_monthly">Co miesiąc</string>
+
+    <string name="cluster_migration_enriching">Wzbogacanie metadanych rodziny (%1$d z %2$d)…</string>
+    <string name="cluster_tuning_use_sport_type_label">Uwzględnij typ sportu</string>
+    <string name="cluster_tuning_use_sport_type_summary">Izoluj różne aktywności (np. bieg vs rower) na tej samej trasie do oddzielnych rodzin.</string>
+
+    <string name="workout_periods__migration_title">Optymalizacja bazy danych historii treningów…</string>
+
+    <string name="import_backup">Import i kopia zapasowa</string>
+    <string name="tab_import">Importuj</string>
+    <string name="tab_backup">Kopia zapasowa</string>
+    <string name="tab_restore">Przywróć</string>
+    <string name="import_backup_summary">Zarządzaj importem treningów, kopiami zapasowymi i przywracaniem danych</string>
+
     <string name="create_and_upload_to_dropbox">Utwórz \u0026 prześlij do Dropbox</string>
     <string name="full_restore_description">Usuwa wszystkie lokalne dane i zastępuje je zawartością kopii zapasowej. Wymaga restartu aplikacji.</string>
     <string name="incremental_import_description">Scala treningi z kopii zapasowej z Twoją obecną historią. Istniejące już treningi zostaną pominięte.</string>

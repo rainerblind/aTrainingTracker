@@ -1079,6 +1079,19 @@
     <string name="backup_interval_3days">A cada 3 dias</string>
     <string name="backup_interval_weekly">Semanal</string>
     <string name="backup_interval_monthly">Mensal</string>
+
+    <string name="cluster_migration_enriching">Enriquecendo metadados da família (%1$d de %2$d)…</string>
+    <string name="cluster_tuning_use_sport_type_label">Levar em conta o tipo de esporte</string>
+    <string name="cluster_tuning_use_sport_type_summary">Isole diferentes atividades (ex: corrida vs ciclismo) na mesma rota em famílias separadas.</string>
+
+    <string name="workout_periods__migration_title">Otimizando a base de dados do histórico de treinos…</string>
+
+    <string name="import_backup">Importação e backup</string>
+    <string name="tab_import">Importar</string>
+    <string name="tab_backup">Backup</string>
+    <string name="tab_restore">Restaurar</string>
+    <string name="import_backup_summary">Gerir importações de treinos, backups e restauração de dados</string>
+
     <string name="create_and_upload_to_dropbox">Criar \u0026 Enviar p/ Dropbox</string>
     <string name="full_restore_description">Apaga todos os dados locais e os substitui pelo conteúdo do backup. Força reinicialização.</string>
     <string name="incremental_import_description">Mescla treinos de um backup no seu histórico atual. Treinos já existentes serão ignorados.</string>
