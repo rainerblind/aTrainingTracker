@@ -508,8 +508,12 @@ class WorkoutRepository private constructor(private val application: Application
             when (sensorType) {
                 SensorType.LINE_DISTANCE_m -> if (extremaType == ExtremaType.MAX) updated = updated.copy(maxDisplacement = value)
                 SensorType.ALTITUDE -> {
-                    if (extremaType == ExtremaType.MIN) updated = updated.copy(minAltitude = value)
-                    if (extremaType == ExtremaType.MAX) updated = updated.copy(maxAltitude = value)
+                    when (extremaType) {
+                        ExtremaType.MIN -> updated = updated.copy(minAltitude = value)
+                        ExtremaType.MAX -> updated = updated.copy(maxAltitude = value)
+                        ExtremaType.START -> updated = updated.copy(startAltitude = value)
+                        else -> {}
+                    }
                 }
                 else -> {}
             }
@@ -624,11 +628,6 @@ class WorkoutRepository private constructor(private val application: Application
                         PeriodsRepository.getInstance(application).onWorkoutFinished(freshWorkoutData)
                         // --- SURGICAL CLUSTER UPDATE (ATT-354) ---
                         WorkoutClusterEngine.getInstance(application).onWorkoutFinished(application, freshWorkoutData)
-
-                        // --- AUTOMATED ALTITUDE DISCOVERY (ATT-39) ---
-                        val locationsManager = com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.getInstance(application)
-                        locationsManager.learnLocation(freshWorkoutData.startLatLng, freshWorkoutData.minAltitude, ExtremaType.START)
-                        locationsManager.learnLocation(freshWorkoutData.endLatLng, freshWorkoutData.minAltitude, ExtremaType.END)
                     }
 
                     addOrUpdateWorkout(freshWorkoutData)
@@ -675,11 +674,6 @@ class WorkoutRepository private constructor(private val application: Application
                     // persist link and increment count if it's a new or changed association (SCRUM-228)
                     if (userEditedWorkout.clusterId != learnedId) {
                         engine.assignClusterToWorkout(application, workoutId, learnedId)
-
-                        // --- AUTOMATED ALTITUDE DISCOVERY (ATT-39) ---
-                        val locationsManager = com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.getInstance(application)
-                        locationsManager.learnLocation(userEditedWorkout.startLatLng, userEditedWorkout.minAltitude, ExtremaType.START)
-                        locationsManager.learnLocation(userEditedWorkout.endLatLng, userEditedWorkout.minAltitude, ExtremaType.END)
 
                         // reload from DB to ensure memory and UI are in sync with inferred identity (SCRUM-254)
                         reloadWorkoutData(workoutId)

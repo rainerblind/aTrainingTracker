@@ -1066,6 +1066,19 @@
     <string name="backup_interval_3days">3日ごと</string>
     <string name="backup_interval_weekly">毎週</string>
     <string name="backup_interval_monthly">毎月</string>
+
+    <string name="cluster_migration_enriching">ファミリーメタデータを強化中（%1$d/%2$d）…</string>
+    <string name="cluster_tuning_use_sport_type_label">スポーツタイプを考慮する</string>
+    <string name="cluster_tuning_use_sport_type_summary">同じルート上の異なるアクティビティ（例：ランニング対サイクリング）を別々のファミリーに隔離します。</string>
+
+    <string name="workout_periods__migration_title">トレーニング履歴データベースを最適化中…</string>
+
+    <string name="import_backup">インポートとバックアップ</string>
+    <string name="tab_import">インポート</string>
+    <string name="tab_backup">バックアップ</string>
+    <string name="tab_restore">復元</string>
+    <string name="import_backup_summary">ワークアウトのインポート、バックアップ、データの復元を管理します</string>
+
     <string name="create_and_upload_to_dropbox">作成 \u0026 Dropboxへ送る</string>
     <string name="full_restore_description">ローカルデータをすべて削除し、バックアップの内容に置き換えます。アプリの再起動が必要です。</string>
     <string name="incremental_import_description">バックアップから現在の履歴にワークアウトを統合します。既存のワークアウトはスキップされます。</string>

@@ -1,46 +1,30 @@
-# Implementation Plan - ATT-455: Restore Sport Filtering on Period Map
+# Implementation Plan - ATT-453: Update Play Store Descriptions
 
-Restore functional sport-type filtering within the Period Detail Map while maintaining the established UI layout. Tapping a sport summary row will correctly filter all map components: anchor tracks, dynamically loaded member tracks, technical markers, and heatmaps.
+Add the "Workout Import" feature to all localized Play Store descriptions and include "Made in Germany" in the German translation to highlight the app's quality and migration capabilities.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Deep Filtering (REQ-PER-009)**: Tapping the sport summary rows (positioned below the period header) will now act as a primary filter for the entire map visualization. This ensures that only the relevant activities (tracks, markers, and heatmap density) are displayed, providing a focused analytical context without altering the screen's visual structure.
+> - **Unified Feature Presentation**: The "Workout Import" feature (supporting TCX files from former devices) will be added to the "Your Data, Your Choice" section in all 9 supported languages.
+> - **German Heritage**: The German description will explicitly feature "Made in Germany" to emphasize the long-standing reliable development.
 
 ## Proposed Changes
 
-### [Component] Architecture & Data Layer
+### 1. Documentation: English Description
+#### [MODIFY] [en.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/en.md)
+- Add bullet point: `• <b>Workout Import</b>: Easily migrate your training history from former devices by importing TCX files.` under "YOUR DATA, YOUR CHOICE".
 
-#### [MODIFY] [PeriodData.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodData.kt)
-- **Update** `PeriodSummary`: Add `anchorIdToPolylineMap: Map<Long, String>` (or use `workoutIdToPolylineMap` for anchors as well) to allow sport-aware filtering of instant anchor tracks.
-- **Update** `PeriodMapState`: Change `heatmapPaths: List<List<LatLng>>` to `workoutIdToHeatmapPathMap: Map<Long, List<LatLng>>` to enable ID-based filtering of the heatmap layer.
+### 2. Documentation: German Description
+#### [MODIFY] [de.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/de.md)
+- Add bullet point: `• <b>Training-Import</b>: Migriere deinen Trainingsverlauf einfach von früheren Geräten durch den Import von TCX-Dateien.` under "DEINE DATEN, DEINE WAHL".
+- Prepend `<b>Made in Germany</b>. ` to the paragraph under "VON ATHLETEN FÜR ATHLETEN".
 
-#### [MODIFY] [PeriodsRepository.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsRepository.kt)
-- **Update** `enrich` to ensure all spatial data is mapped to workout IDs.
-
-### [Component] Logic Layer (ViewModel)
-
-#### [MODIFY] [PeriodsViewModel.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsViewModel.kt)
-- **Update** `showPeriodMap` to populate the ID-mapped paths in `PeriodMapState`.
-
-### [Component] UI & Map Layer
-
-#### [MODIFY] [PeriodMapScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodMapScreen.kt)
-- **Retain** the existing header layout (Period details above Sport rows).
-- **Refine Filtering**: Ensure `InteractivePeriodMap` receives only the data that matches the user's `selectedSports`.
-- **Pass** filtered tracks, markers, and heatmap paths to the map component.
-
-#### [MODIFY] [InteractivePeriodMap.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/InteractivePeriodMap.kt)
-- **Update** to render only the filtered data provided by the screen layer.
-- **Ensure** anchor tracks utilize the correct sport-type colors/styling.
+### 3. Documentation: Global Translations
+#### [MODIFY] [es.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/es.md), [fr.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/fr.md), [it.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/it.md), [ja.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/ja.md), [nl.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/nl.md), [pl.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/pl.md), [pt.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/pt.md)
+- Add the corresponding localized "Workout Import" bullet point to the data sovereignty section of each file.
 
 ## Verification Plan
 
 ### Manual Verification
-- **TST-PER-012 (Jira: ATT-466)**:
-    1. Open a **Period Detail Map**.
-    2. **Verify** sport rows are at the top.
-    3. **Tap** "Cycling" -> Map shows only bike paths.
-    4. **Tap** "Running" -> Map shows only run paths.
-    5. **Toggle Both** -> Map shows all.
-    6. **Verify** heatmap intensity changes as sports are filtered.
+- **Visual Audit**: Inspect each modified markdown file to ensure formatting is correct and translations are accurate.
+- **Protocol Compliance**: Verify that all 9 languages are updated to maintain our world-class standard (REQ-STP-001).

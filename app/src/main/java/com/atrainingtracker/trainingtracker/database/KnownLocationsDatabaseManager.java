@@ -106,9 +106,9 @@ public class KnownLocationsDatabaseManager {
     }
 
     @Nullable
-    public MyLocation addNewLocation(String name, int altitude, int radius, double latitude, double longitude) {
+    public MyLocation addNewLocation(String name, int altitude, int radius, double latitude, double longitude, @NonNull ExtremaType type) {
         if (DEBUG)
-            Log.d(TAG, "addNewLocation: " + name + " " + altitude + " m" + ", radius=" + radius);
+            Log.d(TAG, "addNewLocation: " + name + " " + altitude + " m" + ", radius=" + radius + ", type=" + type);
 
         MyLocation myLocation = null;
 
@@ -119,6 +119,8 @@ public class KnownLocationsDatabaseManager {
         values.put(KnownLocationsDbHelper.RADIUS, radius);
         values.put(KnownLocationsDbHelper.LONGITUDE, longitude);
         values.put(KnownLocationsDbHelper.LATITUDE, latitude);
+        values.put(KnownLocationsDbHelper.EXTREMA_TYPE, type.name());
+        values.put(KnownLocationsDbHelper.HIT_COUNT, 1);
 
         try {
             long id = getDatabase().insert(KnownLocationsDbHelper.TABLE, null, values);
@@ -198,6 +200,7 @@ public class KnownLocationsDatabaseManager {
         contentValues.put(KnownLocationsDbHelper.LATITUDE, myLocation.latLng.latitude);
         contentValues.put(KnownLocationsDbHelper.LONGITUDE, myLocation.latLng.longitude);
         contentValues.put(KnownLocationsDbHelper.RADIUS, myLocation.radius);
+        contentValues.put(KnownLocationsDbHelper.HIT_COUNT, myLocation.hitCount);
 
         updateId(id, contentValues);
     }
@@ -258,7 +261,7 @@ public class KnownLocationsDatabaseManager {
             } else {
                 // New discovery
                 String name = "Auto-learned " + type.name().toLowerCase();
-                addNewLocation(name, (int) Math.round(altitude), DEFAULT_RADIUS, pos.latitude, pos.longitude);
+                addNewLocation(name, (int) Math.round(altitude), DEFAULT_RADIUS, pos.latitude, pos.longitude, type);
                 if (DEBUG) Log.d(TAG, "Discovered new location at " + pos + " with altitude " + altitude + "m");
             }
         }

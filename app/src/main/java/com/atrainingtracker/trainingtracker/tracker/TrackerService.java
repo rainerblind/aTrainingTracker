@@ -957,10 +957,12 @@ public class TrackerService extends Service {
         // 1. Save START and END locations
         LatLng startPos = mLiveSession.getStartLatLng();
         LatLng endPos = mLiveSession.getLastLatLng();
+
         if (startPos != null) {
             summariesManager.updateExtremaValue(mWorkoutID, SensorType.LATITUDE, ExtremaType.START, startPos.latitude, startPos);
             summariesManager.updateExtremaValue(mWorkoutID, SensorType.LONGITUDE, ExtremaType.START, startPos.longitude, startPos);
         }
+
         if (endPos != null) {
             summariesManager.updateExtremaValue(mWorkoutID, SensorType.LATITUDE, ExtremaType.END, endPos.latitude, endPos);
             summariesManager.updateExtremaValue(mWorkoutID, SensorType.LONGITUDE, ExtremaType.END, endPos.longitude, endPos);

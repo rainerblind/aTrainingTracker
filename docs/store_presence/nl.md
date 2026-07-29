@@ -48,6 +48,7 @@ Zodra je sessie klaar is, vind je uitgebreide lokale statistieken die klaar zijn
 <b>JOUW DATA, JOUW KEUZE</b>
 Jij beslist waar je data naartoe gaat. aTrainingTracker stelt privacy voorop en biedt tegelijkertijd het gemak van de cloud.
 • <b>Privacy als Standaard</b>: Geen account vereist. Geen verplichte cloud. Je trainingen blijven op jouw toestel, tenzij je anders kiest.
+• <b>Workout-import</b>: migreer eenvoudig je trainingsgeschiedenis van vorige apparaten door TCX-bestanden te importeren.
 • <b>Optionele Cloudsync</b>: Upload nieuwe activiteiten automatisch naar Strava of Dropbox voor verdere analyse.
 • <b>Populaire Formaten</b>: Exporteer je trainingen als GPX, TCX, CSV en andere standaardformaten.
 
