@@ -34,8 +34,14 @@ import java.time.temporal.IsoFields
 import java.time.temporal.TemporalAdjusters
 
 /**
- * Acts as the single source of truth for period-level data.
- * Orchestrates hierarchical synchronization between workout history and the persistent Periods database.
+ * Acts as the centralized source of truth for historical analytical summaries.
+ *
+ * This repository orchestrates a complex hierarchical synchronization model (Day -> Week -> Month -> Year)
+ * using a Dual-Phase O(N) strategy. It maintains a persistent relational database of period-level
+ * statistics, providing reactive streams for the analytical UI.
+ *
+ * Architectural Role: Aggregation layer for long-term historical trends.
+ * Threading: Intensive database rollups are offloaded to [Dispatchers.IO].
  */
 class PeriodsRepository private constructor(private val application: Application) {
 
@@ -96,9 +102,14 @@ class PeriodsRepository private constructor(private val application: Application
     }
 
     /**
-     * ATT-379: Performs a Dual-Phase hierarchical re-aggregation of history.
-     * Phase 1: High-speed O(N) database read and global grouping.
-     * Phase 2: Prioritized hierarchical sync with Transactional Pumping.
+     * Performs a full Dual-Phase hierarchical re-aggregation of the entire workout history.
+     *
+     * Implementation Logic (ATT-379):
+     * 1. **Phase 1 (Reading)**: Acquires a cursor for all workouts and performs an O(N) vectorized
+     *    read to build the primary training directory.
+     * 2. **Phase 2 (Syncing)**: Iterates through temporal buckets (Months), committing updates
+     *    in transactions to ensure the UI list grows visibly and responsively.
+     * 3. **Rollup**: Automatically propagates metrics upward (Day -> Week/Month -> Year).
      */
     private suspend fun performHierarchicalMigration() = withContext(Dispatchers.Default) {
         rebuildMutex.withLock {

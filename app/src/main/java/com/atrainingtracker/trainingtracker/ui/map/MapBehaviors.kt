@@ -29,6 +29,14 @@ import com.google.maps.android.compose.CameraPositionState
 
 /**
  * Manages automated bounds fitting when tracks, segments, or routes change.
+ *
+ * This controller ensures that the map camera is always focused on the most relevant data
+ * while respecting the user's manual interactions. It features a "Snap and Lock" behavior
+ * that fits the initial bounds once and then allows for manual exploration.
+ *
+ * @param zoomFocus The desired camera strategy (e.g., center on user vs. fit all markers).
+ * @param initialBounds Explicit boundaries to snap to immediately (bypassing auto-calculation).
+ * @param currentLocation The user's current GPS location, used for proximity filtering.
  */
 @Composable
 fun MapBoundsController(

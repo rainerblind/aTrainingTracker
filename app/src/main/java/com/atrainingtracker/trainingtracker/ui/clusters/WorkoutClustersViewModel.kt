@@ -58,6 +58,25 @@ data class ClusterMapState(
     val isLoading: Boolean = false
 )
 
+/**
+ * Manages the UI state and background processing for the Favorite Tracks (Workout Clusters) hub.
+ *
+ * This ViewModel orchestrates the discovery and organization of recurring route families.
+ * It features a selection-driven loading model that pre-calculates exhaustive map data
+ * (Tracks, Heatmaps, Markers) in the background to ensure a fluid user experience.
+ *
+ * Architectural Role: Presentation layer for recurring spatial patterns.
+ */
+/**
+ * Manages the UI state and background processing for the Favorite Tracks (Workout Clusters) hub.
+ *
+ * This ViewModel orchestrates the discovery and organization of recurring route families.
+ * It features a selection-driven loading model that pre-calculates exhaustive map data
+ * (Tracks, Heatmaps, Markers) in the background to ensure a fluid user experience.
+ *
+ * Architectural Role: Presentation layer for recurring spatial patterns.
+ * Threading: Intensive map data processing is offloaded to [Dispatchers.Default].
+ */
 class WorkoutClustersViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = WorkoutClusterRepository.getInstance(application)

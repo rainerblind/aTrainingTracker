@@ -47,6 +47,16 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Orchestrates all persistent storage operations for high-level workout session metadata.
+ *
+ * This manager provides a thread-safe interface to the `WorkoutSummaries` and `ExtremumValues`
+ * SQLite tables. It handles session identity, equipment links, analytical aggregates (extrema),
+ * and spatial boundaries.
+ *
+ * Architectural Role: Primary data management layer for workout history summaries.
+ * Threading: Methods should generally be called from background contexts to avoid UI block.
+ */
 public class WorkoutSummariesDatabaseManager {
     private static final String TAG = "WorkoutSummariesDatabaseManager";
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
@@ -55,12 +65,21 @@ public class WorkoutSummariesDatabaseManager {
     private static volatile WorkoutSummariesDatabaseManager cInstance;
     private SQLiteDatabase mDatabase = null;
 
-    // Private constructor to prevent direct instantiation
+    /**
+     * Private constructor to prevent direct instantiation and ensure singleton pattern.
+     */
     private WorkoutSummariesDatabaseManager(Context context) {
         // The helper is instantiated with the application context, making it safe.
         cWorkoutSummariesDbHelper = new WorkoutSummariesDbHelper(context);
     }
 
+    /**
+     * Provides the thread-safe singleton instance of the manager.
+     * Uses double-checked locking for lazy initialization.
+     *
+     * @param context The application context.
+     * @return The authoritative manager instance.
+     */
     @NonNull
     public static WorkoutSummariesDatabaseManager getInstance(@NonNull Context context) {
         // Use double-checked locking for thread-safe lazy initialization.
@@ -100,6 +119,14 @@ public class WorkoutSummariesDatabaseManager {
     // some high level helper methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
+    /**
+     * Persists all user-editable and analytical fields for a workout session.
+     *
+     * Implementation: Updates the primary session row with current metadata, including
+     * sport identity, equipment links, descriptive text, and spatial bounding boxes.
+     *
+     * @param workoutData The exhaustive session data to persist.
+     */
     public void updateWorkoutData(WorkoutData workoutData) {
         if (DEBUG) Log.i(TAG, "updateWorkoutData for workoutId: " + workoutData.getId());
 
@@ -199,6 +226,9 @@ public class WorkoutSummariesDatabaseManager {
                 WorkoutSummaries.CLUSTER_ID + "=?", new String[]{String.valueOf(clusterId)});
     }
 
+    /**
+     * Retrieves a cursor for a specific workout ID.
+     */
     public Cursor getWorkoutCursor(long workoutId) {
         return getDatabase().query(WorkoutSummaries.TABLE,
                 null,
@@ -207,7 +237,9 @@ public class WorkoutSummariesDatabaseManager {
                 null, null, null);
     }
 
-
+    /**
+     * Returns a cursor for all workouts sorted descending (newest first).
+     */
     public Cursor getCursorForAllWorkouts() {
         return getDatabase().query(
                 WorkoutSummaries.TABLE,
@@ -216,6 +248,9 @@ public class WorkoutSummariesDatabaseManager {
         );
     }
 
+    /**
+     * Returns a cursor for all workouts sorted ascending (oldest first).
+     */
     public Cursor getCursorForAllWorkoutsAsc() {
         return getDatabase().query(
                 WorkoutSummaries.TABLE,
@@ -226,7 +261,11 @@ public class WorkoutSummariesDatabaseManager {
 
     /**
      * Returns a cursor for all workouts within a specific time range.
-     * Used for targeted period recalculations (ATT-346).
+     * Used for hierarchical periods (ATT-346) and analytical rollups.
+     *
+     * @param startTimeS Start of range in seconds.
+     * @param endTimeS End of range in seconds.
+     * @return A cursor sorted by start time ascending.
      */
     public Cursor getWorkoutsInRangeCursor(long startTimeS, long endTimeS) {
         String selection = "strftime('%s', " + WorkoutSummaries.TIME_START + ") >= ? AND " +
@@ -396,11 +435,17 @@ public class WorkoutSummariesDatabaseManager {
         return value;
     }
 
+    /**
+     * Retrieves the peak value (Min/Mean/Max) for a specific sensor in a workout.
+     */
     @Nullable
     public Double getExtremaValue(long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType) {
         return getExtremaValue(getDatabase(), workoutId, sensorType, extremaType);
     }
 
+    /**
+     * Retrieves the peak value using an explicit database connection.
+     */
     @Nullable
     public Double getExtremaValue(SQLiteDatabase db, long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType) {
         Double extremaValue = null;
@@ -423,6 +468,9 @@ public class WorkoutSummariesDatabaseManager {
         return extremaValue;
     }
 
+    /**
+     * Retrieves the geographical position associated with a sensor peak.
+     */
     @Nullable
     public LatLng getExtremaPosition(long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType) {
         LatLng position = null;
@@ -465,7 +513,10 @@ public class WorkoutSummariesDatabaseManager {
 
     /**
      * Fetches all extrema records for a batch of workout IDs in a single query (ATT-359).
-     * Reduces O(N) queries to O(1).
+     * Reduces O(N) queries to O(1) for high-performance list loading.
+     *
+     * @param workoutIds A collection of IDs to fetch peaks for.
+     * @return A list of [ExtremaRecord] objects.
      */
     public List<ExtremaRecord> getExtremaForWorkouts(java.util.Collection<Long> workoutIds) {
         List<ExtremaRecord> records = new ArrayList<>();
@@ -504,10 +555,16 @@ public class WorkoutSummariesDatabaseManager {
         return records;
     }
 
+    /**
+     * Atomically updates or inserts a sensor peak value and its location.
+     */
     public void updateExtremaValue(long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType, double value, @Nullable LatLng position) {
         updateExtremaValue(getDatabase(), workoutId, sensorType, extremaType, value, position);
     }
 
+    /**
+     * Implementation for extrema update using an explicit database handle.
+     */
     public void updateExtremaValue(SQLiteDatabase db, long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType, double value, @Nullable LatLng position) {
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.WORKOUT_ID, workoutId);
@@ -527,6 +584,12 @@ public class WorkoutSummariesDatabaseManager {
         }
     }
 
+    /**
+     * Updates the map polyline and analytical streams (Altitude/Distance) for a workout.
+     *
+     * Implementation: Also recalculates the spatial bounding box (N/S/E/W) based on the
+     * provided polyline to ensure zero-latency map focus in the list view (ATT-352).
+     */
     public void updateMapAndStreams(long workoutId, String polyline, String altitudeStream, String distanceStream) {
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.MAP_POLYLINE, polyline);
@@ -553,6 +616,10 @@ public class WorkoutSummariesDatabaseManager {
         getDatabase().update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
     }
 
+    /**
+     * Concatenates new data segments to existing map and data streams.
+     * Use this during live tracking for incremental persistence.
+     */
     public void appendToMapAndStreams(long workoutId, String polylineSuffix, String altitudeSuffix, String distanceSuffix) {
         String sql = "UPDATE " + WorkoutSummaries.TABLE + " SET "
                 + WorkoutSummaries.MAP_POLYLINE + " = IFNULL(" + WorkoutSummaries.MAP_POLYLINE + ", '') || ?, "
@@ -596,6 +663,9 @@ public class WorkoutSummariesDatabaseManager {
     }
 
 
+    /**
+     * Persists the list of sensor types that were active during a workout.
+     */
     public void saveAccumulatedSensorTypes(long workoutId, @NonNull Iterable<SensorType> sensorTypes) {
         if (DEBUG) Log.i(TAG, "saveAccumulatedSensors for workoutId: " + workoutId);
 
@@ -610,6 +680,9 @@ public class WorkoutSummariesDatabaseManager {
         }
     }
 
+    /**
+     * Retrieves the set of sensor types recorded for a specific workout.
+     */
     @NonNull
     public Set<SensorType> getAccumulatedSensorTypes(long workoutId) {
         if (DEBUG) Log.i(TAG, "getAccumulatedSensorTypes for workoutId: " + workoutId);
@@ -634,6 +707,9 @@ public class WorkoutSummariesDatabaseManager {
     }
 
 
+    /**
+     * Returns a list of workout IDs that are older than the specified number of days.
+     */
     @NonNull
     public List<Long> getOldWorkouts(int days) {
         if (DEBUG) Log.i(TAG, "getOldWorkouts(" + days + ")");
@@ -656,6 +732,9 @@ public class WorkoutSummariesDatabaseManager {
     }
 
 
+    /**
+     * Retrieves the start timestamp of a workout session, formatted for a specific timezone.
+     */
     public String getStartTime(String fileBaseName, String timeZone) {
         if (DEBUG) Log.i(TAG, "getStartTime: fileBaseName=" + fileBaseName);
         String startTime = null;
@@ -675,7 +754,12 @@ public class WorkoutSummariesDatabaseManager {
     }
 
 
-    // TODO: here, we only delete the workout from this db.  Use WorkoutDeletionHelper to delete from all DBs.
+    /**
+     * Surgically deletes a workout and its related metadata from the summary and extrema tables.
+     * Note: This does NOT delete raw samples. Use [WorkoutDeletionHelper] for full cleanup.
+     *
+     * @return true if the deletion was successful.
+     */
     boolean deleteWorkout(long workoutId) {
         if (DEBUG) Log.i(TAG, "deleteWorkout: workoutId=" + workoutId);
 
@@ -691,7 +775,7 @@ public class WorkoutSummariesDatabaseManager {
 
 
     /**
-     * Getting some stats for an equipment or a sport type
+     * DTO for aggregated workout statistics (Equipment or Sport Type).
      */
     public static class Stats {
         public double totalDistanceM = 0;
@@ -703,7 +787,7 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
-     * generic method to get the total Stats for a column=id
+     * Internal helper to calculate total statistics for a specific column/ID pair.
      */
     private Stats getStatsForColumn(String column, long id) {
         Stats stats = new Stats();
@@ -747,7 +831,7 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
-     * Aggregates workout statistics for a specific sport type
+     * Aggregates workout statistics for a specific sport type.
      */
     public Stats getSportTypeStats(long sportTypeId) {
         return getStatsForColumn(WorkoutSummaries.SPORT_ID, sportTypeId);
@@ -755,9 +839,15 @@ public class WorkoutSummariesDatabaseManager {
 
 
     /**
-     * Generic method to get the Stats for a Period
+     * Aggregates statistics for a specific category within a time range.
+     *
+     * @param column The database column to filter by (e.g., EQUIPMENT_ID).
+     * @param id The value of the column (e.g., specific equipment ID).
+     * @param startTimeS Start of range in seconds.
+     * @param endTimeS End of range in seconds.
+     * @return A [Stats] object containing the totals for the period.
      */
-    public Stats getStatsForPeriod(String column, long equipmentId, long startTimeS, long endTimeS) {
+    public Stats getStatsForPeriod(String column, long id, long startTimeS, long endTimeS) {
         Stats stats = new Stats();
         SQLiteDatabase db = getDatabase();
 
@@ -772,11 +862,11 @@ public class WorkoutSummariesDatabaseManager {
 
         // Compare DATETIME column against numeric unix timestamps
         String selection = column + "=? AND " +
-                WorkoutSummaries.TIME_START + " >= datetime(?, 'unixepoch') AND " +
-                WorkoutSummaries.TIME_START + " <= datetime(?, 'unixepoch')";
+                "strftime('%s', " + WorkoutSummaries.TIME_START + ") >= ? AND " +
+                "strftime('%s', " + WorkoutSummaries.TIME_START + ") <= ?";
 
         String[] selectionArgs = {
-                String.valueOf(equipmentId),
+                String.valueOf(id),
                 String.valueOf(startTimeS),
                 String.valueOf(endTimeS)
         };
@@ -795,7 +885,7 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
-     * Aggregates statistics for a specific equipment within a time range.
+     * Aggregates statistics for a specific piece of equipment within a time range.
      */
     public Stats getEquipmentStatsForPeriod(long equipmentId, long startTimeS, long endTimeS) {
         return getStatsForPeriod(WorkoutSummaries.EQUIPMENT_ID, equipmentId, startTimeS, endTimeS);

@@ -82,6 +82,34 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * The core background service responsible for live workout tracking and session persistence.
+ *
+ * This service manages the "1Hz Technical Sampling Loop" which ensures a deterministic
+ * time-base for all recorded data. Its primary responsibilities include:
+ * 1. **Data Acquisition**: Coordinating with [BANALService] to pull real-time sensor telemetry.
+ * 2. **Session Persistence**: Maintaining the `WorkoutSummaries` and `WorkoutSamples` databases.
+ * 3. **Lifecycle Management**: Handling Start/Stop/Pause states and implementing WakeLock
+ *    protection to prevent data gaps during screen-off periods.
+ * 4. **Post-Processing**: Calculating session averages and extrema (peaks) upon completion.
+ *
+ * Architectural Role: Primary business logic layer for real-time data recording.
+ * Threading: Uses a dedicated [ScheduledExecutorService] for the high-precision sampling loop.
+ */
+/**
+ * The core background service responsible for live workout tracking and session persistence.
+ *
+ * This service manages the "1Hz Technical Sampling Loop" which ensures a deterministic
+ * time-base for all recorded data. Its primary responsibilities include:
+ * 1. **Data Acquisition**: Coordinating with BANALService to pull real-time sensor telemetry.
+ * 2. **Session Persistence**: Maintaining the WorkoutSummaries and WorkoutSamples databases.
+ * 3. **Lifecycle Management**: Handling Start/Stop/Pause states and implementing WakeLock
+ *    protection to prevent data gaps during screen-off periods.
+ * 4. **Post-Processing**: Calculating session averages and extrema (peaks) upon completion.
+ *
+ * Architectural Role: Primary business logic layer for real-time data recording.
+ * Threading: Uses a dedicated ScheduledExecutorService for the high-precision sampling loop.
+ */
 public class TrackerService extends Service {
     // TODO: probably, we also have to remove this and use the keywords of WorkoutSummaries directly.
     // there seems to be also a problem with workout_name and the base_file_name...

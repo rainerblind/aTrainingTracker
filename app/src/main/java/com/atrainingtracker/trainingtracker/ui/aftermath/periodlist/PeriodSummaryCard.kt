@@ -57,6 +57,27 @@ import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLngBounds
 
+/**
+ * Provides a high-fidelity analytical summary card for a specific time range.
+ *
+ * This card establishes the visual identity for the Periods module, featuring:
+ * 1. **Primary Metrics**: Bold representation of volume and count.
+ * 2. **Analytical Breakdown**: Sport-specific and detailed session summaries.
+ * 3. **Spatial Preview**: An instant mini-map showing the geographic reach of the period.
+ *
+ * @param summary The data model containing all aggregated metrics and spatial anchors.
+ */
+/**
+ * Provides a high-fidelity analytical summary card for a specific time range.
+ *
+ * This card establishes the visual identity for the Periods module, featuring:
+ * 1. **Primary Metrics**: Bold representation of volume and count.
+ * 2. **Analytical Breakdown**: Sport-specific and detailed session summaries.
+ * 3. **Spatial Preview**: An instant mini-map showing the geographic reach of the period.
+ *
+ * Architectural Role: List item component for historical summaries.
+ * @param summary The data model containing all aggregated metrics and spatial anchors.
+ */
 @Composable
 fun PeriodSummaryCard(
     summary: PeriodSummary,

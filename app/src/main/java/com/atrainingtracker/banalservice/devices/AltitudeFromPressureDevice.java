@@ -41,6 +41,15 @@ import com.google.android.gms.maps.model.LatLng;
 
 // TODO: use database or preferences to store whether or not the pressure sensor is available.  really necessary??
 
+/**
+ * Driver for the internal smartphone barometric pressure sensor, providing high-precision altitude.
+ *
+ * This device implements barometric formula logic to derive altitude from raw pressure. It
+ * features an automated "Location Learning" loop that utilizes GPS-confirmed starting
+ * locations to correct the pressure sensor's baseline drift.
+ *
+ * Architectural Role: Internal hardware sensor driver.
+ */
 public class AltitudeFromPressureDevice extends MyDevice
         implements SensorEventListener {
     public static final String ALTITUDE_CORRECTION_VALUE = "com.atrainingtracker.banalservice.Devices.AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE";

@@ -29,6 +29,27 @@ import com.google.maps.android.PolyUtil
 import com.google.maps.android.compose.*
 import kotlinx.coroutines.flow.MutableStateFlow
 
+/**
+ * Provides the exhaustive spatial analytics view for a specific training period.
+ *
+ * This component blends multiple data tiers to achieve high-performance visualization:
+ * 1. **Tier 1 (Instant)**: Renders the pre-calculated spatial anchors (N/S/E/W) immediately.
+ * 2. **Tier 2 (Heatmap)**: Renders the complete historical density map from the provided [mapState].
+ * 3. **Tier 3 (Detail)**: Displays individual member traces and technical markers (Start/End/Apex).
+ *
+ * It utilizes the standard project-wide [ATrainingTrackerMap] engine with [MapZoomFocus.EXPLICIT_BOUNDS].
+ */
+/**
+ * Provides the exhaustive spatial analytics view for a specific training period.
+ *
+ * This component blends multiple data tiers to achieve high-performance visualization:
+ * 1. **Tier 1 (Instant)**: Renders the pre-calculated spatial anchors (N/S/E/W) immediately.
+ * 2. **Tier 2 (Heatmap)**: Renders the complete historical density map from the provided [mapState].
+ * 3. **Tier 3 (Detail)**: Displays individual member traces and technical markers (Start/End/Apex).
+ *
+ * Architectural Role: Primary analytical map view for historical periods.
+ * Performance: Uses pre-simplified paths from [PeriodMapState] to ensure zero-latency population.
+ */
 @OptIn(MapsComposeExperimentalApi::class)
 @Composable
 fun InteractivePeriodMap(

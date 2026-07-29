@@ -27,11 +27,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * A DSL scope for defining the content of the ATrainingTrackerMap.
+ * Defines the available operations for adding data layers to the [ATrainingTrackerMap].
+ *
+ * This DSL-style interface decouples the "what to draw" from the "how to draw", allowing
+ * different screens (e.g., Live Tracking vs. Period Summaries) to share the same map engine.
  */
 interface MapContentScope {
     /**
-     * Renders a generic mappable path (Track, Route, or Segment).
+     * Renders a generic mappable path (Track, Route, or Segment) with a specific alpha.
      */
     fun path(
         path: MappablePath,
@@ -39,14 +42,25 @@ interface MapContentScope {
         onPathClick: (Long) -> Unit = {}
     )
 
-    // Specialized helpers for common collections
+    /**
+     * Renders a list of producción tracks, typically used for workout history.
+     */
     fun tracks(tracks: List<MapTrack>)
+
+    /**
+     * Renders Strava segments with optional highlighting for active live segments.
+     */
     fun segments(segments: List<MapSegment>, activeLiveSegmentIds: Set<Long> = emptySet(), onSegmentClick: (Long) -> Unit = {})
+
+    /**
+     * Renders planned routes with standardized selected/unselected styling.
+     */
     fun routes(routes: List<MapRoute>, onRouteClick: (Long) -> Unit = {})
     
     /**
-     * Renders a list of background paths (context) with tiered alpha based on sport type.
-     * Contextual paths are ignored by automated bounds fitting.
+     * Renders background context paths (e.g., other routes in the area) using tiered alpha.
+     * @param sameSportAlpha Opacity for paths matching the current activity type (default 0.5).
+     * @param otherSportAlpha Opacity for paths of a different activity type (default 0.2).
      */
     fun contextualPaths(
         paths: List<MappablePath>,
@@ -54,8 +68,26 @@ interface MapContentScope {
         otherSportAlpha: Float = 0.2f
     )
 
+    /**
+     * Renders a collection of technical [LocationMarker] objects (Start, End, Apex).
+     */
     fun markers(markers: List<LocationMarker>)
+
+    /**
+     * Renders a high-frequency live track, typically used during active recording.
+     */
     fun liveTrack(path: List<LatLng>)
+
+    /**
+     * Renders a density-based heatmap using a Cyan -> Indigo sequential gradient.
+     *
+     * Implementation: Uses [HeatmapTileProvider] and offloads point densification/thinning
+     * to a background thread to prevent UI jank.
+     *
+     * @param opacity The overall transparency of the heatmap layer.
+     * @param radius The blur radius of each point in pixels.
+     * @param maxPoints A technical budget to prevent OOM. If exceeded, the data will be thinned.
+     */
     fun heatmap(
         allPaths: List<List<LatLng>>, 
         opacity: Double = 0.8, 
@@ -64,10 +96,20 @@ interface MapContentScope {
         maxPoints: Int? = null
     )
 
+    /**
+     * Internal implementation of the rendering loop. Called by [ATrainingTrackerMap].
+     */
     @Composable
     fun Render(currentZoom: Float)
 }
 
+/**
+ * Concrete implementation of the map content orchestration logic.
+ *
+ * This class handles the complex blending schedule that makes the map "zoom-adaptive":
+ * - **Low Zoom**: Heatmaps are broad and tracks are muted. Markers are culled for clarity.
+ * - **High Zoom**: Heatmaps recede into a density shadow, and tracks become fully opaque.
+ */
 internal class MapContentScopeImpl(
     private val zoomFocus: MapZoomFocus,
     private val primaryColor: androidx.compose.ui.graphics.Color,

@@ -216,7 +216,12 @@ fun saveBitmapDescriptorFactoryFromBitmap(bm: Bitmap): BitmapDescriptor? {
 
 /**
  * Adds intermediate points to a path if the distance between consecutive points
- * exceeds [maxDistanceMeters]. This improves heatmap quality for sparse data.
+ * exceeds [maxDistanceMeters]. This improves heatmap quality for sparse data by
+ * ensuring consistent density along a vector.
+ *
+ * @param path The list of coordinates to densify.
+ * @param maxDistanceMeters The maximum gap allowed between points.
+ * @return A new list of coordinates with interpolated intermediate points.
  */
 fun densifyPath(path: List<LatLng>, maxDistanceMeters: Double): List<LatLng> {
     if (path.isEmpty()) return emptyList()
@@ -241,10 +246,19 @@ fun densifyPath(path: List<LatLng>, maxDistanceMeters: Double): List<LatLng> {
 }
 
 /**
- * Creates a HeatmapTileProvider with the standard training heatmap styling.
- * @param radius The radius of the heatmap points in pixels.
- * @param maxPoints The maximum number of points to process. If exceeded, the path will be thinned.
- * @param weight The weight assigned to each point. Lower weights result in 'thinner' looking lines.
+ * Creates a configured heatmap provider using the project's standard sequential gradient.
+ *
+ * Implementation:
+ * 1. **Budget Enforcement**: Calculates a thinning factor if the total point count exceeds [maxPoints].
+ * 2. **Densification**: If the budget allows, it adds intermediate points to low-frequency paths
+ *    to prevent the "dotted line" effect on maps.
+ * 3. **Mathematical Safety**: Validates intensity and gradient thresholds to prevent [IllegalArgumentException].
+ *
+ * @param allPaths The source coordinates for the heatmap.
+ * @param radius The blur radius of each point in pixels.
+ * @param densifyInterval The distance in meters used for path interpolation.
+ * @param maxPoints The technical memory budget for this provider.
+ * @param weight The individual weight of each point (affects "thickness").
  */
 fun createHeatmapProvider(
     allPaths: List<List<LatLng>>,

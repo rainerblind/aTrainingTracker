@@ -11,9 +11,6 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
 package com.atrainingtracker.trainingtracker.helpers
@@ -63,7 +60,16 @@ suspend fun combineAndShare(context: Context, header: Bitmap, map: Bitmap) = wit
 }
 
 /**
- * Shares a detailed workout consisting of a Header, Map, and Elevation profile.
+ * Composes a detailed workout snapshot consisting of a Header, Map, and Elevation profile.
+ *
+ * Implementation Logic:
+ * 1. **Thread Safety**: Offloads heavy bitmap composition to [Dispatchers.Default] to
+ *    prevent UI freezing.
+ * 2. **Dynamic Assembly**: Calculates the total height based on which UI components
+ *    (Header/Elevation) are currently visible.
+ * 3. **Branding**: Automatically appends the official application footer and logo.
+ * 4. **Persistence**: Saves the final image to a secure cache directory and triggers
+ *    the system sharing intent via a [FileProvider].
  */
 suspend fun combineWorkoutAndShare(context: Context, header: Bitmap?, map: Bitmap, elevation: Bitmap?) = withContext(Dispatchers.Default) {
     val sHeader = header?.let { ensureSoftwareBitmap(it) }
