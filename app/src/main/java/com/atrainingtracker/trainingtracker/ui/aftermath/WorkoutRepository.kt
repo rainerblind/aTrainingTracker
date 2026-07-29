@@ -628,10 +628,6 @@ class WorkoutRepository private constructor(private val application: Application
                         PeriodsRepository.getInstance(application).onWorkoutFinished(freshWorkoutData)
                         // --- SURGICAL CLUSTER UPDATE (ATT-354) ---
                         WorkoutClusterEngine.getInstance(application).onWorkoutFinished(application, freshWorkoutData)
-
-                        // --- AUTOMATED ALTITUDE DISCOVERY (ATT-39/448) ---
-                        val locationsManager = com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.getInstance(application)
-                        locationsManager.learnLocation(freshWorkoutData.startLatLng, freshWorkoutData.startAltitude ?: freshWorkoutData.minAltitude, ExtremaType.START)
                     }
 
                     addOrUpdateWorkout(freshWorkoutData)
@@ -678,10 +674,6 @@ class WorkoutRepository private constructor(private val application: Application
                     // persist link and increment count if it's a new or changed association (SCRUM-228)
                     if (userEditedWorkout.clusterId != learnedId) {
                         engine.assignClusterToWorkout(application, workoutId, learnedId)
-
-                        // --- AUTOMATED ALTITUDE DISCOVERY (ATT-39/448) ---
-                        val locationsManager = com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.getInstance(application)
-                        locationsManager.learnLocation(userEditedWorkout.startLatLng, userEditedWorkout.startAltitude ?: userEditedWorkout.minAltitude, ExtremaType.START)
 
                         // reload from DB to ensure memory and UI are in sync with inferred identity (SCRUM-254)
                         reloadWorkoutData(workoutId)

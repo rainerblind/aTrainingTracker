@@ -35,6 +35,7 @@ import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.trainingtracker.database.ExtremaType;
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
 import com.google.android.gms.maps.model.LatLng;
 
@@ -53,6 +54,7 @@ public class AltitudeFromPressureDevice extends MyDevice
     protected boolean mPressureSensorRegistered = false;
     private final String TAG = "AltitudeFromPressureDev";
     private double mAltitudeCorrection = 0;
+    private double mLastRawAltitude = Double.NaN;
     private boolean mPressureSensorInitialized = false;
     private final BroadcastReceiver mGPSProviderEnabledReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
@@ -104,12 +106,12 @@ public class AltitudeFromPressureDevice extends MyDevice
     private void initPressureSensor() {
         if (DEBUG) Log.d(TAG, "initPressureSensor");
 
-        if (mMySensorManager.getSensor(SensorType.LATITUDE) != null
+        if (!Double.isNaN(mLastRawAltitude)
+                && mMySensorManager.getSensor(SensorType.LATITUDE) != null
                 && mMySensorManager.getSensor(SensorType.LONGITUDE) != null
                 && mMySensorManager.getSensor(SensorType.LATITUDE).getValue() != null
                 && mMySensorManager.getSensor(SensorType.LONGITUDE).getValue() != null
-                && mAltitudeSensor != null
-                && mAltitudeSensor.getValue() != null) {
+                && mAltitudeSensor != null) {
 
             mPressureSensorInitialized = true;
 
@@ -118,9 +120,14 @@ public class AltitudeFromPressureDevice extends MyDevice
             KnownLocationsDatabaseManager.MyLocation myLocation = KnownLocationsDatabaseManager.getInstance(mContext).getMyLocation(new LatLng(latitude, longitude));
 
             if (myLocation != null) {
+                if (DEBUG) Log.i(TAG, "Location found: " + myLocation.name + " (Reference Alt: " + myLocation.altitude + "m)");
                 setAltitudeCorrection(myLocation.altitude);
                 mAltitudeSensor.newValue(myLocation.altitude);
             }
+
+            // --- ATT-448: Refinement ---
+            // Automatically discover or refine the learned reference altitude using the current raw measurement
+            KnownLocationsDatabaseManager.getInstance(mContext).learnLocation(new LatLng(latitude, longitude), mLastRawAltitude, ExtremaType.START);
         }
     }
 
@@ -161,9 +168,9 @@ public class AltitudeFromPressureDevice extends MyDevice
             registerSensors();
         }
 
-        double altitude = SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, event.values[0]);
+        mLastRawAltitude = SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, event.values[0]);
         //Log.d(TAG, "new altitude value: " + altitude);
-        mAltitudeSensor.newValue(altitude + mAltitudeCorrection);
+        mAltitudeSensor.newValue(mLastRawAltitude + mAltitudeCorrection);
         if (!mPressureSensorInitialized) {
             initPressureSensor();
         }

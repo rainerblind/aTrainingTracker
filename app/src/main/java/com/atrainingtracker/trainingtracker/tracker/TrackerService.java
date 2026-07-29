@@ -954,17 +954,13 @@ public class TrackerService extends Service {
         WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(this);
         WorkoutRepository repository = WorkoutRepository.Companion.getInstance((Application) getApplicationContext());
 
-        // 1. Save START and END locations and altitudes
+        // 1. Save START and END locations
         LatLng startPos = mLiveSession.getStartLatLng();
         LatLng endPos = mLiveSession.getLastLatLng();
-        Double startAlt = mLiveSession.getStartAltitude();
 
         if (startPos != null) {
             summariesManager.updateExtremaValue(mWorkoutID, SensorType.LATITUDE, ExtremaType.START, startPos.latitude, startPos);
             summariesManager.updateExtremaValue(mWorkoutID, SensorType.LONGITUDE, ExtremaType.START, startPos.longitude, startPos);
-        }
-        if (startAlt != null) {
-            summariesManager.updateExtremaValue(mWorkoutID, SensorType.ALTITUDE, ExtremaType.START, startAlt, startPos);
         }
 
         if (endPos != null) {

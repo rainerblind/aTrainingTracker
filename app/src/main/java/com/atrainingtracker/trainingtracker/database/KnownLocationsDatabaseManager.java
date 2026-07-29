@@ -200,6 +200,7 @@ public class KnownLocationsDatabaseManager {
         contentValues.put(KnownLocationsDbHelper.LATITUDE, myLocation.latLng.latitude);
         contentValues.put(KnownLocationsDbHelper.LONGITUDE, myLocation.latLng.longitude);
         contentValues.put(KnownLocationsDbHelper.RADIUS, myLocation.radius);
+        contentValues.put(KnownLocationsDbHelper.HIT_COUNT, myLocation.hitCount);
 
         updateId(id, contentValues);
     }
