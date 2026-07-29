@@ -958,7 +958,6 @@ public class TrackerService extends Service {
         LatLng startPos = mLiveSession.getStartLatLng();
         LatLng endPos = mLiveSession.getLastLatLng();
         Double startAlt = mLiveSession.getStartAltitude();
-        Double endAlt = mLiveSession.getLastAltitude();
 
         if (startPos != null) {
             summariesManager.updateExtremaValue(mWorkoutID, SensorType.LATITUDE, ExtremaType.START, startPos.latitude, startPos);
@@ -971,9 +970,6 @@ public class TrackerService extends Service {
         if (endPos != null) {
             summariesManager.updateExtremaValue(mWorkoutID, SensorType.LATITUDE, ExtremaType.END, endPos.latitude, endPos);
             summariesManager.updateExtremaValue(mWorkoutID, SensorType.LONGITUDE, ExtremaType.END, endPos.longitude, endPos);
-        }
-        if (endAlt != null) {
-            summariesManager.updateExtremaValue(mWorkoutID, SensorType.ALTITUDE, ExtremaType.END, endAlt, endPos);
         }
 
         // 2. Save and Push Extrema Values

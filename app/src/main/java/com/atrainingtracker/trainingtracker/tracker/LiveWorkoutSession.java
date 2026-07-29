@@ -55,7 +55,6 @@ public class LiveWorkoutSession {
     private LatLng lastLatLng = null;
 
     private Double startAltitude = null;
-    private Double lastAltitude = null;
 
     public LiveWorkoutSession(long workoutId, Set<SensorType> sensorsForAverage) {
         this.workoutId = workoutId;
@@ -71,7 +70,6 @@ public class LiveWorkoutSession {
 
         if (type == SensorType.ALTITUDE) {
             if (startAltitude == null) startAltitude = value;
-            lastAltitude = value;
         }
 
         RunningStats stats = sensorStats.get(type);
@@ -92,10 +90,6 @@ public class LiveWorkoutSession {
 
     public Double getStartAltitude() {
         return startAltitude;
-    }
-
-    public Double getLastAltitude() {
-        return lastAltitude;
     }
 
     /**
@@ -188,7 +182,6 @@ public class LiveWorkoutSession {
 
         // 4. Shift Anchor values (ATT-448)
         if (startAltitude != null) startAltitude += offset;
-        if (lastAltitude != null) lastAltitude += offset;
     }
 
     /**

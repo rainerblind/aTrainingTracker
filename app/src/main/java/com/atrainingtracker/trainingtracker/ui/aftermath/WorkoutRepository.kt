@@ -512,7 +512,6 @@ class WorkoutRepository private constructor(private val application: Application
                         ExtremaType.MIN -> updated = updated.copy(minAltitude = value)
                         ExtremaType.MAX -> updated = updated.copy(maxAltitude = value)
                         ExtremaType.START -> updated = updated.copy(startAltitude = value)
-                        ExtremaType.END -> updated = updated.copy(endAltitude = value)
                         else -> {}
                     }
                 }
@@ -633,7 +632,6 @@ class WorkoutRepository private constructor(private val application: Application
                         // --- AUTOMATED ALTITUDE DISCOVERY (ATT-39/448) ---
                         val locationsManager = com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.getInstance(application)
                         locationsManager.learnLocation(freshWorkoutData.startLatLng, freshWorkoutData.startAltitude ?: freshWorkoutData.minAltitude, ExtremaType.START)
-                        locationsManager.learnLocation(freshWorkoutData.endLatLng, freshWorkoutData.endAltitude ?: freshWorkoutData.minAltitude, ExtremaType.END)
                     }
 
                     addOrUpdateWorkout(freshWorkoutData)
@@ -684,7 +682,6 @@ class WorkoutRepository private constructor(private val application: Application
                         // --- AUTOMATED ALTITUDE DISCOVERY (ATT-39/448) ---
                         val locationsManager = com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.getInstance(application)
                         locationsManager.learnLocation(userEditedWorkout.startLatLng, userEditedWorkout.startAltitude ?: userEditedWorkout.minAltitude, ExtremaType.START)
-                        locationsManager.learnLocation(userEditedWorkout.endLatLng, userEditedWorkout.endAltitude ?: userEditedWorkout.minAltitude, ExtremaType.END)
 
                         // reload from DB to ensure memory and UI are in sync with inferred identity (SCRUM-254)
                         reloadWorkoutData(workoutId)
