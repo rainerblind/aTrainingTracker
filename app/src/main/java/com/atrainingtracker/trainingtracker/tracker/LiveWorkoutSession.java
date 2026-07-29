@@ -54,6 +54,9 @@ public class LiveWorkoutSession {
     private LatLng startLatLng = null;
     private LatLng lastLatLng = null;
 
+    private Double startAltitude = null;
+    private Double lastAltitude = null;
+
     public LiveWorkoutSession(long workoutId, Set<SensorType> sensorsForAverage) {
         this.workoutId = workoutId;
         this.sensorsForAverage = sensorsForAverage;
@@ -64,6 +67,11 @@ public class LiveWorkoutSession {
         if (position != null) {
             if (startLatLng == null) startLatLng = position;
             lastLatLng = position;
+        }
+
+        if (type == SensorType.ALTITUDE) {
+            if (startAltitude == null) startAltitude = value;
+            lastAltitude = value;
         }
 
         RunningStats stats = sensorStats.get(type);
@@ -80,6 +88,14 @@ public class LiveWorkoutSession {
 
     public LatLng getLastLatLng() {
         return lastLatLng;
+    }
+
+    public Double getStartAltitude() {
+        return startAltitude;
+    }
+
+    public Double getLastAltitude() {
+        return lastAltitude;
     }
 
     /**
@@ -169,6 +185,10 @@ public class LiveWorkoutSession {
 
         // 3. Update Anchor for next delta encoding
         lastAltE2 += Math.round(offset * 100);
+
+        // 4. Shift Anchor values (ATT-448)
+        if (startAltitude != null) startAltitude += offset;
+        if (lastAltitude != null) lastAltitude += offset;
     }
 
     /**
