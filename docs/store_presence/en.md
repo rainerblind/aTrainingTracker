@@ -48,6 +48,7 @@ Once your session is done, find comprehensive local statistics ready for review:
 <b>YOUR DATA, YOUR CHOICE</b>
 You decide where your data goes. aTrainingTracker puts privacy first while offering the convenience of the cloud.
 • <b>Privacy by Default</b>: No account required. No mandatory cloud. Your workouts stay on your device unless you choose otherwise.
+• <b>Workout Import</b>: Easily migrate your training history from former devices by importing TCX files.
 • <b>Optional Cloud Sync</b>: Automatically upload new activities to Strava or Dropbox for further analysis.
 • <b>Popular Formats</b>: Export your workouts as GPX, TCX, CSV and other standard formats.
 

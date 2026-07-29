@@ -48,6 +48,7 @@ Une fois votre session terminée, retrouvez des statistiques locales complètes 
 <b>VOS DONNÉES, VOTRE CHOIX</b>
 Vous décidez de la destination de vos données. aTrainingTracker donne la priorité à la confidentialité tout en offrant la commodité du cloud.
 • <b>Confidentialité par défaut</b> : Aucun compte requis. Pas de cloud obligatoire. Vos entraînements restent sur votre appareil, sauf si vous en décidez autrement.
+• <b>Importation d'entraînements</b> : migrez facilement votre historique d'entraînement depuis d'anciens appareils en important des fichiers TCX.
 • <b>Synchronisation cloud optionnelle</b> : Téléchargez automatiquement les nouvelles activités sur Strava ou Dropbox pour une analyse approfondie.
 • <b>Formats populaires</b> : Exportez vos entraînements aux formats GPX, TCX, CSV et autres formats standard.
 

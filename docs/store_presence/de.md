@@ -48,10 +48,11 @@ Sobald deine Einheit beendet ist, stehen umfassende lokale Statistiken zur Über
 <b>DEINE DATEN, DEINE WAHL</b>
 Du entscheidest, wohin deine Daten gehen. aTrainingTracker stellt Datenschutz an erste Stelle und bietet gleichzeitig den Komfort der Cloud.
 • <b>Privat als Standard</b>: Kein Account erforderlich. Keine Cloud-Pflicht. Deine Trainings bleiben auf deinem Gerät, sofern du nichts anderes wählst.
+• <b>Training-Import</b>: Migriere deinen Trainingsverlauf einfach von früheren Geräten durch den Import von TCX-Dateien.
 • <b>Optionale Cloud-Synchronisierung</b>: Lade neue Aktivitäten automatisch bei Strava oder Dropbox hoch, um sie dort weiter zu analysieren.
 • <b>Gängige Formate</b>: Exportiere deine Trainings als GPX, TCX, CSV und in andere Standardformate.
 
 <b>VON ATHLETEN FÜR ATHLETEN</b>
-Seit mehr als 15 Jahren kontinuierlich entwickelt mit einem Ziel: die Aufzeichnung so zuverlässig und automatisch wie möglich zu machen. Kein Social-Media-Lärm, keine Ablenkung – einfach exzellentes Tracking.
+<b>Made in Germany</b>. Seit mehr als 15 Jahren kontinuierlich entwickelt mit einem Ziel: die Aufzeichnung so zuverlässig und automatisch wie möglich zu machen. Kein Social-Media-Lärm, keine Ablenkung – einfach exzellentes Tracking.
 
 Du konzentrierst dich auf dein Training. aTrainingTracker kümmert sich um die Aufzeichnung.
