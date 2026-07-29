@@ -511,7 +511,6 @@ class WorkoutRepository private constructor(private val application: Application
                     when (extremaType) {
                         ExtremaType.MIN -> updated = updated.copy(minAltitude = value)
                         ExtremaType.MAX -> updated = updated.copy(maxAltitude = value)
-                        ExtremaType.START -> updated = updated.copy(startAltitude = value)
                         else -> {}
                     }
                 }
