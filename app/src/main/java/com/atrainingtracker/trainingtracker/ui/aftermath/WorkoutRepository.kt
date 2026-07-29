@@ -74,8 +74,16 @@ import kotlinx.coroutines.withContext
 
 
 /**
- * A repository that acts as a single source of truth for workout data.
- * It abstracts the data source (database) from the ViewModels.
+ * Acts as the centralized data hub and single source of truth for all workout-related history.
+ *
+ * This repository orchestrates the flow of data between the persistent SQLite databases
+ * (Summaries and Samples) and the UI layer. It provides reactive StateFlows for observing
+ * the complete workout list and individual sessions, while handling complex background
+ * operations such as progressive history loading, spatial path decoding, and atomic
+ * database synchronization.
+ *
+ * Architectural Role: Data access layer with state management.
+ * Threading: Most operations are offloaded to [Dispatchers.IO] using a [SupervisorJob].
  */
 class WorkoutRepository private constructor(private val application: Application) : CoroutineScope {
 
@@ -83,16 +91,14 @@ class WorkoutRepository private constructor(private val application: Application
         private val TAG = WorkoutRepository::class.java.simpleName
         private val DEBUG = TrainingApplication.getDebug(true)
 
-        // The single, volatile instance of the repository.
-        // @Volatile guarantees that writes to this field are immediately visible to other threads.
         @Volatile
         private var INSTANCE: WorkoutRepository? = null
 
         /**
-         * Gets the singleton instance of the WorkoutRepository.
+         * Provides a thread-safe singleton instance of the repository.
+         * Uses double-check locking to ensure performance and safety.
          *
-         * @param application The application context, needed to create the instance for the first time.
-         * @return The single instance of WorkoutRepository.
+         * @param application The application context used for initialization.
          */
         fun getInstance(application: Application): WorkoutRepository {
             // Double-check locking ensures thread safety and performance.
@@ -133,13 +139,21 @@ class WorkoutRepository private constructor(private val application: Application
 
     // --- StateFlow for Data and LiveData for Progress ---
 
-    // StateFlow for all workouts
+    /**
+     * A reactive StateFlow containing the complete list of workouts currently in memory.
+     * This list is populated progressively by [loadAllWorkouts].
+     */
     private val _allWorkouts = MutableStateFlow<List<WorkoutData>>(emptyList())
     val allWorkouts: StateFlow<List<WorkoutData>> = _allWorkouts.asStateFlow()
 
     /**
-     * Returns a Flow object that contains only the workout with the specified ID.
-     * This is derived from the main 'allWorkouts' StateFlow.
+     * Provides a reactive stream for a specific workout ID.
+     *
+     * Implementation: Transforms the global [allWorkouts] flow to isolate the target session.
+     * Use this in detail screens to receive updates when a specific workout is edited or enriched.
+     *
+     * @param id The unique identifier of the workout session.
+     * @return A Flow that emits the workout data or null if not found.
      */
     fun getWorkoutById(id: Long): kotlinx.coroutines.flow.Flow<WorkoutData?> {
         return allWorkouts.map { list ->
@@ -147,11 +161,15 @@ class WorkoutRepository private constructor(private val application: Application
         }
     }
 
-    // LiveData for the one-time initial load event
+    /**
+     * Emits a one-time event when a workout has been successfully loaded into memory.
+     */
     private val _initialWorkoutLoaded = SingleLiveEvent<WorkoutData>()
     val initialWorkoutLoaded: LiveData<WorkoutData> = _initialWorkoutLoaded
 
-    //  LiveData for granular deletion progress ---
+    /**
+     * Exposes granular progress updates during bulk deletion operations.
+     */
     private val _deletionProgress = MutableLiveData<DeletionProgress>(DeletionProgress.Idle)
     val deletionProgress: LiveData<DeletionProgress> = _deletionProgress
 
@@ -161,6 +179,9 @@ class WorkoutRepository private constructor(private val application: Application
     val deleteFinishedEvent = SingleLiveEvent<Pair<Long, Boolean>>()
 
 
+    /**
+     * Listens for workout state changes (Updates, Completion) broadcast by the [TrackerService].
+     */
     private val workoutUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val workoutId = intent.getLongExtra(TrackerService.WORKOUT_ID, -1L)
@@ -176,6 +197,9 @@ class WorkoutRepository private constructor(private val application: Application
         }
     }
 
+    /**
+     * Listens for changes in file export and cloud upload status.
+     */
     private val exportStatusUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val fileName = intent.getStringExtra(ExportStatusChangedBroadcaster.EXTRA_FILE_BASE_NAME)
@@ -186,6 +210,14 @@ class WorkoutRepository private constructor(private val application: Application
         }
     }
 
+    /**
+     * Refreshes the export and upload status markers for a specific workout in memory.
+     *
+     * Implementation: Performs a fresh query of export logs in the IO context and
+     * atomically updates the relevant session in the [allWorkouts] list.
+     *
+     * @param fileName The unique file base name associated with the session.
+     */
     private fun reloadExportStatusesFor(fileName: String) {
         launch(Dispatchers.IO) {
             val exportStatuses: MutableList<ExportStatusGroupData> = mutableListOf()
@@ -207,6 +239,16 @@ class WorkoutRepository private constructor(private val application: Application
         }
     }
 
+    /**
+     * Retrieves the exhaustive list of GPS/Sensor points for a specific workout track.
+     *
+     * Implementation: Accesses the high-fidelity Samples database for the session.
+     * It dynamically selects the coordinate columns based on the requested [TrackType].
+     *
+     * @param workoutId The unique identifier of the workout.
+     * @param trackType The specific track provider to retrieve (BEST, GPS, FUSED, NETWORK).
+     * @return A list of [PathPoint] objects containing distance, location, and altitude.
+     */
     suspend fun getWorkoutTrackPoints(
         workoutId: Long,
         trackType: TrackType
@@ -259,6 +301,15 @@ class WorkoutRepository private constructor(private val application: Application
         SensorType.HR, SensorType.POWER, SensorType.LINE_DISTANCE_m, SensorType.SPEED_mps
     )
 
+    /**
+     * Generates a list of geographical markers for a workout, including Start, Stop, and extrema.
+     *
+     * Implementation: Combines primary spatial data from [WorkoutData] with detailed sensor
+     * peaks retrieved from the Extrema database table.
+     *
+     * @param workoutData The session to generate markers for.
+     * @return A list of [LocationMarker] objects ready for map display.
+     */
     suspend fun getWorkoutMarkers(workoutData: WorkoutData): List<LocationMarker> = withContext(Dispatchers.IO) {
         val workoutId = workoutData.id
         val markerList = mutableListOf<LocationMarker>()
@@ -287,6 +338,12 @@ class WorkoutRepository private constructor(private val application: Application
         markerList
     }
 
+    /**
+     * Helper to conditionally add a sensor extremum marker if it has valid spatial data.
+     *
+     * Implementation: Queries the summary database for the peak value and its associated
+     * coordinate. If found, a new marker is appended to the provided list.
+     */
     private fun addExtremaMarkerIfPresent(
         workoutId: Long,
         sensor: SensorType,
@@ -318,6 +375,9 @@ class WorkoutRepository private constructor(private val application: Application
         }
     }
 
+    /**
+     * Identifies the appropriate technical icon for a sensor peak.
+     */
     private fun getExtremaIcon(sensor: SensorType, type: ExtremaType): Int {
         return when (sensor) {
             SensorType.ALTITUDE -> if (type == ExtremaType.MAX) { R.drawable.ic_altitude_max} else { R.drawable.ic_altitude_min }
@@ -331,8 +391,9 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
 
-
     init {
+        // --- EVENT REGISTRATION ---
+        // Registers receivers for workout state changes and export status updates.
         val filter = IntentFilter()
         filter.addAction(TrackerService.WORKOUT_UPDATED_INTENT)
         filter.addAction(TrackerService.TRACKING_FINISHED_INTENT)
@@ -347,7 +408,12 @@ class WorkoutRepository private constructor(private val application: Application
     // --- Public API for ViewModels ---
 
     /**
-     * Loads a single workout by its ID into the repository's LiveData.
+     * Loads a single workout by its ID into the repository's LiveData and memory cache.
+     *
+     * Implementation: Performs a direct database query and atomically updates the
+     * in-memory workout list to ensure UI consistency.
+     *
+     * @param id The primary key of the session to load.
      */
     suspend fun loadWorkout(id: Long) {
         withContext(Dispatchers.IO) {
@@ -379,6 +445,15 @@ class WorkoutRepository private constructor(private val application: Application
 
     private var isListLoading = false
 
+    /**
+     * Performs a progressive background scan of the entire workout history.
+     *
+     * Implementation:
+     * 1. Acquires a cursor for all workouts sorted descending (newest first).
+     * 2. Iterates through the cursor in chunks (100 sessions per batch) to maintain UI responsiveness.
+     * 3. For each chunk, vectorized queries are used to fetch metadata (Strava logs, extrema).
+     * 4. Batches are emitted into [allWorkouts] as they are ready, providing immediate feedback.
+     */
     suspend fun loadAllWorkouts() {
         if (isListLoading) {
             if (DEBUG) Log.d(TAG, "loadAllWorkouts: already in progress, skipping redundant call.")
@@ -470,18 +545,30 @@ class WorkoutRepository private constructor(private val application: Application
 
     // --- Public API for Direct Memory Updates (Avoids DB Read) ---
 
+    /**
+     * Replaces the entire polyline for a workout in memory.
+     */
     fun setMapPolyline(workoutId: Long, polyline: String) {
         updateWorkoutInMemory(workoutId) { it.copy(mapPolyline = polyline) }
     }
 
+    /**
+     * Appends a new segment to an existing workout polyline in memory.
+     */
     fun appendMapPolyline(workoutId: Long, polylineSuffix: String) {
         updateWorkoutInMemory(workoutId) { it.copy(mapPolyline = it.mapPolyline + polylineSuffix) }
     }
 
+    /**
+     * Replaces the altitude and distance streams for a workout in memory.
+     */
     fun setElevationStreams(workoutId: Long, altitudes: String, distances: String) {
         updateWorkoutInMemory(workoutId) { it.copy(encodedAltitudes = altitudes, encodedDistances = distances) }
     }
 
+    /**
+     * Appends new data to existing altitude and distance streams in memory.
+     */
     fun appendElevationStreams(workoutId: Long, altitudeSuffix: String, distanceSuffix: String) {
         updateWorkoutInMemory(workoutId) {
             it.copy(
@@ -491,14 +578,26 @@ class WorkoutRepository private constructor(private val application: Application
         }
     }
 
+    /**
+     * Updates the commute and trainer flags for a workout in memory.
+     */
     fun setCommuteAndTrainer(workoutId: Long, commute: Boolean, trainer: Boolean) {
         updateWorkoutInMemory(workoutId) { it.copy(commute = commute, trainer = trainer) }
     }
 
+    /**
+     * Updates the display name of a workout in memory.
+     */
     fun setWorkoutName(workoutId: Long, name: String) {
         updateWorkoutInMemory(workoutId) { it.copy(workoutName = name) }
     }
 
+    /**
+     * Updates a specific sensor peak (Extremum) for a workout in memory.
+     *
+     * Implementation: Updates both the flat [WorkoutData] fields and the specific
+     * row in the [WorkoutData.extremaRows] list to ensure the UI reflects the change immediately.
+     */
     fun updateExtremaValue(workoutId: Long, sensorType: SensorType, extremaType: ExtremaType, value: Double, position: LatLng? = null) {
         val formattedValue = sensorType.myFormatter.format(value)
         updateWorkoutInMemory(workoutId) { workout ->
@@ -533,6 +632,12 @@ class WorkoutRepository private constructor(private val application: Application
         }
     }
 
+    /**
+     * Atomically updates a workout session in memory while handling potential race conditions.
+     *
+     * Implementation: If the workout is already cached, it applies the [block] transform.
+     * If not, it fetches the session from the database first, ensuring no updates are lost.
+     */
     private fun updateWorkoutInMemory(workoutId: Long, block: (WorkoutData) -> WorkoutData) {
         _allWorkouts.update { currentList ->
             val index = currentList.indexOfFirst { it.id == workoutId }
@@ -562,6 +667,13 @@ class WorkoutRepository private constructor(private val application: Application
         }
     }
 
+    /**
+     * Adds a new workout to the memory cache or performs a surgical merge with an existing record.
+     *
+     * Implementation: To prevent overwriting real-time background data (like active tracks)
+     * with stale database snapshots, this method performs a field-level merge of
+     * transient metadata.
+     */
     private fun addOrUpdateWorkout(workout: WorkoutData) {
         _allWorkouts.update { currentList ->
             val index = currentList.indexOfFirst { it.id == workout.id }
@@ -597,6 +709,9 @@ class WorkoutRepository private constructor(private val application: Application
         }
     }
 
+    /**
+     * Replaces a workout in the memory list with a fresh instance.
+     */
     private fun updateWorkoutInList(workoutId: Long, updatedWorkout: WorkoutData) {
         Log.i(TAG, "updateWorkoutInList: workoutId=$workoutId (${updatedWorkout.fileBaseName}), mapPolyline: ${updatedWorkout.mapPolyline}, extremaRows: ${updatedWorkout.extremaRows}, exportStatuses: ${updatedWorkout.exportStatuses}")
         _allWorkouts.update { currentList ->
@@ -606,9 +721,13 @@ class WorkoutRepository private constructor(private val application: Application
         }
     }
 
-    // Function to update the workout data from the database but keep transient metadata
     /**
-     * Public accessor to force a reload of a single workout from the database (ATT-388).
+     * Public accessor to force a reload of a single workout from the database.
+     *
+     * Implementation: Fetches the latest summary and triggers surgical updates for
+     * dependent modules (Periods, Clusters) if the workout has just been finalized.
+     *
+     * @param workoutId The primary key of the session to reload.
      */
     suspend fun reloadWorkoutData(workoutId: Long) {
         if (DEBUG) Log.i(TAG, "reloadWorkoutData: workoutId=$workoutId")
@@ -637,9 +756,13 @@ class WorkoutRepository private constructor(private val application: Application
 
 
     /**
-     * Saves the user-editable state of the WorkoutData object to the databases.
-     * This method is surgical: it only updates fields the user can actually edit,
-     * ensuring that background-calculated data (like map polylines) is preserved.
+     * Saves the user-editable state of a WorkoutData object to the databases.
+     *
+     * Implementation: Performs a surgical database update and triggers a re-export of
+     * the session data. Additionally, it executes the 'Learning Loop' to refine
+     * Workout Cluster centroids and identities based on the new user input.
+     *
+     * @param userEditedWorkout The modified session data to persist.
      */
     fun saveWorkout(userEditedWorkout: WorkoutData?) {
         if (userEditedWorkout == null) return
@@ -719,6 +842,9 @@ class WorkoutRepository private constructor(private val application: Application
         }
     }
 
+    /**
+     * Manually triggers a file export for a specific session.
+     */
     suspend fun exportWorkoutTo(workoutId: Long, fileFormat: FileFormat) {
         withContext(Dispatchers.IO) {
             exportManager.exportWorkoutTo(workoutId, fileFormat)
@@ -726,7 +852,12 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     /**
-     * Deletes a workout from the current list and posts the update.
+     * Deletes a workout session from the database and memory.
+     *
+     * Implementation: Triggers surgical cleanup for dependent modules (Periods, Clusters)
+     * and posts granular progress updates for UI feedback.
+     *
+     * @param id The unique identifier of the workout to delete.
      */
     fun deleteWorkout(id: Long) {
         launch(Dispatchers.IO) {
@@ -764,6 +895,14 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
 
+    /**
+     * Bulk deletes all workouts older than the specified retention period.
+     *
+     * Implementation: Delegates to [WorkoutDeletionHelper] and provides a callback
+     * to reactively update dependent modules and the UI list.
+     *
+     * @param daysToKeep Number of days of workout history to preserve.
+     */
     suspend fun deleteOldWorkouts(daysToKeep: Int) {
         withContext(Dispatchers.IO) {
             try {
@@ -797,8 +936,13 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     /**
-     * Saves a workout's path as a new Route in the system.
-     * @return The ID of the newly created route, or null if it failed.
+     * Converts a workout's path into a permanent Route record.
+     *
+     * Implementation: Fetches the high-fidelity track points and creates a new
+     * [RouteSummary] entry in the Routes database.
+     *
+     * @param workout The source session data.
+     * @return The unique ID of the newly created route.
      */
     suspend fun saveAsRoute(workout: WorkoutData): Long? = withContext(Dispatchers.IO) {
         val points = getWorkoutTrackPoints(workout.id, TrackType.BEST)
@@ -821,7 +965,13 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     /**
-     * Assigns a cluster to a workout and automatically propagates sport-specific settings (SCRUM-200).
+     * Manually assigns a Workout Cluster to a specific session.
+     *
+     * Implementation: Updates the database link and triggers a full identity
+     * re-evaluation to propagate inferred sport and gear settings.
+     *
+     * @param workoutId Target workout session.
+     * @param clusterId Target route family (cluster).
      */
     fun assignClusterToWorkout(workoutId: Long, clusterId: Long) {
         launch(Dispatchers.IO) {

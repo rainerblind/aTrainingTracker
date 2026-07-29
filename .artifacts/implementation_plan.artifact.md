@@ -1,30 +1,44 @@
-# Implementation Plan - ATT-453: Update Play Store Descriptions
+# Implementation Plan - ATT-236: Mandatory Code Documentation
 
-Add the "Workout Import" feature to all localized Play Store descriptions and include "Made in Germany" in the German translation to highlight the app's quality and migration capabilities.
+Establish a new professional standard for internal code documentation by updating the project protocol and adding comprehensive KDoc/JavaDoc comments to core system components, starting with the WorkoutRepository.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Unified Feature Presentation**: The "Workout Import" feature (supporting TCX files from former devices) will be added to the "Your Data, Your Choice" section in all 9 supported languages.
-> - **German Heritage**: The German description will explicitly feature "Made in Germany" to emphasize the long-standing reliable development.
+> - **Mandatory Documentation Standard**: I am updating the `project_protocol.md` to require KDoc (for Kotlin) and JavaDoc (for Java) headers for all classes and methods. This ensures that the "Why" and "How" of the code are always documented alongside the implementation.
+> - **Core Logic Documentation**: I am starting with `WorkoutRepository.kt`, providing detailed descriptions for its 60+ methods to ensure this critical data hub is easy to maintain.
+> - **Future Enforcement**: This new rule will apply to all future code changes made by AI agents or human developers.
 
 ## Proposed Changes
 
-### 1. Documentation: English Description
-#### [MODIFY] [en.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/en.md)
-- Add bullet point: `• <b>Workout Import</b>: Easily migrate your training history from former devices by importing TCX files.` under "YOUR DATA, YOUR CHOICE".
+### 1. Process Layer: Protocol Update
+Fulfills REQ-PRO-011 | Test: TST-STR-015
 
-### 2. Documentation: German Description
-#### [MODIFY] [de.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/de.md)
-- Add bullet point: `• <b>Training-Import</b>: Migriere deinen Trainingsverlauf einfach von früheren Geräten durch den Import von TCX-Dateien.` under "DEINE DATEN, DEINE WAHL".
-- Prepend `<b>Made in Germany</b>. ` to the paragraph under "VON ATHLETEN FÜR ATHLETEN".
+#### [MODIFY] [project_protocol.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/project_protocol.md)
+- Add a new section **"Internal Documentation Standards"** under Mandatory Development Workflow.
+- Mandate class-level headers: Purpose and architectural role.
+- Mandate method-level headers: Functional description and implementation logic.
 
-### 3. Documentation: Global Translations
-#### [MODIFY] [es.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/es.md), [fr.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/fr.md), [it.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/it.md), [ja.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/ja.md), [nl.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/nl.md), [pl.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/pl.md), [pt.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/pt.md)
-- Add the corresponding localized "Workout Import" bullet point to the data sovereignty section of each file.
+### 2. Documentation Layer: Core Repository Enrichment
+Fulfills REQ-PRO-011 | Test: TST-STR-015
+
+#### [MODIFY] [WorkoutRepository.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt)
+- Add class-level KDoc.
+- Add KDoc headers to all public and internal methods, including:
+    - `loadAllWorkouts()`: Describing the progressive loading strategy and StateFlow emission.
+    - `getWorkoutTrackPoints()`: Explaining the dynamic track selection and decoding logic.
+    - `saveWorkout()`: Detailing the database update and memory synchronization process.
+    - `getWorkoutMarkers()`: Documenting the extrema visualization rules.
+
+### 3. Requirements & Verification
+#### [MODIFY] [requirements.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/requirements.md)
+- Add **REQ-PRO-011**: Mandatory Code Documentation.
+
+#### [MODIFY] [tests.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/tests.md)
+- Add **TST-STR-015**: Documentation Audit.
 
 ## Verification Plan
 
-### Manual Verification
-- **Visual Audit**: Inspect each modified markdown file to ensure formatting is correct and translations are accurate.
-- **Protocol Compliance**: Verify that all 9 languages are updated to maintain our world-class standard (REQ-STP-001).
+### Manual Verification (TST-STR-015)
+- **Static Audit**: Inspect `WorkoutRepository.kt` to ensure every method has a descriptive header.
+- **Protocol Compliance**: Verify that the new rule is clearly stated in `project_protocol.md`.
