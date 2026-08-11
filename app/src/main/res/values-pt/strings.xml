@@ -892,9 +892,9 @@
 
     <!-- routes -->
     <string name="routes">Rotas</string>
-    <string name="no_routes_available">Nenhuma rota %s.</string>
+    <string name="no_routes_available">Nenhuma rota %1$s.</string>
     <string name="absolutely_no_routes_available">Nenhuma rota disponível.</string>
-    <string name="no_clusters_available">Nenhum trajeto %s disponível.</string>
+    <string name="no_clusters_available">Nenhum trajeto %1$s disponível.</string>
     <string name="absolutely_no_clusters_available">Nenhum trajeto disponível.</string>
     <string name="routes_import_hint">Importa um GPX do \"+\" ou do gestor de arquivos.</string>
     <string name="route_edit">Modificar rota</string>
@@ -998,7 +998,7 @@
     <string name="cluster_manual_pick_start">Escolher início</string>
     <string name="cluster_manual_pick_end">Escolher fim</string>
     <string name="cluster_manual_pick_apex">Escolher ápice (mais distante)</string>
-    <string name="cluster_manual_distance_hint">Distância do treino (%s)</string>
+    <string name="cluster_manual_distance_hint">Distância do treino (%1$s)</string>
     <string name="cluster_manual_missing_points">Por favor, escolha todos os 3 pontos espaciais no mapa.</string>
     <string name="cluster_edit_fingerprint">Editar impressão do treino</string>
     <string name="cluster_edit_fingerprint_hint">Ajuste o início, o fim ou o ápice selecionando o tipo e tocando no mapa.</string>
@@ -1007,10 +1007,10 @@
     <string name="cluster_save_fingerprint_content_desc">Guardar impressão</string>
     <string name="cluster_edit_fingerprint_content_desc">Editar impressão</string>
     <string name="cluster_manual_pick_hint">Escolher impressão espacial no mapa:</string>
-    <string name="cluster_manual_tap_map_format">Toque no mapa para definir %s</string>
+    <string name="cluster_manual_tap_map_format">Toque no mapa para definir %1$s</string>
     <string name="cluster_clear_content_desc">Limpar</string>
-    <string name="cluster_default_name_format">Treino em %s</string>
-    <string name="cluster_equipment_mapping_format">→ %s</string>
+    <string name="cluster_default_name_format">Treino em %1$s</string>
+    <string name="cluster_equipment_mapping_format">→ %1$s</string>
     <string name="cluster_score_brackets_format">(%1$.3f)</string>
     <string name="cluster_suggestions_content_desc">Sugestões</string>
     <string name="cluster_autoname_format">%1$s #%2$d</string>

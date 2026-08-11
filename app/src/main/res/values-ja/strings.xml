@@ -981,7 +981,7 @@
     <string name="cluster_manual_pick_start">開始点を選択</string>
     <string name="cluster_manual_pick_end">終了点を選択</string>
     <string name="cluster_manual_pick_apex">頂点（最遠点）を選択</string>
-    <string name="cluster_manual_distance_hint">ワークアウト距離 (%s)</string>
+    <string name="cluster_manual_distance_hint">ワークアウト距離 (%1$s)</string>
     <string name="cluster_manual_missing_points">地図上の3つの空間ポイントをすべて選択してください。</string>
     <string name="cluster_edit_fingerprint">ワークアウトフィンガープリントを編集</string>
     <string name="cluster_edit_fingerprint_hint">タイプを選択して地図をタップし、開始、終了、または頂点を調整します。</string>
@@ -990,10 +990,10 @@
     <string name="cluster_save_fingerprint_content_desc">フィンガープリントを保存</string>
     <string name="cluster_edit_fingerprint_content_desc">フィンガープリントを編集</string>
     <string name="cluster_manual_pick_hint">地図上の空間フィンガープリントを選択：</string>
-    <string name="cluster_manual_tap_map_format">地図をタップして %s を設定</string>
+    <string name="cluster_manual_tap_map_format">地図をタップして %1$s を設定</string>
     <string name="cluster_clear_content_desc">クリア</string>
-    <string name="cluster_default_name_format">%s のワークアウト</string>
-    <string name="cluster_equipment_mapping_format">→ %s</string>
+    <string name="cluster_default_name_format">%1$s のワークアウト</string>
+    <string name="cluster_equipment_mapping_format">→ %1$s</string>
     <string name="cluster_score_brackets_format">(%1$.3f)</string>
     <string name="cluster_suggestions_content_desc">提案</string>
     <string name="cluster_autoname_format">%1$s #%2$d</string>

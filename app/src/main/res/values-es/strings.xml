@@ -1001,7 +1001,7 @@
     <string name="cluster_manual_pick_start">Seleccionar inicio</string>
     <string name="cluster_manual_pick_end">Seleccionar fin</string>
     <string name="cluster_manual_pick_apex">Seleccionar ápice (más lejano)</string>
-    <string name="cluster_manual_distance_hint">Distancia del entrenamiento (%s)</string>
+    <string name="cluster_manual_distance_hint">Distancia del entrenamiento (%1$s)</string>
     <string name="cluster_manual_missing_points">Por favor, elija los 3 puntos espaciales en el mapa.</string>
     <string name="cluster_edit_fingerprint">Editar huella de entrenamiento</string>
     <string name="cluster_edit_fingerprint_hint">Ajuste el inicio, el fin o el ápice seleccionando el tipo y tocando el mapa.</string>
@@ -1010,10 +1010,10 @@
     <string name="cluster_save_fingerprint_content_desc">Guardar huella</string>
     <string name="cluster_edit_fingerprint_content_desc">Editar huella</string>
     <string name="cluster_manual_pick_hint">Elegir huella espacial en el mapa:</string>
-    <string name="cluster_manual_tap_map_format">Toca el mapa para establecer %s</string>
+    <string name="cluster_manual_tap_map_format">Toca el mapa para establecer %1$s</string>
     <string name="cluster_clear_content_desc">Limpiar</string>
-    <string name="cluster_default_name_format">Entrenamiento en %s</string>
-    <string name="cluster_equipment_mapping_format">→ %s</string>
+    <string name="cluster_default_name_format">Entrenamiento en %1$s</string>
+    <string name="cluster_equipment_mapping_format">→ %1$s</string>
     <string name="cluster_score_brackets_format">(%1$.3f)</string>
     <string name="cluster_suggestions_content_desc">Sugerencias</string>
     <string name="cluster_autoname_format">%1$s #%2$d</string>

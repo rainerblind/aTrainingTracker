@@ -998,7 +998,7 @@
     <string name="cluster_manual_pick_start">Kies start</string>
     <string name="cluster_manual_pick_end">Kies eind</string>
     <string name="cluster_manual_pick_apex">Kies apex (verste punt)</string>
-    <string name="cluster_manual_distance_hint">Workout afstand (%s)</string>
+    <string name="cluster_manual_distance_hint">Workout afstand (%1$s)</string>
     <string name="cluster_manual_missing_points">Kies alle 3 de ruimtelijke punten op de kaart.</string>
     <string name="cluster_edit_fingerprint">Workout-vingerafdruk bewerken</string>
     <string name="cluster_edit_fingerprint_hint">Pas start, eind of apex aan door het type te selecteren en op de kaart te tikken.</string>
@@ -1007,10 +1007,10 @@
     <string name="cluster_save_fingerprint_content_desc">Vingerafdruk opslaan</string>
     <string name="cluster_edit_fingerprint_content_desc">Vingerafdruk bewerken</string>
     <string name="cluster_manual_pick_hint">Kies ruimtelijke vingerafdruk op de kaart:</string>
-    <string name="cluster_manual_tap_map_format">Tik op de kaart om %s in te stellen</string>
+    <string name="cluster_manual_tap_map_format">Tik op de kaart om %1$s in te stellen</string>
     <string name="cluster_clear_content_desc">Wissen</string>
-    <string name="cluster_default_name_format">Workout bij %s</string>
-    <string name="cluster_equipment_mapping_format">→ %s</string>
+    <string name="cluster_default_name_format">Workout bij %1$s</string>
+    <string name="cluster_equipment_mapping_format">→ %1$s</string>
     <string name="cluster_score_brackets_format">(%1$.3f)</string>
     <string name="cluster_suggestions_content_desc">Suggesties</string>
     <string name="cluster_autoname_format">%1$s #%2$d</string>

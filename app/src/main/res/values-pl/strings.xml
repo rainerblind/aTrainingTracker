@@ -654,9 +654,9 @@
 
     <!-- routes -->
     <string name="routes">Trasy</string>
-    <string name="no_routes_available">Brak tras %s.</string>
+    <string name="no_routes_available">Brak tras %1$s.</string>
     <string name="absolutely_no_routes_available">Brak dostępnych tras.</string>
-    <string name="no_clusters_available">Brak dostępnych tras %s.</string>
+    <string name="no_clusters_available">Brak dostępnych tras %1$s.</string>
     <string name="absolutely_no_clusters_available">Brak dostępnych tras.</string>
     <string name="routes_import_hint">Importuj GPX przez \"+\" lub menedżer plików.</string>
     <string name="route_edit">Edytuj trasę</string>
@@ -766,7 +766,7 @@
     <string name="cluster_manual_pick_start">Wybierz start</string>
     <string name="cluster_manual_pick_end">Wybierz koniec</string>
     <string name="cluster_manual_pick_apex">Wybierz wierzchołek (najdalej)</string>
-    <string name="cluster_manual_distance_hint">Dystans treningu (%s)</string>
+    <string name="cluster_manual_distance_hint">Dystans treningu (%1$s)</string>
     <string name="cluster_manual_missing_points">Proszę wybrać wszystkie 3 punkty przestrzenne na mapie.</string>
     <string name="cluster_edit_fingerprint">Edytuj odcisk treningu</string>
     <string name="cluster_edit_fingerprint_hint">Dostosuj start, koniec lub wierzchołek, wybierając typ i dotykając mapy.</string>
@@ -775,7 +775,7 @@
     <string name="cluster_save_fingerprint_content_desc">Zapisz odcisk</string>
     <string name="cluster_edit_fingerprint_content_desc">Edytuj odcisk</string>
     <string name="cluster_manual_pick_hint">Wybierz odcisk przestrzenny na mapie:</string>
-    <string name="cluster_manual_tap_map_format">Dotknij mapy, aby ustawić %s</string>
+    <string name="cluster_manual_tap_map_format">Dotknij mapy, aby ustawić %1$s</string>
     <string name="cluster_clear_content_desc">Wyczyść</string>
     <string name="cluster_default_name_format">Trening w %1$s</string>
     <string name="cluster_equipment_mapping_format">→ %1$s</string>
