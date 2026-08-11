@@ -1,37 +1,26 @@
-# Implementation Plan - ATT-522: Final Global Format String Correction
+# Implementation Plan - ATT-515 Post-Action: Project Protocol Hardening
 
-Surgically correct ALL remaining invalid format specifiers across all localized resource files to permanently resolve `UnknownFormatConversionException` production crashes.
+Formally update the `project_protocol.md` to incorporate strict format string standards, ensuring that the recently resolved production crashes never recur.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Total Resolution**: While we fixed the notification crash, my audit revealed another 15+ broken strings in various languages (PL, ES, FR, IT, PT, JA, NL) that would cause the app to crash during other UI interactions, such as deleting a workout or viewing location details.
-> - **Syntax Standard**: I will strictly enforce the `%1$s` (positional) or `%s` (simple) syntax, ensuring that every `%` is followed by a valid conversion character.
+> - **Enforcement**: This update makes the use of fully-qualified format specifiers (e.g., `%1$s`) a mandatory non-negotiable standard for all developers and AI agents.
+> - **Zero-Tolerance for `%1`**: Incomplete specifiers are now explicitly identified as a "Critical System Failure" risk.
 
 ## Proposed Changes
 
-### 1. Localization Layer: Global Cleanup
-Fulfills REQ-UI-122 | Test: TST-STR-016
+### 1. Process Layer: Protocol Hardening
+Fulfills REQ-PRO-012 | Test: TST-STR-017
 
-#### [MODIFY] All `strings.xml` and `strings_filters.xml` files in all locales.
-- **Identify and Fix**:
-    - `really_delete_format`: Ensure it uses `%1$s` across all languages.
-    - `get_extremaType_of_sportType_format`: Correct positional index and type.
-    - `latLongEquals`: Ensure `%1$f` or `%1$s` is used.
-    - `concatenate_last_format_or`: Fix positional syntax.
-    - `notification_export_...`: Fix multiple placeholders.
-    - `successfully_..._to_...`: Fix multiple placeholders.
-    - `uploading_to_...`: Fix multiple placeholders.
-    - `waiting_to_...`: Fix multiple placeholders.
-- **Validation**: Ensure no literal `%` remains that isn't a valid specifier or escaped as `%%`.
+#### [MODIFY] [project_protocol.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/project_protocol.md)
+- **New Section: "Format String Hardening"**:
+    - **Rule 1: Fully-Qualified Syntax**: All string placeholders MUST use the `java.util.Formatter` positional syntax (e.g., `%1$s` for strings, `%2$d` for integers, `%3$.2f` for floats).
+    - **Rule 2: Type Suffix Requirement**: Placeholders MUST include the type character. Syntax like `%1` or `%2` is strictly prohibited.
+    - **Rule 3: Literal Percent Signs**: Literal `%` characters MUST be escaped as `%%` or referenced via the `@string/units_percent` resource.
+    - **Rule 4: Mandatory Audit Phase**: Every task involving localization or string resource modification MUST conclude with a static audit using `grep` to verify placeholder integrity across all affected locales.
 
 ## Verification Plan
 
-### Automated Verification
-- **Project-Wide Audit**: Re-run the `grep` search: `grep -r "%[0-9]" | grep -v "\\$"` to ensure NO positional specifiers are missing the mandatory `$` and type suffix.
-
-### Manual Verification (TST-STR-016)
-1. Switch to various languages (PL, ES, FR).
-2. Attempt to delete a workout.
-3. **Verify** the `really_delete_format` dialog appears correctly without crashing.
-4. Perform a file export and verify the multi-argument notifications are correctly formatted.
+### Manual Verification (TST-STR-017)
+- **Audit**: Verify that the new section is present in `project_protocol.md` and that the language is unambiguous and aligned with ASPICE safety standards.

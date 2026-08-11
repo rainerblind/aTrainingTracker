@@ -315,3 +315,4 @@ This document tracks all functional and non-functional requirements of the proje
 |:---|:---|:---|:---|:---|:---|
 | **REQ-PRI-001** | **Permission Transparency.** | The system SHALL provide transparent information about location and background permissions to comply with Android standards and build user trust. | `MainActivityWithNavigation.java`| `TST-MAN-001` | Verified |
 | **REQ-PRI-002** | **Accessible Privacy Policy.** | The system SHALL provide an accessible Privacy Policy linked to the source to inform users about data handling practices. | `privacy.md` | `TST-MAN-001` | Verified |
+| **REQ-PRO-012** | **Project Protocol Hardening.** | The system documentation MUST include strict rules for format string safety to prevent runtime crashes caused by invalid placeholders. | `project_protocol.md` | `TST-STR-017` | Verified |

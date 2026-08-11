@@ -237,3 +237,4 @@ Whenever a file is modified, the following workflow is triggered:
 2.  **Requirement Mapping**: The agent cross-references the files with `docs/requirements.md` (Implementation Column) to identify affected features.
 3.  **Test Selection**: The agent selects the relevant **Verification ID** from the requirements table.
 4.  **Co-Execution**: The user and agent perform the verification. The agent updates the `Status` column in `docs/requirements.md` upon success.
+| **TST-STR-017** | `ATT-523` | **Protocol Integrity Audit** | `REQ-PRO-012` | Verify that the 'Format String Hardening' section is correctly incorporated into 'project_protocol.md'. | New safety standards are formally established and unambiguous. | Proposed |
