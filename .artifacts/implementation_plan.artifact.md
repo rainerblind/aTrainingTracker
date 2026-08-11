@@ -1,40 +1,37 @@
-# Implementation Plan - ATT-515: Global Format String Correction
+# Implementation Plan - ATT-522: Final Global Format String Correction
 
-Surgically correct invalid format specifiers across multiple localized resource files to resolve production crashes caused by `UnknownFormatConversionException`.
+Surgically correct ALL remaining invalid format specifiers across all localized resource files to permanently resolve `UnknownFormatConversionException` production crashes.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Critical Fix**: I have identified a widespread issue where recent translations used `%1` instead of the required `%1$s` format. This is the direct cause of the reported crash.
-> - **Multi-Language Scope**: This fix affects 7 languages (Polish, Spanish, French, Italian, Portuguese, Japanese, and Dutch).
-> - **Stability Enforcement**: I am adding a new requirement (**REQ-UI-122**) to mandate strict format string compliance for all future development.
+> - **Total Resolution**: While we fixed the notification crash, my audit revealed another 15+ broken strings in various languages (PL, ES, FR, IT, PT, JA, NL) that would cause the app to crash during other UI interactions, such as deleting a workout or viewing location details.
+> - **Syntax Standard**: I will strictly enforce the `%1$s` (positional) or `%s` (simple) syntax, ensuring that every `%` is followed by a valid conversion character.
 
 ## Proposed Changes
 
-### 1. Localization Layer: Format String Correction
+### 1. Localization Layer: Global Cleanup
 Fulfills REQ-UI-122 | Test: TST-STR-016
 
-#### [MODIFY] `strings.xml` and `strings_filters.xml` in:
-- `values-pl/` (Polish)
-- `values-es/` (Spanish)
-- `values-fr/` (French)
-- `values-it/` (Italian)
-- `values-pt/` (Portuguese)
-- `values-ja/` (Japanese)
-- `values-nl/` (Dutch)
-
-**Correction Pattern**:
-- Change `%1` to `%1$s` (or `%1$d`, `%1$f` as appropriate).
-- Change `%2` to `%2$s`, etc.
-- Ensure all positional specifiers are fully qualified.
+#### [MODIFY] All `strings.xml` and `strings_filters.xml` files in all locales.
+- **Identify and Fix**:
+    - `really_delete_format`: Ensure it uses `%1$s` across all languages.
+    - `get_extremaType_of_sportType_format`: Correct positional index and type.
+    - `latLongEquals`: Ensure `%1$f` or `%1$s` is used.
+    - `concatenate_last_format_or`: Fix positional syntax.
+    - `notification_export_...`: Fix multiple placeholders.
+    - `successfully_..._to_...`: Fix multiple placeholders.
+    - `uploading_to_...`: Fix multiple placeholders.
+    - `waiting_to_...`: Fix multiple placeholders.
+- **Validation**: Ensure no literal `%` remains that isn't a valid specifier or escaped as `%%`.
 
 ## Verification Plan
 
 ### Automated Verification
-- **Format Audit**: Re-run a custom audit script to verify that zero instances of `%[0-9]` (without type suffix) remain in the entire resource tree.
+- **Project-Wide Audit**: Re-run the `grep` search: `grep -r "%[0-9]" | grep -v "\\$"` to ensure NO positional specifiers are missing the mandatory `$` and type suffix.
 
 ### Manual Verification (TST-STR-016)
-1. Switch device language to Polish (PL).
-2. Trigger a "Searching for sensor" state.
-3. **Verify** that the notification update no longer crashes the app.
-4. Switch to Spanish (ES) and repeat.
+1. Switch to various languages (PL, ES, FR).
+2. Attempt to delete a workout.
+3. **Verify** the `really_delete_format` dialog appears correctly without crashing.
+4. Perform a file export and verify the multi-argument notifications are correctly formatted.

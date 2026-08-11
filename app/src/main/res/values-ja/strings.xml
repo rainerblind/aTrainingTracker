@@ -878,9 +878,9 @@
 
     <!-- routes -->
     <string name="routes">ルート</string>
-    <string name="no_routes_available">ルート (%s) なし</string>
+    <string name="no_routes_available">ルート (%1$s) なし</string>
     <string name="absolutely_no_routes_available">ルートなし</string>
-    <string name="no_clusters_available">お気に入りコース (%s) なし</string>
+    <string name="no_clusters_available">お気に入りコース (%1$s) なし</string>
     <string name="absolutely_no_clusters_available">お気に入りコースなし</string>
     <string name="routes_import_hint">「+」またはファイルマネージャーから GPX を読み込んでください。</string>
     <string name="route_edit">ルートを編集</string>

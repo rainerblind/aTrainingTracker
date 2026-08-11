@@ -892,9 +892,9 @@
 
     <!-- routes -->
     <string name="routes">Routes</string>
-    <string name="no_routes_available">Geen %s routes.</string>
+    <string name="no_routes_available">Geen %1$s routes.</string>
     <string name="absolutely_no_routes_available">Geen routes beschikbaar.</string>
-    <string name="no_clusters_available">Geen %s trajecten beschikbaar.</string>
+    <string name="no_clusters_available">Geen %1$s trajecten beschikbaar.</string>
     <string name="absolutely_no_clusters_available">Geen trajecten beschikbaar.</string>
     <string name="routes_import_hint">Importeer een GPX via \"+\" of je bestandsbeheer.</string>
     <string name="route_edit">Route bewerken</string>

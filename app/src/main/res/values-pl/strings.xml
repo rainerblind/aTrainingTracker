@@ -777,8 +777,8 @@
     <string name="cluster_manual_pick_hint">Wybierz odcisk przestrzenny na mapie:</string>
     <string name="cluster_manual_tap_map_format">Dotknij mapy, aby ustawić %s</string>
     <string name="cluster_clear_content_desc">Wyczyść</string>
-    <string name="cluster_default_name_format">Trening w %s</string>
-    <string name="cluster_equipment_mapping_format">→ %s</string>
+    <string name="cluster_default_name_format">Trening w %1$s</string>
+    <string name="cluster_equipment_mapping_format">→ %1$s</string>
     <string name="cluster_score_brackets_format">(%1$.3f)</string>
     <string name="cluster_suggestions_content_desc">Sugestie</string>
     <string name="cluster_autoname_format">%1$s #%2$d</string>
