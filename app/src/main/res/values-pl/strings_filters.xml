@@ -24,8 +24,8 @@
     <string name="filter_average">średnia (cały trening)</string>
     <string name="filter_exponential_smoothing">wygładzanie wykładnicze</string>
     <string name="filter_moving_average">średnia krocząca</string>
-    <string name="filter_exponential_smoothing_format">wygładzanie wykładnicze z α=%1.2f</string>
-    <string name="filter_exponential_smoothing_short_format">exp α=%1.1f</string>
+    <string name="filter_exponential_smoothing_format">wygładzanie wykładnicze z α=%1$1.2f</string>
+    <string name="filter_exponential_smoothing_short_format">exp α=%1$1.1f</string>
 
     <string name="filter_details__instantaneous">Pokazuje bieżącą wartość.</string>
     <string name="filter_details__average">Pokazuje średnią wartość z całego treningu.</string>

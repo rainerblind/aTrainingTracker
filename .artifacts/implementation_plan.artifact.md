@@ -1,28 +1,40 @@
-# Implementation Plan - ATT-507: Standardize TCX Cadence Export
+# Implementation Plan - ATT-515: Global Format String Correction
 
-Standardize the TCX export engine to strictly follow the Training Center XML (TCX) Version 2.0 schema by ensuring cadence and power values are exported as integers.
+Surgically correct invalid format specifiers across multiple localized resource files to resolve production crashes caused by `UnknownFormatConversionException`.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Schema Compliance**: The TCX specification strictly requires `<Cadence>` (0-254) and `<Watts>` (0-65535) to be integers. Currently, we are exporting them as doubles (e.g., `85.0`, `250.0`), which causes compatibility issues with strict analytical platforms.
-> - **Consistent Formatting**: I am refactoring the export loop to cast these values to integers, which will result in clean output like `85` and `250`.
+> - **Critical Fix**: I have identified a widespread issue where recent translations used `%1` instead of the required `%1$s` format. This is the direct cause of the reported crash.
+> - **Multi-Language Scope**: This fix affects 7 languages (Polish, Spanish, French, Italian, Portuguese, Japanese, and Dutch).
+> - **Stability Enforcement**: I am adding a new requirement (**REQ-UI-122**) to mandate strict format string compliance for all future development.
 
 ## Proposed Changes
 
-### 1. Export Layer: TCX Standard Format
-Fulfills REQ-EXP-001 (Refinement) | Test: TST-EXP-004
+### 1. Localization Layer: Format String Correction
+Fulfills REQ-UI-122 | Test: TST-STR-016
 
-#### [MODIFY] [TCXFileWriter.java](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/TCXFileWriter.java)
-- **Refactor Cadence & Power Output**:
-    - Change the `cadence` and `power` variable declarations to `int` within the export loop.
-    - Round the double values from the database to the nearest integer using `Math.round()` before casting.
-    - Ensure `<Cadence>`, `<Watts>`, and `<RunCadence>` all utilize these integer values.
-    - Maintain `double` for fields that require it (e.g., `<Speed>`, `<AltitudeMeters>`, `<DistanceMeters>`).
+#### [MODIFY] `strings.xml` and `strings_filters.xml` in:
+- `values-pl/` (Polish)
+- `values-es/` (Spanish)
+- `values-fr/` (French)
+- `values-it/` (Italian)
+- `values-pt/` (Portuguese)
+- `values-ja/` (Japanese)
+- `values-nl/` (Dutch)
+
+**Correction Pattern**:
+- Change `%1` to `%1$s` (or `%1$d`, `%1$f` as appropriate).
+- Change `%2` to `%2$s`, etc.
+- Ensure all positional specifiers are fully qualified.
 
 ## Verification Plan
 
-### Manual Verification (TST-EXP-004)
-1. Perform a TCX export of a workout containing Cadence and Power data.
-2. Open the resulting `.tcx` file in a text editor.
-3. **Verify** that the `<Cadence>`, `<Watts>`, and `<RunCadence>` tags contain whole numbers (e.g., `85`) instead of decimal values (e.g., `85.0`).
+### Automated Verification
+- **Format Audit**: Re-run a custom audit script to verify that zero instances of `%[0-9]` (without type suffix) remain in the entire resource tree.
+
+### Manual Verification (TST-STR-016)
+1. Switch device language to Polish (PL).
+2. Trigger a "Searching for sensor" state.
+3. **Verify** that the notification update no longer crashes the app.
+4. Switch to Spanish (ES) and repeat.

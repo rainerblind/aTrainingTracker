@@ -1035,21 +1035,21 @@
     <string name="current_value">Valor atual</string>
     <string name="editLocationName">Nome:</string>
     <string name="edit_my_location">Editar localização</string>
-    <string name="get_extremaType_of_sportType_format">Obter as %1 posições dos seus %2 treinos.</string>
+    <string name="get_extremaType_of_sportType_format">Obter as %1$s posições dos seus %2$s treinos.</string>
     <string name="getting_my_locations">Procurando localizações conhecidas.</string>
     <string name="no_sport_types_available">Nenhum tipo de desporto disponível</string>
     <string name="no_workouts_available">Nenhum treino disponível</string>
-    <string name="really_delete_format">Deseja realmente excluir "%1"?</string>
+    <string name="really_delete_format">Deseja realmente excluir "%1$s"?</string>
     <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/master/privacy.md</string>
     <string name="LocationNameText">Casa</string>
     <string name="LocationAltitudeText">123 m</string>
-    <string name="latLongEquals">lat=%1, long=%2</string>
+    <string name="latLongEquals">lat=%1$f, long=%2$f</string>
     <string name="LocationsActivityLabel">Localizações</string>
     <string name="getting_start_locations">Procurando locais de partida.</string>
     <string name="my_locations">Trajetos favoritos</string>
     <string name="LocationAltitude">Altitude:</string>
     <string name="LocationRadius">Raio:</string>
-    <string name="concatenate_last_format_or">%1, ou %2</string>
+    <string name="concatenate_last_format_or">%1$s, ou %2$s</string>
     <string name="location_permission_text_pre_Android10">Permissão de localização necessária nos ajustes do sistema</string>
     <string name="all_sports">+ todos os desportos +</string>
     <string name="all_equipment">+ todo o equipamento +</string>

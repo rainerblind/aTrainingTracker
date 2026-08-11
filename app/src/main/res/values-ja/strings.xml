@@ -1018,25 +1018,25 @@
     <string name="current_value">現在の値</string>
     <string name="editLocationName">名前:</string>
     <string name="edit_my_location">場所を編集</string>
-    <string name="get_extremaType_of_sportType_format">%2ワークアウトの %1位置を取得します。</string>
+    <string name="get_extremaType_of_sportType_format">%2$sワークアウトの %1$s位置を取得します。</string>
     <string name="getting_my_locations">既知の場所を検索中...</string>
     <string name="no_sport_types_available">利用可能なスポーツタイプはありません</string>
     <string name="no_workouts_available">利用可能なワークアウトはありません</string>
-    <string name="really_delete_format">本当に "%1" を削除しますか？</string>
+    <string name="really_delete_format">本当に "%1$s" を削除しますか？</string>
     <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/master/privacy.md</string>
     <string name="LocationNameText">自宅</string>
     <string name="LocationAltitudeText">123 m</string>
-    <string name="latLongEquals">緯度=%1, 経度=%2</string>
-    <string name="notification_export_unknown">%1 %2 ファイルを不明な場所へ出力中...
-%3</string>
-    <string name="notification_finished_unknown">%1 %2 ファイルを不明な場所へ正常に出力しました。
-%3</string>
+    <string name="latLongEquals">緯度=%1$f, 経度=%2$f</string>
+    <string name="notification_export_unknown">%1$s %2$s ファイルを不明な場所へ出力中...
+%3$s</string>
+    <string name="notification_finished_unknown">%1$s %2$s ファイルを不明な場所へ正常に出力しました。
+%3$s</string>
     <string name="LocationsActivityLabel">場所</string>
     <string name="getting_start_locations">スタート地点を検索中...</string>
     <string name="my_locations">お気に入りトラック</string>
     <string name="LocationAltitude">高度:</string>
     <string name="LocationRadius">半径:</string>
-    <string name="concatenate_last_format_or">%1 または %2</string>
+    <string name="concatenate_last_format_or">%1$s または %2$s</string>
     <string name="location_permission_text_pre_Android10">システム設定で位置情報の権限が必要です</string>
     <string name="all_sports">+ すべてのスポーツ +</string>
     <string name="all_equipment">+ すべての装備 +</string>

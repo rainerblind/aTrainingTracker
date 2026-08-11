@@ -1032,21 +1032,21 @@
     <string name="calc_map_polyline">Calcul de la polyligne de la carte.</string>
     <string name="current_value">Valeur actuelle</string>
     <string name="editLocationName">Nom :</string>
-    <string name="get_extremaType_of_sportType_format">Obtenez les %1 positions de vos %2 entraînements.</string>
+    <string name="get_extremaType_of_sportType_format">Obtenez les %1$s positions de vos %2$s entraînements.</string>
     <string name="no_sport_types_available">Aucun type de sport disponible</string>
     <string name="no_workouts_available">Aucun entraînement disponible</string>
-    <string name="really_delete_format">Voulez-vous vraiment supprimer "%1" ?</string>
+    <string name="really_delete_format">Voulez-vous vraiment supprimer "%1$s" ?</string>
     <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/master/privacy.md</string>
 
     <string name="LocationNameText">Domicile</string>
     <string name="LocationAltitudeText">123 m</string>
-    <string name="latLongEquals">lat=%1, long=%2</string>
+    <string name="latLongEquals">lat=%1$f, long=%2$f</string>
     <string name="LocationsActivityLabel">Emplacements</string>
     <string name="getting_start_locations">Recherche des lieux de départ.</string>
     <string name="my_locations">Parcours favoris</string>
     <string name="LocationAltitude">Altitude :</string>
     <string name="LocationRadius">Rayon :</string>
-    <string name="concatenate_last_format_or">%1, ou %2</string>
+    <string name="concatenate_last_format_or">%1$s, ou %2$s</string>
     <string name="smartphone">Smartphone</string>
     <string name="location_permission_text_pre_Android10">Autorisation de localisation requise dans les paramètres système</string>
     <string name="all_sports">+ tous les sports +</string>

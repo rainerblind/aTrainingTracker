@@ -884,7 +884,7 @@
     <string name="all_equipment">+ cały sprzęt +</string>
     <string name="all_shoes">+ wszystkie buty +</string>
     <string name="all_sports">+ wszystkie sporty +</string>
-    <string name="concatenate_last_format_or">%1 lub %2</string>
+    <string name="concatenate_last_format_or">%1$s lub %2$s</string>
     <string name="correct_altitude_message">Proszę podać poprawną wysokość i nazwę bieżącej lokalizacji</string>
     <string name="correct_altitude_title">Skoryguj wysokość</string>
     <string name="current_value">Bieżąca wartość</string>
@@ -899,12 +899,10 @@
     <string name="equipment_type_shoe">Buty</string>
     <string name="getting_equipment_from_strava">pobieranie sprzętu ze Strava…
 proszę czekać</string>
-    <string name="got_bike">pobrano rowery ze Strava
-pobrano rower: %1</string>
-    <string name="got_shoe">pobrano buty ze Strava
-pobrano but: %1</string>
+    <string name="got_bike">pobrano rowery ze Strava\npobrano rower: %1$s</string>
+    <string name="got_shoe">pobrano buty ze Strava\npobrano but: %1$s</string>
     <string name="lastUpdateOfEquipmentNever">nigdy nie aktualizowano</string>
-    <string name="latLongEquals">szer=%1, dł=%2</string>
+    <string name="latLongEquals">szer=%1$f, dł=%2$f</string>
     <string name="location_permission_text_pre_Android10">Uprawnienie do lokalizacji wymagane w ustawieniach systemu</string>
     <string name="max">max</string>
     <string name="mean">średnia</string>
@@ -933,34 +931,26 @@ pobrano but: %1</string>
     <string name="bike_power__wheel_revolution_data">• Prędkość i dystans</string>
     <string name="bike_power__wheel_speed_and_distance_data">• Prędkość i dystans</string>
     <string name="bike_power__wheel_speed_data">• Prędkość</string>
-    <string name="get_extremaType_of_sportType_format">Pobierz %1 pozycje swoich %2 treningów.</string>
-    <string name="notification_export_community">%1 do %2
-%3</string>
-    <string name="notification_export_dropbox">%1 plik %2 do Dropbox
-%3</string>
-    <string name="notification_export_file">%1 plik %2 do systemu plików
-%3</string>
-    <string name="notification_export_unknown">%1 plik %2 do ???
-%3</string>
+    <string name="get_extremaType_of_sportType_format">Pobierz %1$s pozycje swoich %2$s treningów.</string>
+    <string name="notification_export_community">%1$s do %2$s\n%3$s</string>
+    <string name="notification_export_dropbox">%1$s plik %2$s do Dropbox\n%3$s</string>
+    <string name="notification_export_file">%1$s plik %2$s do systemu plików\n%3$s</string>
+    <string name="notification_export_unknown">%1$s plik %2$s do ???\n%3$s</string>
     <string name="notification_exporting_finished">eksportowanie ukończone</string>
-    <string name="notification_finished_community">pomyślnie przesłano %1 do %2
-%3</string>
-    <string name="notification_finished_dropbox">pomyślnie wyeksportowano %1 plik %2 do Dropbox
-%3</string>
-    <string name="notification_finished_file">pomyślnie wyeksportowano %1 plik %2 do systemu plików
-%3</string>
-    <string name="notification_finished_unknown">pomyślnie %1 plik %2 do ???
-%3</string>
+    <string name="notification_finished_community">pomyślnie przesłano %1$s do %2$s\n%3$s</string>
+    <string name="notification_finished_dropbox">pomyślnie wyeksportowano %1$s plik %2$s do Dropbox\n%3$s</string>
+    <string name="notification_finished_file">pomyślnie wyeksportowano %1$s plik %2$s do systemu plików\n%3$s</string>
+    <string name="notification_finished_unknown">pomyślnie %1$s plik %2$s do ???\n%3$s</string>
     <string name="notification_searching_finished">szukanie ukończone</string>
     <string name="notification_searching_for_ant">szukanie urządzeń ANT+</string>
     <string name="strava_success_but_must_check">przesłano do Strava, sprawdzanie wyniku …</string>
     <string name="strava_success_waiting_for_result">przesłano do Strava, oczekiwanie na wynik …</string>
-    <string name="successfully_exported_to_file">pomyślnie wyeksportowano %1/%2 plików</string>
-    <string name="successfully_uploaded_to_community">pomyślnie przesłano do %1/%2 społeczności online</string>
-    <string name="successfully_uploaded_to_dropbox">pomyślnie przesłano %1/%2 plików do Dropbox</string>
-    <string name="waiting_to_export_to_file">oczekiwanie na eksport %1/%2 plików</string>
-    <string name="waiting_to_upload_to_community">oczekiwanie na przesłanie do %1/%2 społeczności</string>
-    <string name="waiting_to_upload_to_dropbox">oczekiwanie na przesłanie %1/%2 plików do Dropbox</string>
+    <string name="successfully_exported_to_file">pomyślnie wyeksportowano %1$d/%2$d plików</string>
+    <string name="successfully_uploaded_to_community">pomyślnie przesłano do %1$d/%2$d społeczności online</string>
+    <string name="successfully_uploaded_to_dropbox">pomyślnie przesłano %1$d/%2$d plików do Dropbox</string>
+    <string name="waiting_to_export_to_file">oczekiwanie na eksport %1$d/%2$d plików</string>
+    <string name="waiting_to_upload_to_community">oczekiwanie na przesłanie do %1$d/%2$d społeczności</string>
+    <string name="waiting_to_upload_to_dropbox">oczekiwanie na przesłanie %1$d/%2$d plików do Dropbox</string>
     <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/master/privacy.md</string>
     <string name="pedal_smoothness_r_short">płyn. p</string>
     <string name="pedal_smoothness">płynność pedałowania</string>
@@ -1034,22 +1024,22 @@ pobrano but: %1</string>
     <string name="uploading_to_dropbox_not_wanted">Przesyłanie do Dropbox nie jest wymagane.</string>
     <string name="uploading_to_community_not_wanted">Przesyłanie do społeczności online nie jest wymagane.</string>
     <string name="exporting_to_file">exporting to file: %1$s (%2$d/%3$d)</string>
-    <string name="uploading_to_dropbox">przesyłanie do Dropbox: %1 (%2/%3)</string>
-    <string name="uploading_to_community">przesyłanie do społeczności online: %1 (%2/%3)</string>
+    <string name="uploading_to_dropbox">przesyłanie do Dropbox: %1$s (%2$d/%3$d)</string>
+    <string name="uploading_to_community">przesyłanie do społeczności online: %1$s (%2$d/%3$d)</string>
     <string name="exporting_to_file_failed_for_one">exporting to file failed for 1/%1$d files</string>
-    <string name="uploading_to_dropbox_failed_for_one">przesyłanie do Dropbox nieudane dla 1/%1 plików</string>
-    <string name="uploading_to_community_failed_for_one">przesyłanie do 1/%1 społeczności online nieudane</string>
+    <string name="uploading_to_dropbox_failed_for_one">przesyłanie do Dropbox nieudane dla 1/%1$d plików</string>
+    <string name="uploading_to_community_failed_for_one">przesyłanie do 1/%1$d społeczności online nieudane</string>
     <string name="exporting_to_file_failed_for_several">exporting to file failed for %1$d/%2$d files</string>
-    <string name="uploading_to_dropbox_failed_for_several">przesyłanie do Dropbox nieudane dla %1/%2 plików</string>
-    <string name="uploading_to_community_failed_for_several">przesyłanie do %1/%2 społeczności online nieudane</string>
+    <string name="uploading_to_dropbox_failed_for_several">przesyłanie do Dropbox nieudane dla %1$d/%2$d plików</string>
+    <string name="uploading_to_community_failed_for_several">przesyłanie do %1$d/%2$d społeczności online nieudane</string>
     <string name="tracking">śledzenie</string>
     <string name="tracking_finished">zatrzymano</string>
-    <string name="notification_title">%1 do %2</string>
+    <string name="notification_title">%1$s do %2$s</string>
     <string name="notification_tracking">śledzenie</string>
     <string name="notification_paused">wstrzymano</string>
-    <string name="notification_tracking_and_searching_format">śledzenie i szukanie %1</string>
-    <string name="notification_pause_and_searching_format">pauza i szukanie %1</string>
-    <string name="really_delete_format">Czy na pewno chcesz usunąć "%1"?</string>
+    <string name="notification_tracking_and_searching_format">śledzenie i szukanie %1$s</string>
+    <string name="notification_pause_and_searching_format">pauza i szukanie %1$s</string>
+    <string name="really_delete_format">Czy na pewno chcesz usunąć "%1$s"?</string>
     <string name="no_sport_types_available">No sport types available</string>
     <string name="no_workouts_available">No workouts available</string>
 

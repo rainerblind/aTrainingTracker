@@ -1035,21 +1035,21 @@
     <string name="current_value">Huidige waarde</string>
     <string name="editLocationName">Naam:</string>
     <string name="edit_my_location">Locatie bewerken</string>
-    <string name="get_extremaType_of_sportType_format">Vind de %1 posities van je %2 workouts.</string>
+    <string name="get_extremaType_of_sportType_format">Vind de %1$s posities van je %2$s workouts.</string>
     <string name="getting_my_locations">Zoeken naar bekende locaties.</string>
     <string name="no_sport_types_available">Geen sporttypes beschikbaar</string>
     <string name="no_workouts_available">Geen workouts beschikbaar</string>
-    <string name="really_delete_format">Wil je "%1" echt verwijderen?</string>
+    <string name="really_delete_format">Wil je "%1$s" echt verwijderen?</string>
     <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/master/privacy.md</string>
     <string name="LocationNameText">Thuis</string>
     <string name="LocationAltitudeText">123 m</string>
-    <string name="latLongEquals">lat=%1, long=%2</string>
+    <string name="latLongEquals">lat=%1$f, long=%2$f</string>
     <string name="LocationsActivityLabel">Locaties</string>
     <string name="getting_start_locations">Zoeken naar startlocaties.</string>
     <string name="my_locations">Favoriete tracks</string>
     <string name="LocationAltitude">Hoogte:</string>
     <string name="LocationRadius">Straal:</string>
-    <string name="concatenate_last_format_or">%1, of %2</string>
+    <string name="concatenate_last_format_or">%1$s, of %2$s</string>
     <string name="location_permission_text_pre_Android10">Locatiepermissie vereist in systeeminstellingen</string>
     <string name="all_sports">+ alle sporten +</string>
     <string name="all_equipment">+ alle uitrusting +</string>

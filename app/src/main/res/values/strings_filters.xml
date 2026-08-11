@@ -27,8 +27,8 @@
     <string name="filter_exponential_smoothing">exponential smoothing</string>
     <string name="filter_moving_average">moving average</string>
     <string name="filter_moving_average_short" translatable="false">Ø</string>
-    <string name="filter_exponential_smoothing_format">exponential smoothing (α=%1.2f)</string>
-    <string name="filter_exponential_smoothing_short_format">exp α=%1.1f</string>
+    <string name="filter_exponential_smoothing_format">exponential smoothing (α=%1$1.2f)</string>
+    <string name="filter_exponential_smoothing_short_format">exp α=%1$1.1f</string>
 
     <string name="filter_details__instantaneous">Show the current value.</string>
     <string name="filter_details__average">Show the average value of the entire workout.</string>
