@@ -23,6 +23,7 @@ This document defines the verification procedures for all project requirements. 
 | **TST-UNT-013** | `ATT-458` | `WorkoutSummariesViewModel` | `REQ-PER-008` | Verify `getFilteredWorkouts` correctly filters by `bSportType` (Base Sport) when `sportId` is null. | Proposed |
 | **TST-UNT-014** | `ATT-476` | `WorkoutSummariesDbHelper` | `REQ-DAT-008` | Verify that `onUpgrade` does not call `setTransactionSuccessful()` explicitly, which would conflict with `SQLiteOpenHelper`'s internal transaction management. | Verified |
 | **TST-FIL-002** | | `WorkoutSamplesDb` | `REQ-DAT-003` | Verify that `calcExtremaValue` returns `null` (not 0.0) when querying a sensor that has only NULL values or does not exist in the table. | Verified |
+| **TST-EXP-004** | `ATT-517` | **TCX Schema Compliance Audit** | `REQ-EXP-001` | 1. Perform a TCX export of a workout containing Cadence and Power data. 2. Inspect the raw XML content. 3. Verify that `<Cadence>`, `<Watts>`, and `<RunCadence>` tags contain ONLY integer values (no decimal points). | Exported TCX file strictly uses integer formatting for cadence and power tags. | Verified |
 
 ## 2. Regression & Manual Verification (SWE.5 / SWE.6)
 
