@@ -18,6 +18,32 @@
 
 package com.atrainingtracker.trainingtracker.ui.utils
 
+/**
+ * Provides high-efficiency delta-encoding for numerical streams and geographical paths.
+ *
+ * This utility implements an algorithm similar to Google's Encoded Polyline Algorithm Format,
+ * but specialized for [Double] streams (Altitudes, Distances) and incremental tracking updates.
+ *
+ * It maximizes database storage efficiency by:
+ * 1. **Fixed-Point Conversion**: Multiplying values by a precision factor (e.g., 100 for cm-precision).
+ * 2. **Delta Encoding**: Only storing the difference between consecutive points.
+ * 3. **Variable-Length Base64**: Using a 7-bit ASCII representation to minimize string length.
+ *
+ * Architectural Role: Data compression utility for persistent streams.
+ */
+/**
+ * Provides high-efficiency delta-encoding for numerical streams and geographical paths.
+ *
+ * This utility implements an algorithm similar to Google's Encoded Polyline Algorithm Format,
+ * but specialized for [Double] streams (Altitudes, Distances) and incremental tracking updates.
+ *
+ * It maximizes database storage efficiency by:
+ * 1. **Fixed-Point Conversion**: Multiplying values by a precision factor (e.g., 100 for cm-precision).
+ * 2. **Delta Encoding**: Only storing the difference between consecutive points.
+ * 3. **Variable-Length Base64**: Using a 7-bit ASCII representation to minimize string length.
+ *
+ * Architectural Role: Data compression utility for persistent streams.
+ */
 object NumericalEncodingUtils {
     /**
      * Encodes a list of doubles (like altitudes or distances) into a compact String.
@@ -65,6 +91,12 @@ object NumericalEncodingUtils {
         return result.toString()
     }
 
+    /**
+     * Decodes a compressed string back into a list of [Double] values.
+     *
+     * Implementation: Iteratively parses the variable-length bit segments, reconstructs
+     * the signed deltas, and integrates them into a running absolute value.
+     */
     fun decodeDoubles(encoded: String): List<Double> {
         val result = mutableListOf<Double>()
         var index = 0

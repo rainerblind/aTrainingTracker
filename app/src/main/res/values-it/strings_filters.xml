@@ -24,8 +24,8 @@
     <string name="filter_average">media (intero allenamento)</string>
     <string name="filter_exponential_smoothing">smoothing esponenziale</string>
     <string name="filter_moving_average">media mobile</string>
-    <string name="filter_exponential_smoothing_format">smoothing esponenziale α=%1.2f</string>
-    <string name="filter_exponential_smoothing_short_format">exp α=%1.1f</string>
+    <string name="filter_exponential_smoothing_format">smoothing esponenziale α=%1$1.2f</string>
+    <string name="filter_exponential_smoothing_short_format">exp α=%1$1.1f</string>
 
     <string name="filter_details__instantaneous">Mostra il valore attuale.</string>
     <string name="filter_details__average">Mostra la media di tutto l\'allenamento.</string>

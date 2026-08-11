@@ -191,7 +191,7 @@ public class TCXFileWriter extends BaseFileWriter {
             if (haveBikeCadence && dataValid(cursor, SensorType.CADENCE.name())) {
                 cadence = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.CADENCE.name()));
                 bufferedWriter.write("            <Cadence>" +
-                        cadence + "</Cadence>\n");
+                        (int) Math.round(cadence) + "</Cadence>\n");
             }
 
             if ((haveSpeed || havePower || haveRunCadence)
@@ -209,13 +209,13 @@ public class TCXFileWriter extends BaseFileWriter {
                 if (havePower && dataValid(cursor, SensorType.POWER.name())) {
                     power = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.POWER.name()));
                     bufferedWriter.write("            <Watts>" +
-                            power + "</Watts>\n");
+                            (int) Math.round(power) + "</Watts>\n");
                 }
 
                 if (haveRunCadence && dataValid(cursor, SensorType.CADENCE.name())) {
                     cadence = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.CADENCE.name()));
                     bufferedWriter.write("            <RunCadence>" +
-                            cadence + "</RunCadence>\n");
+                            (int) Math.round(cadence) + "</RunCadence>\n");
                 }
 
 

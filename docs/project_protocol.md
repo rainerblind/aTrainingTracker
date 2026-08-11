@@ -102,6 +102,28 @@ Any AI assistant working on this project **must** follow these steps for every t
 11. **UI Visual Standards (Mandatory Design Rules)**:
     *   **Original Sport Icons**: Sport type icons MUST always be displayed in their original colors to ensure quick identification and maintain branding. Agents are FORBIDDEN from applying theme-based tinting (e.g., `primary` color) to these icons, except when they are explicitly in a muted background state or disabled.
 
+## Internal Documentation Standards
+
+To maintain world-class architectural clarity, every code component MUST be self-documenting:
+
+1.  **Class-Level Headers**: Every class MUST have a KDoc (Kotlin) or JavaDoc (Java) block describing its **purpose**, its **architectural role**, and any critical threading or lifecycle constraints.
+2.  **Method-Level Headers**: Every public and protected method MUST have a header describing:
+    *   **Functional Description**: What the method does from a system perspective.
+    *   **Implementation Logic**: Briefly explain *how* it achieves its goal if the logic is non-trivial (e.g., synchronization patterns, background offloading).
+    *   **Parameters & Returns**: Explicitly document inputs and outputs.
+3.  **Future Enforcement**: These standards apply to ALL new code and any significant refactoring of existing modules.
+
+## Format String Hardening (Crash Prevention)
+
+To prevent `UnknownFormatConversionException` runtime crashes, all developers and AI agents MUST adhere to these strict syntax rules for string resources:
+
+1.  **Fully-Qualified Positional Specifiers**: All string placeholders MUST use positional indices and type characters.
+    *   **Correct**: `%1$s`, `%2$d`, `%3$.2f`.
+    *   **Prohibited**: `%s`, `%d`, `%1`, `%2`.
+2.  **Type Suffix Requirement**: Placeholders MUST explicitly include the data type suffix (e.g., `$s` for String, `$d` for Decimal).
+3.  **Literal Percent Signs**: Literal `%` characters in a format string MUST be escaped as `%%`. For standalone usage, prefer referencing the `@string/units_percent` resource.
+4.  **Mandatory Static Audit**: Every task involving string modification MUST conclude with a static audit phase. The agent SHALL use `grep` to verify that zero instances of invalid positional specifiers (e.g., `%[0-9]` without `$`) exist across all affected locales.
+
 ## New Version / Release Workflow
 Whenever preparing for a new version:
 1.  **File Audit**: The agent identifies all files modified since the last release.

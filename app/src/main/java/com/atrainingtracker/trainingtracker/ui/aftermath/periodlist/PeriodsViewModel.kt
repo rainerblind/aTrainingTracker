@@ -42,6 +42,15 @@ data class PeriodMapState(
     val isLoading: Boolean = false,
 )
 
+/**
+ * Manages the UI state and background data aggregation for the Workout PeriodsAnalytical hub.
+ *
+ * This ViewModel orchestrates the progressive loading of historical summaries and manages
+ * the transition between the period list and the detailed spatial analytics view. It features
+ * a selection-driven loading algorithm to ensure 100% data visibility on maps.
+ *
+ * Architectural Role: Presentation layer for historical analytical trends.
+ */
 class PeriodsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val workoutRepo = WorkoutRepository.getInstance(application)
@@ -82,6 +91,15 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /**
+     * Triggers the transition to the Period Map view and launches the exhaustive loading job.
+     *
+     * Implementation: Uses a selection-driven algorithm (standardized with Clusters) that
+     * queries the database directly for the range. This ensures that every workout in the
+     * period is eventually mapped, bypassing the repository's background rollup state.
+     *
+     * @param summary The period to analyze.
+     */
     fun showPeriodMap(summary: PeriodSummary) {
         selectionJob?.cancel()
         _selectedPeriod.value = summary

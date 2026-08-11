@@ -1,30 +1,26 @@
-# Implementation Plan - ATT-453: Update Play Store Descriptions
+# Implementation Plan - ATT-515 Post-Action: Project Protocol Hardening
 
-Add the "Workout Import" feature to all localized Play Store descriptions and include "Made in Germany" in the German translation to highlight the app's quality and migration capabilities.
+Formally update the `project_protocol.md` to incorporate strict format string standards, ensuring that the recently resolved production crashes never recur.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Unified Feature Presentation**: The "Workout Import" feature (supporting TCX files from former devices) will be added to the "Your Data, Your Choice" section in all 9 supported languages.
-> - **German Heritage**: The German description will explicitly feature "Made in Germany" to emphasize the long-standing reliable development.
+> - **Enforcement**: This update makes the use of fully-qualified format specifiers (e.g., `%1$s`) a mandatory non-negotiable standard for all developers and AI agents.
+> - **Zero-Tolerance for `%1`**: Incomplete specifiers are now explicitly identified as a "Critical System Failure" risk.
 
 ## Proposed Changes
 
-### 1. Documentation: English Description
-#### [MODIFY] [en.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/en.md)
-- Add bullet point: `• <b>Workout Import</b>: Easily migrate your training history from former devices by importing TCX files.` under "YOUR DATA, YOUR CHOICE".
+### 1. Process Layer: Protocol Hardening
+Fulfills REQ-PRO-012 | Test: TST-STR-017
 
-### 2. Documentation: German Description
-#### [MODIFY] [de.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/de.md)
-- Add bullet point: `• <b>Training-Import</b>: Migriere deinen Trainingsverlauf einfach von früheren Geräten durch den Import von TCX-Dateien.` under "DEINE DATEN, DEINE WAHL".
-- Prepend `<b>Made in Germany</b>. ` to the paragraph under "VON ATHLETEN FÜR ATHLETEN".
-
-### 3. Documentation: Global Translations
-#### [MODIFY] [es.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/es.md), [fr.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/fr.md), [it.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/it.md), [ja.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/ja.md), [nl.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/nl.md), [pl.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/pl.md), [pt.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/store_presence/pt.md)
-- Add the corresponding localized "Workout Import" bullet point to the data sovereignty section of each file.
+#### [MODIFY] [project_protocol.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/project_protocol.md)
+- **New Section: "Format String Hardening"**:
+    - **Rule 1: Fully-Qualified Syntax**: All string placeholders MUST use the `java.util.Formatter` positional syntax (e.g., `%1$s` for strings, `%2$d` for integers, `%3$.2f` for floats).
+    - **Rule 2: Type Suffix Requirement**: Placeholders MUST include the type character. Syntax like `%1` or `%2` is strictly prohibited.
+    - **Rule 3: Literal Percent Signs**: Literal `%` characters MUST be escaped as `%%` or referenced via the `@string/units_percent` resource.
+    - **Rule 4: Mandatory Audit Phase**: Every task involving localization or string resource modification MUST conclude with a static audit using `grep` to verify placeholder integrity across all affected locales.
 
 ## Verification Plan
 
-### Manual Verification
-- **Visual Audit**: Inspect each modified markdown file to ensure formatting is correct and translations are accurate.
-- **Protocol Compliance**: Verify that all 9 languages are updated to maintain our world-class standard (REQ-STP-001).
+### Manual Verification (TST-STR-017)
+- **Audit**: Verify that the new section is present in `project_protocol.md` and that the language is unambiguous and aligned with ASPICE safety standards.

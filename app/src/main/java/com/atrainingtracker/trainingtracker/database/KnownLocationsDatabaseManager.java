@@ -37,6 +37,17 @@ import com.google.android.gms.maps.model.LatLng;
 import java.util.LinkedList;
 import java.util.List;
 
+/**
+ * Orchestrates the persistent storage and retrieval of known geographical locations.
+ *
+ * This manager maintains a spatial database of "Known Locations" (Starting points). It
+ * features an automated "Altitude Discovery" engine that refines altitude estimates
+ * using a weighted moving average of raw barometric samples recorded at the start of
+ * each workout.
+ *
+ * Architectural Role: Spatial knowledge base for sensor calibration.
+ * Threading: Methods should generally be called from background contexts to avoid UI block.
+ */
 public class KnownLocationsDatabaseManager {
     public static final int DEFAULT_RADIUS = 200;
     private static final String TAG = KnownLocationsDatabaseManager.class.getName();

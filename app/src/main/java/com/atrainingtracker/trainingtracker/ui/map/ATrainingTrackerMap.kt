@@ -51,6 +51,21 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import kotlinx.coroutines.flow.StateFlow
 
+/**
+ * The primary Map Singleton for the application, providing a high-level DSL for rendering athletic data.
+ *
+ * This component orchestrates the Google Maps engine with standardized behaviors:
+ * 1. **Modular Content (DSL)**: Data layers (Tracks, Routes, Heatmaps) are added via a [MapContentScope] block.
+ * 2. **Intelligent Focus**: Managed by [MapBoundsController], ensuring the camera snaps to relevant data.
+ * 3. **Shared Overlays**: Handles common UI elements like the user location arrow and the interactive scrubber.
+ * 4. **Performance**: Offloads heavy processing (like heatmap generation) to background threads.
+ *
+ * @param zoomFocus Determines the camera's auto-fit strategy (e.g., center on user vs. fit all markers).
+ * @param initialBounds Optional spatial boundaries to snap the camera to immediately upon creation.
+ * @param currentLocationFlow Reactive stream of the user's GPS coordinates.
+ * @param activeScrubPath The path used for the interactive scrubber (e.g., when sliding a finger on a chart).
+ * @param content The DSL block defining what additional data layers to render.
+ */
 @OptIn(MapsComposeExperimentalApi::class)
 @Composable
 fun ATrainingTrackerMap(

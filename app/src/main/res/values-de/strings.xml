@@ -969,9 +969,9 @@
 
     <!-- routes -->
     <string name="routes">Routen</string>
-    <string name="no_routes_available">Keine %s Routen verfügbar.</string>
+    <string name="no_routes_available">Keine %1$s Routen verfügbar.</string>
     <string name="absolutely_no_routes_available">Keine Routen verfügbar.</string>
-    <string name="no_clusters_available">Keine %s Lieblingsstrecken verfügbar.</string>
+    <string name="no_clusters_available">Keine %1$s Lieblingsstrecken verfügbar.</string>
     <string name="absolutely_no_clusters_available">Keine Lieblingsstrecken verfügbar.</string>
     <string name="routes_import_hint">Du kannst GPX Dateien importieren, indem Du oben auf das \"+\" klickst, oder im Datei Exploerer auf eine GPX-Datei klickst.</string>
     <string name="route_edit">Route bearbeiten</string>
@@ -1083,7 +1083,7 @@
     <string name="cluster_manual_pick_start">Start wählen</string>
     <string name="cluster_manual_pick_end">Ende wählen</string>
     <string name="cluster_manual_pick_apex">Apex (Entferntester Punkt) wählen</string>
-    <string name="cluster_manual_distance_hint">Einheit-Distanz (%s)</string>
+    <string name="cluster_manual_distance_hint">Einheit-Distanz (%1$s)</string>
     <string name="cluster_manual_missing_points">Bitte wählen Sie alle 3 räumlichen Punkte auf der Karte aus.</string>
 
     <string name="cluster_edit_fingerprint">Workout-Fingerabdruck bearbeiten</string>
@@ -1093,10 +1093,10 @@
     <string name="cluster_save_fingerprint_content_desc">Fingerabdruck speichern</string>
     <string name="cluster_edit_fingerprint_content_desc">Fingerabdruck bearbeiten</string>
     <string name="cluster_manual_pick_hint">Räumlichen Fingerabdruck auf der Karte wählen:</string>
-    <string name="cluster_manual_tap_map_format">Tippen Sie auf die Karte, um %s zu setzen</string>
+    <string name="cluster_manual_tap_map_format">Tippen Sie auf die Karte, um %1$s zu setzen</string>
     <string name="cluster_clear_content_desc">Löschen</string>
-    <string name="cluster_default_name_format">Einheit bei %s</string>
-    <string name="cluster_equipment_mapping_format">→ %s</string>
+    <string name="cluster_default_name_format">Einheit bei %1$s</string>
+    <string name="cluster_equipment_mapping_format">→ %1$s</string>
     <string name="cluster_score_brackets_format">(%1$.3f)</string>
     <string name="cluster_suggestions_content_desc">Vorschläge</string>
     <string name="cluster_autoname_format">%1$s #%2$d</string>
