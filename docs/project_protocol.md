@@ -27,7 +27,7 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   Identify which manual or automated tests in `docs/tests.md` will prove the requirement is met.
     *   If no suitable test exists, add a new one to `docs/tests.md` immediately.
     *   **Jira Integration**: For each identified or new test case, the agent MUST create a **Sub-task** in Jira linked to the main ticket.
-        *   The sub-task **Summary** MUST follow the format: `[Test] TST-XXX-###: Summary`.
+        *   The sub-task **Summary** MUST follow the format: `[Test] ATT-XXX: TST-XXX-### - Summary`.
         *   The sub-task **Description** MUST be identical to the procedure and expected result defined in `docs/tests.md` to ensure absolute synchronization.
         *   After creation, the agent MUST update `docs/tests.md` to include the **Jira Ticket ID** of the sub-task (e.g., `ATT-123`) in the test case table for bidirectional traceability.
     *   **Iterative Refinement**: The agent must refine the test cases based on user feedback until the user explicitly agrees.
@@ -54,12 +54,15 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   **Type-Aware Engineering**: The agent MUST check the **Issue Type** (e.g., Bug, Task, Story) and adapt its strategy accordingly:
         *   **Bugs**: Require a formal **Root Cause Analysis (RCA)** and inspection of all attachments (logs, screenshots). Use `jira_util.py download-all KEY` to retrieve debugging artifacts. The agent MUST create a dedicated sub-task for the RCA (summary format: `[RCA] ATT-XXX: Summary`) and document the detailed technical results in its **Description** before proceeding to implementation.
         *   **Stories/Tasks**: Require detailed feature requirements and architectural impact analysis.
+    *   **Traceable Sub-task Generation**: The agent MUST create dedicated Jira sub-tasks for every stage of the lifecycle to maintain 100% transparency:
+        *   `[RCA] ATT-XXX: Summary`: Root Cause Analysis for bugs.
+        *   `[Test] ATT-XXX: TST-XXX-### - Summary`: Individual verification test cases.
+        *   `[Plan] ATT-XXX: Summary`: Implementation Plan.
+        *   `[Review-Risk] ATT-XXX: Pre-Implementation Impact Assessment`: Gate 1 Risk Review.
+        *   `[Review-Code] ATT-XXX: Post-Implementation Code Audit`: Gate 2 Code Review.
     *   **Documentation**: For any ticket in progress, the agent must:
         *   **Identity Disclaimer**: Every comment posted by the agent MUST start with a clear disclaimer: *"[Automated comment by AI Agent]"*.
-        *   **Initial Analysis**: Immediately after moving to "In Progress", post a comment containing the **Implementation Strategy**, the **Impact Analysis**, and the **Agreed Verification Criteria (Test IDs)**. Reference the dedicated `[RCA]` (for bugs) and `[Plan]` sub-tasks for technical details. This ensures that the main ticket remains a high-level coordination hub while technical specifics are isolated in traceable sub-tasks.
-        *   **Jira Sub-task Generation**: Immediately after the Initial Analysis, the agent MUST create a **Sub-task** for the implementation plan. 
-            *   The sub-task **Summary** MUST follow the format: `[Plan] ATT-XXX: Summary`.
-            *   The sub-task **Description** MUST be identical to the Implementation Plan defined in Step 6.
+        *   **Initial Analysis**: Immediately after moving to "In Progress", post a comment containing the **Implementation Strategy**, the **Impact Analysis**, and the **Agreed Verification Criteria (Test IDs)**. Reference the dedicated `[RCA]` (for bugs) and `[Plan]` sub-tasks for technical details.
         *   **Verification & Closure**: When moving to "In Überprüfung", post the full text of the walkthrough as a comment. This provides a permanent record of the implemented changes and verification evidence.
 
 5.  **Architectural Integrity (SWE.2 Phase)**:
@@ -128,6 +131,30 @@ To prevent `UnknownFormatConversionException` runtime crashes, all developers an
 2.  **Type Suffix Requirement**: Placeholders MUST explicitly include the data type suffix (e.g., `$s` for String, `$d` for Decimal).
 3.  **Literal Percent Signs**: Literal `%` characters in a format string MUST be escaped as `%%`. For standalone usage, prefer referencing the `@string/units_percent` resource.
 4.  **Mandatory Static Audit**: Every task involving string modification MUST conclude with a static audit phase. The agent SHALL use `grep` to verify that zero instances of invalid positional specifiers (e.g., `%[0-9]` without `$`) exist across all affected locales.
+
+## Dual-Gate AI Review Protocol (Pre-Implementation & Post-Implementation Quality Gates)
+
+To prevent side-effect regressions, "destroyed features", and architectural drift, all development workflows MUST pass through two explicit, AI-driven quality gates:
+
+### Gate 1: Pre-Implementation Risk & Impact Review (`[Review-Risk]`)
+*   **Timing**: Executed immediately after Root Cause Analysis (RCA) or Implementation Plan generation, **BEFORE** modifying any source files.
+*   **Artifact**: Created as a dedicated Jira sub-task with the summary format: `[Review-Risk] ATT-XXX: Pre-Implementation Impact Assessment`.
+*   **Required Auditor Checks**:
+    1.  **Call Site Audit**: Run `find_usages` or `grep` on all classes, methods, and resources slated for editing. List every caller.
+    2.  **Requirement Mapping Audit**: Cross-reference all files to be edited with `docs/requirements.md` and explicitly list all mapped `REQ-XXX` IDs.
+    3.  **System Invariant Checklist**: Explicitly state what existing system behavior, precision, schema, or API contracts MUST NOT change.
+    4.  **Risk Rating**: Assign a risk level (`LOW`, `MEDIUM`, `HIGH`) with detailed technical justification.
+*   **User Decision Gate**: Code modification is strictly FORBIDDEN until the user reviews Gate 1 and provides explicit approval to proceed.
+
+### Gate 2: Post-Implementation Code & Regression Review (`[Review-Code]`)
+*   **Timing**: Executed immediately after coding and unit verification (SWE.4/SWE.5), **BEFORE** asking the user for final closure or moving the ticket to "In Überprüfung".
+*   **Artifact**: Created as a dedicated Jira sub-task with the summary format: `[Review-Code] ATT-XXX: Post-Implementation Code Audit`.
+*   **Required Auditor Checks**:
+    1.  **Diff Scrutiny**: Inspect the complete `git diff` against the approved plan. Confirm zero unapproved files or unintended modifications.
+    2.  **Side-Effect Audit**: Verify that adjacent callers and non-target metrics/features were NOT altered or broken.
+    3.  **Quality & Compliance**: Verify that class/method headers comply with self-documenting standards and all user-facing strings are fully localized across all 9 supported languages.
+    4.  **Recommendation**: Issue an explicit recommendation (`RECOMMEND PASS` or `RECOMMEND REVISION`) with itemized audit notes.
+*   **User Decision Gate**: The user reviews the Gate 2 audit report to decide whether to accept the implementation or request revisions.
 
 ## New Version / Release Workflow
 Whenever preparing for a new version:
