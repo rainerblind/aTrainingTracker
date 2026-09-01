@@ -73,15 +73,11 @@ fun getPeriodMapVisuals(
                 }
             }
 
-            // ATT-342 Refinement: Even tighter radius at low zoom to prevent bloating.
-            // NOTE: HeatmapTileProvider requires radius between 10 and 50.
+            // ATT-500 Refinement: Strict radius clamping (10-15px) prevents the heatmap from bloating into a wide band.
             val radius = if (zoom == null) {
                 10 // Safe minimum for summary cards
             } else {
-                // Adaptive formula: base 10 + drift from zoom 12.
-                // It stays at 10px until zoom 12, then grows.
-                // Clamped between 10 and 50 pixels to stay within HeatmapTileProvider bounds.
-                (10 + (zoom - 12).coerceAtLeast(0f) * 4.0f).toInt().coerceIn(10, 50)
+                (10 + (zoom - 14).coerceAtLeast(0f) * 1.0f).toInt().coerceIn(10, 15)
             }
 
             // ATT-342 OOM Fix: Define point caps to protect heap

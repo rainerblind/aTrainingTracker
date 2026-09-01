@@ -302,13 +302,13 @@ fun createHeatmapProvider(
 
     if (allPoints.isEmpty()) return null
 
-    // Modern sequential Blue gradient with translucent alpha channels (ATT-504 Fix)
-    // Translucent Cyan -> Translucent Blue -> Translucent Deep Indigo
-    // This ensures terrain, roads, and map labels remain clearly legible underneath the overlay.
+    // Modern sequential Blue gradient with ultra-light translucent alpha channels (ATT-504 & ATT-500 Fix)
+    // Light Cyan -> Light Blue -> Light Deep Indigo
+    // Ensures the heatmap acts as a thin, subtle density indicator that never bloats or dominates terrain.
     val colors = intArrayOf(
-        0x6600E5FF,          // Low density: Vibrant Cyan (40% opacity)
-        0x800000FF.toInt(),  // Medium: The "Identity" Blue (50% opacity)
-        0x99311B92.toInt()   // High density: Deep Indigo (60% opacity)
+        0x3300E5FF,          // Low density: Soft Light Cyan (20% opacity)
+        0x4D0000FF,          // Medium: Soft Light Blue (30% opacity)
+        0x66311B92           // High density: Soft Light Indigo (40% opacity)
     )
     
     // Dynamically calculate intermediate points based on the provided startIntensity

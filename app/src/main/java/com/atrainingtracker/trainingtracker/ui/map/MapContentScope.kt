@@ -160,25 +160,30 @@ internal class MapContentScopeImpl(
     override fun Render(currentZoom: Float) {
         val steppedZoom = remember(currentZoom) { currentZoom.toInt().toFloat() }
 
-        // ATT-342 Final Refinement: Total Path Priority & Marker Culling
+        // ATT-500 Refinement: Calibrated zoom-dependent weights and intervals.
+        // At low zoom (zoomed out), low weights (0.15-0.3) prevent the Gaussian blur from bloating sideways,
+        // keeping the heatmap line tight, narrow, and crisp over the routes.
         val trackAlpha: Float
         val markerAlphaMult: Float
         val heatmapWeight: Double
         val heatmapStartIntensity: Float
-        val heatmapMaxIntensity: Double
+        val heatmapMaxIntensity: Double?
 
         when {
+            steppedZoom < 10 -> {
+                // Zoomed far out (country/region): Low weight keeps heatmap narrow and tight
+                trackAlpha = 0.4f; markerAlphaMult = 0.0f; heatmapWeight = 0.15; heatmapStartIntensity = 0.2f; heatmapMaxIntensity = null
+            }
             steppedZoom < 13 -> {
-                trackAlpha = 0.4f; markerAlphaMult = 0.0f; heatmapWeight = 0.005; heatmapStartIntensity = 0.2f; heatmapMaxIntensity = 20.0
+                // Zoomed moderately out (city level): Crisp, narrow thread over route lines
+                trackAlpha = 0.6f; markerAlphaMult = 0.0f; heatmapWeight = 0.3; heatmapStartIntensity = 0.2f; heatmapMaxIntensity = null
             }
             steppedZoom <= 15 -> {
-                trackAlpha = 0.8f; markerAlphaMult = 0.2f; heatmapWeight = 0.001; heatmapStartIntensity = 0.4f; heatmapMaxIntensity = 60.0
-            }
-            steppedZoom <= 16 -> {
-                trackAlpha = 1.0f; markerAlphaMult = 0.6f; heatmapWeight = 0.0005; heatmapStartIntensity = 0.5f; heatmapMaxIntensity = 100.0
+                // Detailed zoom (district level): Clear, light density overlay
+                trackAlpha = 0.8f; markerAlphaMult = 0.2f; heatmapWeight = 0.6; heatmapStartIntensity = 0.2f; heatmapMaxIntensity = null
             }
             else -> {
-                trackAlpha = 1.0f; markerAlphaMult = 1.0f; heatmapWeight = 0.0002; heatmapStartIntensity = 0.6f; heatmapMaxIntensity = 200.0
+                trackAlpha = 1.0f; markerAlphaMult = 1.0f; heatmapWeight = 0.8; heatmapStartIntensity = 0.2f; heatmapMaxIntensity = null
             }
         }
 
@@ -197,11 +202,12 @@ internal class MapContentScopeImpl(
                 heatmapStartIntensity,
                 heatmapMaxIntensity
             ) {
-                val effectiveRadius = data.radius ?: (10 + (steppedZoom - 12).coerceAtLeast(0f) * 4.0f).toInt().coerceIn(10, 50)
+                // ATT-500 Refinement: Strict radius clamping (10-15px) prevents the heatmap from bloating into a wide band at high zoom levels.
+                val effectiveRadius = data.radius ?: (10 + (steppedZoom - 14).coerceAtLeast(0f) * 1.0f).toInt().coerceIn(10, 15)
                 val effectiveInterval = data.densifyInterval ?: when {
-                    steppedZoom < 10 -> 200.0
-                    steppedZoom < 12 -> 100.0
-                    steppedZoom < 14 -> 50.0
+                    steppedZoom < 10 -> 500.0
+                    steppedZoom < 13 -> 250.0
+                    steppedZoom < 15 -> 50.0
                     else -> 10.0
                 }
                 val effectiveMaxPoints = data.maxPoints ?: 15000
