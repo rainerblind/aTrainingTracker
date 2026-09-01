@@ -758,7 +758,30 @@ class PeriodsRepository private constructor(private val application: Application
             .filter { it.mapPolyline.isNotEmpty() }
             .associate { it.id to it.mapPolyline }
 
+        // 3. Hydrate LongestWorkout metrics for each sport from in-memory workouts (ATT-504 Fix)
+        val enrichedSportStats = summary.sportStats.mapValues { (sport, stats) ->
+            val targetId = stats.longestWorkout?.id ?: -1L
+            val longestWorkoutData = if (targetId != -1L) {
+                groupWorkouts.find { it.id == targetId }
+            } else {
+                groupWorkouts.filter { it.bSportType == sport }.maxByOrNull { it.activeTimeSec }
+            }
+
+            if (longestWorkoutData != null) {
+                stats.copy(
+                    longestWorkout = LongestWorkout(
+                        id = longestWorkoutData.id,
+                        name = longestWorkoutData.workoutName,
+                        durationSec = longestWorkoutData.activeTimeSec,
+                        distanceMeters = longestWorkoutData.totalDistance,
+                        ascentMeters = longestWorkoutData.ascentMeters
+                    )
+                )
+            } else stats
+        }
+
         return summary.copy(
+            sportStats = enrichedSportStats,
             polylines = anchorWorkouts.map { it.mapPolyline }.filter { it.isNotEmpty() },
             workoutIdToPolylineMap = allPolylineMap,
             workoutIdToSportMap = groupWorkouts.associate { it.id to it.bSportType },

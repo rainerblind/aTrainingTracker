@@ -272,43 +272,43 @@ fun createHeatmapProvider(
 ): com.google.maps.android.heatmaps.HeatmapTileProvider? {
     if (allPaths.isEmpty()) return null
 
-    // 1. Calculate raw point count to determine thinning factor
+    // 1. Calculate raw point count to determine global sampling step (ATT-504)
     val rawPointCount = allPaths.sumOf { it.size }
     
-    // ATT-342 Refinement: Use a more aggressive thinning factor calculation
-    // to ensure we always stay well within the maxPoints budget.
-    val thinningFactor = if (rawPointCount > maxPoints) {
-        (rawPointCount / (maxPoints * 0.9)).toInt().coerceAtLeast(1)
+    // ATT-504 Fix: Calculate a global sampling step across all paths so every path in allPaths
+    // is uniformly sampled rather than breaking early and truncating workouts.
+    val samplingStep = if (rawPointCount > maxPoints) {
+        Math.ceil(rawPointCount.toDouble() / (maxPoints * 0.9)).toInt().coerceAtLeast(1)
     } else 1
 
-    // 2. Collect points with strictly enforced thinning (ATT-342)
+    // 2. Collect points with uniform path sampling (ATT-504)
     val allPoints = ArrayList<com.google.maps.android.heatmaps.WeightedLatLng>()
 
     for (path in allPaths) {
         if (path.isEmpty()) continue
         
-        // ATT-342: If we are thinning, we MUST NOT densify as it adds more points.
-        val processedPath = if (thinningFactor > 1) {
-            path.filterIndexed { index, _ -> index % thinningFactor == 0 }
+        val processedPath = if (samplingStep > 1) {
+            path.filterIndexed { index, _ -> index % samplingStep == 0 }
         } else {
             densifyPath(path, densifyInterval)
         }
 
         for (point in processedPath) {
-            if (allPoints.size >= maxPoints) break
-            allPoints.add(com.google.maps.android.heatmaps.WeightedLatLng(point, weight))
+            if (allPoints.size < maxPoints) {
+                allPoints.add(com.google.maps.android.heatmaps.WeightedLatLng(point, weight))
+            }
         }
-        if (allPoints.size >= maxPoints) break
     }
 
     if (allPoints.isEmpty()) return null
 
-    // Modern sequential Blue gradient (Cyan -> Blue -> Deep Indigo)
-    // ATT-342 Fix: Ensure startPoints are ALWAYS in increasing order to avoid IllegalArgumentException.
+    // Modern sequential Blue gradient with translucent alpha channels (ATT-504 Fix)
+    // Translucent Cyan -> Translucent Blue -> Translucent Deep Indigo
+    // This ensures terrain, roads, and map labels remain clearly legible underneath the overlay.
     val colors = intArrayOf(
-        0xFF00E5FF.toInt(), // Low density: Vibrant Cyan
-        0xFF0000FF.toInt(), // Medium: The "Identity" Blue
-        0xFF311B92.toInt()  // High density: Deep Indigo
+        0x6600E5FF,          // Low density: Vibrant Cyan (40% opacity)
+        0x800000FF.toInt(),  // Medium: The "Identity" Blue (50% opacity)
+        0x99311B92.toInt()   // High density: Deep Indigo (60% opacity)
     )
     
     // Dynamically calculate intermediate points based on the provided startIntensity

@@ -46,10 +46,11 @@ fun getPeriodMapVisuals(
         if (allPaths.isEmpty() || periodType == PeriodType.DAY) {
             null
         } else {
+            // ATT-504 Fix: Calibrated opacity levels (0.4-0.6) so terrain, roads, and map labels remain legible
             val opacity = when (periodType) {
-                PeriodType.WEEK -> 0.6
-                PeriodType.MONTH -> 0.8
-                PeriodType.YEAR -> 1.0
+                PeriodType.WEEK -> 0.4
+                PeriodType.MONTH -> 0.5
+                PeriodType.YEAR -> 0.6
                 else -> 0.0
             }
 
