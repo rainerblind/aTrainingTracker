@@ -17,6 +17,8 @@ Any AI assistant working on this project **must** follow these steps for every t
         *   **System-Centric**: Describe system behavior, not user desires. (Avoid "The user wants...", "I would like...").
         *   **State-Oriented**: Requirements MUST describe the intended *behavior* or *state* of the system, NOT the *change process* or *implementation steps*. (Strictly avoid "The system SHALL change...", "The system SHALL rename...", "Update the...").
         *   **Lifecycle Management**: When introducing new functionality, create a new requirement. When modifying existing behavior that is already documented, **update the existing requirement's description** to reflect the new state instead of adding a "change" requirement.
+        *   **System Invariants & Preserved Behavior**: Every requirement MUST explicitly specify what existing behavior, data precision, schema structure, or layer contract MUST NOT change (e.g., "The system MUST preserve existing TCX XML schema ordering and non-target metrics").
+        *   **Given-When-Then Acceptance Criteria**: Complex functional requirements SHOULD include explicit Given-When-Then scenarios to remove ambiguity for implementation and testing.
     *   Define the **Rationale** (the "Why") clearly.
     *   Map the requirement to the relevant **Implementation File(s)**.
 
@@ -33,6 +35,8 @@ Any AI assistant working on this project **must** follow these steps for every t
 
 3.  **Impact Analysis (SWE.1.BP.5 Phase)**:
     *   Before implementation, perform a formal audit of existing code.
+    *   **Mandatory `find_usages` Audit**: The agent MUST run `find_usages` or `grep` on all classes, methods, or string resource IDs slated for modification.
+    *   **Mapped Requirements Cross-Check**: The agent MUST inspect `docs/requirements.md` to identify ALL Requirement IDs mapped to the target files. The agent MUST explicitly confirm that proposed edits will NOT break any of those mapped requirements.
     *   Identify potential side effects on:
         *   **Android System**: Battery usage, WakeLock durations, Background execution rules.
         *   **Component Interfaces**: Will a change in `BANALService` break the `MutableStateFlow` used by the UI?
@@ -77,6 +81,7 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   **SWE.5 (Integration Verification)**: Verify that the interface between two modules remains stable (e.g., `TrackerService` correctly consumes `BANALService` data).
     *   Perform a verification (build, static analysis, or logic check).
     *   Refer to `docs/tests.md` to execute the agreed-upon tests.
+    *   **Mandatory Adversarial Self-Review ("Red Team" Pass)**: Before committing or presenting a walkthrough, the agent MUST review the complete `git diff` with a critical "Senior Auditor" persona, asking: *"What adjacent features, edge cases, state flows, or caller assumptions could this change inadvertently break?"*
 
 8.  **Final Documentation & Release (SWE.6)**:
     *   **Pass/Fail Recording**: Document verification evidence in Jira using the following format:

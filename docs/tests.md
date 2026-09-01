@@ -238,3 +238,4 @@ Whenever a file is modified, the following workflow is triggered:
 3.  **Test Selection**: The agent selects the relevant **Verification ID** from the requirements table.
 4.  **Co-Execution**: The user and agent perform the verification. The agent updates the `Status` column in `docs/requirements.md` upon success.
 | **TST-STR-017** | `ATT-523` | **Protocol Integrity Audit** | `REQ-PRO-012` | Verify that the 'Format String Hardening' section is correctly incorporated into 'project_protocol.md'. | New safety standards are formally established and unambiguous. | Proposed |
+| **TST-PRO-005** | `ATT-523` | **System Invariant & Impact Protocol Verification** | `REQ-PRO-013` | Verify that 'project_protocol.md' mandates System Invariants, pre-implementation `find_usages` requirement cross-checks, and adversarial self-reviews. | The project protocol incorporates explicit guardrails against side-effect regressions. | Verified |
