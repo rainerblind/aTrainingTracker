@@ -150,11 +150,25 @@ class WorkoutClusterRepository private constructor(private val context: Context)
                 )
             }
 
-            // Update hit count if reality differs (Self-Healing)
+            // Update hit count if reality differs (Self-Healing - ATT-495)
             val realCount = actualCounts[cluster.id] ?: 0
+            
+            // Check for explicit route link to preserve imported/created routes (REQ-SET-062 Invariant)
+            val linkedRoute = routesDb.getRouteByClusterId(cluster.id)
+            val isRouteLinked = linkedRoute != null || !cluster.routePolyline.isNullOrEmpty()
+
+            if (realCount == 0 && !isRouteLinked) {
+                if (DEBUG) android.util.Log.i("WorkoutClusterRepo", "Purging unlinked zero-workout orphan cluster: ${cluster.name} (id: ${cluster.id})")
+                clusterDb.deleteCluster(cluster.id)
+                return@mapIndexed null
+            }
+
             val updatedCluster = if (cluster.hitCount != realCount) {
                 if (DEBUG) android.util.Log.i("WorkoutClusterRepo", "Correcting hit count for ${cluster.name}: ${cluster.hitCount} -> $realCount")
-                cluster.copy(hitCount = realCount)
+                cluster.copy(
+                    hitCount = realCount,
+                    previewPaths = if (realCount == 0) emptyList() else cluster.previewPaths
+                )
             } else cluster
 
             // --- POPULATE PREVIEW PATHS (SCRUM-224 / ATT-441) ---
@@ -163,7 +177,6 @@ class WorkoutClusterRepository private constructor(private val context: Context)
             
             if (previewPaths.isEmpty() && updatedCluster.hitCount > 0) {
                 // 1. Check for linked route
-                val linkedRoute = routesDb.getRouteByClusterId(updatedCluster.id)
                 routePolyline = if (linkedRoute != null && linkedRoute.path.isNotEmpty()) {
                     PolyUtil.encode(linkedRoute.path.map { it.latLng })
                 } else null
@@ -201,7 +214,7 @@ class WorkoutClusterRepository private constructor(private val context: Context)
             finalCluster
         }
         
-        _allClusters.value = enriched.sortedByDescending { it.hitCount }
+        _allClusters.value = enriched.filterNotNull().sortedByDescending { it.hitCount }
         if (showProgress) {
             _migrationStatus.value = null
         }

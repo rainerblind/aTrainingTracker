@@ -105,8 +105,10 @@ class WorkoutClusterEngine private constructor(context: Context) {
         maxLat: Double? = null, maxLng: Double? = null
     ): Long {
         val workoutSportType = SportTypeDatabaseManager.getInstance(appContext).getBSportType(userSportId)
+        val normalizedInputName = stripHitCount(userSpecifiedName)
         val existingMatch = if (clusterIdOverride != -1L) dbManager.getClusterById(clusterIdOverride) 
-                            else suggestCluster(start, end, apex, distance, userSpecifiedName, workoutSportType)
+                            else (suggestCluster(start, end, apex, distance, userSpecifiedName, workoutSportType)
+                                ?: dbManager.getClusterByName(normalizedInputName))
 
         return if (existingMatch != null) {
             val normalizedInputName = stripHitCount(userSpecifiedName)
@@ -457,7 +459,15 @@ class WorkoutClusterEngine private constructor(context: Context) {
         val previousClusterId = summariesManager.getLong(workoutId, WorkoutSummaries.CLUSTER_ID) ?: -1L
         if (previousClusterId != -1L && previousClusterId != clusterId) {
             val oldCluster = clusterDb.getClusterById(previousClusterId)
-            if (oldCluster != null) clusterDb.updateCluster(oldCluster.copy(hitCount = (oldCluster.hitCount - 1).coerceAtLeast(0)))
+            if (oldCluster != null) {
+                val newOldHitCount = (oldCluster.hitCount - 1).coerceAtLeast(0)
+                // ATT-496/495 Fix: If oldCluster's hitCount drops to 0, clear its previewPaths so no phantom previews linger.
+                val updatedOld = oldCluster.copy(
+                    hitCount = newOldHitCount,
+                    previewPaths = if (newOldHitCount == 0) emptyList() else oldCluster.previewPaths
+                )
+                clusterDb.updateCluster(updatedOld)
+            }
         }
         val cluster = clusterDb.getClusterById(clusterId) ?: return
 

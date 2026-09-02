@@ -166,6 +166,24 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
     }
 
     /**
+     * Exact name lookup for route clusters (ATT-496 Fix).
+     */
+    fun getClusterByName(name: String): WorkoutCluster? {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return null
+        val selection = "${WorkoutClusterContract.COLUMN_NAME} = ?"
+        val args = arrayOf(trimmed)
+        getDatabase().query(
+            WorkoutClusterContract.TABLE_NAME, null, selection, args, null, null, null
+        ).use { cursor ->
+            if (cursor.moveToFirst()) {
+                return mapCursorToCluster(cursor)
+            }
+        }
+        return null
+    }
+
+    /**
      * Fast lookup of a cluster name by ID (ATT-388).
      */
     fun getClusterNameById(id: Long): String? {
