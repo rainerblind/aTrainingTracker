@@ -1024,6 +1024,9 @@
     <string name="cluster_migration_processing_workouts">Elaborazione dell\'allenamento %1$d di %2$d…</string>
     <string name="legacy_import__scanning_dropbox">Scansione di %1$s su Dropbox…</string>
     <string name="legacy_import__downloading_dropbox">Download di %1$s da Dropbox…</string>
+    <string name="legacy_import__finished_with_skipped">Importazione completata: %1$d nuovo/i allenamento/i importato/i (%2$d ignorato/i) su %3$d file scansionati.</string>
+    <string name="legacy_import__finished_all_new">Importazione completata: %1$d nuovo/i allenamento/i importato/i su %2$d file scansionati.</string>
+    <string name="legacy_import__finished_with_failed">Importazione completata: %1$d importati, %2$d ignorati, %3$d non riusciti su %4$d file scansionati.</string>
     <string name="migration_phase_label">Fase %1$d: %2$s</string>
 
     <string name="unclustered">Aperto</string>

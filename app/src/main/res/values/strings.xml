@@ -1251,6 +1251,9 @@
     <string name="cluster_migration_enriching">Enriching family metadata (%1$d of %2$d)…</string>
     <string name="legacy_import__scanning_dropbox">Scanning %1$s on Dropbox…</string>
     <string name="legacy_import__downloading_dropbox">Downloading %1$s from Dropbox…</string>
+    <string name="legacy_import__finished_with_skipped">Import finished: %1$d new workout(s) imported (%2$d skipped) out of %3$d files scanned.</string>
+    <string name="legacy_import__finished_all_new">Import finished: %1$d new workout(s) imported out of %2$d files scanned.</string>
+    <string name="legacy_import__finished_with_failed">Import finished: %1$d imported, %2$d skipped, %3$d failed out of %4$d files scanned.</string>
     <string name="migration_phase_label">Phase %1$d: %2$s</string>
 
     <string name="all_sports">+ all sports +</string>

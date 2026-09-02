@@ -22,6 +22,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
@@ -305,8 +306,31 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         saveClusteringTolerances()
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = UiState.Loading("Initializing legacy recovery...")
-            val count = LegacyImportEngine.bulkRecoverFromDropbox(context, format, createLegacyListener())
-            _uiState.value = UiState.Success("Recovery finished. Imported $count new workouts from $format files.")
+            val result = LegacyImportEngine.bulkRecoverFromDropbox(context, format, createLegacyListener())
+            val app = getApplication<Application>()
+            val message = if (result.failedCount > 0) {
+                app.getString(
+                    R.string.legacy_import__finished_with_failed,
+                    result.importedCount,
+                    result.skippedCount,
+                    result.failedCount,
+                    result.totalScanned
+                )
+            } else if (result.skippedCount > 0) {
+                app.getString(
+                    R.string.legacy_import__finished_with_skipped,
+                    result.importedCount,
+                    result.skippedCount,
+                    result.totalScanned
+                )
+            } else {
+                app.getString(
+                    R.string.legacy_import__finished_all_new,
+                    result.importedCount,
+                    result.totalScanned
+                )
+            }
+            _uiState.value = UiState.Success(message)
         }
     }
 

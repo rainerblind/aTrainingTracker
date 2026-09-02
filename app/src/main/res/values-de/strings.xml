@@ -1111,6 +1111,9 @@
     <string name="cluster_migration_enriching">Erweitere Metadaten (%1$d von %2$d)…</string>
     <string name="legacy_import__scanning_dropbox">Scanne %1$s auf Dropbox…</string>
     <string name="legacy_import__downloading_dropbox">Lade %1$s von Dropbox herunter…</string>
+    <string name="legacy_import__finished_with_skipped">Import abgeschlossen: %1$d neue(s) Workout(s) importiert (%2$d übersprungen) von %3$d gescannten Dateien.</string>
+    <string name="legacy_import__finished_all_new">Import abgeschlossen: %1$d neue(s) Workout(s) importiert von %2$d gescannten Dateien.</string>
+    <string name="legacy_import__finished_with_failed">Import abgeschlossen: %1$d importiert, %2$d übersprungen, %3$d fehlgeschlagen von %4$d gescannten Dateien.</string>
     <string name="migration_phase_label">Phase %1$d: %2$s</string>
 
     <string name="all_sports">+ Alle Sportarten +</string>

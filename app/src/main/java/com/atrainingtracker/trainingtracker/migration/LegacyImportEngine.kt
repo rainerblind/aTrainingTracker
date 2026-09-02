@@ -67,44 +67,50 @@ object LegacyImportEngine {
         ): Pair<Long?, String?>
     }
 
+    data class RecoveryResult(
+        val importedCount: Int,
+        val skippedCount: Int,
+        val failedCount: Int,
+        val totalScanned: Int
+    )
+
     /**
-     * Scans Dropbox and recovers all legacy workouts.
+     * Scans Dropbox recursively across all target paths and recovers all legacy workouts.
      */
-    suspend fun bulkRecoverFromDropbox(context: Context, format: String, listener: ProgressListener? = null): Int {
-        val credential = TrainingApplication.readDropboxCredential() ?: return 0
+    suspend fun bulkRecoverFromDropbox(context: Context, format: String, listener: ProgressListener? = null): RecoveryResult {
+        val credential = TrainingApplication.readDropboxCredential() ?: return RecoveryResult(0, 0, 0, 0)
         val dbxClient = DbxClientV2(DbxRequestConfig(BuildConfig.DROPBOX_APP_KEY), credential)
         
         val possiblePaths = when (format.lowercase()) {
             "tcx" -> listOf("/TCX", "/apps/Workouts/TCX")
-            else -> return 0
+            else -> return RecoveryResult(0, 0, 0, 0)
         }
 
-        var entries: List<com.dropbox.core.v2.files.Metadata> = emptyList()
-        var foundPath: String? = null
+        val allEntries = mutableListOf<com.dropbox.core.v2.files.Metadata>()
 
         for (path in possiblePaths) {
             try {
                 listener?.onStatus("Scanning $path...")
-                var result = dbxClient.files().listFolder(path)
-                val folderEntries = mutableListOf<com.dropbox.core.v2.files.Metadata>()
+                var result = dbxClient.files().listFolderBuilder(path).withRecursive(true).start()
                 
                 while (true) {
-                    folderEntries.addAll(result.entries.filter { it.name.lowercase().endsWith(".$format") })
+                    allEntries.addAll(result.entries.filter { it.name.lowercase().endsWith(".$format") })
                     if (!result.hasMore) break
-                    result = dbxClient.files().listFolderContinue(result.cursor)
-                }
-
-                if (folderEntries.isNotEmpty()) {
-                    entries = folderEntries
-                    foundPath = path
-                    break
+                    try {
+                        result = dbxClient.files().listFolderContinue(result.cursor)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error continuing folder listing for $path, keeping ${allEntries.size} entries", e)
+                        break
+                    }
                 }
             } catch (e: Exception) {
-                // Path might not exist, try next
+                Log.w(TAG, "Folder scan failed for $path: ${e.message}")
             }
         }
 
-        if (foundPath == null) return 0
+        // Deduplicate entries by path or name across scanned paths
+        val entries = allEntries.distinctBy { it.pathLower ?: it.name }
+        if (entries.isEmpty()) return RecoveryResult(0, 0, 0, 0)
         
         val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
         val tempDir = File(context.cacheDir, "legacy_recovery")
@@ -112,6 +118,8 @@ object LegacyImportEngine {
         tempDir.mkdirs()
 
         val importedCount = java.util.concurrent.atomic.AtomicInteger(0)
+        val skippedCount = java.util.concurrent.atomic.AtomicInteger(0)
+        val failedCount = java.util.concurrent.atomic.AtomicInteger(0)
         val processedCount = java.util.concurrent.atomic.AtomicInteger(0)
 
         try {
@@ -131,24 +139,32 @@ object LegacyImportEngine {
 
                             val baseFileName = entry.name.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~")
                             if (isWorkoutExisting(summaryDb, baseFileName)) {
-                                if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists (checked before download).")
+                                if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
+                                skippedCount.incrementAndGet()
                                 continue
                             }
 
                             listener?.onStatus(context.getString(R.string.legacy_import__downloading_dropbox, entry.name))
                             val tempFile = File(tempDir, "${current}_${entry.name}")
                             try {
-                                FileOutputStream(tempFile).use { fos ->
-                                    dbxClient.files().download(entry.pathLower).download(fos)
+                                val downloaded = downloadFileWithRetry(dbxClient, entry.pathLower ?: entry.name, tempFile)
+                                if (!downloaded) {
+                                    failedCount.incrementAndGet()
+                                    continue
                                 }
 
                                 val success = when (format.lowercase()) {
                                     "tcx" -> importFromTcx(context, tempFile, listener)
                                     else -> false
                                 }
-                                if (success) importedCount.incrementAndGet()
+                                if (success) {
+                                    importedCount.incrementAndGet()
+                                } else {
+                                    failedCount.incrementAndGet()
+                                }
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to download/import ${entry.name}", e)
+                                failedCount.incrementAndGet()
                             } finally {
                                 tempFile.delete()
                             }
@@ -159,7 +175,40 @@ object LegacyImportEngine {
         } catch (e: Exception) {
             Log.e(TAG, "Bulk recovery failed", e)
         }
-        return importedCount.get()
+
+        return RecoveryResult(
+            importedCount = importedCount.get(),
+            skippedCount = skippedCount.get(),
+            failedCount = failedCount.get(),
+            totalScanned = entries.size
+        )
+    }
+
+    private fun downloadFileWithRetry(
+        dbxClient: DbxClientV2,
+        pathLower: String,
+        targetFile: File,
+        maxRetries: Int = 3
+    ): Boolean {
+        var attempt = 0
+        while (attempt < maxRetries) {
+            attempt++
+            try {
+                FileOutputStream(targetFile).use { fos ->
+                    dbxClient.files().download(pathLower).download(fos)
+                }
+                return true
+            } catch (e: com.dropbox.core.RateLimitException) {
+                val backoffMs = e.backoffMillis + 500L
+                Log.w(TAG, "Dropbox rate limit hit for $pathLower. Backing off for ${backoffMs}ms (attempt $attempt/$maxRetries)...")
+                try { Thread.sleep(backoffMs) } catch (_: Exception) {}
+            } catch (e: Exception) {
+                Log.e(TAG, "Transient download error for $pathLower (attempt $attempt/$maxRetries): ${e.message}")
+                if (attempt >= maxRetries) return false
+                try { Thread.sleep(1000L * attempt) } catch (_: Exception) {}
+            }
+        }
+        return false
     }
 
     /**
