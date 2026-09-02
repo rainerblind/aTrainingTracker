@@ -71,8 +71,8 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         .map { it.size }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    // Backpressure control: Limit pending UI interactions to 10 to ensure prompt naming (ATT-349)
-    private val interactionSemaphore = Semaphore(10)
+    // Backpressure control: Limit pending UI interactions to 3 to ensure prompt naming (ATT-493 / ATT-349)
+    private val interactionSemaphore = Semaphore(3)
 
     fun provideClusterDecision(clusterId: Long?, name: String?) {
         val currentQueue = _interactionQueue.value

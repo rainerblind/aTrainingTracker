@@ -79,67 +79,87 @@ object LegacyImportEngine {
             else -> return 0
         }
 
-        var importedCount = 0
-        try {
-            var entries: List<com.dropbox.core.v2.files.Metadata> = emptyList()
-            var foundPath: String? = null
+        var entries: List<com.dropbox.core.v2.files.Metadata> = emptyList()
+        var foundPath: String? = null
 
-            for (path in possiblePaths) {
-                try {
-                    listener?.onStatus("Scanning $path...")
-                    var result = dbxClient.files().listFolder(path)
-                    val folderEntries = mutableListOf<com.dropbox.core.v2.files.Metadata>()
-                    
-                    while (true) {
-                        folderEntries.addAll(result.entries.filter { it.name.lowercase().endsWith(".$format") })
-                        if (!result.hasMore) break
-                        result = dbxClient.files().listFolderContinue(result.cursor)
-                    }
-
-                    if (folderEntries.isNotEmpty()) {
-                        entries = folderEntries
-                        foundPath = path
-                        break
-                    }
-                } catch (e: Exception) {
-                    // Path might not exist, try next
-                }
-            }
-
-            if (foundPath == null) return 0
-            
-            val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
-            val tempDir = File(context.cacheDir, "legacy_recovery")
-            if (tempDir.exists()) tempDir.deleteRecursively()
-            tempDir.mkdirs()
-
-            entries.forEachIndexed { index, entry ->
-                listener?.onProgress(index + 1, entries.size, entry.name)
+        for (path in possiblePaths) {
+            try {
+                listener?.onStatus("Scanning $path...")
+                var result = dbxClient.files().listFolder(path)
+                val folderEntries = mutableListOf<com.dropbox.core.v2.files.Metadata>()
                 
-                // ATT-335: Check if workout exists before downloading to save time/bandwidth
-                val baseFileName = entry.name.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~")
-                if (isWorkoutExisting(summaryDb, baseFileName)) {
-                    if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists (checked before download).")
-                    return@forEachIndexed
+                while (true) {
+                    folderEntries.addAll(result.entries.filter { it.name.lowercase().endsWith(".$format") })
+                    if (!result.hasMore) break
+                    result = dbxClient.files().listFolderContinue(result.cursor)
                 }
 
-                listener?.onStatus(context.getString(R.string.legacy_import__downloading_dropbox, entry.name))
-                val tempFile = File(tempDir, entry.name)
-                FileOutputStream(tempFile).use { fos ->
-                    dbxClient.files().download(entry.pathLower).download(fos)
+                if (folderEntries.isNotEmpty()) {
+                    entries = folderEntries
+                    foundPath = path
+                    break
                 }
+            } catch (e: Exception) {
+                // Path might not exist, try next
+            }
+        }
 
-                val success = when (format.lowercase()) {
-                    "tcx" -> importFromTcx(context, tempFile, listener)
-                    else -> false
+        if (foundPath == null) return 0
+        
+        val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
+        val tempDir = File(context.cacheDir, "legacy_recovery")
+        if (tempDir.exists()) tempDir.deleteRecursively()
+        tempDir.mkdirs()
+
+        val importedCount = java.util.concurrent.atomic.AtomicInteger(0)
+        val processedCount = java.util.concurrent.atomic.AtomicInteger(0)
+
+        try {
+            // ATT-493 Fix: Concurrent import pipeline using coroutineScope and a worker channel.
+            // Spawns 3 concurrent background workers (bounded by interactionSemaphore(3)) so that
+            // file downloading and importing continues concurrently while waiting for user candidate resolution.
+            kotlinx.coroutines.coroutineScope {
+                val channel = kotlinx.coroutines.channels.Channel<Pair<Int, com.dropbox.core.v2.files.Metadata>>(kotlinx.coroutines.channels.Channel.UNLIMITED)
+                entries.forEachIndexed { index, entry -> channel.trySend(Pair(index, entry)) }
+                channel.close()
+
+                (1..3).map {
+                    launch(Dispatchers.IO) {
+                        for ((_, entry) in channel) {
+                            val current = processedCount.incrementAndGet()
+                            listener?.onProgress(current, entries.size, entry.name)
+
+                            val baseFileName = entry.name.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~")
+                            if (isWorkoutExisting(summaryDb, baseFileName)) {
+                                if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists (checked before download).")
+                                continue
+                            }
+
+                            listener?.onStatus(context.getString(R.string.legacy_import__downloading_dropbox, entry.name))
+                            val tempFile = File(tempDir, "${current}_${entry.name}")
+                            try {
+                                FileOutputStream(tempFile).use { fos ->
+                                    dbxClient.files().download(entry.pathLower).download(fos)
+                                }
+
+                                val success = when (format.lowercase()) {
+                                    "tcx" -> importFromTcx(context, tempFile, listener)
+                                    else -> false
+                                }
+                                if (success) importedCount.incrementAndGet()
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to download/import ${entry.name}", e)
+                            } finally {
+                                tempFile.delete()
+                            }
+                        }
+                    }
                 }
-                if (success) importedCount++
-                tempFile.delete()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Bulk recovery failed", e)
         }
-        return importedCount
+        return importedCount.get()
     }
 
     /**
