@@ -1026,6 +1026,16 @@
     <string name="legacy_import__finished_with_skipped">Importation terminée : %1$d nouvel(s) entraînement(s) importé(s) (%2$d ignoré(s)) sur %3$d fichiers analysés.</string>
     <string name="legacy_import__finished_all_new">Importation terminée : %1$d nouvel(s) entraînement(s) importé(s) sur %2$d fichiers analysés.</string>
     <string name="legacy_import__finished_with_failed">Importation terminée : %1$d importés, %2$d ignorés, %3$d échoués sur %4$d fichiers analysés.</string>
+    <string name="cluster_naming__select_existing_route">Sélectionner un itinéraire existant</string>
+    <string name="cluster_naming__title">Attribuer l\'entraînement à un itinéraire</string>
+    <string name="cluster_naming__found_recurring">Nouvel itinéraire trouvé du %1$s.</string>
+    <string name="cluster_naming__task_count">Tâche %1$d sur %2$d</string>
+    <string name="cluster_naming__assignment_label">Attribution d\'itinéraire :</string>
+    <string name="cluster_naming__create_new">Créer nouveau…</string>
+    <string name="cluster_naming__selected_route_label">Itinéraire sélectionné</string>
+    <string name="cluster_naming__new_name_prompt">Ou donnez-lui un nouveau nom :</string>
+    <string name="cluster_naming__new_route_name_label">Nom du nouvel itinéraire</string>
+    <string name="cluster_naming__leave_unclustered">Laisser non groupé</string>
     <string name="migration_phase_label">Phase %1$d : %2$s</string>
 
     <string name="unclustered">Ouvert</string>

@@ -1254,6 +1254,16 @@
     <string name="legacy_import__finished_with_skipped">Import finished: %1$d new workout(s) imported (%2$d skipped) out of %3$d files scanned.</string>
     <string name="legacy_import__finished_all_new">Import finished: %1$d new workout(s) imported out of %2$d files scanned.</string>
     <string name="legacy_import__finished_with_failed">Import finished: %1$d imported, %2$d skipped, %3$d failed out of %4$d files scanned.</string>
+    <string name="cluster_naming__select_existing_route">Select Existing Route</string>
+    <string name="cluster_naming__title">Assign Workout to Route</string>
+    <string name="cluster_naming__found_recurring">Found a new route from %1$s.</string>
+    <string name="cluster_naming__task_count">Task %1$d of %2$d</string>
+    <string name="cluster_naming__assignment_label">Route Assignment:</string>
+    <string name="cluster_naming__create_new">Create New…</string>
+    <string name="cluster_naming__selected_route_label">Selected Route</string>
+    <string name="cluster_naming__new_name_prompt">Or give it a new name:</string>
+    <string name="cluster_naming__new_route_name_label">New Route Name</string>
+    <string name="cluster_naming__leave_unclustered">Leave Unclustered</string>
     <string name="migration_phase_label">Phase %1$d: %2$s</string>
 
     <string name="all_sports">+ all sports +</string>

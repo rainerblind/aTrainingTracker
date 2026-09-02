@@ -1010,6 +1010,16 @@
     <string name="legacy_import__finished_with_skipped">インポート完了: %3$d個のスキャン済みファイルのうち、%1$d個の新しいワークアウトをインポートしました（%2$d個をスキップ）。</string>
     <string name="legacy_import__finished_all_new">インポート完了: %2$d個のスキャン済みファイルのうち、%1$d個の新しいワークアウトをインポートしました。</string>
     <string name="legacy_import__finished_with_failed">インポート完了: %4$d個のスキャン済みファイルのうち、%1$d個をインポート、%2$d個をスキップ、%3$d個が失敗しました。</string>
+    <string name="cluster_naming__select_existing_route">既存のルートを選択</string>
+    <string name="cluster_naming__title">ワークアウトをルートに割り当て</string>
+    <string name="cluster_naming__found_recurring">%1$s からの新しいルートが見つかりました。</string>
+    <string name="cluster_naming__task_count">タスク %1$d / %2$d</string>
+    <string name="cluster_naming__assignment_label">ルートの割り当て:</string>
+    <string name="cluster_naming__create_new">新規作成…</string>
+    <string name="cluster_naming__selected_route_label">選択されたルート</string>
+    <string name="cluster_naming__new_name_prompt">または新しい名前を指定:</string>
+    <string name="cluster_naming__new_route_name_label">新しいルート名</string>
+    <string name="cluster_naming__leave_unclustered">未分類のままにする</string>
     <string name="migration_phase_label">フェーズ %1$d: %2$s</string>
 
     <string name="unclustered">未分類</string>

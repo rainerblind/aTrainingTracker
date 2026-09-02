@@ -408,7 +408,7 @@ fun ClusterNamingDialog(
         }
 
         WorkoutClusterSelectionDialog(
-            title = "Select Existing Route",
+            title = stringResource(R.string.cluster_naming__select_existing_route),
             candidates = candidatesWithScores,
             onSelect = { 
                 selectedCluster = it
@@ -424,7 +424,7 @@ fun ClusterNamingDialog(
         onDismissRequest = onDismiss,
         title = { 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Assign Workout to Route")
+                Text(stringResource(R.string.cluster_naming__title))
                 if (queueCount > 1) {
                     Spacer(modifier = Modifier.weight(1f))
                     Badge { Text("$queueCount") }
@@ -433,7 +433,7 @@ fun ClusterNamingDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Found a recurring route from ${state.date}.")
+                Text(stringResource(R.string.cluster_naming__found_recurring, state.date))
 
                 // --- ATT-304: Show sport type & distance ---
                 Row(
@@ -471,7 +471,7 @@ fun ClusterNamingDialog(
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ) {
                             Text(
-                                text = "Task 1 of $queueCount",
+                                text = stringResource(R.string.cluster_naming__task_count, 1, queueCount),
                                 modifier = Modifier.padding(horizontal = 4.dp)
                             )
                         }
@@ -494,31 +494,31 @@ fun ClusterNamingDialog(
                         )
                         Marker(
                             state = remember(state.start) { MarkerState(position = state.start) }, 
-                            title = "Start",
+                            title = stringResource(R.string.marker_start),
                             icon = remember { createSensorMarker(localContext, R.drawable.control_start, TTColor.StartPoint) }
                         )
                         Marker(
                             state = remember(state.end) { MarkerState(position = state.end) }, 
-                            title = "End",
+                            title = stringResource(R.string.marker_end),
                             icon = remember { createSensorMarker(localContext, R.drawable.control_stop, TTColor.EndPoint) }
                         )
                         Marker(
                             state = remember(state.apex) { MarkerState(position = state.apex) }, 
-                            title = "Apex",
+                            title = stringResource(R.string.marker_max_distance),
                             icon = remember { createSensorMarker(localContext, R.drawable.ic_distance, TTColor.ApexPoint) }
                         )
                     }
                 }
 
                 // --- ATT-305: Same dropdown (using button + dialog pattern) ---
-                Text("Route Assignment:", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.cluster_naming__assignment_label), style = MaterialTheme.typography.labelLarge)
                 
                 OutlinedTextField(
-                    value = selectedCluster?.name ?: "Create New...",
+                    value = selectedCluster?.name ?: stringResource(R.string.cluster_naming__create_new),
                     onValueChange = {},
                     readOnly = true,
                     modifier = Modifier.fillMaxWidth().clickable { showSelectionDialog = true },
-                    label = { Text("Selected Route") },
+                    label = { Text(stringResource(R.string.cluster_naming__selected_route_label)) },
                     trailingIcon = {
                         IconButton(onClick = { showSelectionDialog = true }) {
                             Icon(painter = painterResource(id = R.drawable.my_locations), contentDescription = null)
@@ -528,11 +528,11 @@ fun ClusterNamingDialog(
 
                 if (selectedCluster == null) {
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Or give it a new name:", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.cluster_naming__new_name_prompt), style = MaterialTheme.typography.labelLarge)
                     TextField(
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text("New Route Name") },
+                        label = { Text(stringResource(R.string.cluster_naming__new_route_name_label)) },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -551,7 +551,7 @@ fun ClusterNamingDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Leave Unclustered")
+                Text(stringResource(R.string.cluster_naming__leave_unclustered))
             }
         }
     )

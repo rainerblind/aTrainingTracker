@@ -1027,6 +1027,16 @@
     <string name="legacy_import__finished_with_skipped">Import voltooid: %1$d nieuwe workout(s) geïmporteerd (%2$d overgeslagen) van %3$d gescande bestanden.</string>
     <string name="legacy_import__finished_all_new">Import voltooid: %1$d nieuwe workout(s) geïmporteerd van %2$d gescande bestanden.</string>
     <string name="legacy_import__finished_with_failed">Import voltooid: %1$d geïmporteerd, %2$d overgeslagen, %3$d mislukt van %4$d gescande bestanden.</string>
+    <string name="cluster_naming__select_existing_route">Bestaande route selecteren</string>
+    <string name="cluster_naming__title">Workout aan route toewijzen</string>
+    <string name="cluster_naming__found_recurring">Nieuwe route gevonden van %1$s.</string>
+    <string name="cluster_naming__task_count">Taak %1$d van %2$d</string>
+    <string name="cluster_naming__assignment_label">Routetoewijzing:</string>
+    <string name="cluster_naming__create_new">Nieuwe maken…</string>
+    <string name="cluster_naming__selected_route_label">Geselecteerde route</string>
+    <string name="cluster_naming__new_name_prompt">Of geef een nieuwe naam:</string>
+    <string name="cluster_naming__new_route_name_label">Nieuwe routenaam</string>
+    <string name="cluster_naming__leave_unclustered">Niet-gegroepeerd laten</string>
     <string name="migration_phase_label">Fase %1$d: %2$s</string>
 
     <string name="unclustered">Open</string>

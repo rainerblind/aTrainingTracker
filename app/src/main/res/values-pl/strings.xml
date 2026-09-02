@@ -795,6 +795,16 @@
     <string name="legacy_import__finished_with_skipped">Import zakończony: zaimportowano %1$d nowych treningów (%2$d pominięto) z %3$d zeskanowanych plików.</string>
     <string name="legacy_import__finished_all_new">Import zakończony: zaimportowano %1$d nowych treningów z %2$d zeskanowanych plików.</string>
     <string name="legacy_import__finished_with_failed">Import zakończony: %1$d zaimportowanych, %2$d pominiętych, %3$d nieudanych z %4$d zeskanowanych plików.</string>
+    <string name="cluster_naming__select_existing_route">Wybierz istniejącą trasę</string>
+    <string name="cluster_naming__title">Przypisz trening do trasy</string>
+    <string name="cluster_naming__found_recurring">Znaleziono nową trasę z %1$s.</string>
+    <string name="cluster_naming__task_count">Zadanie %1$d z %2$d</string>
+    <string name="cluster_naming__assignment_label">Przypisanie trasy:</string>
+    <string name="cluster_naming__create_new">Utwórz nową…</string>
+    <string name="cluster_naming__selected_route_label">Wybrana trasa</string>
+    <string name="cluster_naming__new_name_prompt">LUB podaj nową nazwę:</string>
+    <string name="cluster_naming__new_route_name_label">Nazwa nowej trasy</string>
+    <string name="cluster_naming__leave_unclustered">Pozostaw niepogrupowane</string>
     <string name="migration_phase_label">Faza %1$d: %2$s</string>
 
     <string name="unclustered">Otwarte</string>
