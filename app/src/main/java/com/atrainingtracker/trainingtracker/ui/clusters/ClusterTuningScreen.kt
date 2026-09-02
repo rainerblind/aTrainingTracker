@@ -110,7 +110,8 @@ fun ClusterTuningContent(
     distanceTolerance: Float,
     onDistanceToleranceChange: (Float) -> Unit,
     useSportTypeForClustering: Boolean,
-    onUseSportTypeChange: (Boolean) -> Unit
+    onUseSportTypeChange: (Boolean) -> Unit,
+    isDialog: Boolean = false
 ) {
     var showDetails by remember { mutableStateOf(false) }
 
@@ -127,7 +128,9 @@ fun ClusterTuningContent(
         (nEnd + nApex + nDist) / 3f
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+    val verticalSpacing = if (isDialog) 12.dp else 24.dp
+
+    Column(verticalArrangement = Arrangement.spacedBy(verticalSpacing)) {
         // 1. Master Slider
         Column {
             Text(
@@ -240,19 +243,14 @@ private fun TuningSlider(
     decimalPlaces: Int = 0
 ) {
     val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(text = label, style = MaterialTheme.typography.titleSmall)
-            Text(
-                text = java.lang.String.format(locale, "%.${decimalPlaces}f %s", value * displayMultiplier, unit),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(text = label, style = MaterialTheme.typography.titleSmall)
+        Text(
+            text = java.lang.String.format(locale, "%.${decimalPlaces}f %s", value * displayMultiplier, unit),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
         Slider(
             value = value,
             onValueChange = onValueChange,

@@ -323,9 +323,14 @@ fun PreImportTuningDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.cluster_tuning_title)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Text(
-                    text = "Adjust the clustering sensitivity to optimize route matching for the imported files.",
+                    text = "Adjust workout clustering sensitivity to optimize route matching for imported workouts.",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 ClusterTuningContent(
@@ -336,7 +341,8 @@ fun PreImportTuningDialog(
                     distanceTolerance = viewModel.distanceTolerance,
                     onDistanceToleranceChange = { viewModel.distanceTolerance = it },
                     useSportTypeForClustering = viewModel.useSportTypeForClustering,
-                    onUseSportTypeChange = { viewModel.useSportTypeForClustering = it }
+                    onUseSportTypeChange = { viewModel.useSportTypeForClustering = it },
+                    isDialog = true
                 )
             }
         },
