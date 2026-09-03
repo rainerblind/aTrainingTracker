@@ -59,7 +59,8 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
                "PeriodSummaries_v21.db", "PeriodSummaries_v21.db-shm", "PeriodSummaries_v21.db-wal",
                "PeriodSummaries_v22.db", "PeriodSummaries_v22.db-shm", "PeriodSummaries_v22.db-wal",
                "PeriodSummaries_v23.db", "PeriodSummaries_v23.db-shm", "PeriodSummaries_v23.db-wal",
-               "PeriodSummaries_v24.db", "PeriodSummaries_v24.db-shm", "PeriodSummaries_v24.db-wal").forEach {
+               "PeriodSummaries_v24.db", "PeriodSummaries_v24.db-shm", "PeriodSummaries_v24.db-wal",
+               "PeriodSummaries_v25.db", "PeriodSummaries_v25.db-shm", "PeriodSummaries_v25.db-wal").forEach {
             val file = context.getDatabasePath(it)
             if (file.exists()) {
                 Log.i(TAG, "Cleaning up experimental database file: $it")
@@ -195,11 +196,14 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
             
             stats.values.forEach { s ->
                 val tempId = s.longestWorkout?.id ?: -1L
-                val longestIdFromDb = db.query(SportStatsContract.TABLE_NAME, arrayOf(SportStatsContract.COLUMN_LONGEST_WORKOUT_ID), 
-                    "${BaseColumns._ID} = ?", arrayOf(tempId.toString()), null, null, null).use { c ->
-                    if (c.moveToFirst()) c.getLong(0) else -1L
+                val (longestIdFromDb, longestDurationFromDb) = db.query(
+                    SportStatsContract.TABLE_NAME, 
+                    arrayOf(SportStatsContract.COLUMN_LONGEST_WORKOUT_ID, SportStatsContract.COLUMN_LONGEST_DURATION), 
+                    "${BaseColumns._ID} = ?", arrayOf(tempId.toString()), null, null, null
+                ).use { c ->
+                    if (c.moveToFirst()) Pair(c.getLong(0), c.getLong(1)) else Pair(-1L, 0L)
                 }
-                s.longestWorkout = if (longestIdFromDb != -1L) LongestWorkout(longestIdFromDb, "", 0, 0.0, 0) else null
+                s.longestWorkout = if (longestIdFromDb != -1L) LongestWorkout(longestIdFromDb, "", longestDurationFromDb, 0.0, 0) else null
             }
 
             p.copy(sportStats = stats)
@@ -245,8 +249,9 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
                 val statsId = cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID))
                 val type = BSportType.valueOf(cursor.getString(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_BSPORT_TYPE)))
                 val longestId = cursor.getLong(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_LONGEST_WORKOUT_ID))
+                val longestDuration = cursor.getLong(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_LONGEST_DURATION))
                 statsMap[type] = mapCursorToSportStats(cursor, getDetailedStatsForSport(db, statsId)).apply {
-                    longestWorkout = if (longestId != -1L) LongestWorkout(longestId, "", 0, 0.0, 0) else null
+                    longestWorkout = if (longestId != -1L) LongestWorkout(longestId, "", longestDuration, 0.0, 0) else null
                 }
             }
         }
@@ -303,6 +308,7 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
         put(SportStatsContract.COLUMN_COUNT, s.count); put(SportStatsContract.COLUMN_TOTAL_DURATION, s.totalDurationSec)
         put(SportStatsContract.COLUMN_TOTAL_DISTANCE, s.totalDistanceMeters); put(SportStatsContract.COLUMN_TOTAL_ASCENT, s.totalAscentMeters)
         put(SportStatsContract.COLUMN_LONGEST_WORKOUT_ID, s.longestWorkout?.id ?: -1L)
+        put(SportStatsContract.COLUMN_LONGEST_DURATION, s.longestWorkout?.durationSec ?: 0L)
     }
 
     private fun createDetailedStatsContentValues(statsId: Long, name: String, s: DetailedStats) = ContentValues().apply {
@@ -402,12 +408,14 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
         const val COLUMN_TOTAL_DISTANCE = "total_distance"
         const val COLUMN_TOTAL_ASCENT = "total_ascent"
         const val COLUMN_LONGEST_WORKOUT_ID = "longest_workout_id"
+        const val COLUMN_LONGEST_DURATION = "longest_duration"
 
         const val CREATE_TABLE = """
             CREATE TABLE $TABLE_NAME (
                 ${BaseColumns._ID} INTEGER PRIMARY KEY AUTOINCREMENT,
                 $COLUMN_PERIOD_ID INTEGER, $COLUMN_BSPORT_TYPE TEXT, $COLUMN_COUNT INTEGER,
-                $COLUMN_TOTAL_DURATION INTEGER, $COLUMN_TOTAL_DISTANCE REAL, $COLUMN_TOTAL_ASCENT INTEGER, $COLUMN_LONGEST_WORKOUT_ID INTEGER,
+                $COLUMN_TOTAL_DURATION INTEGER, $COLUMN_TOTAL_DISTANCE REAL, $COLUMN_TOTAL_ASCENT INTEGER, 
+                $COLUMN_LONGEST_WORKOUT_ID INTEGER, $COLUMN_LONGEST_DURATION INTEGER,
                 FOREIGN KEY($COLUMN_PERIOD_ID) REFERENCES ${PeriodSummariesContract.TABLE_NAME}(${BaseColumns._ID}) ON DELETE CASCADE
             )
         """
@@ -436,7 +444,7 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
     }
 
     private class PeriodSummariesDbHelper(context: Context) : SQLiteOpenHelper(
-        context, "PeriodSummaries.db", null, 25
+        context, "PeriodSummaries.db", null, 26
     ) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(PeriodSummariesContract.CREATE_TABLE)
@@ -446,8 +454,8 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            // Relational Restart for ATT-346 (v25: Final Framing & Multi-Phase UI)
-            if (oldVersion < 25) {
+            // Relational Restart for ATT-536 (v26: Add longest_duration to SportStats and fix DST week boundaries)
+            if (oldVersion < 26) {
                 db.execSQL("DROP TABLE IF EXISTS ${SyncStatusContract.TABLE_NAME}")
                 db.execSQL("DROP TABLE IF EXISTS ${DetailedStatsContract.TABLE_NAME}")
                 db.execSQL("DROP TABLE IF EXISTS ${SportStatsContract.TABLE_NAME}")

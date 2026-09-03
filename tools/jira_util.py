@@ -78,11 +78,13 @@ def list_sprint_issues():
 
 def show_issue(issue_key):
     config = get_config()
-    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=summary,description,comment,attachment,parent,issuetype"
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=summary,description,comment,attachment,parent,issuetype,status"
     issue = jira_request(url)
 
     itype = issue['fields']['issuetype']['name']
+    status = issue['fields'].get('status', {}).get('name', 'Unknown')
     print(f"h1. {issue['key']}: [{itype}] {issue['fields']['summary']}")
+    print(f"\n*Status*: {status}")
 
     # Epic/Parent context
     parent = issue['fields'].get('parent')
@@ -111,6 +113,14 @@ def show_issue(issue_key):
     print("\n*Comments*:")
     for c in issue['fields']['comment']['comments']:
         print(f"--- {c['author']['displayName']} ({c['created']}) ---\n{c['body']}\n")
+
+def print_status(issue_key):
+    config = get_config()
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=status"
+    issue = jira_request(url)
+    status = issue['fields'].get('status', {}).get('name', 'Unknown')
+    print(f"{issue_key} status: {status}")
+    return status
 
 def download_attachment(url, filename):
     print(f"Downloading {filename}...")
@@ -247,7 +257,7 @@ def create_issue(summary, description, issuetype_id="10005", parent_key=None):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: jira_util.py [list | show KEY | move KEY todo|in_progress|in_review|freigabe|done | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY]]")
+        print("Usage: jira_util.py [list | show KEY | status KEY | move KEY todo|in_progress|in_review|freigabe|done | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY]]")
         sys.exit(1)
 
     cmd = sys.argv[1]
@@ -255,6 +265,8 @@ if __name__ == "__main__":
         list_sprint_issues()
     elif cmd == "show" and len(sys.argv) == 3:
         show_issue(sys.argv[2])
+    elif cmd == "status" and len(sys.argv) == 3:
+        print_status(sys.argv[2])
     elif cmd == "download" and len(sys.argv) == 4:
         download_attachment(sys.argv[2], sys.argv[3])
     elif cmd == "download-all" and len(sys.argv) == 3:
