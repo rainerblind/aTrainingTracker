@@ -148,6 +148,14 @@ def download_all_attachments(issue_key):
         download_attachment(a['content'], a['filename'])
 
 def transition_issue(issue_key, status_name):
+    # Strict Human Gate Guard: Prohibit AI agents from moving to Erledigt / Freigabe erteilt
+    prohibited_targets = ["erledigt", "done", "freigabe erteilt"]
+    normalized_input = status_name.lower().strip()
+    if normalized_input in prohibited_targets:
+        print(f"ERROR: Transitioning '{issue_key}' to '{status_name}' is strictly prohibited for AI agents.\n"
+              f"Moving tickets or sub-tasks to 'Erledigt' ('Freigabe erteilt') is a Human Decision Gate reserved exclusively for the human user.")
+        sys.exit(1)
+
     config = get_config()
     url = f"{config['JIRA_URL']}/rest/api/3/issue/{issue_key}/transitions"
     data = jira_request(url)
@@ -159,10 +167,9 @@ def transition_issue(issue_key, status_name):
         "in_review": "in überprüfung",
         "review": "in überprüfung",
         "freigabe": "freigabe (human)",
-        "human": "freigabe (human)",
-        "done": "erledigt"
+        "human": "freigabe (human)"
     }
-    normalized_target = aliases.get(status_name.lower().strip(), status_name.lower().strip())
+    normalized_target = aliases.get(normalized_input, normalized_input)
 
     chosen_trans = None
     for t in available_transitions:
@@ -179,6 +186,13 @@ def transition_issue(issue_key, status_name):
         avail_str = ", ".join([f"'{t['name']}' -> '{t.get('to', {}).get('name')}' (id {t['id']})" for t in available_transitions])
         print(f"Error: Cannot transition '{issue_key}' to '{status_name}'. Available transitions: {avail_str}")
         return
+
+    target_name = chosen_trans.get("to", {}).get("name", "").lower()
+    trans_name = chosen_trans.get("name", "").lower()
+    if target_name == "erledigt" or trans_name == "freigabe erteilt":
+        print(f"ERROR: Transition '{chosen_trans['name']}' to '{chosen_trans.get('to', {}).get('name')}' is strictly prohibited for AI agents.\n"
+              f"This transition is a Human Decision Gate reserved exclusively for the human user.")
+        sys.exit(1)
 
     trans_id = chosen_trans["id"]
     jira_request(url, method="POST", payload={"transition": {"id": trans_id}})
@@ -257,7 +271,7 @@ def create_issue(summary, description, issuetype_id="10005", parent_key=None):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: jira_util.py [list | show KEY | status KEY | move KEY todo|in_progress|in_review|freigabe|done | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY]]")
+        print("Usage: jira_util.py [list | show KEY | status KEY | move KEY todo|in_progress|in_review|freigabe | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY]]")
         sys.exit(1)
 
     cmd = sys.argv[1]

@@ -664,7 +664,22 @@ public class TrackerService extends Service {
 
     // TODO: the database entries should be correct even when this method is not called due to a crash
     // some stuff could be written earlier, others from the calling part (and then also executed when a crash is detected...), ...
-    // might be best to use a method that is executed ever minute (or only every 5 or 10 minutes?)
+    /**
+     * Finalizes the active recording session and persists terminal summaries.
+     *
+     * <p>Functional Description: Closes out active laps, saves accumulated sensor types and
+     * hardware metadata, marks the workout as finished in the summaries database, and dispatches
+     * completion broadcasts.
+     *
+     * <p>Implementation Logic:
+     * 1. Creates a final lap and persists active sensor devices and GC data.
+     * 2. Sets {@link WorkoutSummaries#FINISHED} flag in {@link WorkoutSummaries#TABLE}.
+     * 3. Finalizes live session auto-naming, triggers file export via {@link ExportManager}.
+     * 4. Dispatches a system-level {@link #TRACKING_FINISHED_INTENT} with {@link #WORKOUT_ID} for app-level listeners.
+     * 5. Dispatches {@link #WORKOUT_UPDATED_INTENT} and {@link #TRACKING_FINISHED_INTENT} containing {@link #WORKOUT_ID}
+     *    via {@link LocalBroadcastManager} to notify internal data layers (e.g. {@code WorkoutRepository},
+     *    {@code PeriodsRepository}, and {@code WorkoutClusterEngine}) for reactive period and cluster aggregation.
+     */
     public void endWorkout() {
         if (DEBUG) {
             Log.d(TAG, "endWorkout");
@@ -716,8 +731,21 @@ public class TrackerService extends Service {
         ExportManager exportManager = new ExportManager(this);
         exportManager.workoutFinished(mBaseFileName);
 
-        sendBroadcast(new Intent(TRACKING_FINISHED_INTENT)
-                .setPackage(getPackageName()));
+        // 1. Broadcast TRACKING_FINISHED_INTENT with WORKOUT_ID at system level
+        Intent finishedIntent = new Intent(TRACKING_FINISHED_INTENT)
+                .setPackage(getPackageName())
+                .putExtra(WORKOUT_ID, mWorkoutID);
+        sendBroadcast(finishedIntent);
+
+        // 2. Broadcast WORKOUT_UPDATED_INTENT and TRACKING_FINISHED_INTENT via LocalBroadcastManager
+        // for internal components (WorkoutRepository, etc.) to trigger reactive period & cluster updates (REQ-TRK-010, ATT-505)
+        Intent localUpdatedIntent = new Intent(WORKOUT_UPDATED_INTENT)
+                .putExtra(WORKOUT_ID, mWorkoutID);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(localUpdatedIntent);
+
+        Intent localFinishedIntent = new Intent(TRACKING_FINISHED_INTENT)
+                .putExtra(WORKOUT_ID, mWorkoutID);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(localFinishedIntent);
     }
 
     private void sampleAndWriteToDb() {
