@@ -145,7 +145,8 @@ object LegacyImportEngine {
                             }
 
                             listener?.onStatus(context.getString(R.string.legacy_import__downloading_dropbox, entry.name))
-                            val tempFile = File(tempDir, "${current}_${entry.name}")
+                            val workerDir = File(tempDir, "job_$current").apply { mkdirs() }
+                            val tempFile = File(workerDir, entry.name)
                             try {
                                 val downloaded = downloadFileWithRetry(dbxClient, entry.pathLower ?: entry.name, tempFile)
                                 if (!downloaded) {
@@ -167,6 +168,7 @@ object LegacyImportEngine {
                                 failedCount.incrementAndGet()
                             } finally {
                                 tempFile.delete()
+                                workerDir.delete()
                             }
                         }
                     }
