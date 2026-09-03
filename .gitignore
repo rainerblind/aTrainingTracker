@@ -24,6 +24,7 @@ gen/
 # Intellij files (Android Studio)
 *.iml
 
-# NetBeans IDE project files
-/.nb-gradle/private/
+# Python cache
+__pycache__/
+*.pyc
 

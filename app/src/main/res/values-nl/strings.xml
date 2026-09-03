@@ -335,6 +335,8 @@
     <string name="prefsStartLocationsSummary">Hoogte van bekende locaties configureren</string>
     <string name="updateStravaEquipment">Strava materiaal bijwerken</string>
     <string name="lastUpdateOfEquipmentNever">nooit bijgewerkt</string>
+    <string name="updateStravaRoutes">Strava routes bijwerken</string>
+    <string name="lastUpdateOfRoutesNever">nooit bijgewerkt</string>
 
     <string name="getting_equipment_from_strava">Strava materiaal ophalen…\neven geduld</string>
     <string name="got_shoe">Strava schoenen opgehaald\nontvangen: %1$s</string>

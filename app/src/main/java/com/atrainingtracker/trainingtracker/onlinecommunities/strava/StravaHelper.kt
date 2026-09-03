@@ -147,12 +147,20 @@ object StravaHelper {
     fun getRefreshedAccessToken(): String? {
         if (DEBUG) Log.i(TAG, "getRefreshedAccessToken()")
         
-        if (System.currentTimeMillis() / 1000 < TrainingApplication.getStravaTokenExpiresAt()) {
-            return TrainingApplication.getStravaAccessToken()
+        try {
+            if (System.currentTimeMillis() / 1000 < TrainingApplication.getStravaTokenExpiresAt()) {
+                return TrainingApplication.getStravaAccessToken()
+            }
+        } catch (e: Exception) {
+            return null
         }
 
         val refreshUrl = "https://www.strava.com/oauth/token"
-        val refreshToken = TrainingApplication.getStravaRefreshToken() ?: return null
+        val refreshToken = try {
+            TrainingApplication.getStravaRefreshToken()
+        } catch (e: Exception) {
+            null
+        } ?: return null
         
         val formBody = FormBody.Builder()
             .add(CLIENT_ID, MY_CLIENT_ID)

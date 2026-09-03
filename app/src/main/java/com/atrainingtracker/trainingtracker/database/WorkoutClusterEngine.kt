@@ -39,18 +39,6 @@ import com.google.android.gms.maps.model.LatLng
  * Architectural Role: Business logic layer for spatial pattern recognition.
  * Threading: Operations should be executed on background threads due to database intensity.
  */
-/**
- * The core logic engine for discovery and management of recurring route families (Workout Clusters).
- *
- * This engine implements the spatial fingerprinting algorithm used to group similar workouts
- * together. It maintains the "Favorite Tracks" knowledge base by:
- * 1. **Similarity Scoring**: Calculating a weighted mathematical score based on Start, End, Apex, and Distance.
- * 2. **Sport-Aware Grouping**: Optionally isolating different activities (e.g., Run vs. Bike) on the same path.
- * 3. **Identity Learning**: Reactively updating cluster centroids and probable sport/names from user feedback.
- *
- * Architectural Role: Business logic layer for spatial pattern recognition.
- * Threading: Operations should be executed on background threads due to database intensity.
- */
 class WorkoutClusterEngine private constructor(context: Context) {
 
     private val appContext = context.applicationContext

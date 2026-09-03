@@ -427,6 +427,8 @@
     <string name="prefsStartLocationsSummary">Configure altitude of start locations</string>
     <string name="updateStravaEquipment">Update Strava Equipment</string>
     <string name="lastUpdateOfEquipmentNever">never updated</string>
+    <string name="updateStravaRoutes">Update Strava Routes</string>
+    <string name="lastUpdateOfRoutesNever">never updated</string>
 
     <string name="getting_equipment_from_strava">getting equipment from Strava…\nplease wait</string>
     <string name="got_shoe">getting shoes from Strava\ngot shoe: %1$s</string>

@@ -924,6 +924,8 @@ proszę czekać</string>
     <string name="pairedText">sparowano</string>
     <string name="unpairing">rozparowywanie</string>
     <string name="updateStravaEquipment">Aktualizuj sprzęt Strava</string>
+    <string name="updateStravaRoutes">Aktualizuj trasy Strava</string>
+    <string name="lastUpdateOfRoutesNever">nigdy nie aktualizowano</string>
     <string name="battery_level">Poziom baterii</string>
     <string name="bike_power__accumulated_energy">• Skumulowana energia</string>
     <string name="bike_power__accumulated_torque">• Skumulowany moment obrotowy</string>

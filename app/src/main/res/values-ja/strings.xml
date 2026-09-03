@@ -335,6 +335,8 @@
     <string name="prefsStartLocationsSummary">地点の高度を設定</string>
     <string name="updateStravaEquipment">Strava 装備を更新</string>
     <string name="lastUpdateOfEquipmentNever">未更新</string>
+    <string name="updateStravaRoutes">Strava ルートを更新</string>
+    <string name="lastUpdateOfRoutesNever">未更新</string>
 
     <string name="getting_equipment_from_strava">Strava から装備を取得中…\nお待ちください</string>
     <string name="got_shoe">シューズを取得完了\n取得: %1$s</string>

@@ -335,6 +335,8 @@
     <string name="prefsStartLocationsSummary">Configura altitudine luoghi noti</string>
     <string name="updateStravaEquipment">Aggiorna attrezzatura Strava</string>
     <string name="lastUpdateOfEquipmentNever">mai aggiornato</string>
+    <string name="updateStravaRoutes">Aggiorna percorsi Strava</string>
+    <string name="lastUpdateOfRoutesNever">mai aggiornato</string>
 
     <string name="getting_equipment_from_strava">caricamento attrezzatura Strava…\nattendere</string>
     <string name="got_shoe">scarpe Strava ricevute\nricevuto: %1$s</string>

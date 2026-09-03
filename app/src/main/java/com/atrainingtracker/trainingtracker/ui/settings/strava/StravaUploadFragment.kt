@@ -59,6 +59,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSharedPreferenceChangeListener {
 
     private var mUpdateStravaEquipment: Preference? = null
+    private var mUpdateStravaRoutes: Preference? = null
     private var mSharedPreferences: SharedPreferences? = null
     private var mHeaderComposeView: ComposeView? = null
 
@@ -70,6 +71,7 @@ class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSha
         setPreferencesFromResource(R.xml.prefs_strava, null)
 
         mUpdateStravaEquipment = findPreference(TrainingApplication.UPDATE_STRAVA_EQUIPMENT)
+        mUpdateStravaRoutes = findPreference(TrainingApplication.UPDATE_STRAVA_ROUTES)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -106,6 +108,9 @@ class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSha
                         val repository = SegmentsRepository.getInstance(requireContext())
                         repository.syncSegmentsAsync(BSportType.BIKE)
                         repository.syncSegmentsAsync(BSportType.RUN)
+
+                        val routesRepo = com.atrainingtracker.trainingtracker.repositories.RoutesRepository.getInstance(requireContext())
+                        routesRepo.syncRoutesFromStravaAsync()
                         
                         authViewModel.resetState()
                     }
@@ -180,6 +185,16 @@ class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSha
             }
         }
 
+        mUpdateStravaRoutes?.apply {
+            summary = TrainingApplication.getLastUpdateTimeOfStravaRoutes()
+            setOnPreferenceClickListener {
+                if (DEBUG) Log.d(TAG, "updateStravaRoutes has been clicked")
+                val routesRepo = com.atrainingtracker.trainingtracker.repositories.RoutesRepository.getInstance(requireContext())
+                routesRepo.syncRoutesFromStravaAsync()
+                false
+            }
+        }
+
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(requireActivity())
         mSharedPreferences?.registerOnSharedPreferenceChangeListener(this)
         
@@ -196,6 +211,7 @@ class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSha
         val isConnected = TrainingApplication.getStravaAccessToken() != null
         
         findPreference<Preference>(TrainingApplication.UPDATE_STRAVA_EQUIPMENT)?.isVisible = isConnected
+        findPreference<Preference>(TrainingApplication.UPDATE_STRAVA_ROUTES)?.isVisible = isConnected
         findPreference<Preference>("strava_selective_upload_category")?.isVisible = isConnected
     }
 
@@ -204,6 +220,10 @@ class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSha
 
         if (TrainingApplication.SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT == key) {
             mUpdateStravaEquipment?.summary = TrainingApplication.getLastUpdateTimeOfStravaEquipment()
+        }
+
+        if (TrainingApplication.SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES == key) {
+            mUpdateStravaRoutes?.summary = TrainingApplication.getLastUpdateTimeOfStravaRoutes()
         }
 
         if (TrainingApplication.SP_STRAVA_TOKEN == key) {

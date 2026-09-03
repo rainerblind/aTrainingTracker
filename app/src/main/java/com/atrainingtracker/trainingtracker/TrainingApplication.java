@@ -116,6 +116,8 @@ public class TrainingApplication extends Application {
     public static final String SP_CLUSTER_USE_SPORT_TYPE = "clusterUseSportType";
     public static final String UPDATE_STRAVA_EQUIPMENT = "updateStravaEquipment";
     public static final String SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT = "lastUpdateTimeOfStravaEquipment";
+    public static final String UPDATE_STRAVA_ROUTES = "updateStravaRoutes";
+    public static final String SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES = "lastUpdateTimeOfStravaRoutes";
     public static final String SP_STRAVA_ATHLETE_ID = "stravaAthleteId";
     public static final String PREFERENCE_SCREEN_RUNKEEPER = "psUploadToRunkeeper";
     public static final String SP_UPLOAD_TO_RUNKEEPER = "uploadToRunkeeper";
@@ -586,6 +588,15 @@ public class TrainingApplication extends Application {
 
     public static void setLastUpdateTimeOfStravaEquipment(String updateTime) {
         cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT, updateTime).apply();
+    }
+
+    @NonNull
+    public static String getLastUpdateTimeOfStravaRoutes() {
+        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES, cAppContext.getString(R.string.lastUpdateOfRoutesNever));
+    }
+
+    public static void setLastUpdateTimeOfStravaRoutes(String updateTime) {
+        cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES, updateTime).apply();
     }
 
     public static int getStravaAthleteId() {

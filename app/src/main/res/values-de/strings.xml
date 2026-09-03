@@ -339,6 +339,8 @@
     <string name="prefsStartLocationsSummary">Die Höhe der Startorte bearbeiten</string>
     <string name="updateStravaEquipment">Strava Ausrüstung aktualisieren</string>
     <string name="lastUpdateOfEquipmentNever">noch nie aktualisiert</string>
+    <string name="updateStravaRoutes">Strava Routen aktualisieren</string>
+    <string name="lastUpdateOfRoutesNever">noch nie aktualisiert</string>
 
     <string name="getting_equipment_from_strava">Aktualisiere Strava Ausrüstung…\nbitte warten</string>
     <string name="got_shoe">Aktualisiere Schuhe\nSchuh: %1$s</string>
