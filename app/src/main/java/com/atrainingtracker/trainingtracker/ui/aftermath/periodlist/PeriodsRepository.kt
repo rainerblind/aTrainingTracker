@@ -755,7 +755,8 @@ class PeriodsRepository private constructor(private val application: Application
 
     private fun enrich(summary: PeriodSummary, groupWorkouts: List<WorkoutData>): PeriodSummary {
         // 1. Identify spatial anchors for instant framing
-        val anchorIds = setOf(summary.longestId, summary.northId, summary.southId, summary.eastId, summary.westId).filter { it != -1L }
+        val trueLongestId = if (groupWorkouts.isNotEmpty()) groupWorkouts.maxByOrNull { it.activeTimeSec }?.id else summary.longestId
+        val anchorIds = setOf(trueLongestId ?: summary.longestId, summary.northId, summary.southId, summary.eastId, summary.westId).filter { it != -1L }
         val anchorWorkouts = if (groupWorkouts.isNotEmpty()) groupWorkouts.filter { it.id in anchorIds } else emptyList()
         
         // 2. Map ALL available workout polylines for the full heatmap (ATT-440 Refinement)
@@ -765,14 +766,16 @@ class PeriodsRepository private constructor(private val application: Application
                 .associate { it.id to it.mapPolyline }
         } else summary.workoutIdToPolylineMap
 
-        // 3. Hydrate LongestWorkout metrics for each sport from in-memory workouts or fallback queries (ATT-536)
+        // 3. Hydrate LongestWorkout metrics for each sport from in-memory workouts or fallback queries (ATT-536 / ATT-579)
         val enrichedSportStats = summary.sportStats.mapValues { (sport, stats) ->
             val targetId = stats.longestWorkout?.id ?: -1L
-            var longestWorkoutData = if (targetId != -1L) {
-                groupWorkouts.find { it.id == targetId }
-            } else {
+            val longestFromGroup = if (groupWorkouts.isNotEmpty()) {
                 groupWorkouts.filter { it.bSportType == sport }.maxByOrNull { it.activeTimeSec }
-            }
+            } else null
+
+            var longestWorkoutData = longestFromGroup ?: (if (targetId != -1L) {
+                groupWorkouts.find { it.id == targetId }
+            } else null)
 
             // Fallback 1: global in-memory workouts
             if (longestWorkoutData == null && targetId != -1L) {
