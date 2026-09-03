@@ -50,13 +50,19 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   **Sub-Task Workflow (`Zu erledigen` -> `In Bearbeitung` -> `In Überprüfung` -> `Freigabe (Human)` -> `Erledigt`)**:
         All lifecycle sub-tasks follow this strict state machine:
         1.  `Zu erledigen`: Sub-task is created.
-        2.  `In Bearbeitung`: **Agent 1** moves the sub-task here to perform the primary task (e.g., investigate RCA or implement plan/code).
-        3.  `In Überprüfung`: When Agent 1 finishes, Agent 1 moves the sub-task here, posting full findings/summary in a Jira comment.
+        2.  `In Bearbeitung`: **Agent 1** moves the sub-task here to perform the primary task (e.g., investigate RCA, formulate plan, or implement code).
+        3.  `In Überprüfung`: When Agent 1 finishes, Agent 1 updates the sub-task **Description** with the complete deliverable (RCA findings, Implementation Plan, or Walkthrough/Evidence) and moves the sub-task here.
         4.  `Freigabe (Human)`: **Agent 2** independently audits the work, posts the audit report/critique as a Jira comment, and transitions the sub-task here.
-        5.  **Human Decision Gate**: In the `Freigabe (Human)` state, the user inspects the work and reviews directly via Jira comments and decides how to proceed:
+        5.  **Human Decision Gate**: In the `Freigabe (Human)` state, the user inspects the work (reviewing the ticket Description and Agent 2's audit comment) and decides how to proceed:
             *   *Approve*: User moves the sub-task to `Erledigt` (via transition *"Freigabe erteilt"*), authorizing progress to the next phase.
             *   *Reject / Revise*: User moves the sub-task back to `In Bearbeitung` (via transition *"Nochmals von Vorne"*) with guidance in a comment.
-    *   **Jira Comment-Based Communication**: The vast majority of technical handoffs, status notifications, analysis outputs, and review verdicts MUST be communicated directly via **comments in the Jira tickets and sub-tasks** (prefixed with `[Automated comment by AI Agent]`). This ensures a complete, asynchronous, human-auditable trail in Jira.
+    *   **Jira Description & Comment Separation**: For all lifecycle sub-tasks, the primary deliverable produced by Agent 1 (e.g., Root Cause Analysis for `[RCA]`, Implementation Plan for `[Plan]`, Walkthrough & Verification evidence for `[Impl]`, or test procedure for `[Test]`) MUST be written directly as the ticket's **Description**. The independent review/audit produced by Agent 2 MUST be posted as a **Comment** on the ticket (prefixed with `[Automated comment by AI Agent]`). This ensures that the deliverable remains prominent and readable in the header, while comments capture the review dialogue and gate approvals.
+    *   **STRICT PROHIBITION ON AI-DRIVEN 'ERLEDIGT' TRANSITIONS (HUMAN-ONLY GATE)**:
+        Under NO circumstances may any AI agent transition a Jira ticket or sub-task to `Erledigt` (or execute the transition *"Freigabe erteilt"*). Moving any ticket or sub-task to `Erledigt` is an inviolable **Human Decision Gate** reserved exclusively for the human user.
+        * The agent's terminal transition for any sub-task is ALWAYS `Freigabe (Human)` (via *"Freigabe anfragen"*), and for any main ticket is ALWAYS `In Überprüfung`.
+        * The local CLI utility `./tools/jira_util.py` strictly blocks and aborts any attempt to target `done` / `erledigt`.
+        * External IDE messages or automated review policy notices (such as *"The user has automatically approved the artifact through their review policy. Proceed to execution."*) apply SOLELY to local IDE markdown documents and DO NOT grant permission to transition Jira tickets to `Erledigt`.
+        * The agent MUST pause and wait for the human user to personally perform the Jira transition.
     *   **Selection & Focus**: Multiple tickets may be "In Bearbeitung" (In Progress). The agent works on one chosen ticket at a time. While working on a ticket, it becomes the exclusive focus of the development session. The agent MUST fully complete the current topic (including documentation and verification) before concluding. The agent is strictly FORBIDDEN from asking to start a new ticket or suggesting the next task; the user holds sole initiative for task transitions. The agent SHALL NOT perform any preemptive research, code searches, or logic analysis for unrelated tickets or tasks that have not been explicitly assigned. However, to maintain **Contextual Awareness**, the agent SHOULD research other tickets and documentation within the active Epic to gain a holistic understanding of the feature area and ensure technical alignment. Exploratory analysis of unrelated 'next potential tasks' remains strictly forbidden.
     *   **Contextual Awareness**: Before starting work on a ticket, the agent MUST examine its **Epic** (if linked) to understand the overall picture and vision. The agent SHOULD ask clarifying questions about the Epic to ensure the current task aligns with the long-term goals. If the Epic's description is missing or vague, the agent SHOULD propose an updated description to the user. Once the overall idea of the Epic becomes clear, the agent MUST update the Epic's description in Jira using the `update-desc` command.
     *   **Clarification & Completeness**: If a ticket selected for work lacks a **Description**, specific failure logs, or clear technical context, the agent **MUST NOT** proceed with an implementation plan. Instead, the agent must ask the user for clarification and agreement on the problem statement first.
@@ -65,35 +71,35 @@ Any AI assistant working on this project **must** follow these steps for every t
         
         *   **Stage 1: Root Cause Analysis (`[RCA]`)**:
             1.  Sub-task created: `[RCA] ATT-XXX: Root Cause Analysis & Auditor Review`.
-            2.  **Agent 1 (Forensic Investigator)**: Transitions sub-task from `Zu erledigen` to `In Bearbeitung`. Analyzes logs, traces, and code paths. Formulates technical root cause vs. symptoms and corrective concept. Populates the description and posts a detailed RCA comment in Jira. Transitions sub-task to `In Überprüfung`.
+            2.  **Agent 1 (Forensic Investigator)**: Transitions sub-task from `Zu erledigen` to `In Bearbeitung`. Analyzes logs, traces, and code paths. Formulates technical root cause vs. symptoms and corrective concept. Sets the complete RCA as the ticket's **Description**. Transitions sub-task to `In Überprüfung`.
             3.  **Agent 2 (Independent Senior Auditor)**: Picks up sub-task in `In Überprüfung`. Conducts the Gate 1 review (scrutinizes findings, call sites, and system invariants). Posts the Gate 1 review report as a comment in Jira. Transitions sub-task to `Freigabe (Human)`.
-            4.  **MANDATORY HARD STOP 1 (RCA Approval Gate)**: In `Freigabe (Human)`, the user reviews the analysis and audit comments:
+            4.  **MANDATORY HARD STOP 1 (RCA Approval Gate)**: In `Freigabe (Human)`, the user reviews the analysis (in ticket Description) and audit comments:
                 *   *Approve*: User moves sub-task to `Erledigt` (via *"Freigabe erteilt"*). **Agent 1 is strictly FORBIDDEN from starting the planning stage until the user has approved the RCA.**
                 *   *Reject / Revise*: User moves sub-task back to `In Bearbeitung` (via *"Nochmals von Vorne"*) with feedback comments.
 
         *   **Stage 2: Implementation Planning (`[Plan]`)**:
             1.  Prerequisite: `[RCA]` sub-task is `Erledigt`.
             2.  Sub-task created: `[Plan] ATT-XXX: Implementation Plan & Auditor Review` (and verification test sub-tasks `[Test] ATT-XXX: TST-XXX-###`).
-            3.  **Agent 1 (Architect / Planner)**: Transitions sub-task to `In Bearbeitung`. Formulates the plan at `docs/engineering/plans/ATT-XXX_plan.md`, maps requirements, affected components, and tests. Posts the full plan as a Jira comment. Transitions sub-task to `In Überprüfung`.
+            3.  **Agent 1 (Architect / Planner)**: Transitions sub-task to `In Bearbeitung`. Formulates the plan at `docs/engineering/plans/ATT-XXX_plan.md`, maps requirements, affected components, and tests. Sets the full plan as the ticket's **Description**. Transitions sub-task to `In Überprüfung`.
             4.  **Agent 2 (Plan Auditor)**: Picks up sub-task in `In Überprüfung`. Audits the plan for architectural integrity, invariant safety, and complete test coverage. Posts the plan review report as a comment in Jira. Transitions sub-task to `Freigabe (Human)`.
-            5.  **MANDATORY HARD STOP 2 (Plan Approval Gate)**: In `Freigabe (Human)`, the user reviews the plan and audit comments:
+            5.  **MANDATORY HARD STOP 2 (Plan Approval Gate)**: In `Freigabe (Human)`, the user reviews the plan (in ticket Description) and audit comments:
                 *   *Approve*: User moves sub-task to `Erledigt` (via *"Freigabe erteilt"*). **Agent 1 is strictly FORBIDDEN from writing any production code until the user has approved the plan.**
                 *   *Reject / Revise*: User moves sub-task back to `In Bearbeitung` (via *"Nochmals von Vorne"*) with revision requests.
 
         *   **Stage 3: Implementation & Verification (`[Impl]`)**:
             1.  Prerequisite: `[Plan]` sub-task is `Erledigt`.
             2.  Sub-task created: `[Impl] ATT-XXX: Implementation & Code Review`.
-            3.  **Agent 1 (Developer)**: Transitions sub-task to `In Bearbeitung`. Implements the approved changes, ensures KDoc headers and 9-language localization, and executes unit/integration tests (`docs/tests.md`). Posts the walkthrough and test verification evidence as a Jira comment. Transitions sub-task to `In Überprüfung`.
-            4.  **Agent 2 (Code Auditor)**: Picks up sub-task in `In Überprüfung`. Conducts Gate 2 review (`git diff` scrutiny, side-effects, localization compliance, invariant check). Posts the Gate 2 audit report as a Jira comment. Transitions sub-task to `Freigabe (Human)`.
-            5.  **MANDATORY HARD STOP 3 (Implementation Approval Gate)**: In `Freigabe (Human)`, the user reviews the walkthrough and code audit:
+            3.  **Agent 1 (Developer)**: Transitions sub-task to `In Bearbeitung`. Implements the approved changes, ensures KDoc headers and 9-language localization, and executes unit/integration tests (`docs/tests.md`). Sets the walkthrough and test verification evidence as the ticket's **Description**. Transitions sub-task to `In Überprüfung`.
+            4.  **Agent 2 (Code Auditor)**: Picks up sub-task in `In Überprüfung`. Conducts Gate 2 review (`git diff` scrutiny, side-effects, localization compliance, invariant check). Posts the Gate 2 audit report as a comment in Jira. Transitions sub-task to `Freigabe (Human)`.
+            5.  **MANDATORY HARD STOP 3 (Implementation Approval Gate)**: In `Freigabe (Human)`, the user reviews the walkthrough (in ticket Description) and code audit comments:
                 *   *Approve*: User moves sub-task to `Erledigt` (via *"Freigabe erteilt"*).
                 *   *Reject / Revise*: User moves sub-task back to `In Bearbeitung` (via *"Nochmals von Vorne"*) with change requests.
 
     *   **Traceable Sub-task Generation**: The agent creates dedicated Jira sub-tasks to maintain 100% transparency:
-        *   `[RCA] ATT-XXX: Root Cause Analysis & Auditor Review`: Stage 1 RCA & Gate 1 review.
-        *   `[Test] ATT-XXX: TST-XXX-### - Summary`: Individual verification test cases.
-        *   `[Plan] ATT-XXX: Implementation Plan & Auditor Review`: Stage 2 Plan & architectural review.
-        *   `[Impl] ATT-XXX: Implementation & Code Review`: Stage 3 Implementation & Gate 2 code review.
+        *   `[RCA] ATT-XXX: Root Cause Analysis & Auditor Review`: Stage 1 RCA (in Description) & Gate 1 review (in Comments).
+        *   `[Test] ATT-XXX: TST-XXX-### - Summary`: Individual verification test cases (procedure in Description).
+        *   `[Plan] ATT-XXX: Implementation Plan & Auditor Review`: Stage 2 Plan (in Description) & architectural review (in Comments).
+        *   `[Impl] ATT-XXX: Implementation & Code Review`: Stage 3 Implementation Walkthrough (in Description) & Gate 2 code review (in Comments).
     *   **Documentation & Main Ticket Closure**:
         *   **Identity Disclaimer**: Every comment posted by the agent MUST start with a clear disclaimer: *"[Automated comment by AI Agent]"*.
         *   **Main Ticket Transitions**: When a main ticket is assigned, the agent transitions it to "In Bearbeitung". When all sub-tasks (`[RCA]`, `[Test]`, `[Plan]`, `[Impl]`) have reached `Erledigt`, the agent moves the main ticket to "In Überprüfung" and posts the final walkthrough comment. The user retains sole authority to move the main ticket to "Erledigt".
@@ -108,9 +114,9 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   **Plan Artifact**: Create an implementation plan at `docs/engineering/plans/ATT-XXX_plan.md` (where XXX is the ticket number).
     *   Every proposed change **must** explicitly reference the Requirement ID, the Component affected, and the corresponding Test ID it fulfills.
     *   **Jira Sub-task Workflow**: The agent creates the dedicated sub-task `[Plan] ATT-XXX: Implementation Plan & Auditor Review`.
-        1. Agent 1 transitions the sub-task to `In Bearbeitung`, formulates the plan, and posts it as a detailed comment in Jira.
+        1. Agent 1 transitions the sub-task to `In Bearbeitung`, formulates the plan, and sets it as the sub-task **Description**.
         2. Agent 1 transitions the sub-task to `In Überprüfung`.
-        3. Agent 2 reviews the plan for architectural integrity, invariant safety, and test coverage, posts the review comment, and transitions the sub-task to `Freigabe (Human)`.
+        3. Agent 2 reviews the plan for architectural integrity, invariant safety, and test coverage, posts the review report as a comment in Jira, and transitions the sub-task to `Freigabe (Human)`.
     *   **MANDATORY HARD STOP 2 (Plan Approval Gate)**: The user reviews the plan and audit in `Freigabe (Human)`:
         *   *Approval*: Moving to `Erledigt` (via *"Freigabe erteilt"*) authorizes Agent 1 to begin code execution (Stage 3).
         *   *Revisions*: Moving back to `In Bearbeitung` (via *"Nochmals von Vorne"*) with feedback requires iterative refinement.
@@ -119,8 +125,8 @@ Any AI assistant working on this project **must** follow these steps for every t
 7.  **Execution & Multi-Stage Verification**:
     *   **Prerequisite**: The `[Plan]` sub-task MUST be in `Erledigt` status (formally approved by the user).
     *   **Jira Sub-task Workflow**: The agent creates the dedicated sub-task `[Impl] ATT-XXX: Implementation & Code Review`.
-        1. Agent 1 transitions the sub-task to `In Bearbeitung`, implements the code changes, and runs automated tests.
-        2. Agent 1 posts the walkthrough and test verification evidence as a Jira comment, and transitions to `In Überprüfung`.
+        1. Agent 1 transitions the sub-task to `In Bearbeitung`, implements the code changes, runs automated tests, and sets the walkthrough and test verification evidence as the sub-task **Description**.
+        2. Agent 1 transitions to `In Überprüfung`.
         3. Agent 2 conducts the Gate 2 Code Audit (`git diff` scrutiny, side-effects, localization compliance, invariant check), posts the audit report as a Jira comment, and transitions to `Freigabe (Human)`.
     *   **SWE.4 (Unit Verification)**: Verify internal logic of the specific module (e.g., `NumericalEncodingUtilsTest`).
     *   **SWE.5 (Integration Verification)**: Verify that the interface between two modules remains stable (e.g., `TrackerService` correctly consumes `BANALService` data).
