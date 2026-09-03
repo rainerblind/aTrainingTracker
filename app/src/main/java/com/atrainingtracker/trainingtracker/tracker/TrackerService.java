@@ -32,6 +32,7 @@ import android.content.pm.ServiceInfo;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
+import android.location.Location;
 import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
@@ -809,7 +810,13 @@ public class TrackerService extends Service {
                 SensorData<Number> bestData = mBanalService.getBestSensorData(sensorType);
                 if (bestData == null || bestData.getValue() == null) continue;
 
-                int changed = mLiveSession.addSample(sensorType, bestData.getValue().doubleValue(), currentPos);
+                double sampleVal = bestData.getValue().doubleValue();
+                // REQ-MAP-020 (ATT-528): Authoritative dynamic line distance anchored to session start
+                if (sensorType == SensorType.LINE_DISTANCE_m && currentPos != null && mLiveSession.getStartLatLng() != null) {
+                    sampleVal = WorkoutClusterEngine.Companion.distanceBetween(mLiveSession.getStartLatLng(), currentPos);
+                }
+
+                int changed = mLiveSession.addSample(sensorType, sampleVal, currentPos);
 
                 if (changed != 0) {
                     LiveWorkoutSession.RunningStats stats = mLiveSession.getSensorStats().get(sensorType);
@@ -1051,6 +1058,23 @@ public class TrackerService extends Service {
                 summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, avgValue, null);
                 repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, avgValue, null);
             }
+        }
+
+        // REQ-MAP-020 (ATT-528): Authoritative deterministic calculation of max line distance and apex from recorded track
+        if (startPos != null && mLiveSession.getSampledLatLngs() != null && !mLiveSession.getSampledLatLngs().isEmpty()) {
+            double calculatedMaxDisp = 0.0;
+            LatLng calculatedApex = startPos;
+            for (LatLng pt : mLiveSession.getSampledLatLngs()) {
+                if (pt != null) {
+                    float dist = WorkoutClusterEngine.Companion.distanceBetween(startPos, pt);
+                    if (dist > calculatedMaxDisp) {
+                        calculatedMaxDisp = dist;
+                        calculatedApex = pt;
+                    }
+                }
+            }
+            summariesManager.updateExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, calculatedMaxDisp, calculatedApex);
+            repository.updateExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, calculatedMaxDisp, calculatedApex);
         }
 
         // 3. Guess Commute and Trainer

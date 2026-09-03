@@ -89,7 +89,7 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
         mAltitudeSensor = new MySensor<Double>(this, SensorType.ALTITUDE);
         mSpeedSensor = new MySensor<Double>(this, SensorType.SPEED_mps);
         mPaceSensor = new MySensor<Double>(this, SensorType.PACE_spm);
-        mLineDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.LINE_DISTANCE_m, false);
+        mLineDistanceSensor = new MySensor<Double>(this, SensorType.LINE_DISTANCE_m);
         mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m, true);
         mLapDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m_LAP, true);
 

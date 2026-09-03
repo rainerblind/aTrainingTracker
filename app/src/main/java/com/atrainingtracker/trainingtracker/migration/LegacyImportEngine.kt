@@ -540,13 +540,6 @@ object LegacyImportEngine {
 
         // 5. Clustering (Spatial Markers)
         if (points.isNotEmpty()) {
-            // ATT-314: Skip clustering if a cluster is already assigned
-            val existingClusterId = summariesDb.getLong(workoutId, WorkoutSummaries.CLUSTER_ID) ?: -1L
-            if (existingClusterId != -1L) {
-                if (TrainingApplication.getDebug(true)) Log.d(TAG, "Workout $workoutId already has cluster $existingClusterId assigned. Skipping clustering logic.")
-                return
-            }
-
             val start = points.first()
             val end = points.last()
             
@@ -565,6 +558,13 @@ object LegacyImportEngine {
             summariesDb.updateExtremaValue(workoutId, SensorType.LATITUDE, ExtremaType.END, end.latitude, end)
             summariesDb.updateExtremaValue(workoutId, SensorType.LONGITUDE, ExtremaType.END, end.longitude, end)
             summariesDb.updateExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, maxDisp, apex)
+
+            // ATT-314: Skip clustering if a cluster is already assigned
+            val existingClusterId = summariesDb.getLong(workoutId, WorkoutSummaries.CLUSTER_ID) ?: -1L
+            if (existingClusterId != -1L) {
+                if (TrainingApplication.getDebug(true)) Log.d(TAG, "Workout $workoutId already has cluster $existingClusterId assigned. Skipping clustering logic.")
+                return
+            }
 
             val clusterEngine = WorkoutClusterEngine.getInstance(context)
             val matchingCluster = clusterEngine.suggestCluster(start, end, apex, totalDistance, null, bSportType)

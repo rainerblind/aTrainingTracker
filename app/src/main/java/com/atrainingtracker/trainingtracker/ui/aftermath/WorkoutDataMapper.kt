@@ -20,8 +20,11 @@ package com.atrainingtracker.trainingtracker.ui.aftermath
 
 import android.content.Context
 import android.database.Cursor
+import android.location.Location
 import android.util.Log
 import com.atrainingtracker.R
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.PolyUtil
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
@@ -80,7 +83,13 @@ class WorkoutDataMapper(
         val totalDistance = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m))
         val startLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.START)
         val endLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.END)
-        val maxDispLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
+        val rawMaxDispLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
+        val rawMaxDisplacement = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
+        val mapPolyline = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.MAP_POLYLINE)) ?: ""
+
+        val resolvedApex = resolveAuthoritativeApex(workoutId, startLatLng, mapPolyline, rawMaxDisplacement, rawMaxDispLatLng)
+        val maxDisplacement = resolvedApex.first
+        val maxDispLatLng = resolvedApex.second
 
         val workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME))
         val clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID))
@@ -116,7 +125,7 @@ class WorkoutDataMapper(
             maxLng = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LNG))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LNG)),
 
             totalDistance = totalDistance,
-            maxDisplacement = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX),
+            maxDisplacement = maxDisplacement,
             activeTimeSec = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s)),
             totalTimeSec = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_TOTAL_s)),
             avgSpeedMps = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPEED_AVERAGE_mps)),
@@ -203,9 +212,15 @@ class WorkoutDataMapper(
         fun getBatchPos(sensor: SensorType, type: ExtremaType) = workoutExtrema.find { it.sensorType == sensor && it.extremaType == type }?.position
 
         val totalDistance = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m))
+        val mapPolyline = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.MAP_POLYLINE)) ?: ""
         val startLatLng = getBatchPos(SensorType.LATITUDE, ExtremaType.START)
         val endLatLng = getBatchPos(SensorType.LATITUDE, ExtremaType.END)
-        val maxDispLatLng = getBatchPos(SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
+        val rawMaxDispLatLng = getBatchPos(SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
+        val rawMaxDisplacement = getBatchVal(SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
+
+        val resolvedApex = resolveAuthoritativeApex(workoutId, startLatLng, mapPolyline, rawMaxDisplacement, rawMaxDispLatLng)
+        val maxDisplacement = resolvedApex.first
+        val maxDispLatLng = resolvedApex.second
 
         val workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME))
         val clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID))
@@ -240,7 +255,7 @@ class WorkoutDataMapper(
             maxLng = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LNG))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LNG)),
 
             totalDistance = totalDistance,
-            maxDisplacement = getBatchVal(SensorType.LINE_DISTANCE_m, ExtremaType.MAX),
+            maxDisplacement = maxDisplacement,
             activeTimeSec = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s)),
             totalTimeSec = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_TOTAL_s)),
             avgSpeedMps = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPEED_AVERAGE_mps)),
@@ -398,5 +413,57 @@ class WorkoutDataMapper(
         }
     }
 
+    /**
+     * Resolves the authoritative maximum line distance (Apex) coordinate and value.
+     *
+     * REQ-MAP-020 (ATT-528): If maxDispLatLng is missing, or if the recorded apex is geometrically
+     * inconsistent with the recorded polyline track (e.g. displacement is substantially smaller than
+     * the furthest track point due to pre-tracking GPS state or accumulator corruption), this helper
+     * derives the true apex from the decoded track points and heals the database.
+     */
+    private fun resolveAuthoritativeApex(
+        workoutId: Long,
+        startLatLng: LatLng?,
+        mapPolyline: String,
+        recordedMaxDisp: Double?,
+        recordedApex: LatLng?
+    ): Pair<Double?, LatLng?> {
+        if (startLatLng == null || mapPolyline.isEmpty()) {
+            return Pair(recordedMaxDisp, recordedApex)
+        }
+        try {
+            val points = PolyUtil.decode(mapPolyline)
+            if (points.isEmpty()) {
+                return Pair(recordedMaxDisp, recordedApex)
+            }
+            var calculatedMax = -1.0
+            var calculatedApex: LatLng = points.first()
+            for (pt in points) {
+                val d = com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.distanceBetween(startLatLng, pt).toDouble()
+                if (d > calculatedMax) {
+                    calculatedMax = d
+                    calculatedApex = pt
+                }
+            }
+
+            val recordedDistToApex = if (recordedApex != null) {
+                com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.distanceBetween(startLatLng, recordedApex).toDouble()
+            } else -1.0
+
+            if (recordedApex == null || recordedMaxDisp == null || calculatedMax > recordedDistToApex + 25.0) {
+                workoutSummariesDatabaseManager.updateExtremaValue(
+                    workoutId,
+                    SensorType.LINE_DISTANCE_m,
+                    ExtremaType.MAX,
+                    calculatedMax,
+                    calculatedApex
+                )
+                return Pair(calculatedMax, calculatedApex)
+            }
+        } catch (e: Exception) {
+            Log.w("WorkoutDataMapper", "Failed to derive authoritative apex for workout $workoutId", e)
+        }
+        return Pair(recordedMaxDisp, recordedApex)
+    }
 
 }
