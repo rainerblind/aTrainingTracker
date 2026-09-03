@@ -158,6 +158,11 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
 
     fun uploadToDropbox(context: Context) {
         viewModelScope.launch {
+            val credential = TrainingApplication.readDropboxCredential()
+            if (credential == null || !TrainingApplication.uploadToDropbox()) {
+                _uiState.value = UiState.Error(context.getString(R.string.dropbox_disconnected_status))
+                return@launch
+            }
             _uiState.value = UiState.Loading("Creating backup...")
             val backupFile = withContext(Dispatchers.IO) { 
                 BackupManager.createBackup(context, object : BackupManager.ProgressListener {
@@ -182,6 +187,11 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
 
     fun restoreFromDropbox(context: Context) {
         viewModelScope.launch {
+            val credential = TrainingApplication.readDropboxCredential()
+            if (credential == null || !TrainingApplication.uploadToDropbox()) {
+                _uiState.value = UiState.Error(context.getString(R.string.dropbox_disconnected_status))
+                return@launch
+            }
             _uiState.value = UiState.Loading("Downloading from Dropbox...")
             val tempFile = File(context.cacheDir, "dropbox_restore.attbackup")
             val downloadSuccess = DropboxBackupManager.downloadBackup(context, tempFile)
@@ -305,6 +315,11 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
     fun bulkRecoverLegacyData(context: Context, format: String) {
         saveClusteringTolerances()
         viewModelScope.launch(Dispatchers.IO) {
+            val credential = TrainingApplication.readDropboxCredential()
+            if (credential == null || !TrainingApplication.uploadToDropbox()) {
+                _uiState.value = UiState.Error(context.getString(R.string.dropbox_disconnected_status))
+                return@launch
+            }
             _uiState.value = UiState.Loading("Initializing legacy recovery...")
             val result = LegacyImportEngine.bulkRecoverFromDropbox(context, format, createLegacyListener())
             val app = getApplication<Application>()

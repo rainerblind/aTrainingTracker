@@ -493,12 +493,18 @@ public class TrainingApplication extends Application {
     }
 
     public static DbxCredential readDropboxCredential() {
+        if (cSharedPreferences == null) {
+            return null;
+        }
         String credential = cSharedPreferences.getString(SP_DROPBOX_CREDENTIAL, null);
+        if (credential == null || credential.trim().isEmpty()) {
+            return null;
+        }
         DbxCredential dbxCredential = null;
         try {
             dbxCredential = DbxCredential.Reader.readFully(credential);
-        } catch (JsonReadException e) {
-            // do nothing
+        } catch (Exception e) {
+            Log.e(TAG, "Error reading dropbox credential: " + e.getMessage());
         }
         return dbxCredential;
     }

@@ -22,8 +22,10 @@ import android.content.Intent
 import android.net.Uri
 import java.text.DateFormat
 import java.util.Date
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -96,6 +98,10 @@ fun ImportBackupTabsScreen(
     // ATT-315: Pre-import Tuning state
     var showTuningDialogForBulk by remember { mutableStateOf(false) }
     var pendingSingleLegacyUri by remember { mutableStateOf<Uri?>(null) }
+    var showDropboxDisconnectedDialog by remember { mutableStateOf(false) }
+    val isDropboxConnected = remember(uiState) {
+        TrainingApplication.uploadToDropbox() && TrainingApplication.readDropboxCredential() != null
+    }
     
     val isBusy = uiState is BackupRestoreViewModel.UiState.Loading || uiState is BackupRestoreViewModel.UiState.Progress
 
@@ -187,12 +193,20 @@ fun ImportBackupTabsScreen(
                 when (pageIndex) {
                     0 -> ImportTabContent(
                         isBusy = isBusy,
-                        onBulkRecoverClick = { showTuningDialogForBulk = true },
+                        isDropboxConnected = isDropboxConnected,
+                        onBulkRecoverClick = {
+                            if (isDropboxConnected) {
+                                showTuningDialogForBulk = true
+                            } else {
+                                showDropboxDisconnectedDialog = true
+                            }
+                        },
                         onSingleLegacyImportClick = { pickLegacyFileLauncher.launch(arrayOf("*/*")) }
                     )
                     1 -> BackupTabContent(
                         viewModel = viewModel,
                         isBusy = isBusy,
+                        isDropboxConnected = isDropboxConnected,
                         onCreateBackupClick = {
                             viewModel.createBackup(context) { uri ->
                                 val intent = Intent(Intent.ACTION_SEND).apply {
@@ -203,13 +217,26 @@ fun ImportBackupTabsScreen(
                                 context.startActivity(Intent.createChooser(intent, createBackupChooserTitle))
                             }
                         },
-                        onUploadToDropboxClick = { viewModel.uploadToDropbox(context) }
+                        onUploadToDropboxClick = {
+                            if (isDropboxConnected) {
+                                viewModel.uploadToDropbox(context)
+                            } else {
+                                showDropboxDisconnectedDialog = true
+                            }
+                        }
                     )
                     2 -> RestoreTabContent(
                         isBusy = isBusy,
+                        isDropboxConnected = isDropboxConnected,
                         onIncrementalImportClick = { pickImportLauncher.launch(arrayOf("*/*")) },
                         onLocalRestoreClick = { pickFullRestoreLauncher.launch(arrayOf("*/*")) },
-                        onDropboxRestoreClick = { showDropboxRestoreConfirm = true }
+                        onDropboxRestoreClick = {
+                            if (isDropboxConnected) {
+                                showDropboxRestoreConfirm = true
+                            } else {
+                                showDropboxDisconnectedDialog = true
+                            }
+                        }
                     )
                 }
             }
@@ -260,6 +287,19 @@ fun ImportBackupTabsScreen(
             dismissButton = {
                 TextButton(onClick = { showDropboxRestoreConfirm = false }) {
                     Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    if (showDropboxDisconnectedDialog) {
+        AlertDialog(
+            onDismissRequest = { showDropboxDisconnectedDialog = false },
+            title = { Text(stringResource(R.string.Dropbox)) },
+            text = { Text(stringResource(R.string.dropbox_disconnected_status)) },
+            confirmButton = {
+                TextButton(onClick = { showDropboxDisconnectedDialog = false }) {
+                    Text(stringResource(R.string.OK))
                 }
             }
         )
@@ -737,9 +777,23 @@ private fun StateOverlaySection(uiState: BackupRestoreViewModel.UiState, onClear
 @Composable
 private fun ImportTabContent(
     isBusy: Boolean,
+    isDropboxConnected: Boolean,
     onBulkRecoverClick: () -> Unit,
     onSingleLegacyImportClick: () -> Unit
 ) {
+    val scanButtonColors = if (isDropboxConnected) {
+        ButtonDefaults.outlinedButtonColors()
+    } else {
+        ButtonDefaults.outlinedButtonColors(
+            contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        )
+    }
+    val scanBorder = if (isDropboxConnected) {
+        ButtonDefaults.outlinedButtonBorder(enabled = !isBusy)
+    } else {
+        BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+    }
+
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -755,7 +809,13 @@ private fun ImportTabContent(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(text = stringResource(R.string.legacy_recovery_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(onClick = onBulkRecoverClick, modifier = Modifier.fillMaxWidth(), enabled = !isBusy) {
+                OutlinedButton(
+                    onClick = onBulkRecoverClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isBusy,
+                    colors = scanButtonColors,
+                    border = scanBorder
+                ) {
                     Text(stringResource(R.string.scan_tcx))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -774,10 +834,19 @@ private fun ImportTabContent(
 private fun BackupTabContent(
     viewModel: BackupRestoreViewModel,
     isBusy: Boolean,
+    isDropboxConnected: Boolean,
     onCreateBackupClick: () -> Unit,
     onUploadToDropboxClick: () -> Unit
 ) {
     val lastBackupInfo by viewModel.lastBackupInfo.collectAsState()
+    val uploadButtonColors = if (isDropboxConnected) {
+        ButtonDefaults.buttonColors()
+    } else {
+        ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        )
+    }
     
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -798,7 +867,12 @@ private fun BackupTabContent(
                     Text(stringResource(R.string.create_backup))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = onUploadToDropboxClick, modifier = Modifier.fillMaxWidth(), enabled = !isBusy) {
+                Button(
+                    onClick = onUploadToDropboxClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isBusy,
+                    colors = uploadButtonColors
+                ) {
                     Icon(Icons.Default.CloudUpload, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.create_and_upload_to_dropbox))
@@ -853,10 +927,22 @@ private fun BackupTabContent(
 @Composable
 private fun RestoreTabContent(
     isBusy: Boolean,
+    isDropboxConnected: Boolean,
     onIncrementalImportClick: () -> Unit,
     onLocalRestoreClick: () -> Unit,
     onDropboxRestoreClick: () -> Unit
 ) {
+    val dropboxRestoreColors = if (isDropboxConnected) {
+        ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+    } else {
+        ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+    }
+    val dropboxRestoreBorder = if (isDropboxConnected) {
+        ButtonDefaults.outlinedButtonBorder(enabled = !isBusy)
+    } else {
+        BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+    }
+
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -897,7 +983,13 @@ private fun RestoreTabContent(
                     Text("Local: " + stringResource(R.string.restore_backup))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(onClick = onDropboxRestoreClick, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error), enabled = !isBusy) {
+                OutlinedButton(
+                    onClick = onDropboxRestoreClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = dropboxRestoreColors,
+                    border = dropboxRestoreBorder,
+                    enabled = !isBusy
+                ) {
                     Icon(Icons.Default.CloudUpload, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Dropbox: " + stringResource(R.string.restore_backup))

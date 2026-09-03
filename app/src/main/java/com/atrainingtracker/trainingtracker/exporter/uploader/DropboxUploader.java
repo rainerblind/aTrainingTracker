@@ -29,6 +29,7 @@ import com.atrainingtracker.trainingtracker.exporter.BaseExporter;
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
 import com.dropbox.core.DbxException;
 import com.dropbox.core.DbxRequestConfig;
+import com.dropbox.core.oauth.DbxCredential;
 import com.dropbox.core.v2.DbxClientV2;
 import com.dropbox.core.v2.files.WriteMode;
 
@@ -54,8 +55,13 @@ public class DropboxUploader extends BaseExporter {
             return new ExportResult(false, false,"Dropbox file does not exist: " + file);
         }
 
+        DbxCredential credential = TrainingApplication.readDropboxCredential();
+        if (credential == null) {
+            return new ExportResult(false, false, "Dropbox credential is null or not linked");
+        }
+
         try (InputStream inputStream = new FileInputStream(file)) {
-            DbxClientV2 dbxClientV2 = new DbxClientV2(new DbxRequestConfig(BuildConfig.DROPBOX_APP_KEY), TrainingApplication.readDropboxCredential());
+            DbxClientV2 dbxClientV2 = new DbxClientV2(new DbxRequestConfig(BuildConfig.DROPBOX_APP_KEY), credential);
             dbxClientV2.files().uploadBuilder("/" + filename)
                     .withMode(WriteMode.OVERWRITE)
                     .uploadAndFinish(inputStream);
