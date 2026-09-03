@@ -803,14 +803,13 @@ public class TrackerService extends Service {
 
         Map<String, SensorValueType> sensorName2Type = new HashMap<>();
 
-        // 1. Capture all data on the 1Hz sampling thread
-        for (SensorData<Number> sensorData : mBanalService.getAllSensorData()) {
-            if (sensorData == null || sensorData.getValue() == null) continue;
+        // 1. Update LiveSession running statistics ONLY from authoritative best sensor telemetry (REQ-MAP-019, ATT-499)
+        if (mLiveSession != null) {
+            for (SensorType sensorType : SENSORS_TO_TRACK) {
+                SensorData<Number> bestData = mBanalService.getBestSensorData(sensorType);
+                if (bestData == null || bestData.getValue() == null) continue;
 
-            SensorType sensorType = sensorData.getSensorType();
-
-            if (mLiveSession != null && SENSORS_TO_TRACK.contains(sensorType)) {
-                int changed = mLiveSession.addSample(sensorType, sensorData.getValue().doubleValue(), currentPos);
+                int changed = mLiveSession.addSample(sensorType, bestData.getValue().doubleValue(), currentPos);
 
                 if (changed != 0) {
                     LiveWorkoutSession.RunningStats stats = mLiveSession.getSensorStats().get(sensorType);
@@ -835,6 +834,13 @@ public class TrackerService extends Service {
                     }
                 }
             }
+        }
+
+        // 2. Capture multi-sensor telemetry for raw samples database and session accumulators
+        for (SensorData<Number> sensorData : mBanalService.getAllSensorData()) {
+            if (sensorData == null || sensorData.getValue() == null) continue;
+
+            SensorType sensorType = sensorData.getSensorType();
 
             String sensorName = sensorType.name();
             String deviceName = sensorData.getDeviceName();

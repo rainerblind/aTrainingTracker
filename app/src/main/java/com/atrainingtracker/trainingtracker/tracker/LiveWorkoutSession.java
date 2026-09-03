@@ -192,12 +192,21 @@ public class LiveWorkoutSession {
                 min = value;
                 minPos = position;
                 changed |= CHANGED_MIN;
+            } else if (minPos == null && position != null && Math.abs(value - min) < 1e-3) {
+                // ATT-499: If initial minimum was recorded before GPS fix, late-bind coordinate upon first fix
+                minPos = position;
+                changed |= CHANGED_MIN;
             }
+
             if (value > max) {
                 max = value;
                 maxPos = position;
                 changed |= CHANGED_MAX;
+            } else if (maxPos == null && position != null && Math.abs(value - max) < 1e-3) {
+                maxPos = position;
+                changed |= CHANGED_MAX;
             }
+
             if (calcAverage) {
                 sum += value;
                 count++;
