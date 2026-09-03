@@ -162,11 +162,30 @@ class WorkoutClusterEngine private constructor(context: Context) {
     /**
      * O(1) Surgical update when a workout is finished (ATT-354).
      */
+    /**
+     * Identifies the coordinate among the given points that maximizes geodesic
+     * distance from the specified start position (REQ-SET-063, ATT-498).
+     */
+    fun findApexFromPoints(start: LatLng, points: List<LatLng>): LatLng {
+        if (points.isEmpty()) return start
+        var maxDist = -1.0
+        var apex = points.first()
+        for (pt in points) {
+            val d = distanceBetween(start, pt).toDouble()
+            if (d > maxDist) {
+                maxDist = d
+                apex = pt
+            }
+        }
+        return apex
+    }
+
     fun onWorkoutFinished(context: Context, w: WorkoutData) {
         if (w.startLatLng == null || w.endLatLng == null) return // Ignore non-spatial
         
+        val apex = w.maxDisplacementLatLng ?: w.endLatLng ?: w.startLatLng
         val normalizedName = if (w.workoutName != w.fileBaseName) stripHitCount(w.workoutName) else null
-        val match = suggestCluster(w.startLatLng, w.endLatLng, w.startLatLng, w.totalDistance, normalizedName, w.bSportType)
+        val match = suggestCluster(w.startLatLng, w.endLatLng, apex, w.totalDistance, normalizedName, w.bSportType)
 
         if (match != null) {
             assignClusterToWorkout(context, w.id, match.id, false)
@@ -180,6 +199,8 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 startLng = (currentMatch.startLng * currentMatch.hitCount + w.startLatLng.longitude) / (currentMatch.hitCount + 1),
                 endLat = (currentMatch.endLat * currentMatch.hitCount + w.endLatLng.latitude) / (currentMatch.hitCount + 1),
                 endLng = (currentMatch.endLng * currentMatch.hitCount + w.endLatLng.longitude) / (currentMatch.hitCount + 1),
+                maxDispLat = (currentMatch.maxDispLat * currentMatch.hitCount + apex.latitude) / (currentMatch.hitCount + 1),
+                maxDispLng = (currentMatch.maxDispLng * currentMatch.hitCount + apex.longitude) / (currentMatch.hitCount + 1),
                 refDistance = (currentMatch.refDistance * currentMatch.hitCount + w.totalDistance) / (currentMatch.hitCount + 1),
                 
                 minLat = if (wMinLat != null) minOf(currentMatch.minLat ?: 90.0, wMinLat) else currentMatch.minLat,
@@ -191,7 +212,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
         } else {
             val clusterName = normalizedName ?: context.getString(R.string.cluster_default_name_format, w.fileBaseName?.take(10) ?: "Workout")
             val newId = learnFromWorkout(
-                w.startLatLng, w.endLatLng, w.startLatLng, w.totalDistance, 
+                w.startLatLng, w.endLatLng, apex, w.totalDistance, 
                 clusterName, w.sportId,
                 minLat = w.minLat, minLng = w.minLng, maxLat = w.maxLat, maxLng = w.maxLng
             )
@@ -322,7 +343,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
         val distance = route.summary.distance
         
         var minLat = 90.0; var maxLat = -90.0; var minLng = 180.0; var maxLng = -180.0
-        var maxLineDist = -1.0; var apex = start
+        val apex = findApexFromPoints(start, path.map { it.latLng })
         
         path.forEach { point ->
             val lat = point.latLng.latitude
@@ -331,16 +352,22 @@ class WorkoutClusterEngine private constructor(context: Context) {
             if (lat > maxLat) maxLat = lat
             if (lon < minLng) minLng = lon
             if (lon > maxLng) maxLng = lon
-
-            val dist = distanceBetween(point.latLng, start).toDouble()
-            if (dist > maxLineDist) { maxLineDist = dist; apex = point.latLng }
         }
         
         val sportId = SportTypeDatabaseManager.getSportTypeId(route.summary.bSportType)
-        return learnFromWorkout(
+        val clusterId = learnFromWorkout(
             start, end, apex, distance, route.summary.name, sportId,
             minLat = minLat, minLng = minLng, maxLat = maxLat, maxLng = maxLng
         )
+
+        // ATT-498: Authoritative route anchors the cluster apex
+        if (clusterId != -1L) {
+            val cluster = dbManager.getClusterById(clusterId)
+            if (cluster != null) {
+                dbManager.updateCluster(cluster.copy(maxDispLat = apex.latitude, maxDispLng = apex.longitude))
+            }
+        }
+        return clusterId
     }
 
     /**
@@ -589,7 +616,21 @@ class WorkoutClusterEngine private constructor(context: Context) {
     }
 
     fun distanceBetween(p1: LatLng, p2: LatLng): Float {
-        val res = FloatArray(1); Location.distanceBetween(p1.latitude, p1.longitude, p2.latitude, p2.longitude, res); return res[0]
+        return try {
+            val res = FloatArray(1)
+            Location.distanceBetween(p1.latitude, p1.longitude, p2.latitude, p2.longitude, res)
+            res[0]
+        } catch (e: RuntimeException) {
+            // Fallback for JVM unit test execution
+            val earthRadius = 6371000.0
+            val dLat = Math.toRadians(p2.latitude - p1.latitude)
+            val dLon = Math.toRadians(p2.longitude - p1.longitude)
+            val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(Math.toRadians(p1.latitude)) * Math.cos(Math.toRadians(p2.latitude)) *
+                    Math.sin(dLon / 2) * Math.sin(dLon / 2)
+            val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+            (earthRadius * c).toFloat()
+        }
     }
 
     private fun isDefaultName(name: String): Boolean {

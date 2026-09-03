@@ -113,6 +113,17 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
         mLapDistanceSensor.reset();
     }
 
+    @Override
+    protected void onAccumulatorsReset() {
+        resetStartLocation();
+    }
+
+    public void resetStartLocation() {
+        if (DEBUG) Log.i(TAG, "resetStartLocation()");
+        mStartLocation = null;
+        mPrevLocation = null;
+    }
+
 
     public void onNewLocation(Location location) {
         if (DEBUG) Log.i(TAG, "onNewLocation()");
