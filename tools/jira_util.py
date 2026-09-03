@@ -139,14 +139,41 @@ def download_all_attachments(issue_key):
 
 def transition_issue(issue_key, status_name):
     config = get_config()
-    trans_id = TRANSITIONS.get(status_name)
-    if not trans_id:
-        print(f"Error: Unknown transition '{status_name}'. Use: {list(TRANSITIONS.keys())}")
+    url = f"{config['JIRA_URL']}/rest/api/3/issue/{issue_key}/transitions"
+    data = jira_request(url)
+    available_transitions = data.get("transitions", [])
+
+    aliases = {
+        "todo": "zu erledigen",
+        "in_progress": "in bearbeitung",
+        "in_review": "in überprüfung",
+        "review": "in überprüfung",
+        "freigabe": "freigabe (human)",
+        "human": "freigabe (human)",
+        "done": "erledigt"
+    }
+    normalized_target = aliases.get(status_name.lower().strip(), status_name.lower().strip())
+
+    chosen_trans = None
+    for t in available_transitions:
+        target_name = t.get("to", {}).get("name", "").lower()
+        trans_name = t.get("name", "").lower()
+        if (normalized_target == target_name or 
+            normalized_target == trans_name or 
+            normalized_target in target_name or 
+            normalized_target in trans_name):
+            chosen_trans = t
+            break
+
+    if not chosen_trans:
+        avail_str = ", ".join([f"'{t['name']}' -> '{t.get('to', {}).get('name')}' (id {t['id']})" for t in available_transitions])
+        print(f"Error: Cannot transition '{issue_key}' to '{status_name}'. Available transitions: {avail_str}")
         return
 
-    url = f"{config['JIRA_URL']}/rest/api/3/issue/{issue_key}/transitions"
+    trans_id = chosen_trans["id"]
     jira_request(url, method="POST", payload={"transition": {"id": trans_id}})
-    print(f"Successfully moved {issue_key} to {status_name}.")
+    target_status = chosen_trans.get("to", {}).get("name", status_name)
+    print(f"Successfully moved {issue_key} to '{target_status}' via transition '{chosen_trans['name']}'.")
 
 def add_comment(issue_key, text):
     config = get_config()
@@ -220,7 +247,7 @@ def create_issue(summary, description, issuetype_id="10005", parent_key=None):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: jira_util.py [list | show KEY | move KEY todo|in_progress|in_review|done | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY]]")
+        print("Usage: jira_util.py [list | show KEY | move KEY todo|in_progress|in_review|freigabe|done | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY]]")
         sys.exit(1)
 
     cmd = sys.argv[1]
