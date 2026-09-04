@@ -74,6 +74,7 @@ import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -108,6 +109,7 @@ import com.atrainingtracker.banalservice.filters.FilterData;
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
@@ -131,6 +133,7 @@ public class MainActivityWithNavigation
         StartOrResumeInterface {
     public static final String SELECTED_FRAGMENT_ID = "SELECTED_FRAGMENT_ID";
     public static final String SELECTED_FRAGMENT = "SELECTED_FRAGMENT";
+    public static final String EXTRA_RESUME_INTERRUPTED_WORKOUT = "com.atrainingtracker.EXTRA_RESUME_INTERRUPTED_WORKOUT";
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
     private static final String TAG = "MainActivityWithNavigat";
     private static final int DEFAULT_SELECTED_FRAGMENT_ID = R.id.drawer_start_tracking;
@@ -151,6 +154,7 @@ public class MainActivityWithNavigation
     protected Fragment mFragment;
     protected Handler mHandler;  // necessary to wait some time before we disconnect from the BANALService when the app is paused.
     protected boolean mStartAndNotResume = true;        // start a new workout or continue with the previous one
+    private boolean mResumingFromInterruptedNotification = false;
     @Nullable
     protected BANALService.BANALServiceComm mBanalServiceComm = null;
     final LinkedList<ConnectionStatusListener> mConnectionStatusListeners = new LinkedList<>();
@@ -273,13 +277,45 @@ public class MainActivityWithNavigation
     }
 
     private void handleIntent(Intent intent) {
-        if (intent.hasExtra(SELECTED_FRAGMENT)) {
+        if (intent == null) {
+            return;
+        }
+        if (intent.getBooleanExtra(EXTRA_RESUME_INTERRUPTED_WORKOUT, false)) {
+            intent.removeExtra(EXTRA_RESUME_INTERRUPTED_WORKOUT);
+            mResumingFromInterruptedNotification = true;
+            try {
+                NotificationManagerCompat.from(this).cancel(TrackerService.TRACKING_INTERRUPTED_NOTIFICATION_ID);
+            } catch (Exception e) {
+                Log.e(TAG, "Error cancelling tracking interrupted notification: " + e.getMessage(), e);
+            }
+            mSelectedFragmentId = R.id.drawer_start_tracking;
+            if (mNavigationView != null && mNavigationView.getMenu() != null) {
+                MenuItem item = mNavigationView.getMenu().findItem(mSelectedFragmentId);
+                if (item != null) {
+                    onNavigationItemSelected(item);
+                }
+            }
+            chooseResume();
+        } else if (intent.hasExtra(SELECTED_FRAGMENT)) {
             try {
                 SelectedFragment selected = SelectedFragment.valueOf(intent.getStringExtra(SELECTED_FRAGMENT));
                 if (selected == SelectedFragment.WORKOUT_LIST) {
                     mSelectedFragmentId = R.id.drawer_workouts;
                     // Force navigation to workout list if not already there
-                    onNavigationItemSelected(mNavigationView.getMenu().findItem(mSelectedFragmentId));
+                    if (mNavigationView != null && mNavigationView.getMenu() != null) {
+                        MenuItem item = mNavigationView.getMenu().findItem(mSelectedFragmentId);
+                        if (item != null) {
+                            onNavigationItemSelected(item);
+                        }
+                    }
+                } else if (selected == SelectedFragment.START_OR_TRACKING) {
+                    mSelectedFragmentId = R.id.drawer_start_tracking;
+                    if (mNavigationView != null && mNavigationView.getMenu() != null) {
+                        MenuItem item = mNavigationView.getMenu().findItem(mSelectedFragmentId);
+                        if (item != null) {
+                            onNavigationItemSelected(item);
+                        }
+                    }
                 }
             } catch (IllegalArgumentException ignored) {}
         }
@@ -652,6 +688,22 @@ public class MainActivityWithNavigation
         ContextCompat.registerReceiver(this, mTrackingStoppedReceiver, new IntentFilter(TrackerService.TRACKING_FINISHED_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
         registerReceiver(mAntDependencyReceiver, new IntentFilter("com.atrainingtracker.ANT_DEPENDENCY_MISSING"), Context.RECEIVER_NOT_EXPORTED);
         registerReceiver(mAntAdapterMissingReceiver, new IntentFilter("com.atrainingtracker.ADAPTER_NOT_DETECTED"), Context.RECEIVER_NOT_EXPORTED);
+
+        checkUnfinishedWorkout();
+    }
+
+    private void checkUnfinishedWorkout() {
+        if (mResumingFromInterruptedNotification) {
+            mResumingFromInterruptedNotification = false;
+            return;
+        }
+        if (!TrainingApplication.isTracking()) {
+            if (WorkoutSummariesDatabaseManager.getInstance(this).hasUnfinishedWorkout()) {
+                if (getSupportFragmentManager().findFragmentByTag(StartOrResumeDialog.TAG) == null) {
+                    showStartOrResumeDialog();
+                }
+            }
+        }
     }
 
     // method to verify the preferences
@@ -1088,10 +1140,15 @@ public class MainActivityWithNavigation
 
 
     /***********************************************************************************************/
-    /* Implementation of the StartOrResumeInterface                                                */
     @Override
     public void chooseStart() {
+        try {
+            NotificationManagerCompat.from(this).cancel(TrackerService.TRACKING_INTERRUPTED_NOTIFICATION_ID);
+        } catch (Exception e) {
+            Log.e(TAG, "Error cancelling tracking interrupted notification: " + e.getMessage(), e);
+        }
         TrainingApplication.setResumeFromCrash(false);
+        WorkoutSummariesDatabaseManager.getInstance(this).discardOrFinishUnfinishedWorkout();
 
         TextView tv = findViewById(R.id.tvStart);
         if (tv != null) {
@@ -1101,7 +1158,13 @@ public class MainActivityWithNavigation
 
     @Override
     public void chooseResume() {
+        try {
+            NotificationManagerCompat.from(this).cancel(TrackerService.TRACKING_INTERRUPTED_NOTIFICATION_ID);
+        } catch (Exception e) {
+            Log.e(TAG, "Error cancelling tracking interrupted notification: " + e.getMessage(), e);
+        }
         TrainingApplication.setResumeFromCrash(true);
+        sendBroadcast(new Intent(TrainingApplication.REQUEST_START_TRACKING).setPackage(getPackageName()));
 
         TextView tv = findViewById(R.id.tvStart);
         if (tv != null) {
