@@ -78,6 +78,8 @@
     <string name="start_or_resume_dialog_message">The previous workout was not finished properly.\n Do you want to start a new workout or resume the previous one?</string>
     <string name="start_new_workout">Start new</string>
     <string name="resume_workout">Resume prev.</string>
+    <string name="tracking_interrupted_notification_title">Tracking Interrupted</string>
+    <string name="tracking_interrupted_notification_text">Workout tracking was paused by Android. Tap to resume.</string>
     <string name="SD_card">SD-card</string>  <!-- TODO: replace -->
     <string name="File">File</string>
     <string name="Community">Community</string>

@@ -75,6 +75,8 @@
     <string name="start_or_resume_dialog_message">Die vorherige Aufzeichnung wurde nicht korrekt beendet.\n Soll eine neue Aufzeichnung angefangen oder die vorherige fortgesetzt werden? </string>
     <string name="start_new_workout">Neue starten</string>
     <string name="resume_workout">Vorherige fortsetzen</string>
+    <string name="tracking_interrupted_notification_title">Aufzeichnung unterbrochen</string>
+    <string name="tracking_interrupted_notification_text">Aufzeichnung wurde von Android pausiert. Zum Fortsetzen tippen.</string>
     <string name="SD_card">SD-Karte</string>
     <string name="File">Datei</string>
     <string name="Community">Community</string>
