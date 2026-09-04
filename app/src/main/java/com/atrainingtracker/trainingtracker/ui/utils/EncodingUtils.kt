@@ -71,7 +71,7 @@ object NumericalEncodingUtils {
             result.append(((0x20 or (b.toInt() and 0x1f)) + 63).toChar())
             b = b shr 5
         }
-        result.append((b + 63).toChar())
+        result.append((b + 63).toInt().toChar())
     }
 
     /**
