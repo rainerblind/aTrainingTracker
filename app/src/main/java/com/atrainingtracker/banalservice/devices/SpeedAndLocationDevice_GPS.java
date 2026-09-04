@@ -49,12 +49,28 @@ public class SpeedAndLocationDevice_GPS extends SpeedAndLocationDevice
         mDeviceId = devicesDatabaseManager.getSpeedAndLocationGPSDeviceId();
 
         mLocationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
-        mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
+        if (mLocationManager != null && mLocationManager.getProvider(LocationManager.GPS_PROVIDER) != null) {
+            try {
+                mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
+            } catch (IllegalArgumentException | SecurityException e) {
+                Log.w(TAG, "Failed to register GPS location updates: " + e.getMessage());
+                LocationUnavailable();
+            }
+        } else {
+            Log.w(TAG, "GPS location provider is not available on this device");
+            LocationUnavailable();
+        }
     }
 
     @Override
     public void shutDown() {
-        mLocationManager.removeUpdates(this);
+        if (mLocationManager != null) {
+            try {
+                mLocationManager.removeUpdates(this);
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to remove GPS location updates: " + e.getMessage());
+            }
+        }
 
         super.shutDown();
     }
@@ -67,20 +83,31 @@ public class SpeedAndLocationDevice_GPS extends SpeedAndLocationDevice
     @Override
     public void onProviderEnabled(String provider) {
         if (DEBUG) Log.d(TAG, "onProviderEnabled: " + provider);
-        if (provider.equals(LocationManager.GPS_PROVIDER)) {
+        if (LocationManager.GPS_PROVIDER.equals(provider)) {
             if (DEBUG) Log.d(TAG, "GPS location provider enabled");
-            mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
-
-            // set last active
-            setLastActive();
+            if (mLocationManager != null && mLocationManager.getProvider(LocationManager.GPS_PROVIDER) != null) {
+                try {
+                    mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
+                    // set last active
+                    setLastActive();
+                } catch (IllegalArgumentException | SecurityException e) {
+                    Log.w(TAG, "Failed to register GPS location updates on provider enabled: " + e.getMessage());
+                }
+            }
         }
     }
 
     @Override
     public void onProviderDisabled(String provider) {
-        if (provider.equals(LocationManager.GPS_PROVIDER)) {
+        if (LocationManager.GPS_PROVIDER.equals(provider)) {
             if (DEBUG) Log.d(TAG, "GPS location provider disabled");
-            mLocationManager.removeUpdates(this);
+            if (mLocationManager != null) {
+                try {
+                    mLocationManager.removeUpdates(this);
+                } catch (Exception e) {
+                    Log.w(TAG, "Failed to remove GPS location updates on provider disabled: " + e.getMessage());
+                }
+            }
             LocationUnavailable();
         }
     }

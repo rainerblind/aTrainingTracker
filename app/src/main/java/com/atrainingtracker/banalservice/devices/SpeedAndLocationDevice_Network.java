@@ -48,13 +48,29 @@ public class SpeedAndLocationDevice_Network extends SpeedAndLocationDevice
         mDeviceId = devicesDatabaseManager.getSpeedAndLocationNetworkDeviceId();
 
         mLocationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
-        mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
+        if (mLocationManager != null && mLocationManager.getProvider(LocationManager.NETWORK_PROVIDER) != null) {
+            try {
+                mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
+            } catch (IllegalArgumentException | SecurityException e) {
+                Log.w(TAG, "Failed to register Network location updates: " + e.getMessage());
+                LocationUnavailable();
+            }
+        } else {
+            Log.w(TAG, "Network location provider is not available on this device");
+            LocationUnavailable();
+        }
     }
 
 
     @Override
     public void shutDown() {
-        mLocationManager.removeUpdates(this);
+        if (mLocationManager != null) {
+            try {
+                mLocationManager.removeUpdates(this);
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to remove Network location updates: " + e.getMessage());
+            }
+        }
 
         super.shutDown();
     }
@@ -67,20 +83,31 @@ public class SpeedAndLocationDevice_Network extends SpeedAndLocationDevice
     @Override
     public void onProviderEnabled(String provider) {
         if (DEBUG) Log.d(TAG, "onProviderEnabled: " + provider);
-        if (provider.equals(LocationManager.NETWORK_PROVIDER)) {
+        if (LocationManager.NETWORK_PROVIDER.equals(provider)) {
             if (DEBUG) Log.d(TAG, "Network location provider enabled");
-            mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
-
-            // set last active
-            setLastActive();
+            if (mLocationManager != null && mLocationManager.getProvider(LocationManager.NETWORK_PROVIDER) != null) {
+                try {
+                    mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
+                    // set last active
+                    setLastActive();
+                } catch (IllegalArgumentException | SecurityException e) {
+                    Log.w(TAG, "Failed to register Network location updates on provider enabled: " + e.getMessage());
+                }
+            }
         }
     }
 
     @Override
     public void onProviderDisabled(String provider) {
-        if (provider.equals(LocationManager.NETWORK_PROVIDER)) {
+        if (LocationManager.NETWORK_PROVIDER.equals(provider)) {
             if (DEBUG) Log.d(TAG, "Network location provider disabled");
-            mLocationManager.removeUpdates(this);
+            if (mLocationManager != null) {
+                try {
+                    mLocationManager.removeUpdates(this);
+                } catch (Exception e) {
+                    Log.w(TAG, "Failed to remove Network location updates on provider disabled: " + e.getMessage());
+                }
+            }
             LocationUnavailable();
         }
     }
