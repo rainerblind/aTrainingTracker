@@ -74,6 +74,8 @@
     <string name="start_or_resume_dialog_message">前回のトレーニングが正常に終了していません。\n新しく開始しますか、それとも再開しますか？</string>
     <string name="start_new_workout">新しく開始</string>
     <string name="resume_workout">再開</string>
+    <string name="tracking_interrupted_notification_title">記録が中断されました</string>
+    <string name="tracking_interrupted_notification_text">Androidにより記録が一時停止されました。タップして再開します。</string>
     <string name="SD_card">SDカード</string>
     <string name="File">ファイル</string>
     <string name="Community">コミュニティ</string>

@@ -74,6 +74,8 @@
     <string name="start_or_resume_dialog_message">De vorige training is niet correct afgesloten.\nWilt u een nieuwe training starten of de vorige hervatten?</string>
     <string name="start_new_workout">Nieuw</string>
     <string name="resume_workout">Hervatten</string>
+    <string name="tracking_interrupted_notification_title">Registratie onderbroken</string>
+    <string name="tracking_interrupted_notification_text">Registratie is gepauzeerd door Android. Tik om te hervatten.</string>
     <string name="SD_card">SD-kaart</string>
     <string name="File">Bestand</string>
     <string name="Community">Community</string>

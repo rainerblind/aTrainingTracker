@@ -74,6 +74,8 @@
     <string name="start_or_resume_dialog_message">L\'allenamento precedente non è finito.\nVuoi iniziarne uno nuovo o riprendere ?</string>
     <string name="start_new_workout">Nuovo</string>
     <string name="resume_workout">Riprendi</string>
+    <string name="tracking_interrupted_notification_title">Registrazione interrotta</string>
+    <string name="tracking_interrupted_notification_text">La registrazione è stata messa in pausa da Android. Tocca per riprendere.</string>
     <string name="SD_card">Scheda SD</string>
     <string name="File">File</string>
     <string name="Community">Comunità</string>

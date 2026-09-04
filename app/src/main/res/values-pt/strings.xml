@@ -74,6 +74,8 @@
     <string name="start_or_resume_dialog_message">O treino anterior não foi concluído corretamente.\nDeseja iniciar um novo ou retomar o anterior?</string>
     <string name="start_new_workout">Novo</string>
     <string name="resume_workout">Retomar</string>
+    <string name="tracking_interrupted_notification_title">Gravação interrompida</string>
+    <string name="tracking_interrupted_notification_text">A gravação foi pausada pelo Android. Toque para retomar.</string>
     <string name="SD_card">Cartão SD</string>
     <string name="File">Arquivo</string>
     <string name="Community">Comunidade</string>

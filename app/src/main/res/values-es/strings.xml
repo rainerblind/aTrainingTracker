@@ -74,6 +74,8 @@
     <string name="start_or_resume_dialog_message">El entrenamiento anterior no se finalizó correctamente.\n ¿Quieres empezar uno nuevo o reanudar el anterior?</string>
     <string name="start_new_workout">Empezar nuevo</string>
     <string name="resume_workout">Reanudar ant.</string>
+    <string name="tracking_interrupted_notification_title">Grabación interrumpida</string>
+    <string name="tracking_interrupted_notification_text">La grabación fue pausada por Android. Toca para reanudar.</string>
     <string name="SD_card">Tarjeta SD</string>
     <string name="File">Archivo</string>
     <string name="Community">Comunidad</string>

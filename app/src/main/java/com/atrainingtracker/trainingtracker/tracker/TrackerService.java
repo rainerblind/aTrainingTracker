@@ -39,8 +39,14 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import android.app.PendingIntent;
+import android.content.pm.PackageManager;
+import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
@@ -165,7 +171,8 @@ public class TrackerService extends Service {
     // double mPrevLapDistanceTotal_m  = 0.0;
 
 
-    // private long mSportTypeId = SportTypeDatabaseManager.getDefaultSportTypeId();
+    public static final int TRACKING_INTERRUPTED_NOTIFICATION_ID = 2;
+    private boolean mTrackingInterrupted = false;
     private long mWorkoutID;
     private LiveWorkoutSession mLiveSession;
     private final BroadcastReceiver mLapSummaryReceiver = new BroadcastReceiver() {
@@ -344,12 +351,12 @@ public class TrackerService extends Service {
         }
     }
 
-    private boolean hasLocationPermission() {
+    protected boolean hasLocationPermission() {
         return ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
                 || ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED;
     }
 
-    private boolean hasBackgroundLocationPermission() {
+    protected boolean hasBackgroundLocationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             return ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_BACKGROUND_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED;
         }
@@ -358,9 +365,20 @@ public class TrackerService extends Service {
 
     @Override
     public int onStartCommand(@Nullable Intent intent, int flags, int startId) {
-        super.onStartCommand(intent, flags, startId);
         if (DEBUG) {
             Log.d(TAG, "onStartCommand Received start id " + startId + ": " + intent);
+        }
+
+        // On Android 14+ (API 34+), promoting a background service to a foreground service of type location
+        // requires background location permission. If the service was recreated by the OS after being killed
+        // (intent == null) and the user has not granted background location permission, starting the FGS
+        // will throw a fatal SecurityException. We catch this condition early, notify the user, and gracefully stop.
+        if (intent == null && !hasBackgroundLocationPermission()) {
+            Log.w(TAG, "Recreating TrackerService in background without background location permission. Cannot start location FGS.");
+            mTrackingInterrupted = true;
+            showTrackingInterruptedNotification();
+            performStopSelf();
+            return Service.START_STICKY;
         }
 
         StartType startType;
@@ -391,7 +409,9 @@ public class TrackerService extends Service {
 
             case RESUME_SERVICE_RECREATION:
                 Log.d(TAG, "resuming after killed service");
-                mTrainingApplication.setTracking();
+                if (mTrainingApplication != null) {
+                    mTrainingApplication.setTracking();
+                }
                 if (mBanalService != null) {
                     recreateValuesWhenResuming();
                     // mBanalService.resumeTracking(); already started by broadcast?
@@ -413,40 +433,82 @@ public class TrackerService extends Service {
                 TimeUnit.SECONDS);
 
         // notify others
-        Intent trackingStartedIntent = new Intent(TRACKING_STARTED_INTENT)
-                .putExtra(WorkoutSummaries.WORKOUT_ID, mWorkoutID)
-                .setPackage(this.getPackageName());
-        this.sendBroadcast(trackingStartedIntent);
+        notifyTrackingStarted(mWorkoutID);
 
-        Notification notification = mTrainingApplication.getSearchingAndTrackingNotification();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) { // API 34+
-            // On API 34+, we MUST specify the type if it's in the manifest.
-            // If permissions are missing or if we are in background without background permission,
-            // it will throw SecurityException.
-            int fgsType = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION;
-            
-            // If we are resuming after being killed, we are likely in the background.
-            // We should check if we have the necessary background permission if we want to use location type.
-            if (intent == null && !hasBackgroundLocationPermission()) {
-                Log.w(TAG, "Resuming TrackerService in background without background location permission. FGS might fail.");
+        Notification notification = mTrainingApplication != null ? mTrainingApplication.getSearchingAndTrackingNotification() : null;
+        if (notification != null) {
+            try {
+                performStartForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+            } catch (SecurityException | IllegalStateException e) {
+                Log.e(TAG, "Failed to start foreground service: " + e.getMessage(), e);
+                mTrackingInterrupted = true;
+                if (mTrackerHandle != null) {
+                    mTrackerHandle.cancel(true);
+                    mTrackerHandle = null;
+                }
+                showTrackingInterruptedNotification();
+                performStopSelf();
+                return Service.START_STICKY;
             }
-            
-            if (!hasLocationPermission()) {
-                Log.w(TAG, "Starting TrackerService without foreground location permission granted.");
-            }
-
-            startForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification, fgsType);
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { // API 29-33
-            startForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
-        } else {
-            startForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification);
         }
-
 
         // We want this service to continue running until it is explicitly stopped, so return sticky.
         // When the service is stopped due to a lack of memory, it will be recreated and this method called with a null intent, see:
         // https://android-developers.googleblog.com/2010/02/service-api-changes-starting-with.html
         return Service.START_STICKY;
+    }
+
+    protected void performStopSelf() {
+        stopSelf();
+    }
+
+    protected void performStartForeground(int id, Notification notification, int foregroundServiceType) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(id, notification, foregroundServiceType);
+        } else {
+            startForeground(id, notification);
+        }
+    }
+
+    protected void showTrackingInterruptedNotification() {
+        Context context = getApplicationContext();
+        if (context == null) {
+            context = this;
+        }
+        Intent resumeIntent = new Intent(context, MainActivityWithNavigation.class);
+        resumeIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            flags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, resumeIntent, flags);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, TrainingApplication.NOTIFICATION_CHANNEL__TRACKING_2)
+                .setSmallIcon(R.drawable.logo)
+                .setContentTitle(getString(R.string.tracking_interrupted_notification_title))
+                .setContentText(getString(R.string.tracking_interrupted_notification_text))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true);
+
+        try {
+            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
+            if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                    || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                notificationManager.notify(TRACKING_INTERRUPTED_NOTIFICATION_ID, builder.build());
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to show tracking interrupted notification: " + e.getMessage(), e);
+        }
+    }
+
+    public boolean isTrackingInterrupted() {
+        return mTrackingInterrupted;
+    }
+
+    void setTrackingInterruptedForTesting(boolean interrupted) {
+        this.mTrackingInterrupted = interrupted;
     }
 
     @Override
@@ -455,9 +517,20 @@ public class TrackerService extends Service {
         return null;
     }
 
+    protected void notifyTrackingStarted(long workoutId) {
+        Intent trackingStartedIntent = new Intent(TRACKING_STARTED_INTENT)
+                .putExtra(WorkoutSummaries.WORKOUT_ID, workoutId)
+                .setPackage(this.getPackageName());
+        this.sendBroadcast(trackingStartedIntent);
+    }
+
+    protected void performSuperOnDestroy() {
+        super.onDestroy();
+    }
+
     @Override
     public void onDestroy() {
-        super.onDestroy();
+        performSuperOnDestroy();
         if (DEBUG) Log.d(TAG, "onDestroy");
 
         // first of all, stop the trackerHandle
@@ -475,7 +548,9 @@ public class TrackerService extends Service {
         }
 
         // mTrainingApplication.setTracking(false);
-        endWorkout();
+        if (!mTrackingInterrupted) {
+            endWorkout();
+        }
 
         unbindService(mBanalConnection);
         mBanalService = null;
@@ -694,15 +769,19 @@ public class TrackerService extends Service {
         SQLiteDatabase activeDevicesDb = new ActiveDevicesDbHelper(this).getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(ActiveDevices.WORKOUT_ID, mWorkoutID);
-        for (long deviceDbId : mBanalService.getDatabaseIdsOfActiveRemoteDevices()) {
-            if (DEBUG) Log.d(TAG, "adding deviceId " + deviceDbId + " to list of active devices");
-            values.put(ActiveDevices.DEVICE_DB_ID, deviceDbId);
-            activeDevicesDb.insert(ActiveDevices.TABLE, null, values);
+        if (mBanalService != null) {
+            for (long deviceDbId : mBanalService.getDatabaseIdsOfActiveRemoteDevices()) {
+                if (DEBUG) Log.d(TAG, "adding deviceId " + deviceDbId + " to list of active devices");
+                values.put(ActiveDevices.DEVICE_DB_ID, deviceDbId);
+                activeDevicesDb.insert(ActiveDevices.TABLE, null, values);
+            }
         }
 
         WorkoutSummariesDatabaseManager summariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
         // save the accumulated SensorTypes
-        summariesDatabaseManager.saveAccumulatedSensorTypes(mWorkoutID, mBanalService.getAccumulatedSensorTypeSet());
+        if (mBanalService != null) {
+            summariesDatabaseManager.saveAccumulatedSensorTypes(mWorkoutID, mBanalService.getAccumulatedSensorTypeSet());
+        }
 
         // update the summaries
         ContentValues summaryValues = new ContentValues();
@@ -712,7 +791,9 @@ public class TrackerService extends Service {
         // Thus, use a return statement at the very beginning for debugging
 
         // TODO: store at very beginning, end of ANT and BTLE searching, GPS found
-        summaryValues.put(WorkoutSummaries.GC_DATA, mBanalService.getAccumulatedGCDataString());
+        if (mBanalService != null) {
+            summaryValues.put(WorkoutSummaries.GC_DATA, mBanalService.getAccumulatedGCDataString());
+        }
 
         long sportTypeId = getSportTypeId();
         summaryValues.put(WorkoutSummaries.SPORT_ID, sportTypeId);

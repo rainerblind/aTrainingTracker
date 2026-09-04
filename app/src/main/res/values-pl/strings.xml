@@ -74,6 +74,8 @@
     <string name="start_or_resume_dialog_message">Poprzedni trening nie został ukończony.\nCzy chcesz rozpocząć nowy czy wznowić poprzedni?</string>
     <string name="start_new_workout">Nowy</string>
     <string name="resume_workout">Wznów</string>
+    <string name="tracking_interrupted_notification_title">Śledzenie przerwane</string>
+    <string name="tracking_interrupted_notification_text">Śledzenie treningu zostało wstrzymane przez system Android. Dotknij, aby wznowić.</string>
     <string name="SD_card">Karta SD</string>
     <string name="File">Plik</string>
     <string name="Community">Społeczność</string>
