@@ -23,6 +23,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.location.LocationManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
@@ -276,11 +277,21 @@ public class DeviceManager {
 
         // create the location devices when they are paired.
         DevicesDatabaseManager devicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
+        LocationManager locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
+
         long gpsDeviceId = devicesDatabaseManager.getSpeedAndLocationGPSDeviceId();
         if (devicesDatabaseManager.isPaired(gpsDeviceId)
                 && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
-            if (DEBUG) Log.i(TAG, "creating GPS location device");
-            mSpeedAndLocationDevice_GPS = new SpeedAndLocationDevice_GPS(mContext, mSensorManager);
+            if (locationManager != null && locationManager.getProvider(LocationManager.GPS_PROVIDER) != null) {
+                if (DEBUG) Log.i(TAG, "creating GPS location device");
+                try {
+                    mSpeedAndLocationDevice_GPS = new SpeedAndLocationDevice_GPS(mContext, mSensorManager);
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not initialize GPS location device: " + e.getMessage());
+                }
+            } else {
+                if (DEBUG) Log.i(TAG, "Skipping GPS location device: provider unavailable");
+            }
         }
 
         long fusedDeviceId = devicesDatabaseManager.getSpeedAndLocationGoogleFusedDeviceId();
@@ -288,14 +299,26 @@ public class DeviceManager {
                 && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)
                 && GooglePlayServicesUtil.isGooglePlayServicesAvailable(mContext) == ConnectionResult.SUCCESS) {
             if (DEBUG) Log.i(TAG, "creating google fused location device");
-            mSpeedAndLocationDevice_GoogleFused = new SpeedAndLocationDevice_GoogleFused(mContext, mSensorManager);
+            try {
+                mSpeedAndLocationDevice_GoogleFused = new SpeedAndLocationDevice_GoogleFused(mContext, mSensorManager);
+            } catch (Exception e) {
+                Log.w(TAG, "Could not initialize Google Fused location device: " + e.getMessage());
+            }
         }
 
         long networkDeviceId = devicesDatabaseManager.getSpeedAndLocationNetworkDeviceId();
         if (devicesDatabaseManager.isPaired(networkDeviceId)
                 && TrainingApplication.havePermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
-            if (DEBUG) Log.i(TAG, "creating network location device");
-            mSpeedAndLocationDevice_Network = new SpeedAndLocationDevice_Network(mContext, mSensorManager);
+            if (locationManager != null && locationManager.getProvider(LocationManager.NETWORK_PROVIDER) != null) {
+                if (DEBUG) Log.i(TAG, "creating network location device");
+                try {
+                    mSpeedAndLocationDevice_Network = new SpeedAndLocationDevice_Network(mContext, mSensorManager);
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not initialize Network location device: " + e.getMessage());
+                }
+            } else {
+                if (DEBUG) Log.i(TAG, "Skipping Network location device: provider unavailable");
+            }
         }
 
         // also create paired remote devices and start searching for them
@@ -353,11 +376,19 @@ public class DeviceManager {
     private void pairingChanged(long deviceId, boolean paired) {
         // first, check for the location devices.
         DevicesDatabaseManager devicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
+        LocationManager locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
+
         long gpsDeviceId = devicesDatabaseManager.getSpeedAndLocationGPSDeviceId();
         if (deviceId == gpsDeviceId) {
             if (paired && mSpeedAndLocationDevice_GPS == null // paired and not yet there -> create (if we have the permission)
                     && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
-                mSpeedAndLocationDevice_GPS = new SpeedAndLocationDevice_GPS(mContext, mSensorManager);
+                if (locationManager != null && locationManager.getProvider(LocationManager.GPS_PROVIDER) != null) {
+                    try {
+                        mSpeedAndLocationDevice_GPS = new SpeedAndLocationDevice_GPS(mContext, mSensorManager);
+                    } catch (Exception e) {
+                        Log.w(TAG, "Could not create GPS location device on pairing change: " + e.getMessage());
+                    }
+                }
             }
             else {                                           // destroy
                 if (mSpeedAndLocationDevice_GPS != null) {   // if it exists
@@ -372,7 +403,11 @@ public class DeviceManager {
         if (deviceId == fusedDeviceId) {
             if (paired && mSpeedAndLocationDevice_GoogleFused == null // if it does not exist
                     && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) { // and we have the permission to do so
-                mSpeedAndLocationDevice_GoogleFused = new SpeedAndLocationDevice_GoogleFused(mContext, mSensorManager);
+                try {
+                    mSpeedAndLocationDevice_GoogleFused = new SpeedAndLocationDevice_GoogleFused(mContext, mSensorManager);
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not create Google Fused location device on pairing change: " + e.getMessage());
+                }
             }
             else {                                           // destroy
                 if (mSpeedAndLocationDevice_GoogleFused != null) {   // if it exists
@@ -386,7 +421,13 @@ public class DeviceManager {
         if (deviceId == networkDeviceId) {
             if (paired && mSpeedAndLocationDevice_Network == null  // if it does not exist
                     && TrainingApplication.havePermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {  // and we have the permission to do so
-                mSpeedAndLocationDevice_Network = new SpeedAndLocationDevice_Network(mContext, mSensorManager);
+                if (locationManager != null && locationManager.getProvider(LocationManager.NETWORK_PROVIDER) != null) {
+                    try {
+                        mSpeedAndLocationDevice_Network = new SpeedAndLocationDevice_Network(mContext, mSensorManager);
+                    } catch (Exception e) {
+                        Log.w(TAG, "Could not create Network location device on pairing change: " + e.getMessage());
+                    }
+                }
             }
             else {                                           // destroy
                 if (mSpeedAndLocationDevice_Network != null) {   // if it exists

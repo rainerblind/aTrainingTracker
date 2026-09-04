@@ -422,8 +422,14 @@ public class MainActivityWithNavigation
         if (TrainingApplication.trackLocation()) {
             // check whether GPS is enabled
             LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-            if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                showGPSDisabledAlertToUser();
+            if (locationManager != null && locationManager.getProvider(LocationManager.GPS_PROVIDER) != null) {
+                try {
+                    if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                        showGPSDisabledAlertToUser();
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "Failed to check if GPS provider is enabled: " + e.getMessage());
+                }
             }
         }
 
