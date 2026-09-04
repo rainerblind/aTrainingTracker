@@ -295,7 +295,18 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         saveClusteringTolerances()
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = UiState.Loading("Importing legacy file...")
-            val tempFile = File(context.cacheDir, "legacy_import.$format")
+            val displayName = try {
+                context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                        if (idx != -1) cursor.getString(idx) else null
+                    } else null
+                }
+            } catch (e: Exception) {
+                null
+            }
+            val fileName = displayName?.takeIf { it.isNotBlank() } ?: "legacy_import_${System.currentTimeMillis()}.$format"
+            val tempFile = File(context.cacheDir, fileName)
             context.contentResolver.openInputStream(uri)?.use { input ->
                 tempFile.outputStream().use { output -> input.copyTo(output) }
             }
