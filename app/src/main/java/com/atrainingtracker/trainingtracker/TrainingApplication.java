@@ -814,6 +814,33 @@ public class TrainingApplication extends Application {
         cResumeFromCrash = resumeFromCrash;
     }
 
+    private static boolean sWorkManagerAvailable = false;
+
+    public static boolean isWorkManagerAvailable() {
+        return sWorkManagerAvailable;
+    }
+
+    public static void setWorkManagerAvailableForTesting(boolean available) {
+        sWorkManagerAvailable = available;
+    }
+
+    private void initWorkManager() {
+        try {
+            androidx.work.Configuration config = new androidx.work.Configuration.Builder().build();
+            try {
+                WorkManager.initialize(this, config);
+            } catch (IllegalStateException e) {
+                if (DEBUG) Log.w(TAG, "WorkManager already initialized: " + e.getMessage());
+            }
+            WorkManager.getInstance(this);
+            sWorkManagerAvailable = true;
+            if (DEBUG) Log.i(TAG, "WorkManager initialized successfully");
+        } catch (Throwable t) {
+            sWorkManagerAvailable = false;
+            Log.e(TAG, "WorkManager failed to initialize (non-standard platform JobScheduler)", t);
+        }
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -821,7 +848,12 @@ public class TrainingApplication extends Application {
 
         cAppContext = getApplicationContext();
 
-        com.atrainingtracker.trainingtracker.migration.BackupWorker.Companion.schedule(this);
+        initWorkManager();
+        if (sWorkManagerAvailable) {
+            com.atrainingtracker.trainingtracker.migration.BackupWorker.Companion.schedule(this);
+        } else {
+            Log.w(TAG, "Skipping BackupWorker scheduling because WorkManager is unavailable on this device.");
+        }
 
         trackOnMapHelper = new TrackOnMapHelper();
 
