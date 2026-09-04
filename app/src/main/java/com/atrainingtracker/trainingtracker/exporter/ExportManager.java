@@ -257,6 +257,17 @@ public class ExportManager {
                 updateStatus(communityExportInfo, ExportStatus.WAITING, null); // set state ot WAITING
             }
 
+            // Check if WorkManager is available on this device
+            if (!TrainingApplication.isWorkManagerAvailable()) {
+                Log.e(TAG, "WorkManager is unavailable on this device; cannot schedule export.");
+                ContentValues values = new ContentValues();
+                values.put(ExportStatusDatabaseManager.EXPORT_STATUS, ExportStatus.FINISHED_FAILED.name());
+                values.put(ExportStatusDatabaseManager.ANSWER, "WorkManager unavailable on device");
+                exportStatusDatabaseManager.updateExportStatus(values, fileBaseName, null, fileFormat);
+                broadcastExportStatusChanged(mContext, fileBaseName);
+                return;
+            }
+
             // create the queue and start.
             if (uploadWorks.isEmpty()) {
                 // OK, no uploads just export to file
@@ -281,6 +292,14 @@ public class ExportManager {
             values.put(ExportStatusDatabaseManager.EXPORT_STATUS, ExportStatus.FINISHED_FAILED.name());
             values.put(ExportStatusDatabaseManager.ANSWER, "Interner Fehler bei Job-Erstellung");  // TODO: Text
             exportStatusDatabaseManager.updateExportStatus(values, fileBaseName, null, fileFormat);   // note that exportType is set to null to update all.
+            broadcastExportStatusChanged(mContext, fileBaseName);
+        } catch (Throwable t) {
+            Log.e(TAG, "Failed to schedule export job with WorkManager", t);
+
+            ContentValues values = new ContentValues();
+            values.put(ExportStatusDatabaseManager.EXPORT_STATUS, ExportStatus.FINISHED_FAILED.name());
+            values.put(ExportStatusDatabaseManager.ANSWER, "WorkManager unavailable on device");
+            exportStatusDatabaseManager.updateExportStatus(values, fileBaseName, null, fileFormat);
             broadcastExportStatusChanged(mContext, fileBaseName);
         }
     }
