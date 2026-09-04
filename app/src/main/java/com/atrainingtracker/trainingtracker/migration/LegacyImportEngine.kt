@@ -49,6 +49,21 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Locale
+import kotlin.math.roundToInt
+
+/**
+ * Data model representing a parsed lap segment from a TCX file.
+ */
+data class ParsedLap(
+    val lapNr: Long,
+    var startTime: String? = null,
+    var totalTimeSeconds: Double = 0.0,
+    var distanceMeters: Double = 0.0,
+    var maxSpeed: Double? = null,
+    var calories: Int? = null,
+    var avgHeartRate: Int? = null,
+    var maxHeartRate: Int? = null
+)
 
 /**
  * Handles recreation of workouts from legacy export files (TCX).
@@ -236,10 +251,14 @@ object LegacyImportEngine {
             val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
             
             var firstTime: String? = null
+            var lastTime: String? = null
             var sportName: String? = null
+            var workoutNotes: String? = null
             val points = mutableListOf<LatLng>()
             val altitudes = mutableListOf<Double>()
             val distances = mutableListOf<Double>()
+            val parsedLaps = mutableListOf<ParsedLap>()
+            var currentLap: ParsedLap? = null
             
             val foundSensors = mutableSetOf<SensorType>()
             val bufferedSamples = mutableListOf<ContentValues>()
@@ -257,7 +276,8 @@ object LegacyImportEngine {
                 var currentDist: Double? = null
 
                 while (eventType != XmlPullParser.END_DOCUMENT) {
-                    val name = parser.name
+                    val rawName = parser.name
+                    val name = rawName?.substringAfterLast(':')
                     when (eventType) {
                         XmlPullParser.START_TAG -> {
                             when (name) {
@@ -272,10 +292,48 @@ object LegacyImportEngine {
                                         }
                                     }
                                 }
+                                "Lap" -> {
+                                    val rawStartTime = parser.getAttributeValue(null, "StartTime") ?: run {
+                                        for (i in 0 until parser.attributeCount) {
+                                            if (parser.getAttributeName(i).equals("StartTime", ignoreCase = true)) {
+                                                return@run parser.getAttributeValue(i)
+                                            }
+                                        }
+                                        null
+                                    }
+                                    val formattedStartTime = rawStartTime?.let { raw ->
+                                        try {
+                                            val date = tcxTimeFormat.parse(raw.substring(0, 19))
+                                            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(date!!)
+                                        } catch (_: Exception) { raw }
+                                    }
+                                    val lap = ParsedLap(
+                                        lapNr = parsedLaps.size.toLong(),
+                                        startTime = formattedStartTime
+                                    )
+                                    parsedLaps.add(lap)
+                                    currentLap = lap
+                                }
+                                "TotalTimeSeconds" -> if (!inTrackpoint) {
+                                    currentLap?.totalTimeSeconds = parser.nextText().toDoubleOrNull() ?: 0.0
+                                }
+                                "MaximumSpeed" -> if (!inTrackpoint) {
+                                    currentLap?.maxSpeed = parser.nextText().toDoubleOrNull()
+                                }
+                                "Calories" -> if (!inTrackpoint) {
+                                    currentLap?.calories = parser.nextText().toIntOrNull()
+                                }
+                                "Notes" -> if (!inTrackpoint) {
+                                    val text = parser.nextText()
+                                    if (!text.isNullOrBlank()) {
+                                        workoutNotes = text
+                                    }
+                                }
                                 "Trackpoint" -> {
                                     inTrackpoint = true
+                                    val lapNr = (parsedLaps.size - 1).coerceAtLeast(0).toLong()
                                     values = ContentValues().apply {
-                                        put(SensorType.LAP_NR.name, 0)
+                                        put(SensorType.LAP_NR.name, lapNr)
                                     }
                                     currentLat = null
                                     currentLng = null
@@ -290,6 +348,7 @@ object LegacyImportEngine {
                                     } catch (e: Exception) { rawTime }
                                     values.put("time", formatted)
                                     if (firstTime == null) firstTime = formatted
+                                    lastTime = formatted
                                 }
                                 "LatitudeDegrees" -> if (inTrackpoint) {
                                     val lat = parser.nextText().toDoubleOrNull()
@@ -320,12 +379,21 @@ object LegacyImportEngine {
                                         values.put(SensorType.DISTANCE_m.name, currentDist)
                                         foundSensors.add(SensorType.DISTANCE_m)
                                     }
+                                } else {
+                                    currentLap?.distanceMeters = parser.nextText().toDoubleOrNull() ?: 0.0
                                 }
-                                "Value" -> if (inTrackpoint && parser.getAttributeValue(null, "xsi:type") == null) {
-                                    val hr = parser.nextText().toIntOrNull()
-                                    if (hr != null) {
-                                        values.put(SensorType.HR.name, hr)
-                                        foundSensors.add(SensorType.HR)
+                                "Value" -> {
+                                    if (inTrackpoint && parser.getAttributeValue(null, "xsi:type") == null) {
+                                        val hr = parser.nextText().toIntOrNull()
+                                        if (hr != null) {
+                                            values.put(SensorType.HR.name, hr)
+                                            foundSensors.add(SensorType.HR)
+                                        }
+                                    } else if (!inTrackpoint) {
+                                        val hr = parser.nextText().toIntOrNull()
+                                        if (hr != null && currentLap != null && currentLap.avgHeartRate == null) {
+                                            currentLap.avgHeartRate = hr
+                                        }
                                     }
                                 }
                                 "Cadence" -> if (inTrackpoint) {
@@ -340,6 +408,20 @@ object LegacyImportEngine {
                                     if (pwr != null) {
                                         values.put(SensorType.POWER.name, pwr)
                                         foundSensors.add(SensorType.POWER)
+                                    }
+                                }
+                                "Speed" -> if (inTrackpoint) {
+                                    val spd = parser.nextText().toDoubleOrNull()
+                                    if (spd != null) {
+                                        values.put(SensorType.SPEED_mps.name, spd)
+                                        foundSensors.add(SensorType.SPEED_mps)
+                                    }
+                                }
+                                "RunCadence" -> if (inTrackpoint) {
+                                    val cad = parser.nextText().toIntOrNull()
+                                    if (cad != null) {
+                                        values.put(SensorType.CADENCE.name, cad)
+                                        foundSensors.add(SensorType.CADENCE)
                                     }
                                 }
                             }
@@ -385,6 +467,10 @@ object LegacyImportEngine {
                 } finally {
                     targetDb.endTransaction()
                 }
+            }
+
+            if (firstTime == null && parsedLaps.isNotEmpty() && parsedLaps.first().startTime != null) {
+                firstTime = parsedLaps.first().startTime
             }
 
             if (firstTime != null) {
@@ -434,7 +520,21 @@ object LegacyImportEngine {
                 // ATT-316: Synchronous post-processing to support backpressure (ATT-349).
                 // Refined: We no longer hold the mutex for the entire duration to allow the queue to grow,
                 // but we await the recalculation to ensure the engine pauses if the UI queue is full.
-                recalculateStats(context, workoutId, baseFileName, points, altitudes, distances, bSportType, foundSensors, listener)
+                recalculateStats(
+                    context = context,
+                    workoutId = workoutId,
+                    baseFileName = baseFileName,
+                    points = points,
+                    altitudes = altitudes,
+                    distances = distances,
+                    bSportType = bSportType,
+                    foundSensors = foundSensors,
+                    parsedLaps = parsedLaps,
+                    workoutNotes = workoutNotes,
+                    firstTime = firstTime,
+                    lastTime = lastTime,
+                    listener = listener
+                )
 
                 // ATT-602 (REQ-EXT-008): Automatically schedule background upload to Strava and online communities
                 schedulePostImportCommunityUpload(context, workoutId, baseFileName)
@@ -470,6 +570,10 @@ object LegacyImportEngine {
         distances: List<Double>,
         bSportType: BSportType,
         foundSensors: Set<SensorType> = emptySet(),
+        parsedLaps: List<ParsedLap> = emptyList(),
+        workoutNotes: String? = null,
+        firstTime: String? = null,
+        lastTime: String? = null,
         listener: ProgressListener? = null
     ) {
         val summariesDb = WorkoutSummariesDatabaseManager.getInstance(context)
@@ -481,15 +585,48 @@ object LegacyImportEngine {
             totalDistance = calculateCumulativeDistance(points)
         }
         
-        val activeTime = (points.size.coerceAtLeast(altitudes.size)).coerceAtLeast(distances.size)
+        val activeTime = if (parsedLaps.any { it.totalTimeSeconds > 0 }) {
+            parsedLaps.sumOf { it.totalTimeSeconds }.roundToInt()
+        } else {
+            (points.size.coerceAtLeast(altitudes.size)).coerceAtLeast(distances.size)
+        }
+
+        val totalTime = if (firstTime != null && lastTime != null) {
+            try {
+                val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+                val t1 = format.parse(firstTime)?.time ?: 0L
+                val t2 = format.parse(lastTime)?.time ?: 0L
+                val elapsed = ((t2 - t1) / 1000).toInt()
+                elapsed.coerceAtLeast(activeTime)
+            } catch (_: Exception) {
+                activeTime
+            }
+        } else {
+            activeTime
+        }
         
         val values = ContentValues()
         values.put(WorkoutSummaries.DISTANCE_TOTAL_m, totalDistance)
         values.put(WorkoutSummaries.TIME_ACTIVE_s, activeTime)
-        values.put(WorkoutSummaries.TIME_TOTAL_s, activeTime)
+        values.put(WorkoutSummaries.TIME_TOTAL_s, totalTime)
         if (activeTime > 0) {
             values.put(WorkoutSummaries.SPEED_AVERAGE_mps, totalDistance / activeTime)
         }
+
+        // ATT-617: Persist total calories burned if present
+        if (parsedLaps.any { (it.calories ?: 0) > 0 }) {
+            val totalCalories = parsedLaps.sumOf { it.calories ?: 0 }
+            values.put(WorkoutSummaries.CALORIES, totalCalories)
+        }
+
+        // ATT-617: Persist workout notes if present
+        if (!workoutNotes.isNullOrBlank()) {
+            values.put(WorkoutSummaries.DESCRIPTION, workoutNotes.trim())
+        }
+
+        // ATT-617: Persist lap count
+        val lapCount = parsedLaps.size.coerceAtLeast(1)
+        values.put(WorkoutSummaries.LAPS, lapCount)
 
         // ATT-602: Build GC_DATA so BaseFileWriter and exporters know which streams exist
         val gcData = StringBuilder(MySensorManager.EMPTY_GC_DATA).apply {
@@ -505,13 +642,23 @@ object LegacyImportEngine {
         }.toString()
         values.put(WorkoutSummaries.GC_DATA, gcData)
 
-        // ATT-602: Save initial lap in LapsDatabaseManager for this imported workout
+        // ATT-617: Save multi-lap entries in LapsDatabaseManager for this imported workout
         try {
             val lapsDb = LapsDatabaseManager.getInstance(context)
-            val avgSpeed = if (activeTime > 0) totalDistance / activeTime else 0.0
-            lapsDb.saveLap(workoutId, 0L, activeTime, totalDistance, avgSpeed)
+            lapsDb.deleteWorkout(workoutId)
+            if (parsedLaps.isNotEmpty()) {
+                parsedLaps.forEach { lap ->
+                    val lapDuration = if (lap.totalTimeSeconds > 0) lap.totalTimeSeconds.toInt() else activeTime
+                    val lapDistance = if (lap.distanceMeters > 0) lap.distanceMeters else totalDistance
+                    val lapAvgSpeed = if (lapDuration > 0) lapDistance / lapDuration else 0.0
+                    lapsDb.saveLap(workoutId, lap.lapNr, lap.startTime ?: firstTime, lapDuration, lapDistance, lapAvgSpeed)
+                }
+            } else {
+                val avgSpeed = if (activeTime > 0) totalDistance / activeTime else 0.0
+                lapsDb.saveLap(workoutId, 0L, firstTime, activeTime, totalDistance, avgSpeed)
+            }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to save lap for workout $workoutId", e)
+            Log.w(TAG, "Failed to save laps for workout $workoutId", e)
         }
         
         // 2. Ascent/Descent (5-minute moving average filter) (ATT-301)

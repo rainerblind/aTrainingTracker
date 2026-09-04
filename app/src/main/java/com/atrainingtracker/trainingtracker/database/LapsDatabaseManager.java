@@ -102,15 +102,26 @@ public class LapsDatabaseManager {
      * @param lapDistance The total distance of the lap in meters.
      * @param averageSpeed The average speed of the lap in m/s.
      */
-    public void saveLap(long workoutId, long lapNr, int lapTime, double lapDistance, double averageSpeed) {
+    /**
+     * Creates and saves a new lap entry in the database with explicit start time.
+     * @param workoutId The ID of the workout this lap belongs to.
+     * @param lapNr The number of the lap.
+     * @param timeStart The ISO/formatted start timestamp of the lap, or null to use database default.
+     * @param lapTime The total time of the lap in seconds.
+     * @param lapDistance The total distance of the lap in meters.
+     * @param averageSpeed The average speed of the lap in m/s.
+     */
+    public void saveLap(long workoutId, long lapNr, @Nullable String timeStart, int lapTime, double lapDistance, double averageSpeed) {
         if (DEBUG)
-            Log.i(TAG, "saveLap: workoutId=" + workoutId + ", lapNr=" + lapNr + ", lapTime=" + lapTime + ", lapDistance=" + lapDistance);
+            Log.i(TAG, "saveLap: workoutId=" + workoutId + ", lapNr=" + lapNr + ", timeStart=" + timeStart + ", lapTime=" + lapTime + ", lapDistance=" + lapDistance);
 
         // Create and fill content values
         ContentValues values = new ContentValues();
         values.put(Laps.WORKOUT_ID, workoutId);
         values.put(Laps.LAP_NR, lapNr);
-        // values.put(Laps.TIME_START, done automatically by DB trigger);
+        if (timeStart != null) {
+            values.put(Laps.TIME_START, timeStart);
+        }
         values.put(Laps.TIME_TOTAL_s, lapTime);
         values.put(Laps.DISTANCE_TOTAL_m, lapDistance);
         values.put(Laps.SPEED_AVERAGE_mps, averageSpeed);
@@ -120,6 +131,19 @@ public class LapsDatabaseManager {
         } catch (Exception e) {
             Log.e(TAG, "Error saving lap for workoutId: " + workoutId, e);
         }
+    }
+
+    /**
+     * Creates and saves a new lap entry in the database.
+     * This is the preferred way to create a new lap.
+     * @param workoutId The ID of the workout this lap belongs to.
+     * @param lapNr The number of the lap.
+     * @param lapTime The total time of the lap in seconds.
+     * @param lapDistance The total distance of the lap in meters.
+     * @param averageSpeed The average speed of the lap in m/s.
+     */
+    public void saveLap(long workoutId, long lapNr, int lapTime, double lapDistance, double averageSpeed) {
+        saveLap(workoutId, lapNr, null, lapTime, lapDistance, averageSpeed);
     }
 
     /**
