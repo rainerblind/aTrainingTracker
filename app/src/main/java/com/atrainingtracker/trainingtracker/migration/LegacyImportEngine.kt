@@ -24,8 +24,14 @@ import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
+import com.atrainingtracker.banalservice.sensor.MySensorManager
+import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.exporter.ExportManager
+import com.atrainingtracker.trainingtracker.exporter.ExportType
+import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.dropbox.core.DbxRequestConfig
 import com.dropbox.core.v2.DbxClientV2
@@ -218,11 +224,11 @@ object LegacyImportEngine {
      */
     suspend fun importFromTcx(context: Context, tcxFile: File, listener: ProgressListener? = null): Boolean {
         try {
-            val baseFileName = tcxFile.nameWithoutExtension.removeSuffix("-TMP").removeSuffix("~")
+            var baseFileName = tcxFile.nameWithoutExtension.removeSuffix("-TMP").removeSuffix("~")
             val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
 
             // ATT-314: Early exit if workout already exists to prevent redundant processing
-            if (isWorkoutExisting(summaryDb, baseFileName)) {
+            if (!baseFileName.startsWith("legacy_import", ignoreCase = true) && isWorkoutExisting(summaryDb, baseFileName)) {
                 if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
                 return false
             }
@@ -268,7 +274,9 @@ object LegacyImportEngine {
                                 }
                                 "Trackpoint" -> {
                                     inTrackpoint = true
-                                    values = ContentValues()
+                                    values = ContentValues().apply {
+                                        put(SensorType.LAP_NR.name, 0)
+                                    }
                                     currentLat = null
                                     currentLng = null
                                     currentAlt = null
@@ -357,7 +365,15 @@ object LegacyImportEngine {
 
             // Post-parsing: Bulk insertion and dynamic table creation (ATT-357)
             if (bufferedSamples.isNotEmpty()) {
-                samplesDbManager.createNewTable(baseFileName, foundSensors.toList())
+                if (baseFileName.startsWith("legacy_import", ignoreCase = true) && firstTime != null) {
+                    baseFileName = firstTime!!.replace(" ", "_").replace(":", "")
+                    if (isWorkoutExisting(summaryDb, baseFileName)) {
+                        if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
+                        return false
+                    }
+                }
+                // ATT-602: Always create table with all SensorType values (same as TrackerService) so LAP_NR and standard columns exist
+                samplesDbManager.createNewTable(baseFileName, SensorType.values().toList())
                 val targetDb = samplesDbManager.database
                 val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
                 targetDb.beginTransaction()
@@ -381,6 +397,9 @@ object LegacyImportEngine {
                         put(WorkoutSummaries.SPORT_ID, -1L)
                         put(WorkoutSummaries.EQUIPMENT_ID, -1L)
                         put(WorkoutSummaries.FINISHED, 1)
+                        if (TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
+                            put(WorkoutSummaries.UPLOAD_TO_STRAVA, 1)
+                        }
                     }
                     workoutId = summaryDb.database.insert(WorkoutSummaries.TABLE, null, summaryValues)
                 }
@@ -415,7 +434,11 @@ object LegacyImportEngine {
                 // ATT-316: Synchronous post-processing to support backpressure (ATT-349).
                 // Refined: We no longer hold the mutex for the entire duration to allow the queue to grow,
                 // but we await the recalculation to ensure the engine pauses if the UI queue is full.
-                recalculateStats(context, workoutId, baseFileName, points, altitudes, distances, bSportType, listener)
+                recalculateStats(context, workoutId, baseFileName, points, altitudes, distances, bSportType, foundSensors, listener)
+
+                // ATT-602 (REQ-EXT-008): Automatically schedule background upload to Strava and online communities
+                schedulePostImportCommunityUpload(context, workoutId, baseFileName)
+
                 return true
             }
         } catch (e: Exception) {
@@ -446,6 +469,7 @@ object LegacyImportEngine {
         altitudes: List<Double>,
         distances: List<Double>,
         bSportType: BSportType,
+        foundSensors: Set<SensorType> = emptySet(),
         listener: ProgressListener? = null
     ) {
         val summariesDb = WorkoutSummariesDatabaseManager.getInstance(context)
@@ -465,6 +489,29 @@ object LegacyImportEngine {
         values.put(WorkoutSummaries.TIME_TOTAL_s, activeTime)
         if (activeTime > 0) {
             values.put(WorkoutSummaries.SPEED_AVERAGE_mps, totalDistance / activeTime)
+        }
+
+        // ATT-602: Build GC_DATA so BaseFileWriter and exporters know which streams exist
+        val gcData = StringBuilder(MySensorManager.EMPTY_GC_DATA).apply {
+            setCharAt(0, 'T')
+            if (totalDistance > 0 || distances.isNotEmpty() || foundSensors.contains(SensorType.DISTANCE_m)) setCharAt(1, 'D')
+            if (foundSensors.contains(SensorType.SPEED_mps) || (activeTime > 0 && totalDistance > 0)) setCharAt(2, 'S')
+            if (foundSensors.contains(SensorType.POWER)) setCharAt(3, 'P')
+            if (foundSensors.contains(SensorType.HR)) setCharAt(4, 'H')
+            if (foundSensors.contains(SensorType.CADENCE)) setCharAt(5, 'C')
+            if (foundSensors.contains(SensorType.TORQUE)) setCharAt(6, 'N')
+            if (altitudes.isNotEmpty() || foundSensors.contains(SensorType.ALTITUDE)) setCharAt(7, 'A')
+            if (points.isNotEmpty() || foundSensors.contains(SensorType.LATITUDE) || foundSensors.contains(SensorType.LONGITUDE)) setCharAt(8, 'G')
+        }.toString()
+        values.put(WorkoutSummaries.GC_DATA, gcData)
+
+        // ATT-602: Save initial lap in LapsDatabaseManager for this imported workout
+        try {
+            val lapsDb = LapsDatabaseManager.getInstance(context)
+            val avgSpeed = if (activeTime > 0) totalDistance / activeTime else 0.0
+            lapsDb.saveLap(workoutId, 0L, activeTime, totalDistance, avgSpeed)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to save lap for workout $workoutId", e)
         }
         
         // 2. Ascent/Descent (5-minute moving average filter) (ATT-301)
@@ -631,5 +678,69 @@ object LegacyImportEngine {
             totalDist += results[0]
         }
         return totalDist
+    }
+
+    /**
+     * Schedules asynchronous upload of an imported workout to Strava and active online communities.
+     *
+     * REQ-EXT-008 (ATT-602): Evaluates active community export formats. If community upload is enabled
+     * (e.g. TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) and not opted-out for this workout,
+     * enqueues an asynchronous export and upload task via [ExportManager].
+     */
+    internal fun schedulePostImportCommunityUpload(
+        context: Context,
+        workoutId: Long,
+        baseFileName: String,
+        exportManager: ExportManager = ExportManager(context)
+    ) {
+        try {
+            // ATT-602: Ensure export status entries exist for this workout in ExportStatusDatabaseManager
+            try {
+                val exportStatusDb = ExportStatusDatabaseManager.getInstance(context)
+                if (exportStatusDb.getExportRows(baseFileName).isEmpty()) {
+                    exportManager.newWorkout(baseFileName)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not initialize export status rows for $baseFileName", e)
+            }
+
+            for (format in ExportType.COMMUNITY.exportToFileFormats) {
+                if (TrainingApplication.uploadToCommunity(format)) {
+                    if (format == FileFormat.STRAVA) {
+                        val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
+                        val uploadToStrava = getUploadToStravaStatus(summaryDb, workoutId)
+                        if (uploadToStrava == 0) {
+                            if (TrainingApplication.getDebug(true)) {
+                                Log.d(TAG, "Skipping Strava upload for workout $workoutId: Explicitly opted out.")
+                            }
+                            continue
+                        }
+                    }
+                    exportManager.exportWorkoutTo(workoutId, format)
+                    if (TrainingApplication.getDebug(true)) {
+                        Log.d(TAG, "Scheduled community upload for workout $workoutId ($baseFileName) to ${format.name}")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to schedule community upload for workout $workoutId ($baseFileName)", e)
+        }
+    }
+
+    private fun getUploadToStravaStatus(db: WorkoutSummariesDatabaseManager, workoutId: Long): Int {
+        return try {
+            db.database.query(
+                WorkoutSummaries.TABLE,
+                arrayOf(WorkoutSummaries.UPLOAD_TO_STRAVA),
+                "${WorkoutSummaries.C_ID} = ?",
+                arrayOf(workoutId.toString()),
+                null, null, null
+            ).use { cursor ->
+                if (cursor.moveToFirst()) cursor.getInt(0) else -1
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not query uploadToStrava for workout $workoutId", e)
+            -1
+        }
     }
 }
