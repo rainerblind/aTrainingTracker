@@ -71,14 +71,33 @@ Any AI assistant working on this project **must** follow these steps for every t
           2. **Turn 2 (Audit Phase - Agent 2 - User-Initiated)**: In a subsequent turn (strictly triggered after the user reviews the implementation report and explicitly prompts, e.g., *"Please let Agent 2 review the implementation and tests"*), Agent 2 (Independent Senior Auditor) conducts the Gate 3 Code Audit, executes the complete project test suite (`./gradlew testDebugUnitTest`), posts the audit comment on Jira, and transitions `[Impl]` to `Freigabe (Human)`.
     *   **STRICT PROHIBITION ON PREMATURE MAIN TICKET TRANSITIONS**:
         A main ticket MUST remain in `In Bearbeitung` throughout active development. Under NO circumstances may an agent transition a main ticket to `In Überprüfung` while ANY of its sub-tasks (`[RCA]`, `[Plan]`, `[Test]`, `[Impl]`) remain in `Zu erledigen`, `In Bearbeitung`, `In Überprüfung`, or `Freigabe (Human)`. Transitioning the main ticket to `In Überprüfung` is permitted ONLY when 100% of its sub-tasks have been verified as `Erledigt` in Jira.
-    *   **STRICT PROHIBITION ON UNREQUESTED GIT COMMITS & PROMPT TRACKING OF NEW FILES**:
-        The agent is strictly FORBIDDEN from executing `git commit` or altering git commit history without the user's explicit, prior authorization ('commit', 'go ahead and commit', etc.) in the chat. All code modifications MUST remain as uncommitted working directory changes until the user gives explicit instruction to commit. However, whenever the agent creates a new relevant file (e.g., plan artifact, walkthrough artifact, source file, or test suite), the agent SHALL immediately add it to git (`git add <file>`) so that it is properly tracked in git.
-    *   **Git Branching Strategy & Lifecycle**:
-        *   **Branch Isolation**: Every ticket starts by branching directly off `develop`:
-            *   `feature/ATT-XXX`: For new features, functional additions, or architectural enhancements.
-            *   `bugfix/ATT-XXX`: For defect resolution, bug fixes, or regressions.
-        *   **Dedicated Workspace**: All exploratory code, implementation edits, test suites, and documentation artifacts (`docs/engineering/plans/`, `docs/engineering/walkthroughs/`) must reside exclusively on this branch.
-        *   **Integration**: Merging back into `develop` occurs only after 100% of sub-tasks are approved into `Erledigt` and the user explicitly authorizes the git commit and merge in the chat.
+    *   **Agent-Driven Git Branching, Conventional Commits, and Develop Merging Lifecycle**:
+        The AI agent is mandated and authorized to autonomously manage the complete git lifecycle for all assigned tickets:
+        *   **Step 1: Automated Branch Creation & Checkout**:
+            *   Before starting work on an assigned ticket, the agent SHALL verify or switch to `develop` (`git checkout develop`), verify the workspace is clean, and automatically create and switch to a dedicated branch branching directly off `develop`:
+                *   `feature/ATT-XXX`: For new features, enhancements, process updates, or tasks.
+                *   `bugfix/ATT-XXX`: For bug fixes, defects, or regressions.
+            *   Execution: `git checkout develop && git checkout -b <branch_name>`
+            *   All exploratory analysis, implementation edits, test suites, and documentation artifacts (`docs/engineering/plans/`, `docs/engineering/walkthroughs/`) MUST reside exclusively on this branch.
+        *   **Step 2: Prompt Staging & Agent-Driven Conventional Commits**:
+            *   Whenever the agent creates a new relevant file (e.g., plan artifact, walkthrough artifact, source file, or test suite), the agent SHALL immediately stage it in git (`git add <file>`) so that it is properly tracked.
+            *   The agent SHALL execute git commits (`git commit`) on the ticket branch using the **Conventional Commits** standard:
+                *   Format: `<type>(<scope>): <short summary> (ATT-XXX)`
+                *   Allowed types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `style`.
+                *   The commit body MUST use the `*` symbol for bullet points (avoiding dashes or dots).
+                *   Commits are executed upon concluding logical work units, completing lifecycle stages, or finalizing implementations.
+        *   **Step 3: Automated Non-Fast-Forward Merge to `develop`**:
+            *   Merging back into `develop` is strictly conditioned upon **100% of sub-tasks being verified in `Erledigt`** in Jira and human release sign-off.
+            *   Once approved, the agent SHALL ensure all changes on the ticket branch are committed, switch to `develop`, and execute a non-fast-forward merge:
+                ```bash
+                git checkout develop
+                git merge --no-ff <branch_name> -m "Merge branch '<branch_name>' into develop"
+                ```
+            *   The agent SHALL verify a clean working tree (`git status`) following the merge.
+        *   **System Invariants**:
+            *   Direct commits or merges to `master` by agents remain strictly forbidden.
+            *   Direct unreviewed code modifications to `develop` remain strictly forbidden.
+            *   Merging into `develop` is strictly prohibited while ANY sub-task remains unapproved.
     *   **Selection & Focus**: Multiple tickets may be "In Bearbeitung" (In Progress). The agent works on one chosen ticket at a time. While working on a ticket, it becomes the exclusive focus of the development session. The agent MUST fully complete the current topic (including documentation and verification) before concluding. The agent is strictly FORBIDDEN from asking to start a new ticket or suggesting the next task; the user holds sole initiative for task transitions. The agent SHALL NOT perform any preemptive research, code searches, or logic analysis for unrelated tickets or tasks that have not been explicitly assigned. However, to maintain **Contextual Awareness**, the agent SHOULD research other tickets and documentation within the active Epic to gain a holistic understanding of the feature area and ensure technical alignment. Exploratory analysis of unrelated 'next potential tasks' remains strictly forbidden.
     *   **Contextual Awareness**: Before starting work on a ticket, the agent MUST examine its **Epic** (if linked) to understand the overall picture and vision. The agent SHOULD ask clarifying questions about the Epic to ensure the current task aligns with the long-term goals. If the Epic's description is missing or vague, the agent SHOULD propose an updated description to the user. Once the overall idea of the Epic becomes clear, the agent MUST update the Epic's description in Jira using the `update-desc` command.
     *   **Clarification & Completeness**: If a ticket selected for work lacks a **Description**, specific failure logs, or clear technical context, the agent **MUST NOT** proceed with an implementation plan. Instead, the agent must ask the user for clarification and agreement on the problem statement first.
@@ -187,8 +206,16 @@ Any AI assistant working on this project **must** follow these steps for every t
         > * **Scope**: SWE.4 Unit Verification
         > * **Artifact**: [Link to log/screenshot]
     *   Update the `Status` in `docs/requirements.md` to `Verified`.
-    *   **Walkthrough Artifact**: Create a summary of the fulfilled requirements at `docs/engineering/walkthroughs/ATT-XXX_walkthrough.md`.
-    *   **Git Commit Message**: Provide a clear, comprehensive commit message covering all changes for the **entire ticket**, following the Conventional Commits standard. The agent SHALL use the `*` symbol for bullet points within the commit body (avoiding dots or dashes). The commit message **MUST** be presented inside a literal markdown code block to ensure formatting characters are preserved for copy-paste compatibility.
+    *   **Git Commit & Develop Integration**:
+        *   Stage all files (`git add`) and commit final documentation, requirements, tests, and walkthrough updates on the ticket branch using the Conventional Commits format with asterisk `*` bullet points.
+        *   Present the commit message inside a literal markdown code block in the walkthrough.
+        *   Once 100% of all sub-tasks (`[RCA]`/`[Test]`, `[Plan]`, `[Impl]`) have been formally verified as `Erledigt` in Jira and human release sign-off is given, the agent SHALL switch to `develop` and execute the integration merge:
+            ```bash
+            git checkout develop
+            git merge --no-ff <branch_name> -m "Merge branch '<branch_name>' into develop"
+            ```
+        *   The agent verifies a clean working tree (`git status`) following the merge.
+
 
 9.  **Post-Implementation Review**:
     *   **MANDATORY FINAL STEP**: Before concluding the task, the agent MUST review the newly implemented logic against the requirements and tests defined in Steps 1 and 2.

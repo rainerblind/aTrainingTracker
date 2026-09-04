@@ -14,6 +14,13 @@ As an AI agent working on this project, you must adhere to the following quality
 
 ## Mandatory Workflow
 Before performing any task, you must:
-1.  **Sync Requirements**: Read `docs/requirements.md` and `docs/project_protocol.md`. Update the requirements list with the current task before writing any code.
-2.  **Traceability**: Every item in your implementation plan must reference a Requirement ID.
-3.  **Verification**: Confirm requirements are met and update their status to "Verified" upon completion.
+1.  **Git Branch Creation**: Verify clean state on `develop` (`git checkout develop`), then create and switch to the dedicated ticket branch:
+    *   `feature/ATT-XXX` (for features, enhancements, or tasks).
+    *   `bugfix/ATT-XXX` (for bug fixes or regressions).
+2.  **Sync Requirements**: Read `docs/requirements.md` and `docs/project_protocol.md`. Update the requirements list with the current task before writing any code.
+3.  **Traceability**: Every item in your implementation plan must reference a Requirement ID and follow the multi-stage review gates in `docs/project_protocol.md`.
+4.  **Prompt Staging & Conventional Commits**: Immediately stage new files (`git add <file>`) and execute `git commit` using Conventional Commits (`feat(...)`, `fix(...)`, `docs(...)`, etc.) with `*` for bullet points.
+5.  **Verification**: Confirm requirements are met and update their status to "Verified" upon completion.
+6.  **Integration Merge to Develop**: Once 100% of sub-tasks are verified as `Erledigt` in Jira and human approval is granted, switch to `develop` and execute a non-fast-forward merge:
+    `git checkout develop && git merge --no-ff <branch_name> -m "Merge branch '<branch_name>' into develop"`.
+
