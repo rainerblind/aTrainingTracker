@@ -814,6 +814,10 @@ public class TrainingApplication extends Application {
         cResumeFromCrash = resumeFromCrash;
     }
 
+    public static boolean isResumeFromCrash() {
+        return cResumeFromCrash;
+    }
+
     private static boolean sWorkManagerAvailable = false;
 
     public static boolean isWorkManagerAvailable() {
@@ -1090,6 +1094,7 @@ public class TrainingApplication extends Application {
         Intent intent = new Intent(this, TrackerService.class);
         if (cResumeFromCrash) {
             intent.putExtra(TrackerService.START_TYPE, TrackerService.StartType.RESUME_BY_USER.name());
+            cResumeFromCrash = false;
         } else {
             intent.putExtra(TrackerService.START_TYPE, TrackerService.StartType.START_NORMAL.name());
         }

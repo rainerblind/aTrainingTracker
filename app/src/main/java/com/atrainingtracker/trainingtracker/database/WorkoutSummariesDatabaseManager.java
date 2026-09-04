@@ -66,11 +66,13 @@ public class WorkoutSummariesDatabaseManager {
     private SQLiteDatabase mDatabase = null;
 
     /**
-     * Private constructor to prevent direct instantiation and ensure singleton pattern.
+     * Protected constructor to allow subclassing in unit tests.
      */
-    private WorkoutSummariesDatabaseManager(Context context) {
-        // The helper is instantiated with the application context, making it safe.
-        cWorkoutSummariesDbHelper = new WorkoutSummariesDbHelper(context);
+    protected WorkoutSummariesDatabaseManager(Context context) {
+        if (context != null) {
+            Context appContext = context.getApplicationContext();
+            cWorkoutSummariesDbHelper = new WorkoutSummariesDbHelper(appContext != null ? appContext : context);
+        }
     }
 
     /**
@@ -92,6 +94,12 @@ public class WorkoutSummariesDatabaseManager {
             }
         }
         return cInstance;
+    }
+
+    public static void setInstanceForTesting(@Nullable WorkoutSummariesDatabaseManager instance) {
+        synchronized (WorkoutSummariesDatabaseManager.class) {
+            cInstance = instance;
+        }
     }
 
     /**
@@ -553,6 +561,55 @@ public class WorkoutSummariesDatabaseManager {
             }
         }
         return records;
+    }
+
+    /**
+     * Checks if there is an unfinalized workout in the database (ATT-635).
+     *
+     * @return true if the most recent workout exists and has FINISHED == 0.
+     */
+    public boolean hasUnfinishedWorkout() {
+        SQLiteDatabase db = getDatabase();
+        if (db == null || !db.isOpen()) {
+            return false;
+        }
+        try (Cursor cursor = db.query(
+                WorkoutSummaries.TABLE,
+                new String[]{WorkoutSummaries.C_ID, WorkoutSummaries.FINISHED},
+                null,
+                null,
+                null,
+                null,
+                WorkoutSummaries.C_ID + " DESC",
+                "1"
+        )) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int finishedCol = cursor.getColumnIndex(WorkoutSummaries.FINISHED);
+                if (finishedCol != -1) {
+                    return cursor.getInt(finishedCol) == 0;
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking for unfinished workout: " + e.getMessage(), e);
+        }
+        return false;
+    }
+
+    /**
+     * Finalizes any unfinished workout in the database (ATT-635).
+     */
+    public void discardOrFinishUnfinishedWorkout() {
+        SQLiteDatabase db = getDatabase();
+        if (db == null || !db.isOpen()) {
+            return;
+        }
+        try {
+            ContentValues values = new ContentValues();
+            values.put(WorkoutSummaries.FINISHED, 1);
+            db.update(WorkoutSummaries.TABLE, values, WorkoutSummaries.FINISHED + " = 0", null);
+        } catch (Exception e) {
+            Log.e(TAG, "Error finalizing unfinished workout: " + e.getMessage(), e);
+        }
     }
 
     /**
