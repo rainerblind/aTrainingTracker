@@ -41,12 +41,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -54,8 +56,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.google.accompanist.drawablepainter.rememberDrawablePainter
 
 /**
  * Configuration model representing a single item in the navigation drawer.
@@ -272,12 +276,19 @@ fun DrawerItemView(
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            painter = painterResource(id = item.iconRes),
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = contentColor
-        )
+        val context = LocalContext.current
+        val drawable = remember(item.iconRes) {
+            ContextCompat.getDrawable(context, item.iconRes)
+        }
+        if (drawable != null) {
+            Image(
+                painter = rememberDrawablePainter(drawable),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            )
+        } else {
+            Spacer(modifier = Modifier.size(24.dp))
+        }
         Spacer(modifier = Modifier.width(32.dp))
         Text(
             text = stringResource(id = item.titleRes),
