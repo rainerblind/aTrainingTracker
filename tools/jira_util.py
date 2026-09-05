@@ -252,6 +252,7 @@ def create_subtask(parent_key, summary, description):
     }
     data = jira_request(url, method="POST", payload=payload)
     print(f"Sub-task {data['key']} created for parent {parent_key}.")
+    return data['key']
 
 def create_issue(summary, description, issuetype_id="10005", parent_key=None):
     config = get_config()
