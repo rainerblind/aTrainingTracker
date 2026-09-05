@@ -212,32 +212,33 @@ fun DrawerHeader() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(180.dp + statusBarHeight)
+            .height(92.dp + statusBarHeight)
     ) {
         Image(
             painter = painterResource(id = R.drawable.menu_header_background),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.FillBounds
+            contentScale = ContentScale.FillWidth,
+            alignment = Alignment.BottomCenter
         )
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 16.dp, end = 16.dp, top = statusBarHeight + 8.dp, bottom = 30.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
-            horizontalAlignment = Alignment.Start
+                .padding(start = 16.dp, end = 16.dp, top = statusBarHeight + 2.dp, bottom = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start
         ) {
             Image(
                 painter = painterResource(id = R.drawable.logo_512),
                 contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                contentScale = ContentScale.Fit,
-                alignment = Alignment.CenterStart
+                modifier = Modifier.size(46.dp),
+                contentScale = ContentScale.Fit
             )
+            Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = stringResource(id = R.string.TrainingTracker),
                 color = colorResource(id = R.color.my_blue),
-                fontSize = 26.sp,
+                fontSize = 21.sp,
                 fontWeight = FontWeight.Bold
             )
         }
