@@ -1,4 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <item name="map_container_id" type="id" />
+
+    <!-- Navigation Drawer Item IDs (ATT-526) -->
+    <!-- Training -->
+    <item name="drawer_start_tracking" type="id" />
+    <item name="drawer_workouts" type="id" />
+    <item name="drawer_periods" type="id" />
+
+    <!-- Maps -->
+    <item name="drawer_map" type="id" />
+    <item name="drawer_segments" type="id" />
+    <item name="drawer_routes" type="id" />
+    <item name="drawer_my_locations" type="id" />
+
+    <!-- Equipment / My Stuff -->
+    <item name="drawer_my_sensors" type="id" />
+    <item name="drawer_bikes" type="id" />
+    <item name="drawer_shoes" type="id" />
+    <item name="drawer_sport_types" type="id" />
+    <item name="drawer_training_zones" type="id" />
+
+    <!-- Online Communities / Ecosystem -->
+    <item name="drawer_strava" type="id" />
+    <item name="drawer_dropbox" type="id" />
+    <item name="drawer_export" type="id" />
+
+    <!-- Settings -->
+    <item name="drawer_units" type="id" />
+    <item name="drawer_display_settings" type="id" />
+    <item name="drawer_tracking_layouts" type="id" />
+    <item name="drawer_search_settings" type="id" />
+    <item name="drawer_backup_restore" type="id" />
+    <item name="drawer_privacy_policy" type="id" />
 </resources>
