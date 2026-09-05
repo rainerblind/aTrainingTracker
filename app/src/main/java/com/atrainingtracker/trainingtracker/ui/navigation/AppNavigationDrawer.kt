@@ -21,16 +21,21 @@ package com.atrainingtracker.trainingtracker.ui.navigation
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -201,38 +206,38 @@ fun AppNavigationDrawer(
  */
 @Composable
 fun DrawerHeader() {
+    val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val statusBarHeight = if (topInset > 0.dp) topInset else 36.dp
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(150.dp)
+            .height(180.dp + statusBarHeight)
     ) {
         Image(
             painter = painterResource(id = R.drawable.menu_header_background),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.FillBounds
         )
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 22.dp, start = 16.dp, end = 16.dp),
+                .padding(start = 16.dp, end = 16.dp, top = statusBarHeight + 8.dp, bottom = 30.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.Start
         ) {
-            Box(modifier = Modifier.weight(1f)) {
-                Image(
-                    painter = painterResource(id = R.drawable.logo_512),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(8.dp),
-                    contentScale = ContentScale.Fit,
-                    alignment = Alignment.CenterStart
-                )
-            }
+            Image(
+                painter = painterResource(id = R.drawable.logo_512),
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                contentScale = ContentScale.Fit,
+                alignment = Alignment.CenterStart
+            )
             Text(
                 text = stringResource(id = R.string.TrainingTracker),
                 color = colorResource(id = R.color.my_blue),
-                fontSize = 30.sp,
+                fontSize = 26.sp,
                 fontWeight = FontWeight.Bold
             )
         }

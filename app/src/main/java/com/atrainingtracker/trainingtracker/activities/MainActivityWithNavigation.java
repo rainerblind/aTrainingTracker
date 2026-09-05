@@ -96,6 +96,7 @@ import androidx.preference.PreferenceScreen;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -448,6 +449,11 @@ public class MainActivityWithNavigation
             WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
             if (controller != null) {
                 controller.setAppearanceLightStatusBars(true);
+            }
+
+            View composeNav = findViewById(R.id.compose_nav_view);
+            if (composeNav != null) {
+                ViewCompat.dispatchApplyWindowInsets(composeNav, windowInsets);
             }
 
             return windowInsets;
