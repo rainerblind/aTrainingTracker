@@ -42,12 +42,6 @@
         <item>@string/sport_type_run</item>
         <item>@string/sport_type_bike</item>
     </string-array>
-    <string name="Basic_Sport_Types_values" translatable="false">
-        <item>UNKNOWN</item>
-        <item>RUN</item>
-        <item>BIKE</item>
-    </string>
-    <string name="filter_max">max</string>
 
 
     <string-array name="Strava_Sport_Types_Strava_Names" translatable="false">
@@ -296,7 +290,7 @@
         <item>@string/backup_interval_weekly</item>
         <item>@string/backup_interval_monthly</item>
     </string-array>
-    <string-array name="backup_interval_values">
+    <string-array name="backup_interval_values" translatable="false">
         <item>1</item>
         <item>3</item>
         <item>7</item>

@@ -19,8 +19,6 @@
 
 <resources>
 
-    <string name="filter_max">最大</string>
-
     <string-array name="Strava_Sport_Types_UI_Names">
         <item>@string/no_upload</item>
         <item>トレーニング (その他)</item>

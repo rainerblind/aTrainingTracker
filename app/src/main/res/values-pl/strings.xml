@@ -397,88 +397,88 @@
     <!-- waiting  -->
     <plurals name="export_notification__detail__File_waiting">
         <item quantity="one">⏳ Oczekiwanie na zapis pliku %1$s.</item>
-        <item quantity="few">⏳ Oczekiwanie na zapis %1$d plików %2$s.</item>
-        <item quantity="many">⏳ Oczekiwanie na zapis %1$d plików %2$s.</item>
+        <item quantity="few">⏳ Oczekiwanie na zapis plików %1$s.</item>
+        <item quantity="many">⏳ Oczekiwanie na zapis plików %1$s.</item>
         <item quantity="other">⏳ Oczekiwanie na zapis plików %1$s.</item>
     </plurals>
 
     <plurals name="export_notification__detail__Dropbox_waiting">
         <item quantity="one">⏳ Oczekiwanie na wysyłkę %1$s do Dropbox.</item>
-        <item quantity="few">⏳ Oczekiwanie na wysyłkę %1$d plików %2$s do Dropbox.</item>
-        <item quantity="many">⏳ Oczekiwanie na wysyłkę %1$d plików %2$s do Dropbox.</item>
+        <item quantity="few">⏳ Oczekiwanie na wysyłkę plików %1$s do Dropbox.</item>
+        <item quantity="many">⏳ Oczekiwanie na wysyłkę plików %1$s do Dropbox.</item>
         <item quantity="other">⏳ Oczekiwanie na wysyłkę %1$s do Dropbox.</item>
     </plurals>
 
     <plurals name="export_notification__detail__Community_waiting">
         <item quantity="one">⏳ Oczekiwanie na wysyłkę do %1$s.</item>
-        <item quantity="few">⏳ Oczekiwanie na wysyłkę do %1$d społeczności %2$s.</item>
-        <item quantity="many">⏳ Oczekiwanie na wysyłkę do %1$d społeczności %2$s.</item>
+        <item quantity="few">⏳ Oczekiwanie na wysyłkę do społeczności %1$s.</item>
+        <item quantity="many">⏳ Oczekiwanie na wysyłkę do społeczności %1$s.</item>
         <item quantity="other">⏳ Oczekiwanie na wysyłkę do %1$s.</item>
     </plurals>
 
     <!-- ongoing -->
     <plurals name="export_notification__detail__File_ongoing">
         <item quantity="one">💾 Zapisywanie pliku %1$s.</item>
-        <item quantity="few">💾 Zapisywanie %1$d plików %2$s.</item>
-        <item quantity="many">💾 Zapisywanie %1$d plików %2$s.</item>
+        <item quantity="few">💾 Zapisywanie plików %1$s.</item>
+        <item quantity="many">💾 Zapisywanie plików %1$s.</item>
         <item quantity="other">💾 Zapisywanie plików %1$s.</item>
     </plurals>
 
     <plurals name="export_notification__detail__Dropbox_ongoing">
         <item quantity="one">📤 Wysyłanie %1$s do Dropbox.</item>
-        <item quantity="few">📤 Wysyłanie %1$d plików %2$s do Dropbox.</item>
-        <item quantity="many">📤 Wysyłanie %1$d plików %2$s do Dropbox.</item>
+        <item quantity="few">📤 Wysyłanie plików %1$s do Dropbox.</item>
+        <item quantity="many">📤 Wysyłanie plików %1$s do Dropbox.</item>
         <item quantity="other">📤 Wysyłanie %1$s do Dropbox.</item>
     </plurals>
 
     <plurals name="export_notification__detail__Community_ongoing">
         <item quantity="one">📤 Wysyłanie do %1$s.</item>
-        <item quantity="few">📤 Wysyłanie do %1$d społeczności %2$s.</item>
-        <item quantity="many">📤 Wysyłanie do %1$d społeczności %2$s.</item>
+        <item quantity="few">📤 Wysyłanie do społeczności %1$s.</item>
+        <item quantity="many">📤 Wysyłanie do społeczności %1$s.</item>
         <item quantity="other">📤 Wysyłanie do %1$s.</item>
     </plurals>
 
     <!-- success -->
     <plurals name="export_notification__detail__File_success">
         <item quantity="one">✅ Plik %1$s zapisany pomyślnie.</item>
-        <item quantity="few">✅ %1$d pliki %2$s zapisane pomyślnie.</item>
-        <item quantity="many">✅ %1$d plików %2$s zapisanych pomyślnie.</item>
+        <item quantity="few">✅ Pliki %1$s zapisane pomyślnie.</item>
+        <item quantity="many">✅ Pliki %1$s zapisane pomyślnie.</item>
         <item quantity="other">✅ Pliki %1$s zapisane pomyślnie.</item>
     </plurals>
 
     <plurals name="export_notification__detail__Dropbox_success">
         <item quantity="one">✅ %1$s przesłany do Dropbox.</item>
-        <item quantity="few">✅ %1$d pliki %2$s przesłane do Dropbox.</item>
-        <item quantity="many">✅ %1$d plików %2$s przesłanych do Dropbox.</item>
+        <item quantity="few">✅ Pliki %1$s przesłane do Dropbox.</item>
+        <item quantity="many">✅ Pliki %1$s przesłane do Dropbox.</item>
         <item quantity="other">✅ %1$s przesłane do Dropbox.</item>
     </plurals>
 
     <plurals name="export_notification__detail__Community_success">
         <item quantity="one">✅ Przesłano pomyślnie do %1$s.</item>
-        <item quantity="few">✅ Przesłano pomyślnie do %1$d społeczności %2$s.</item>
-        <item quantity="many">✅ Przesłano pomyślnie do %1$d społeczności %2$s.</item>
+        <item quantity="few">✅ Przesłano pomyślnie do społeczności %1$s.</item>
+        <item quantity="many">✅ Przesłano pomyślnie do społeczności %1$s.</item>
         <item quantity="other">✅ Przesłano pomyślnie do %1$s.</item>
     </plurals>
 
     <!-- failed -->
     <plurals name="export_notification__detail__File_failed">
         <item quantity="one">❌ Błąd zapisu pliku %1$s.</item>
-        <item quantity="few">❌ Błąd zapisu %1$d plików %2$s.</item>
-        <item quantity="many">❌ Błąd zapisu %1$d plików %2$s.</item>
+        <item quantity="few">❌ Błąd zapisu plików %1$s.</item>
+        <item quantity="many">❌ Błąd zapisu plików %1$s.</item>
         <item quantity="other">❌ Błąd zapisu plików %1$s.</item>
     </plurals>
 
     <plurals name="export_notification__detail__Dropbox_failed">
         <item quantity="one">❌ Błąd przesyłania %1$s do Dropbox.</item>
-        <item quantity="few">❌ Błąd przesyłania %1$d plików %2$s do Dropbox.</item>
-        <item quantity="many">❌ Błąd przesyłania %1$d plików %2$s do Dropbox.</item>
+        <item quantity="few">❌ Błąd przesyłania plików %1$s do Dropbox.</item>
+        <item quantity="many">❌ Błąd przesyłania plików %1$s do Dropbox.</item>
         <item quantity="other">❌ Błąd przesyłania %1$s do Dropbox.</item>
     </plurals>
 
     <plurals name="export_notification__detail__Community_failed">
         <item quantity="one">❌ Błąd przesyłania do %1$s.</item>
-        <item quantity="few">❌ Błąd przesyłania do %1$d społeczności %2$s.</item>
-        <item quantity="many">❌ Błąd przesyłania do %1$d społeczności %2$s.</item>
+        <item quantity="few">❌ Błąd przesyłania do społeczności %1$s.</item>
+        <item quantity="many">❌ Błąd przesyłania do społeczności %1$s.</item>
         <item quantity="other">❌ Błąd przesyłania do %1$s.</item>
     </plurals>
 

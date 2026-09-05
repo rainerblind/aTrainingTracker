@@ -1152,7 +1152,6 @@
     <string name="editLocationName">Name:</string>
     <string name="edit_my_location">Strecke bearbeiten</string>
     <string name="end">Ende</string>
-    <string name="filter_max">Max</string>
     <string name="get_extremaType_of_sportType_format">Ermittle %1$s Positionen deiner %2$s Einheiten.</string>
     <string name="getting_my_locations">Suche nach bekannten Orten.</string>
     <string name="invalid_date">\???</string>

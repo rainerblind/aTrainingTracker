@@ -26,6 +26,7 @@
     <string name="filter_moving_average">移動平均</string>
     <string name="filter_exponential_smoothing_format">指数平滑化 (α=%1$1.2f)</string>
     <string name="filter_exponential_smoothing_short_format">exp α=%1$1.1f</string>
+    <string name="filter_max">最大</string>
 
     <string name="filter_details__instantaneous">現在の値を表示します。</string>
     <string name="filter_details__average">トレーニング全体の平均値を表示します。</string>
