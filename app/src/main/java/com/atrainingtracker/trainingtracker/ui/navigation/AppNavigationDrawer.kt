@@ -257,7 +257,7 @@ fun DrawerGroupView(
     Column {
         Text(
             text = stringResource(id = group.titleRes),
-            color = MaterialTheme.colorScheme.primary,
+            color = colorResource(id = R.color.color_primary),
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
@@ -281,8 +281,10 @@ fun DrawerItemView(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent
-    val contentColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+    val selectedColor = colorResource(id = R.color.color_primary)
+    val unselectedColor = colorResource(id = R.color.color_on_surface)
+    val contentColor = if (isSelected) selectedColor else unselectedColor
+    val backgroundColor = if (isSelected) selectedColor.copy(alpha = 0.12f) else Color.Transparent
 
     Row(
         modifier = Modifier
@@ -311,7 +313,7 @@ fun DrawerItemView(
             text = stringResource(id = item.titleRes),
             fontSize = 14.sp,
             color = contentColor,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
         )
     }
 }
