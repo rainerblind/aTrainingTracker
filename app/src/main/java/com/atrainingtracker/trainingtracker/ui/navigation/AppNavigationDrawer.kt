@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -190,41 +191,51 @@ fun AppNavigationDrawer(
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.navigationBarsPadding().height(24.dp))
         }
     }
 }
 
 /**
- * Top header displaying application branding, icon, and title.
+ * Top header displaying application branding, icon, and title over the landscape background image.
  */
 @Composable
 fun DrawerHeader() {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(150.dp)
-            .background(Color.White)
-            .padding(bottom = 22.dp, start = 16.dp, end = 16.dp),
-        horizontalAlignment = Alignment.Start
     ) {
-        Box(modifier = Modifier.weight(1f)) {
-            Image(
-                painter = painterResource(id = R.drawable.logo_512),
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp),
-                contentScale = ContentScale.Fit,
-                alignment = Alignment.CenterStart
+        Image(
+            painter = painterResource(id = R.drawable.menu_header_background),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 22.dp, start = 16.dp, end = 16.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                Image(
+                    painter = painterResource(id = R.drawable.logo_512),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp),
+                    contentScale = ContentScale.Fit,
+                    alignment = Alignment.CenterStart
+                )
+            }
+            Text(
+                text = stringResource(id = R.string.TrainingTracker),
+                color = colorResource(id = R.color.my_blue),
+                fontSize = 30.sp,
+                fontWeight = FontWeight.Bold
             )
         }
-        Text(
-            text = stringResource(id = R.string.TrainingTracker),
-            color = colorResource(id = R.color.my_blue),
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Bold
-        )
     }
 }
 

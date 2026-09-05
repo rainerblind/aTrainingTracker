@@ -459,9 +459,11 @@ public class MainActivityWithNavigation
                     public void handleOnBackPressed() {
                         if (DEBUG) Log.i(TAG, "onBackPressed, entryCout=" + getSupportFragmentManager().getBackStackEntryCount());
 
-                        if (mDrawerLayout.isDrawerOpen(GravityCompat.START)) {
+                        if (mDrawerLayout.isDrawerOpen(GravityCompat.START) || mDrawerLayout.isDrawerVisible(GravityCompat.START)) {
                             mDrawerLayout.closeDrawer(GravityCompat.START);
-                        }  if (getSupportFragmentManager().getBackStackEntryCount() > 0) {  // when showing "deeper fragments", we only want to go back one step and not completely to the start_tracking fragment
+                            return;
+                        }
+                        if (getSupportFragmentManager().getBackStackEntryCount() > 0) {  // when showing "deeper fragments", we only want to go back one step and not completely to the start_tracking fragment
                             getSupportFragmentManager().popBackStack();
                         } else if (getSupportFragmentManager().getBackStackEntryCount() == 0
                                 && mSelectedFragmentId != R.id.drawer_start_tracking) {
