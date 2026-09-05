@@ -308,7 +308,7 @@ fun DrawerItemView(
         } else {
             Spacer(modifier = Modifier.size(24.dp))
         }
-        Spacer(modifier = Modifier.width(32.dp))
+        Spacer(modifier = Modifier.width(16.dp))
         Text(
             text = stringResource(id = item.titleRes),
             fontSize = 14.sp,
