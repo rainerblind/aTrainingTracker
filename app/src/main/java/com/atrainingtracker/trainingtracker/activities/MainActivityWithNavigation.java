@@ -72,7 +72,9 @@ import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.maps.MapsInitializer;
-import com.google.android.material.navigation.NavigationView;
+import androidx.compose.ui.platform.ComposeView;
+import com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerKt;
+import com.atrainingtracker.trainingtracker.ui.navigation.NavigationDrawerController;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
@@ -94,6 +96,7 @@ import androidx.preference.PreferenceScreen;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -127,7 +130,6 @@ import java.util.List;
 public class MainActivityWithNavigation
         extends AppCompatActivity
         implements
-        NavigationView.OnNavigationItemSelectedListener,
         BANALService.GetBanalServiceInterface,
         PreferenceFragmentCompat.OnPreferenceStartScreenCallback,
         StartOrResumeInterface {
@@ -148,8 +150,7 @@ public class MainActivityWithNavigation
     protected int mSelectedFragmentId = DEFAULT_SELECTED_FRAGMENT_ID;
     // the views
     protected DrawerLayout mDrawerLayout;
-    protected NavigationView mNavigationView;
-    protected MenuItem mPreviousMenuItem;
+    protected NavigationDrawerController mDrawerController = new NavigationDrawerController(DEFAULT_SELECTED_FRAGMENT_ID, R.string.tab_start);
     @Nullable
     protected Fragment mFragment;
     protected Handler mHandler;  // necessary to wait some time before we disconnect from the BANALService when the app is paused.
@@ -163,7 +164,7 @@ public class MainActivityWithNavigation
     final BroadcastReceiver mStartTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            mNavigationView.getMenu().findItem(R.id.drawer_start_tracking).setTitle(R.string.Tracking);
+            mDrawerController.setStartTrackingTitleRes(R.string.Tracking);
         }
     };
 
@@ -172,13 +173,13 @@ public class MainActivityWithNavigation
     final BroadcastReceiver mPauseTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            mNavigationView.getMenu().findItem(R.id.drawer_start_tracking).setTitle(R.string.Pause);
+            mDrawerController.setStartTrackingTitleRes(R.string.Pause);
         }
     };
     final BroadcastReceiver mStopTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            mNavigationView.getMenu().findItem(R.id.drawer_start_tracking).setTitle(R.string.Start);
+            mDrawerController.setStartTrackingTitleRes(R.string.Start);
 
             checkBatteryStatus();
         }
@@ -188,7 +189,7 @@ public class MainActivityWithNavigation
         public void onReceive(Context context, Intent intent) {
             // show the workout list
             mSelectedFragmentId = R.id.drawer_workouts;
-            onNavigationItemSelected(mNavigationView.getMenu().findItem(mSelectedFragmentId));
+            navigateToDrawerItem(mSelectedFragmentId);
         }
     };
 
@@ -289,33 +290,17 @@ public class MainActivityWithNavigation
                 Log.e(TAG, "Error cancelling tracking interrupted notification: " + e.getMessage(), e);
             }
             mSelectedFragmentId = R.id.drawer_start_tracking;
-            if (mNavigationView != null && mNavigationView.getMenu() != null) {
-                MenuItem item = mNavigationView.getMenu().findItem(mSelectedFragmentId);
-                if (item != null) {
-                    onNavigationItemSelected(item);
-                }
-            }
+            navigateToDrawerItem(mSelectedFragmentId);
             chooseResume();
         } else if (intent.hasExtra(SELECTED_FRAGMENT)) {
             try {
                 SelectedFragment selected = SelectedFragment.valueOf(intent.getStringExtra(SELECTED_FRAGMENT));
                 if (selected == SelectedFragment.WORKOUT_LIST) {
                     mSelectedFragmentId = R.id.drawer_workouts;
-                    // Force navigation to workout list if not already there
-                    if (mNavigationView != null && mNavigationView.getMenu() != null) {
-                        MenuItem item = mNavigationView.getMenu().findItem(mSelectedFragmentId);
-                        if (item != null) {
-                            onNavigationItemSelected(item);
-                        }
-                    }
+                    navigateToDrawerItem(mSelectedFragmentId);
                 } else if (selected == SelectedFragment.START_OR_TRACKING) {
                     mSelectedFragmentId = R.id.drawer_start_tracking;
-                    if (mNavigationView != null && mNavigationView.getMenu() != null) {
-                        MenuItem item = mNavigationView.getMenu().findItem(mSelectedFragmentId);
-                        if (item != null) {
-                            onNavigationItemSelected(item);
-                        }
-                    }
+                    navigateToDrawerItem(mSelectedFragmentId);
                 }
             } catch (IllegalArgumentException ignored) {}
         }
@@ -393,10 +378,15 @@ public class MainActivityWithNavigation
 
         mDrawerLayout = findViewById(R.id.drawer_layout);
 
-        mNavigationView = findViewById(R.id.nav_view);
-        mNavigationView.setItemIconTintList(null);  // avoid converting the icons to black and white or gray and white
-        mNavigationView.setNavigationItemSelectedListener(this);
-
+        ComposeView composeNavView = findViewById(R.id.compose_nav_view);
+        AppNavigationDrawerKt.setupComposeNavigationDrawer(
+                composeNavView,
+                mDrawerController,
+                itemId -> {
+                    navigateToDrawerItem(itemId);
+                    return kotlin.Unit.INSTANCE;
+                }
+        );
 
         // getPermissions
         getPermissions(true);
@@ -410,10 +400,11 @@ public class MainActivityWithNavigation
 
         if (savedInstanceState != null) {
             mSelectedFragmentId = savedInstanceState.getInt(SELECTED_FRAGMENT_ID, DEFAULT_SELECTED_FRAGMENT_ID);
+            mDrawerController.setSelectedItemId(mSelectedFragmentId);
             mFragment = getSupportFragmentManager().getFragment(savedInstanceState, "mFragment");
         } else {
             // now, create and show the main fragment
-            onNavigationItemSelected(mNavigationView.getMenu().findItem(mSelectedFragmentId));
+            navigateToDrawerItem(mSelectedFragmentId);
         }
 
         handleIntent(getIntent());
@@ -460,6 +451,11 @@ public class MainActivityWithNavigation
                 controller.setAppearanceLightStatusBars(true);
             }
 
+            View composeNav = findViewById(R.id.compose_nav_view);
+            if (composeNav != null) {
+                ViewCompat.dispatchApplyWindowInsets(composeNav, windowInsets);
+            }
+
             return windowInsets;
         });
 
@@ -469,13 +465,15 @@ public class MainActivityWithNavigation
                     public void handleOnBackPressed() {
                         if (DEBUG) Log.i(TAG, "onBackPressed, entryCout=" + getSupportFragmentManager().getBackStackEntryCount());
 
-                        if (mDrawerLayout.isDrawerOpen(GravityCompat.START)) {
+                        if (mDrawerLayout.isDrawerOpen(GravityCompat.START) || mDrawerLayout.isDrawerVisible(GravityCompat.START)) {
                             mDrawerLayout.closeDrawer(GravityCompat.START);
-                        }  if (getSupportFragmentManager().getBackStackEntryCount() > 0) {  // when showing "deeper fragments", we only want to go back one step and not completely to the start_tracking fragment
+                            return;
+                        }
+                        if (getSupportFragmentManager().getBackStackEntryCount() > 0) {  // when showing "deeper fragments", we only want to go back one step and not completely to the start_tracking fragment
                             getSupportFragmentManager().popBackStack();
                         } else if (getSupportFragmentManager().getBackStackEntryCount() == 0
                                 && mSelectedFragmentId != R.id.drawer_start_tracking) {
-                            onNavigationItemSelected(mNavigationView.getMenu().findItem(R.id.drawer_start_tracking));
+                            navigateToDrawerItem(R.id.drawer_start_tracking);
                         } else {
                             finish();
                         }
@@ -515,7 +513,7 @@ public class MainActivityWithNavigation
             mSelectedFragmentId = R.id.drawer_workouts;
 
             // 2. Update the Drawer UI checkmark
-            mNavigationView.setCheckedItem(mSelectedFragmentId);
+            mDrawerController.setSelectedItemId(mSelectedFragmentId);
 
             // 3. Instantiate the new Fragment
             mFragment = new WorkoutSummariesTabbedFragment();
@@ -828,23 +826,21 @@ public class MainActivityWithNavigation
         disconnectFromBANALService();
     }
 
-    @Override
+    @Deprecated
     public boolean onNavigationItemSelected(@Nullable MenuItem menuItem) {
-        if (DEBUG) Log.i(TAG, "onNavigationItemSelected");
-
         if (menuItem == null) {
             return false;
         }
+        return navigateToDrawerItem(menuItem.getItemId());
+    }
+
+    public boolean navigateToDrawerItem(int itemId) {
+        if (DEBUG) Log.i(TAG, "navigateToDrawerItem: " + itemId);
 
         mDrawerLayout.closeDrawers();
 
-        // just for debugging
-        // if (DEBUG) Toast.makeText(getApplicationContext(), menuItem.getTitle(), Toast.LENGTH_SHORT).show();
-
         mFragment = null;
         String tag = null;
-
-        int itemId = menuItem.getItemId();
 
         switch (itemId) {
             case R.id.drawer_start_tracking:
@@ -963,20 +959,14 @@ public class MainActivityWithNavigation
                 return true;
 
             default:
-                Log.d(TAG, "setting a new content fragment not yet implemented");
+                Log.d(TAG, "setting a new content fragment not yet implemented: " + itemId);
                 Toast.makeText(this, "setting a new content fragment not yet implemented", Toast.LENGTH_SHORT).show();
         }
 
         if (mFragment != null) {
             // Update the checked state ONLY if a fragment transition occurred (ATT-245)
-            if (mPreviousMenuItem != null) {
-                mPreviousMenuItem.setChecked(false);
-            }
-            mPreviousMenuItem = menuItem;
-            menuItem.setChecked(true);
-
-            // save
             mSelectedFragmentId = itemId;
+            mDrawerController.setSelectedItemId(itemId);
 
             // Clear the backstack before switching top-level fragments
             // This prevents Preference fragments or other sub-screens from
@@ -985,7 +975,6 @@ public class MainActivityWithNavigation
 
             FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
             fragmentTransaction.replace(R.id.content, mFragment, tag);
-            // if (addToBackStack) { fragmentTransaction.addToBackStack(null); }
             fragmentTransaction.commit();
         }
 
