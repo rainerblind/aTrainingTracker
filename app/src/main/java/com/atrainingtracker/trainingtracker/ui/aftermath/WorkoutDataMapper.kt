@@ -73,7 +73,7 @@ class WorkoutDataMapper(
         val sportName = sportTypeDatabaseManager.getUIName(sportId)
 
         val equipmentId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.EQUIPMENT_ID))
-        val equipmentName = equipmentDbHelper.getEquipmentNameFromId(equipmentId)
+        val equipmentName = if (equipmentId > 0) equipmentDbHelper.getEquipmentNameFromId(equipmentId) else null
 
         val dateTimeResult = formatDateTime(cursor)
 
@@ -200,7 +200,7 @@ class WorkoutDataMapper(
         val sportName = sportTypeDatabaseManager.getUIName(sportId)
 
         val equipmentId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.EQUIPMENT_ID))
-        val equipmentName = equipmentDbHelper.getEquipmentNameFromId(equipmentId)
+        val equipmentName = if (equipmentId > 0) equipmentDbHelper.getEquipmentNameFromId(equipmentId) else null
 
         val dateTimeResult = formatDateTime(cursor)
         val fileBaseName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME))
