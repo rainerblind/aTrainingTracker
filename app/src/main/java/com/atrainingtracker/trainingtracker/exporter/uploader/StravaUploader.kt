@@ -274,7 +274,8 @@ class StravaUploader(context: Context) : BaseExporter(context) {
 
         val eqIndex = cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.EQUIPMENT_ID)
         val gearId: String? = if (!cursor.isNull(eqIndex)) {
-            EquipmentDbHelper(mContext).getStravaIdFromId(cursor.getInt(eqIndex))
+            val eqId = cursor.getLong(eqIndex)
+            if (eqId > 0) EquipmentDbHelper(mContext).getStravaIdFromId(eqId) else null
         } else null
 
         cursor.close()

@@ -32,6 +32,7 @@ import androidx.annotation.Nullable;
 import com.atrainingtracker.banalservice.BSportType;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -192,6 +193,9 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
      * @param linkedDeviceIds The new list of sensor IDs to link to this equipment.
      */
     public void updateEquipment(long id, String name, int frameType, @NonNull List<Long> linkedDeviceIds) {
+        if (id <= 0) {
+            return;
+        }
         SQLiteDatabase db = this.getWritableDatabase();
 
         // Start a transaction to ensure database integrity
@@ -228,6 +232,9 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
      * Deletes equipment and its associated sensor links in one transaction.
      */
     public void deleteEquipment(long id) {
+        if (id <= 0) {
+            return;
+        }
         SQLiteDatabase db = this.getWritableDatabase();
         db.beginTransaction();
         try {
@@ -343,6 +350,9 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
      */
     @NonNull
     public List<Long> getDeviceIdsForEquipment(long equipmentId) {
+        if (equipmentId <= 0) {
+            return Collections.emptyList();
+        }
         List<Long> deviceIds = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
 
@@ -490,6 +500,9 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
 
     @Nullable
     public String getEquipmentNameFromId(long equipmentId) {
+        if (equipmentId <= 0) {
+            return null;
+        }
         String equipmentName = null;
 
         SQLiteDatabase db = this.getReadableDatabase();
@@ -508,6 +521,14 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
 
     @Nullable
     public String getStravaIdFromId(int equipmentId) {
+        return getStravaIdFromId((long) equipmentId);
+    }
+
+    @Nullable
+    public String getStravaIdFromId(long equipmentId) {
+        if (equipmentId <= 0) {
+            return null;
+        }
         String stravaId = null;
 
         SQLiteDatabase db = this.getReadableDatabase();

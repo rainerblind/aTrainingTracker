@@ -74,7 +74,7 @@ class EquipmentAndSportTypeDiscoveryManager private constructor(context: Context
         val equipmentIds = getLinkedEquipmentIds(activeDeviceIds)
         if (equipmentIds.isEmpty()) return emptySet()
 
-        return equipmentIds.mapNotNull { id ->
+        return equipmentIds.filter { it > 0 }.mapNotNull { id ->
             equipmentDbHelper.getEquipmentNameFromId(id)
         }.toSet()
     }
@@ -162,7 +162,7 @@ class EquipmentAndSportTypeDiscoveryManager private constructor(context: Context
         if (sportId == -1L) return emptySet()
 
         val equipmentIds = sportTypeEquipmentLinkHelper.getEquipmentIdsForSport(sportId)
-        return equipmentIds.mapNotNull { id ->
+        return equipmentIds.filter { it > 0 }.mapNotNull { id ->
             equipmentDbHelper.getEquipmentNameFromId(id)
         }.toSet()
     }
