@@ -896,9 +896,9 @@
 
     <!-- routes -->
     <string name="routes">Percorsi</string>
-    <string name="no_routes_available">Nessun percorso %s.</string>
+    <string name="no_routes_available">Nessun percorso %1$s.</string>
     <string name="absolutely_no_routes_available">Nessun percorso disponibile.</string>
-    <string name="no_clusters_available">Nessun percorso %s disponibile.</string>
+    <string name="no_clusters_available">Nessun percorso %1$s disponibile.</string>
     <string name="absolutely_no_clusters_available">Nessun percorso disponibile.</string>
     <string name="routes_import_hint">Importa un GPX dal \"+\" o dal tuo file manager.</string>
     <string name="route_edit">Modifica percorso</string>
@@ -1002,7 +1002,7 @@
     <string name="cluster_manual_pick_start">Scegli inizio</string>
     <string name="cluster_manual_pick_end">Scegli fine</string>
     <string name="cluster_manual_pick_apex">Scegli apice (più lontano)</string>
-    <string name="cluster_manual_distance_hint">Distanza allenamento (%s)</string>
+    <string name="cluster_manual_distance_hint">Distanza allenamento (%1$s)</string>
     <string name="cluster_manual_missing_points">Scegli tutti e 3 i punti spaziali sulla mappa.</string>
     <string name="cluster_edit_fingerprint">Modifica impronta dell’allenamento</string>
     <string name="cluster_edit_fingerprint_hint">Regola inizio, fine o apice selezionando il tipo e toccando la mappa.</string>
@@ -1011,10 +1011,10 @@
     <string name="cluster_save_fingerprint_content_desc">Salva impronta</string>
     <string name="cluster_edit_fingerprint_content_desc">Modifica impronta</string>
     <string name="cluster_manual_pick_hint">Scegli l\'impronta spaziale sulla mappa:</string>
-    <string name="cluster_manual_tap_map_format">Tocca la mappa per impostare %s</string>
+    <string name="cluster_manual_tap_map_format">Tocca la mappa per impostare %1$s</string>
     <string name="cluster_clear_content_desc">Cancella</string>
-    <string name="cluster_default_name_format">Allenamento a %s</string>
-    <string name="cluster_equipment_mapping_format">→ %s</string>
+    <string name="cluster_default_name_format">Allenamento a %1$s</string>
+    <string name="cluster_equipment_mapping_format">→ %1$s</string>
     <string name="cluster_score_brackets_format">(%1$.3f)</string>
     <string name="cluster_suggestions_content_desc">Suggerimenti</string>
     <string name="cluster_autoname_format">%1$s #%2$d</string>

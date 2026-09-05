@@ -455,11 +455,11 @@
 
     <!-- notification -->
     <string name="notification_title">%1$s を %2$s へ</string>
-    <string name="notification_export_file">%1$s ファイルをローカルへ出力中\n%3$s</string>
-    <string name="notification_export_dropbox">%1$s ファイルを Dropbox へ送信中\n%3$s</string>
+    <string name="notification_export_file">%1$s %2$s ファイルをローカルへ出力中\n%3$s</string>
+    <string name="notification_export_dropbox">%1$s %2$s ファイルを Dropbox へ送信中\n%3$s</string>
     <string name="notification_export_community">%1$s を %2$s へ送信中\n%3$s</string>
-    <string name="notification_finished_file">%1$s をローカルへ出力完了\n%3$s</string>
-    <string name="notification_finished_dropbox">%1$s を Dropbox へ送信完了\n%3$s</string>
+    <string name="notification_finished_file">%1$s %2$s をローカルへ出力完了\n%3$s</string>
+    <string name="notification_finished_dropbox">%1$s %2$s を Dropbox へ送信完了\n%3$s</string>
     <string name="notification_finished_community">%1$s を %2$s へ送信完了\n%3$s</string>
     <string name="notification_exporting_finished">エクスポート完了</string>
     <string name="notification_tracking_a_workout">トレーニングを記録中</string>

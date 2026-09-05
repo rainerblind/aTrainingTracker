@@ -1075,7 +1075,6 @@
     <string name="all_shoes">+ todas las zapatillas +</string>
     <string name="all_bikes">+ todas las bicis +</string>
     <string name="no_equipment">- ninguno -</string>
-    <string name="devices_sensors_title">Sensores</string>
     <string name="backup_restore">Backup \u0026 Restore</string>
     <string name="backup_restore_summary">Migrar datos o realizar recuperación de desastres</string>
     <string name="create_backup">Crear copia</string>
