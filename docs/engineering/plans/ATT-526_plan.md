@@ -19,7 +19,7 @@ Ticket **ATT-526** replaces the legacy XML-based `NavigationView` with a declara
 
 | Requirement ID | Description | Implementation File(s) | Verification ID | Status |
 |:---|:---|:---|:---|:---|
-| **REQ-UI-123** | Declarative Compose Navigation Drawer & High-Density Presentation | `main_activity_with_navigation.xml`, `AppNavigationDrawer.kt`, `MainActivityWithNavigation.java` | `TST-NAV-007` | In Progress |
+| **REQ-UI-123** | Declarative Compose Navigation Drawer & High-Density Presentation | `main_activity_with_navigation.xml`, `AppNavigationDrawer.kt`, `MainActivityWithNavigation.java` | `TST-NAV-007` | Verified |
 | **REQ-SET-050** | Navigation Drawer Hub & Item Structure | `AppNavigationDrawer.kt`, `MainActivityWithNavigation.java` | `TST-NAV-001` | Verified |
 | **REQ-UI-112** | Navigation Drawer Terminology (Equipment, Synchronization, Export) | `AppNavigationDrawer.kt`, `strings.xml` | `TST-NAV-002` | Verified |
 | **REQ-UI-115** | Concise Settings Terminology | `AppNavigationDrawer.kt`, `strings.xml` | `TST-UI-075` | Verified |
