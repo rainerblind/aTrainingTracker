@@ -136,27 +136,17 @@ fun EditWorkoutScreen(
                                    else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     },
-                    trailingIcon = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (currentClusterId > 0) {
-                                IconButton(onClick = { viewModel.unassignCluster() }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Clear,
-                                        contentDescription = stringResource(R.string.cluster_naming__leave_unclustered),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                            IconButton(onClick = { showClusterDialog = true }) {
+                    trailingIcon = if (currentClusterId > 0) {
+                        {
+                            IconButton(onClick = { viewModel.unassignCluster() }) {
                                 Icon(
-                                    painter = painterResource(id = R.drawable.my_locations),
-                                    contentDescription = stringResource(R.string.cluster_naming__title),
-                                    tint = if (suggestions.isNotEmpty()) MaterialTheme.colorScheme.primary
-                                           else MaterialTheme.colorScheme.onSurfaceVariant
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = stringResource(R.string.cluster_naming__leave_unclustered),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
-                    },
+                    } else null,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -164,7 +154,7 @@ fun EditWorkoutScreen(
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .padding(end = if (currentClusterId > 0) 96.dp else 48.dp)
+                        .padding(end = if (currentClusterId > 0) 48.dp else 0.dp)
                         .clickable { showClusterDialog = true }
                 )
             }
