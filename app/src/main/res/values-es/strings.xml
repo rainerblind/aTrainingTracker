@@ -1059,6 +1059,8 @@
     <string name="getting_my_locations">Buscando ubicaciones conocidas.</string>
     <string name="no_sport_types_available">No hay tipos de deporte disponibles</string>
     <string name="no_workouts_available">No hay entrenamientos disponibles</string>
+    <string name="no_periods_available">No hay resúmenes de períodos disponibles</string>
+    <string name="no_periods_available_hint">Graba entrenamientos para ver resúmenes de períodos</string>
     <string name="really_delete_format">¿Realmente quieres eliminar "%1$s"?</string>
     <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/master/privacy.md</string>
     <string name="LocationNameText">Casa</string>

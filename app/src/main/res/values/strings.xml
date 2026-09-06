@@ -1174,6 +1174,8 @@
     <string name="strava_disconnect">Disconnect from Strava</string>
     <string name="strava_overall_rank_description">Overall Rank #%1$d</string>
     <string name="no_workouts_available">No workouts available</string>
+    <string name="no_periods_available">No period summaries available</string>
+    <string name="no_periods_available_hint">Record workouts to view period summaries</string>
     <string name="source_device">Source</string>
     <string name="source_active_backups">Active Backups</string>
     <string name="source_not_connected">Not Connected</string>
