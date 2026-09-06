@@ -501,30 +501,9 @@ class WorkoutClusterEngine private constructor(context: Context) {
         val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
         val clusterDb = WorkoutClusterDatabaseManager.getInstance(context)
         val previousClusterId = summariesManager.getLong(workoutId, WorkoutSummaries.CLUSTER_ID) ?: -1L
-        if (previousClusterId != -1L && previousClusterId != clusterId) {
-            val oldCluster = clusterDb.getClusterById(previousClusterId)
-            if (oldCluster != null) {
-                val newOldHitCount = (oldCluster.hitCount - 1).coerceAtLeast(0)
-                // ATT-496/495 Fix: If oldCluster's hitCount drops to 0, clear its previewPaths so no phantom previews linger.
-                val updatedOld = oldCluster.copy(
-                    hitCount = newOldHitCount,
-                    previewPaths = if (newOldHitCount == 0) emptyList() else oldCluster.previewPaths
-                )
-                clusterDb.updateCluster(updatedOld)
-            }
-        }
         val cluster = clusterDb.getClusterById(clusterId) ?: return
 
-        // --- ATT-441: Unified Atomic Update (HitCount + Previews) ---
-        val polyline = summariesManager.getString(workoutId, WorkoutSummaries.MAP_POLYLINE)
-        val newHitCount = if (previousClusterId != clusterId) cluster.hitCount + 1 else cluster.hitCount
-        val newPreviews = if (!polyline.isNullOrEmpty() && !cluster.previewPaths.contains(polyline)) {
-            (listOf(polyline) + cluster.previewPaths).take(5)
-        } else cluster.previewPaths
-        
-        val refreshedCluster = cluster.copy(hitCount = newHitCount, previewPaths = newPreviews)
-        clusterDb.updateCluster(refreshedCluster)
-
+        // 1. Update WorkoutSummaries first so it remains the authoritative single source of truth
         val values = android.content.ContentValues().apply {
             put(WorkoutSummaries.CLUSTER_ID, clusterId)
             val currentName = summariesManager.getString(workoutId, WorkoutSummaries.WORKOUT_NAME)
@@ -535,6 +514,31 @@ class WorkoutClusterEngine private constructor(context: Context) {
             }
         }
         summariesManager.database.update(WorkoutSummaries.TABLE, values, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
+
+        // 2. Decrement/reconcile the old cluster if changed (ATT-318)
+        if (previousClusterId != -1L && previousClusterId != clusterId) {
+            val oldCluster = clusterDb.getClusterById(previousClusterId)
+            if (oldCluster != null) {
+                val realOldCount = summariesManager.getWorkoutCountForCluster(previousClusterId)
+                val newOldHitCount = if (realOldCount >= 0) realOldCount else (oldCluster.hitCount - 1).coerceAtLeast(0)
+                val updatedOld = oldCluster.copy(
+                    hitCount = newOldHitCount,
+                    previewPaths = if (newOldHitCount == 0) emptyList() else oldCluster.previewPaths
+                )
+                clusterDb.updateCluster(updatedOld)
+            }
+        }
+
+        // 3. Increment/reconcile new cluster hitCount from authoritative WorkoutSummaries (ATT-318)
+        val polyline = summariesManager.getString(workoutId, WorkoutSummaries.MAP_POLYLINE)
+        val realCount = summariesManager.getWorkoutCountForCluster(clusterId)
+        val newHitCount = if (realCount > 0) realCount else (if (previousClusterId != clusterId) cluster.hitCount + 1 else cluster.hitCount)
+        val newPreviews = if (!polyline.isNullOrEmpty() && !cluster.previewPaths.contains(polyline)) {
+            (listOf(polyline) + cluster.previewPaths).take(5)
+        } else cluster.previewPaths
+        
+        val refreshedCluster = cluster.copy(hitCount = newHitCount, previewPaths = newPreviews)
+        clusterDb.updateCluster(refreshedCluster)
 
         val sportStr = summariesManager.getString(workoutId, WorkoutSummaries.B_SPORT)
         val currentBSport = if (!sportStr.isNullOrBlank()) {
@@ -552,16 +556,23 @@ class WorkoutClusterEngine private constructor(context: Context) {
     }
 
     /**
-     * Unassigns a workout from its workout cluster, atomically decrementing the cluster's hit count (REQ-SET-059).
+     * Unassigns a workout from its workout cluster, atomically decrementing the cluster's hit count (REQ-SET-059, ATT-318).
      */
     fun unassignClusterFromWorkout(context: Context, workoutId: Long) {
         val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
         val clusterDb = WorkoutClusterDatabaseManager.getInstance(context)
         val previousClusterId = summariesManager.getLong(workoutId, WorkoutSummaries.CLUSTER_ID) ?: -1L
+        
+        val values = android.content.ContentValues().apply {
+            put(WorkoutSummaries.CLUSTER_ID, -1L)
+        }
+        summariesManager.database.update(WorkoutSummaries.TABLE, values, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
+
         if (previousClusterId > 0L) {
             val oldCluster = clusterDb.getClusterById(previousClusterId)
             if (oldCluster != null) {
-                val newOldHitCount = (oldCluster.hitCount - 1).coerceAtLeast(0)
+                val realOldCount = summariesManager.getWorkoutCountForCluster(previousClusterId)
+                val newOldHitCount = if (realOldCount >= 0) realOldCount else (oldCluster.hitCount - 1).coerceAtLeast(0)
                 val updatedOld = oldCluster.copy(
                     hitCount = newOldHitCount,
                     previewPaths = if (newOldHitCount == 0) emptyList() else oldCluster.previewPaths
@@ -569,10 +580,6 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 clusterDb.updateCluster(updatedOld)
             }
         }
-        val values = android.content.ContentValues().apply {
-            put(WorkoutSummaries.CLUSTER_ID, -1L)
-        }
-        summariesManager.database.update(WorkoutSummaries.TABLE, values, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
     }
 
     /**
@@ -680,7 +687,24 @@ class WorkoutClusterEngine private constructor(context: Context) {
         dbManager.deleteAllClusters()
         migrateHistory(context, listener) 
     }
-    fun getClusterScores(start: LatLng, end: LatLng, apex: LatLng, distance: Double, workoutName: String? = null, workoutSportType: BSportType = BSportType.UNKNOWN): List<Pair<WorkoutCluster, Double>> = scoreClusters(dbManager.getAllClusters(), start, end, apex, distance, workoutName, workoutSportType)
+    fun getClusterScores(start: LatLng, end: LatLng, apex: LatLng, distance: Double, workoutName: String? = null, workoutSportType: BSportType = BSportType.UNKNOWN): List<Pair<WorkoutCluster, Double>> {
+        val summariesManager = WorkoutSummariesDatabaseManager.getInstance(appContext)
+        val actualCounts = summariesManager.workoutCountsForAllClusters
+        val clusters = dbManager.getAllClusters().map { cluster ->
+            val realCount = actualCounts[cluster.id] ?: 0
+            if (cluster.hitCount != realCount) {
+                val healed = cluster.copy(
+                    hitCount = realCount,
+                    previewPaths = if (realCount == 0) emptyList() else cluster.previewPaths
+                )
+                dbManager.updateCluster(healed)
+                healed
+            } else {
+                cluster
+            }
+        }
+        return scoreClusters(clusters, start, end, apex, distance, workoutName, workoutSportType)
+    }
     fun scoreClusters(clusters: List<WorkoutCluster>, start: LatLng, end: LatLng, apex: LatLng, distance: Double, workoutName: String? = null, workoutSportType: BSportType = BSportType.UNKNOWN): List<Pair<WorkoutCluster, Double>> = clusters.map { it to calculateSimilarity(start, end, apex, distance, it, workoutName, workoutSportType) }.sortedBy { it.second }
 
     fun moveWorkoutToCluster(context: Context, workoutId: Long, currentClusterId: Long, newClusterId: Long) {

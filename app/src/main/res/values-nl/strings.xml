@@ -980,6 +980,10 @@
     <string name="cluster_total_recordings">Totaal aantal opnamen</string>
     <string name="cluster_average_distance">Gemiddelde afstand</string>
     <string name="cluster_recordings_format">%1$d opnamen</string>
+    <plurals name="cluster_recordings">
+        <item quantity="one">%d opname</item>
+        <item quantity="other">%d opnamen</item>
+    </plurals>
     <string name="cluster_ref_distance_label">Ref: %1$s</string>
     <string name="cluster_tuning_title">Groeperingsparameters</string>
     <string name="cluster_tuning_master_label">Groeperingsgevoeligheid</string>

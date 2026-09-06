@@ -145,6 +145,7 @@ class WorkoutRepository private constructor(private val application: Application
      */
     private val _allWorkouts = MutableStateFlow<List<WorkoutData>>(emptyList())
     val allWorkouts: StateFlow<List<WorkoutData>> = _allWorkouts.asStateFlow()
+    private val reloadingWorkoutIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
 
     /**
      * Provides a reactive stream for a specific workout ID.
@@ -730,27 +731,35 @@ class WorkoutRepository private constructor(private val application: Application
      * @param workoutId The primary key of the session to reload.
      */
     suspend fun reloadWorkoutData(workoutId: Long) {
-        if (DEBUG) Log.i(TAG, "reloadWorkoutData: workoutId=$workoutId")
+        if (!reloadingWorkoutIds.add(workoutId)) {
+            if (DEBUG) Log.d(TAG, "reloadWorkoutData: workoutId=$workoutId already reloading, skipping duplicate pass")
+            return
+        }
+        try {
+            if (DEBUG) Log.i(TAG, "reloadWorkoutData: workoutId=$workoutId")
 
-        withContext(Dispatchers.IO) {
-            summariesManager.getWorkoutCursor(workoutId).use { cursor ->
-                if (cursor?.moveToFirst() == true) {
-                    // Get the fresh data from the database.
-                    val freshWorkoutData = mapper.fromCursor(cursor)
-                    
-                    // --- SURGICAL PERIOD UPDATE (ATT-346) ---
-                    val existing = allWorkouts.value.find { it.id == workoutId }
-                    val isNewFinish = (existing == null || !existing.finished) && freshWorkoutData.finished
-                    
-                    if (isNewFinish) {
-                        PeriodsRepository.getInstance(application).onWorkoutFinished(freshWorkoutData)
-                        // --- SURGICAL CLUSTER UPDATE (ATT-354) ---
-                        WorkoutClusterEngine.getInstance(application).onWorkoutFinished(application, freshWorkoutData)
+            withContext(Dispatchers.IO) {
+                summariesManager.getWorkoutCursor(workoutId).use { cursor ->
+                    if (cursor?.moveToFirst() == true) {
+                        // Get the fresh data from the database.
+                        val freshWorkoutData = mapper.fromCursor(cursor)
+                        
+                        // --- SURGICAL PERIOD UPDATE (ATT-346) ---
+                        val existing = allWorkouts.value.find { it.id == workoutId }
+                        val isNewFinish = (existing == null || !existing.finished) && freshWorkoutData.finished
+                        
+                        if (isNewFinish) {
+                            PeriodsRepository.getInstance(application).onWorkoutFinished(freshWorkoutData)
+                            // --- SURGICAL CLUSTER UPDATE (ATT-354) ---
+                            WorkoutClusterEngine.getInstance(application).onWorkoutFinished(application, freshWorkoutData)
+                        }
+
+                        addOrUpdateWorkout(freshWorkoutData)
                     }
-
-                    addOrUpdateWorkout(freshWorkoutData)
                 }
             }
+        } finally {
+            reloadingWorkoutIds.remove(workoutId)
         }
     }
 

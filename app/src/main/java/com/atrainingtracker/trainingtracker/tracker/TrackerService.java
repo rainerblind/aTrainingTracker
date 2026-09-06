@@ -821,12 +821,8 @@ public class TrackerService extends Service {
                 .putExtra(WORKOUT_ID, mWorkoutID);
         sendBroadcast(finishedIntent);
 
-        // 2. Broadcast WORKOUT_UPDATED_INTENT and TRACKING_FINISHED_INTENT via LocalBroadcastManager
+        // 2. Broadcast TRACKING_FINISHED_INTENT via LocalBroadcastManager
         // for internal components (WorkoutRepository, etc.) to trigger reactive period & cluster updates (REQ-TRK-010, ATT-505)
-        Intent localUpdatedIntent = new Intent(WORKOUT_UPDATED_INTENT)
-                .putExtra(WORKOUT_ID, mWorkoutID);
-        LocalBroadcastManager.getInstance(this).sendBroadcast(localUpdatedIntent);
-
         Intent localFinishedIntent = new Intent(TRACKING_FINISHED_INTENT)
                 .putExtra(WORKOUT_ID, mWorkoutID);
         LocalBroadcastManager.getInstance(this).sendBroadcast(localFinishedIntent);

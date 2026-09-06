@@ -1059,6 +1059,10 @@
     <string name="cluster_total_recordings">Aufzeichnungen gesamt</string>
     <string name="cluster_average_distance">Mittlere Distanz</string>
     <string name="cluster_recordings_format">%1$d Aufzeichnungen</string>
+    <plurals name="cluster_recordings">
+        <item quantity="one">%d Aufzeichnung</item>
+        <item quantity="other">%d Aufzeichnungen</item>
+    </plurals>
     <string name="cluster_ref_distance_label">Ref: %1$s</string>
 
     <string name="cluster_tuning_title">Cluster-Parameter</string>

@@ -444,6 +444,37 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * Retrieves the authoritative count of workouts currently assigned to a cluster (ATT-318).
+     */
+    public int getWorkoutCountForCluster(long clusterId) {
+        if (clusterId <= 0) return 0;
+        try (Cursor cursor = getDatabase().rawQuery(
+                "SELECT COUNT(*) FROM " + WorkoutSummaries.TABLE + " WHERE " + WorkoutSummaries.CLUSTER_ID + " = ?",
+                new String[]{String.valueOf(clusterId)})) {
+            if (cursor.moveToFirst()) {
+                return cursor.getInt(0);
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Retrieves the authoritative workout counts for all clusters in one query (ATT-318).
+     */
+    public java.util.Map<Long, Integer> getWorkoutCountsForAllClusters() {
+        java.util.Map<Long, Integer> counts = new java.util.HashMap<>();
+        try (Cursor cursor = getDatabase().rawQuery(
+                "SELECT " + WorkoutSummaries.CLUSTER_ID + ", COUNT(*) FROM " + WorkoutSummaries.TABLE +
+                " WHERE " + WorkoutSummaries.CLUSTER_ID + " > 0 GROUP BY " + WorkoutSummaries.CLUSTER_ID,
+                null)) {
+            while (cursor.moveToNext()) {
+                counts.put(cursor.getLong(0), cursor.getInt(1));
+            }
+        }
+        return counts;
+    }
+
+    /**
      * Retrieves the peak value (Min/Mean/Max) for a specific sensor in a workout.
      */
     @Nullable

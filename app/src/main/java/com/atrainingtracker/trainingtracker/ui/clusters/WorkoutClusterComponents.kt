@@ -34,6 +34,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -140,7 +141,7 @@ fun WorkoutClusterMetadataBlock(
 
         // 4. Hit Count
         Text(
-            text = stringResource(R.string.cluster_recordings_format, cluster.hitCount),
+            text = pluralStringResource(R.plurals.cluster_recordings, cluster.hitCount, cluster.hitCount),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
@@ -557,7 +558,7 @@ fun WorkoutClusterSelectionItem(
 
             // 3. Hit Count Row (Blue/Primary, not bold)
             Text(
-                text = stringResource(R.string.cluster_recordings_format, cluster.hitCount),
+                text = pluralStringResource(R.plurals.cluster_recordings, cluster.hitCount, cluster.hitCount),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary
             )

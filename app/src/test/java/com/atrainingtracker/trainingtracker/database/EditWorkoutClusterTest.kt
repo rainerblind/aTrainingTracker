@@ -21,6 +21,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.google.android.gms.maps.model.LatLng
@@ -52,6 +53,12 @@ class EditWorkoutClusterTest {
         every { Log.w(any<String>(), any<String>()) } returns 0
         every { Log.e(any<String>(), any<String>()) } returns 0
 
+        mockkStatic(TrainingApplication::class)
+        every { TrainingApplication.getClusterTolEndpoints() } returns 200f
+        every { TrainingApplication.getClusterTolApex() } returns 400f
+        every { TrainingApplication.getClusterTolDistance() } returns 0.20f
+        every { TrainingApplication.useSportTypeForClustering() } returns true
+
         mockContext = mockk(relaxed = true)
         mockSummariesDb = mockk(relaxed = true)
         mockSummariesManager = mockk(relaxed = true)
@@ -72,6 +79,9 @@ class EditWorkoutClusterTest {
         every { anyConstructed<ContentValues>().put(any<String>(), any<Long>()) } returns Unit
         every { anyConstructed<ContentValues>().put(any<String>(), any<String>()) } returns Unit
         every { anyConstructed<ContentValues>().put(any<String>(), any<Int>()) } returns Unit
+
+        every { mockSummariesManager.getWorkoutCountForCluster(any()) } returns -1
+        every { mockSummariesManager.workoutCountsForAllClusters } returns emptyMap()
 
         WorkoutClusterDatabaseManager.resetForTesting(mockClusterDb)
         WorkoutClusterEngine.resetForTesting(null)
@@ -280,6 +290,81 @@ class EditWorkoutClusterTest {
         // Verify cluster hitCount is incremented during assignment
         verify {
             mockClusterDb.updateCluster(match { it.id == newGeneratedClusterId && it.hitCount == 1 })
+        }
+    }
+
+    @Test
+    fun testGetClusterScores_reconcilesStaleHitCountAgainstWorkoutSummaries() {
+        val staleClusterId = 67L
+        val staleCluster = WorkoutCluster(
+            id = staleClusterId,
+            name = "Walk to another Stone",
+            probableSportId = 1L,
+            startLat = 48.0,
+            startLng = 9.0,
+            endLat = 48.1,
+            endLng = 9.1,
+            maxDispLat = 48.2,
+            maxDispLng = 9.2,
+            refDistance = 2500.0,
+            hitCount = 2, // Stale hit count reported as 2
+            bSportType = BSportType.RUN
+        )
+
+        every { mockClusterDb.getAllClusters() } returns listOf(staleCluster)
+        // Authoritative count in WorkoutSummaries is actually 1
+        every { mockSummariesManager.workoutCountsForAllClusters } returns mapOf(staleClusterId to 1)
+
+        val scores = clusterEngine.getClusterScores(
+            start = LatLng(48.0, 9.0),
+            end = LatLng(48.1, 9.1),
+            apex = LatLng(48.2, 9.2),
+            distance = 2500.0
+        )
+
+        assertEquals(1, scores.size)
+        val candidate = scores.first().first
+        // Verify candidate hit count is healed to 1
+        assertEquals(1, candidate.hitCount)
+
+        // Verify cluster database is updated with healed hit count
+        verify {
+            mockClusterDb.updateCluster(match { it.id == staleClusterId && it.hitCount == 1 })
+        }
+    }
+
+    @Test
+    fun testAssignClusterToWorkout_usesAuthoritativeCountFromWorkoutSummaries() {
+        val workoutId = 2193L
+        val clusterId = 67L
+        val targetCluster = WorkoutCluster(
+            id = clusterId,
+            name = "Walk to another Stone",
+            probableSportId = 1L,
+            startLat = 48.0,
+            startLng = 9.0,
+            endLat = 48.1,
+            endLng = 9.1,
+            maxDispLat = 48.2,
+            maxDispLng = 9.2,
+            refDistance = 2500.0,
+            hitCount = 0,
+            bSportType = BSportType.RUN
+        )
+
+        every { mockSummariesManager.getLong(workoutId, WorkoutSummaries.CLUSTER_ID) } returns -1L
+        every { mockSummariesManager.getString(workoutId, WorkoutSummaries.MAP_POLYLINE) } returns "polyline"
+        every { mockSummariesManager.getString(workoutId, WorkoutSummaries.WORKOUT_NAME) } returns "Walk"
+        every { mockSummariesManager.getString(workoutId, WorkoutSummaries.FILE_BASE_NAME) } returns "track_2193"
+        every { mockClusterDb.getClusterById(clusterId) } returns targetCluster
+        every { mockSummariesDb.update(any(), any(), any(), any()) } returns 1
+        // After inserting/updating, WorkoutSummaries has 1 row
+        every { mockSummariesManager.getWorkoutCountForCluster(clusterId) } returns 1
+
+        clusterEngine.assignClusterToWorkout(mockContext, workoutId, clusterId)
+
+        verify {
+            mockClusterDb.updateCluster(match { it.id == clusterId && it.hitCount == 1 })
         }
     }
 }
