@@ -43,10 +43,9 @@ This ticket replaces the subtle trailing-icon cluster selector inside the workou
 - [`EditWorkoutScreen.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/editworkout/EditWorkoutScreen.kt):
   - Removed subtle trailing icon inside the workout name text field.
   - Added dedicated read-only `OutlinedTextField` labeled "Lieblingsstrecke" (Favorite Route / Cluster) positioned prominently below the workout name.
-  - Added leading route pin icon.
-  - Added quick clear button ("✕") when a cluster is currently assigned.
-  - Added trailing route selection pin icon.
-  - Tapping the field or trailing pin opens `EditWorkoutClusterDialog`.
+  - Added leading route pin icon (`my_locations`).
+  - Added quick clear button ("✕") on the trailing edge when a cluster is currently assigned.
+  - Tapping anywhere across the text field opens `EditWorkoutClusterDialog`.
 
 ---
 
