@@ -1060,7 +1060,7 @@ proszę czekać</string>
     <string name="no_sport_types_available">No sport types available</string>
     <string name="no_workouts_available">Brak dostępnych treningów</string>
     <string name="no_periods_available">Brak podsumowań okresów</string>
-    <string name="no_periods_available_hint">Zarejestruj treningi lub dostosuj filtry sportowe, aby wyświetlić podsumowania</string>
+    <string name="no_periods_available_hint">Zarejestruj treningi, aby wyświetlić podsumowania okresów</string>
 
     <!-- smartphone devices -->
     <string name="notification_tracking_a_workout">Rejestrowanie treningu</string>

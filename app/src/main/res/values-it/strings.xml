@@ -1057,7 +1057,7 @@
     <string name="no_sport_types_available">Nessun tipo di sport disponibile</string>
     <string name="no_workouts_available">Nessun allenamento disponibile</string>
     <string name="no_periods_available">Nessun riepilogo del periodo disponibile</string>
-    <string name="no_periods_available_hint">Registra allenamenti o regola i filtri sport per visualizzare i riepiloghi</string>
+    <string name="no_periods_available_hint">Registra allenamenti per visualizzare i riepiloghi dei periodi</string>
     <string name="really_delete_format">Vuoi davvero eliminare "%1$s"?</string>
     <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/master/privacy.md</string>
     <string name="LocationNameText">Casa</string>

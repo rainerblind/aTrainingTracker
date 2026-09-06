@@ -1040,7 +1040,7 @@
     <string name="no_sport_types_available">利用可能なスポーツタイプはありません</string>
     <string name="no_workouts_available">利用可能なワークアウトはありません</string>
     <string name="no_periods_available">利用可能な期間の概要はありません</string>
-    <string name="no_periods_available_hint">ワークアウトを記録するかフィルターを調整して概要を表示します</string>
+    <string name="no_periods_available_hint">期間の概要を表示するにはワークアウトを記録してください</string>
     <string name="really_delete_format">本当に "%1$s" を削除しますか？</string>
     <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/master/privacy.md</string>
     <string name="LocationNameText">自宅</string>
