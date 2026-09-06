@@ -1056,6 +1056,8 @@
     <string name="getting_my_locations">Zoeken naar bekende locaties.</string>
     <string name="no_sport_types_available">Geen sporttypes beschikbaar</string>
     <string name="no_workouts_available">Geen workouts beschikbaar</string>
+    <string name="no_periods_available">Geen periodeoverzichten beschikbaar</string>
+    <string name="no_periods_available_hint">Registreer workouts of pas sportfilters aan om overzichten te zien</string>
     <string name="really_delete_format">Wil je "%1$s" echt verwijderen?</string>
     <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/master/privacy.md</string>
     <string name="LocationNameText">Thuis</string>

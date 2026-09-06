@@ -1058,7 +1058,9 @@ proszę czekać</string>
     <string name="notification_pause_and_searching_format">pauza i szukanie %1$s</string>
     <string name="really_delete_format">Czy na pewno chcesz usunąć "%1$s"?</string>
     <string name="no_sport_types_available">No sport types available</string>
-    <string name="no_workouts_available">No workouts available</string>
+    <string name="no_workouts_available">Brak dostępnych treningów</string>
+    <string name="no_periods_available">Brak podsumowań okresów</string>
+    <string name="no_periods_available_hint">Zarejestruj treningi lub dostosuj filtry sportowe, aby wyświetlić podsumowania</string>
 
     <!-- smartphone devices -->
     <string name="notification_tracking_a_workout">Rejestrowanie treningu</string>
