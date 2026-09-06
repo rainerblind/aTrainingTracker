@@ -984,4 +984,43 @@ class WorkoutRepository private constructor(private val application: Application
         }
     }
 
+    /**
+     * Unassigns the workout from its cluster, decrementing the cluster's hit count (REQ-SET-059).
+     */
+    fun unassignClusterFromWorkout(workoutId: Long) {
+        launch(Dispatchers.IO) {
+            WorkoutClusterEngine.getInstance(application)
+                .unassignClusterFromWorkout(application, workoutId)
+
+            reloadWorkoutData(workoutId)
+            loadWorkout(workoutId)
+        }
+    }
+
+    /**
+     * Creates a new cluster from the workout's spatial fingerprint and assigns the workout to it (REQ-SET-059).
+     */
+    fun createNewClusterFromWorkout(workout: WorkoutData, customName: String? = null) {
+        launch(Dispatchers.IO) {
+            WorkoutClusterEngine.getInstance(application)
+                .createNewClusterFromWorkout(application, workout, customName)
+
+            reloadWorkoutData(workout.id)
+            loadWorkout(workout.id)
+        }
+    }
+
+    /**
+     * Creates a new cluster from raw workout metadata and assigns the workout to it (REQ-SET-059).
+     */
+    fun createNewClusterFromWorkout(workoutId: Long, customName: String? = null) {
+        launch(Dispatchers.IO) {
+            WorkoutClusterEngine.getInstance(application)
+                .createNewClusterFromWorkout(application, workoutId, customName)
+
+            reloadWorkoutData(workoutId)
+            loadWorkout(workoutId)
+        }
+    }
+
 }

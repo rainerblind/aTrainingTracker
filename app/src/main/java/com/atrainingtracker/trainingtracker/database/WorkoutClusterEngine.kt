@@ -58,6 +58,11 @@ class WorkoutClusterEngine private constructor(context: Context) {
             }
         }
 
+        @androidx.annotation.VisibleForTesting
+        fun resetForTesting(newInstance: WorkoutClusterEngine? = null) {
+            instance = newInstance
+        }
+
         fun distanceBetween(p1: LatLng, p2: LatLng): Float {
             return try {
                 val res = FloatArray(1)
@@ -489,6 +494,10 @@ class WorkoutClusterEngine private constructor(context: Context) {
 
     @JvmOverloads
     fun assignClusterToWorkout(context: Context, workoutId: Long, clusterId: Long, forceIdentity: Boolean = false) {
+        if (clusterId <= 0L) {
+            unassignClusterFromWorkout(context, workoutId)
+            return
+        }
         val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
         val clusterDb = WorkoutClusterDatabaseManager.getInstance(context)
         val previousClusterId = summariesManager.getLong(workoutId, WorkoutSummaries.CLUSTER_ID) ?: -1L
@@ -528,12 +537,113 @@ class WorkoutClusterEngine private constructor(context: Context) {
         summariesManager.database.update(WorkoutSummaries.TABLE, values, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
 
         val sportStr = summariesManager.getString(workoutId, WorkoutSummaries.B_SPORT)
-        val currentBSport = if (sportStr != null) BSportType.valueOf(sportStr) else BSportType.UNKNOWN
+        val currentBSport = if (!sportStr.isNullOrBlank()) {
+            try {
+                BSportType.valueOf(sportStr)
+            } catch (e: Exception) {
+                BSportType.UNKNOWN
+            }
+        } else BSportType.UNKNOWN
         val avgSpeed = summariesManager.getDouble(workoutId, WorkoutSummaries.SPEED_AVERAGE_mps) ?: 0.0
         val discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(context)
         val hardwareIdentity = discoveryManager.resolveIdentity(workoutId, currentBSport, avgSpeed)
         if (!forceIdentity && hardwareIdentity.isHighConfidence) summariesManager.applyInferredIdentity(workoutId, hardwareIdentity)
         else summariesManager.applyInferredIdentity(workoutId, discoveryManager.inferIdentityFromSport(cluster.probableSportId))
+    }
+
+    /**
+     * Unassigns a workout from its workout cluster, atomically decrementing the cluster's hit count (REQ-SET-059).
+     */
+    fun unassignClusterFromWorkout(context: Context, workoutId: Long) {
+        val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
+        val clusterDb = WorkoutClusterDatabaseManager.getInstance(context)
+        val previousClusterId = summariesManager.getLong(workoutId, WorkoutSummaries.CLUSTER_ID) ?: -1L
+        if (previousClusterId > 0L) {
+            val oldCluster = clusterDb.getClusterById(previousClusterId)
+            if (oldCluster != null) {
+                val newOldHitCount = (oldCluster.hitCount - 1).coerceAtLeast(0)
+                val updatedOld = oldCluster.copy(
+                    hitCount = newOldHitCount,
+                    previewPaths = if (newOldHitCount == 0) emptyList() else oldCluster.previewPaths
+                )
+                clusterDb.updateCluster(updatedOld)
+            }
+        }
+        val values = android.content.ContentValues().apply {
+            put(WorkoutSummaries.CLUSTER_ID, -1L)
+        }
+        summariesManager.database.update(WorkoutSummaries.TABLE, values, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
+    }
+
+    /**
+     * Creates a new workout cluster from the workout's spatial fingerprint and assigns the workout to it (REQ-SET-059).
+     */
+    fun createNewClusterFromWorkout(context: Context, workout: WorkoutData, customName: String? = null): Long {
+        val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
+        val start = workout.startLatLng ?: summariesManager.getExtremaPosition(workout.id, SensorType.LATITUDE, ExtremaType.START) ?: return -1L
+        val end = workout.endLatLng ?: summariesManager.getExtremaPosition(workout.id, SensorType.LATITUDE, ExtremaType.END) ?: return -1L
+        val apex = workout.maxDisplacementLatLng ?: summariesManager.getExtremaPosition(workout.id, SensorType.LINE_DISTANCE_m, ExtremaType.MAX) ?: end
+        val distance = workout.totalDistance
+        val sportId = workout.sportId
+        val fallbackName = workout.workoutName.ifBlank { context.getString(R.string.cluster_default_name_format, "Workout") }
+        val clusterName = if (!customName.isNullOrBlank()) customName else fallbackName
+
+        val uniqueName = findUniqueClusterName(stripHitCount(clusterName))
+        val newCluster = WorkoutCluster(
+            name = uniqueName,
+            probableSportId = sportId,
+            startLat = start.latitude,
+            startLng = start.longitude,
+            endLat = end.latitude,
+            endLng = end.longitude,
+            maxDispLat = apex.latitude,
+            maxDispLng = apex.longitude,
+            refDistance = distance,
+            hitCount = 0,
+            bSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(sportId),
+            minLat = workout.minLat, minLng = workout.minLng, maxLat = workout.maxLat, maxLng = workout.maxLng
+        )
+        val newClusterId = dbManager.insertCluster(newCluster)
+        assignClusterToWorkout(context, workout.id, newClusterId, forceIdentity = false)
+        return newClusterId
+    }
+
+    /**
+     * Creates a new workout cluster from raw database metadata and assigns the workout to it (REQ-SET-059).
+     */
+    fun createNewClusterFromWorkout(context: Context, workoutId: Long, customName: String? = null): Long {
+        val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
+        val start = summariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.START) ?: return -1L
+        val end = summariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.END) ?: return -1L
+        val apex = summariesManager.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX) ?: end
+        val distance = summariesManager.getDouble(workoutId, WorkoutSummaries.DISTANCE_TOTAL_m) ?: 0.0
+        val sportId = summariesManager.getLong(workoutId, WorkoutSummaries.SPORT_ID) ?: -1L
+        val wMinLat = summariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MIN_LAT)
+        val wMinLng = summariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MIN_LNG)
+        val wMaxLat = summariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MAX_LAT)
+        val wMaxLng = summariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MAX_LNG)
+        val workoutName = summariesManager.getString(workoutId, WorkoutSummaries.WORKOUT_NAME)
+            ?: context.getString(R.string.cluster_default_name_format, "Workout")
+        val clusterName = if (!customName.isNullOrBlank()) customName else workoutName
+
+        val uniqueName = findUniqueClusterName(stripHitCount(clusterName))
+        val newCluster = WorkoutCluster(
+            name = uniqueName,
+            probableSportId = sportId,
+            startLat = start.latitude,
+            startLng = start.longitude,
+            endLat = end.latitude,
+            endLng = end.longitude,
+            maxDispLat = apex.latitude,
+            maxDispLng = apex.longitude,
+            refDistance = distance,
+            hitCount = 0,
+            bSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(sportId),
+            minLat = wMinLat, minLng = wMinLng, maxLat = wMaxLat, maxLng = wMaxLng
+        )
+        val newClusterId = dbManager.insertCluster(newCluster)
+        assignClusterToWorkout(context, workoutId, newClusterId, forceIdentity = false)
+        return newClusterId
     }
 
     fun calculateSimilarity(
