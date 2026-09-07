@@ -37,6 +37,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
@@ -928,6 +929,7 @@ class WorkoutRepository private constructor(private val application: Application
                 if (success) {
                     loadAllWorkouts()
                     PeriodsRepository.getInstance(application).resyncAllPeriods()
+                    WorkoutClusterRepository.getInstance(application).refreshClusters(forceShowProgress = false)
                     WorkoutClusterEngine.getInstance(application).enrichAllClusterMetadata(application)
                 }
             } finally {
