@@ -65,6 +65,9 @@ This change reactivates and modernizes the dormant bulk workout deletion feature
   * Verified historical periods are completely purged from groupings upon bulk deletion.
   * Verified boundary periods recalculate metrics and extrema anchors matching only surviving workouts.
   * Verified zero periods generated when 100% of workouts are purged.
+* **[WorkoutClusterRepositoryTest.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/test/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterRepositoryTest.kt)**:
+  * Verified that surviving workout clusters preserve their historical lifetime `hitCount` completely untouched upon bulk workout deletion.
+  * Verified that unlinked zero-workout orphan clusters are automatically purged per `REQ-SET-062`.
 
 ---
 
@@ -74,4 +77,4 @@ This change reactivates and modernizes the dormant bulk workout deletion feature
 ```bash
 ./gradlew testDebugUnitTest
 ```
-* **Result**: `BUILD SUCCESSFUL in 33s` (all 117 unit tests passed green with 0 errors).
+* **Result**: `BUILD SUCCESSFUL in 35s` (all 119 unit tests passed green with 0 errors).

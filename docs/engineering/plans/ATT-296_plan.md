@@ -11,7 +11,7 @@ Per user guidance, the default retention threshold is increased from 30 to **365
 
 | Requirement ID | Component / Layer | Implementation File(s) | Verification Test ID |
 | :--- | :--- | :--- | :--- |
-| **REQ-DAT-010** | Database & Deletion Engine | `WorkoutDeletionHelper.java`, `WorkoutSummariesDatabaseManager.java`, `WorkoutRepository.kt` | **TST-DAT-004** |
+| **REQ-DAT-010** | Database & Deletion Engine | `WorkoutDeletionHelper.java`, `WorkoutSummariesDatabaseManager.java`, `WorkoutRepository.kt`, `WorkoutClusterRepository.kt` | **TST-DAT-004** |
 | **REQ-DAT-011** | Analytical Periods Cache Resync | `PeriodsRepository.kt`, `PeriodSummariesDatabaseManager.kt`, `WorkoutRepository.kt` | **TST-DAT-005** |
 | **REQ-UI-127** | Jetpack Compose UI & ViewModel | `DeleteOldWorkoutsDialog.kt`, `WorkoutListActions.kt`, `WorkoutTabsScreen.kt`, `WorkoutSummariesTabbedFragment.kt`, `strings.xml` | **TST-UI-080** |
 
@@ -28,9 +28,13 @@ Per user guidance, the default retention threshold is increased from 30 to **365
 * `PeriodsRepository.kt` (`REQ-DAT-011`):
   * Add `suspend fun resyncAllPeriods()` to trigger `performHierarchicalMigration()`.
   * Ensure `allWorkouts.isEmpty()` branch calls `dbManager.deleteAll(db)` and `loadFromDatabase(forceIncremental = false)` to prevent ghost periods when all sessions are purged.
+* `WorkoutClusterRepository.kt` (`REQ-DAT-010`, `REQ-SET-062`):
+  * Update `refreshClusters(forceShowProgress, forceCheckIntegrity)`:
+    * For **surviving workout clusters** ($\ge 1$ remaining workout or linked Route), keep lifetime hit counter (`hitCount`) completely untouched (`maxOf(cluster.hitCount, realCount)`).
+    * For **unlinked zero-workout orphan clusters** (`realCount == 0 && !isRouteLinked`), purge orphan cluster from `clusterDb` per `REQ-SET-062`.
 * `WorkoutRepository.deleteOldWorkouts(int daysToKeep)`:
-  * Remove inverted per-workout surgical calls from `progressCallback` (which suffered from null in-memory lookups and race conditions).
-  * Post-deletion: Invoke `PeriodsRepository.getInstance(application).resyncAllPeriods()` and `WorkoutClusterEngine.getInstance(application).enrichAllClusterMetadata(application)` upon completion.
+  * Remove inverted per-workout surgical calls from `progressCallback`.
+  * Post-deletion: Invoke `PeriodsRepository.getInstance(application).resyncAllPeriods()`, `WorkoutClusterRepository.getInstance(application).refreshClusters(forceShowProgress = false, forceCheckIntegrity = true)`, and `WorkoutClusterEngine.getInstance(application).enrichAllClusterMetadata(application)`.
 * `WorkoutListActions.kt`:
   * Callers: `WorkoutTabsScreen.kt`, `WorkoutSummariesListFragment.kt`, `WorkoutClustersFragment.kt`.
   * Make `onDeleteOldWorkoutsClicked: (() -> Unit)? = null` optional with default `null` so other screens (`WorkoutClustersFragment`) are not affected.
@@ -39,6 +43,8 @@ Per user guidance, the default retention threshold is increased from 30 to **365
 
 ### 3.2. Preserved Invariants
 * **Non-Destructive for Recent Workouts**: All sessions recorded within the retention threshold ($> \text{now} - D\text{ days}$) MUST NOT be modified or deleted.
+* **Surviving Cluster Counters Untouched**: Deleting historical workout files to free device storage MUST NOT decrement or overwrite `hitCount` for surviving workout clusters.
+* **Zero-Workout Orphan Purging**: Unlinked clusters whose workouts were completely deleted MUST be automatically cleaned up per `REQ-SET-062`, while Route-linked clusters MUST be preserved.
 * **Period Cache Consistency**: Following bulk deletion, `PeriodSummaries.db` MUST NOT contain ghost records for purged timeframes, boundary periods MUST be recalculated, and all `longest_workout_id` foreign keys MUST remain valid.
 * **Header Height Invariant**: `LayoutConstants.HEADER_TITLE_ROW_HEIGHT` (32dp) and `COMPACT_HEADER_CONTENT_HEIGHT` (80dp) MUST be preserved.
 * **Localization Parity**: 100% translation coverage across all 9 supported locales.

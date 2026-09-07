@@ -70,9 +70,14 @@ class WorkoutClusterRepository private constructor(private val context: Context)
                 instance ?: WorkoutClusterRepository(context.applicationContext).also { instance = it }
             }
         }
+
+        @androidx.annotation.VisibleForTesting
+        fun resetForTesting(testInstance: WorkoutClusterRepository? = null) {
+            instance = testInstance
+        }
     }
 
-    suspend fun refreshClusters(forceShowProgress: Boolean = false): Unit = withContext(Dispatchers.IO) {
+    suspend fun refreshClusters(forceShowProgress: Boolean = false, forceCheckIntegrity: Boolean = false): Unit = withContext(Dispatchers.IO) {
         val currentClusters = clusterDb.getAllClusters()
         
         // --- SELF-HEALING BOOTSTRAPPER (ATT-392 Refinement) ---
@@ -103,7 +108,7 @@ class WorkoutClusterRepository private constructor(private val context: Context)
             )
         }
         
-        if (!needsEnrichment && !forceShowProgress) {
+        if (!needsEnrichment && !forceShowProgress && !forceCheckIntegrity) {
             _allClusters.value = currentClusters.sortedByDescending { it.hitCount }
             return@withContext
         }
@@ -150,7 +155,7 @@ class WorkoutClusterRepository private constructor(private val context: Context)
                 )
             }
 
-            // Update hit count if reality differs (Self-Healing - ATT-495)
+            // Check actual counts from WorkoutSummaries (surviving workouts)
             val realCount = actualCounts[cluster.id] ?: 0
             
             // Check for explicit route link to preserve imported/created routes (REQ-SET-062 Invariant)
@@ -163,10 +168,14 @@ class WorkoutClusterRepository private constructor(private val context: Context)
                 return@mapIndexed null
             }
 
-            val updatedCluster = if (cluster.hitCount != realCount) {
-                if (DEBUG) android.util.Log.i("WorkoutClusterRepo", "Correcting hit count for ${cluster.name}: ${cluster.hitCount} -> $realCount")
+            // For surviving workout clusters, keep counters untouched (ATT-296: bulk deletion preserves lifetime hitCount)
+            val preservedHitCount = if (realCount > 0) maxOf(cluster.hitCount, realCount) else 0
+            val updatedCluster = if (cluster.hitCount != preservedHitCount || (realCount == 0 && cluster.previewPaths.isNotEmpty())) {
+                if (DEBUG && cluster.hitCount != preservedHitCount) {
+                    android.util.Log.i("WorkoutClusterRepo", "Updating hit count for ${cluster.name}: ${cluster.hitCount} -> $preservedHitCount")
+                }
                 cluster.copy(
-                    hitCount = realCount,
+                    hitCount = preservedHitCount,
                     previewPaths = if (realCount == 0) emptyList() else cluster.previewPaths
                 )
             } else cluster

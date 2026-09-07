@@ -929,7 +929,7 @@ class WorkoutRepository private constructor(private val application: Application
                 if (success) {
                     loadAllWorkouts()
                     PeriodsRepository.getInstance(application).resyncAllPeriods()
-                    WorkoutClusterRepository.getInstance(application).refreshClusters(forceShowProgress = false)
+                    WorkoutClusterRepository.getInstance(application).refreshClusters(forceShowProgress = false, forceCheckIntegrity = true)
                     WorkoutClusterEngine.getInstance(application).enrichAllClusterMetadata(application)
                 }
             } finally {
