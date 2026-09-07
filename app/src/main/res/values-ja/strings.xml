@@ -53,6 +53,7 @@
     <string name="delete_workout">トレーニングを削除</string>
     <string name="deleteOldWorkouts">古いトレーニングを削除</string>
     <string name="deleteWorkoutsThatAreOlderThanDays">指定日数より古いトレーニングを削除</string>
+    <string name="really_delete_old_workouts_format">%1$d日より古いすべてのトレーニングを本当に削除しますか？</string>
     <string name="delete_sensor">削除</string>
     <string name="really_delete_workout">このトレーニングを削除しますか？</string>
     <string name="really_delete_pebble_view_format">Pebble表示 "%1$s" を削除しますか？</string>
