@@ -131,6 +131,75 @@ class WorkoutDataMapperAltitudeTest {
     }
 
     /**
+     * Verifies the "Kurz zum Bäcker" scenario (ATT-508 / REQ-DAT-009):
+     * When SQLite extrema has recordedMin higher than the stream minimum (e.g. 368 m vs 360 m),
+     * it is detected as contradictory and healed down to streamMin (360 m).
+     */
+    @Test
+    fun testReconcileAltitudeExtrema_StoredMinHigherThanStream_HealedToStreamMin() {
+        val streamAltitudes = listOf(364.0, 360.0, 370.0, 380.0)
+        val encodedStream = NumericalEncodingUtils.encodeDoubles(streamAltitudes)
+
+        val workoutId = 511L
+        val recordedMin = 368.0 // Contradicts stream: higher than the lowest point
+        val recordedMax = 380.0
+
+        val (reconciledMin, reconciledMax) = mapper.reconcileAltitudeExtrema(
+            workoutId = workoutId,
+            encodedAltitudes = encodedStream,
+            recordedMin = recordedMin,
+            recordedMax = recordedMax
+        )
+
+        assertEquals("Authoritative min altitude must be healed down to stream minimum", 360.0, reconciledMin!!, 0.001)
+        assertEquals(380.0, reconciledMax!!, 0.001)
+
+        verify(exactly = 1) {
+            mockSummariesDb.updateExtremaValue(
+                workoutId,
+                SensorType.ALTITUDE,
+                ExtremaType.MIN,
+                360.0,
+                null
+            )
+        }
+    }
+
+    /**
+     * Verifies that when SQLite extrema has recordedMax lower than the stream maximum,
+     * it is detected as contradictory and healed up to streamMax.
+     */
+    @Test
+    fun testReconcileAltitudeExtrema_StoredMaxLowerThanStream_HealedToStreamMax() {
+        val streamAltitudes = listOf(360.0, 370.0, 385.0)
+        val encodedStream = NumericalEncodingUtils.encodeDoubles(streamAltitudes)
+
+        val workoutId = 512L
+        val recordedMin = 360.0
+        val recordedMax = 375.0 // Contradicts stream: lower than the peak
+
+        val (reconciledMin, reconciledMax) = mapper.reconcileAltitudeExtrema(
+            workoutId = workoutId,
+            encodedAltitudes = encodedStream,
+            recordedMin = recordedMin,
+            recordedMax = recordedMax
+        )
+
+        assertEquals(360.0, reconciledMin!!, 0.001)
+        assertEquals("Authoritative max altitude must be healed up to stream maximum", 385.0, reconciledMax!!, 0.001)
+
+        verify(exactly = 1) {
+            mockSummariesDb.updateExtremaValue(
+                workoutId,
+                SensorType.ALTITUDE,
+                ExtremaType.MAX,
+                385.0,
+                null
+            )
+        }
+    }
+
+    /**
      * Verifies that workouts with empty altitude streams return original recorded values without DB writes.
      */
     @Test

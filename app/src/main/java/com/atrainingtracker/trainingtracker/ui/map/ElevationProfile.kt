@@ -104,9 +104,11 @@ fun calculateElevationBounds(
     val streamMin = pathPoints.minOf { it.altitude }
     val streamMax = pathPoints.maxOf { it.altitude }
 
-    // Sanitize min override: if deviating excessively from stream bounds, clamp to stream
+    // Sanitize min override:
+    // If override is an outlier (< streamMin - 15) OR higher than stream points (> streamMin),
+    // clamp to streamMin to guarantee that rendered points never drop below the chart baseline.
     val sanitizedMin = if (minAltitudeOverride != null) {
-        if (minAltitudeOverride < streamMin - outlierToleranceMeters || minAltitudeOverride > streamMax + outlierToleranceMeters) {
+        if (minAltitudeOverride < streamMin - outlierToleranceMeters || minAltitudeOverride > streamMin) {
             streamMin
         } else {
             minAltitudeOverride
@@ -115,9 +117,11 @@ fun calculateElevationBounds(
         streamMin
     }
 
-    // Sanitize max override: if deviating excessively from stream bounds, clamp to stream
+    // Sanitize max override:
+    // If override is an outlier (> streamMax + 15) OR lower than stream points (< streamMax),
+    // clamp to streamMax to guarantee that rendered points never clip above the chart ceiling.
     val sanitizedMax = if (maxAltitudeOverride != null) {
-        if (maxAltitudeOverride > streamMax + outlierToleranceMeters || maxAltitudeOverride < streamMin - outlierToleranceMeters) {
+        if (maxAltitudeOverride > streamMax + outlierToleranceMeters || maxAltitudeOverride < streamMax) {
             streamMax
         } else {
             maxAltitudeOverride
@@ -126,17 +130,18 @@ fun calculateElevationBounds(
         streamMax
     }
 
-    // Ensure valid order
-    val effectiveMinRaw = minOf(sanitizedMin, sanitizedMax)
-    val effectiveMaxRaw = maxOf(sanitizedMin, sanitizedMax)
+    // Ensure valid order and envelope containment
+    val effectiveMinRaw = minOf(sanitizedMin, streamMin)
+    val effectiveMaxRaw = maxOf(sanitizedMax, streamMax)
     val currentSpan = effectiveMaxRaw - effectiveMinRaw
 
     // Enforce aesthetic minimum vertical span centered on the route
     return if (currentSpan < minSpanMeters) {
         val mid = (effectiveMinRaw + effectiveMaxRaw) / 2.0
-        val expandedMin = mid - (minSpanMeters / 2.0)
-        val expandedMax = mid + (minSpanMeters / 2.0)
-        ElevationBounds(expandedMin, expandedMax, minSpanMeters)
+        val expandedMin = minOf(mid - (minSpanMeters / 2.0), streamMin)
+        val expandedMax = maxOf(mid + (minSpanMeters / 2.0), streamMax)
+        val span = expandedMax - expandedMin
+        ElevationBounds(expandedMin, expandedMax, span.coerceAtLeast(1.0))
     } else {
         ElevationBounds(effectiveMinRaw, effectiveMaxRaw, currentSpan.coerceAtLeast(1.0))
     }

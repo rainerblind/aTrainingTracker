@@ -113,6 +113,67 @@ class ElevationProfileBoundsTest {
     }
 
     /**
+     * Verifies the "Kurz zum Bäcker" scenario (ATT-508 / REQ-UI-126):
+     * When minAltitudeOverride is higher than the actual lowest point in the stream (e.g. 368 m vs 360 m),
+     * bounds.min MUST be clamped down to <= 360.0 m, guaranteeing that NO points on the elevation curve
+     * ever render below the chart's bottom bound.
+     */
+    @Test
+    fun testCalculateElevationBounds_overrideHigherThanStreamMin_strictlyEnvelopesStream() {
+        val pathPoints = listOf(
+            createPoint(0.0, 364.0),
+            createPoint(250.0, 360.0), // Valley dipping to 360 m
+            createPoint(500.0, 368.0),
+            createPoint(1000.0, 375.0),
+            createPoint(2200.0, 366.0)
+        )
+
+        val bounds = calculateElevationBounds(
+            pathPoints = pathPoints,
+            minAltitudeOverride = 368.0, // Stored summary extrema higher than actual lowest point
+            maxAltitudeOverride = 384.0,
+            outlierToleranceMeters = 15.0,
+            minSpanMeters = 20.0
+        )
+
+        // Strict Containment Assertion: bounds.min MUST envelope the lowest point (360.0 m)
+        assertTrue("bounds.min (${bounds.min}) must be <= stream minimum (360.0)", bounds.min <= 360.0)
+        assertTrue("bounds.max (${bounds.max}) must be >= stream maximum (375.0)", bounds.max >= 384.0)
+
+        // Verify that every single point in the route is inside [bounds.min, bounds.max]
+        for (point in pathPoints) {
+            assertTrue("Point altitude (${point.altitude}) must be >= bounds.min (${bounds.min})", point.altitude >= bounds.min)
+            assertTrue("Point altitude (${point.altitude}) must be <= bounds.max (${bounds.max})", point.altitude <= bounds.max)
+        }
+    }
+
+    /**
+     * Verifies that when maxAltitudeOverride is lower than the actual highest point in the stream,
+     * bounds.max is clamped up to streamMax, preventing clipping above the chart ceiling.
+     */
+    @Test
+    fun testCalculateElevationBounds_overrideLowerThanStreamMax_strictlyEnvelopesStream() {
+        val pathPoints = listOf(
+            createPoint(0.0, 360.0),
+            createPoint(500.0, 385.0), // Peak at 385 m
+            createPoint(1000.0, 365.0)
+        )
+
+        val bounds = calculateElevationBounds(
+            pathPoints = pathPoints,
+            minAltitudeOverride = 360.0,
+            maxAltitudeOverride = 375.0, // Stored summary extrema lower than stream peak
+            outlierToleranceMeters = 15.0,
+            minSpanMeters = 20.0
+        )
+
+        assertTrue("bounds.max (${bounds.max}) must be >= stream peak (385.0)", bounds.max >= 385.0)
+        for (point in pathPoints) {
+            assertTrue("Point altitude (${point.altitude}) must be <= bounds.max (${bounds.max})", point.altitude <= bounds.max)
+        }
+    }
+
+    /**
      * Verifies safe fallback when path points are empty.
      */
     @Test

@@ -516,14 +516,14 @@ class WorkoutDataMapper(
 
             var needUpdate = false
 
-            val authoritativeMin = if (recordedMin == null || recordedMin < streamMin - 15.0 || recordedMin > streamMax + 5.0) {
+            val authoritativeMin = if (recordedMin == null || recordedMin < streamMin - 15.0 || recordedMin > streamMin) {
                 needUpdate = true
                 streamMin
             } else {
                 recordedMin
             }
 
-            val authoritativeMax = if (recordedMax == null || recordedMax > streamMax + 15.0 || recordedMax < streamMin - 5.0) {
+            val authoritativeMax = if (recordedMax == null || recordedMax > streamMax + 15.0 || recordedMax < streamMax) {
                 needUpdate = true
                 streamMax
             } else {
