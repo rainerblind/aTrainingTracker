@@ -178,11 +178,10 @@ public class AltitudeFromPressureDevice extends MyDevice
         }
 
         mLastRawAltitude = SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, event.values[0]);
-        //Log.d(TAG, "new altitude value: " + altitude);
-        mAltitudeSensor.newValue(mLastRawAltitude + mAltitudeCorrection);
         if (!mPressureSensorInitialized) {
             initPressureSensor();
         }
+        mAltitudeSensor.newValue(mLastRawAltitude + mAltitudeCorrection);
     }
 
 //    protected double getAltitude(double p0, double p)
