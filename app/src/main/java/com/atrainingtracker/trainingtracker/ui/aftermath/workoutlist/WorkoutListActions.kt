@@ -39,11 +39,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.atrainingtracker.R
 
 /**
- * Reusable actions for workout lists: Toggling between compact/detailed view and sorting.
+ * Reusable actions for workout lists: Toggling between compact/detailed view, sorting,
+ * and bulk-deleting old workouts.
  */
 @Composable
 fun WorkoutListActions(
@@ -52,12 +54,24 @@ fun WorkoutListActions(
     sortOrder: WorkoutSortOrder,
     onSortOrderChange: (WorkoutSortOrder) -> Unit,
     modifier: Modifier = Modifier,
+    onDeleteOldWorkoutsClicked: (() -> Unit)? = null,
     tint: Color = MaterialTheme.colorScheme.onPrimaryContainer
 ) {
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Delete Old Workouts Button (ATT-296)
+        if (onDeleteOldWorkoutsClicked != null) {
+            IconButton(onClick = onDeleteOldWorkoutsClicked) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_baseline_delete_sweep_24),
+                    contentDescription = stringResource(R.string.deleteOldWorkouts),
+                    tint = tint
+                )
+            }
+        }
+
         // Toggle View Mode Button
         IconButton(onClick = onToggleCompactView) {
             Icon(

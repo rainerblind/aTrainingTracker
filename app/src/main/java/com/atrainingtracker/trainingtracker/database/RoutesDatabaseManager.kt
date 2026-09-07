@@ -115,6 +115,11 @@ class RoutesDatabaseManager private constructor(context: Context) {
                 }
             }
         }
+
+        @androidx.annotation.VisibleForTesting
+        fun resetForTesting(newInstance: RoutesDatabaseManager? = null) {
+            instance = newInstance
+        }
     }
 
     /**

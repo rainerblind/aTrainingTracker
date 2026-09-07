@@ -37,6 +37,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
@@ -915,27 +916,21 @@ class WorkoutRepository private constructor(private val application: Application
     suspend fun deleteOldWorkouts(daysToKeep: Int) {
         withContext(Dispatchers.IO) {
             try {
-                // The callback lambda that will be executed inside the helper.
+                // The callback lambda executed inside the helper to update UI progress.
                 val progressCallback: (Long) -> Unit = { workoutId ->
-                    // Find the workout name from the current list to display it.
                     val workout = allWorkouts.value.find { it.id == workoutId }
                     val workoutName = workout?.headerData?.workoutName ?: "Workout ID: $workoutId"
-
-                    // --- SURGICAL UPDATES (ATT-346 / ATT-354) ---
-                    workout?.let { 
-                        PeriodsRepository.getInstance(application).onWorkoutDeleted(it)
-                        WorkoutClusterEngine.getInstance(application).onWorkoutDeleted(application, it)
-                    }
-
-                    // Post the detailed progress to the LiveData.
                     _deletionProgress.postValue(DeletionProgress.InProgress(workoutName, workoutId))
                 }
 
                 val success = deletionHelper.deleteOldWorkouts(daysToKeep, progressCallback)
 
-                // After deleting, reload the data so the UI updates automatically.
+                // After deleting, reload workouts and resynchronize downstream analytical caches (REQ-DAT-011).
                 if (success) {
                     loadAllWorkouts()
+                    PeriodsRepository.getInstance(application).resyncAllPeriods()
+                    WorkoutClusterRepository.getInstance(application).refreshClusters(forceShowProgress = false, forceCheckIntegrity = true)
+                    WorkoutClusterEngine.getInstance(application).enrichAllClusterMetadata(application)
                 }
             } finally {
                 // Reset the state to Idle when done or if an error occurs.
