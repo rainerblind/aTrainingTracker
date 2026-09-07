@@ -75,7 +75,6 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     // Constants for special spinner items
     val allSportTypes = application.getString(R.string.all_sports)
-    val allEquipment = application.getString(R.string.all_equipment)
     val allShoes = application.getString(R.string.all_shoes)
     val allBikes = application.getString(R.string.all_bikes)
     val noEquipment = application.getString(R.string.no_equipment)
@@ -129,7 +128,40 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                 
                 suggestedSportTypeName = data.sportName
                 currentBSportType = data.bSportType
-                suggestedEquipmentName = data.equipmentName
+
+                val linkedEquipment = getFilteredLinkedEquipment(data.sportName, data.bSportType)
+                val finalEquipmentName: String?
+                val finalEquipmentId: Long
+
+                if (data.equipmentName != null) {
+                    val currentEquip = equipmentList.find { it.name == data.equipmentName }
+                    if (currentEquip != null && (data.bSportType == BSportType.UNKNOWN || currentEquip.sportType == data.bSportType)) {
+                        finalEquipmentName = data.equipmentName
+                        finalEquipmentId = data.equipmentId
+                    } else if (linkedEquipment.size == 1) {
+                        val linkedName = linkedEquipment.first()
+                        finalEquipmentName = linkedName
+                        finalEquipmentId = equipmentList.find { it.name == linkedName }?.id ?: -1L
+                    } else {
+                        finalEquipmentName = null
+                        finalEquipmentId = -1L
+                    }
+                } else {
+                    if (linkedEquipment.size == 1) {
+                        val linkedName = linkedEquipment.first()
+                        finalEquipmentName = linkedName
+                        finalEquipmentId = equipmentList.find { it.name == linkedName }?.id ?: -1L
+                    } else {
+                        finalEquipmentName = null
+                        finalEquipmentId = -1L
+                    }
+                }
+
+                if (finalEquipmentName != data.equipmentName || finalEquipmentId != data.equipmentId) {
+                    _workoutData.update { it?.copy(equipmentName = finalEquipmentName, equipmentId = finalEquipmentId) }
+                }
+
+                suggestedEquipmentName = finalEquipmentName
                 updateSuggestedSportTypeNames(data)
                 updateSuggestedEquipmentNames(data.sportName)
             }
@@ -153,35 +185,57 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         val simpleSportTypeInfo = sportTypesList.find { it.name == newSportName }
         val newSportId = simpleSportTypeInfo?.id ?: -1
 
-        // Automatically infer equipment and Strava upload (SCRUM-200)
-        val identity = discoveryManager.inferIdentityFromSport(newSportId)
-        val inferredEquipmentName = equipmentList.find { it.id == identity.equipmentId }?.name
+        val previousBSportType = currentBSportType
+        val newBSportType = sportTypeDatabaseManager.getBSportType(newSportId)
+        currentBSportType = newBSportType
+        suggestedSportTypeName = newSportName
+
+        // Query linked equipment for the new sport
+        val linkedEquipment = getFilteredLinkedEquipment(newSportName, newBSportType)
+
+        // Determine preselected equipment based on REQ-UI-130
+        val targetEquipmentName: String?
+        val targetEquipmentId: Long
+
+        if (linkedEquipment.size == 1) {
+            // Case 2 (N == 1): The uniquely linked equipment is preselected
+            targetEquipmentName = linkedEquipment.first()
+            targetEquipmentId = equipmentList.find { it.name == targetEquipmentName }?.id ?: -1L
+        } else if (newBSportType == previousBSportType && previousBSportType != BSportType.UNKNOWN) {
+            // Same base sport: If current equipment is valid for this base sport, retain it
+            val currentEquipName = workoutData.value?.equipmentName
+            val currentEquip = equipmentList.find { it.name == currentEquipName }
+            if (currentEquip != null && currentEquip.sportType == newBSportType) {
+                targetEquipmentName = currentEquipName
+                targetEquipmentId = currentEquip.id
+            } else {
+                targetEquipmentName = null
+                targetEquipmentId = -1L
+            }
+        } else {
+            // Different base sport or UNKNOWN: reset to - none -
+            targetEquipmentName = null
+            targetEquipmentId = -1L
+        }
+
+        val stravaSportName = sportTypeDatabaseManager.getStravaName(newSportId)
 
         _workoutData.update { current ->
             current?.copy(
                 sportName = newSportName,
-                bSportType = identity.bSportType,
+                bSportType = newBSportType,
                 sportId = newSportId,
-                stravaSportName = identity.stravaSportName,
-                uploadToStrava = identity.uploadToStrava,
-                equipmentName = inferredEquipmentName,
-                equipmentId = identity.equipmentId
+                stravaSportName = stravaSportName,
+                uploadToStrava = if (stravaSportName != null) 1 else 0,
+                equipmentName = targetEquipmentName,
+                equipmentId = targetEquipmentId
             )
         }
-        
-        // Synchronize suggested equipment name for UI (SCRUM-200)
-        suggestedEquipmentName = inferredEquipmentName
 
-        // first, get the new sportId and bSportType
-        val newBSportType = sportTypeDatabaseManager.getBSportType(newSportId)
+        suggestedEquipmentName = targetEquipmentName
 
-
-        currentBSportType = newBSportType
-        suggestedSportTypeName = newSportName
-        
-        // Use current data for sport suggestion context, but update based on new selection
         workoutData.value?.let { current ->
-            val updatedForSuggestions = current.copy(sportName = newSportName, bSportType = identity.bSportType)
+            val updatedForSuggestions = current.copy(sportName = newSportName, bSportType = newBSportType)
             updateSuggestedSportTypeNames(updatedForSuggestions)
         }
         updateSuggestedEquipmentNames(newSportName)
@@ -191,9 +245,12 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     fun updateEquipmentName(newName: String) {
         when (newName) {
-            allEquipment -> showAllEquipment()
             allShoes -> showAllShoes()
             allBikes -> showAllBikes()
+            noEquipment -> {
+                _workoutData.update { it?.copy(equipmentName = null, equipmentId = -1L) }
+                suggestedEquipmentName = null
+            }
             else -> {
                 val equipment = equipmentList.find { it.name == newName }
                 val newId = equipment?.id ?: -1L
@@ -219,49 +276,57 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         _sportTypeNames.value = suggestedSports
     }
 
+    private fun getFilteredLinkedEquipment(sportName: String, bSportType: BSportType): List<String> {
+        return discoveryManager.getEquipmentNamesForSport(sportName)
+            .filter { name ->
+                val eq = equipmentList.find { it.name == name }
+                eq != null && (bSportType == BSportType.UNKNOWN || eq.sportType == bSportType)
+            }
+    }
+
     private fun updateSuggestedEquipmentNames(sportName: String) {
-        val linkedEquipment = discoveryManager.getEquipmentNamesForSport(sportName).toList()
-        if (linkedEquipment.isNotEmpty()) {
-            val options = mutableListOf<String>()
-            options.addAll(linkedEquipment)
-            options.add(noEquipment)
-            options.add(allEquipment)
-            
-            // Add categorical filters based on BSportType
-            if (currentBSportType == BSportType.RUN) options.add(allShoes)
-            if (currentBSportType == BSportType.BIKE) options.add(allBikes)
-            
-            _equipmentNames.value = options
-        } else {
-            showAllEquipment()
+        val linkedEquipment = getFilteredLinkedEquipment(sportName, currentBSportType)
+        val options = mutableListOf<String>()
+        options.add(noEquipment)
+
+        val sportEquipment = when (currentBSportType) {
+            BSportType.BIKE -> equipmentList.filter { it.sportType == BSportType.BIKE }.map { it.name }
+            BSportType.RUN -> equipmentList.filter { it.sportType == BSportType.RUN }.map { it.name }
+            else -> emptyList()
         }
+
+        if (linkedEquipment.size > 1) {
+            // Case 1 (N > 1): [- none -, <linked equipment...>, + all bikes/shoes +]
+            options.addAll(linkedEquipment)
+            when (currentBSportType) {
+                BSportType.BIKE -> options.add(allBikes)
+                BSportType.RUN -> options.add(allShoes)
+                else -> { /* no expansion token for UNKNOWN / OTHER */ }
+            }
+        } else {
+            // Case 2 (N == 1) & Case 3 (N == 0): [- none -, <all equipment of that sport>]
+            options.addAll(sportEquipment)
+        }
+
+        _equipmentNames.value = options.distinct()
     }
 
     private fun showAllSportTypes() {
         _sportTypeNames.value = sportTypesList.map { it.name }
     }
 
-    private fun showAllEquipment() {
-        val options = mutableListOf<String>()
-        options.add(noEquipment)
-        options.addAll(equipmentList.map { it.name })
-        _equipmentNames.value = options
-    }
-
     private fun showAllShoes() {
         val options = mutableListOf<String>()
         options.add(noEquipment)
         options.addAll(equipmentList.filter { it.sportType == BSportType.RUN }.map { it.name })
-        options.add(allEquipment)
-        _equipmentNames.value = options
+        _equipmentNames.value = options.distinct()
     }
 
     private fun showAllBikes() {
         val options = mutableListOf<String>()
         options.add(noEquipment)
         options.addAll(equipmentList.filter { it.sportType == BSportType.BIKE }.map { it.name })
-        options.add(allEquipment)
-        _equipmentNames.value = options
+        _equipmentNames.value = options.distinct()
     }
 
 

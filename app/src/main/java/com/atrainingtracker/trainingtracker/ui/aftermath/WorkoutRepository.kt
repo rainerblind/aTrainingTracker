@@ -116,6 +116,11 @@ class WorkoutRepository private constructor(private val application: Application
                 }
             }
         }
+
+        @androidx.annotation.VisibleForTesting
+        fun resetForTesting(newInstance: WorkoutRepository? = null) {
+            INSTANCE = newInstance
+        }
     }
 
     private val job = SupervisorJob()
