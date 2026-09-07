@@ -33,6 +33,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -61,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.ui.clusters.EditWorkoutClusterDialog
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialog
 import com.atrainingtracker.trainingtracker.ui.components.DropdownSelector
 
@@ -106,43 +108,78 @@ fun EditWorkoutScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Workout Name with Cluster Suggestions
+            // 1. Workout Name
+            OutlinedTextField(
+                value = workoutData?.workoutName ?: "",
+                onValueChange = { viewModel.updateWorkoutName(it) },
+                label = { Text(stringResource(R.string.hint_workout_name)) },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // 2. Route / Cluster Assignment (ATT-318)
             val suggestions by viewModel.clusterSuggestions.collectAsState()
-            var showSuggestions by remember { mutableStateOf(false) }
+            val currentClusterId = workoutData?.clusterId ?: -1L
+            val currentClusterName = workoutData?.clusterName
+            var showClusterDialog by remember { mutableStateOf(false) }
 
             Box(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
-                    value = workoutData?.workoutName ?: "",
-                    onValueChange = { viewModel.updateWorkoutName(it) },
-                    label = { Text(stringResource(R.string.hint_workout_name)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    trailingIcon = {
-                        if (suggestions.isNotEmpty()) {
-                            IconButton(onClick = { showSuggestions = true }) {
+                    value = currentClusterName ?: stringResource(R.string.unclustered),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(stringResource(R.string.cluster_naming__selected_route_label)) },
+                    leadingIcon = {
+                        Icon(
+                            painter = painterResource(id = R.drawable.my_locations),
+                            contentDescription = null,
+                            tint = if (currentClusterId > 0) MaterialTheme.colorScheme.primary 
+                                   else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    trailingIcon = if (currentClusterId > 0) {
+                        {
+                            IconButton(onClick = { viewModel.unassignCluster() }) {
                                 Icon(
-                                    painter = painterResource(id = R.drawable.my_locations),
-                                    contentDescription = stringResource(R.string.cluster_suggestions_content_desc),
-                                    tint = if (suggestions.any { it.second < 1.0 }) MaterialTheme.colorScheme.primary 
-                                           else MaterialTheme.colorScheme.onSurfaceVariant
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = stringResource(R.string.cluster_naming__leave_unclustered),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
-                    }
+                    } else null,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
-                if (showSuggestions) {
-                    WorkoutClusterSelectionDialog(
-                        title = stringResource(R.string.edit_workout_name),
-                        candidates = suggestions,
-                        onSelect = { 
-                            viewModel.applyClusterIdentity(it)
-                            showSuggestions = false
-                        },
-                        onDismiss = { showSuggestions = false },
-                        sportNameResolver = { viewModel.getSportName(it) },
-                        bSportTypeResolver = { viewModel.getBSportType(it) }
-                    )
-                }
+                // Clickable overlay over text area to open cluster dialog on tap
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .padding(end = if (currentClusterId > 0) 48.dp else 0.dp)
+                        .clickable { showClusterDialog = true }
+                )
+            }
+
+            if (showClusterDialog) {
+                EditWorkoutClusterDialog(
+                    currentClusterId = currentClusterId,
+                    candidates = suggestions,
+                    initialWorkoutName = workoutData?.workoutName ?: "",
+                    onSelectCluster = { cluster ->
+                        viewModel.applyClusterIdentity(cluster)
+                        showClusterDialog = false
+                    },
+                    onUnassignCluster = {
+                        viewModel.unassignCluster()
+                        showClusterDialog = false
+                    },
+                    onCreateNewCluster = { newName ->
+                        viewModel.createNewCluster(newName)
+                        showClusterDialog = false
+                    },
+                    onDismiss = { showClusterDialog = false },
+                    sportNameResolver = { viewModel.getSportName(it) },
+                    bSportTypeResolver = { viewModel.getBSportType(it) }
+                )
             }
 
             // 2. Spinners (Sport & Equipment)

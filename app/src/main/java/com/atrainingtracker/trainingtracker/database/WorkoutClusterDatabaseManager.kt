@@ -64,6 +64,11 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
                 instance ?: WorkoutClusterDatabaseManager(context.applicationContext).also { instance = it }
             }
         }
+
+        @androidx.annotation.VisibleForTesting
+        fun resetForTesting(newInstance: WorkoutClusterDatabaseManager? = null) {
+            instance = newInstance
+        }
     }
 
     /**

@@ -983,6 +983,10 @@
     <string name="cluster_total_recordings">Grabaciones totales</string>
     <string name="cluster_average_distance">Distancia promedio</string>
     <string name="cluster_recordings_format">%1$d grabaciones</string>
+    <plurals name="cluster_recordings">
+        <item quantity="one">%d grabación</item>
+        <item quantity="other">%d grabaciones</item>
+    </plurals>
     <string name="cluster_ref_distance_label">Ref: %1$s</string>
     <string name="cluster_tuning_title">Parámetros de agrupación</string>
     <string name="cluster_tuning_master_label">Sensibilidad de agrupación</string>

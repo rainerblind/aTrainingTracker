@@ -54,6 +54,11 @@ class EquipmentAndSportTypeDiscoveryManager private constructor(context: Context
                 }
             }
         }
+
+        @androidx.annotation.VisibleForTesting
+        fun resetForTesting(newInstance: EquipmentAndSportTypeDiscoveryManager? = null) {
+            INSTANCE = newInstance
+        }
     }
 
     /**

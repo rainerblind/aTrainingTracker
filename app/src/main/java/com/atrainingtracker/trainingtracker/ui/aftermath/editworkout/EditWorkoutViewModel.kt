@@ -119,6 +119,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                             equipmentId = data.equipmentId,
                             equipmentName = data.equipmentName,
                             clusterId = data.clusterId,
+                            clusterName = data.clusterName,
                             stravaSportName = data.stravaSportName
                         )
                     } else {
@@ -328,6 +329,25 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
         // ATT-388: Persist the new cluster identity immediately
         repository.assignClusterToWorkout(workoutId, cluster.id)
+    }
+
+    fun unassignCluster() {
+        _workoutData.update { current ->
+            current?.copy(
+                clusterId = -1L,
+                clusterName = null
+            )
+        }
+        repository.unassignClusterFromWorkout(workoutId)
+    }
+
+    fun createNewCluster(customName: String) {
+        val current = _workoutData.value
+        if (current != null) {
+            repository.createNewClusterFromWorkout(current, customName)
+        } else {
+            repository.createNewClusterFromWorkout(workoutId, customName)
+        }
     }
 
     fun getSportName(sportId: Long): String {

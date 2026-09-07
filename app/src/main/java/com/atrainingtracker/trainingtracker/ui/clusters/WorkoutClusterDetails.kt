@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -120,7 +121,7 @@ fun WorkoutClusterDetails(
 
             // 4. Hit Count (Recordings)
             Text(
-                text = stringResource(R.string.cluster_recordings_format, cluster.hitCount),
+                text = pluralStringResource(R.plurals.cluster_recordings, cluster.hitCount, cluster.hitCount),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = if (showRecordingsInPrimaryColor) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
