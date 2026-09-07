@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
@@ -87,7 +88,8 @@ fun WorkoutTabsScreen(
     scrollToTop: Boolean,
     isCompactView: Boolean,
     onToggleCompactView: () -> Unit,
-    onDeleteOldWorkouts: (Int) -> Unit
+    onDeleteOldWorkouts: (Int) -> Unit,
+    deletionProgress: DeletionProgress = DeletionProgress.Idle
 ) {
     val tabs = listOf(
         stringResource(R.string.workout_summaries_tab_all),
@@ -140,6 +142,8 @@ fun WorkoutTabsScreen(
             onDismiss = { showDeleteOldWorkoutsDialog = false }
         )
     }
+
+    WorkoutDeletionProgressDialog(progress = deletionProgress)
 
     // This is the root container
     Surface(

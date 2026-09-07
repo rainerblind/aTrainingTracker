@@ -38,6 +38,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -57,6 +58,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
+import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModel
@@ -145,6 +147,7 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                     }
                     val sortOrder by viewModel.sortOrder.collectAsState()
                     val isCompactView by viewModel.isCompactView.collectAsState()
+                    val deletionProgress by viewModel.deletionProgress.observeAsState(DeletionProgress.Idle)
 
                     // --- SNACKBAR FEEDBACK ---
                     val snackbarHostState = remember { SnackbarHostState() }
@@ -266,7 +269,8 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                                     onToggleCompactView = { viewModel.toggleCompactView() },
                                     onDeleteOldWorkouts = { daysToKeep ->
                                         viewModel.executeDeleteOldWorkouts(daysToKeep)
-                                    }
+                                    },
+                                    deletionProgress = deletionProgress
                                 )
                             }
                         }

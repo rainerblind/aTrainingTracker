@@ -24,6 +24,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -53,6 +54,7 @@ import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutDeletionNotificationManager
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
@@ -174,6 +176,9 @@ class WorkoutRepository private constructor(private val application: Application
      */
     private val _deletionProgress = MutableLiveData<DeletionProgress>(DeletionProgress.Idle)
     val deletionProgress: LiveData<DeletionProgress> = _deletionProgress
+
+    @VisibleForTesting
+    var notificationManagerProvider: ((Context) -> WorkoutDeletionNotificationManager)? = null
 
 
 
@@ -915,18 +920,24 @@ class WorkoutRepository private constructor(private val application: Application
      */
     suspend fun deleteOldWorkouts(daysToKeep: Int) {
         withContext(Dispatchers.IO) {
+            val notificationManager = notificationManagerProvider?.invoke(application)
+                ?: WorkoutDeletionNotificationManager(application)
             try {
-                // The callback lambda executed inside the helper to update UI progress.
-                val progressCallback: (Long) -> Unit = { workoutId ->
+                // The callback invoked inside the helper to update UI progress.
+                val progressCallback = WorkoutDeletionHelper.DeletionProgressCallback { current, total, workoutId ->
                     val workout = allWorkouts.value.find { it.id == workoutId }
                     val workoutName = workout?.headerData?.workoutName ?: "Workout ID: $workoutId"
-                    _deletionProgress.postValue(DeletionProgress.InProgress(workoutName, workoutId))
+                    _deletionProgress.postValue(DeletionProgress.Deleting(current, total, workoutName, workoutId))
+                    notificationManager.showProgressNotification(current, total, workoutName)
                 }
 
                 val success = deletionHelper.deleteOldWorkouts(daysToKeep, progressCallback)
 
                 // After deleting, reload workouts and resynchronize downstream analytical caches (REQ-DAT-011).
                 if (success) {
+                    _deletionProgress.postValue(DeletionProgress.Resyncing)
+                    notificationManager.showResyncNotification()
+
                     loadAllWorkouts()
                     PeriodsRepository.getInstance(application).resyncAllPeriods()
                     WorkoutClusterRepository.getInstance(application).refreshClusters(forceShowProgress = false, forceCheckIntegrity = true)
@@ -935,6 +946,7 @@ class WorkoutRepository private constructor(private val application: Application
             } finally {
                 // Reset the state to Idle when done or if an error occurs.
                 _deletionProgress.postValue(DeletionProgress.Idle)
+                notificationManager.cancelNotification()
             }
         }
     }

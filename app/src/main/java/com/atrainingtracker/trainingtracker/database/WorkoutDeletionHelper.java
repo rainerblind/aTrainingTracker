@@ -100,27 +100,45 @@ public class WorkoutDeletionHelper {
         return true;
     }
 
+    public interface DeletionProgressCallback {
+        void onProgress(int current, int total, long workoutId);
+    }
+
     /**
-     * Bulk deletes all workouts older than the specified retention period.
+     * Bulk deletes all workouts older than the specified retention period with detailed progress tracking.
      *
      * @param daysToKeep Number of days of workout history to preserve.
-     * @param progressCallback Callback invoked with each deleted workout ID for UI progress tracking.
+     * @param progressCallback Callback invoked with current index, total count, and deleted workout ID.
      * @return {@code true} if the operation completed successfully.
      */
-    public boolean deleteOldWorkouts(int daysToKeep, Function1<Long, Unit> progressCallback) {
+    public boolean deleteOldWorkouts(int daysToKeep, DeletionProgressCallback progressCallback) {
         Log.i(TAG, "deleteOldWorkouts(" + daysToKeep + ")");
-        List<Long> oldWorkoutIds = WorkoutSummariesDatabaseManager.getInstance(mContext).getOldWorkouts(daysToKeep);
-        for (long workoutId : oldWorkoutIds) {
-            Log.d(TAG, "Deleting workout with ID: " + workoutId);
+        List<Long> oldWorkoutIds = mSummariesManager.getOldWorkouts(daysToKeep);
+        int total = oldWorkoutIds.size();
+        for (int i = 0; i < total; i++) {
+            long workoutId = oldWorkoutIds.get(i);
+            Log.d(TAG, "Deleting workout " + (i + 1) + "/" + total + " with ID: " + workoutId);
 
             if (progressCallback != null) {
-                progressCallback.invoke(workoutId);
+                progressCallback.onProgress(i + 1, total, workoutId);
             }
 
             deleteWorkout(workoutId);
         }
 
         return true;
+    }
+
+    /**
+     * Bulk deletes all workouts older than the specified retention period.
+     * Backwards-compatible overload for single-parameter callback callers.
+     *
+     * @param daysToKeep Number of days of workout history to preserve.
+     * @param progressCallback Callback invoked with each deleted workout ID for UI progress tracking.
+     * @return {@code true} if the operation completed successfully.
+     */
+    public boolean deleteOldWorkouts(int daysToKeep, Function1<Long, Unit> progressCallback) {
+        return deleteOldWorkouts(daysToKeep, progressCallback != null ? (current, total, workoutId) -> progressCallback.invoke(workoutId) : null);
     }
 }
 
