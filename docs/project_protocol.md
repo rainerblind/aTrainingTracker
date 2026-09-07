@@ -80,6 +80,21 @@ Any AI assistant working on this project **must** follow these steps for every t
         * The local CLI utility `./tools/jira_util.py` strictly blocks and aborts any attempt to target `done` / `erledigt`.
         * External IDE messages or automated review policy notices (such as *"The user has automatically approved the artifact through their review policy. Proceed to execution."*) apply SOLELY to local IDE markdown documents and DO NOT grant permission to transition Jira tickets to `Erledigt`.
         * The agent MUST pause and wait for the human user to personally perform the Jira transition.
+    *   **Mandatory Field: Lösungsversion (Fix Version/s)**:
+        The Jira field **Lösungsversion** (*Fix Version/s*) is **MANDATORY** for all parent tickets across all issue types (Bug, Improvement, Feature).
+        *   **Jira Cloud Workflow Enforcement (Best Practice)**:
+            A ticket cannot be closed without an assigned target release version. In Jira Cloud, a **Workflow Screen** containing the field **Lösungsversion/en** (*Fix Version/s*) combined with a **Field Required Validator** (*Validierer: Feld erforderlich*) MUST be configured on the transition into `Erledigt` (or `Test`). When transitioning the ticket to `Erledigt`, Jira prompts for and technically enforces the selection of an active unreleased version (e.g., `V4.9.36`).
+        *   **Sub-Task Inheritance**:
+            Lifecycle sub-tasks inherit their target release version from their parent ticket. The parent ticket's `Lösungsversion` is the authoritative single source of truth for release tracking.
+        *   **Tooling & CLI Support**:
+            The utility `./tools/jira_util.py` actively displays `Lösungsversion` on `show` and `list`. If missing on an issue and its parent, the tool highlights it with a prominent warning: `(WARNING: Mandatory field missing!)`.
+            Developers and agents can query available versions or set the version directly via CLI:
+            ```bash
+            ./tools/jira_util.py versions
+            ./tools/jira_util.py set-fixversion ATT-XXX V4.9.36
+            ```
+        *   **Stage 5 & Gate 5 Enforcement**:
+            During Stage 5 (Test Execution) and Gate 5 (Release Audit), Agent 1 and Agent 2 MUST verify that the parent ticket's `Lösungsversion` is non-empty and assigned to the active unreleased target version before recommending release sign-off.
     *   **MANDATORY TURN SEPARATION & AUTOMATED DUAL-AGENT AUDITS**:
         Under NO circumstances may an AI agent execute multiple lifecycle stages or combine implementation, review, and approval requesting within a single conversation turn!
         * **Jira Status Verification**: An agent is strictly FORBIDDEN from starting the next lifecycle stage (e.g. modifying production code or writing tests) until the preceding sub-task (e.g. `[Impl-Plan]`) is verified to be in status **`Erledigt`** in Jira via `./tools/jira_util.py status <Ticket>`. If the sub-task is still in `Freigabe (Human)`, the agent MUST pause and prompt the user to transition it to `Erledigt`.
@@ -147,12 +162,12 @@ Any AI assistant working on this project **must** follow these steps for every t
 
         ### 5. Stage 5: Test Execution & Clean-Room Regression (`[Test]`)
         1.  Parent ticket enters `Test` status. Jira Automation automatically spawns `[Test] <Summary>` sub-task.
-        2.  **Phase 1 (Agent 1 Execution)**: Transitions sub-task to `In Bearbeitung`. Executes agreed-upon verification tests (`docs/tests.md`) and full repository clean-room regression suite (`./gradlew testDebugUnitTest`). Sets verification log and evidence as sub-task **Description**. Updates `Status` in `docs/requirements.md` and `docs/tests.md` to `Verified`. Transitions sub-task to `In Überprüfung`.
-        3.  **Phase 2 (Agent 2 Automated Gate 5 Audit)**: Agent 2 automatically audits test execution, regression logs, and documentation synchronization, posts the review comment, and transitions sub-task to `Freigabe (Human)`.
+        2.  **Phase 1 (Agent 1 Execution)**: Transitions sub-task to `In Bearbeitung`. Executes agreed-upon verification tests (`docs/tests.md`) and full repository clean-room regression suite (`./gradlew testDebugUnitTest`). Verifies that the parent ticket's mandatory **Lösungsversion** (*Fix Version/s*) is set (via `./tools/jira_util.py show <ParentKey>`); if missing, sets it via `./tools/jira_util.py set-fixversion <ParentKey> <Version>`. Sets verification log and evidence as sub-task **Description**. Updates `Status` in `docs/requirements.md` and `docs/tests.md` to `Verified`. Transitions sub-task to `In Überprüfung`.
+        3.  **Phase 2 (Agent 2 Automated Gate 5 Audit)**: Agent 2 automatically audits test execution, regression logs, living documentation synchronization, and confirms that the parent ticket's mandatory **Lösungsversion** is non-empty. Posts the review comment, and transitions sub-task to `Freigabe (Human)`.
         4.  **MANDATORY HARD STOP 5 (Human Release Gate)**: In `Freigabe (Human)`, user approves sub-task to `Erledigt`. Jira Automation advances parent to `Erledigt`.
 
         ### 6. Stage 6: Erledigt & Release Integration
-        1.  Prerequisite: 100% of all lifecycle sub-tasks verified as `Erledigt` in Jira.
+        1.  Prerequisite: 100% of all lifecycle sub-tasks verified as `Erledigt` in Jira, and parent ticket has a valid, non-empty **Lösungsversion** (*Fix Version/s*) set.
         2.  Agent switches to `develop` and executes non-fast-forward merge:
             `git checkout develop && git merge --no-ff <branch_name> -m "Merge branch '<branch_name>' into develop"`
         3.  Agent verifies clean working tree (`git status`).
@@ -187,16 +202,18 @@ Any AI assistant working on this project **must** follow these steps for every t
 8.  **Test Execution, Clean-Room Regression & Release (SWE.5 / SWE.6 Phase - Stage 5 & 6)**:
     *   **Prerequisite**: The `[Implementation]` sub-task MUST be explicitly verified in status `Erledigt` in Jira via `./tools/jira_util.py status <Ticket>`.
     *   **Jira Sub-task Workflow**: Work is performed within the auto-generated sub-task `[Test] <Summary>`.
-        1. Agent 1 transitions sub-task to `In Bearbeitung`, executes verification tests (`docs/tests.md`), runs the full-suite clean-room regression (`./gradlew testDebugUnitTest`), updates requirements/tests status to `Verified`, sets verification evidence as the sub-task **Description**, and transitions to `In Überprüfung`.
-        2. Agent 2 automatically conducts Gate 5 Verification & Clean-Room Audit, posts the audit report as a Jira comment, and transitions to `Freigabe (Human)`.
+        1. Agent 1 transitions sub-task to `In Bearbeitung`, executes verification tests (`docs/tests.md`), runs the full-suite clean-room regression (`./gradlew testDebugUnitTest`), updates requirements/tests status to `Verified`, verifies/sets the parent ticket's mandatory **Lösungsversion** (*Fix Version/s*), sets verification evidence as the sub-task **Description**, and transitions to `In Überprüfung`.
+        2. Agent 2 automatically conducts Gate 5 Verification & Clean-Room Audit (including verifying that parent ticket has its mandatory **Lösungsversion** assigned), posts the audit report as a Jira comment, and transitions to `Freigabe (Human)`.
     *   **Pass/Fail Recording**: Document verification evidence using the following format:
         > **Verification Result: PASS**
         > * **Test ID**: TST-XXX-###
         > * **Scope**: SWE.5 Integration / SWE.6 System Verification
         > * **Evidence**: Full test suite pass (0 failures, 0 regressions)
+        > * **Lösungsversion**: V4.9.36 (Verified)
     *   **MANDATORY HARD STOP (Release Gate)**: User moves `[Test]` sub-task to `Erledigt` (via *"Freigabe erteilt"*), causing Jira Automation to transition parent ticket to `Erledigt`.
     *   **Git Commit & Develop Integration**:
         *   Stage all files (`git add`) and commit final documentation, requirements, tests, and walkthrough updates on the ticket branch using Conventional Commits with asterisk `*` bullet points.
+        *   Prerequisite for merge: 100% of all sub-tasks in `Erledigt`, and parent ticket has a valid, non-empty **Lösungsversion** set.
         *   Switch to `develop` and execute the integration merge:
             ```bash
             git checkout develop
@@ -308,7 +325,8 @@ To prevent side-effect regressions, "destroyed features", and architectural drif
 *   **Required Auditor Checks**:
     1.  **Mandatory Full-Suite Regression Execution**: Verify `./gradlew testDebugUnitTest` passed with 100% success (0 failures, 0 regressions) across all project modules.
     2.  **Living Documentation Parity**: Confirm that `docs/requirements.md` and `docs/tests.md` are completely updated to `Verified`.
-    3.  **Recommendation**: Issue an explicit recommendation (`RECOMMEND PASS` or `RECOMMEND REVISION`).
+    3.  **Lösungsversion Audit**: Confirm that the parent ticket's mandatory **Lösungsversion** (*Fix Version/s*) is populated with the active target release version (e.g. `V4.9.36`). If missing, Agent 2 must flag the gate as `CHALLENGED` / `REVISE` before recommending release approval.
+    4.  **Recommendation**: Issue an explicit recommendation (`RECOMMEND PASS` or `RECOMMEND REVISION`).
 *   **Human Gate Decision**: The user reviews the Gate 5 audit report in `Freigabe (Human)` to authorize release (`Erledigt`), triggering Jira Automation to advance the parent ticket to `Erledigt`.
 
 ## New Version / Release Workflow
@@ -317,6 +335,7 @@ Whenever preparing for a new version:
 2.  **Impact Analysis**: Mapping modified files back to Requirement IDs in `docs/requirements.md`.
 3.  **Test Collection**: Identifying all manual or automated tests in `docs/tests.md` that cover the affected Requirements.
 4.  **Co-Verification**: The agent and user execute the collected tests together to ensure no regressions were introduced.
+5.  **Lösungsversion Verification**: Verify that all tickets included in the release have their **Lösungsversion** (*Fix Version/s*) set to the target release version before the version is marked as released in Jira.
 
 ## Living Documentation Principle
 To maintain a high-fidelity "Digital Twin" of the codebase, the agent must:

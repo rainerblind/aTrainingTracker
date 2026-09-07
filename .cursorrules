@@ -29,5 +29,6 @@ Before performing any task, you must:
 6.  **Prompt Staging & Conventional Commits**: Immediately stage new files (`git add <file>`) and execute `git commit` using Conventional Commits (`feat(...)`, `fix(...)`, `docs(...)`, etc.) with `*` for bullet points.
 7.  **Integration Merge to Develop**: Once 100% of sub-tasks are verified as `Erledigt` in Jira and human release sign-off is granted, switch to `develop` and execute a non-fast-forward merge:
     `git checkout develop && git merge --no-ff <branch_name> -m "Merge branch '<branch_name>' into develop"`.
+8.  **Mandatory Lösungsversion (Fix Version/s)**: The field `Lösungsversion` is mandatory for all parent tickets. Agent 1 verifies/sets it in Stage 5, and Agent 2 audits its presence during the Gate 5 release review prior to human release approval.
 
 

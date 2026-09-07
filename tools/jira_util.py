@@ -71,20 +71,45 @@ def list_sprint_issues():
     print(f"Active Sprint: {sprints[0]['name']}")
 
     # 3. Get issues
-    issues = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype")["issues"]
+    issues = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype,fixVersions")["issues"]
     for i in issues:
         itype = i['fields']['issuetype']['name']
-        print(f"{i['key']}: [{itype}] {i['fields']['summary']} [{i['fields']['status']['name']}]")
+        fvs = [v.get('name', '') for v in i['fields'].get('fixVersions', [])]
+        fv_str = f" [FixVersion: {', '.join(fvs)}]" if fvs else " [No FixVersion!]"
+        print(f"{i['key']}: [{itype}] {i['fields']['summary']} [{i['fields']['status']['name']}]{fv_str}")
 
 def show_issue(issue_key):
     config = get_config()
-    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=summary,description,comment,attachment,parent,issuetype,status,subtasks"
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=summary,description,comment,attachment,parent,issuetype,status,subtasks,fixVersions"
     issue = jira_request(url)
 
     itype = issue['fields']['issuetype']['name']
     status = issue['fields'].get('status', {}).get('name', 'Unknown')
     print(f"h1. {issue['key']}: [{itype}] {issue['fields']['summary']}")
     print(f"\n*Status*: {status}")
+
+    # Fix Version / Lösungsversion
+    fix_versions = issue['fields'].get('fixVersions', [])
+    if fix_versions:
+        fv_names = ", ".join([v.get('name', '') for v in fix_versions])
+        print(f"\n*Lösungsversion (Fix Version/s)*: {fv_names}")
+    else:
+        # Check if parent has a fixVersion if this is a subtask
+        parent_fv = None
+        if issue['fields'].get('parent'):
+            parent_key = issue['fields']['parent']['key']
+            parent_url = f"{config['JIRA_URL']}/rest/api/2/issue/{parent_key}?fields=fixVersions"
+            try:
+                parent_res = jira_request(parent_url)
+                pfvs = parent_res.get('fields', {}).get('fixVersions', [])
+                if pfvs:
+                    parent_fv = ", ".join([v.get('name', '') for v in pfvs])
+            except Exception:
+                pass
+        if parent_fv:
+            print(f"\n*Lösungsversion (Fix Version/s)*: None on subtask (Inherited from Parent: {parent_fv})")
+        else:
+            print(f"\n*Lösungsversion (Fix Version/s)*: None (WARNING: Mandatory field missing!)")
 
     # Epic/Parent context
     parent = issue['fields'].get('parent')
@@ -123,6 +148,36 @@ def show_issue(issue_key):
     print("\n*Comments*:")
     for c in issue['fields']['comment']['comments']:
         print(f"--- {c['author']['displayName']} ({c['created']}) ---\n{c['body']}\n")
+
+def list_versions():
+    config = get_config()
+    url = f"{config['JIRA_URL']}/rest/api/2/project/ATT/versions"
+    versions = jira_request(url)
+    print("Project ATT Versions (Lösungsversionen):")
+    for v in versions:
+        status = "RELEASED" if v.get("released") else ("ARCHIVED" if v.get("archived") else "ACTIVE/UNRELEASED")
+        print(f"- {v.get('name')} (id: {v.get('id')}) [{status}]")
+
+def set_fix_version(issue_key, version_name):
+    config = get_config()
+    # Validate against project ATT versions
+    url_versions = f"{config['JIRA_URL']}/rest/api/2/project/ATT/versions"
+    versions = jira_request(url_versions)
+    valid_names = [v.get('name') for v in versions]
+    if version_name not in valid_names:
+        active_versions = [v.get('name') for v in versions if not v.get('released') and not v.get('archived')]
+        print(f"Error: Version '{version_name}' not found in project ATT.")
+        print(f"Available active unreleased versions: {', '.join(active_versions)}")
+        sys.exit(1)
+
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}"
+    payload = {
+        "fields": {
+            "fixVersions": [{"name": version_name}]
+        }
+    }
+    jira_request(url, method="PUT", payload=payload)
+    print(f"Lösungsversion (Fix Version) '{version_name}' successfully set on {issue_key}.")
 
 def print_status(issue_key):
     config = get_config()
@@ -282,7 +337,7 @@ def create_issue(summary, description, issuetype_id="10005", parent_key=None):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: jira_util.py [list | show KEY | status KEY | move KEY todo|in_progress|in_review|freigabe | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY]]")
+        print("Usage: jira_util.py [list | show KEY | status KEY | versions | set-fixversion KEY VERSION | move KEY todo|in_progress|in_review|freigabe | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY]]")
         sys.exit(1)
 
     cmd = sys.argv[1]
@@ -292,6 +347,10 @@ if __name__ == "__main__":
         show_issue(sys.argv[2])
     elif cmd == "status" and len(sys.argv) == 3:
         print_status(sys.argv[2])
+    elif cmd == "versions":
+        list_versions()
+    elif cmd == "set-fixversion" and len(sys.argv) == 4:
+        set_fix_version(sys.argv[2], sys.argv[3])
     elif cmd == "download" and len(sys.argv) == 4:
         download_attachment(sys.argv[2], sys.argv[3])
     elif cmd == "download-all" and len(sys.argv) == 3:
