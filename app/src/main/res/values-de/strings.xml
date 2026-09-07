@@ -54,6 +54,7 @@
     <string name="delete_workout">Einheit löschen</string>
     <string name="deleteOldWorkouts">Alte Einheiten löschen</string>
     <string name="deleteWorkoutsThatAreOlderThanDays">Lösche alle Einheiten, die älter als … Tage sind.</string>
+    <string name="really_delete_old_workouts_format">Möchtest du wirklich alle Einheiten löschen, die älter als %1$d Tage sind?</string>
     <string name="delete_sensor">löschen</string>
     <string name="really_delete_workout">Willst du diese Einheit wirklich löschen?</string>
     <string name="really_delete_pebble_view_format">Willst du die Pebble Ansicht "%1$s" wirklich löschen?</string>

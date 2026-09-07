@@ -132,14 +132,27 @@ fun WorkoutTabsScreen(
     }
 
     var showDeleteOldWorkoutsDialog by rememberSaveable { mutableStateOf(false) }
+    var daysToConfirmDelete by rememberSaveable { mutableStateOf<Int?>(null) }
 
     if (showDeleteOldWorkoutsDialog) {
         DeleteOldWorkoutsDialog(
             onConfirm = { daysToKeep ->
-                onDeleteOldWorkouts(daysToKeep)
                 showDeleteOldWorkoutsDialog = false
+                daysToConfirmDelete = daysToKeep
             },
             onDismiss = { showDeleteOldWorkoutsDialog = false }
+        )
+    }
+
+    daysToConfirmDelete?.let { days ->
+        com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog(
+            title = stringResource(R.string.deleteOldWorkouts),
+            message = stringResource(R.string.really_delete_old_workouts_format, days),
+            onConfirm = {
+                onDeleteOldWorkouts(days)
+                daysToConfirmDelete = null
+            },
+            onDismiss = { daysToConfirmDelete = null }
         )
     }
 

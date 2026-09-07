@@ -53,6 +53,7 @@
     <string name="delete_workout">supprimer l\'entraînement</string>
     <string name="deleteOldWorkouts">supprimer les anciens entraînements</string>
     <string name="deleteWorkoutsThatAreOlderThanDays">supprimer les entraînements de plus de … jours</string>
+    <string name="really_delete_old_workouts_format">Voulez-vous vraiment supprimer tous les entraînements de plus de %1$d jours ?</string>
     <string name="delete_sensor">supprimer</string>
     <string name="really_delete_workout">Voulez-vous vraiment supprimer cet entraînement ?</string>
     <string name="really_delete_pebble_view_format">Voulez-vous vraiment supprimer la vue Pebble "%1$s" ?</string>
