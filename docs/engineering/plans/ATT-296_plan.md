@@ -12,6 +12,7 @@ Per user guidance, the default retention threshold is increased from 30 to **365
 | Requirement ID | Component / Layer | Implementation File(s) | Verification Test ID |
 | :--- | :--- | :--- | :--- |
 | **REQ-DAT-010** | Database & Deletion Engine | `WorkoutDeletionHelper.java`, `WorkoutSummariesDatabaseManager.java`, `WorkoutRepository.kt` | **TST-DAT-004** |
+| **REQ-DAT-011** | Analytical Periods Cache Resync | `PeriodsRepository.kt`, `PeriodSummariesDatabaseManager.kt`, `WorkoutRepository.kt` | **TST-DAT-005** |
 | **REQ-UI-127** | Jetpack Compose UI & ViewModel | `DeleteOldWorkoutsDialog.kt`, `WorkoutListActions.kt`, `WorkoutTabsScreen.kt`, `WorkoutSummariesTabbedFragment.kt`, `strings.xml` | **TST-UI-080** |
 
 ---
@@ -24,6 +25,12 @@ Per user guidance, the default retention threshold is increased from 30 to **365
   * Fix sequencing: Query `fileBaseName` *before* deleting summary row so that `WorkoutSamplesDatabaseManager.deleteWorkout(fileBaseName)` drops the SQLite sample table properly.
 * `WorkoutSummariesDatabaseManager.getOldWorkouts(int days)`:
   * Harden SQL query with parameterized binding: `TIME_START <= datetime('now', '-' || ? || ' days')`.
+* `PeriodsRepository.kt` (`REQ-DAT-011`):
+  * Add `suspend fun resyncAllPeriods()` to trigger `performHierarchicalMigration()`.
+  * Ensure `allWorkouts.isEmpty()` branch calls `dbManager.deleteAll(db)` and `loadFromDatabase(forceIncremental = false)` to prevent ghost periods when all sessions are purged.
+* `WorkoutRepository.deleteOldWorkouts(int daysToKeep)`:
+  * Remove inverted per-workout surgical calls from `progressCallback` (which suffered from null in-memory lookups and race conditions).
+  * Post-deletion: Invoke `PeriodsRepository.getInstance(application).resyncAllPeriods()` and `WorkoutClusterEngine.getInstance(application).enrichAllClusterMetadata(application)` upon completion.
 * `WorkoutListActions.kt`:
   * Callers: `WorkoutTabsScreen.kt`, `WorkoutSummariesListFragment.kt`, `WorkoutClustersFragment.kt`.
   * Make `onDeleteOldWorkoutsClicked: (() -> Unit)? = null` optional with default `null` so other screens (`WorkoutClustersFragment`) are not affected.
@@ -32,7 +39,7 @@ Per user guidance, the default retention threshold is increased from 30 to **365
 
 ### 3.2. Preserved Invariants
 * **Non-Destructive for Recent Workouts**: All sessions recorded within the retention threshold ($> \text{now} - D\text{ days}$) MUST NOT be modified or deleted.
-* **Surgical Cascade Integrity**: For each deleted session, `PeriodsRepository.onWorkoutDeleted` and `WorkoutClusterEngine.onWorkoutDeleted` MUST be invoked.
+* **Period Cache Consistency**: Following bulk deletion, `PeriodSummaries.db` MUST NOT contain ghost records for purged timeframes, boundary periods MUST be recalculated, and all `longest_workout_id` foreign keys MUST remain valid.
 * **Header Height Invariant**: `LayoutConstants.HEADER_TITLE_ROW_HEIGHT` (32dp) and `COMPACT_HEADER_CONTENT_HEIGHT` (80dp) MUST be preserved.
 * **Localization Parity**: 100% translation coverage across all 9 supported locales.
 

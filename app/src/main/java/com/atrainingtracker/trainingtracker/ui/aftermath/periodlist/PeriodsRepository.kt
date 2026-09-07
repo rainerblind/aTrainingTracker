@@ -74,6 +74,21 @@ class PeriodsRepository private constructor(private val application: Application
                 instance ?: PeriodsRepository(application).also { instance = it }
             }
         }
+
+        @androidx.annotation.VisibleForTesting
+        fun getPeriodSortKey(startTimestampS: Long, type: PeriodType): String {
+            val dt = OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(startTimestampS), java.time.ZoneId.systemDefault())
+            return when (type) {
+                PeriodType.DAY -> dt.format(DateTimeFormatter.ISO_LOCAL_DATE)
+                PeriodType.WEEK -> {
+                    val week = dt.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+                    val year = dt.get(IsoFields.WEEK_BASED_YEAR)
+                    "$year-W${week.toString().padStart(2, '0')}"
+                }
+                PeriodType.MONTH -> dt.format(DateTimeFormatter.ofPattern("yyyy-MM"))
+                PeriodType.YEAR -> dt.year.toString()
+            }
+        }
     }
 
     init {
@@ -190,8 +205,12 @@ class PeriodsRepository private constructor(private val application: Application
             }
 
             if (allWorkouts.isEmpty()) {
-                dbManager.runInTransaction { db -> dbManager.setSyncFinished(db, true) }
+                dbManager.runInTransaction { db ->
+                    dbManager.deleteAll(db)
+                    dbManager.setSyncFinished(db, true)
+                }
                 _migrationStatus.value = null
+                loadFromDatabase(forceIncremental = false)
                 return@withLock
             }
 
@@ -270,6 +289,17 @@ class PeriodsRepository private constructor(private val application: Application
         val monthStart = firstW.localDateTime.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
         val monthEnd = firstW.localDateTime.with(TemporalAdjusters.lastDayOfMonth()).toLocalDate().atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
         rollupDaysToParentPeriods(db, monthStart, monthEnd)
+    }
+
+    /**
+     * Resynchronizes and rebuilds all period summaries from the underlying workout summaries.
+     *
+     * Used after bulk operations (such as bulk workout deletion, ATT-296 / REQ-DAT-011) to ensure
+     * that PeriodSummaries.db completely purges obsolete historical periods, recalculates boundary
+     * periods, and eliminates all dangling foreign key references.
+     */
+    suspend fun resyncAllPeriods() = withContext(Dispatchers.Default) {
+        performHierarchicalMigration()
     }
 
     /**
@@ -434,19 +464,6 @@ class PeriodsRepository private constructor(private val application: Application
         )
     }
 
-    private fun getPeriodSortKey(startTimestampS: Long, type: PeriodType): String {
-        val dt = OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(startTimestampS), java.time.ZoneId.systemDefault())
-        return when (type) {
-            PeriodType.DAY -> dt.format(DateTimeFormatter.ISO_LOCAL_DATE)
-            PeriodType.WEEK -> {
-                val week = dt.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
-                val year = dt.get(IsoFields.WEEK_BASED_YEAR)
-                "$year-W${week.toString().padStart(2, '0')}"
-            }
-            PeriodType.MONTH -> dt.format(DateTimeFormatter.ofPattern("yyyy-MM"))
-            PeriodType.YEAR -> dt.year.toString()
-        }
-    }
 
     private fun createSortKey(w: WorkoutData, type: PeriodType): String {
         return getPeriodSortKey(w.startTimeS, type)
