@@ -171,4 +171,30 @@ class WorkoutDeletionHelperTest {
         verify(exactly = 0) { mockSummariesManager.deleteWorkout(any()) }
         verify(exactly = 0) { mockSamplesManager.deleteWorkout(any()) }
     }
+
+    /**
+     * Verifies that deleteOldWorkouts with DeletionProgressCallback reports accurate 1-based index and total.
+     */
+    @Test
+    fun testDeleteOldWorkouts_withDeletionProgressCallback_reportsCurrentAndTotal() {
+        val daysToKeep = 365
+        val oldIds = listOf(201L, 202L, 203L)
+
+        every { mockSummariesManager.getOldWorkouts(daysToKeep) } returns oldIds
+        every { mockSummariesManager.getBaseFileName(any()) } returns "file_x"
+        every { mockSummariesManager.deleteWorkout(any()) } returns true
+
+        val progressReports = mutableListOf<Triple<Int, Int, Long>>()
+        val callback = WorkoutDeletionHelper.DeletionProgressCallback { current, total, workoutId ->
+            progressReports.add(Triple(current, total, workoutId))
+        }
+
+        val success = deletionHelper.deleteOldWorkouts(daysToKeep, callback)
+
+        assertTrue(success)
+        assertEquals(3, progressReports.size)
+        assertEquals(Triple(1, 3, 201L), progressReports[0])
+        assertEquals(Triple(2, 3, 202L), progressReports[1])
+        assertEquals(Triple(3, 3, 203L), progressReports[2])
+    }
 }
