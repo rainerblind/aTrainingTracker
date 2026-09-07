@@ -17,11 +17,17 @@ Before performing any task, you must:
 1.  **Git Branch Creation**: Verify clean state on `develop` (`git checkout develop`), then create and switch to the dedicated ticket branch:
     *   `feature/ATT-XXX` (for features, enhancements, or tasks).
     *   `bugfix/ATT-XXX` (for bug fixes or regressions).
-2.  **Sync Requirements**: Read `docs/requirements.md` and `docs/project_protocol.md`. Update the requirements list with the current task before writing any code.
-3.  **Traceability**: Every item in your implementation plan must reference a Requirement ID and follow the multi-stage review gates in `docs/project_protocol.md`.
-4.  **Automated Dual-Agent Pipeline**: Whenever Agent 1 completes a job (RCA, Plan, or Implementation) and moves the sub-task to `In Überprüfung`, Agent 2 automatically conducts the independent audit, posts the review comment to Jira, and transitions the sub-task to `Freigabe (Human)`.
-5.  **Prompt Staging & Conventional Commits**: Immediately stage new files (`git add <file>`) and execute `git commit` using Conventional Commits (`feat(...)`, `fix(...)`, `docs(...)`, etc.) with `*` for bullet points.
-6.  **Verification**: Confirm requirements are met and update their status to "Verified" upon completion.
-7.  **Integration Merge to Develop**: Once 100% of sub-tasks are verified as `Erledigt` in Jira and human approval is granted, switch to `develop` and execute a non-fast-forward merge:
+2.  **Unified 5-Stage ASPICE Workflow**: Follow the sequential stages for all ticket types (Bug, Improvement, Feature):
+    *   **Stage 1: Analysis (`[Analysis]`)**: Root Cause Analysis (RCA) for bugs; domain comprehension, user motivation, and side effects for features/improvements. Deliverable in sub-task Description.
+    *   **Stage 2: Test Spec (`[Test-Spec]`)**: Synchronize `docs/requirements.md` (SHALL/MUST, atomic, invariants, Given-When-Then) and specify test cases in `docs/tests.md`. Deliverable in sub-task Description.
+    *   **Stage 3: Implementation Plan (`[Impl-Plan]`)**: Formulate plan in `docs/engineering/plans/ATT-XXX_plan.md`. Deliverable in sub-task Description.
+    *   **Stage 4: Implementation (`[Implementation]`)**: Implement code changes, self-documenting headers, and 9-language localization. Walkthrough in sub-task Description.
+    *   **Stage 5: Test (`[Test]`)**: Execute verification tests, run full clean-room regression (`./gradlew testDebugUnitTest`), and update status to "Verified". Evidence in sub-task Description.
+3.  **Automated Jira Sub-Tasks & Transitions**: Sub-tasks are automatically created by Jira Automation upon entering each stage. Moving a sub-task to `Erledigt` (human gate only) automatically advances the parent ticket to the next stage and spawns the next sub-task.
+4.  **Mandatory Automated Agent 2 Audits**: Whenever Agent 1 completes a stage deliverable and moves the sub-task to `In Überprüfung`, Agent 2 automatically conducts the independent audit, posts the review comment to Jira (prefixed with `[Automated comment by AI Agent]`), and transitions the sub-task to `Freigabe (Human)`.
+5.  **Strict Human Decision Gate**: Moving any ticket or sub-task to `Erledigt` is an inviolable human-only gate. AI agents are strictly prohibited from moving tickets to `Erledigt`.
+6.  **Prompt Staging & Conventional Commits**: Immediately stage new files (`git add <file>`) and execute `git commit` using Conventional Commits (`feat(...)`, `fix(...)`, `docs(...)`, etc.) with `*` for bullet points.
+7.  **Integration Merge to Develop**: Once 100% of sub-tasks are verified as `Erledigt` in Jira and human release sign-off is granted, switch to `develop` and execute a non-fast-forward merge:
     `git checkout develop && git merge --no-ff <branch_name> -m "Merge branch '<branch_name>' into develop"`.
+
 

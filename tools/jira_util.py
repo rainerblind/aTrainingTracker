@@ -78,7 +78,7 @@ def list_sprint_issues():
 
 def show_issue(issue_key):
     config = get_config()
-    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=summary,description,comment,attachment,parent,issuetype,status"
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=summary,description,comment,attachment,parent,issuetype,status,subtasks"
     issue = jira_request(url)
 
     itype = issue['fields']['issuetype']['name']
@@ -100,6 +100,16 @@ def show_issue(issue_key):
             epic = jira_request(epic_url)
             epic_desc = epic['fields'].get('description', 'No description')
             print(f"\n*Epic Description*:\n{epic_desc}")
+
+    print("\n*Sub-tasks*:")
+    subtasks = issue['fields'].get('subtasks', [])
+    if not subtasks:
+        print("None")
+    for st in subtasks:
+        st_key = st.get('key')
+        st_summary = st.get('fields', {}).get('summary', '')
+        st_status = st.get('fields', {}).get('status', {}).get('name', 'Unknown')
+        print(f"* {st_key}: {st_summary} [{st_status}]")
 
     print(f"\n*Description*:\n{issue['fields']['description']}")
 
