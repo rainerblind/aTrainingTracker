@@ -47,6 +47,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,7 +86,8 @@ fun WorkoutTabsScreen(
     onSortOrderChange: (WorkoutSortOrder) -> Unit,
     scrollToTop: Boolean,
     isCompactView: Boolean,
-    onToggleCompactView: () -> Unit
+    onToggleCompactView: () -> Unit,
+    onDeleteOldWorkouts: (Int) -> Unit
 ) {
     val tabs = listOf(
         stringResource(R.string.workout_summaries_tab_all),
@@ -124,6 +126,18 @@ fun WorkoutTabsScreen(
             workout = workoutToDelete,
             onConfirm = onDeleteConfirmed,
             onDismiss = { workoutIdToDelete = -1L }
+        )
+    }
+
+    var showDeleteOldWorkoutsDialog by rememberSaveable { mutableStateOf(false) }
+
+    if (showDeleteOldWorkoutsDialog) {
+        DeleteOldWorkoutsDialog(
+            onConfirm = { daysToKeep ->
+                onDeleteOldWorkouts(daysToKeep)
+                showDeleteOldWorkoutsDialog = false
+            },
+            onDismiss = { showDeleteOldWorkoutsDialog = false }
         )
     }
 
@@ -196,6 +210,7 @@ fun WorkoutTabsScreen(
                             onToggleCompactView = onToggleCompactView,
                             sortOrder = sortOrder,
                             onSortOrderChange = onSortOrderChange,
+                            onDeleteOldWorkoutsClicked = { showDeleteOldWorkoutsDialog = true },
                             tint = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }

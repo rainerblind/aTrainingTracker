@@ -796,7 +796,10 @@ public class WorkoutSummariesDatabaseManager {
 
 
     /**
-     * Returns a list of workout IDs that are older than the specified number of days.
+     * Retrieves all workout IDs whose start time is older than the specified retention threshold.
+     *
+     * @param days Number of days of workout history to preserve.
+     * @return List of unique workout IDs older than {@code days} days.
      */
     @NonNull
     public List<Long> getOldWorkouts(int days) {
@@ -804,13 +807,14 @@ public class WorkoutSummariesDatabaseManager {
 
         List<Long> oldWorkoutIds = new LinkedList<>();
 
-        try(Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE,
-                new String[]{WorkoutSummaries.C_ID}, // columns,
-                WorkoutSummaries.TIME_START + " <= datetime('now', '-" + days + " day')", // selection
-                null, null, null, null)) { // selectionArgs, groupBy, having, orderBy)
+        try (Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE,
+                new String[]{WorkoutSummaries.C_ID}, // columns
+                WorkoutSummaries.TIME_START + " <= datetime('now', '-' || ? || ' days')", // selection
+                new String[]{String.valueOf(days)}, // selectionArgs
+                null, null, null)) { // groupBy, having, orderBy
 
             while (cursor.moveToNext()) {
-                long workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
+                long workoutId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID));
                 if (DEBUG) Log.i(TAG, "adding " + workoutId + " to oldWorkoutId List");
                 oldWorkoutIds.add(workoutId);
             }

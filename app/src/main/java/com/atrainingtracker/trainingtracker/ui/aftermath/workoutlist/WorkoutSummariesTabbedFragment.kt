@@ -264,6 +264,9 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                                     scrollToTop = viewModel.shouldScrollToTop(sortOrder),
                                     isCompactView = isCompactView,
                                     onToggleCompactView = { viewModel.toggleCompactView() },
+                                    onDeleteOldWorkouts = { daysToKeep ->
+                                        viewModel.executeDeleteOldWorkouts(daysToKeep)
+                                    }
                                 )
                             }
                         }

@@ -48,41 +48,74 @@ public class WorkoutDeletionHelper {
      * @param context The application context.
      */
     public WorkoutDeletionHelper(@NonNull Context context) {
-        this.mContext = context.getApplicationContext();
+        this(
+                context,
+                WorkoutSummariesDatabaseManager.getInstance(context),
+                LapsDatabaseManager.getInstance(context),
+                WorkoutSamplesDatabaseManager.getInstance(context),
+                ExportStatusDatabaseManager.getInstance(context)
+        );
+    }
 
-        // Get instances of all required managers
-        this.mSummariesManager = WorkoutSummariesDatabaseManager.getInstance(mContext);
-        this.mLapsManager = LapsDatabaseManager.getInstance(mContext);
-        this.mSamplesManager = WorkoutSamplesDatabaseManager.getInstance(mContext);
-        this.mExportStatusRepo = ExportStatusDatabaseManager.getInstance(mContext);
+    /**
+     * Testing constructor allowing injection of mock database managers.
+     */
+    @androidx.annotation.VisibleForTesting
+    public WorkoutDeletionHelper(
+            @NonNull Context context,
+            @NonNull WorkoutSummariesDatabaseManager summariesManager,
+            @NonNull LapsDatabaseManager lapsManager,
+            @NonNull WorkoutSamplesDatabaseManager samplesManager,
+            @NonNull ExportStatusDatabaseManager exportStatusRepo
+    ) {
+        this.mContext = context.getApplicationContext();
+        this.mSummariesManager = summariesManager;
+        this.mLapsManager = lapsManager;
+        this.mSamplesManager = samplesManager;
+        this.mExportStatusRepo = exportStatusRepo;
     }
 
     /**
      * Deletes a workout and all its related data across all databases.
      * This method orchestrates the entire deletion process.
      *
+     * <p>Forensic sequencing fix (ATT-296): {@code getBaseFileName} must be queried
+     * BEFORE deleting the summary record from SQLite, otherwise {@code fileBaseName}
+     * resolves to null and high-frequency sample tables are permanently orphaned.
+     *
      * @param workoutId The ID of the workout to delete.
      * @return {@code true} if the workout was found and deletion was attempted, {@code false} otherwise.
      */
     public boolean deleteWorkout(long workoutId) {
+        String fileBaseName = mSummariesManager.getBaseFileName(workoutId);
 
         mSummariesManager.deleteWorkout(workoutId);
         mLapsManager.deleteWorkout(workoutId);
 
-        String fileBaseName = mSummariesManager.getBaseFileName(workoutId);
-        mSamplesManager.deleteWorkout(fileBaseName);
-        mExportStatusRepo.deleteWorkout(fileBaseName);
+        if (fileBaseName != null) {
+            mSamplesManager.deleteWorkout(fileBaseName);
+            mExportStatusRepo.deleteWorkout(fileBaseName);
+        }
 
         return true;
     }
 
+    /**
+     * Bulk deletes all workouts older than the specified retention period.
+     *
+     * @param daysToKeep Number of days of workout history to preserve.
+     * @param progressCallback Callback invoked with each deleted workout ID for UI progress tracking.
+     * @return {@code true} if the operation completed successfully.
+     */
     public boolean deleteOldWorkouts(int daysToKeep, Function1<Long, Unit> progressCallback) {
         Log.i(TAG, "deleteOldWorkouts(" + daysToKeep + ")");
         List<Long> oldWorkoutIds = WorkoutSummariesDatabaseManager.getInstance(mContext).getOldWorkouts(daysToKeep);
         for (long workoutId : oldWorkoutIds) {
             Log.d(TAG, "Deleting workout with ID: " + workoutId);
 
-            progressCallback.invoke(workoutId);
+            if (progressCallback != null) {
+                progressCallback.invoke(workoutId);
+            }
 
             deleteWorkout(workoutId);
         }
