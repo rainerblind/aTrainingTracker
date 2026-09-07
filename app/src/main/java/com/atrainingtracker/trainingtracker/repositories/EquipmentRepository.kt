@@ -71,6 +71,11 @@ class EquipmentRepository private constructor(private val application: Applicati
                 }
             }
         }
+
+        @androidx.annotation.VisibleForTesting
+        fun resetForTesting(newInstance: EquipmentRepository? = null) {
+            INSTANCE = newInstance
+        }
     }
 
 }

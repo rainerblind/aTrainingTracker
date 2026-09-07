@@ -198,7 +198,7 @@ fun EditWorkoutScreen(
                     selectedOption = viewModel.suggestedEquipmentName ?: viewModel.noEquipment,
                     onOptionSelected = { viewModel.updateEquipmentName(it) },
                     modifier = Modifier.weight(1f),
-                    stayOpenOn = setOf(viewModel.allEquipment, viewModel.allShoes, viewModel.allBikes)
+                    stayOpenOn = setOf(viewModel.allShoes, viewModel.allBikes)
                 )
             }
 

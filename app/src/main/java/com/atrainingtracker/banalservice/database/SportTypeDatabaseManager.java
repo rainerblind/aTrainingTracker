@@ -68,6 +68,11 @@ public class SportTypeDatabaseManager {
         return cInstance;
     }
 
+    @androidx.annotation.VisibleForTesting
+    public static void resetForTesting(SportTypeDatabaseManager newInstance) {
+        cInstance = newInstance;
+    }
+
     /**
      * Returns a writable database instance and ensures it remains open.
      * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
