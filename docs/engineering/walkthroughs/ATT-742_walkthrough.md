@@ -39,6 +39,15 @@ This enhancement resolves four specific presentation and lifecycle feedback item
   * When navigating away from the workouts section (e.g. back to `drawer_start_tracking` or another drawer screen), active filters are automatically cleared in memory and DataStore.
   * Within-section operations (tab switching, viewing track on map, editing workouts) retain active filters seamlessly.
 
+### D. Header Action Order Consistency
+* **[WorkoutListActions.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutListActions.kt)**:
+  * Ordered header action icons consistently:
+    1. **Delete Old Workouts** (`onDeleteOldWorkoutsClicked`, if available)
+    2. **Toggle View Mode / Layout** (`onToggleCompactView`)
+    3. **Sort Menu** (`onSortOrderChange`)
+    4. **Filter Button** (`onFilterClicked`, with badge)
+  * Keeps the primary view controls (`Layout` → `Sort`) in consistent positions with sub-views (`WorkoutClustersFragment`, `WorkoutSummariesListFragment`) that do not feature bulk deletion or filter sheets.
+
 ---
 
 ## 3. Verification & Evidence
