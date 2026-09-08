@@ -28,6 +28,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMarker
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterMarkerType
 import com.atrainingtracker.trainingtracker.ui.routes.RouteFilterCriteria
+import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.SegmentFilterCriteria
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -48,6 +49,7 @@ class MyPreferenceManager(context: Context) {
         val ENABLED_TRACK_TYPES = stringSetPreferencesKey("enabled_track_types")
         val WORKOUT_FILTER_CRITERIA_JSON = stringPreferencesKey("workout_filter_criteria_json")
         val ROUTE_FILTER_CRITERIA_JSON = stringPreferencesKey("route_filter_criteria_json")
+        val SEGMENT_FILTER_CRITERIA_JSON = stringPreferencesKey("segment_filter_criteria_json")
     }
 
     val isCompactViewFlow: Flow<Boolean> = dataStore.data.map { preferences ->
@@ -150,6 +152,28 @@ class MyPreferenceManager(context: Context) {
         appScope.launch {
             dataStore.edit { preferences ->
                 preferences.remove(ROUTE_FILTER_CRITERIA_JSON)
+            }
+        }
+    }
+
+    val segmentFilterCriteriaFlow: Flow<SegmentFilterCriteria> = dataStore.data.map { preferences ->
+        SegmentFilterCriteria.fromJson(preferences[SEGMENT_FILTER_CRITERIA_JSON])
+    }
+
+    suspend fun setSegmentFilterCriteria(criteria: SegmentFilterCriteria) {
+        dataStore.edit { preferences ->
+            if (criteria.isEmpty) {
+                preferences.remove(SEGMENT_FILTER_CRITERIA_JSON)
+            } else {
+                preferences[SEGMENT_FILTER_CRITERIA_JSON] = criteria.toJson()
+            }
+        }
+    }
+
+    fun clearSegmentFilterCriteria() {
+        appScope.launch {
+            dataStore.edit { preferences ->
+                preferences.remove(SEGMENT_FILTER_CRITERIA_JSON)
             }
         }
     }

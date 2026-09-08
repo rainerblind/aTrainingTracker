@@ -61,7 +61,8 @@ fun SegmentList(
     onConnectToStrava: () -> Unit,
     onSegmentClick: (Long) -> Unit,
     appBarOffsetPx: Int,
-    headerHeightPx: Float
+    headerHeightPx: Float,
+    isFilterActive: Boolean = false
 ) {
     val density = LocalDensity.current
     val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
@@ -81,6 +82,12 @@ fun SegmentList(
                     onConnectToStrava()
                 })
             }
+        } else if (isFilterActive && segmentsWithPath.isEmpty()) {
+            EmptyStatePlaceholder(
+                modifier = Modifier.padding(top = topPadding),
+                icon = Icons.Default.Map,
+                message = stringResource(R.string.filter_no_matching_segments)
+            )
         }
         else {
             LazyColumn(

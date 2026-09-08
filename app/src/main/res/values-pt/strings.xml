@@ -1149,4 +1149,20 @@
     <string name="filter_route_selected">Apenas selecionados</string>
     <string name="filter_min_elevation_format">&gt; %1$s m</string>
     <string name="filter_no_matching_routes">Nenhum percurso corresponde aos filtros ativos</string>
+    <!-- Segment Filtering (ATT-735) -->
+    <string name="filter_segments_title">Filtrar segmentos</string>
+    <string name="filter_search_segments_hint">Buscar nome, cidade…</string>
+    <string name="filter_section_climb_category">Categoria de subida</string>
+    <string name="filter_climb_cat_4">Cat. 4+</string>
+    <string name="filter_climb_cat_3">Cat. 3+</string>
+    <string name="filter_climb_cat_2">Cat. 2+</string>
+    <string name="filter_climb_cat_1">Cat. 1+</string>
+    <string name="filter_climb_cat_hc">Apenas HC</string>
+    <string name="filter_climb_chip_cat4">≥ Cat. 4</string>
+    <string name="filter_climb_chip_cat3">≥ Cat. 3</string>
+    <string name="filter_climb_chip_cat2">≥ Cat. 2</string>
+    <string name="filter_climb_chip_cat1">≥ Cat. 1</string>
+    <string name="filter_climb_chip_hc">HC</string>
+    <string name="filter_has_pr">Recorde pessoal (PR)</string>
+    <string name="filter_no_matching_segments">Nenhum segmento corresponde aos filtros ativos</string>
 </resources>
