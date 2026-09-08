@@ -1156,4 +1156,10 @@ proszę czekać</string>
     <string name="filter_climb_chip_hc">HC</string>
     <string name="filter_has_pr">Rekord życiowy (PR)</string>
     <string name="filter_no_matching_segments">Brak segmentów pasujących do aktywnych filtrów</string>
+    <!-- Cluster Filtering (ATT-737) -->
+    <string name="filter_clusters_title">Filtruj ulubione trasy</string>
+    <string name="filter_search_clusters_hint">Szukaj nazwy trasy…</string>
+    <string name="filter_section_recordings">Nagrania</string>
+    <string name="filter_min_recordings_chip_format">≥ %1$d nagrań</string>
+    <string name="filter_no_matching_clusters">Żadne ulubione trasy nie pasują do aktywnych filtrów</string>
 </resources>

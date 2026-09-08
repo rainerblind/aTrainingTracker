@@ -1151,4 +1151,10 @@
     <string name="filter_climb_chip_hc">HC</string>
     <string name="filter_has_pr">自己ベスト(PR)あり</string>
     <string name="filter_no_matching_segments">有効なフィルターに一致するセグメントはありません</string>
+    <!-- Cluster Filtering (ATT-737) -->
+    <string name="filter_clusters_title">お気に入りトラックを絞り込み</string>
+    <string name="filter_search_clusters_hint">トラック名を検索…</string>
+    <string name="filter_section_recordings">記録</string>
+    <string name="filter_min_recordings_chip_format">≥ %1$d 件の記録</string>
+    <string name="filter_no_matching_clusters">一致するお気に入りトラックはありません</string>
 </resources>
