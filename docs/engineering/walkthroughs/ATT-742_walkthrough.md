@@ -34,10 +34,16 @@ This enhancement resolves four specific presentation and lifecycle feedback item
     * `"OK"` (`Button` / `@string/OK`): Commits local criteria via `onApplyCriteria()` and dismisses the sheet.
 
 ### C. State Management & Lifecycle
+* **[MyPreferenceManager.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/MyPreferenceManager.kt)**:
+  * Added `clearWorkoutFilterCriteria()` executing on an application-level coroutine scope (`appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)`), ensuring disk removal of `WORKOUT_FILTER_CRITERIA_JSON` is never cancelled by Fragment or ViewModel teardown.
+* **[WorkoutSummariesViewModel.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummariesViewModel.kt)**:
+  * Updated `clearFilterCriteria()` and `setFilterCriteria()` to dispatch `prefManager.clearWorkoutFilterCriteria()` whenever filter criteria are empty.
 * **[WorkoutSummariesTabbedFragment.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummariesTabbedFragment.kt)**:
-  * Overrode `onDestroyView()` to invoke `viewModel.clearFilterCriteria()`.
-  * When navigating away from the workouts section (e.g. back to `drawer_start_tracking` or another drawer screen), active filters are automatically cleared in memory and DataStore.
-  * Within-section operations (tab switching, viewing track on map, editing workouts) retain active filters seamlessly.
+  * Migrated `viewModel` from `by viewModels()` to `by activityViewModels()` (matching `WorkoutClustersFragment` and `WorkoutSummariesListFragment`), allowing instantaneous and robust in-memory reset.
+  * Overrode `onDestroyView()` to invoke `viewModel.clearFilterCriteria()` when navigating away (guarded by `activity?.isChangingConfigurations != true` to preserve active filters across device rotation).
+* **[MainActivityWithNavigation.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/activities/MainActivityWithNavigation.kt)**:
+  * Added explicit invocations of `MyPreferenceManager.clearWorkoutFilterCriteria()` upon back button press from `drawer_workouts` to `drawer_start_tracking`, and upon drawer item switches when leaving workouts.
+  * Guarantees that returning to the main view always completely clears active filters, ensuring subsequent visits to the workouts list start clean and unfiltered.
 
 ### D. Header Action Order Consistency
 * **[WorkoutListActions.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutListActions.kt)**:
