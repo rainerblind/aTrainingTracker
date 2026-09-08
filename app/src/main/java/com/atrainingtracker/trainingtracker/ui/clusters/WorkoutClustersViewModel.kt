@@ -125,6 +125,67 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
             initialValue = ClusterFilterCriteria()
         )
 
+    private val _sortOrder = MutableStateFlow(ClusterSortOrder.RECORDINGS)
+    val sortOrder: StateFlow<ClusterSortOrder> = _sortOrder.asStateFlow()
+
+    val isLocationAvailable: StateFlow<Boolean> = currentLocation
+        .map { it != null }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = currentLocation.value != null
+        )
+
+    fun setSortOrder(order: ClusterSortOrder) {
+        _sortOrder.value = order
+    }
+
+    /**
+     * Calculates geodetic distance between two geographical coordinates in meters.
+     */
+    fun calculateDistance(uLat: Double, uLon: Double, cLat: Double, cLon: Double): Float {
+        val results = FloatArray(1)
+        android.location.Location.distanceBetween(uLat, uLon, cLat, cLon, results)
+        return results[0]
+    }
+
+    /**
+     * Sorts a list of [WorkoutCluster]s according to the specified [ClusterSortOrder].
+     */
+    fun sortClusters(
+        clusters: List<WorkoutCluster>,
+        order: ClusterSortOrder,
+        location: LatLng?
+    ): List<WorkoutCluster> {
+        return when (order) {
+            ClusterSortOrder.RECORDINGS ->
+                clusters.sortedWith(
+                    compareByDescending<WorkoutCluster> { it.hitCount }
+                        .thenBy { it.name.lowercase() }
+                )
+            ClusterSortOrder.DISTANCE ->
+                clusters.sortedWith(
+                    compareByDescending<WorkoutCluster> { it.refDistance }
+                        .thenBy { it.name.lowercase() }
+                )
+            ClusterSortOrder.NAME ->
+                clusters.sortedBy { it.name.lowercase() }
+            ClusterSortOrder.DISTANCE_TO_USER -> {
+                if (location == null) {
+                    clusters.sortedBy { it.name.lowercase() }
+                } else {
+                    clusters.sortedBy { cluster ->
+                        calculateDistance(
+                            location.latitude, location.longitude,
+                            cluster.startLat, cluster.startLng
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+
     val availableEquipment: StateFlow<List<String>> = allClusters
         .map { clusters ->
             clusters.flatMap { cluster ->
