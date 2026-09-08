@@ -51,7 +51,7 @@ import com.atrainingtracker.R
 /**
  * Reusable Material 3 modal bottom sheet scaffold for multi-dimensional filtering.
  *
- * Provides a standardized structural layout across workouts and routes:
+ * Provides a standardized structural layout across workouts, routes, and segments:
  * 1. Top header row with title text and close dismiss button.
  * 2. Top horizontal divider.
  * 3. Scrollable content body with standardized horizontal padding and vertical spacing.
