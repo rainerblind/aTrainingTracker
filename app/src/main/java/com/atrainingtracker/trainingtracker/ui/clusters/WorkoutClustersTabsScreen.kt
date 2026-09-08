@@ -20,8 +20,11 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
+
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,6 +68,10 @@ fun WorkoutClustersTabsScreen(
     val unclusteredWorkouts by viewModel.unclusteredWorkouts.collectAsState()
     val filterCriteria by viewModel.filterCriteria.collectAsState()
     val availableEquipment by viewModel.availableEquipment.collectAsState()
+    val sortOrder by viewModel.sortOrder.collectAsState()
+    val currentLocation by viewModel.currentLocation.collectAsState()
+    val isLocationAvailable by viewModel.isLocationAvailable.collectAsState()
+
 
     var showFilterBottomSheet by rememberSaveable { mutableStateOf(false) }
 
@@ -140,13 +147,17 @@ fun WorkoutClustersTabsScreen(
                         clusters.filter { it.bSportType == currentSport }
                     }
 
-                    val finalClusters = if (filterCriteria.isEmpty) {
+                    val filteredClusters = if (filterCriteria.isEmpty) {
                         sportFilteredClusters
                     } else {
                         sportFilteredClusters.filter { cluster ->
                             val linkedEquipment = viewModel.getLinkedEquipmentSet(cluster.probableSportId)
                             filterCriteria.matches(cluster, linkedEquipment)
                         }
+                    }
+
+                    val finalClusters = remember(filteredClusters, sortOrder, currentLocation) {
+                        viewModel.sortClusters(filteredClusters, sortOrder, currentLocation)
                     }
 
                     val emptyMessage = when {
@@ -163,6 +174,7 @@ fun WorkoutClustersTabsScreen(
                         onHitCountClick = onHitCountClick,
                         scrollState = listState,
                         appBarOffsetPx = connection.appBarOffset,
+
                         headerHeightDp = headerHeightDp,
                         density = density,
                         emptyMessage = emptyMessage
@@ -252,6 +264,58 @@ fun WorkoutClustersTabsScreen(
                                     )
                                 }
 
+                                // --- SORT BUTTON (ATT-761) ---
+                                var showSortMenu by remember { mutableStateOf(false) }
+
+                                Box {
+                                    IconButton(onClick = { showSortMenu = true }) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.Sort,
+                                            contentDescription = stringResource(R.string.sort),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+
+                                    DropdownMenu(
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                        expanded = showSortMenu,
+                                        onDismissRequest = { showSortMenu = false }
+                                    ) {
+                                        ClusterSortOrder.entries.forEach { order ->
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Text(
+                                                        text = stringResource(order.labelResId),
+                                                        color = if (order == ClusterSortOrder.DISTANCE_TO_USER && !isLocationAvailable) {
+                                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                                        } else {
+                                                            MaterialTheme.colorScheme.onSurface
+                                                        }
+                                                    )
+                                                },
+                                                onClick = {
+                                                    viewModel.setSortOrder(order)
+                                                    showSortMenu = false
+                                                },
+                                                leadingIcon = {
+                                                    if (sortOrder == order) {
+                                                        Icon(
+                                                            Icons.Default.Check,
+                                                            contentDescription = null,
+                                                            tint = if (order == ClusterSortOrder.DISTANCE_TO_USER && !isLocationAvailable) {
+                                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                                            } else {
+                                                                MaterialTheme.colorScheme.onSurface
+                                                            }
+                                                        )
+                                                    }
+                                                },
+                                                enabled = !(order == ClusterSortOrder.DISTANCE_TO_USER && !isLocationAvailable)
+                                            )
+                                        }
+                                    }
+                                }
+
                                 FilterActionButton(
                                     onClick = { showFilterBottomSheet = true },
                                     isFilterActive = filterCriteria.isNotEmpty,
@@ -259,6 +323,7 @@ fun WorkoutClustersTabsScreen(
                                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
+
                         }
                     }
                     
