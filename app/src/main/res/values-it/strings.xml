@@ -951,7 +951,8 @@
     <string name="strava_kom_description">KOM / Record del tracciato</string>
     <string name="strava_pr_description">Record personale #%1$d</string>
     <string name="strava_show_all_segments_format">▼ Mostra tutti i %1$d segmenti (+%2$d altri)</string>
-    <string name="strava_show_less_segments_format">▲ Mostra solo preferiti e record (%1$d)</string>
+    <string name="strava_show_less_segments_format">▲ Mostra solo speciali e record personali (%1$d)</string>
+    <string name="strava_no_highlights">Nessun segmento speciale o record personale</string>
 
     <string name="strava_connected_status">Sei connesso a Strava</string>
     <string name="strava_disconnected_status">Non sei connesso a Strava</string>

@@ -935,6 +935,7 @@
     <string name="strava_pr_description">自己ベスト #%1$d</string>
     <string name="strava_show_all_segments_format">▼ すべての%1$d件のセグメントを表示（他%2$d件）</string>
     <string name="strava_show_less_segments_format">▲ スター付きと自己ベストのみ表示（%1$d）</string>
+    <string name="strava_no_highlights">スター付きセグメントまたは自己ベストはありません</string>
 
     <string name="strava_connected_status">Strava 接続中</string>
     <string name="strava_disconnected_status">Strava 未接続</string>

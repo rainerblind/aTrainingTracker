@@ -55,11 +55,15 @@ fun StravaActivitySection(
         StravaActivityParser.parse(rawActivityJson)
     } ?: return
 
-    val starredIds = remember {
+    val (starredIds, starredNames) = remember {
         try {
-            SegmentsDatabaseManager.getInstance(context).allSegmentSummaries.map { it.stravaId }.toSet()
+            val summaries = SegmentsDatabaseManager.getInstance(context).allSegmentSummaries
+            Pair(
+                summaries.map { it.stravaId }.toSet(),
+                summaries.map { it.name.trim().lowercase() }.toSet()
+            )
         } catch (e: Exception) {
-            emptySet()
+            Pair(emptySet<Long>(), emptySet<String>())
         }
     }
 
@@ -130,9 +134,11 @@ fun StravaActivitySection(
             )
 
             val totalSegments = activity.segmentEfforts.size
-            val highlightEfforts = remember(activity.segmentEfforts, starredIds) {
+            val highlightEfforts = remember(activity.segmentEfforts, starredIds, starredNames) {
                 activity.segmentEfforts.filter { effort ->
-                    effort.isHighlight || (effort.segmentId != null && starredIds.contains(effort.segmentId))
+                    effort.isHighlight ||
+                        (effort.segmentId != null && starredIds.contains(effort.segmentId)) ||
+                        starredNames.contains(effort.name.trim().lowercase())
                 }
             }
             val isCollapsible = totalSegments > 4 && totalSegments > highlightEfforts.size
@@ -140,14 +146,22 @@ fun StravaActivitySection(
 
             val displayedSegments = if (!isCollapsible || isExpanded) {
                 activity.segmentEfforts
-            } else if (highlightEfforts.isNotEmpty()) {
-                highlightEfforts
             } else {
-                activity.segmentEfforts.take(4)
+                highlightEfforts
+            }
+
+            if (!isExpanded && isCollapsible && highlightEfforts.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.strava_no_highlights),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             displayedSegments.forEach { effort ->
-                val isEffortStarred = effort.isStarred || (effort.segmentId != null && starredIds.contains(effort.segmentId))
+                val isEffortStarred = effort.isStarred ||
+                    (effort.segmentId != null && starredIds.contains(effort.segmentId)) ||
+                    starredNames.contains(effort.name.trim().lowercase())
                 SegmentEffortRow(effort = effort, isStarred = isEffortStarred)
             }
 

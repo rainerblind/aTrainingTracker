@@ -954,7 +954,8 @@
     <string name="strava_kom_description">KOM / Récord del segmento</string>
     <string name="strava_pr_description">Récord personal #%1$d</string>
     <string name="strava_show_all_segments_format">▼ Mostrar los %1$d segmentos (+%2$d más)</string>
-    <string name="strava_show_less_segments_format">▲ Mostrar solo destacados y récords (%1$d)</string>
+    <string name="strava_show_less_segments_format">▲ Mostrar solo destacados y mejores marcas (%1$d)</string>
+    <string name="strava_no_highlights">Sin segmentos destacados ni mejores marcas</string>
 
     <string name="strava_connected_status">Estás conectado a Strava</string>
     <string name="strava_disconnected_status">No estás conectado a Strava</string>

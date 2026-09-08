@@ -951,7 +951,8 @@
     <string name="strava_kom_description">KOM / Segmentrecord</string>
     <string name="strava_pr_description">Persoonlijk record #%1$d</string>
     <string name="strava_show_all_segments_format">▼ Toon alle %1$d segmenten (+%2$d meer)</string>
-    <string name="strava_show_less_segments_format">▲ Toon alleen favorieten &amp; records (%1$d)</string>
+    <string name="strava_show_less_segments_format">▲ Alleen met ster &amp; PR\'s tonen (%1$d)</string>
+    <string name="strava_no_highlights">Geen segmenten met ster of PR\'s</string>
 
     <string name="strava_connected_status">Verbonden met Strava</string>
     <string name="strava_disconnected_status">Niet verbonden met Strava</string>

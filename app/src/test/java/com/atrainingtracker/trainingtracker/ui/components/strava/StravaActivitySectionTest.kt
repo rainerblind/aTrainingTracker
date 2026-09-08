@@ -187,7 +187,7 @@ class StravaActivitySectionTest {
     }
 
     @Test
-    fun testZeroHighlightsFallback() {
+    fun testZeroHighlightsShowsEmptyInCollapsedView() {
         val efforts = (1..7).map {
             StravaSegmentEffort("Normal $it", 100, prRank = null, komRank = null)
         }
@@ -198,15 +198,75 @@ class StravaActivitySectionTest {
         assertTrue("7 segments with 0 highlights should be collapsible", isCollapsible)
         assertEquals(0, highlights.size)
 
-        // Collapsed fallback displays top 4
-        val displayedCollapsed = if (!isCollapsible) {
-            efforts
-        } else if (highlights.isNotEmpty()) {
-            highlights
-        } else {
-            efforts.take(4)
-        }
-        assertEquals(4, displayedCollapsed.size)
-        assertEquals(listOf("Normal 1", "Normal 2", "Normal 3", "Normal 4"), displayedCollapsed.map { it.name })
+        // Collapsed state strictly displays only highlights (0 segments)
+        val displayedCollapsed = if (!isCollapsible) efforts else highlights
+        assertEquals(0, displayedCollapsed.size)
+        assertTrue(displayedCollapsed.isEmpty())
+    }
+
+    @Test
+    fun testParserExtractsPrAndKomFromAchievementsArray() {
+        val json = """
+            {
+              "id": 99881,
+              "segment_efforts": [
+                {
+                  "name": "Achievement PR",
+                  "elapsed_time": 250,
+                  "achievements": [
+                    { "type": "pr", "rank": 1 }
+                  ]
+                },
+                {
+                  "name": "Achievement KOM",
+                  "elapsed_time": 180,
+                  "achievements": [
+                    { "type": "overall", "rank": 1 }
+                  ]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val activity = StravaActivityParser.parse(json)
+        assertNotNull(activity)
+        assertEquals(2, activity!!.segmentEfforts.size)
+
+        val prEffort = activity.segmentEfforts[0]
+        assertEquals(1, prEffort.prRank)
+        assertTrue(prEffort.isHighlight)
+
+        val komEffort = activity.segmentEfforts[1]
+        assertEquals(1, komEffort.komRank)
+        assertTrue(komEffort.isHighlight)
+    }
+
+    @Test
+    fun testParserExtractsStarredDateFromSegment() {
+        val json = """
+            {
+              "id": 99882,
+              "segment_efforts": [
+                {
+                  "name": "Dated Starred Segment",
+                  "elapsed_time": 400,
+                  "segment": {
+                    "id": 112233,
+                    "name": "Dated Starred Segment",
+                    "starred_date": "2024-05-01T12:00:00Z"
+                  }
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val activity = StravaActivityParser.parse(json)
+        assertNotNull(activity)
+        assertEquals(1, activity!!.segmentEfforts.size)
+
+        val effort = activity.segmentEfforts[0]
+        assertTrue(effort.isStarred)
+        assertEquals(112233L, effort.segmentId)
+        assertTrue(effort.isHighlight)
     }
 }
