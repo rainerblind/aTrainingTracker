@@ -27,13 +27,18 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMarkerType
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterMarkerType
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 private val Context.dataStore by preferencesDataStore(name = "user_preferences")
 
 class MyPreferenceManager(context: Context) {
     private val dataStore = context.dataStore
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     companion object {
         val IS_COMPACT_VIEW = booleanPreferencesKey("is_compact_view")
@@ -113,6 +118,14 @@ class MyPreferenceManager(context: Context) {
                 preferences.remove(WORKOUT_FILTER_CRITERIA_JSON)
             } else {
                 preferences[WORKOUT_FILTER_CRITERIA_JSON] = criteria.toJson()
+            }
+        }
+    }
+
+    fun clearWorkoutFilterCriteria() {
+        appScope.launch {
+            dataStore.edit { preferences ->
+                preferences.remove(WORKOUT_FILTER_CRITERIA_JSON)
             }
         }
     }

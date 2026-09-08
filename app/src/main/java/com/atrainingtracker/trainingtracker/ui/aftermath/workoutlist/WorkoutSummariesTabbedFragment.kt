@@ -49,6 +49,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -73,7 +74,7 @@ import kotlin.getValue
 class WorkoutSummariesTabbedFragment : Fragment() {
 
     // Initialize the existing ViewModel
-    private val viewModel: WorkoutSummariesViewModel by viewModels()
+    private val viewModel: WorkoutSummariesViewModel by activityViewModels()
     private val trackOnMapViewModel: TrackOnMapAftermathViewModel by viewModels()
 
 
@@ -293,6 +294,14 @@ class WorkoutSummariesTabbedFragment : Fragment() {
         // Handle deletion events or other one-time events from the ViewModel
         viewModel.confirmDeleteWorkoutEvent.observe(viewLifecycleOwner) { workoutId ->
             // Trigger your existing Delete Dialog logic here if needed
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // ATT-742: Clear active filters when navigating away from workouts view (unless rotating screen)
+        if (activity?.isChangingConfigurations != true) {
+            viewModel.clearFilterCriteria()
         }
     }
 

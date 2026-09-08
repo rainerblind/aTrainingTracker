@@ -23,7 +23,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.ViewHeadline
 import androidx.compose.material.icons.filled.ViewStream
 import androidx.compose.material3.Badge
@@ -67,32 +67,6 @@ fun WorkoutListActions(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Filter Button (ATT-128)
-        if (onFilterClicked != null) {
-            IconButton(onClick = onFilterClicked) {
-                if (isFilterActive && activeFilterCount > 0) {
-                    BadgedBox(
-                        badge = {
-                            Badge {
-                                Text(activeFilterCount.toString())
-                            }
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FilterList,
-                            contentDescription = stringResource(R.string.filter_action),
-                            tint = tint
-                        )
-                    }
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.FilterList,
-                        contentDescription = stringResource(R.string.filter_action),
-                        tint = tint
-                    )
-                }
-            }
-        }
         // Delete Old Workouts Button (ATT-296)
         if (onDeleteOldWorkoutsClicked != null) {
             IconButton(onClick = onDeleteOldWorkoutsClicked) {
@@ -139,11 +113,38 @@ fun WorkoutListActions(
                         leadingIcon = {
                             if (sortOrder == order) {
                                 Icon(
-                                    Icons.Default.Check,
+                                    imageVector = Icons.Default.Check,
                                     contentDescription = null
                                 )
                             }
                         }
+                    )
+                }
+            }
+        }
+
+        // Filter Button (ATT-128 / ATT-742)
+        if (onFilterClicked != null) {
+            IconButton(onClick = onFilterClicked) {
+                if (isFilterActive && activeFilterCount > 0) {
+                    BadgedBox(
+                        badge = {
+                            Badge {
+                                Text(activeFilterCount.toString())
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FilterAlt,
+                            contentDescription = stringResource(R.string.filter_action),
+                            tint = tint
+                        )
+                    }
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.FilterAlt,
+                        contentDescription = stringResource(R.string.filter_action),
+                        tint = tint
                     )
                 }
             }
