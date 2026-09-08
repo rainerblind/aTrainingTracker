@@ -102,8 +102,8 @@ fun SegmentsTabsScreen(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
-    // Chips row adds 36dp to the collapsing header height when active
-    val filterChipsRowHeightDp = if (filterCriteria.isNotEmpty) 36.dp else 0.dp
+    // Chips row adds 40dp to the collapsing header height when active
+    val filterChipsRowHeightDp = if (filterCriteria.isNotEmpty) 40.dp else 0.dp
 
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val appBarMaxHeightPx = with(density) {
@@ -279,25 +279,30 @@ fun SegmentsTabsScreen(
 
                     // Active filter chip strip (shown below tabs when filters are active)
                     if (filterCriteria.isNotEmpty) {
-                        ActiveSegmentFilterChipsRow(
-                            criteria = filterCriteria,
-                            onRemoveQuery = {
-                                onFilterUpdate { it.copy(query = "") }
-                            },
-                            onRemoveClimbCategory = {
-                                onFilterUpdate { it.copy(minClimbCategory = null) }
-                            },
-                            onRemoveMinDistance = {
-                                onFilterUpdate { it.copy(minDistanceMeters = null) }
-                            },
-                            onRemoveMinElevation = {
-                                onFilterUpdate { it.copy(minElevationGainMeters = null) }
-                            },
-                            onRemoveHasPR = {
-                                onFilterUpdate { it.copy(hasPR = null) }
-                            },
-                            onClearAll = onFilterClear
-                        )
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            ActiveSegmentFilterChipsRow(
+                                criteria = filterCriteria,
+                                onRemoveQuery = {
+                                    onFilterUpdate { it.copy(query = "") }
+                                },
+                                onRemoveClimbCategory = {
+                                    onFilterUpdate { it.copy(minClimbCategory = null) }
+                                },
+                                onRemoveMinDistance = {
+                                    onFilterUpdate { it.copy(minDistanceMeters = null) }
+                                },
+                                onRemoveMinElevation = {
+                                    onFilterUpdate { it.copy(minElevationGainMeters = null) }
+                                },
+                                onRemoveHasPR = {
+                                    onFilterUpdate { it.copy(hasPR = null) }
+                                },
+                                onClearAll = onFilterClear
+                            )
+                        }
                     }
                 }
             }

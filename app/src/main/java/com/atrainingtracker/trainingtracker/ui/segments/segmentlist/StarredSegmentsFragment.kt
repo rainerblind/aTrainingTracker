@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
@@ -45,20 +46,21 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 class StarredSegmentsFragment : Fragment() {
 
+    private lateinit var viewModel: SegmentListViewModel
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        viewModel = ViewModelProvider(
+            this,
+            SegmentListViewModel.SegmentListViewModelFactory(requireContext())
+        ).get(SegmentListViewModel::class.java)
+
         return ComposeView(requireContext()).apply {
             setContent {
                 ATrainingTrackerTheme {
-
-                    // Initialize the existing SegmentListViewModel
-                    val viewModel: SegmentListViewModel = viewModel(
-                        factory = SegmentListViewModel.SegmentListViewModelFactory(requireContext())
-                    )
-
                     val segments by viewModel.segmentsWithPath.collectAsStateWithLifecycle()
                     val sortOrder by viewModel.sortOrder.collectAsState()
                     val refreshingSports by viewModel.refreshingSports.collectAsStateWithLifecycle()
@@ -154,6 +156,14 @@ class StarredSegmentsFragment : Fragment() {
             .replace(R.id.content, fragment, TrainingApplication.PREFERENCE_SCREEN_STRAVA)
             .addToBackStack(null) // Allows user to press 'Back' to return to segments
             .commit()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // ATT-735: Clear active filters when navigating away from segments view (unless rotating screen)
+        if (activity?.isChangingConfigurations != true) {
+            viewModel.clearFilterCriteria()
+        }
     }
 
     companion object {
