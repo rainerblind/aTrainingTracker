@@ -51,7 +51,8 @@ fun RouteList(
     onHeaderClick: (Long) -> Unit,
     onDeleteConfirmed: (Long) -> Unit,
     appBarOffsetPx: Int,
-    headerHeightPx: Float
+    headerHeightPx: Float,
+    isFilterActive: Boolean = false
 ) {
     val density = LocalDensity.current
     // val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
@@ -63,12 +64,14 @@ fun RouteList(
         EmptyStatePlaceholder(
             modifier = Modifier.padding(top = topPadding),
             icon = Icons.Default.Route,
-            message = if (bSportType != null) {
+            message = if (isFilterActive) {
+                stringResource(R.string.filter_no_matching_routes)
+            } else if (bSportType != null) {
                 stringResource(R.string.no_routes_available, bSportType.getName(context))
             } else {
                 stringResource(R.string.absolutely_no_routes_available)
             },
-            hint = stringResource(R.string.routes_import_hint)
+            hint = if (isFilterActive) "" else stringResource(R.string.routes_import_hint)
         )
     }
     else {

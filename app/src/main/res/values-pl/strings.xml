@@ -1133,4 +1133,11 @@ proszę czekać</string>
     <string name="filter_min_distance_format">&gt; %1$s km</string>
     <string name="filter_min_duration_format">&gt; %1$s min</string>
     <string name="filter_no_matching_workouts">Brak treningów pasujących do aktywnych filtrów</string>
+    <!-- Route Filtering (ATT-736) -->
+    <string name="filter_routes_title">Filtruj trasy</string>
+    <string name="filter_search_routes_hint">Szukaj nazwy, opisu…</string>
+    <string name="filter_route_source">Źródło</string>
+    <string name="filter_route_selected">Tylko wybrane</string>
+    <string name="filter_min_elevation_format">&gt; %1$s m</string>
+    <string name="filter_no_matching_routes">Brak tras pasujących do aktywnych filtrów</string>
 </resources>

@@ -33,6 +33,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import com.atrainingtracker.trainingtracker.ui.common.filters.FilterActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -123,31 +124,14 @@ fun WorkoutListActions(
             }
         }
 
-        // Filter Button (ATT-128 / ATT-742)
+        // Filter Button (ATT-128 / ATT-742 / ATT-736)
         if (onFilterClicked != null) {
-            IconButton(onClick = onFilterClicked) {
-                if (isFilterActive && activeFilterCount > 0) {
-                    BadgedBox(
-                        badge = {
-                            Badge {
-                                Text(activeFilterCount.toString())
-                            }
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FilterAlt,
-                            contentDescription = stringResource(R.string.filter_action),
-                            tint = tint
-                        )
-                    }
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.FilterAlt,
-                        contentDescription = stringResource(R.string.filter_action),
-                        tint = tint
-                    )
-                }
-            }
+            FilterActionButton(
+                onClick = onFilterClicked,
+                isFilterActive = isFilterActive,
+                activeFilterCount = activeFilterCount,
+                tint = tint
+            )
         }
     }
 }

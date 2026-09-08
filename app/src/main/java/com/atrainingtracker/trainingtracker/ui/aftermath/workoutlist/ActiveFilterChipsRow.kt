@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.common.filters.RemovableFilterChip
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
@@ -216,39 +217,4 @@ fun ActiveFilterChipsRow(
             }
         }
     }
-}
-
-/**
- * Individual chip with leading/body label and trailing close/remove icon.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun RemovableFilterChip(
-    label: String,
-    onRemove: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    InputChip(
-        selected = true,
-        onClick = onRemove,
-        label = {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium
-            )
-        },
-        trailingIcon = {
-            Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = stringResource(R.string.Cancel),
-                modifier = Modifier.size(16.dp)
-            )
-        },
-        colors = InputChipDefaults.inputChipColors(
-            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-            selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
-            selectedTrailingIconColor = MaterialTheme.colorScheme.onSecondaryContainer
-        ),
-        modifier = modifier
-    )
 }

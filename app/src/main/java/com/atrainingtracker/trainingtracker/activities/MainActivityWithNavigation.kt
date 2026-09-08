@@ -435,6 +435,9 @@ class MainActivityWithNavigation :
                         if (mSelectedFragmentId == R.id.drawer_workouts) {
                             MyPreferenceManager(applicationContext).clearWorkoutFilterCriteria()
                         }
+                        if (mSelectedFragmentId == R.id.drawer_routes) {
+                            MyPreferenceManager(applicationContext).clearRouteFilterCriteria()
+                        }
                         navigateToDrawerItem(R.id.drawer_start_tracking)
                     } else {
                         finish()
@@ -882,6 +885,9 @@ class MainActivityWithNavigation :
         if (fragment != null) {
             if (itemId == R.id.drawer_start_tracking || (mSelectedFragmentId == R.id.drawer_workouts && itemId != R.id.drawer_workouts)) {
                 MyPreferenceManager(applicationContext).clearWorkoutFilterCriteria()
+            }
+            if (itemId == R.id.drawer_start_tracking || (mSelectedFragmentId == R.id.drawer_routes && itemId != R.id.drawer_routes)) {
+                MyPreferenceManager(applicationContext).clearRouteFilterCriteria()
             }
             mSelectedFragmentId = itemId
             mDrawerController.selectedItemId = itemId

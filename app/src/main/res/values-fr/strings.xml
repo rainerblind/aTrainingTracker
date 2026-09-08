@@ -1143,4 +1143,11 @@
     <string name="filter_min_distance_format">&gt; %1$s km</string>
     <string name="filter_min_duration_format">&gt; %1$s min</string>
     <string name="filter_no_matching_workouts">Aucun entraînement ne correspond aux filtres actifs</string>
+    <!-- Route Filtering (ATT-736) -->
+    <string name="filter_routes_title">Filtrer les parcours</string>
+    <string name="filter_search_routes_hint">Rechercher nom, description…</string>
+    <string name="filter_route_source">Source</string>
+    <string name="filter_route_selected">Sélectionnés uniquement</string>
+    <string name="filter_min_elevation_format">&gt; %1$s m</string>
+    <string name="filter_no_matching_routes">Aucun parcours ne correspond aux filtres actifs</string>
 </resources>
