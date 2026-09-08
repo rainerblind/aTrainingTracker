@@ -74,6 +74,7 @@ import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory
 import com.atrainingtracker.banalservice.ui.sporttype.SportTypeListFragment
+import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
@@ -431,6 +432,9 @@ class MainActivityWithNavigation :
                     if (supportFragmentManager.backStackEntryCount > 0) {
                         supportFragmentManager.popBackStack()
                     } else if (supportFragmentManager.backStackEntryCount == 0 && mSelectedFragmentId != R.id.drawer_start_tracking) {
+                        if (mSelectedFragmentId == R.id.drawer_workouts) {
+                            MyPreferenceManager(applicationContext).clearWorkoutFilterCriteria()
+                        }
                         navigateToDrawerItem(R.id.drawer_start_tracking)
                     } else {
                         finish()
@@ -876,6 +880,9 @@ class MainActivityWithNavigation :
 
         val fragment = mFragment
         if (fragment != null) {
+            if (itemId == R.id.drawer_start_tracking || (mSelectedFragmentId == R.id.drawer_workouts && itemId != R.id.drawer_workouts)) {
+                MyPreferenceManager(applicationContext).clearWorkoutFilterCriteria()
+            }
             mSelectedFragmentId = itemId
             mDrawerController.selectedItemId = itemId
 

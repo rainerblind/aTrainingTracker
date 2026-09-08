@@ -125,6 +125,7 @@ class WorkoutSummariesViewModelFilterTest {
         mockkConstructor(MyPreferenceManager::class)
         every { anyConstructed<MyPreferenceManager>().workoutFilterCriteriaFlow } returns flowOf(WorkoutFilterCriteria())
         coEvery { anyConstructed<MyPreferenceManager>().setWorkoutFilterCriteria(any()) } just Runs
+        every { anyConstructed<MyPreferenceManager>().clearWorkoutFilterCriteria() } just Runs
         every { anyConstructed<MyPreferenceManager>().isCompactViewFlow } returns flowOf(false)
 
         every { mockWorkoutRepo.allWorkouts } returns allWorkoutsFlow

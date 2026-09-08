@@ -83,13 +83,18 @@ class WorkoutSummariesViewModel(application: Application) :
 
     fun setFilterCriteria(criteria: WorkoutFilterCriteria) {
         _filterCriteria.value = criteria
-        viewModelScope.launch {
-            prefManager.setWorkoutFilterCriteria(criteria)
+        if (criteria.isEmpty) {
+            prefManager.clearWorkoutFilterCriteria()
+        } else {
+            viewModelScope.launch {
+                prefManager.setWorkoutFilterCriteria(criteria)
+            }
         }
     }
 
     fun clearFilterCriteria() {
-        setFilterCriteria(WorkoutFilterCriteria())
+        _filterCriteria.value = WorkoutFilterCriteria()
+        prefManager.clearWorkoutFilterCriteria()
     }
 
     fun updateFilterCriteria(transform: (WorkoutFilterCriteria) -> WorkoutFilterCriteria) {
