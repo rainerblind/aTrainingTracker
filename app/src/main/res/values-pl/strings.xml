@@ -1117,4 +1117,20 @@ proszę czekać</string>
     <string name="legacy_recovery_description">Importuj historię treningów z plików TCX (np. z poprzedniego urządzenia). Istniejące rekordy zostaną pominięte.</string>
     <string name="scan_tcx">Skanuj Dropbox</string>
     <string name="import_single_file">Importuj plik TCX</string>
+    <!-- Workout Filtering (ATT-128) -->
+    <string name="filter_workouts_title">Filtruj treningi</string>
+    <string name="filter_action">Filtruj</string>
+    <string name="filter_clear_all">Wyczyść wszystko</string>
+    <string name="filter_search_hint">Szukaj tytułu, notatek, opisu…</string>
+    <string name="filter_section_time">Czas i okres</string>
+    <string name="filter_section_sport">Dyscyplina</string>
+    <string name="filter_section_equipment">Sprzęt</string>
+    <string name="filter_section_attributes">Atrybuty</string>
+    <string name="filter_section_thresholds">Dystans i czas trwania</string>
+    <string name="filter_commute">Dojazd</string>
+    <string name="filter_trainer">Trenażer / Wewnątrz</string>
+    <string name="filter_has_gps">Z trasą GPS</string>
+    <string name="filter_min_distance_format">&gt; %1$s km</string>
+    <string name="filter_min_duration_format">&gt; %1$s min</string>
+    <string name="filter_no_matching_workouts">Brak treningów pasujących do aktywnych filtrów</string>
 </resources>

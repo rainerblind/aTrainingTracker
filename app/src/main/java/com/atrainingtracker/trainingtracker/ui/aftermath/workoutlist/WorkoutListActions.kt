@@ -23,8 +23,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.ViewHeadline
 import androidx.compose.material.icons.filled.ViewStream
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -45,7 +48,7 @@ import com.atrainingtracker.R
 
 /**
  * Reusable actions for workout lists: Toggling between compact/detailed view, sorting,
- * and bulk-deleting old workouts.
+ * filtering, and bulk-deleting old workouts.
  */
 @Composable
 fun WorkoutListActions(
@@ -55,12 +58,41 @@ fun WorkoutListActions(
     onSortOrderChange: (WorkoutSortOrder) -> Unit,
     modifier: Modifier = Modifier,
     onDeleteOldWorkoutsClicked: (() -> Unit)? = null,
+    onFilterClicked: (() -> Unit)? = null,
+    isFilterActive: Boolean = false,
+    activeFilterCount: Int = 0,
     tint: Color = MaterialTheme.colorScheme.onPrimaryContainer
 ) {
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Filter Button (ATT-128)
+        if (onFilterClicked != null) {
+            IconButton(onClick = onFilterClicked) {
+                if (isFilterActive && activeFilterCount > 0) {
+                    BadgedBox(
+                        badge = {
+                            Badge {
+                                Text(activeFilterCount.toString())
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FilterList,
+                            contentDescription = stringResource(R.string.filter_action),
+                            tint = tint
+                        )
+                    }
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.FilterList,
+                        contentDescription = stringResource(R.string.filter_action),
+                        tint = tint
+                    )
+                }
+            }
+        }
         // Delete Old Workouts Button (ATT-296)
         if (onDeleteOldWorkoutsClicked != null) {
             IconButton(onClick = onDeleteOldWorkoutsClicked) {
