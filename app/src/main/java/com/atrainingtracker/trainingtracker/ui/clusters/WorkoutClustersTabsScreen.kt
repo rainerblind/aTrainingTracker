@@ -40,6 +40,9 @@ import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.atrainingtracker.trainingtracker.ui.common.filters.FilterActionButton
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutClustersTabsScreen(
@@ -60,6 +63,20 @@ fun WorkoutClustersTabsScreen(
 ) {
     val clusters by viewModel.allClusters.collectAsState()
     val unclusteredWorkouts by viewModel.unclusteredWorkouts.collectAsState()
+    val filterCriteria by viewModel.filterCriteria.collectAsState()
+    val availableEquipment by viewModel.availableEquipment.collectAsState()
+
+    var showFilterBottomSheet by rememberSaveable { mutableStateOf(false) }
+
+    if (showFilterBottomSheet) {
+        ClusterFilterBottomSheet(
+            criteria = filterCriteria,
+            availableEquipment = availableEquipment,
+            onApplyCriteria = { viewModel.setFilterCriteria(it) },
+            onClearAll = { viewModel.clearFilterCriteria() },
+            onDismissRequest = { showFilterBottomSheet = false }
+        )
+    }
     
     val tabs = listOf(
         stringResource(R.string.sport_type_tab_all) to null,
@@ -75,7 +92,8 @@ fun WorkoutClustersTabsScreen(
     val density = LocalDensity.current
 
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val headerHeightDp = statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT
+    val chipsRowHeight = if (filterCriteria.isNotEmpty) 40.dp else 0.dp
+    val headerHeightDp = statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT + chipsRowHeight
     val headerHeightPx = with(density) { headerHeightDp.roundToPx() }
 
     val connection = remember(headerHeightPx) {
@@ -116,14 +134,29 @@ fun WorkoutClustersTabsScreen(
                         emptyMessage = stringResource(R.string.no_unclustered_workouts)
                     )
                 } else {
-                    val filteredClusters = if (currentSport == null) {
+                    val sportFilteredClusters = if (currentSport == null) {
                         clusters
                     } else {
                         clusters.filter { it.bSportType == currentSport }
                     }
 
+                    val finalClusters = if (filterCriteria.isEmpty) {
+                        sportFilteredClusters
+                    } else {
+                        sportFilteredClusters.filter { cluster ->
+                            val linkedEquipment = viewModel.getLinkedEquipmentSet(cluster.probableSportId)
+                            filterCriteria.matches(cluster, linkedEquipment)
+                        }
+                    }
+
+                    val emptyMessage = when {
+                        filterCriteria.isNotEmpty -> stringResource(R.string.filter_no_matching_clusters)
+                        currentSport == null -> stringResource(R.string.absolutely_no_clusters_available)
+                        else -> stringResource(R.string.no_clusters_available, tabs[pageIndex].first)
+                    }
+
                     WorkoutClustersList(
-                        clusters = filteredClusters,
+                        clusters = finalClusters,
                         viewModel = viewModel,
                         onClusterClick = onClusterClick,
                         onDeleteRequest = onDeleteRequest,
@@ -132,8 +165,7 @@ fun WorkoutClustersTabsScreen(
                         appBarOffsetPx = connection.appBarOffset,
                         headerHeightDp = headerHeightDp,
                         density = density,
-                        emptyMessage = if (currentSport == null) stringResource(R.string.absolutely_no_clusters_available)
-                                       else stringResource(R.string.no_clusters_available, tabs[pageIndex].first)
+                        emptyMessage = emptyMessage
                     )
                 }
             }
@@ -211,10 +243,19 @@ fun WorkoutClustersTabsScreen(
                                 overflow = TextOverflow.Ellipsis
                             )
 
-                            IconButton(onClick = onTuneClick) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_settings_24),
-                                    contentDescription = stringResource(R.string.cluster_tuning_content_desc),
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = onTuneClick) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_settings_24),
+                                        contentDescription = stringResource(R.string.cluster_tuning_content_desc),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+
+                                FilterActionButton(
+                                    onClick = { showFilterBottomSheet = true },
+                                    isFilterActive = filterCriteria.isNotEmpty,
+                                    activeFilterCount = filterCriteria.activeFilterCount,
                                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
@@ -231,6 +272,23 @@ fun WorkoutClustersTabsScreen(
                                 selected = pagerState.currentPage == index,
                                 onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
                                 text = { Text(text = tab.first) }
+                            )
+                        }
+                    }
+
+                    // Active Filter Chips Strip (ATT-737)
+                    if (filterCriteria.isNotEmpty) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            ActiveClusterFilterChipsRow(
+                                criteria = filterCriteria,
+                                onRemoveQuery = { viewModel.updateFilterCriteria { it.copy(query = "") } },
+                                onRemoveEquipment = { viewModel.updateFilterCriteria { it.copy(equipmentName = null) } },
+                                onRemoveMinDistance = { viewModel.updateFilterCriteria { it.copy(minDistanceMeters = null) } },
+                                onRemoveMinHitCount = { viewModel.updateFilterCriteria { it.copy(minHitCount = null) } },
+                                onClearAll = { viewModel.clearFilterCriteria() }
                             )
                         }
                     }

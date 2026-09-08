@@ -118,6 +118,40 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ClusterMarkerType.entries.toSet())
 
+    val filterCriteria: StateFlow<ClusterFilterCriteria> = preferenceManager.clusterFilterCriteriaFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = ClusterFilterCriteria()
+        )
+
+    val availableEquipment: StateFlow<List<String>> = allClusters
+        .map { clusters ->
+            clusters.flatMap { cluster ->
+                getLinkedEquipment(cluster.probableSportId)
+            }.distinct().sorted()
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    fun setFilterCriteria(criteria: ClusterFilterCriteria) {
+        viewModelScope.launch {
+            preferenceManager.setClusterFilterCriteria(criteria)
+        }
+    }
+
+    fun clearFilterCriteria() {
+        preferenceManager.clearClusterFilterCriteria()
+    }
+
+    fun updateFilterCriteria(transform: (ClusterFilterCriteria) -> ClusterFilterCriteria) {
+        val newCriteria = transform(filterCriteria.value)
+        setFilterCriteria(newCriteria)
+    }
+
     fun toggleMarkerType(type: ClusterMarkerType) {
         viewModelScope.launch {
             val enabled = enabledMarkerTypes.value.contains(type)
@@ -352,5 +386,10 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
     fun getLinkedEquipment(sportId: Long): List<String> {
         val sportName = getSportName(sportId)
         return discoveryManager.getEquipmentNamesForSport(sportName).toList()
+    }
+
+    fun getLinkedEquipmentSet(sportId: Long): Set<String> {
+        val sportName = getSportName(sportId)
+        return discoveryManager.getEquipmentNamesForSport(sportName)
     }
 }

@@ -1165,4 +1165,10 @@
     <string name="filter_climb_chip_hc">HC</string>
     <string name="filter_has_pr">Persoonlijk record (PR)</string>
     <string name="filter_no_matching_segments">Geen segmenten komen overeen met de actieve filters</string>
+    <!-- Cluster Filtering (ATT-737) -->
+    <string name="filter_clusters_title">Favoriete tracks filteren</string>
+    <string name="filter_search_clusters_hint">Zoek tracknaam…</string>
+    <string name="filter_section_recordings">Opnamen</string>
+    <string name="filter_min_recordings_chip_format">≥ %1$d opnamen</string>
+    <string name="filter_no_matching_clusters">Geen favoriete tracks komen overeen met de actieve filters</string>
 </resources>

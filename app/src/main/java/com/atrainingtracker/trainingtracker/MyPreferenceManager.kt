@@ -27,6 +27,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMarkerType
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterMarkerType
+import com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.routes.RouteFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.SegmentFilterCriteria
 import kotlinx.coroutines.CoroutineScope
@@ -50,6 +51,7 @@ class MyPreferenceManager(context: Context) {
         val WORKOUT_FILTER_CRITERIA_JSON = stringPreferencesKey("workout_filter_criteria_json")
         val ROUTE_FILTER_CRITERIA_JSON = stringPreferencesKey("route_filter_criteria_json")
         val SEGMENT_FILTER_CRITERIA_JSON = stringPreferencesKey("segment_filter_criteria_json")
+        val CLUSTER_FILTER_CRITERIA_JSON = stringPreferencesKey("cluster_filter_criteria_json")
     }
 
     val isCompactViewFlow: Flow<Boolean> = dataStore.data.map { preferences ->
@@ -174,6 +176,28 @@ class MyPreferenceManager(context: Context) {
         appScope.launch {
             dataStore.edit { preferences ->
                 preferences.remove(SEGMENT_FILTER_CRITERIA_JSON)
+            }
+        }
+    }
+
+    val clusterFilterCriteriaFlow: Flow<ClusterFilterCriteria> = dataStore.data.map { preferences ->
+        ClusterFilterCriteria.fromJson(preferences[CLUSTER_FILTER_CRITERIA_JSON])
+    }
+
+    suspend fun setClusterFilterCriteria(criteria: ClusterFilterCriteria) {
+        dataStore.edit { preferences ->
+            if (criteria.isEmpty) {
+                preferences.remove(CLUSTER_FILTER_CRITERIA_JSON)
+            } else {
+                preferences[CLUSTER_FILTER_CRITERIA_JSON] = criteria.toJson()
+            }
+        }
+    }
+
+    fun clearClusterFilterCriteria() {
+        appScope.launch {
+            dataStore.edit { preferences ->
+                preferences.remove(CLUSTER_FILTER_CRITERIA_JSON)
             }
         }
     }

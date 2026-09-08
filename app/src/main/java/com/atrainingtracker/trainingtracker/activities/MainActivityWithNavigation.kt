@@ -438,6 +438,9 @@ class MainActivityWithNavigation :
                         if (mSelectedFragmentId == R.id.drawer_routes) {
                             MyPreferenceManager(applicationContext).clearRouteFilterCriteria()
                         }
+                        if (mSelectedFragmentId == R.id.drawer_my_locations) {
+                            MyPreferenceManager(applicationContext).clearClusterFilterCriteria()
+                        }
                         navigateToDrawerItem(R.id.drawer_start_tracking)
                     } else {
                         finish()
@@ -888,6 +891,9 @@ class MainActivityWithNavigation :
             }
             if (itemId == R.id.drawer_start_tracking || (mSelectedFragmentId == R.id.drawer_routes && itemId != R.id.drawer_routes)) {
                 MyPreferenceManager(applicationContext).clearRouteFilterCriteria()
+            }
+            if (itemId == R.id.drawer_start_tracking || (mSelectedFragmentId == R.id.drawer_my_locations && itemId != R.id.drawer_my_locations)) {
+                MyPreferenceManager(applicationContext).clearClusterFilterCriteria()
             }
             mSelectedFragmentId = itemId
             mDrawerController.selectedItemId = itemId

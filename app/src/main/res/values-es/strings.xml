@@ -1167,4 +1167,10 @@
     <string name="filter_climb_chip_hc">HC</string>
     <string name="filter_has_pr">Récord personal (PR)</string>
     <string name="filter_no_matching_segments">Ningún segmento coincide con los filtros activos</string>
+    <!-- Favorite Tracks Filtering (ATT-737) -->
+    <string name="filter_clusters_title">Filtrar rutas favoritas</string>
+    <string name="filter_search_clusters_hint">Buscar nombre de ruta…</string>
+    <string name="filter_section_recordings">Grabaciones</string>
+    <string name="filter_min_recordings_chip_format">≥ %1$d grabaciones</string>
+    <string name="filter_no_matching_clusters">Ninguna ruta favorita coincide con los filtros activos</string>
 </resources>
