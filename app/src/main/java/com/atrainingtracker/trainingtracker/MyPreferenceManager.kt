@@ -21,9 +21,11 @@ package com.atrainingtracker.trainingtracker
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMarkerType
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterMarkerType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -38,6 +40,7 @@ class MyPreferenceManager(context: Context) {
         val ENABLED_PERIOD_MARKER_TYPES = stringSetPreferencesKey("enabled_period_marker_types")
         val ENABLED_CLUSTER_MARKER_TYPES = stringSetPreferencesKey("enabled_cluster_marker_types")
         val ENABLED_TRACK_TYPES = stringSetPreferencesKey("enabled_track_types")
+        val WORKOUT_FILTER_CRITERIA_JSON = stringPreferencesKey("workout_filter_criteria_json")
     }
 
     val isCompactViewFlow: Flow<Boolean> = dataStore.data.map { preferences ->
@@ -97,6 +100,20 @@ class MyPreferenceManager(context: Context) {
             val current = preferences[ENABLED_TRACK_TYPES] ?: setOf(com.atrainingtracker.trainingtracker.ui.map.TrackType.BEST.name)
             val updated = if (enabled) current + type else current - type
             preferences[ENABLED_TRACK_TYPES] = updated
+        }
+    }
+
+    val workoutFilterCriteriaFlow: Flow<WorkoutFilterCriteria> = dataStore.data.map { preferences ->
+        WorkoutFilterCriteria.fromJson(preferences[WORKOUT_FILTER_CRITERIA_JSON])
+    }
+
+    suspend fun setWorkoutFilterCriteria(criteria: WorkoutFilterCriteria) {
+        dataStore.edit { preferences ->
+            if (criteria.isEmpty) {
+                preferences.remove(WORKOUT_FILTER_CRITERIA_JSON)
+            } else {
+                preferences[WORKOUT_FILTER_CRITERIA_JSON] = criteria.toJson()
+            }
         }
     }
 }

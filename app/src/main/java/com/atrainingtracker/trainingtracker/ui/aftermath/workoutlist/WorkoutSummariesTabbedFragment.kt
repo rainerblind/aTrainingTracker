@@ -147,6 +147,8 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                     }
                     val sortOrder by viewModel.sortOrder.collectAsState()
                     val isCompactView by viewModel.isCompactView.collectAsState()
+                    val filterCriteria by viewModel.filterCriteria.collectAsStateWithLifecycle()
+                    val allWorkouts by viewModel.allWorkouts.collectAsStateWithLifecycle()
                     val deletionProgress by viewModel.deletionProgress.observeAsState(DeletionProgress.Idle)
 
                     // --- SNACKBAR FEEDBACK ---
@@ -270,7 +272,12 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                                     onDeleteOldWorkouts = { daysToKeep ->
                                         viewModel.executeDeleteOldWorkouts(daysToKeep)
                                     },
-                                    deletionProgress = deletionProgress
+                                    deletionProgress = deletionProgress,
+                                    filterCriteria = filterCriteria,
+                                    allWorkouts = allWorkouts,
+                                    onApplyFilterCriteria = { viewModel.setFilterCriteria(it) },
+                                    onClearAllFilters = { viewModel.clearFilterCriteria() },
+                                    onUpdateFilterCriteria = { viewModel.updateFilterCriteria(it) }
                                 )
                             }
                         }

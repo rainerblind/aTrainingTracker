@@ -89,7 +89,12 @@ fun WorkoutTabsScreen(
     isCompactView: Boolean,
     onToggleCompactView: () -> Unit,
     onDeleteOldWorkouts: (Int) -> Unit,
-    deletionProgress: DeletionProgress = DeletionProgress.Idle
+    deletionProgress: DeletionProgress = DeletionProgress.Idle,
+    filterCriteria: WorkoutFilterCriteria = WorkoutFilterCriteria(),
+    allWorkouts: List<WorkoutData> = workouts,
+    onApplyFilterCriteria: (WorkoutFilterCriteria) -> Unit = {},
+    onClearAllFilters: () -> Unit = {},
+    onUpdateFilterCriteria: ((WorkoutFilterCriteria) -> WorkoutFilterCriteria) -> Unit = {}
 ) {
     val tabs = listOf(
         stringResource(R.string.workout_summaries_tab_all),
@@ -109,9 +114,22 @@ fun WorkoutTabsScreen(
         }
     }
 
-    // 1. Calculate the total height of the Header (Status Bar + Content Height)
+    var showFilterBottomSheet by rememberSaveable { mutableStateOf(false) }
+
+    if (showFilterBottomSheet) {
+        WorkoutFilterBottomSheet(
+            criteria = filterCriteria,
+            allWorkouts = allWorkouts,
+            onApplyCriteria = onApplyFilterCriteria,
+            onClearAll = onClearAllFilters,
+            onDismissRequest = { showFilterBottomSheet = false }
+        )
+    }
+
+    // 1. Calculate the total height of the Header (Status Bar + Content Height + optional active chips)
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val appBarMaxHeightPx = with(density) { (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT).roundToPx() }
+    val chipsRowHeight = if (filterCriteria.isNotEmpty) 40.dp else 0.dp
+    val appBarMaxHeightPx = with(density) { (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT + chipsRowHeight).roundToPx() }
 
     // 2. Initialize the Connection
     val connection = remember(appBarMaxHeightPx) {
@@ -228,6 +246,9 @@ fun WorkoutTabsScreen(
                             sortOrder = sortOrder,
                             onSortOrderChange = onSortOrderChange,
                             onDeleteOldWorkoutsClicked = { showDeleteOldWorkoutsDialog = true },
+                            onFilterClicked = { showFilterBottomSheet = true },
+                            isFilterActive = filterCriteria.isNotEmpty,
+                            activeFilterCount = filterCriteria.activeFilterCount,
                             tint = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
@@ -241,6 +262,42 @@ fun WorkoutTabsScreen(
                                 selected = pagerState.currentPage == index,
                                 onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
                                 text = { Text(text = title) }
+                            )
+                        }
+                    }
+
+                    // Active Filter Chips Strip (ATT-128)
+                    if (filterCriteria.isNotEmpty) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            val sportName = remember(filterCriteria.sportTypeId, allWorkouts) {
+                                filterCriteria.sportTypeId?.let { id ->
+                                    allWorkouts.find { it.sportId == id }?.sportName
+                                }
+                            }
+                            val equipName = remember(filterCriteria.equipmentId, allWorkouts) {
+                                filterCriteria.equipmentId?.let { id ->
+                                    allWorkouts.find { it.equipmentId == id }?.equipmentName
+                                }
+                            }
+                            ActiveFilterChipsRow(
+                                criteria = filterCriteria,
+                                onRemoveQuery = { onUpdateFilterCriteria { it.copy(query = "") } },
+                                onRemoveYear = { onUpdateFilterCriteria { it.copy(year = null) } },
+                                onRemoveMonth = { onUpdateFilterCriteria { it.copy(month = null) } },
+                                onRemoveDateRange = { onUpdateFilterCriteria { it.copy(startDateS = null, endDateS = null) } },
+                                onRemoveSport = { onUpdateFilterCriteria { it.copy(sportTypeId = null) } },
+                                onRemoveEquipment = { onUpdateFilterCriteria { it.copy(equipmentId = null) } },
+                                onRemoveCommute = { onUpdateFilterCriteria { it.copy(isCommute = null) } },
+                                onRemoveTrainer = { onUpdateFilterCriteria { it.copy(isTrainer = null) } },
+                                onRemoveGpsTrack = { onUpdateFilterCriteria { it.copy(hasGpsTrack = null) } },
+                                onRemoveMinDistance = { onUpdateFilterCriteria { it.copy(minDistanceMeters = null) } },
+                                onRemoveMinDuration = { onUpdateFilterCriteria { it.copy(minDurationSec = null) } },
+                                onClearAll = onClearAllFilters,
+                                sportName = sportName,
+                                equipmentName = equipName
                             )
                         }
                     }

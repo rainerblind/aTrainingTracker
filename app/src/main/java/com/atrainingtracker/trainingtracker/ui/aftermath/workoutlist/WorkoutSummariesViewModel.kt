@@ -66,23 +66,56 @@ class WorkoutSummariesViewModel(application: Application) :
     }
 
 
+    // All workouts unfiltered from repository
+    val allWorkouts: StateFlow<List<WorkoutData>> = workoutRepo.allWorkouts
+
+    // Multi-dimensional filter criteria state
+    private val _filterCriteria = MutableStateFlow(WorkoutFilterCriteria())
+    val filterCriteria: StateFlow<WorkoutFilterCriteria> = _filterCriteria.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            prefManager.workoutFilterCriteriaFlow.collect { restored ->
+                _filterCriteria.value = restored
+            }
+        }
+    }
+
+    fun setFilterCriteria(criteria: WorkoutFilterCriteria) {
+        _filterCriteria.value = criteria
+        viewModelScope.launch {
+            prefManager.setWorkoutFilterCriteria(criteria)
+        }
+    }
+
+    fun clearFilterCriteria() {
+        setFilterCriteria(WorkoutFilterCriteria())
+    }
+
+    fun updateFilterCriteria(transform: (WorkoutFilterCriteria) -> WorkoutFilterCriteria) {
+        val newCriteria = transform(_filterCriteria.value)
+        setFilterCriteria(newCriteria)
+    }
+
     val workouts: StateFlow<List<WorkoutData>> = combine(
         workoutRepo.allWorkouts,
-        _sortOrder
-    ) { workoutList, order ->
+        _sortOrder,
+        _filterCriteria
+    ) { workoutList, order, criteria ->
         if (workoutList.isEmpty()) {
             emptyList()
         } else {
+            val filtered = if (criteria.isEmpty) workoutList else workoutList.filter { criteria.matches(it) }
             // Apply sorting logic
             when (order) {
                 WorkoutSortOrder.DATE ->
-                    workoutList.sortedByDescending { it.startTimeS }
+                    filtered.sortedByDescending { it.startTimeS }
                 WorkoutSortOrder.TOTAL_ELEVATION_GAIN ->
-                    workoutList.sortedByDescending { it.ascentMeters }
+                    filtered.sortedByDescending { it.ascentMeters }
                 WorkoutSortOrder.WORKOUT_DISTANCE ->
-                    workoutList.sortedByDescending { it.totalDistance }
+                    filtered.sortedByDescending { it.totalDistance }
                 WorkoutSortOrder.WORKOUT_DURATION ->
-                    workoutList.sortedByDescending { it.activeTimeSec }
+                    filtered.sortedByDescending { it.activeTimeSec }
             }
         }
     }.stateIn(

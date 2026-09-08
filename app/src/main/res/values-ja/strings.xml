@@ -1112,4 +1112,20 @@
     <string name="legacy_recovery_description">以前のデバイスなどから TCX ファイルを使用してトレーニング履歴をインポートします。既存の記録はスキップされます。</string>
     <string name="scan_tcx">Dropbox をスキャン</string>
     <string name="import_single_file">TCX ファイルをインポート</string>
+    <!-- Workout Filtering (ATT-128) -->
+    <string name="filter_workouts_title">ワークアウトをフィルター</string>
+    <string name="filter_action">フィルター</string>
+    <string name="filter_clear_all">すべてクリア</string>
+    <string name="filter_search_hint">タイトル、メモ、説明を検索…</string>
+    <string name="filter_section_time">期間と日時</string>
+    <string name="filter_section_sport">スポーツの種類</string>
+    <string name="filter_section_equipment">装備</string>
+    <string name="filter_section_attributes">属性</string>
+    <string name="filter_section_thresholds">距離と時間</string>
+    <string name="filter_commute">通勤・通学</string>
+    <string name="filter_trainer">インドア / ローラー台</string>
+    <string name="filter_has_gps">GPSログあり</string>
+    <string name="filter_min_distance_format">&gt; %1$s km</string>
+    <string name="filter_min_duration_format">&gt; %1$s min</string>
+    <string name="filter_no_matching_workouts">有効なフィルターに一致するワークアウトはありません</string>
 </resources>
