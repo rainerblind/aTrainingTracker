@@ -27,6 +27,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMarkerType
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterMarkerType
+import com.atrainingtracker.trainingtracker.ui.routes.RouteFilterCriteria
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -46,6 +47,7 @@ class MyPreferenceManager(context: Context) {
         val ENABLED_CLUSTER_MARKER_TYPES = stringSetPreferencesKey("enabled_cluster_marker_types")
         val ENABLED_TRACK_TYPES = stringSetPreferencesKey("enabled_track_types")
         val WORKOUT_FILTER_CRITERIA_JSON = stringPreferencesKey("workout_filter_criteria_json")
+        val ROUTE_FILTER_CRITERIA_JSON = stringPreferencesKey("route_filter_criteria_json")
     }
 
     val isCompactViewFlow: Flow<Boolean> = dataStore.data.map { preferences ->
@@ -126,6 +128,28 @@ class MyPreferenceManager(context: Context) {
         appScope.launch {
             dataStore.edit { preferences ->
                 preferences.remove(WORKOUT_FILTER_CRITERIA_JSON)
+            }
+        }
+    }
+
+    val routeFilterCriteriaFlow: Flow<RouteFilterCriteria> = dataStore.data.map { preferences ->
+        RouteFilterCriteria.fromJson(preferences[ROUTE_FILTER_CRITERIA_JSON])
+    }
+
+    suspend fun setRouteFilterCriteria(criteria: RouteFilterCriteria) {
+        dataStore.edit { preferences ->
+            if (criteria.isEmpty) {
+                preferences.remove(ROUTE_FILTER_CRITERIA_JSON)
+            } else {
+                preferences[ROUTE_FILTER_CRITERIA_JSON] = criteria.toJson()
+            }
+        }
+    }
+
+    fun clearRouteFilterCriteria() {
+        appScope.launch {
+            dataStore.edit { preferences ->
+                preferences.remove(ROUTE_FILTER_CRITERIA_JSON)
             }
         }
     }

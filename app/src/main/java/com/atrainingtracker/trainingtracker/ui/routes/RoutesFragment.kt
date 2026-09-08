@@ -89,6 +89,7 @@ class RoutesFragment : Fragment() {
                     val routes by viewModel.routes.collectAsStateWithLifecycle()
                     val allSegments by viewModel.segments.collectAsStateWithLifecycle()
                     val sortOrder by viewModel.sortOrder.collectAsState()
+                    val filterCriteria by viewModel.filterCriteria.collectAsStateWithLifecycle()
                     val isLocationAvailable by viewModel.isLocationAvailable.collectAsStateWithLifecycle()
                     val isSyncingStrava by viewModel.isSyncingStrava.collectAsStateWithLifecycle()
                     val syncStravaStatus by viewModel.syncStravaStatus.collectAsStateWithLifecycle()
@@ -209,7 +210,11 @@ class RoutesFragment : Fragment() {
                                     sortOrder = sortOrder,
                                     onSortOrderChange = { viewModel.setSortOrder(it) },
                                     scrollToTop = viewModel.shouldScrollToTop(sortOrder),
-                                    isLocationAvailable = isLocationAvailable
+                                    isLocationAvailable = isLocationAvailable,
+                                    filterCriteria = filterCriteria,
+                                    onApplyFilterCriteria = { viewModel.setFilterCriteria(it) },
+                                    onClearAllFilters = { viewModel.clearFilterCriteria() },
+                                    onUpdateFilterCriteria = { viewModel.updateFilterCriteria(it) }
                                 )
                             }
                         }
@@ -223,6 +228,14 @@ class RoutesFragment : Fragment() {
         super.onResume()
         // Ensure data is fresh when returning to this screen
         viewModel.refresh()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // ATT-736: Clear active filters when navigating away from routes view (unless rotating screen)
+        if (activity?.isChangingConfigurations != true) {
+            viewModel.clearFilterCriteria()
+        }
     }
 
     companion object {
