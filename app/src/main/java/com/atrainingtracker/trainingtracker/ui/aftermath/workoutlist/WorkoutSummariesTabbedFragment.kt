@@ -296,6 +296,12 @@ class WorkoutSummariesTabbedFragment : Fragment() {
         }
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // ATT-742: Clear active filters when navigating away from workouts view
+        viewModel.clearFilterCriteria()
+    }
+
 
     // Companion object for Java compatibility
     companion object {

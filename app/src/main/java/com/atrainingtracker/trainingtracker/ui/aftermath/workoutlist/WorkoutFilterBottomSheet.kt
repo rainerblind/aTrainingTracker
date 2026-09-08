@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -36,13 +37,14 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -99,24 +101,22 @@ fun WorkoutFilterBottomSheet(
             .sortedBy { it.second }
     }
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        sheetState = sheetState,
-        modifier = Modifier.fillMaxHeight(0.9f)
+        sheetState = sheetState
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 24.dp)
+                .navigationBarsPadding()
         ) {
-            // Header Bar: Title, Reset, Done
+            // Header Bar: Title and Close dismiss button
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp),
+                    .padding(start = 20.dp, end = 12.dp, top = 4.dp, bottom = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -126,51 +126,23 @@ fun WorkoutFilterBottomSheet(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(
-                        onClick = {
-                            localQuery = ""
-                            localYear = null
-                            localSportId = null
-                            localEquipId = null
-                            localCommute = null
-                            localTrainer = null
-                            localHasGps = null
-                            localMinDistanceMeters = null
-                            localMinDurationSec = null
-                            onClearAll()
-                        }
-                    ) {
-                        Text(stringResource(R.string.filter_clear_all))
-                    }
-
-                    Button(
-                        onClick = {
-                            val updated = criteria.copy(
-                                query = localQuery,
-                                year = localYear,
-                                sportTypeId = localSportId,
-                                equipmentId = localEquipId,
-                                isCommute = localCommute,
-                                isTrainer = localTrainer,
-                                hasGpsTrack = localHasGps,
-                                minDistanceMeters = localMinDistanceMeters,
-                                minDurationSec = localMinDurationSec
-                            )
-                            onApplyCriteria(updated)
-                            onDismissRequest()
-                        }
-                    ) {
-                        Text(stringResource(R.string.OK))
-                    }
+                IconButton(onClick = onDismissRequest) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.Cancel)
+                    )
                 }
             }
+
+            HorizontalDivider()
 
             // Scrollable Content
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // 1. Text Search Input
@@ -341,6 +313,56 @@ fun WorkoutFilterBottomSheet(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            HorizontalDivider()
+
+            // Dedicated Bottom Action Bar: Reset all & Apply
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedButton(
+                    onClick = {
+                        localQuery = ""
+                        localYear = null
+                        localSportId = null
+                        localEquipId = null
+                        localCommute = null
+                        localTrainer = null
+                        localHasGps = null
+                        localMinDistanceMeters = null
+                        localMinDurationSec = null
+                        onClearAll()
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.filter_clear_all))
+                }
+
+                Button(
+                    onClick = {
+                        val updated = criteria.copy(
+                            query = localQuery.trim(),
+                            year = localYear,
+                            sportTypeId = localSportId,
+                            equipmentId = localEquipId,
+                            isCommute = localCommute,
+                            isTrainer = localTrainer,
+                            hasGpsTrack = localHasGps,
+                            minDistanceMeters = localMinDistanceMeters,
+                            minDurationSec = localMinDurationSec
+                        )
+                        onApplyCriteria(updated)
+                        onDismissRequest()
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.OK))
+                }
             }
         }
     }
