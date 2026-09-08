@@ -1135,4 +1135,20 @@
     <string name="filter_route_selected">選択中のみ</string>
     <string name="filter_min_elevation_format">&gt; %1$s m</string>
     <string name="filter_no_matching_routes">有効なフィルターに一致するルートはありません</string>
+    <!-- Segment Filtering (ATT-735) -->
+    <string name="filter_segments_title">セグメントをフィルター</string>
+    <string name="filter_search_segments_hint">名前、市区町村を検索…</string>
+    <string name="filter_section_climb_category">山岳カテゴリー</string>
+    <string name="filter_climb_cat_4">カテゴリー4以上</string>
+    <string name="filter_climb_cat_3">カテゴリー3以上</string>
+    <string name="filter_climb_cat_2">カテゴリー2以上</string>
+    <string name="filter_climb_cat_1">カテゴリー1以上</string>
+    <string name="filter_climb_cat_hc">超級(HC)のみ</string>
+    <string name="filter_climb_chip_cat4">≥ カテ4</string>
+    <string name="filter_climb_chip_cat3">≥ カテ3</string>
+    <string name="filter_climb_chip_cat2">≥ カテ2</string>
+    <string name="filter_climb_chip_cat1">≥ カテ1</string>
+    <string name="filter_climb_chip_hc">HC</string>
+    <string name="filter_has_pr">自己ベスト(PR)あり</string>
+    <string name="filter_no_matching_segments">有効なフィルターに一致するセグメントはありません</string>
 </resources>

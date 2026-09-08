@@ -1140,4 +1140,20 @@ proszę czekać</string>
     <string name="filter_route_selected">Tylko wybrane</string>
     <string name="filter_min_elevation_format">&gt; %1$s m</string>
     <string name="filter_no_matching_routes">Brak tras pasujących do aktywnych filtrów</string>
+    <!-- Segment Filtering (ATT-735) -->
+    <string name="filter_segments_title">Filtruj segmenty</string>
+    <string name="filter_search_segments_hint">Szukaj nazwy, miasta…</string>
+    <string name="filter_section_climb_category">Kategoria podjazdu</string>
+    <string name="filter_climb_cat_4">Kat. 4+</string>
+    <string name="filter_climb_cat_3">Kat. 3+</string>
+    <string name="filter_climb_cat_2">Kat. 2+</string>
+    <string name="filter_climb_cat_1">Kat. 1+</string>
+    <string name="filter_climb_cat_hc">Tylko HC</string>
+    <string name="filter_climb_chip_cat4">≥ Kat. 4</string>
+    <string name="filter_climb_chip_cat3">≥ Kat. 3</string>
+    <string name="filter_climb_chip_cat2">≥ Kat. 2</string>
+    <string name="filter_climb_chip_cat1">≥ Kat. 1</string>
+    <string name="filter_climb_chip_hc">HC</string>
+    <string name="filter_has_pr">Rekord życiowy (PR)</string>
+    <string name="filter_no_matching_segments">Brak segmentów pasujących do aktywnych filtrów</string>
 </resources>
