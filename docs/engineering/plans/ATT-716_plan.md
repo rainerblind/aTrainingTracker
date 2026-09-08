@@ -20,12 +20,13 @@
   2. Add extension property `val StravaSegmentEffort.isHighlight: Boolean get() = isStarred || prRank != null || komRank != null`.
   3. In `StravaActivityParser.parse()`, extract:
      - `segmentId`: from nested `segment.id` or root `segment_id`.
-     - `isStarred`: from nested `segment.starred` or root `starred` / `is_starred`.
+     - `isStarred`: from nested `segment.starred` / `starred_date`, or root `starred` / `is_starred` / `starred_date`.
+     - `prRank` / `komRank`: from root fields and fallback to Strava's `achievements` array (`type == "pr"` / `type == "overall"` / `"kom"`).
 
 ### Component 2: Presentation Layer & Smart Accordion (`StravaActivitySection.kt`)
 * **File**: [`StravaActivitySection.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/strava/StravaActivitySection.kt)
 * **Changes**:
-  1. Retrieve local starred segment IDs from `SegmentsDatabaseManager.getInstance(context).allSegmentSummaries` to supplement Strava activity JSON payloads.
+  1. Retrieve local starred segments (both IDs and normalized names) from `SegmentsDatabaseManager.getInstance(context).allSegmentSummaries` to supplement Strava activity JSON payloads.
   2. Implement collapse eligibility logic:
      - Threshold $K = 4$.
      - `isCollapsible = totalSegments > 4 && totalSegments > highlightCount`.
@@ -33,8 +34,8 @@
   3. Hoist accordion state using `rememberSaveable { mutableStateOf(false) }`.
   4. Compute `displayedSegments`:
      - If `!isCollapsible || isExpanded`: display all segment efforts.
-     - If `!isExpanded && highlightCount > 0`: display only highlighted segment efforts.
-     - If `!isExpanded && highlightCount == 0`: display first 4 segment efforts.
+     - If `!isExpanded`: strictly display highlighted segment efforts (`highlightEfforts`).
+     - If `!isExpanded && highlightCount == 0`: display zero segment rows along with a localized note (`@string/strava_no_highlights`: *"No starred segments or PRs"*).
   5. Render subtle expand/collapse button below displayed segment efforts:
      - When collapsed: `"▼ Show all %1$d segments (+%2$d more)"`
      - When expanded: `"▲ Show only starred & PRs (%1$d)"`
@@ -55,6 +56,7 @@
 * Add strings:
   - `strava_show_all_segments_format`: `"Show all %1$d segments (+%2$d more)"`
   - `strava_show_less_segments_format`: `"Show only starred & PRs (%1$d)"`
+  - `strava_no_highlights`: `"No starred segments or PRs"`
 
 ---
 
@@ -63,13 +65,15 @@
 ### Automated Unit Tests
 * **File**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/components/strava/StravaActivitySectionTest.kt`
 * **Test Cases**:
-  1. `testParserExtractsStarredAndSegmentIdFromNestedAndFlatJson`: Verifies parsing of nested and flat `starred` and `segment_id`.
-  2. `testHighlightClassification`: Verifies `isHighlight` logic for PR (1, 2, 3), KOM, and starred.
-  3. `testSmallSegmentCountDoesNotTriggerAccordion`: Verifies $\le 4$ segments show all segments and no toggle button.
-  4. `testAllHighlightsDoesNotTriggerAccordion`: Verifies $> 4$ segments where all are highlights show all segments and no toggle button.
-  5. `testCollapsibleDefaultsToHighlights`: Verifies $> 4$ segments with standard segments defaults to showing only highlights and renders expand button.
-  6. `testAccordionExpansionAndCollapse`: Verifies in-place expansion toggles to all segments and collapse button restores highlights.
-  7. `testZeroHighlightsFallback`: Verifies fallback when $> 4$ segments have 0 highlights.
+  1. `testParserExtractsStarredAndSegmentIdFromNestedSegment`: Verifies parsing of nested `starred` and `segment.id`.
+  2. `testParserExtractsStarredAndSegmentIdFromFlatJson`: Verifies parsing of flat JSON `starred` / `is_starred` and `segment_id`.
+  3. `testHighlightClassification`: Verifies `isHighlight` logic for PR (1, 2, 3), KOM, and starred.
+  4. `testSmallSegmentCountDoesNotTriggerAccordion`: Verifies $\le 4$ segments show all segments and no toggle button.
+  5. `testAllHighlightsDoesNotTriggerAccordion`: Verifies $> 4$ segments where all are highlights show all segments and no toggle button.
+  6. `testCollapsibleEligibilityAndFiltering`: Verifies $> 4$ segments with standard segments defaults to showing only highlights and renders expand button.
+  7. `testZeroHighlightsShowsEmptyInCollapsedView`: Verifies collapsed view displays 0 segments when $> 4$ segments have 0 highlights.
+  8. `testParserExtractsPrAndKomFromAchievementsArray`: Verifies extraction of PR and KOM from Strava's `achievements` array.
+  9. `testParserExtractsStarredDateFromSegment`: Verifies `starred_date` timestamp triggers starred highlight.
 
 ### Full Regression Test
 * Execute `./gradlew testDebugUnitTest` verifying 100% clean pass across the full test suite.
