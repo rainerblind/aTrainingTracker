@@ -30,8 +30,13 @@ data class StravaSegmentEffort(
     val name: String,
     val elapsedTimeSec: Int,
     val prRank: Int?, // 1, 2, 3
-    val komRank: Int? // 1
+    val komRank: Int?, // 1
+    val isStarred: Boolean = false,
+    val segmentId: Long? = null
 )
+
+val StravaSegmentEffort.isHighlight: Boolean
+    get() = isStarred || prRank != null || komRank != null
 
 data class StravaBestEffort(
     val name: String,
@@ -50,12 +55,26 @@ object StravaActivityParser {
             json.optJSONArray("segment_efforts")?.let { array ->
                 for (i in 0 until array.length()) {
                     val item = array.getJSONObject(i)
+                    val segmentObj = item.optJSONObject("segment")
+                    val isStarred = item.optBoolean("starred", false) ||
+                            item.optBoolean("is_starred", false) ||
+                            (segmentObj != null && segmentObj.optBoolean("starred", false))
+                    val segmentId = if (segmentObj != null && segmentObj.has("id") && !segmentObj.isNull("id")) {
+                        segmentObj.optLong("id")
+                    } else if (item.has("segment_id") && !item.isNull("segment_id")) {
+                        item.optLong("segment_id")
+                    } else {
+                        null
+                    }
+
                     segmentEfforts.add(
                         StravaSegmentEffort(
                             name = item.optString("name"),
                             elapsedTimeSec = item.optInt("elapsed_time"),
                             prRank = if (item.has("pr_rank") && !item.isNull("pr_rank")) item.optInt("pr_rank") else null,
-                            komRank = if (item.has("kom_rank") && !item.isNull("kom_rank")) item.optInt("kom_rank") else null
+                            komRank = if (item.has("kom_rank") && !item.isNull("kom_rank")) item.optInt("kom_rank") else null,
+                            isStarred = isStarred,
+                            segmentId = segmentId
                         )
                     )
                 }

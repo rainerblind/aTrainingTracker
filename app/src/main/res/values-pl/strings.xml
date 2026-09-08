@@ -716,6 +716,8 @@
     </plurals>
     <string name="strava_kom_description">KOM / Rekord trasy</string>
     <string name="strava_pr_description">Rekord życiowy #%1$d</string>
+    <string name="strava_show_all_segments_format">▼ Pokaż wszystkie %1$d segmenty (+%2$d więcej)</string>
+    <string name="strava_show_less_segments_format">▲ Pokaż tylko wyróżnione &amp; rekordy (%1$d)</string>
 
     <string name="strava_connected_status">Połączono ze Strava</string>
     <string name="strava_disconnected_status">Nie połączono ze Strava</string>

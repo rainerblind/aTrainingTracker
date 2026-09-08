@@ -166,6 +166,7 @@ dependencies {
     testImplementation "io.mockk:mockk:1.14.11"
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0"
     testImplementation 'net.sf.kxml:kxml2:2.3.0'
+    testImplementation 'org.json:json:20240303'
 }
 
 secrets {

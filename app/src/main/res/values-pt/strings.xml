@@ -950,6 +950,8 @@
     </plurals>
     <string name="strava_kom_description">KOM / Recorde do percurso</string>
     <string name="strava_pr_description">Recorde pessoal #%1$d</string>
+    <string name="strava_show_all_segments_format">▼ Mostrar todos os %1$d segmentos (+%2$d mais)</string>
+    <string name="strava_show_less_segments_format">▲ Mostrar apenas favoritos &amp; recordes (%1$d)</string>
 
     <string name="strava_connected_status">Conectado ao Strava</string>
     <string name="strava_disconnected_status">Não conectado ao Strava</string>

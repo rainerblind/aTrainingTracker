@@ -1028,6 +1028,8 @@
     </plurals>
     <string name="strava_kom_description">KOM / Streckenrekord</string>
     <string name="strava_pr_description">Persönliche Bestleistung #%1$d</string>
+    <string name="strava_show_all_segments_format">▼ Alle %1$d Segmente anzeigen (+%2$d weitere)</string>
+    <string name="strava_show_less_segments_format">▲ Nur markierte &amp; Bestzeiten anzeigen (%1$d)</string>
 
     <string name="strava_connected_status">Du bist mit Strava verbunden</string>
     <string name="strava_disconnected_status">Du bist nicht mit Strava verbunden</string>

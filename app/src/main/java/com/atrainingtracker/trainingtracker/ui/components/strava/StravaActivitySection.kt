@@ -18,10 +18,11 @@ package com.atrainingtracker.trainingtracker.ui.components.strava
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,10 +38,12 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
+import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaActivity
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaActivityParser
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaBestEffort
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaSegmentEffort
+import com.atrainingtracker.trainingtracker.ui.aftermath.isHighlight
 
 @Composable
 fun StravaActivitySection(
@@ -51,6 +54,14 @@ fun StravaActivitySection(
     val activity = remember(rawActivityJson) {
         StravaActivityParser.parse(rawActivityJson)
     } ?: return
+
+    val starredIds = remember {
+        try {
+            SegmentsDatabaseManager.getInstance(context).allSegmentSummaries.map { it.stravaId }.toSet()
+        } catch (e: Exception) {
+            emptySet()
+        }
+    }
 
     Column(
         modifier = modifier
@@ -117,9 +128,50 @@ fun StravaActivitySection(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.secondary
             )
-            
-            activity.segmentEfforts.forEach { effort ->
-                SegmentEffortRow(effort)
+
+            val totalSegments = activity.segmentEfforts.size
+            val highlightEfforts = remember(activity.segmentEfforts, starredIds) {
+                activity.segmentEfforts.filter { effort ->
+                    effort.isHighlight || (effort.segmentId != null && starredIds.contains(effort.segmentId))
+                }
+            }
+            val isCollapsible = totalSegments > 4 && totalSegments > highlightEfforts.size
+            var isExpanded by rememberSaveable { mutableStateOf(false) }
+
+            val displayedSegments = if (!isCollapsible || isExpanded) {
+                activity.segmentEfforts
+            } else if (highlightEfforts.isNotEmpty()) {
+                highlightEfforts
+            } else {
+                activity.segmentEfforts.take(4)
+            }
+
+            displayedSegments.forEach { effort ->
+                val isEffortStarred = effort.isStarred || (effort.segmentId != null && starredIds.contains(effort.segmentId))
+                SegmentEffortRow(effort = effort, isStarred = isEffortStarred)
+            }
+
+            if (isCollapsible) {
+                val hiddenCount = totalSegments - displayedSegments.size
+                val buttonText = if (!isExpanded) {
+                    stringResource(R.string.strava_show_all_segments_format, totalSegments, hiddenCount)
+                } else {
+                    stringResource(R.string.strava_show_less_segments_format, highlightEfforts.size)
+                }
+
+                TextButton(
+                    onClick = { isExpanded = !isExpanded },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp)
+                ) {
+                    Text(
+                        text = buttonText,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 
@@ -156,20 +208,37 @@ private fun BestEffortRow(effort: StravaBestEffort) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SegmentEffortRow(effort: StravaSegmentEffort) {
+private fun SegmentEffortRow(
+    effort: StravaSegmentEffort,
+    isStarred: Boolean = false
+) {
     val tf = TimeFormatter()
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = effort.name,
-            style = MaterialTheme.typography.bodyMedium,
+        Row(
             modifier = Modifier.weight(1f),
-            maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-        )
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (isStarred) {
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(16.dp)
+                        .padding(end = 4.dp),
+                    tint = TTColor.Gold
+                )
+            }
+            Text(
+                text = effort.name,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             // Overall Rank (KOM / Top 10)
             effort.komRank?.let { rank ->
