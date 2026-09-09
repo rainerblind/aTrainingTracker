@@ -849,7 +849,7 @@ fun WorkoutClusterDetailDashboard(
                 // Average Time
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = stringResource(R.string.cluster_stats_avg_time),
+                        text = "Ø " + stringResource(R.string.cluster_stats_avg_time),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -865,7 +865,7 @@ fun WorkoutClusterDetailDashboard(
                 val isRun = bSportType == BSportType.RUN
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = stringResource(if (isRun) R.string.cluster_stats_avg_pace else R.string.cluster_stats_avg_speed),
+                        text = "Ø " + stringResource(if (isRun) R.string.cluster_stats_avg_pace else R.string.cluster_stats_avg_speed),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -899,7 +899,7 @@ fun WorkoutClusterDetailDashboard(
                 // Total Distance
                 Column(horizontalAlignment = Alignment.Start) {
                     Text(
-                        text = stringResource(R.string.cluster_stats_total_distance),
+                        text = "Σ " + stringResource(R.string.cluster_stats_total_distance),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -914,7 +914,7 @@ fun WorkoutClusterDetailDashboard(
                 // Total Ascent
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = stringResource(R.string.cluster_stats_total_elevation),
+                        text = "Σ " + stringResource(R.string.cluster_stats_total_elevation),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -929,7 +929,7 @@ fun WorkoutClusterDetailDashboard(
                 // Total Moving Time
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = stringResource(R.string.cluster_stats_total_time),
+                        text = "Σ " + stringResource(R.string.cluster_stats_total_time),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -942,6 +942,7 @@ fun WorkoutClusterDetailDashboard(
                 }
             }
         }
+
 
         // --- TIER 3: Activity & Recency Card (Recordings Count Button, Last Activity) ---
         Surface(

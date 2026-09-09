@@ -161,11 +161,12 @@ fun WorkoutClusterMetadataBlock(
 
             if (stats != null && stats.totalDistanceMeters > 0.0) {
                 Text(
-                    text = "•  ${distanceFormatter.format_with_units(stats.totalDistanceMeters)}",
+                    text = "•  Σ ${distanceFormatter.format_with_units(stats.totalDistanceMeters)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
                 )
             }
+
         }
 
         // 3. Resulting Equipment
