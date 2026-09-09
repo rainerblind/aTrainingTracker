@@ -1175,4 +1175,18 @@
     <string name="cluster_info_tuning_title">感度とパラメータ調整</string>
     <string name="cluster_info_tuning_desc">マスタースライダーでルートの一致基準を調整します。「厳格」にするとわずかなルートの違いを別クラスタに分け、「緩和」にするとスタート位置のズレや小さな回り道があっても同じクラスタにまとめます。個別の許容値も下部で微調整できます。</string>
     <string name="cluster_info_close">了解</string>
+
+    <!-- Workout Cluster Stats -->
+    <string name="cluster_stats_best_time">ベストタイム</string>
+    <string name="cluster_stats_avg_time">平均タイム</string>
+    <string name="cluster_stats_avg_speed">平均速度</string>
+    <string name="cluster_stats_avg_pace">平均ペース</string>
+    <string name="cluster_stats_total_distance">総距離</string>
+    <string name="cluster_stats_total_elevation">総上昇高度</string>
+    <string name="cluster_stats_total_time">合計時間</string>
+    <string name="cluster_stats_last_activity">最後のアクティビティ</string>
+    <string name="cluster_stats_today">今日</string>
+    <string name="cluster_stats_yesterday">昨日</string>
+    <string name="cluster_stats_days_ago">%1$d日前</string>
+    <string name="cluster_stats_weeks_ago">%1$d週間前</string>
 </resources>

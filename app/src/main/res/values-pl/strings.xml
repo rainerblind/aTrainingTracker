@@ -1180,4 +1180,18 @@ proszę czekać</string>
     <string name="cluster_info_tuning_title">Czułość i dostrajanie parametrów</string>
     <string name="cluster_info_tuning_desc">Za pomocą głównego suwaka czułości określasz stopień dopasowania: „Rygorystyczne” rozdziela niewielkie odchylenia na osobne klastry; „Luźne” łączy treningi z przesuniętym startem lub małymi objazdami. Poniżej możesz dostosować poszczególne tolerancje.</string>
     <string name="cluster_info_close">Rozumiem</string>
+
+    <!-- Workout Cluster Stats -->
+    <string name="cluster_stats_best_time">Najlepszy czas</string>
+    <string name="cluster_stats_avg_time">Średni czas</string>
+    <string name="cluster_stats_avg_speed">Średnia prędkość</string>
+    <string name="cluster_stats_avg_pace">Średnie tempo</string>
+    <string name="cluster_stats_total_distance">Całkowity dystans</string>
+    <string name="cluster_stats_total_elevation">Całkowite wzniesienie</string>
+    <string name="cluster_stats_total_time">Łączny czas</string>
+    <string name="cluster_stats_last_activity">Ostatnia aktywność</string>
+    <string name="cluster_stats_today">Dzisiaj</string>
+    <string name="cluster_stats_yesterday">Wczoraj</string>
+    <string name="cluster_stats_days_ago">%1$d dni temu</string>
+    <string name="cluster_stats_weeks_ago">%1$d tyg. temu</string>
 </resources>

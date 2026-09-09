@@ -1276,4 +1276,18 @@
     <string name="cluster_info_tuning_title">Empfindlichkeit &amp; Feinabstimmung</string>
     <string name="cluster_info_tuning_desc">Über den Master-Schieberegler stellst du ein, wie streng Routen übereinstimmen müssen: „Streng“ trennt minimale Routenabweichungen in eigene Cluster; „Locker“ fasst auch Einheiten mit versetzten Startpunkten oder kleinen Umwegen zusammen. Weiter unten kannst du die einzelnen Toleranzen individuell anpassen.</string>
     <string name="cluster_info_close">Verstanden</string>
+
+    <!-- Workout Cluster Stats -->
+    <string name="cluster_stats_best_time">Bestzeit</string>
+    <string name="cluster_stats_avg_time">Durchschnittszeit</string>
+    <string name="cluster_stats_avg_speed">Durchschnittsgeschwindigkeit</string>
+    <string name="cluster_stats_avg_pace">Durchschnittstempo</string>
+    <string name="cluster_stats_total_distance">Gesamtdistanz</string>
+    <string name="cluster_stats_total_elevation">Gesamter Anstieg</string>
+    <string name="cluster_stats_total_time">Gesamtzeit</string>
+    <string name="cluster_stats_last_activity">Letzte Aktivität</string>
+    <string name="cluster_stats_today">Heute</string>
+    <string name="cluster_stats_yesterday">Gestern</string>
+    <string name="cluster_stats_days_ago">vor %1$d Tagen</string>
+    <string name="cluster_stats_weeks_ago">vor %1$d Wochen</string>
 </resources>

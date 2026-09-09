@@ -1189,4 +1189,18 @@
     <string name="cluster_info_tuning_title">Gevoeligheid &amp; Parameterinstellingen</string>
     <string name="cluster_info_tuning_desc">Gebruik de hoofdschuifregelaar om de overeenkomststerkte te bepalen: „Strikt” scheidt kleine routewijzigingen in aparte clusters; „Ontspannen” combineert sessies met afwijkende startpunten of omwegen. Daaronder kun je individuele toleranties afstemmen.</string>
     <string name="cluster_info_close">Begrepen</string>
+
+    <!-- Workout Cluster Stats -->
+    <string name="cluster_stats_best_time">Beste tijd</string>
+    <string name="cluster_stats_avg_time">Gemiddelde tijd</string>
+    <string name="cluster_stats_avg_speed">Gemiddelde snelheid</string>
+    <string name="cluster_stats_avg_pace">Gemiddeld tempo</string>
+    <string name="cluster_stats_total_distance">Totale afstand</string>
+    <string name="cluster_stats_total_elevation">Totale stijging</string>
+    <string name="cluster_stats_total_time">Totale tijd</string>
+    <string name="cluster_stats_last_activity">Laatste activiteit</string>
+    <string name="cluster_stats_today">Vandaag</string>
+    <string name="cluster_stats_yesterday">Gisteren</string>
+    <string name="cluster_stats_days_ago">%1$d dagen geleden</string>
+    <string name="cluster_stats_weeks_ago">%1$d weken geleden</string>
 </resources>
