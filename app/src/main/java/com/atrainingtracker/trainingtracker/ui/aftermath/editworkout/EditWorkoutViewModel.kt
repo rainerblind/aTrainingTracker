@@ -380,7 +380,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     fun applyClusterIdentity(cluster: WorkoutCluster) {
         val displayCount = cluster.hitCount + 1
-        val formattedName = WorkoutClusterEngine.formatClusterWorkoutName(application, cluster.name, displayCount)
+        val formattedName = WorkoutClusterEngine.formatClusterWorkoutName(application, cluster.name, displayCount, cluster.hasCounter)
         _workoutData.update { current ->
             current?.copy(
                 clusterId = cluster.id,
@@ -408,12 +408,12 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         repository.unassignClusterFromWorkout(workoutId)
     }
 
-    fun createNewCluster(customName: String) {
+    fun createNewCluster(customName: String, hasCounter: Boolean = true) {
         val current = _workoutData.value
         if (current != null) {
-            repository.createNewClusterFromWorkout(current, customName)
+            repository.createNewClusterFromWorkout(current, customName, hasCounter)
         } else {
-            repository.createNewClusterFromWorkout(workoutId, customName)
+            repository.createNewClusterFromWorkout(workoutId, customName, hasCounter)
         }
     }
 

@@ -1029,6 +1029,8 @@
     <string name="cluster_score_brackets_format">(%1$.3f)</string>
     <string name="cluster_suggestions_content_desc">Suggerimenti</string>
     <string name="cluster_autoname_format">%1$s #%2$d</string>
+    <string name="cluster_counter_enabled_label">Contatore attività</string>
+    <string name="cluster_counter_enabled_description">Aggiungi numeri sequenziali (#2, #3, …) ai nomi degli allenamenti</string>
     <string name="cluster_delete_title">Elimina gruppo di allenamenti</string>
     <string name="cluster_delete_message">Sei sicuro di voler eliminare questo gruppo di allenamenti? Questo non eliminerà gli allenamenti associati, ma non saranno più raggruppati sotto questo gruppo.</string>
     <string name="cluster_migration_title">Analisi delle famiglie di percorsi…</string>

@@ -55,7 +55,9 @@ data class WorkoutCluster(
     val minAltLat: Double? = null,
     val minAltLng: Double? = null,
     val maxAltLat: Double? = null,
-    val maxAltLng: Double? = null
+    val maxAltLng: Double? = null,
+    // Optional Activity Counter (ATT-714, REQ-SET-067)
+    val hasCounter: Boolean = true
 ) {
     val minAltLatLng: LatLng? get() = if (minAltLat != null && minAltLng != null) LatLng(minAltLat, minAltLng) else null
     val maxAltLatLng: LatLng? get() = if (maxAltLat != null && maxAltLng != null) LatLng(maxAltLat, maxAltLng) else null
@@ -272,6 +274,7 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         val minAltLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_MIN_ALT_LNG)
         val maxAltLatIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_MAX_ALT_LAT)
         val maxAltLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_MAX_ALT_LNG)
+        val hasCounterIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_HAS_COUNTER)
 
         return WorkoutCluster(
             id = cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID)),
@@ -295,7 +298,8 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
             minAltLat = if (minAltLatIdx != -1 && !cursor.isNull(minAltLatIdx)) cursor.getDouble(minAltLatIdx) else null,
             minAltLng = if (minAltLngIdx != -1 && !cursor.isNull(minAltLngIdx)) cursor.getDouble(minAltLngIdx) else null,
             maxAltLat = if (maxAltLatIdx != -1 && !cursor.isNull(maxAltLatIdx)) cursor.getDouble(maxAltLatIdx) else null,
-            maxAltLng = if (maxAltLngIdx != -1 && !cursor.isNull(maxAltLngIdx)) cursor.getDouble(maxAltLngIdx) else null
+            maxAltLng = if (maxAltLngIdx != -1 && !cursor.isNull(maxAltLngIdx)) cursor.getDouble(maxAltLngIdx) else null,
+            hasCounter = if (hasCounterIdx != -1 && !cursor.isNull(hasCounterIdx)) cursor.getInt(hasCounterIdx) == 1 else true
         )
     }
 
@@ -324,6 +328,8 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         put(WorkoutClusterContract.COLUMN_MIN_ALT_LNG, cluster.minAltLng)
         put(WorkoutClusterContract.COLUMN_MAX_ALT_LAT, cluster.maxAltLat)
         put(WorkoutClusterContract.COLUMN_MAX_ALT_LNG, cluster.maxAltLng)
+        // ATT-714 / REQ-SET-067: Optional Activity Counter
+        put(WorkoutClusterContract.COLUMN_HAS_COUNTER, if (cluster.hasCounter) 1 else 0)
     }
 
     private fun serializePreviewPaths(paths: List<String>): String {
@@ -370,6 +376,8 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         const val COLUMN_MIN_ALT_LNG = "min_alt_lng"
         const val COLUMN_MAX_ALT_LAT = "max_alt_lat"
         const val COLUMN_MAX_ALT_LNG = "max_alt_lng"
+        // ATT-714: Optional Activity Counter
+        const val COLUMN_HAS_COUNTER = "has_counter"
 
         const val CREATE_TABLE = """
             CREATE TABLE $TABLE_NAME (
@@ -394,13 +402,14 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
                 $COLUMN_MIN_ALT_LAT REAL,
                 $COLUMN_MIN_ALT_LNG REAL,
                 $COLUMN_MAX_ALT_LAT REAL,
-                $COLUMN_MAX_ALT_LNG REAL
+                $COLUMN_MAX_ALT_LNG REAL,
+                $COLUMN_HAS_COUNTER INTEGER DEFAULT 1
             )
         """
     }
 
     private class WorkoutClusterDbHelper(private val context: Context) : SQLiteOpenHelper(
-        context, "RouteClusters.db", null, 10
+        context, "RouteClusters.db", null, 11
     ) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(WorkoutClusterContract.CREATE_TABLE)
@@ -445,6 +454,15 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
                 try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_MAX_ALT_LAT} REAL") } catch (e: Exception) {}
                 try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_MAX_ALT_LNG} REAL") } catch (e: Exception) {}
                 backfillAltitudeExtrema(context, db)
+            }
+
+            // ATT-714 / REQ-SET-067: Upgrade to Version 11 with has_counter column
+            if (oldVersion < 11) {
+                try {
+                    db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_HAS_COUNTER} INTEGER DEFAULT 1")
+                } catch (e: Exception) {
+                    Log.w("WorkoutClusterDbHelper", "Failed to add has_counter column", e)
+                }
             }
         }
 

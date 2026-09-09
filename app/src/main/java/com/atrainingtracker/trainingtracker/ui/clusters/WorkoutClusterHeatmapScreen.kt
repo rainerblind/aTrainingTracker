@@ -248,8 +248,8 @@ fun WorkoutClusterHeatmapScreen(
     if (showEditDialog) {
         EditWorkoutClusterIdentityDialog(
             cluster = cluster,
-            onConfirm = { newName, newSportId ->
-                viewModel.updateClusterIdentity(cluster, newName, newSportId)
+            onConfirm = { newName, newSportId, hasCounter ->
+                viewModel.updateClusterIdentity(cluster, newName, newSportId, hasCounter)
                 showEditDialog = false
             },
             onDismiss = { showEditDialog = false }
@@ -743,10 +743,11 @@ fun WorkoutClusterSummaryHeader(
 @Composable
 fun EditWorkoutClusterIdentityDialog(
     cluster: WorkoutCluster,
-    onConfirm: (String, Long) -> Unit,
+    onConfirm: (String, Long, Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf(cluster.name) }
+    var hasCounter by remember { mutableStateOf(cluster.hasCounter) }
     
     val context = LocalContext.current
     val sportTypesList = remember { SportTypesRepository.getInstance(context.applicationContext as android.app.Application).sportTypesList }
@@ -777,13 +778,38 @@ fun EditWorkoutClusterIdentityDialog(
                     modifier = Modifier.fillMaxWidth(),
                     stayOpenOn = emptySet()
                 )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                        Text(
+                            text = stringResource(R.string.cluster_counter_enabled_label),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = stringResource(R.string.cluster_counter_enabled_description),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = hasCounter,
+                        onCheckedChange = { hasCounter = it }
+                    )
+                }
             }
         },
         confirmButton = {
             TextButton(
                 onClick = { 
                     val sportId = sportTypesList.find { it.name == selectedSportName }?.id ?: cluster.probableSportId
-                    onConfirm(name, sportId) 
+                    onConfirm(name, sportId, hasCounter) 
                 },
                 enabled = name.isNotBlank()
             ) {

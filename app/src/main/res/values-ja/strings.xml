@@ -1011,6 +1011,8 @@
     <string name="cluster_score_brackets_format">(%1$.3f)</string>
     <string name="cluster_suggestions_content_desc">提案</string>
     <string name="cluster_autoname_format">%1$s #%2$d</string>
+    <string name="cluster_counter_enabled_label">アクティビティカウンター</string>
+    <string name="cluster_counter_enabled_description">ワークアウト名に連番（#2, #3, …）を追加</string>
     <string name="cluster_delete_title">ワークアウトクラスターを削除</string>
     <string name="cluster_delete_message">このワークアウトクラスターを削除してもよろしいですか？関連するワークアウトは削除されませんが、このクラスターの下にはグループ化されなくなります。</string>
     <string name="cluster_migration_title">ルートファミリーを分析中…</string>

@@ -172,8 +172,8 @@ fun EditWorkoutScreen(
                         viewModel.unassignCluster()
                         showClusterDialog = false
                     },
-                    onCreateNewCluster = { newName ->
-                        viewModel.createNewCluster(newName)
+                    onCreateNewCluster = { newName, hasCounter ->
+                        viewModel.createNewCluster(newName, hasCounter)
                         showClusterDialog = false
                     },
                     onDismiss = { showClusterDialog = false },
