@@ -379,11 +379,13 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     }
 
     fun applyClusterIdentity(cluster: WorkoutCluster) {
+        val displayCount = cluster.hitCount + 1
+        val formattedName = WorkoutClusterEngine.formatClusterWorkoutName(application, cluster.name, displayCount)
         _workoutData.update { current ->
             current?.copy(
                 clusterId = cluster.id,
                 clusterName = cluster.name,
-                workoutName = application.getString(R.string.cluster_autoname_format, cluster.name, cluster.hitCount + 1),
+                workoutName = formattedName,
                 sportId = cluster.probableSportId,
                 bSportType = cluster.bSportType
             )
