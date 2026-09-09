@@ -15,6 +15,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.clusters
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -42,12 +43,27 @@ fun ClusterTuningScreen(
 ) {
     val isRecalculating by viewModel.isRecalculating.collectAsState()
 
+    val handleBack = {
+        viewModel.saveTuningParameters()
+        onBack()
+    }
+
+    BackHandler(enabled = !isRecalculating) {
+        handleBack()
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.saveTuningParameters()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.cluster_tuning_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack, enabled = !isRecalculating) {
+                    IconButton(onClick = handleBack, enabled = !isRecalculating) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                     }
                 }
@@ -82,9 +98,16 @@ fun ClusterTuningScreen(
                     altitudePositionTolerance = viewModel.altitudePositionTolerance,
                     onAltitudePositionToleranceChange = { viewModel.altitudePositionTolerance = it },
                     useSportTypeForClustering = viewModel.useSportTypeForClustering,
-                    onUseSportTypeChange = { viewModel.useSportTypeForClustering = it },
+                    onUseSportTypeChange = { 
+                        viewModel.useSportTypeForClustering = it
+                        viewModel.saveTuningParameters()
+                    },
                     useAltitudePosForClustering = viewModel.useAltitudePosForClustering,
-                    onUseAltitudePosChange = { viewModel.useAltitudePosForClustering = it }
+                    onUseAltitudePosChange = { 
+                        viewModel.useAltitudePosForClustering = it
+                        viewModel.saveTuningParameters()
+                    },
+                    onValueChangeFinished = { viewModel.saveTuningParameters() }
                 )
 
                 Spacer(modifier = Modifier.weight(1f))
@@ -121,6 +144,7 @@ fun ClusterTuningContent(
     onUseSportTypeChange: (Boolean) -> Unit = {},
     useAltitudePosForClustering: Boolean = true,
     onUseAltitudePosChange: (Boolean) -> Unit = {},
+    onValueChangeFinished: () -> Unit = {},
     isDialog: Boolean = false
 ) {
     var showDetails by remember { mutableStateOf(false) }
@@ -165,6 +189,7 @@ fun ClusterTuningContent(
                         onAltitudePositionToleranceChange(altRange.start + (altRange.endInclusive - altRange.start) * sensitivity)
                     }
                 },
+                onValueChangeFinished = onValueChangeFinished,
                 valueRange = 0f..1f
             )
             Row(
@@ -247,6 +272,7 @@ fun ClusterTuningContent(
                 label = stringResource(R.string.cluster_tuning_endpoint_label),
                 value = endpointTolerance,
                 onValueChange = onEndpointToleranceChange,
+                onValueChangeFinished = onValueChangeFinished,
                 valueRange = endRange,
                 unit = lengthUnit,
                 displayMultiplier = lengthMultiplier,
@@ -257,6 +283,7 @@ fun ClusterTuningContent(
                 label = stringResource(R.string.cluster_tuning_apex_label),
                 value = apexTolerance,
                 onValueChange = onApexToleranceChange,
+                onValueChangeFinished = onValueChangeFinished,
                 valueRange = apexRange,
                 unit = lengthUnit,
                 displayMultiplier = lengthMultiplier,
@@ -267,6 +294,7 @@ fun ClusterTuningContent(
                 label = stringResource(R.string.cluster_tuning_distance_label),
                 value = distanceTolerance,
                 onValueChange = onDistanceToleranceChange,
+                onValueChangeFinished = onValueChangeFinished,
                 valueRange = distRange,
                 unit = stringResource(R.string.units_percent),
                 displayMultiplier = 100f,
@@ -277,6 +305,7 @@ fun ClusterTuningContent(
                 label = stringResource(R.string.cluster_tuning_altitude_pos_label),
                 value = altitudePositionTolerance,
                 onValueChange = onAltitudePositionToleranceChange,
+                onValueChangeFinished = onValueChangeFinished,
                 valueRange = altRange,
                 unit = lengthUnit,
                 displayMultiplier = lengthMultiplier,
@@ -296,7 +325,8 @@ private fun TuningSlider(
     unit: String,
     displayMultiplier: Float = 1f,
     decimalPlaces: Int = 0,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    onValueChangeFinished: (() -> Unit)? = null
 ) {
     val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
     val contentAlpha = if (enabled) 1.0f else TTAlpha.Disabled
@@ -319,6 +349,7 @@ private fun TuningSlider(
         Slider(
             value = value,
             onValueChange = onValueChange,
+            onValueChangeFinished = onValueChangeFinished,
             valueRange = valueRange,
             enabled = enabled,
             modifier = Modifier.fillMaxWidth()

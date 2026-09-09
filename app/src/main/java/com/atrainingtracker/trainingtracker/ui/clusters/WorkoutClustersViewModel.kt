@@ -242,20 +242,23 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
         }
     }
 
+    fun saveTuningParameters() {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(getApplication())
+        prefs.edit()
+            .putFloat(TrainingApplication.SP_CLUSTER_TOL_ENDPOINTS, endpointTolerance)
+            .putFloat(TrainingApplication.SP_CLUSTER_TOL_APEX, apexTolerance)
+            .putFloat(TrainingApplication.SP_CLUSTER_TOL_DISTANCE, distanceTolerance)
+            .putFloat(TrainingApplication.SP_CLUSTER_TOL_ALTITUDE_POS, altitudePositionTolerance)
+            .putBoolean(TrainingApplication.SP_CLUSTER_USE_SPORT_TYPE, useSportTypeForClustering)
+            .putBoolean(TrainingApplication.SP_CLUSTER_USE_ALTITUDE_POS, useAltitudePosForClustering)
+            .apply()
+    }
+
     fun recalculateClusters() {
         viewModelScope.launch {
             _isRecalculating.value = true
             
-            // Save current parameters to SP first
-            val prefs = PreferenceManager.getDefaultSharedPreferences(getApplication())
-            prefs.edit()
-                .putFloat(TrainingApplication.SP_CLUSTER_TOL_ENDPOINTS, endpointTolerance)
-                .putFloat(TrainingApplication.SP_CLUSTER_TOL_APEX, apexTolerance)
-                .putFloat(TrainingApplication.SP_CLUSTER_TOL_DISTANCE, distanceTolerance)
-                .putFloat(TrainingApplication.SP_CLUSTER_TOL_ALTITUDE_POS, altitudePositionTolerance)
-                .putBoolean(TrainingApplication.SP_CLUSTER_USE_SPORT_TYPE, useSportTypeForClustering)
-                .putBoolean(TrainingApplication.SP_CLUSTER_USE_ALTITUDE_POS, useAltitudePosForClustering)
-                .apply()
+            saveTuningParameters()
 
             repository.recalculateClustersWithProgress()
             

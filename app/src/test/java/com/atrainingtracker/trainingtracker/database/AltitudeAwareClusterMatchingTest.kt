@@ -374,4 +374,40 @@ class AltitudeAwareClusterMatchingTest {
         WorkoutClusterDatabaseManager.resetForTesting(null)
         WorkoutClusterEngine.resetForTesting(null)
     }
+
+    @Test
+    fun testClusterTolerancePreferencePersistence() {
+        // Unmock static to test actual setter/getter behavior with mocked SharedPreferences
+        unmockkAll()
+
+        val mockPrefs = mockk<android.content.SharedPreferences>(relaxed = true)
+        val mockEditor = mockk<android.content.SharedPreferences.Editor>(relaxed = true)
+
+        every { mockPrefs.edit() } returns mockEditor
+        every { mockEditor.putFloat(any(), any()) } returns mockEditor
+        every { mockEditor.putBoolean(any(), any()) } returns mockEditor
+
+        val field = TrainingApplication::class.java.getDeclaredField("cSharedPreferences")
+        field.isAccessible = true
+        val originalPrefs = field.get(null)
+        field.set(null, mockPrefs)
+
+        try {
+            TrainingApplication.setClusterTolAltitudePos(250f)
+            verify(exactly = 1) {
+                mockEditor.putFloat(TrainingApplication.SP_CLUSTER_TOL_ALTITUDE_POS, 250f)
+            }
+
+            TrainingApplication.setUseAltitudePosForClustering(false)
+            verify(exactly = 1) {
+                mockEditor.putBoolean(TrainingApplication.SP_CLUSTER_USE_ALTITUDE_POS, false)
+            }
+
+            verify(exactly = 2) {
+                mockEditor.apply()
+            }
+        } finally {
+            field.set(null, originalPrefs)
+        }
+    }
 }

@@ -585,6 +585,13 @@ public class TrainingApplication extends Application {
     public static boolean useAltitudePosForClustering() { return cSharedPreferences.getBoolean(SP_CLUSTER_USE_ALTITUDE_POS, true); }
     public static float getClusterTolAltitudePos() { return cSharedPreferences.getFloat(SP_CLUSTER_TOL_ALTITUDE_POS, 400f); }
 
+    public static void setClusterTolEndpoints(float val) { cSharedPreferences.edit().putFloat(SP_CLUSTER_TOL_ENDPOINTS, val).apply(); }
+    public static void setClusterTolApex(float val) { cSharedPreferences.edit().putFloat(SP_CLUSTER_TOL_APEX, val).apply(); }
+    public static void setClusterTolDistance(float val) { cSharedPreferences.edit().putFloat(SP_CLUSTER_TOL_DISTANCE, val).apply(); }
+    public static void setUseSportTypeForClustering(boolean val) { cSharedPreferences.edit().putBoolean(SP_CLUSTER_USE_SPORT_TYPE, val).apply(); }
+    public static void setUseAltitudePosForClustering(boolean val) { cSharedPreferences.edit().putBoolean(SP_CLUSTER_USE_ALTITUDE_POS, val).apply(); }
+    public static void setClusterTolAltitudePos(float val) { cSharedPreferences.edit().putFloat(SP_CLUSTER_TOL_ALTITUDE_POS, val).apply(); }
+
     @NonNull
     public static String getLastUpdateTimeOfStravaEquipment() {
         return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT, cAppContext.getString(R.string.lastUpdateOfEquipmentNever));
