@@ -131,9 +131,9 @@ fun WorkoutClusterHeatmapScreen(
         if (editMinAlt != null && (isEditingFingerprint || enabledMarkerTypes.contains(ClusterMarkerType.ALTITUDE_MIN))) {
             list.add(LocationMarker(
                 position = editMinAlt!!,
-                iconResId = R.drawable.ic_altitude,
+                iconResId = R.drawable.ic_altitude_min,
                 title = minAltLabel,
-                iconDescriptor = createSensorMarker(context, R.drawable.ic_altitude, TTColor.MinAltitude), // Teal
+                iconDescriptor = createSensorMarker(context, R.drawable.ic_altitude_min, TTColor.MinAltitude), // Teal
                 draggable = isEditingFingerprint,
                 onDragEnd = { editMinAlt = it }
             ))
@@ -142,9 +142,9 @@ fun WorkoutClusterHeatmapScreen(
         if (editMaxAlt != null && (isEditingFingerprint || enabledMarkerTypes.contains(ClusterMarkerType.ALTITUDE_MAX))) {
             list.add(LocationMarker(
                 position = editMaxAlt!!,
-                iconResId = R.drawable.ic_altitude,
+                iconResId = R.drawable.ic_altitude_max,
                 title = maxAltLabel,
-                iconDescriptor = createSensorMarker(context, R.drawable.ic_altitude, TTColor.MaxAltitude), // Orange/Amber
+                iconDescriptor = createSensorMarker(context, R.drawable.ic_altitude_max, TTColor.MaxAltitude), // Orange/Amber
                 draggable = isEditingFingerprint,
                 onDragEnd = { editMaxAlt = it }
             ))

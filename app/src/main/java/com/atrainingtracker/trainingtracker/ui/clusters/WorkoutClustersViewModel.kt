@@ -315,8 +315,8 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
                         w.startLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.control_start, application.getString(R.string.start), ClusterMarkerType.START)) }
                         w.endLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.control_stop, application.getString(R.string.end), ClusterMarkerType.END)) }
                         w.maxDisplacementLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.ic_distance, application.getString(R.string.max_line_distance), ClusterMarkerType.DISTANCE)) }
-                        w.minAltitudeLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.ic_altitude, application.getString(R.string.marker_min_altitude), ClusterMarkerType.ALTITUDE_MIN)) }
-                        w.maxAltitudeLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.ic_altitude, application.getString(R.string.marker_max_altitude), ClusterMarkerType.ALTITUDE_MAX)) }
+                        w.minAltitudeLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.ic_altitude_min, application.getString(R.string.marker_min_altitude), ClusterMarkerType.ALTITUDE_MIN)) }
+                        w.maxAltitudeLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.ic_altitude_max, application.getString(R.string.marker_max_altitude), ClusterMarkerType.ALTITUDE_MAX)) }
                         list
                     }
 
