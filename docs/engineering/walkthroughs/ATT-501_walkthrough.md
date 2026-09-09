@@ -28,7 +28,16 @@ In this stage, we implemented comprehensive in-app educational documentation exp
 Created reusable dialog in package `com.atrainingtracker.trainingtracker.ui.clusters`:
 - **Architecture**: Jetpack Compose `AlertDialog` with a scrollable `Column` container (`verticalScroll(rememberScrollState())`) to guarantee full accessibility on all screen sizes, orientations, and accessibility font scaling settings without truncation.
 - **Section 1: What are Favorite Tracks? (`cluster_info_what_title`, `cluster_info_what_desc`)**:
-  Explains how repeated workouts on the same path are automatically grouped, named with well-known course patterns (e.g. "Lake Loop #5" / "Seerunde #5"), assigned equipment, and compared for progress over time.
+  Explains how repeated workouts on the same path are automatically grouped, named with iconic, country-specific course patterns, assigned equipment, and compared for progress over time:
+  • **EN**: `"Lake Tahoe Loop #5"`
+  • **DE**: `„Chiemsee-Runde #5“`
+  • **ES**: `«Vuelta a la Albufera #5»`
+  • **FR**: `« Tour du Lac d\'Annecy #5 »`
+  • **IT**: `«Giro del Lago di Garda #5»`
+  • **JA**: `「琵琶湖一周 #5」`
+  • **NL**: `„Rondje IJsselmeer #5”`
+  • **PL**: `„Pętla wokół Jeziora Czorsztyńskiego #5”`
+  • **PT**: `«Volta à Lagoa de Óbidos #5»`
 - **Section 2: 3D Topological Fingerprint (`cluster_info_fingerprint_title`, `cluster_info_fingerprint_desc`)**:
   Highlights the simple but surprisingly good algorithm that gives tolerance to small variations while reliably separating workouts when they are really different, based on a 6-dimensional spatial fingerprint:
   • Start & End: $200\,\text{m}$ default tolerance
@@ -74,14 +83,15 @@ Executed test suites:
 
 ```
 > Task :app:testDebugUnitTest
-BUILD SUCCESSFUL in 1m 37s
-32 actionable tasks: 17 executed, 15 up-to-date
+BUILD SUCCESSFUL
+32 actionable tasks: 1 executed, 31 up-to-date
 ```
 
 All test assertions passed:
 - `testAllRequiredClusterInfoKeysExistAcrossAll9Locales`: PASSED (100% presence and non-blank content across all 9 locales).
-- `testContentCompletenessForFingerprintSection`: PASSED (verifies start, end, apex, distance, and altitude coverage).
-- `testContentCompletenessForWhatSection`: PASSED (verifies naming and comparison coverage).
+- `testCountrySpecificLakesAcrossLocales`: PASSED (verifies each locale uses its culturally and geographically iconic lake/route).
+- `testContentCompletenessForFingerprintSection`: PASSED (verifies simple but surprisingly good algorithm wording, start, end, apex, distance, and altitude coverage).
+- `testContentCompletenessForWhatSection`: PASSED (verifies naming and comparison coverage without generic/time-based names).
 - `testContentCompletenessForTuningSection`: PASSED (verifies sensitivity and slider guidance).
 - `TranslationParityTest`: PASSED across all resource files and format specifiers.
 

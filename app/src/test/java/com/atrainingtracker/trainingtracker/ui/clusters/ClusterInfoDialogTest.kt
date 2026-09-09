@@ -119,8 +119,35 @@ class ClusterInfoDialogTest {
         assertNotNull(whatDesc)
         assertTrue("Must mention naming", whatDesc!!.contains("naming"))
         assertTrue("Must mention comparison or performance", whatDesc.contains("performance"))
-        assertTrue("Must use well-known course example like Lake Loop", whatDesc.contains("Lake Loop"))
+        assertTrue("Must use well-known course example like Lake Tahoe Loop", whatDesc.contains("Lake Tahoe Loop"))
         assertFalse("Must not use time-based naming like Morning Run", whatDesc.contains("Morning Run"))
+    }
+
+    @Test
+    fun testCountrySpecificLakesAcrossLocales() {
+        val resDir = findResDirectory()
+        val expectedLakes = mapOf(
+            "" to "Lake Tahoe Loop",
+            "de" to "Chiemsee-Runde",
+            "es" to "Albufera",
+            "fr" to "Annecy",
+            "it" to "Lago di Garda",
+            "ja" to "琵琶湖一周",
+            "nl" to "IJsselmeer",
+            "pl" to "Jeziora Czorsztyńskiego",
+            "pt" to "Lagoa de Óbidos"
+        )
+
+        for ((locale, expectedLake) in expectedLakes) {
+            val valuesDir = if (locale.isEmpty()) "values" else "values-$locale"
+            val strings = parseStringsFile(File(resDir, "$valuesDir/strings.xml"))
+            val desc = strings["cluster_info_what_desc"]
+            assertNotNull("cluster_info_what_desc must exist in $valuesDir", desc)
+            assertTrue(
+                "Locale '$locale' in $valuesDir must mention iconic lake '$expectedLake', but was: $desc",
+                desc!!.contains(expectedLake)
+            )
+        }
     }
 
     @Test
