@@ -88,22 +88,25 @@ class WorkoutClusterEngine private constructor(context: Context) {
      * Suggests a cluster match for a workout based on spatial shape metrics, sport type, and optional name.
      */
     /**
-     * Finds the best matching WorkoutCluster candidate evaluating against a set of candidate sport types (ATT-773, REQ-SET-064).
+     * Finds the best matching WorkoutCluster candidate evaluating against a set of candidate sport types (ATT-773, REQ-SET-064)
+     * and optional 3D altitude extrema coordinates (ATT-502, REQ-SET-065).
      */
     fun suggestCluster(
         start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
         workoutName: String? = null, 
-        candidateSportTypes: Set<BSportType>
+        candidateSportTypes: Set<BSportType>,
+        minAltPos: LatLng? = null,
+        maxAltPos: LatLng? = null
     ): WorkoutCluster? {
         val endpointTol = TrainingApplication.getClusterTolEndpoints().toDouble()
         val latToleranceDegrees = endpointTol / 111000.0
         val distToleranceMeters = distance * TrainingApplication.getClusterTolDistance().toDouble() * 4.0
 
         val candidates = dbManager.findCandidates(start.latitude, start.longitude, distance, latToleranceDegrees, distToleranceMeters)
-        if (DEBUG) Log.d(TAG, "Found ${candidates.size} candidates for shape [start=$start, dist=$distance, name=$workoutName, sports=$candidateSportTypes]")
+        if (DEBUG) Log.d(TAG, "Found ${candidates.size} candidates for shape [start=$start, dist=$distance, name=$workoutName, sports=$candidateSportTypes, minAlt=$minAltPos, maxAlt=$maxAltPos]")
 
         return candidates.map { cluster ->
-            val score = calculateSimilarity(start, end, apex, distance, cluster, workoutName, candidateSportTypes)
+            val score = calculateSimilarity(start, end, apex, distance, cluster, workoutName, candidateSportTypes, minAltPos, maxAltPos)
             cluster to score
         }.filter { it.second < 1.0 }
          .minByOrNull { it.second }?.first
@@ -116,10 +119,12 @@ class WorkoutClusterEngine private constructor(context: Context) {
     fun suggestCluster(
         start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
         workoutName: String? = null, 
-        workoutSportType: BSportType = BSportType.UNKNOWN
+        workoutSportType: BSportType = BSportType.UNKNOWN,
+        minAltPos: LatLng? = null,
+        maxAltPos: LatLng? = null
     ): WorkoutCluster? {
         val candidateSports = if (workoutSportType != BSportType.UNKNOWN) setOf(workoutSportType) else emptySet()
-        return suggestCluster(start, end, apex, distance, workoutName, candidateSports)
+        return suggestCluster(start, end, apex, distance, workoutName, candidateSports, minAltPos, maxAltPos)
     }
 
     /**
@@ -131,12 +136,13 @@ class WorkoutClusterEngine private constructor(context: Context) {
         userSpecifiedName: String, userSportId: Long, 
         clusterIdOverride: Long = -1,
         minLat: Double? = null, minLng: Double? = null,
-        maxLat: Double? = null, maxLng: Double? = null
+        maxLat: Double? = null, maxLng: Double? = null,
+        minAltPos: LatLng? = null, maxAltPos: LatLng? = null
     ): Long {
         val workoutSportType = SportTypeDatabaseManager.getInstance(appContext).getBSportType(userSportId)
         val normalizedInputName = stripHitCount(userSpecifiedName)
         val existingMatch = if (clusterIdOverride != -1L) dbManager.getClusterById(clusterIdOverride) 
-                            else (suggestCluster(start, end, apex, distance, userSpecifiedName, workoutSportType)
+                            else (suggestCluster(start, end, apex, distance, userSpecifiedName, workoutSportType, minAltPos, maxAltPos)
                                 ?: dbManager.getClusterByName(normalizedInputName))
 
         return if (existingMatch != null) {
@@ -147,6 +153,25 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 if (existingMatch.name == normalizedInputName) normalizedInputName
                 else findUniqueClusterName(normalizedInputName, existingMatch.id)
             }
+
+            // ATT-502: Running centroid update for min and max altitude coordinates
+            val updatedMinAltLat = if (minAltPos != null) {
+                if (existingMatch.minAltLat != null) (existingMatch.minAltLat * existingMatch.hitCount + minAltPos.latitude) / (existingMatch.hitCount + 1)
+                else minAltPos.latitude
+            } else existingMatch.minAltLat
+            val updatedMinAltLng = if (minAltPos != null) {
+                if (existingMatch.minAltLng != null) (existingMatch.minAltLng * existingMatch.hitCount + minAltPos.longitude) / (existingMatch.hitCount + 1)
+                else minAltPos.longitude
+            } else existingMatch.minAltLng
+
+            val updatedMaxAltLat = if (maxAltPos != null) {
+                if (existingMatch.maxAltLat != null) (existingMatch.maxAltLat * existingMatch.hitCount + maxAltPos.latitude) / (existingMatch.hitCount + 1)
+                else maxAltPos.latitude
+            } else existingMatch.maxAltLat
+            val updatedMaxAltLng = if (maxAltPos != null) {
+                if (existingMatch.maxAltLng != null) (existingMatch.maxAltLng * existingMatch.hitCount + maxAltPos.longitude) / (existingMatch.hitCount + 1)
+                else maxAltPos.longitude
+            } else existingMatch.maxAltLng
 
             val updatedCluster = existingMatch.copy(
                 name = uniqueName,
@@ -163,7 +188,12 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 minLat = if (minLat != null) minOf(existingMatch.minLat ?: 90.0, minLat) else existingMatch.minLat,
                 minLng = if (minLng != null) minOf(existingMatch.minLng ?: 180.0, minLng) else existingMatch.minLng,
                 maxLat = if (maxLat != null) maxOf(existingMatch.maxLat ?: -90.0, maxLat) else existingMatch.maxLat,
-                maxLng = if (maxLng != null) maxOf(existingMatch.maxLng ?: -180.0, maxLng) else existingMatch.maxLng
+                maxLng = if (maxLng != null) maxOf(existingMatch.maxLng ?: -180.0, maxLng) else existingMatch.maxLng,
+                // ATT-502
+                minAltLat = updatedMinAltLat,
+                minAltLng = updatedMinAltLng,
+                maxAltLat = updatedMaxAltLat,
+                maxAltLng = updatedMaxAltLng
             )
             dbManager.updateCluster(updatedCluster)
             updatedCluster.id
@@ -182,7 +212,12 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 hitCount = 0,
                 bSportType = SportTypeDatabaseManager.getInstance(appContext).getBSportType(userSportId),
                 // ATT-371: Initialize bounds
-                minLat = minLat, minLng = minLng, maxLat = maxLat, maxLng = maxLng
+                minLat = minLat, minLng = minLng, maxLat = maxLat, maxLng = maxLng,
+                // ATT-502
+                minAltLat = minAltPos?.latitude,
+                minAltLng = minAltPos?.longitude,
+                maxAltLat = maxAltPos?.latitude,
+                maxAltLng = maxAltPos?.longitude
             )
             dbManager.insertCluster(newCluster)
         }
@@ -215,11 +250,32 @@ class WorkoutClusterEngine private constructor(context: Context) {
         if (w.startLatLng == null || w.endLatLng == null) return // Ignore non-spatial
         
         val currentMatch = dbManager.getClusterById(w.clusterId) ?: return
-        val apex = w.maxDisplacementLatLng ?: w.endLatLng ?: w.startLatLng
+        val apex = w.maxDisplacementLatLng ?: w.endLatLng
 
         // --- ATT-354 Refinement: Null-Safe Bounds Update ---
         val wMinLat = w.minLat; val wMinLng = w.minLng; val wMaxLat = w.maxLat; val wMaxLng = w.maxLng
         
+        val minAltPos = w.minAltitudeLatLng ?: WorkoutSummariesDatabaseManager.getInstance(context).getExtremaPosition(w.id, SensorType.ALTITUDE, ExtremaType.MIN)
+        val maxAltPos = w.maxAltitudeLatLng ?: WorkoutSummariesDatabaseManager.getInstance(context).getExtremaPosition(w.id, SensorType.ALTITUDE, ExtremaType.MAX)
+
+        val updatedMinAltLat = if (minAltPos != null) {
+            if (currentMatch.minAltLat != null) (currentMatch.minAltLat * currentMatch.hitCount + minAltPos.latitude) / (currentMatch.hitCount + 1)
+            else minAltPos.latitude
+        } else currentMatch.minAltLat
+        val updatedMinAltLng = if (minAltPos != null) {
+            if (currentMatch.minAltLng != null) (currentMatch.minAltLng * currentMatch.hitCount + minAltPos.longitude) / (currentMatch.hitCount + 1)
+            else minAltPos.longitude
+        } else currentMatch.minAltLng
+
+        val updatedMaxAltLat = if (maxAltPos != null) {
+            if (currentMatch.maxAltLat != null) (currentMatch.maxAltLat * currentMatch.hitCount + maxAltPos.latitude) / (currentMatch.hitCount + 1)
+            else maxAltPos.latitude
+        } else currentMatch.maxAltLat
+        val updatedMaxAltLng = if (maxAltPos != null) {
+            if (currentMatch.maxAltLng != null) (currentMatch.maxAltLng * currentMatch.hitCount + maxAltPos.longitude) / (currentMatch.hitCount + 1)
+            else maxAltPos.longitude
+        } else currentMatch.maxAltLng
+
         val updated = currentMatch.copy(
             startLat = (currentMatch.startLat * currentMatch.hitCount + w.startLatLng.latitude) / (currentMatch.hitCount + 1),
             startLng = (currentMatch.startLng * currentMatch.hitCount + w.startLatLng.longitude) / (currentMatch.hitCount + 1),
@@ -232,7 +288,12 @@ class WorkoutClusterEngine private constructor(context: Context) {
             minLat = if (wMinLat != null) minOf(currentMatch.minLat ?: 90.0, wMinLat) else currentMatch.minLat,
             minLng = if (wMinLng != null) minOf(currentMatch.minLng ?: 180.0, wMinLng) else currentMatch.minLng,
             maxLat = if (wMaxLat != null) maxOf(currentMatch.maxLat ?: -90.0, wMaxLat) else currentMatch.maxLat,
-            maxLng = if (wMaxLng != null) maxOf(currentMatch.maxLng ?: -180.0, wMaxLng) else currentMatch.maxLng
+            maxLng = if (wMaxLng != null) maxOf(currentMatch.maxLng ?: -180.0, wMaxLng) else currentMatch.maxLng,
+
+            minAltLat = updatedMinAltLat,
+            minAltLng = updatedMinAltLng,
+            maxAltLat = updatedMaxAltLat,
+            maxAltLng = updatedMaxAltLng
         )
         dbManager.updateCluster(updated)
     }
@@ -433,13 +494,15 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 val start = summariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.START)
                 val end = summariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.END)
                 val apex = summariesManager.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
+                val minAltPos = summariesManager.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MIN)
+                val maxAltPos = summariesManager.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MAX)
 
                 if (start != null && end != null && apex != null && distance > 100.0) {
                     val isDefault = workoutName.isNullOrEmpty() || workoutName == fileBaseName
                     val normalizedName = if (!isDefault) stripHitCount(workoutName) else null
                     val workoutSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(sportId)
                     
-                    val match = suggestCluster(start, end, apex, distance, normalizedName, workoutSportType)
+                    val match = suggestCluster(start, end, apex, distance, normalizedName, workoutSportType, minAltPos, maxAltPos)
                     if (match != null) {
                         val rawName = normalizedName ?: match.name
                         val finalName = if (match.name == rawName) rawName else findUniqueClusterName(rawName, match.id)
@@ -456,6 +519,24 @@ class WorkoutClusterEngine private constructor(context: Context) {
                         val maxLat = if (wMaxLat != null) maxOf(match.maxLat ?: -90.0, wMaxLat) else match.maxLat
                         val maxLng = if (wMaxLng != null) maxOf(match.maxLng ?: -180.0, wMaxLng) else match.maxLng
 
+                        val updatedMinAltLat = if (minAltPos != null) {
+                            if (match.minAltLat != null) (match.minAltLat * match.hitCount + minAltPos.latitude) / (match.hitCount + 1)
+                            else minAltPos.latitude
+                        } else match.minAltLat
+                        val updatedMinAltLng = if (minAltPos != null) {
+                            if (match.minAltLng != null) (match.minAltLng * match.hitCount + minAltPos.longitude) / (match.hitCount + 1)
+                            else minAltPos.longitude
+                        } else match.minAltLng
+
+                        val updatedMaxAltLat = if (maxAltPos != null) {
+                            if (match.maxAltLat != null) (match.maxAltLat * match.hitCount + maxAltPos.latitude) / (match.hitCount + 1)
+                            else maxAltPos.latitude
+                        } else match.maxAltLat
+                        val updatedMaxAltLng = if (maxAltPos != null) {
+                            if (match.maxAltLng != null) (match.maxAltLng * match.hitCount + maxAltPos.longitude) / (match.hitCount + 1)
+                            else maxAltPos.longitude
+                        } else match.maxAltLng
+
                         val updated = match.copy(
                             name = finalName, probableSportId = finalSport,
                             startLat = (match.startLat * match.hitCount + start.latitude) / (match.hitCount + 1),
@@ -466,7 +547,11 @@ class WorkoutClusterEngine private constructor(context: Context) {
                             maxDispLng = (match.maxDispLng * match.hitCount + apex.longitude) / (match.hitCount + 1),
                             refDistance = (match.refDistance * match.hitCount + distance) / (match.hitCount + 1),
                             bSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(finalSport),
-                            minLat = minLat, minLng = minLng, maxLat = maxLat, maxLng = maxLng
+                            minLat = minLat, minLng = minLng, maxLat = maxLat, maxLng = maxLng,
+                            minAltLat = updatedMinAltLat,
+                            minAltLng = updatedMinAltLng,
+                            maxAltLat = updatedMaxAltLat,
+                            maxAltLng = updatedMaxAltLng
                         )
                         dbManager.updateCluster(updated)
                         assignClusterToWorkout(context, workoutId, updated.id)
@@ -480,7 +565,8 @@ class WorkoutClusterEngine private constructor(context: Context) {
 
                         val newId = learnFromWorkout(
                             start, end, apex, distance, clusterName, sportId,
-                            minLat = wMinLat, minLng = wMinLng, maxLat = wMaxLat, maxLng = wMaxLng
+                            minLat = wMinLat, minLng = wMinLng, maxLat = wMaxLat, maxLng = wMaxLng,
+                            minAltPos = minAltPos, maxAltPos = maxAltPos
                         )
                         assignClusterToWorkout(context, workoutId, newId)
                     }
@@ -598,6 +684,9 @@ class WorkoutClusterEngine private constructor(context: Context) {
         val fallbackName = workout.workoutName.ifBlank { context.getString(R.string.cluster_default_name_format, "Workout") }
         val clusterName = if (!customName.isNullOrBlank()) customName else fallbackName
 
+        val minAltPos = workout.minAltitudeLatLng ?: summariesManager.getExtremaPosition(workout.id, SensorType.ALTITUDE, ExtremaType.MIN)
+        val maxAltPos = workout.maxAltitudeLatLng ?: summariesManager.getExtremaPosition(workout.id, SensorType.ALTITUDE, ExtremaType.MAX)
+
         val uniqueName = findUniqueClusterName(stripHitCount(clusterName))
         val newCluster = WorkoutCluster(
             name = uniqueName,
@@ -611,7 +700,11 @@ class WorkoutClusterEngine private constructor(context: Context) {
             refDistance = distance,
             hitCount = 0,
             bSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(sportId),
-            minLat = workout.minLat, minLng = workout.minLng, maxLat = workout.maxLat, maxLng = workout.maxLng
+            minLat = workout.minLat, minLng = workout.minLng, maxLat = workout.maxLat, maxLng = workout.maxLng,
+            minAltLat = minAltPos?.latitude,
+            minAltLng = minAltPos?.longitude,
+            maxAltLat = maxAltPos?.latitude,
+            maxAltLng = maxAltPos?.longitude
         )
         val newClusterId = dbManager.insertCluster(newCluster)
         assignClusterToWorkout(context, workout.id, newClusterId, forceIdentity = false)
@@ -636,6 +729,9 @@ class WorkoutClusterEngine private constructor(context: Context) {
             ?: context.getString(R.string.cluster_default_name_format, "Workout")
         val clusterName = if (!customName.isNullOrBlank()) customName else workoutName
 
+        val minAltPos = summariesManager.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MIN)
+        val maxAltPos = summariesManager.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MAX)
+
         val uniqueName = findUniqueClusterName(stripHitCount(clusterName))
         val newCluster = WorkoutCluster(
             name = uniqueName,
@@ -649,7 +745,11 @@ class WorkoutClusterEngine private constructor(context: Context) {
             refDistance = distance,
             hitCount = 0,
             bSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(sportId),
-            minLat = wMinLat, minLng = wMinLng, maxLat = wMaxLat, maxLng = wMaxLng
+            minLat = wMinLat, minLng = wMinLng, maxLat = wMaxLat, maxLng = wMaxLng,
+            minAltLat = minAltPos?.latitude,
+            minAltLng = minAltPos?.longitude,
+            maxAltLat = maxAltPos?.latitude,
+            maxAltLng = maxAltPos?.longitude
         )
         val newClusterId = dbManager.insertCluster(newCluster)
         assignClusterToWorkout(context, workoutId, newClusterId, forceIdentity = false)
@@ -660,17 +760,43 @@ class WorkoutClusterEngine private constructor(context: Context) {
      * Calculates similarity between a spatial signature and a WorkoutCluster,
      * supporting multi-sport candidate evaluation (ATT-773, REQ-SET-064).
      */
+    /**
+     * Calculates similarity between a spatial signature and a WorkoutCluster,
+     * supporting multi-sport candidate evaluation (ATT-773, REQ-SET-064)
+     * and optional 3D altitude extrema coordinates (ATT-502, REQ-SET-065).
+     */
     fun calculateSimilarity(
         start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
         cluster: WorkoutCluster, 
         workoutName: String? = null,
-        candidateSportTypes: Set<BSportType>
+        candidateSportTypes: Set<BSportType>,
+        minAltPos: LatLng? = null,
+        maxAltPos: LatLng? = null
     ): Double {
-        val s1 = (distanceBetween(start, LatLng(cluster.startLat, cluster.startLng)) / TrainingApplication.getClusterTolEndpoints()) * 0.25
-        val s2 = (distanceBetween(end, LatLng(cluster.endLat, cluster.endLng)) / TrainingApplication.getClusterTolEndpoints()) * 0.25
-        val s3 = (distanceBetween(apex, LatLng(cluster.maxDispLat, cluster.maxDispLng)) / TrainingApplication.getClusterTolApex()) * 0.25
-        val s4 = (Math.abs(distance - cluster.refDistance) / cluster.refDistance / TrainingApplication.getClusterTolDistance()) * 0.25
-        var totalScore = s1 + s2 + s3 + s4
+        val useAlt = minAltPos != null && maxAltPos != null &&
+                     cluster.minAltLatLng != null && cluster.maxAltLatLng != null &&
+                     try { TrainingApplication.useAltitudePosForClustering() } catch (e: Exception) { true }
+
+        var totalScore = if (useAlt) {
+            val tolEndpoints = TrainingApplication.getClusterTolEndpoints()
+            val tolApex = TrainingApplication.getClusterTolApex()
+            val tolDistance = TrainingApplication.getClusterTolDistance()
+            val tolAlt = try { TrainingApplication.getClusterTolAltitudePos() } catch (e: Exception) { 400f }
+
+            val s1 = (distanceBetween(start, LatLng(cluster.startLat, cluster.startLng)) / tolEndpoints) * 0.20
+            val s2 = (distanceBetween(end, LatLng(cluster.endLat, cluster.endLng)) / tolEndpoints) * 0.20
+            val s3 = (distanceBetween(apex, LatLng(cluster.maxDispLat, cluster.maxDispLng)) / tolApex) * 0.20
+            val s4 = (Math.abs(distance - cluster.refDistance) / cluster.refDistance / tolDistance) * 0.20
+            val sMinAlt = (distanceBetween(minAltPos, cluster.minAltLatLng!!) / tolAlt) * 0.10
+            val sMaxAlt = (distanceBetween(maxAltPos, cluster.maxAltLatLng!!) / tolAlt) * 0.10
+            s1 + s2 + s3 + s4 + sMinAlt + sMaxAlt
+        } else {
+            val s1 = (distanceBetween(start, LatLng(cluster.startLat, cluster.startLng)) / TrainingApplication.getClusterTolEndpoints()) * 0.25
+            val s2 = (distanceBetween(end, LatLng(cluster.endLat, cluster.endLng)) / TrainingApplication.getClusterTolEndpoints()) * 0.25
+            val s3 = (distanceBetween(apex, LatLng(cluster.maxDispLat, cluster.maxDispLng)) / TrainingApplication.getClusterTolApex()) * 0.25
+            val s4 = (Math.abs(distance - cluster.refDistance) / cluster.refDistance / TrainingApplication.getClusterTolDistance()) * 0.25
+            s1 + s2 + s3 + s4
+        }
         
         // ATT-412 / ATT-773: Tiered Sport Type Awareness with Multi-Sport Candidate Evaluation
         if (TrainingApplication.useSportTypeForClustering()) {
@@ -696,14 +822,18 @@ class WorkoutClusterEngine private constructor(context: Context) {
     /**
      * Backward-compatible single sport type overload.
      */
+    @JvmOverloads
     fun calculateSimilarity(
         start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
         cluster: WorkoutCluster, 
         workoutName: String? = null,
-        workoutSportType: BSportType = BSportType.UNKNOWN
+        workoutSportType: BSportType = BSportType.UNKNOWN,
+        minAltPos: LatLng? = null,
+        maxAltPos: LatLng? = null
     ): Double = calculateSimilarity(
         start, end, apex, distance, cluster, workoutName,
-        if (workoutSportType != BSportType.UNKNOWN) setOf(workoutSportType) else emptySet()
+        if (workoutSportType != BSportType.UNKNOWN) setOf(workoutSportType) else emptySet(),
+        minAltPos, maxAltPos
     )
 
     private fun normalizeName(name: String): String = name.replace(Regex(" (?:#|var) \\d+$", RegexOption.IGNORE_CASE), "").trim().lowercase()
@@ -717,7 +847,9 @@ class WorkoutClusterEngine private constructor(context: Context) {
     fun getClusterScores(
         start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
         workoutName: String? = null, 
-        candidateSportTypes: Set<BSportType>
+        candidateSportTypes: Set<BSportType>,
+        minAltPos: LatLng? = null,
+        maxAltPos: LatLng? = null
     ): List<Pair<WorkoutCluster, Double>> {
         val summariesManager = WorkoutSummariesDatabaseManager.getInstance(appContext)
         val actualCounts = summariesManager.workoutCountsForAllClusters
@@ -734,35 +866,45 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 cluster
             }
         }
-        return scoreClusters(clusters, start, end, apex, distance, workoutName, candidateSportTypes)
+        return scoreClusters(clusters, start, end, apex, distance, workoutName, candidateSportTypes, minAltPos, maxAltPos)
     }
 
+    @JvmOverloads
     fun getClusterScores(
         start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
         workoutName: String? = null, 
-        workoutSportType: BSportType = BSportType.UNKNOWN
+        workoutSportType: BSportType = BSportType.UNKNOWN,
+        minAltPos: LatLng? = null,
+        maxAltPos: LatLng? = null
     ): List<Pair<WorkoutCluster, Double>> = getClusterScores(
         start, end, apex, distance, workoutName,
-        if (workoutSportType != BSportType.UNKNOWN) setOf(workoutSportType) else emptySet()
+        if (workoutSportType != BSportType.UNKNOWN) setOf(workoutSportType) else emptySet(),
+        minAltPos, maxAltPos
     )
 
     fun scoreClusters(
         clusters: List<WorkoutCluster>, 
         start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
         workoutName: String? = null, 
-        candidateSportTypes: Set<BSportType>
+        candidateSportTypes: Set<BSportType>,
+        minAltPos: LatLng? = null,
+        maxAltPos: LatLng? = null
     ): List<Pair<WorkoutCluster, Double>> = clusters.map { 
-        it to calculateSimilarity(start, end, apex, distance, it, workoutName, candidateSportTypes) 
+        it to calculateSimilarity(start, end, apex, distance, it, workoutName, candidateSportTypes, minAltPos, maxAltPos) 
     }.sortedBy { it.second }
 
+    @JvmOverloads
     fun scoreClusters(
         clusters: List<WorkoutCluster>, 
         start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
         workoutName: String? = null, 
-        workoutSportType: BSportType = BSportType.UNKNOWN
+        workoutSportType: BSportType = BSportType.UNKNOWN,
+        minAltPos: LatLng? = null,
+        maxAltPos: LatLng? = null
     ): List<Pair<WorkoutCluster, Double>> = scoreClusters(
         clusters, start, end, apex, distance, workoutName,
-        if (workoutSportType != BSportType.UNKNOWN) setOf(workoutSportType) else emptySet()
+        if (workoutSportType != BSportType.UNKNOWN) setOf(workoutSportType) else emptySet(),
+        minAltPos, maxAltPos
     )
 
     fun moveWorkoutToCluster(context: Context, workoutId: Long, currentClusterId: Long, newClusterId: Long) {

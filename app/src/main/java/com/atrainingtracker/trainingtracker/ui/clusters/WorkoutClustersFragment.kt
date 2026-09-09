@@ -113,10 +113,16 @@ class WorkoutClustersFragment : Fragment() {
 
                     when {
                         isTuning -> {
-                            BackHandler { isTuning = false }
+                            BackHandler {
+                                viewModel.saveTuningParameters()
+                                isTuning = false
+                            }
                             ClusterTuningScreen(
                                 viewModel = viewModel,
-                                onBack = { isTuning = false }
+                                onBack = {
+                                    viewModel.saveTuningParameters()
+                                    isTuning = false
+                                }
                             )
                         }
                         isAdding -> {

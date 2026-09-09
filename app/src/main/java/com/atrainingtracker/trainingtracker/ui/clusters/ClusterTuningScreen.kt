@@ -15,6 +15,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.clusters
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -24,6 +25,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -31,6 +33,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,12 +43,27 @@ fun ClusterTuningScreen(
 ) {
     val isRecalculating by viewModel.isRecalculating.collectAsState()
 
+    val handleBack = {
+        viewModel.saveTuningParameters()
+        onBack()
+    }
+
+    BackHandler(enabled = !isRecalculating) {
+        handleBack()
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.saveTuningParameters()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.cluster_tuning_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack, enabled = !isRecalculating) {
+                    IconButton(onClick = handleBack, enabled = !isRecalculating) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                     }
                 }
@@ -77,8 +95,19 @@ fun ClusterTuningScreen(
                     onApexToleranceChange = { viewModel.apexTolerance = it },
                     distanceTolerance = viewModel.distanceTolerance,
                     onDistanceToleranceChange = { viewModel.distanceTolerance = it },
+                    altitudePositionTolerance = viewModel.altitudePositionTolerance,
+                    onAltitudePositionToleranceChange = { viewModel.altitudePositionTolerance = it },
                     useSportTypeForClustering = viewModel.useSportTypeForClustering,
-                    onUseSportTypeChange = { viewModel.useSportTypeForClustering = it }
+                    onUseSportTypeChange = { 
+                        viewModel.useSportTypeForClustering = it
+                        viewModel.saveTuningParameters()
+                    },
+                    useAltitudePosForClustering = viewModel.useAltitudePosForClustering,
+                    onUseAltitudePosChange = { 
+                        viewModel.useAltitudePosForClustering = it
+                        viewModel.saveTuningParameters()
+                    },
+                    onValueChangeFinished = { viewModel.saveTuningParameters() }
                 )
 
                 Spacer(modifier = Modifier.weight(1f))
@@ -109,8 +138,13 @@ fun ClusterTuningContent(
     onApexToleranceChange: (Float) -> Unit,
     distanceTolerance: Float,
     onDistanceToleranceChange: (Float) -> Unit,
-    useSportTypeForClustering: Boolean,
-    onUseSportTypeChange: (Boolean) -> Unit,
+    altitudePositionTolerance: Float = 400f,
+    onAltitudePositionToleranceChange: (Float) -> Unit = {},
+    useSportTypeForClustering: Boolean = true,
+    onUseSportTypeChange: (Boolean) -> Unit = {},
+    useAltitudePosForClustering: Boolean = true,
+    onUseAltitudePosChange: (Boolean) -> Unit = {},
+    onValueChangeFinished: () -> Unit = {},
     isDialog: Boolean = false
 ) {
     var showDetails by remember { mutableStateOf(false) }
@@ -119,13 +153,19 @@ fun ClusterTuningContent(
     val endRange = 10f..500f
     val apexRange = 10f..500f
     val distRange = 0.01f..0.2f
+    val altRange = 10f..500f
 
     // Derived master sensitivity (average of normalized values)
-    val currentMasterValue = remember(endpointTolerance, apexTolerance, distanceTolerance) {
+    val currentMasterValue = remember(endpointTolerance, apexTolerance, distanceTolerance, altitudePositionTolerance, useAltitudePosForClustering) {
         val nEnd = (endpointTolerance - endRange.start) / (endRange.endInclusive - endRange.start)
         val nApex = (apexTolerance - apexRange.start) / (apexRange.endInclusive - apexRange.start)
         val nDist = (distanceTolerance - distRange.start) / (distRange.endInclusive - distRange.start)
-        (nEnd + nApex + nDist) / 3f
+        if (useAltitudePosForClustering) {
+            val nAlt = (altitudePositionTolerance - altRange.start) / (altRange.endInclusive - altRange.start)
+            (nEnd + nApex + nDist + nAlt) / 4f
+        } else {
+            (nEnd + nApex + nDist) / 3f
+        }
     }
 
     val verticalSpacing = if (isDialog) 12.dp else 24.dp
@@ -145,7 +185,11 @@ fun ClusterTuningContent(
                     onEndpointToleranceChange(endRange.start + (endRange.endInclusive - endRange.start) * sensitivity)
                     onApexToleranceChange(apexRange.start + (apexRange.endInclusive - apexRange.start) * sensitivity)
                     onDistanceToleranceChange(distRange.start + (distRange.endInclusive - distRange.start) * sensitivity)
+                    if (useAltitudePosForClustering) {
+                        onAltitudePositionToleranceChange(altRange.start + (altRange.endInclusive - altRange.start) * sensitivity)
+                    }
                 },
+                onValueChangeFinished = onValueChangeFinished,
                 valueRange = 0f..1f
             )
             Row(
@@ -170,16 +214,65 @@ fun ClusterTuningContent(
             )
         }
 
-        // 3. Individual Sliders (Optional)
+        // 3. Detailed Parameters (Optional)
         if (showDetails) {
             val isImperial = TrainingApplication.getUnit() == MyUnits.IMPERIAL
             val lengthUnit = stringResource(if (isImperial) R.string.units_distance_imperial else R.string.units_distance_metric)
             val lengthMultiplier = if (isImperial) (1.0 / BANALService.METER_PER_MILE).toFloat() else 0.001f
 
+            // A. Switches above sliders
+            // Sport Type Awareness (ATT-350)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.cluster_tuning_use_sport_type_label),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = stringResource(R.string.cluster_tuning_use_sport_type_summary),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = useSportTypeForClustering,
+                    onCheckedChange = onUseSportTypeChange
+                )
+            }
+
+            // Altitude Extrema Awareness (ATT-502, REQ-SET-065)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.cluster_tuning_use_altitude_label),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = stringResource(R.string.cluster_tuning_use_altitude_summary),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = useAltitudePosForClustering,
+                    onCheckedChange = onUseAltitudePosChange
+                )
+            }
+
+            // B. Tolerance Sliders
             TuningSlider(
                 label = stringResource(R.string.cluster_tuning_endpoint_label),
                 value = endpointTolerance,
                 onValueChange = onEndpointToleranceChange,
+                onValueChangeFinished = onValueChangeFinished,
                 valueRange = endRange,
                 unit = lengthUnit,
                 displayMultiplier = lengthMultiplier,
@@ -190,6 +283,7 @@ fun ClusterTuningContent(
                 label = stringResource(R.string.cluster_tuning_apex_label),
                 value = apexTolerance,
                 onValueChange = onApexToleranceChange,
+                onValueChangeFinished = onValueChangeFinished,
                 valueRange = apexRange,
                 unit = lengthUnit,
                 displayMultiplier = lengthMultiplier,
@@ -200,33 +294,23 @@ fun ClusterTuningContent(
                 label = stringResource(R.string.cluster_tuning_distance_label),
                 value = distanceTolerance,
                 onValueChange = onDistanceToleranceChange,
+                onValueChangeFinished = onValueChangeFinished,
                 valueRange = distRange,
                 unit = stringResource(R.string.units_percent),
                 displayMultiplier = 100f,
                 decimalPlaces = 0
             )
-        }
 
-        // 4. Sport Type Awareness (ATT-350)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.cluster_tuning_use_sport_type_label),
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Text(
-                    text = stringResource(R.string.cluster_tuning_use_sport_type_summary),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Switch(
-                checked = useSportTypeForClustering,
-                onCheckedChange = onUseSportTypeChange
+            TuningSlider(
+                label = stringResource(R.string.cluster_tuning_altitude_pos_label),
+                value = altitudePositionTolerance,
+                onValueChange = onAltitudePositionToleranceChange,
+                onValueChangeFinished = onValueChangeFinished,
+                valueRange = altRange,
+                unit = lengthUnit,
+                displayMultiplier = lengthMultiplier,
+                decimalPlaces = 3,
+                enabled = useAltitudePosForClustering
             )
         }
     }
@@ -240,21 +324,34 @@ private fun TuningSlider(
     valueRange: ClosedFloatingPointRange<Float>,
     unit: String,
     displayMultiplier: Float = 1f,
-    decimalPlaces: Int = 0
+    decimalPlaces: Int = 0,
+    enabled: Boolean = true,
+    onValueChangeFinished: (() -> Unit)? = null
 ) {
     val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(text = label, style = MaterialTheme.typography.titleSmall)
+    val contentAlpha = if (enabled) 1.0f else TTAlpha.Disabled
+
+    Column(
+        modifier = Modifier.alpha(contentAlpha),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else TTAlpha.Disabled)
+        )
         Text(
             text = java.lang.String.format(locale, "%.${decimalPlaces}f %s", value * displayMultiplier, unit),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
+            color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Disabled)
         )
         Slider(
             value = value,
             onValueChange = onValueChange,
+            onValueChangeFinished = onValueChangeFinished,
             valueRange = valueRange,
+            enabled = enabled,
             modifier = Modifier.fillMaxWidth()
         )
     }

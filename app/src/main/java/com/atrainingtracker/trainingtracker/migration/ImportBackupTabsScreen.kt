@@ -380,14 +380,28 @@ fun PreImportTuningDialog(
                     onApexToleranceChange = { viewModel.apexTolerance = it },
                     distanceTolerance = viewModel.distanceTolerance,
                     onDistanceToleranceChange = { viewModel.distanceTolerance = it },
+                    altitudePositionTolerance = viewModel.altitudePositionTolerance,
+                    onAltitudePositionToleranceChange = { viewModel.altitudePositionTolerance = it },
                     useSportTypeForClustering = viewModel.useSportTypeForClustering,
-                    onUseSportTypeChange = { viewModel.useSportTypeForClustering = it },
+                    onUseSportTypeChange = { 
+                        viewModel.useSportTypeForClustering = it
+                        viewModel.saveClusteringTolerances()
+                    },
+                    useAltitudePosForClustering = viewModel.useAltitudePosForClustering,
+                    onUseAltitudePosChange = { 
+                        viewModel.useAltitudePosForClustering = it
+                        viewModel.saveClusteringTolerances()
+                    },
+                    onValueChangeFinished = { viewModel.saveClusteringTolerances() },
                     isDialog = true
                 )
             }
         },
         confirmButton = {
-            Button(onClick = onConfirm) {
+            Button(onClick = {
+                viewModel.saveClusteringTolerances()
+                onConfirm()
+            }) {
                 Text(stringResource(R.string.OK))
             }
         },
