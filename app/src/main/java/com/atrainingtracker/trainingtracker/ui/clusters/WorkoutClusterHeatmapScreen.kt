@@ -95,7 +95,7 @@ fun WorkoutClusterHeatmapScreen(
     val fingerprintMarkers = remember(editStart, editEnd, editApex, editMinAlt, editMaxAlt, isEditingFingerprint, startLabel, endLabel, apexLabel, minAltLabel, maxAltLabel, enabledMarkerTypes) {
         val list = mutableListOf<LocationMarker>()
         
-        if (isEditingFingerprint || enabledMarkerTypes.contains(ClusterMarkerType.START)) {
+        if (enabledMarkerTypes.contains(ClusterMarkerType.START)) {
             list.add(LocationMarker(
                 position = editStart,
                 iconResId = R.drawable.control_start,
@@ -106,7 +106,7 @@ fun WorkoutClusterHeatmapScreen(
             ))
         }
 
-        if (isEditingFingerprint || enabledMarkerTypes.contains(ClusterMarkerType.END)) {
+        if (enabledMarkerTypes.contains(ClusterMarkerType.END)) {
             list.add(LocationMarker(
                 position = editEnd,
                 iconResId = R.drawable.control_stop,
@@ -117,7 +117,7 @@ fun WorkoutClusterHeatmapScreen(
             ))
         }
 
-        if (isEditingFingerprint || enabledMarkerTypes.contains(ClusterMarkerType.DISTANCE)) {
+        if (enabledMarkerTypes.contains(ClusterMarkerType.DISTANCE)) {
             list.add(LocationMarker(
                 position = editApex,
                 iconResId = R.drawable.ic_distance,
@@ -128,26 +128,32 @@ fun WorkoutClusterHeatmapScreen(
             ))
         }
 
-        if (editMinAlt != null && (isEditingFingerprint || enabledMarkerTypes.contains(ClusterMarkerType.ALTITUDE_MIN))) {
-            list.add(LocationMarker(
-                position = editMinAlt!!,
-                iconResId = R.drawable.ic_altitude_min,
-                title = minAltLabel,
-                iconDescriptor = createSensorMarker(context, R.drawable.ic_altitude_min, TTColor.MinAltitude), // Blue (same as Apex)
-                draggable = isEditingFingerprint,
-                onDragEnd = { editMinAlt = it }
-            ))
+        if (enabledMarkerTypes.contains(ClusterMarkerType.ALTITUDE_MIN)) {
+            val minAltPos = editMinAlt ?: if (isEditingFingerprint) editStart else null
+            if (minAltPos != null) {
+                list.add(LocationMarker(
+                    position = minAltPos,
+                    iconResId = R.drawable.ic_altitude_min,
+                    title = minAltLabel,
+                    iconDescriptor = createSensorMarker(context, R.drawable.ic_altitude_min, TTColor.MinAltitude), // Blue (same as Apex)
+                    draggable = isEditingFingerprint,
+                    onDragEnd = { editMinAlt = it }
+                ))
+            }
         }
 
-        if (editMaxAlt != null && (isEditingFingerprint || enabledMarkerTypes.contains(ClusterMarkerType.ALTITUDE_MAX))) {
-            list.add(LocationMarker(
-                position = editMaxAlt!!,
-                iconResId = R.drawable.ic_altitude_max,
-                title = maxAltLabel,
-                iconDescriptor = createSensorMarker(context, R.drawable.ic_altitude_max, TTColor.MaxAltitude), // Blue (same as Apex)
-                draggable = isEditingFingerprint,
-                onDragEnd = { editMaxAlt = it }
-            ))
+        if (enabledMarkerTypes.contains(ClusterMarkerType.ALTITUDE_MAX)) {
+            val maxAltPos = editMaxAlt ?: if (isEditingFingerprint) editApex else null
+            if (maxAltPos != null) {
+                list.add(LocationMarker(
+                    position = maxAltPos,
+                    iconResId = R.drawable.ic_altitude_max,
+                    title = maxAltLabel,
+                    iconDescriptor = createSensorMarker(context, R.drawable.ic_altitude_max, TTColor.MaxAltitude), // Blue (same as Apex)
+                    draggable = isEditingFingerprint,
+                    onDragEnd = { editMaxAlt = it }
+                ))
+            }
         }
 
         list
@@ -342,56 +348,54 @@ fun WorkoutClusterHeatmapScreen(
                 }
                 
                 // MARKER DROPDOWN BUTTON (ATT-463)
-                if (!isEditingFingerprint) {
-                    Box(modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 76.dp, end = 16.dp), contentAlignment = Alignment.TopEnd) {
-                        var showMarkerMenu by remember { mutableStateOf(false) }
-                        Box {
-                            Surface(
-                                onClick = { showMarkerMenu = true },
-                                modifier = Modifier.size(44.dp),
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
-                                shadowElevation = 6.dp,
-                                tonalElevation = 2.dp
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Default.Place,
-                                        contentDescription = stringResource(R.string.marker_options),
-                                        modifier = Modifier.size(22.dp),
-                                        tint = if (enabledMarkerTypes.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Disabled)
-                                    )
-                                }
+                Box(modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 76.dp, end = 16.dp), contentAlignment = Alignment.TopEnd) {
+                    var showMarkerMenu by remember { mutableStateOf(false) }
+                    Box {
+                        Surface(
+                            onClick = { showMarkerMenu = true },
+                            modifier = Modifier.size(44.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
+                            shadowElevation = 6.dp,
+                            tonalElevation = 2.dp
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Place,
+                                    contentDescription = stringResource(R.string.marker_options),
+                                    modifier = Modifier.size(22.dp),
+                                    tint = if (enabledMarkerTypes.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Disabled)
+                                )
                             }
-                            DropdownMenu(
-                                expanded = showMarkerMenu,
-                                onDismissRequest = { showMarkerMenu = false }
-                            ) {
-                                ClusterMarkerType.entries.forEach { type ->
-                                    DropdownMenuItem(
-                                        text = {
-                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Checkbox(
-                                                    checked = enabledMarkerTypes.contains(type),
-                                                    onCheckedChange = null
-                                                )
-                                                Spacer(Modifier.width(8.dp))
-                                                Text(
-                                                    text = when (type) {
-                                                        ClusterMarkerType.DISTANCE -> stringResource(R.string.marker_max_distance)
-                                                        ClusterMarkerType.START -> stringResource(R.string.marker_start)
-                                                        ClusterMarkerType.END -> stringResource(R.string.marker_end)
-                                                        ClusterMarkerType.ALTITUDE_MIN -> stringResource(R.string.marker_min_altitude)
-                                                        ClusterMarkerType.ALTITUDE_MAX -> stringResource(R.string.marker_max_altitude)
-                                                    }
-                                                )
-                                            }
-                                        },
-                                        onClick = { viewModel.toggleMarkerType(type) }
-                                    )
-                                }
+                        }
+                        DropdownMenu(
+                            expanded = showMarkerMenu,
+                            onDismissRequest = { showMarkerMenu = false }
+                        ) {
+                            ClusterMarkerType.entries.forEach { type ->
+                                DropdownMenuItem(
+                                    text = {
+                                         Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Checkbox(
+                                                checked = enabledMarkerTypes.contains(type),
+                                                onCheckedChange = null
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                text = when (type) {
+                                                    ClusterMarkerType.DISTANCE -> stringResource(R.string.marker_max_distance)
+                                                    ClusterMarkerType.START -> stringResource(R.string.marker_start)
+                                                    ClusterMarkerType.END -> stringResource(R.string.marker_end)
+                                                    ClusterMarkerType.ALTITUDE_MIN -> stringResource(R.string.marker_min_altitude)
+                                                    ClusterMarkerType.ALTITUDE_MAX -> stringResource(R.string.marker_max_altitude)
+                                                }
+                                            )
+                                        }
+                                    },
+                                    onClick = { viewModel.toggleMarkerType(type) }
+                                )
                             }
                         }
                     }
@@ -435,6 +439,8 @@ fun WorkoutClusterHeatmapScreen(
             editStart = LatLng(cluster.startLat, cluster.startLng)
             editEnd = LatLng(cluster.endLat, cluster.endLng)
             editApex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
+            editMinAlt = cluster.minAltLatLng
+            editMaxAlt = cluster.maxAltLatLng
         } else {
             onBack()
         }
