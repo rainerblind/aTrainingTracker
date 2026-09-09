@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.EditLocationAlt
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -39,18 +40,27 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
+import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter
+import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
+import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterStats
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.DropdownSelector
+import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.map.*
+
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.model.LatLng
@@ -635,12 +645,13 @@ fun WorkoutClusterSummaryHeader(
                 }
 
                 if (!isEditing) {
-                    WorkoutClusterMetadataBlock(
+                    WorkoutClusterDetailDashboard(
                         cluster = cluster,
                         viewModel = viewModel,
                         onHitCountClick = onHitCountClick
                     )
                 } else {
+
                     // Marker Type Selection Row (Active / Movable State)
                     Row(
                         modifier = Modifier
@@ -739,6 +750,251 @@ fun WorkoutClusterSummaryHeader(
         }
     }
 }
+
+/**
+ * 3-Tier Performance, Cumulative Volume, and Recency Dashboard for Workout Cluster Details (REQ-SET-068).
+ */
+@Composable
+fun WorkoutClusterDetailDashboard(
+    cluster: WorkoutCluster,
+    viewModel: WorkoutClustersViewModel,
+    onHitCountClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val distanceFormatter = remember { DistanceFormatter() }
+    val timeFormatter = remember { TimeFormatter() }
+    val altitudeFormatter = remember { AltitudeFormatter() }
+    val speedFormatter = remember { SpeedFormatter() }
+    val paceFormatter = remember { PaceFormatter() }
+
+    val sportName = remember(cluster.probableSportId) { viewModel.getSportName(cluster.probableSportId) }
+    val bSportType = remember(cluster.probableSportId) { viewModel.getBSportType(cluster.probableSportId) }
+    val linkedEquipment = remember(cluster.probableSportId) { viewModel.getLinkedEquipment(cluster.probableSportId) }
+
+    val statsMap by viewModel.clusterStats.collectAsState()
+    val stats = statsMap[cluster.id] ?: WorkoutClusterStats.EMPTY
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        // Base metadata row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            MetricItem(
+                iconRes = R.drawable.ic_distance,
+                value = distanceFormatter.format_with_units(cluster.refDistance),
+                isPrimary = false,
+                valueColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                iconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+            )
+
+            Text(
+                text = sportName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            if (linkedEquipment.isNotEmpty()) {
+                Text(
+                    text = "•  ${linkedEquipment.joinToString(", ")}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        // --- TIER 1: Performance Card (Best Time, Average Time, Pace/Speed) ---
+        Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Best Time (PR)
+                Column(horizontalAlignment = Alignment.Start) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.EmojiEvents,
+                            contentDescription = null,
+                            tint = Color(0xFFFFD700),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.cluster_stats_best_time),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        text = stats.bestDurationSec?.let { timeFormatter.format(it) } ?: "--:--:--",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                // Average Time
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = stringResource(R.string.cluster_stats_avg_time),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = if (stats.avgDurationSec > 0) timeFormatter.format(stats.avgDurationSec) else "--:--:--",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                // Sport-Adaptive Velocity (Pace vs Speed)
+                val isRun = bSportType == BSportType.RUN
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = stringResource(if (isRun) R.string.cluster_stats_avg_pace else R.string.cluster_stats_avg_speed),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    val velocityStr = if (stats.avgSpeedMps > 0.0) {
+                        if (isRun) paceFormatter.format_with_units(1.0 / stats.avgSpeedMps)
+                        else speedFormatter.format_with_units(stats.avgSpeedMps)
+                    } else "--"
+                    Text(
+                        text = velocityStr,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+
+        // --- TIER 2: Cumulative Volume Card (Distance, Ascent, Active Time) ---
+        Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Total Distance
+                Column(horizontalAlignment = Alignment.Start) {
+                    Text(
+                        text = stringResource(R.string.cluster_stats_total_distance),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = distanceFormatter.format_with_units(stats.totalDistanceMeters),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                // Total Ascent
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = stringResource(R.string.cluster_stats_total_elevation),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = altitudeFormatter.format_with_units(stats.totalAscentMeters),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                // Total Moving Time
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = stringResource(R.string.cluster_stats_total_time),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = timeFormatter.format_with_units(stats.totalActiveTimeSec),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+
+        // --- TIER 3: Activity & Recency Card (Recordings Count Button, Last Activity) ---
+        Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = onHitCountClick,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    modifier = Modifier.height(32.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                ) {
+                    Text(
+                        text = pluralStringResource(R.plurals.cluster_recordings, cluster.hitCount, cluster.hitCount),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                val lastActivityStr = remember(stats.lastHitTimestampS) {
+                    WorkoutClusterStats.formatRelativeRecency(context, stats.lastHitTimestampS)
+                }
+                if (lastActivityStr.isNotEmpty()) {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = stringResource(R.string.cluster_stats_last_activity),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = lastActivityStr,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 @Composable
 fun EditWorkoutClusterIdentityDialog(

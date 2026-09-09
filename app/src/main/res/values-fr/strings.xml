@@ -1190,4 +1190,18 @@
     <string name="cluster_info_tuning_title">Sensibilité et réglage des paramètres</string>
     <string name="cluster_info_tuning_desc">Ajustez le curseur principal pour définir le niveau d\'exigence : « Strict » sépare les légères variations ; « Relâché » regroupe les séances malgré de petits détours ou décalages. Vous pouvez également affiner chaque tolérance individuellement ci-dessous.</string>
     <string name="cluster_info_close">Compris</string>
+
+    <!-- Workout Cluster Stats -->
+    <string name="cluster_stats_best_time">Meilleur temps</string>
+    <string name="cluster_stats_avg_time">Temps moyen</string>
+    <string name="cluster_stats_avg_speed">Vitesse moyenne</string>
+    <string name="cluster_stats_avg_pace">Allure moyenne</string>
+    <string name="cluster_stats_total_distance">Distance totale</string>
+    <string name="cluster_stats_total_elevation">Dénivelé positif total</string>
+    <string name="cluster_stats_total_time">Temps total</string>
+    <string name="cluster_stats_last_activity">Dernière activité</string>
+    <string name="cluster_stats_today">Aujourd\'hui</string>
+    <string name="cluster_stats_yesterday">Hier</string>
+    <string name="cluster_stats_days_ago">il y a %1$d jours</string>
+    <string name="cluster_stats_weeks_ago">il y a %1$d semaines</string>
 </resources>

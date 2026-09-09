@@ -56,6 +56,9 @@ import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.RoundCap
 import com.google.maps.android.PolyUtil
 import com.google.maps.android.compose.*
+import androidx.compose.material.icons.filled.EmojiEvents
+import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterStats
 
 /**
  * Standard identity row for a Workout Cluster (Icon + Name).
@@ -91,7 +94,7 @@ fun WorkoutClusterIdentityRow(
 }
 
 /**
- * Standard metadata block for a Workout Cluster (Distance, Sport, Equipment, HitCount).
+ * Standard metadata block for a Workout Cluster (Distance, Sport, Equipment, HitCount, PR Best Time, Total Volume).
  */
 @Composable
 fun WorkoutClusterMetadataBlock(
@@ -102,27 +105,68 @@ fun WorkoutClusterMetadataBlock(
     onHitCountClick: (() -> Unit)? = null
 ) {
     val distanceFormatter = remember { DistanceFormatter() }
+    val timeFormatter = remember { TimeFormatter() }
     val sportName = remember(cluster.probableSportId) { viewModel.getSportName(cluster.probableSportId) }
     val linkedEquipment = remember(cluster.probableSportId) { viewModel.getLinkedEquipment(cluster.probableSportId) }
+    val statsMap by viewModel.clusterStats.collectAsState()
+    val stats = statsMap[cluster.id]
 
     Column(modifier = modifier) {
-        // 1. Distance
-        MetricItem(
-            iconRes = R.drawable.ic_distance,
-            value = distanceFormatter.format_with_units(cluster.refDistance),
-            isPrimary = false,
-            valueColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            iconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
-        )
+        // 1. Reference Distance & Best Time (PR)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            MetricItem(
+                iconRes = R.drawable.ic_distance,
+                value = distanceFormatter.format_with_units(cluster.refDistance),
+                isPrimary = false,
+                valueColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                iconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+            )
+
+            if (stats?.bestDurationSec != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.EmojiEvents,
+                        contentDescription = stringResource(R.string.cluster_stats_best_time),
+                        tint = Color(0xFFFFD700), // Gold
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Text(
+                        text = timeFormatter.format(stats.bestDurationSec),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(2.dp))
 
-        // 2. Sport Type
-        Text(
-            text = sportName,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        // 2. Sport Type & Total Distance Volume
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = sportName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            if (stats != null && stats.totalDistanceMeters > 0.0) {
+                Text(
+                    text = "•  ${distanceFormatter.format_with_units(stats.totalDistanceMeters)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+                )
+            }
+        }
 
         // 3. Resulting Equipment
         if (linkedEquipment.isNotEmpty()) {
@@ -153,6 +197,7 @@ fun WorkoutClusterMetadataBlock(
         )
     }
 }
+
 
 @Composable
 fun ClusterItem(

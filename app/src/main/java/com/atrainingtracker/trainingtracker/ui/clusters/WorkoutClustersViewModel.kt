@@ -26,6 +26,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterStats
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
@@ -106,6 +107,15 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
 
     private val _selectedCluster = MutableStateFlow<WorkoutCluster?>(null)
     val selectedCluster: StateFlow<WorkoutCluster?> = _selectedCluster.asStateFlow()
+
+    val clusterStats: StateFlow<Map<Long, WorkoutClusterStats>> = repository.clusterStats
+
+    val selectedClusterStats: StateFlow<WorkoutClusterStats?> = combine(
+        _selectedCluster,
+        repository.clusterStats
+    ) { cluster, statsMap ->
+        cluster?.let { statsMap[it.id] }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private val _isRecalculating = MutableStateFlow(false)
     val isRecalculating: StateFlow<Boolean> = _isRecalculating.asStateFlow()
@@ -238,8 +248,13 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
     fun refresh() {
         viewModelScope.launch {
             repository.refreshClusters()
+            repository.refreshClusterStats()
             _unclusteredWorkouts.value = repository.getUnclusteredWorkouts()
         }
+    }
+
+    suspend fun getStatsForCluster(clusterId: Long): WorkoutClusterStats {
+        return repository.getStatsForCluster(clusterId)
     }
 
     fun saveTuningParameters() {

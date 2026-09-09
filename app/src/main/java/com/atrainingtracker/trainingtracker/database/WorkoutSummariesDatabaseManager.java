@@ -42,9 +42,11 @@ import com.google.maps.android.PolyUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -232,6 +234,152 @@ public class WorkoutSummariesDatabaseManager {
         values.put(WorkoutSummaries.CLUSTER_ID, -1L);
         return getDatabase().update(WorkoutSummaries.TABLE, values,
                 WorkoutSummaries.CLUSTER_ID + "=?", new String[]{String.valueOf(clusterId)});
+    }
+
+    /**
+     * Calculates comprehensive performance, volume, and recency statistics for all Workout Clusters (REQ-SET-068).
+     *
+     * @return Map of clusterId to WorkoutClusterStats.
+     */
+    @NonNull
+    public Map<Long, WorkoutClusterStats> getWorkoutClusterStatsForAllClusters() {
+        Map<Long, WorkoutClusterStats> results = new HashMap<>();
+        String sql = "SELECT " +
+                WorkoutSummaries.CLUSTER_ID + ", " +
+                "COUNT(*) AS cnt, " +
+                "MAX(strftime('%s', " + WorkoutSummaries.TIME_START + ")) AS lastHitEpochS, " +
+                "MAX(" + WorkoutSummaries.TIME_START + ") AS lastHitDateStr, " +
+                "AVG(" + WorkoutSummaries.SPEED_AVERAGE_mps + ") AS avgSpeedMps, " +
+                "AVG(" + WorkoutSummaries.TIME_ACTIVE_s + ") AS avgDurationSec, " +
+                "MIN(CASE WHEN " + WorkoutSummaries.FINISHED + " = 1 AND " + WorkoutSummaries.TIME_ACTIVE_s + " > 0 THEN " + WorkoutSummaries.TIME_ACTIVE_s + " ELSE NULL END) AS bestDurationSec, " +
+                "SUM(" + WorkoutSummaries.DISTANCE_TOTAL_m + ") AS totalDistanceMeters, " +
+                "SUM(" + WorkoutSummaries.ASCENDING + ") AS totalAscentMeters, " +
+                "SUM(" + WorkoutSummaries.TIME_ACTIVE_s + ") AS totalActiveTimeSec " +
+                "FROM " + WorkoutSummaries.TABLE + " " +
+                "WHERE " + WorkoutSummaries.CLUSTER_ID + " > 0 " +
+                "GROUP BY " + WorkoutSummaries.CLUSTER_ID;
+
+        try (Cursor cursor = getDatabase().rawQuery(sql, null)) {
+            while (cursor.moveToNext()) {
+                long clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID));
+                int workoutCount = cursor.getInt(cursor.getColumnIndexOrThrow("cnt"));
+
+                int epochCol = cursor.getColumnIndexOrThrow("lastHitEpochS");
+                Long lastHitEpochS = cursor.isNull(epochCol) ? null : cursor.getLong(epochCol);
+
+                int dateCol = cursor.getColumnIndexOrThrow("lastHitDateStr");
+                String lastHitDateStr = cursor.isNull(dateCol) ? null : cursor.getString(dateCol);
+
+                int speedCol = cursor.getColumnIndexOrThrow("avgSpeedMps");
+                double avgSpeedMps = cursor.isNull(speedCol) ? 0.0 : cursor.getDouble(speedCol);
+
+                int avgDurCol = cursor.getColumnIndexOrThrow("avgDurationSec");
+                long avgDurationSec = cursor.isNull(avgDurCol) ? 0L : cursor.getLong(avgDurCol);
+
+                int bestDurCol = cursor.getColumnIndexOrThrow("bestDurationSec");
+                Long bestDurationSec = cursor.isNull(bestDurCol) ? null : cursor.getLong(bestDurCol);
+
+                int distCol = cursor.getColumnIndexOrThrow("totalDistanceMeters");
+                double totalDistanceMeters = cursor.isNull(distCol) ? 0.0 : cursor.getDouble(distCol);
+
+                int ascentCol = cursor.getColumnIndexOrThrow("totalAscentMeters");
+                long totalAscentMeters = cursor.isNull(ascentCol) ? 0L : cursor.getLong(ascentCol);
+
+                int activeTimeCol = cursor.getColumnIndexOrThrow("totalActiveTimeSec");
+                long totalActiveTimeSec = cursor.isNull(activeTimeCol) ? 0L : cursor.getLong(activeTimeCol);
+
+                WorkoutClusterStats stats = new WorkoutClusterStats(
+                        clusterId,
+                        workoutCount,
+                        lastHitEpochS,
+                        lastHitDateStr,
+                        avgSpeedMps,
+                        avgDurationSec,
+                        bestDurationSec,
+                        totalDistanceMeters,
+                        totalAscentMeters,
+                        totalActiveTimeSec
+                );
+                results.put(clusterId, stats);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error calculating workout cluster stats", e);
+        }
+        return results;
+    }
+
+    /**
+     * Calculates performance, volume, and recency statistics for a single Workout Cluster (REQ-SET-068).
+     *
+     * @param clusterId The ID of the workout cluster.
+     * @return WorkoutClusterStats for the cluster, or default empty stats if none found.
+     */
+    @NonNull
+    public WorkoutClusterStats getWorkoutClusterStats(long clusterId) {
+        if (clusterId <= 0) {
+            return new WorkoutClusterStats(clusterId, 0, null, null, 0.0, 0L, null, 0.0, 0L, 0L);
+        }
+        String sql = "SELECT " +
+                WorkoutSummaries.CLUSTER_ID + ", " +
+                "COUNT(*) AS cnt, " +
+                "MAX(strftime('%s', " + WorkoutSummaries.TIME_START + ")) AS lastHitEpochS, " +
+                "MAX(" + WorkoutSummaries.TIME_START + ") AS lastHitDateStr, " +
+                "AVG(" + WorkoutSummaries.SPEED_AVERAGE_mps + ") AS avgSpeedMps, " +
+                "AVG(" + WorkoutSummaries.TIME_ACTIVE_s + ") AS avgDurationSec, " +
+                "MIN(CASE WHEN " + WorkoutSummaries.FINISHED + " = 1 AND " + WorkoutSummaries.TIME_ACTIVE_s + " > 0 THEN " + WorkoutSummaries.TIME_ACTIVE_s + " ELSE NULL END) AS bestDurationSec, " +
+                "SUM(" + WorkoutSummaries.DISTANCE_TOTAL_m + ") AS totalDistanceMeters, " +
+                "SUM(" + WorkoutSummaries.ASCENDING + ") AS totalAscentMeters, " +
+                "SUM(" + WorkoutSummaries.TIME_ACTIVE_s + ") AS totalActiveTimeSec " +
+                "FROM " + WorkoutSummaries.TABLE + " " +
+                "WHERE " + WorkoutSummaries.CLUSTER_ID + " = ?";
+
+        try (Cursor cursor = getDatabase().rawQuery(sql, new String[]{String.valueOf(clusterId)})) {
+            if (cursor.moveToFirst()) {
+                int countCol = cursor.getColumnIndexOrThrow("cnt");
+                int workoutCount = cursor.getInt(countCol);
+                if (workoutCount > 0) {
+                    int epochCol = cursor.getColumnIndexOrThrow("lastHitEpochS");
+                    Long lastHitEpochS = cursor.isNull(epochCol) ? null : cursor.getLong(epochCol);
+
+                    int dateCol = cursor.getColumnIndexOrThrow("lastHitDateStr");
+                    String lastHitDateStr = cursor.isNull(dateCol) ? null : cursor.getString(dateCol);
+
+                    int speedCol = cursor.getColumnIndexOrThrow("avgSpeedMps");
+                    double avgSpeedMps = cursor.isNull(speedCol) ? 0.0 : cursor.getDouble(speedCol);
+
+                    int avgDurCol = cursor.getColumnIndexOrThrow("avgDurationSec");
+                    long avgDurationSec = cursor.isNull(avgDurCol) ? 0L : cursor.getLong(avgDurCol);
+
+                    int bestDurCol = cursor.getColumnIndexOrThrow("bestDurationSec");
+                    Long bestDurationSec = cursor.isNull(bestDurCol) ? null : cursor.getLong(bestDurCol);
+
+                    int distCol = cursor.getColumnIndexOrThrow("totalDistanceMeters");
+                    double totalDistanceMeters = cursor.isNull(distCol) ? 0.0 : cursor.getDouble(distCol);
+
+                    int ascentCol = cursor.getColumnIndexOrThrow("totalAscentMeters");
+                    long totalAscentMeters = cursor.isNull(ascentCol) ? 0L : cursor.getLong(ascentCol);
+
+                    int activeTimeCol = cursor.getColumnIndexOrThrow("totalActiveTimeSec");
+                    long totalActiveTimeSec = cursor.isNull(activeTimeCol) ? 0L : cursor.getLong(activeTimeCol);
+
+                    return new WorkoutClusterStats(
+                            clusterId,
+                            workoutCount,
+                            lastHitEpochS,
+                            lastHitDateStr,
+                            avgSpeedMps,
+                            avgDurationSec,
+                            bestDurationSec,
+                            totalDistanceMeters,
+                            totalAscentMeters,
+                            totalActiveTimeSec
+                    );
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error calculating stats for cluster " + clusterId, e);
+        }
+        return new WorkoutClusterStats(clusterId, 0, null, null, 0.0, 0L, null, 0.0, 0L, 0L);
     }
 
     /**

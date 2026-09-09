@@ -1191,4 +1191,18 @@
     <string name="cluster_info_tuning_title">Sensibilidad y ajuste de parámetros</string>
     <string name="cluster_info_tuning_desc">Usa el control deslizante principal para ajustar la precisión requerida: «Estricto» separa variaciones leves en rutas distintas; «Relajado» agrupa entrenamientos con desvíos o inicios desplazados. También puedes ajustar tolerancias individuales abajo.</string>
     <string name="cluster_info_close">Entendido</string>
+
+    <!-- Workout Cluster Stats -->
+    <string name="cluster_stats_best_time">Mejor tiempo</string>
+    <string name="cluster_stats_avg_time">Tiempo promedio</string>
+    <string name="cluster_stats_avg_speed">Velocidad promedio</string>
+    <string name="cluster_stats_avg_pace">Ritmo promedio</string>
+    <string name="cluster_stats_total_distance">Distancia total</string>
+    <string name="cluster_stats_total_elevation">Ascenso total</string>
+    <string name="cluster_stats_total_time">Tiempo total</string>
+    <string name="cluster_stats_last_activity">Última actividad</string>
+    <string name="cluster_stats_today">Hoy</string>
+    <string name="cluster_stats_yesterday">Ayer</string>
+    <string name="cluster_stats_days_ago">hace %1$d días</string>
+    <string name="cluster_stats_weeks_ago">hace %1$d semanas</string>
 </resources>

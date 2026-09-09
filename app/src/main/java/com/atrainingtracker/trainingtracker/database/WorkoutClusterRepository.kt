@@ -59,6 +59,9 @@ class WorkoutClusterRepository private constructor(private val context: Context)
     private val _migrationStatus = MutableStateFlow<MigrationStatus?>(null)
     val migrationStatus: StateFlow<MigrationStatus?> = _migrationStatus.asStateFlow()
 
+    private val _clusterStats = MutableStateFlow<Map<Long, WorkoutClusterStats>>(emptyMap())
+    val clusterStats: StateFlow<Map<Long, WorkoutClusterStats>> = _clusterStats.asStateFlow()
+
     companion object {
         private const val SP_KEY_LAST_BOUNDS_REPAIR = "last_cluster_bounds_repair_v5"
         @Volatile
@@ -109,6 +112,7 @@ class WorkoutClusterRepository private constructor(private val context: Context)
         }
         
         if (!needsEnrichment && !forceShowProgress && !forceCheckIntegrity) {
+            _clusterStats.value = summariesManager.getWorkoutClusterStatsForAllClusters()
             _allClusters.value = currentClusters.sortedByDescending { it.hitCount }
             return@withContext
         }
@@ -223,10 +227,19 @@ class WorkoutClusterRepository private constructor(private val context: Context)
             finalCluster
         }
         
+        _clusterStats.value = summariesManager.getWorkoutClusterStatsForAllClusters()
         _allClusters.value = enriched.filterNotNull().sortedByDescending { it.hitCount }
         if (showProgress) {
             _migrationStatus.value = null
         }
+    }
+
+    suspend fun refreshClusterStats(): Unit = withContext(Dispatchers.IO) {
+        _clusterStats.value = summariesManager.getWorkoutClusterStatsForAllClusters()
+    }
+
+    suspend fun getStatsForCluster(clusterId: Long): WorkoutClusterStats = withContext(Dispatchers.IO) {
+        _clusterStats.value[clusterId] ?: summariesManager.getWorkoutClusterStats(clusterId)
     }
 
     suspend fun updateCluster(cluster: WorkoutCluster) = withContext(Dispatchers.IO) {
