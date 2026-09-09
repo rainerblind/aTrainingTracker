@@ -106,6 +106,8 @@ class ClusterInfoDialogTest {
         assertTrue("Must mention Apex", fingerprintDesc.contains("Apex"))
         assertTrue("Must mention Distance", fingerprintDesc.contains("Distance"))
         assertTrue("Must mention Altitude", fingerprintDesc.contains("Altitude"))
+        assertTrue("Must mention simple but surprisingly good algorithm", fingerprintDesc.contains("simple but surprisingly good algorithm"))
+        assertTrue("Must mention separating workouts when really different", fingerprintDesc.contains("separates the workouts when they are really different"))
     }
 
     @Test
@@ -117,6 +119,8 @@ class ClusterInfoDialogTest {
         assertNotNull(whatDesc)
         assertTrue("Must mention naming", whatDesc!!.contains("naming"))
         assertTrue("Must mention comparison or performance", whatDesc.contains("performance"))
+        assertTrue("Must use well-known course example like Lake Loop", whatDesc.contains("Lake Loop"))
+        assertFalse("Must not use time-based naming like Morning Run", whatDesc.contains("Morning Run"))
     }
 
     @Test

@@ -28,9 +28,9 @@ In this stage, we implemented comprehensive in-app educational documentation exp
 Created reusable dialog in package `com.atrainingtracker.trainingtracker.ui.clusters`:
 - **Architecture**: Jetpack Compose `AlertDialog` with a scrollable `Column` container (`verticalScroll(rememberScrollState())`) to guarantee full accessibility on all screen sizes, orientations, and accessibility font scaling settings without truncation.
 - **Section 1: What are Favorite Tracks? (`cluster_info_what_title`, `cluster_info_what_desc`)**:
-  Explains how repeated workouts on the same path are automatically grouped, named (e.g. "Morning Run #5"), assigned equipment, and compared for progress over time.
+  Explains how repeated workouts on the same path are automatically grouped, named with well-known course patterns (e.g. "Lake Loop #5" / "Seerunde #5"), assigned equipment, and compared for progress over time.
 - **Section 2: 3D Topological Fingerprint (`cluster_info_fingerprint_title`, `cluster_info_fingerprint_desc`)**:
-  Breaks down the 6-dimensional spatial fingerprint:
+  Highlights the simple but surprisingly good algorithm that gives tolerance to small variations while reliably separating workouts when they are really different, based on a 6-dimensional spatial fingerprint:
   • Start & End: $200\,\text{m}$ default tolerance
   • Apex (Furthest point from start): $400\,\text{m}$ default tolerance
   • Total Distance: $20\%$ default relative tolerance
