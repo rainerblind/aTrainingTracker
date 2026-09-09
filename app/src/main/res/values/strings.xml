@@ -1392,12 +1392,12 @@
 
     <!-- Workout Cluster Stats -->
     <string name="cluster_stats_best_time">Best Time</string>
-    <string name="cluster_stats_avg_time">Average Time</string>
-    <string name="cluster_stats_avg_speed">Average Speed</string>
-    <string name="cluster_stats_avg_pace">Average Pace</string>
-    <string name="cluster_stats_total_distance">Total Distance</string>
-    <string name="cluster_stats_total_elevation">Total Ascent</string>
-    <string name="cluster_stats_total_time">Total Time</string>
+    <string name="cluster_stats_avg_time">Time</string>
+    <string name="cluster_stats_avg_speed">Speed</string>
+    <string name="cluster_stats_avg_pace">Pace</string>
+    <string name="cluster_stats_total_distance">Distance</string>
+    <string name="cluster_stats_total_elevation">Ascent</string>
+    <string name="cluster_stats_total_time">Time</string>
     <string name="cluster_stats_last_activity">Last Activity</string>
     <string name="cluster_stats_today">Today</string>
     <string name="cluster_stats_yesterday">Yesterday</string>

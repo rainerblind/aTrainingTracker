@@ -1183,12 +1183,12 @@ proszę czekać</string>
 
     <!-- Workout Cluster Stats -->
     <string name="cluster_stats_best_time">Najlepszy czas</string>
-    <string name="cluster_stats_avg_time">Średni czas</string>
-    <string name="cluster_stats_avg_speed">Średnia prędkość</string>
-    <string name="cluster_stats_avg_pace">Średnie tempo</string>
-    <string name="cluster_stats_total_distance">Całkowity dystans</string>
-    <string name="cluster_stats_total_elevation">Całkowite wzniesienie</string>
-    <string name="cluster_stats_total_time">Łączny czas</string>
+    <string name="cluster_stats_avg_time">Czas</string>
+    <string name="cluster_stats_avg_speed">Prędkość</string>
+    <string name="cluster_stats_avg_pace">Tempo</string>
+    <string name="cluster_stats_total_distance">Dystans</string>
+    <string name="cluster_stats_total_elevation">Wzniesienie</string>
+    <string name="cluster_stats_total_time">Czas</string>
     <string name="cluster_stats_last_activity">Ostatnia aktywność</string>
     <string name="cluster_stats_today">Dzisiaj</string>
     <string name="cluster_stats_yesterday">Wczoraj</string>

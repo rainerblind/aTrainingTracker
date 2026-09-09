@@ -1178,12 +1178,12 @@
 
     <!-- Workout Cluster Stats -->
     <string name="cluster_stats_best_time">ベストタイム</string>
-    <string name="cluster_stats_avg_time">平均タイム</string>
-    <string name="cluster_stats_avg_speed">平均速度</string>
-    <string name="cluster_stats_avg_pace">平均ペース</string>
-    <string name="cluster_stats_total_distance">総距離</string>
-    <string name="cluster_stats_total_elevation">総上昇高度</string>
-    <string name="cluster_stats_total_time">合計時間</string>
+    <string name="cluster_stats_avg_time">タイム</string>
+    <string name="cluster_stats_avg_speed">速度</string>
+    <string name="cluster_stats_avg_pace">ペース</string>
+    <string name="cluster_stats_total_distance">距離</string>
+    <string name="cluster_stats_total_elevation">獲得標高</string>
+    <string name="cluster_stats_total_time">時間</string>
     <string name="cluster_stats_last_activity">最後のアクティビティ</string>
     <string name="cluster_stats_today">今日</string>
     <string name="cluster_stats_yesterday">昨日</string>

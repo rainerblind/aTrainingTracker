@@ -1192,12 +1192,12 @@
 
     <!-- Workout Cluster Stats -->
     <string name="cluster_stats_best_time">Miglior tempo</string>
-    <string name="cluster_stats_avg_time">Tempo medio</string>
-    <string name="cluster_stats_avg_speed">Velocità media</string>
-    <string name="cluster_stats_avg_pace">Ritmo medio</string>
-    <string name="cluster_stats_total_distance">Distanza totale</string>
-    <string name="cluster_stats_total_elevation">Salita totale</string>
-    <string name="cluster_stats_total_time">Tempo totale</string>
+    <string name="cluster_stats_avg_time">Tempo</string>
+    <string name="cluster_stats_avg_speed">Velocità</string>
+    <string name="cluster_stats_avg_pace">Passo</string>
+    <string name="cluster_stats_total_distance">Distanza</string>
+    <string name="cluster_stats_total_elevation">Salita</string>
+    <string name="cluster_stats_total_time">Tempo</string>
     <string name="cluster_stats_last_activity">Ultima attività</string>
     <string name="cluster_stats_today">Oggi</string>
     <string name="cluster_stats_yesterday">Ieri</string>
