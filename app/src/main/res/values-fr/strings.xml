@@ -1176,4 +1176,15 @@
     <string name="filter_section_recordings">Enregistrements</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d enregistrements</string>
     <string name="filter_no_matching_clusters">Aucun parcours favori ne correspond aux filtres actifs</string>
+    <!-- Cluster Algorithm Info (ATT-501) -->
+    <string name="cluster_info_title">Parcours favoris et regroupement</string>
+    <string name="cluster_info_what_title">Que sont les Parcours favoris ?</string>
+    <string name="cluster_info_what_desc">Lorsque vous vous entraînez plusieurs fois sur le même itinéraire, l\'application le détecte automatiquement et regroupe ces séances au sein d\'un Parcours favori (cluster). Cela permet un nommage automatique (ex. « Course matinale #5 »), le suivi de l\'équipement et la comparaison des performances sur des trajets identiques.</string>
+    <string name="cluster_info_fingerprint_title">Empreinte topologique 3D</string>
+    <string name="cluster_info_fingerprint_desc">Les itinéraires sont comparés via une signature spatiale multidimensionnelle plutôt qu\'un tracé GPS point par point :&#10;• Départ &amp; Arrivée : Coordonnées géographiques de départ et d\'arrivée (tolérance : 200 m).&#10;• Apex (Point le plus éloigné) : Le point le plus distant du départ (tolérance : 400 m).&#10;• Distance totale : Longueur totale du parcours (tolérance : 20 %).&#10;• Altitude min. et max. : Emplacements géographiques des altitudes minimale et maximale (tolérance : 400 m, facultatif). Cela sépare nettement les vallées des crêtes aux tracés comparables.</string>
+    <string name="cluster_info_sports_title">Séparation par sport et centroïde adaptatif</string>
+    <string name="cluster_info_sports_desc">Les parcours favoris peuvent séparer les sports, garantissant que sorties vélo et courses à pied ne se mélangent pas. Au fil de vos entraînements, le cluster ajuste dynamiquement ses coordonnées de référence via un centroïde pondéré.</string>
+    <string name="cluster_info_tuning_title">Sensibilité et réglage des paramètres</string>
+    <string name="cluster_info_tuning_desc">Ajustez le curseur principal pour définir le niveau d\'exigence : « Strict » sépare les légères variations ; « Tolérant » regroupe les séances malgré de petits détours ou décalages. Vous pouvez également affiner chaque tolérance individuellement ci-dessous.</string>
+    <string name="cluster_info_close">Compris</string>
 </resources>

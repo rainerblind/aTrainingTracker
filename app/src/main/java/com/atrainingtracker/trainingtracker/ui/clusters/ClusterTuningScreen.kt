@@ -21,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -58,6 +59,8 @@ fun ClusterTuningScreen(
         }
     }
 
+    var showInfoDialog by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -66,10 +69,21 @@ fun ClusterTuningScreen(
                     IconButton(onClick = handleBack, enabled = !isRecalculating) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                     }
+                },
+                actions = {
+                    IconButton(onClick = { showInfoDialog = true }, enabled = !isRecalculating) {
+                        Icon(
+                            Icons.Outlined.Info,
+                            contentDescription = stringResource(R.string.cluster_info_title)
+                        )
+                    }
                 }
             )
         }
     ) { padding ->
+        if (showInfoDialog) {
+            ClusterInfoDialog(onDismissRequest = { showInfoDialog = false })
+        }
         if (isRecalculating) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {

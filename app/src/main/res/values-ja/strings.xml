@@ -1161,4 +1161,15 @@
     <string name="filter_section_recordings">記録</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d 件の記録</string>
     <string name="filter_no_matching_clusters">一致するお気に入りトラックはありません</string>
+    <!-- Cluster Algorithm Info (ATT-501) -->
+    <string name="cluster_info_title">お気に入りルートとクラスタリング</string>
+    <string name="cluster_info_what_title">お気に入りルートとは？</string>
+    <string name="cluster_info_what_desc">同じコースで複数回トレーニングを行うと、アプリが自動的に検知してお気に入りルート（クラスタ）としてグループ化します。これにより、自動命名（例:「朝のランニング #5」）、ギアの自動割り当て、同一コースでのパフォーマンス比較が可能になります。</string>
+    <string name="cluster_info_fingerprint_title">3Dトポロジカル指紋</string>
+    <string name="cluster_info_fingerprint_desc">ルートはGPSの点単位ではなく、多次元の空間シグネチャによって比較されます:&#10;• スタートとゴール: 地理的な開始点と終了点（許容範囲: 200 m）。&#10;• エイペックス（最遠点）: スタートから最も離れたコース上の地点（許容範囲: 400 m）。&#10;• 総距離: ルートの全体距離（許容範囲: 20%）。&#10;• 最低・最高高度位置: 最低地点および最高地点の地理的位置（許容範囲: 400 m、オプション）。これにより、輪郭が似た谷沿いのルートと尾根ルートを確実に区別します。</string>
+    <string name="cluster_info_sports_title">スポーツ種別の分離と適応重心</string>
+    <string name="cluster_info_sports_desc">お気に入りルートはスポーツ種別ごとに分離できるため、同じ道でのサイクリングとランニングが混ざりません。ワークアウトが追加されるたびに、加重移動平均（重心）によって参照座標が自動的に微調整されます。</string>
+    <string name="cluster_info_tuning_title">感度とパラメータ調整</string>
+    <string name="cluster_info_tuning_desc">マスタースライダーでルートの一致基準を調整します。「厳格」にするとわずかなルートの違いを別クラスタに分け、「緩和」にするとスタート位置のズレや小さな回り道があっても同じクラスタにまとめます。個別の許容値も下部で微調整できます。</string>
+    <string name="cluster_info_close">了解</string>
 </resources>

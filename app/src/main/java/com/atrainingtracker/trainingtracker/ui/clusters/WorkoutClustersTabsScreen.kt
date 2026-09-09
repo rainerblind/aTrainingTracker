@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 
 import androidx.compose.runtime.*
@@ -74,6 +75,11 @@ fun WorkoutClustersTabsScreen(
 
 
     var showFilterBottomSheet by rememberSaveable { mutableStateOf(false) }
+    var showInfoDialog by rememberSaveable { mutableStateOf(false) }
+
+    if (showInfoDialog) {
+        ClusterInfoDialog(onDismissRequest = { showInfoDialog = false })
+    }
 
     if (showFilterBottomSheet) {
         ClusterFilterBottomSheet(
@@ -260,6 +266,15 @@ fun WorkoutClustersTabsScreen(
                                     Icon(
                                         painter = painterResource(id = R.drawable.ic_settings_24),
                                         contentDescription = stringResource(R.string.cluster_tuning_content_desc),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+
+                                // --- INFO BUTTON (ATT-501) ---
+                                IconButton(onClick = { showInfoDialog = true }) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Info,
+                                        contentDescription = stringResource(R.string.cluster_info_title),
                                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
