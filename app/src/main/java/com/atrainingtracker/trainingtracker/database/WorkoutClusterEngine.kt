@@ -194,44 +194,31 @@ class WorkoutClusterEngine private constructor(context: Context) {
     }
 
     fun onWorkoutFinished(context: Context, w: WorkoutData) {
+        // REQ-MIG-025: Strictly respect unclustered status and never auto-create fallback clusters
+        if (w.clusterId == -1L) return
         if (w.startLatLng == null || w.endLatLng == null) return // Ignore non-spatial
         
+        val currentMatch = dbManager.getClusterById(w.clusterId) ?: return
         val apex = w.maxDisplacementLatLng ?: w.endLatLng ?: w.startLatLng
-        val normalizedName = if (w.workoutName != w.fileBaseName) stripHitCount(w.workoutName) else null
-        val match = suggestCluster(w.startLatLng, w.endLatLng, apex, w.totalDistance, normalizedName, w.bSportType)
 
-        if (match != null) {
-            assignClusterToWorkout(context, w.id, match.id, false)
-            val currentMatch = dbManager.getClusterById(match.id) ?: return
+        // --- ATT-354 Refinement: Null-Safe Bounds Update ---
+        val wMinLat = w.minLat; val wMinLng = w.minLng; val wMaxLat = w.maxLat; val wMaxLng = w.maxLng
+        
+        val updated = currentMatch.copy(
+            startLat = (currentMatch.startLat * currentMatch.hitCount + w.startLatLng.latitude) / (currentMatch.hitCount + 1),
+            startLng = (currentMatch.startLng * currentMatch.hitCount + w.startLatLng.longitude) / (currentMatch.hitCount + 1),
+            endLat = (currentMatch.endLat * currentMatch.hitCount + w.endLatLng.latitude) / (currentMatch.hitCount + 1),
+            endLng = (currentMatch.endLng * currentMatch.hitCount + w.endLatLng.longitude) / (currentMatch.hitCount + 1),
+            maxDispLat = (currentMatch.maxDispLat * currentMatch.hitCount + apex.latitude) / (currentMatch.hitCount + 1),
+            maxDispLng = (currentMatch.maxDispLng * currentMatch.hitCount + apex.longitude) / (currentMatch.hitCount + 1),
+            refDistance = (currentMatch.refDistance * currentMatch.hitCount + w.totalDistance) / (currentMatch.hitCount + 1),
             
-            // --- ATT-354 Refinement: Null-Safe Bounds Update ---
-            val wMinLat = w.minLat; val wMinLng = w.minLng; val wMaxLat = w.maxLat; val wMaxLng = w.maxLng
-            
-            val updated = currentMatch.copy(
-                startLat = (currentMatch.startLat * currentMatch.hitCount + w.startLatLng.latitude) / (currentMatch.hitCount + 1),
-                startLng = (currentMatch.startLng * currentMatch.hitCount + w.startLatLng.longitude) / (currentMatch.hitCount + 1),
-                endLat = (currentMatch.endLat * currentMatch.hitCount + w.endLatLng.latitude) / (currentMatch.hitCount + 1),
-                endLng = (currentMatch.endLng * currentMatch.hitCount + w.endLatLng.longitude) / (currentMatch.hitCount + 1),
-                maxDispLat = (currentMatch.maxDispLat * currentMatch.hitCount + apex.latitude) / (currentMatch.hitCount + 1),
-                maxDispLng = (currentMatch.maxDispLng * currentMatch.hitCount + apex.longitude) / (currentMatch.hitCount + 1),
-                refDistance = (currentMatch.refDistance * currentMatch.hitCount + w.totalDistance) / (currentMatch.hitCount + 1),
-                
-                minLat = if (wMinLat != null) minOf(currentMatch.minLat ?: 90.0, wMinLat) else currentMatch.minLat,
-                minLng = if (wMinLng != null) minOf(currentMatch.minLng ?: 180.0, wMinLng) else currentMatch.minLng,
-                maxLat = if (wMaxLat != null) maxOf(currentMatch.maxLat ?: -90.0, wMaxLat) else currentMatch.maxLat,
-                maxLng = if (wMaxLng != null) maxOf(currentMatch.maxLng ?: -180.0, wMaxLng) else currentMatch.maxLng
-            )
-            dbManager.updateCluster(updated)
-        } else {
-            val clusterName = normalizedName ?: context.getString(R.string.cluster_default_name_format, w.fileBaseName?.take(10) ?: "Workout")
-            val newId = learnFromWorkout(
-                w.startLatLng, w.endLatLng, apex, w.totalDistance, 
-                clusterName, w.sportId,
-                minLat = w.minLat, minLng = w.minLng, maxLat = w.maxLat, maxLng = w.maxLng
-            )
-            
-            assignClusterToWorkout(context, w.id, newId, false)
-        }
+            minLat = if (wMinLat != null) minOf(currentMatch.minLat ?: 90.0, wMinLat) else currentMatch.minLat,
+            minLng = if (wMinLng != null) minOf(currentMatch.minLng ?: 180.0, wMinLng) else currentMatch.minLng,
+            maxLat = if (wMaxLat != null) maxOf(currentMatch.maxLat ?: -90.0, wMaxLat) else currentMatch.maxLat,
+            maxLng = if (wMaxLng != null) maxOf(currentMatch.maxLng ?: -180.0, wMaxLng) else currentMatch.maxLng
+        )
+        dbManager.updateCluster(updated)
     }
 
     /**

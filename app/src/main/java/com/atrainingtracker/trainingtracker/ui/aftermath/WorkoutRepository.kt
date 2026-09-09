@@ -755,13 +755,16 @@ class WorkoutRepository private constructor(private val application: Application
                         // Get the fresh data from the database.
                         val freshWorkoutData = mapper.fromCursor(cursor)
                         
-                        // --- SURGICAL PERIOD UPDATE (ATT-346) ---
+                        // --- SURGICAL PERIOD UPDATE (ATT-346) & CLUSTER UPDATE (ATT-354 / REQ-MIG-025) ---
                         val existing = allWorkouts.value.find { it.id == workoutId }
-                        val isNewFinish = (existing == null || !existing.finished) && freshWorkoutData.finished
+                        val isLiveSessionFinish = (existing != null && !existing.finished) && freshWorkoutData.finished
+                        val isNewImportOrFinish = (existing == null || !existing.finished) && freshWorkoutData.finished
                         
-                        if (isNewFinish) {
+                        if (isNewImportOrFinish) {
                             PeriodsRepository.getInstance(application).onWorkoutFinished(freshWorkoutData)
-                            // --- SURGICAL CLUSTER UPDATE (ATT-354) ---
+                        }
+
+                        if (isLiveSessionFinish && freshWorkoutData.clusterId != -1L) {
                             WorkoutClusterEngine.getInstance(application).onWorkoutFinished(application, freshWorkoutData)
                         }
 
