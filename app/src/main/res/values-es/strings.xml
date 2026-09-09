@@ -994,6 +994,7 @@
     </plurals>
     <string name="cluster_ref_distance_label">Ref: %1$s</string>
     <string name="cluster_tuning_title">Parámetros de agrupación</string>
+    <string name="cluster_tuning_pre_import_desc">Ajusta la sensibilidad del agrupamiento de rutas para optimizar la coincidencia en entrenamientos importados.</string>
     <string name="cluster_tuning_master_label">Sensibilidad de agrupación</string>
     <string name="cluster_tuning_strict">Estricto</string>
     <string name="cluster_tuning_relaxed">Relajado</string>

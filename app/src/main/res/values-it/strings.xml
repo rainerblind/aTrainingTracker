@@ -991,6 +991,7 @@
     </plurals>
     <string name="cluster_ref_distance_label">Rif: %1$s</string>
     <string name="cluster_tuning_title">Parametri di raggruppamento</string>
+    <string name="cluster_tuning_pre_import_desc">Regola la sensibilità del raggruppamento dei percorsi per ottimizzare la corrispondenza degli allenamenti importati.</string>
     <string name="cluster_tuning_master_label">Sensibilità di raggruppamento</string>
     <string name="cluster_tuning_strict">Rigoroso</string>
     <string name="cluster_tuning_relaxed">Rilassato</string>

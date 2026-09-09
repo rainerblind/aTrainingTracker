@@ -1071,6 +1071,7 @@
     <string name="cluster_ref_distance_label">Ref: %1$s</string>
 
     <string name="cluster_tuning_title">Cluster-Parameter</string>
+    <string name="cluster_tuning_pre_import_desc">Passe die Sensitivität der Streckenerkennung an, um den Streckenabgleich für importierte Workouts zu optimieren.</string>
     <string name="cluster_tuning_master_label">Gruppierungs-Sensitivität</string>
     <string name="cluster_tuning_strict">Streng</string>
     <string name="cluster_tuning_relaxed">Locker</string>

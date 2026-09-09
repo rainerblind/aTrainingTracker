@@ -990,6 +990,7 @@
     </plurals>
     <string name="cluster_ref_distance_label">Réf : %1$s</string>
     <string name="cluster_tuning_title">Paramètres de regroupement</string>
+    <string name="cluster_tuning_pre_import_desc">Ajustez la sensibilité du regroupement de parcours pour optimiser la correspondance des entraînements importés.</string>
     <string name="cluster_tuning_master_label">Sensibilité du regroupement</string>
     <string name="cluster_tuning_strict">Strict</string>
     <string name="cluster_tuning_relaxed">Relâché</string>

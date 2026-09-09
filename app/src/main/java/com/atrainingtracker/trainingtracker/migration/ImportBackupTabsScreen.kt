@@ -57,6 +57,8 @@ import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManag
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialog
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterTuningContent
+import com.atrainingtracker.trainingtracker.ui.clusters.ClusterInfoDialog
+import androidx.compose.material.icons.outlined.Info
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
@@ -329,9 +331,9 @@ fun ImportBackupTabsScreen(
         )
     }
 
-    // ATT-315: Pre-import Tuning Dialogs
+    // ATT-315 / ATT-793: Pre-import Tuning Bottom Sheets
     if (showTuningDialogForBulk) {
-        PreImportTuningDialog(
+        PreImportTuningBottomSheet(
             viewModel = viewModel,
             onConfirm = {
                 showTuningDialogForBulk = false
@@ -342,7 +344,7 @@ fun ImportBackupTabsScreen(
     }
 
     pendingSingleLegacyUri?.let { uri ->
-        PreImportTuningDialog(
+        PreImportTuningBottomSheet(
             viewModel = viewModel,
             onConfirm = {
                 viewModel.importLegacyFile(context, uri, "tcx")
@@ -353,25 +355,76 @@ fun ImportBackupTabsScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PreImportTuningDialog(
+fun PreImportTuningBottomSheet(
     viewModel: BackupRestoreViewModel,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    var showInfoDialog by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    if (showInfoDialog) {
+        ClusterInfoDialog(onDismissRequest = { showInfoDialog = false })
+    }
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.cluster_tuning_title)) },
-        text = {
+        sheetState = sheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+        ) {
+            // Header Bar: Title, Info button, and Close button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 24.dp, end = 12.dp, top = 4.dp, bottom = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.cluster_tuning_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { showInfoDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = stringResource(R.string.cluster_info_title),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringResource(R.string.cancel),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            // Scrollable Content
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = "Adjust workout clustering sensitivity to optimize route matching for imported workouts.",
-                    style = MaterialTheme.typography.bodyMedium
+                    text = stringResource(R.string.cluster_tuning_pre_import_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 ClusterTuningContent(
                     endpointTolerance = viewModel.endpointTolerance,
@@ -393,23 +446,48 @@ fun PreImportTuningDialog(
                         viewModel.saveClusteringTolerances()
                     },
                     onValueChangeFinished = { viewModel.saveClusteringTolerances() },
-                    isDialog = true
+                    isDialog = false
                 )
             }
-        },
-        confirmButton = {
-            Button(onClick = {
-                viewModel.saveClusteringTolerances()
-                onConfirm()
-            }) {
-                Text(stringResource(R.string.OK))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
+
+            // Action Buttons
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.cancel))
+                }
+                Button(
+                    onClick = {
+                        viewModel.saveClusteringTolerances()
+                        onConfirm()
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.OK))
+                }
             }
         }
+    }
+}
+
+@Composable
+fun PreImportTuningDialog(
+    viewModel: BackupRestoreViewModel,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    PreImportTuningBottomSheet(
+        viewModel = viewModel,
+        onConfirm = onConfirm,
+        onDismiss = onDismiss
     )
 }
 

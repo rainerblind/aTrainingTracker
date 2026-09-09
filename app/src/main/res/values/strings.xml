@@ -1213,6 +1213,7 @@
     <string name="cluster_ref_distance_label">Ref: %1$s</string>
 
     <string name="cluster_tuning_title">Clustering Parameters</string>
+    <string name="cluster_tuning_pre_import_desc">Adjust workout clustering sensitivity to optimize route matching for imported workouts.</string>
     <string name="cluster_tuning_master_label">Grouping Sensitivity</string>
     <string name="cluster_tuning_strict">Strict</string>
     <string name="cluster_tuning_relaxed">Relaxed</string>
