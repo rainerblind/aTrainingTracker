@@ -126,6 +126,6 @@ object TTColor {
     val StartPoint = Color(0xFF2E7D32) // Material Green 800
     val EndPoint = Color(0xFFC62828)   // Material Red 800
     val ApexPoint = Color(0xFF1565C0)  // Material Blue 800
-    val MinAltitude = Color(0xFF00897B) // Material Teal 600
-    val MaxAltitude = Color(0xFFEF6C00) // Material Orange 800
+    val MinAltitude = Color(0xFF1565C0) // Material Blue 800 (same as Apex / Max Line Distance)
+    val MaxAltitude = Color(0xFF1565C0) // Material Blue 800 (same as Apex / Max Line Distance)
 }
