@@ -48,7 +48,8 @@ This feature upgrades route clustering from a 2D planar fingerprint to a 3D alti
 
 ### E. User Interface, Tuning & Heatmap Relocation
 * **[WorkoutClusterHeatmapScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterHeatmapScreen.kt)**:
-  * Renders distinct markers for Min Altitude (teal) and Max Altitude (amber).
+  * Renders distinct markers for Min Altitude (teal) and Max Altitude (amber) using unified icons [`ic_altitude_min.xml`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/res/drawable/ic_altitude_min.xml) (mountain silhouette + downward triangle `▼`) and [`ic_altitude_max.xml`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/res/drawable/ic_altitude_max.xml) (mountain silhouette + upward triangle `▲`).
+  * Harmonized altitude icons across both Workout Details and Cluster Heatmap screens.
   * In fingerprint edit mode (`isEditingFingerprint = true`), markers are draggable; on save, new positions are persisted via `updateClusterFingerprint`.
 * **[ClusterTuningScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/res/values/strings.xml)** & **[ImportBackupTabsScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/migration/ImportBackupTabsScreen.kt)**:
   * Added switch toggle for `useAltitudePosForClustering`.
@@ -56,6 +57,7 @@ This feature upgrades route clustering from a 2D planar fingerprint to a 3D alti
   * Connected sensitivity master slider with altitude position tolerance scaling.
 * **[WorkoutClustersViewModel.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersViewModel.kt)** & **[BackupRestoreViewModel.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/migration/BackupRestoreViewModel.kt)**:
   * Added state flows, preference synchronization, and updated `updateClusterFingerprint`.
+  * Added peak markers referencing distinct `ic_altitude_min` and `ic_altitude_max` drawables.
 * **[ClusterData.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/ClusterData.kt)**, **[Color.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/theme/Color.kt)**, **[MyPreferenceManager.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/MyPreferenceManager.kt)**:
   * Added `ALTITUDE_MIN` and `ALTITUDE_MAX` marker types and colors.
 
