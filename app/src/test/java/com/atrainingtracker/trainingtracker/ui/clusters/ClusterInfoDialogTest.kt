@@ -160,4 +160,31 @@ class ClusterInfoDialogTest {
         assertTrue("Must mention Slider or Strict", tuningDesc!!.contains("Strict"))
         assertTrue("Must mention Relaxed", tuningDesc.contains("Relaxed"))
     }
+
+    @Test
+    fun testSliderLabelConsistencyAcrossAllLocales() {
+        val resDir = findResDirectory()
+        val locales = listOf("", "de", "es", "fr", "it", "ja", "nl", "pl", "pt")
+        for (locale in locales) {
+            val valuesDir = if (locale.isEmpty()) "values" else "values-$locale"
+            val strings = parseStringsFile(File(resDir, "$valuesDir/strings.xml"))
+            val strictLabel = strings["cluster_tuning_strict"]
+            val relaxedLabel = strings["cluster_tuning_relaxed"]
+            val tuningDesc = strings["cluster_info_tuning_desc"]
+
+            assertNotNull("cluster_tuning_strict must exist in $valuesDir", strictLabel)
+            assertNotNull("cluster_tuning_relaxed must exist in $valuesDir", relaxedLabel)
+            assertNotNull("cluster_info_tuning_desc must exist in $valuesDir", tuningDesc)
+
+            assertTrue(
+                "Locale '$locale' ($valuesDir): cluster_info_tuning_desc must contain strict label '$strictLabel', but was: $tuningDesc",
+                tuningDesc!!.contains(strictLabel!!)
+            )
+            assertTrue(
+                "Locale '$locale' ($valuesDir): cluster_info_tuning_desc must contain relaxed label '$relaxedLabel', but was: $tuningDesc",
+                tuningDesc.contains(relaxedLabel!!)
+            )
+        }
+    }
 }
+

@@ -1185,6 +1185,6 @@
     <string name="cluster_info_sports_title">Séparation par sport et centroïde adaptatif</string>
     <string name="cluster_info_sports_desc">Les parcours favoris peuvent séparer les sports, garantissant que sorties vélo et courses à pied ne se mélangent pas. Au fil de vos entraînements, le cluster ajuste dynamiquement ses coordonnées de référence via un centroïde pondéré.</string>
     <string name="cluster_info_tuning_title">Sensibilité et réglage des paramètres</string>
-    <string name="cluster_info_tuning_desc">Ajustez le curseur principal pour définir le niveau d\'exigence : « Strict » sépare les légères variations ; « Tolérant » regroupe les séances malgré de petits détours ou décalages. Vous pouvez également affiner chaque tolérance individuellement ci-dessous.</string>
+    <string name="cluster_info_tuning_desc">Ajustez le curseur principal pour définir le niveau d\'exigence : « Strict » sépare les légères variations ; « Relâché » regroupe les séances malgré de petits détours ou décalages. Vous pouvez également affiner chaque tolérance individuellement ci-dessous.</string>
     <string name="cluster_info_close">Compris</string>
 </resources>

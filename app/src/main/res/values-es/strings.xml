@@ -1186,6 +1186,6 @@
     <string name="cluster_info_sports_title">Separación por deporte y centroide adaptable</string>
     <string name="cluster_info_sports_desc">Las rutas favoritas pueden distinguir el tipo de deporte para que salidas en bicicleta y carreras a pie no se mezclen. Con cada nuevo entrenamiento, el clúster adapta dinámicamente sus coordenadas de referencia mediante un centroide ponderado.</string>
     <string name="cluster_info_tuning_title">Sensibilidad y ajuste de parámetros</string>
-    <string name="cluster_info_tuning_desc">Usa el control deslizante principal para ajustar la precisión requerida: «Estricto» separa variaciones leves en rutas distintas; «Tolerante» agrupa entrenamientos con desvíos o inicios desplazados. También puedes ajustar tolerancias individuales abajo.</string>
+    <string name="cluster_info_tuning_desc">Usa el control deslizante principal para ajustar la precisión requerida: «Estricto» separa variaciones leves en rutas distintas; «Relajado» agrupa entrenamientos con desvíos o inicios desplazados. También puedes ajustar tolerancias individuales abajo.</string>
     <string name="cluster_info_close">Entendido</string>
 </resources>

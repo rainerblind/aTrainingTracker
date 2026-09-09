@@ -1175,6 +1175,6 @@ proszę czekać</string>
     <string name="cluster_info_sports_title">Podział na dyscypliny i adaptacyjny środek ciężkości</string>
     <string name="cluster_info_sports_desc">Ulubione trasy mogą rozróżniać dyscypliny sportowe, dzięki czemu jazdy rowerowe i biegi na tej samej ścieżce tworzą osobne klastry. Wraz z dodawaniem nowych treningów klaster dynamicznie dostosowuje współrzędne referencyjne, wyliczając ważony środek ciężkości (centroid).</string>
     <string name="cluster_info_tuning_title">Czułość i dostrajanie parametrów</string>
-    <string name="cluster_info_tuning_desc">Za pomocą głównego suwaka czułości określasz stopień dopasowania: „Ścisły” rozdziela niewielkie odchylenia na osobne klastry; „Tolerancyjny” łączy treningi z przesuniętym startem lub małymi objazdami. Poniżej możesz dostosować poszczególne tolerancje.</string>
+    <string name="cluster_info_tuning_desc">Za pomocą głównego suwaka czułości określasz stopień dopasowania: „Rygorystyczne” rozdziela niewielkie odchylenia na osobne klastry; „Luźne” łączy treningi z przesuniętym startem lub małymi objazdami. Poniżej możesz dostosować poszczególne tolerancje.</string>
     <string name="cluster_info_close">Rozumiem</string>
 </resources>

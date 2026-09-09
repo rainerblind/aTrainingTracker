@@ -1184,6 +1184,6 @@
     <string name="cluster_info_sports_title">Separazione per sport e baricentro adattivo</string>
     <string name="cluster_info_sports_desc">I percorsi preferiti possono filtrare per tipo di sport, evitando di unire pedalate e corse a piedi sullo stesso sentiero. Con ogni nuovo allenamento, il cluster aggiorna dinamicamente le proprie coordinate di riferimento calcolando un baricentro ponderato.</string>
     <string name="cluster_info_tuning_title">Sensibilità e regolazione dei parametri</string>
-    <string name="cluster_info_tuning_desc">Usa il cursore principale per regolare la rigidità del confronto: «Rigoroso» suddivide piccole variazioni in percorsi distinti ; «Tollerante» raggruppa anche sessioni con brevi deviazioni o partenze sfasate. Più in basso puoi personalizzare le singole tolleranze.</string>
+    <string name="cluster_info_tuning_desc">Usa il cursore principale per regolare la rigidità del confronto: «Rigoroso» suddivide piccole variazioni in percorsi distinti ; «Rilassato» raggruppa anche sessioni con brevi deviazioni o partenze sfasate. Più in basso puoi personalizzare le singole tolleranze.</string>
     <string name="cluster_info_close">Ho capito</string>
 </resources>

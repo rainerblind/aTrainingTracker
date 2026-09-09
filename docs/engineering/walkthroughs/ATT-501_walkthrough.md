@@ -47,7 +47,16 @@ Created reusable dialog in package `com.atrainingtracker.trainingtracker.ui.clus
 - **Section 3: Sport Awareness & Adaptive Centroid (`cluster_info_sports_title`, `cluster_info_sports_desc`)**:
   Details sport-type filtering (keeping cycling and running separate) and dynamic reference centroid adaptation as new recordings join the track family.
 - **Section 4: Sensitivity & Parameter Tuning (`cluster_info_tuning_title`, `cluster_info_tuning_desc`)**:
-  Provides guidance on using the Master Sensitivity Slider ("Strict" to "Relaxed") and fine-tuning individual parameter tolerances.
+  Provides guidance on using the Master Sensitivity Slider and fine-tuning individual parameter tolerances. Ensured 100% strict terminology consistency with the actual slider endpoint labels across all 9 languages:
+  • **EN**: `"Strict"` / `"Relaxed"` (slider: `Strict` / `Relaxed`)
+  • **DE**: `„Streng“` / `„Locker“` (slider: `Streng` / `Locker`)
+  • **ES**: `«Estricto»` / `«Relajado»` (slider: `Estricto` / `Relajado`)
+  • **FR**: `« Strict »` / `« Relâché »` (slider: `Strict` / `Relâché`)
+  • **IT**: `«Rigoroso»` / `«Rilassato»` (slider: `Rigoroso` / `Rilassato`)
+  • **JA**: `「厳格」` / `「緩和」` (slider: `厳格` / `緩和`)
+  • **NL**: `„Strikt”` / `„Ontspannen”` (slider: `Strikt` / `Ontspannen`)
+  • **PL**: `„Rygorystyczne”` / `„Luźne”` (slider: `Rygorystyczne` / `Luźne`)
+  • **PT**: `«Rigoroso»` / `«Relaxado»` (slider: `Rigoroso` / `Relaxado`)
 - **Dismissal Action**: Prominent "Got it" / "Verstanden" / "Entendido" button (`cluster_info_close`) and backdrop dismissal.
 
 ### 2.2 Entry Points Integration
@@ -83,13 +92,14 @@ Executed test suites:
 
 ```
 > Task :app:testDebugUnitTest
-BUILD SUCCESSFUL
-32 actionable tasks: 1 executed, 31 up-to-date
+BUILD SUCCESSFUL in 21s
+32 actionable tasks: 18 executed, 14 up-to-date
 ```
 
 All test assertions passed:
 - `testAllRequiredClusterInfoKeysExistAcrossAll9Locales`: PASSED (100% presence and non-blank content across all 9 locales).
 - `testCountrySpecificLakesAcrossLocales`: PASSED (verifies each locale uses its culturally and geographically iconic lake/route).
+- `testSliderLabelConsistencyAcrossAllLocales`: PASSED (verifies that `cluster_info_tuning_desc` in every locale strictly matches the actual UI slider labels `cluster_tuning_strict` and `cluster_tuning_relaxed`).
 - `testContentCompletenessForFingerprintSection`: PASSED (verifies simple but surprisingly good algorithm wording, start, end, apex, distance, and altitude coverage).
 - `testContentCompletenessForWhatSection`: PASSED (verifies naming and comparison coverage without generic/time-based names).
 - `testContentCompletenessForTuningSection`: PASSED (verifies sensitivity and slider guidance).

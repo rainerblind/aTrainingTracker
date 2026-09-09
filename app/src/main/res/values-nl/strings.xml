@@ -1184,6 +1184,6 @@
     <string name="cluster_info_sports_title">Sportonderscheid &amp; Lerend zwaartepunt</string>
     <string name="cluster_info_sports_desc">Favoriete routes kunnen sporttypes scheiden, zodat fietstochten en hardloopsessies op hetzelfde pad niet worden samengevoegd. Naarmate er meer trainingen worden toegevoegd, past het cluster zijn referentiecoördinaten dynamisch aan via een gewogen zwaartepunt (centroid).</string>
     <string name="cluster_info_tuning_title">Gevoeligheid &amp; Parameterinstellingen</string>
-    <string name="cluster_info_tuning_desc">Gebruik de hoofdschuifregelaar om de overeenkomststerkte te bepalen: „Strikt” scheidt kleine routewijzigingen in aparte clusters; „Tolerant” combineert sessies met afwijkende startpunten of omwegen. Daaronder kun je individuele toleranties afstemmen.</string>
+    <string name="cluster_info_tuning_desc">Gebruik de hoofdschuifregelaar om de overeenkomststerkte te bepalen: „Strikt” scheidt kleine routewijzigingen in aparte clusters; „Ontspannen” combineert sessies met afwijkende startpunten of omwegen. Daaronder kun je individuele toleranties afstemmen.</string>
     <string name="cluster_info_close">Begrepen</string>
 </resources>
