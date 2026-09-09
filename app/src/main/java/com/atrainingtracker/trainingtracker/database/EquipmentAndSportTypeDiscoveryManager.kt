@@ -25,13 +25,14 @@ import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 /**
  * High-level manager to coordinate lookups across multiple database helpers.
  */
-class EquipmentAndSportTypeDiscoveryManager private constructor(context: Context) {
-
-    val activeDevicesHelper = ActiveDevicesDbHelper(context)
-    val equipmentDbHelper = EquipmentDbHelper(context)
-    val sportTypeEquipmentLinkHelper = SportTypeEquipmentLinkManager.getInstance(context)
-    val sportTypeManager = SportTypeDatabaseManager.getInstance(context)
-    val workoutSummariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
+class EquipmentAndSportTypeDiscoveryManager @androidx.annotation.VisibleForTesting internal constructor(
+    context: Context,
+    val sportTypeManager: SportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(context),
+    val activeDevicesHelper: ActiveDevicesDbHelper = ActiveDevicesDbHelper(context),
+    val equipmentDbHelper: EquipmentDbHelper = EquipmentDbHelper(context),
+    val sportTypeEquipmentLinkHelper: SportTypeEquipmentLinkManager = SportTypeEquipmentLinkManager.getInstance(context),
+    val workoutSummariesManager: WorkoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(context)
+) {
 
     data class InferredIdentity(
         val sportId: Long,
@@ -160,6 +161,25 @@ class EquipmentAndSportTypeDiscoveryManager private constructor(context: Context
         return sportTypeIds.mapNotNull { id ->
             sportTypeManager.getUIName(id)
         }.toSet()
+    }
+
+    /**
+     * Returns all candidate BSportTypes supported by a given base sport type and average speed (ATT-773, REQ-SET-064).
+     * When tracking without sensors or explicit user pre-selection, intermediate speeds (e.g. ~3.0 m/s)
+     * may suggest multiple plausible base sports (e.g. RUN and BIKE).
+     *
+     * @param bSportType The initial base sport type (e.g. UNKNOWN).
+     * @param averageSpeed The session's average speed in m/s.
+     * @return A set of candidate BSportTypes matching the speed profile.
+     */
+    fun getCandidateBSportTypes(bSportType: BSportType, averageSpeed: Double): Set<BSportType> {
+        val speedSportTypeIds = getSpeedBasedSportTypeIds(bSportType, averageSpeed)
+        val candidateBSports = speedSportTypeIds.mapNotNull { sportTypeManager.getBSportType(it) }.toSet()
+        return when {
+            candidateBSports.isNotEmpty() -> candidateBSports
+            bSportType != BSportType.UNKNOWN -> setOf(bSportType)
+            else -> emptySet()
+        }
     }
 
     fun getEquipmentNamesForSport(sportName: String): Set<String> {

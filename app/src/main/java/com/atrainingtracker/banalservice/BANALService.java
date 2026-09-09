@@ -622,6 +622,11 @@ public class BANALService
             return BANALService.this.getBSportType();
         }
 
+        @Nullable
+        public BSportType getUserSelectedBSportType() {
+            return BANALService.this.getUserSelectedBSportType();
+        }
+
         public long getSportTypeId() {
             return BANALService.this.getSportTypeId();
         }

@@ -76,10 +76,13 @@ import com.google.maps.android.PolyUtil;
 
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.HashSet;
+import java.util.Set;
+import com.atrainingtracker.banalservice.BSportType;
 import java.util.Locale;
 import java.util.Map;
 import java.util.SortedSet;
@@ -1172,7 +1175,22 @@ public class TrackerService extends Service {
 
         if (startPosRaw != null && endPosRaw != null && maxDispPos != null) {
             WorkoutClusterEngine engine = WorkoutClusterEngine.Companion.getInstance(this);
-            WorkoutCluster suggestion = engine.suggestCluster(startPosRaw, endPosRaw, maxDispPos, mDistanceTotal_m, null, mBanalService.getBSportType());
+
+            // Determine candidate sport types for clustering (ATT-773, REQ-SET-064)
+            Set<BSportType> candidateSports;
+            BSportType userSelectedSport = mBanalService.getUserSelectedBSportType();
+            if (userSelectedSport != null && userSelectedSport != BSportType.UNKNOWN) {
+                // Tier 1: User Pre-Selection Sovereignty (Option A)
+                candidateSports = Collections.singleton(userSelectedSport);
+            } else if (identity.isHighConfidence()) {
+                // Tier 2: Dedicated Hardware Sensor Sovereignty (REQ-SET-030)
+                candidateSports = Collections.singleton(identity.getBSportType());
+            } else {
+                // Tier 3: Speed-Based Multi-Sport Candidate Set
+                candidateSports = discoveryManager.getCandidateBSportTypes(mBanalService.getBSportType(), getAverageSpeed());
+            }
+
+            WorkoutCluster suggestion = engine.suggestCluster(startPosRaw, endPosRaw, maxDispPos, mDistanceTotal_m, null, candidateSports);
             if (suggestion != null) {
                 // If hardware confidence is high, we only take the name from the cluster
                 if (identity.isHighConfidence()) {
@@ -1185,7 +1203,7 @@ public class TrackerService extends Service {
                     // Apply hardware-based identity (Sport, Gear, Strava)
                     summariesManager.applyInferredIdentity(mWorkoutID, identity);
                 } else {
-                    // Low hardware confidence -> Workout Cluster wins everything
+                    // Low hardware confidence -> Workout Cluster wins everything and resolves ambiguous sport type
                     engine.assignClusterToWorkout(this, mWorkoutID, suggestion.getId());
                 }
             } else {

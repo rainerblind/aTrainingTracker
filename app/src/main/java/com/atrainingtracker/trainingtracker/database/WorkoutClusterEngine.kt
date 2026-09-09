@@ -87,23 +87,39 @@ class WorkoutClusterEngine private constructor(context: Context) {
     /**
      * Suggests a cluster match for a workout based on spatial shape metrics, sport type, and optional name.
      */
+    /**
+     * Finds the best matching WorkoutCluster candidate evaluating against a set of candidate sport types (ATT-773, REQ-SET-064).
+     */
     fun suggestCluster(
         start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
         workoutName: String? = null, 
-        workoutSportType: BSportType = BSportType.UNKNOWN
+        candidateSportTypes: Set<BSportType>
     ): WorkoutCluster? {
         val endpointTol = TrainingApplication.getClusterTolEndpoints().toDouble()
         val latToleranceDegrees = endpointTol / 111000.0
         val distToleranceMeters = distance * TrainingApplication.getClusterTolDistance().toDouble() * 4.0
 
         val candidates = dbManager.findCandidates(start.latitude, start.longitude, distance, latToleranceDegrees, distToleranceMeters)
-        if (DEBUG) Log.d(TAG, "Found ${candidates.size} candidates for shape [start=$start, dist=$distance, name=$workoutName, sport=$workoutSportType]")
+        if (DEBUG) Log.d(TAG, "Found ${candidates.size} candidates for shape [start=$start, dist=$distance, name=$workoutName, sports=$candidateSportTypes]")
 
         return candidates.map { cluster ->
-            val score = calculateSimilarity(start, end, apex, distance, cluster, workoutName, workoutSportType)
+            val score = calculateSimilarity(start, end, apex, distance, cluster, workoutName, candidateSportTypes)
             cluster to score
         }.filter { it.second < 1.0 }
          .minByOrNull { it.second }?.first
+    }
+
+    /**
+     * Backward-compatible overload for single sport type.
+     */
+    @JvmOverloads
+    fun suggestCluster(
+        start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
+        workoutName: String? = null, 
+        workoutSportType: BSportType = BSportType.UNKNOWN
+    ): WorkoutCluster? {
+        val candidateSports = if (workoutSportType != BSportType.UNKNOWN) setOf(workoutSportType) else emptySet()
+        return suggestCluster(start, end, apex, distance, workoutName, candidateSports)
     }
 
     /**
@@ -640,11 +656,15 @@ class WorkoutClusterEngine private constructor(context: Context) {
         return newClusterId
     }
 
+    /**
+     * Calculates similarity between a spatial signature and a WorkoutCluster,
+     * supporting multi-sport candidate evaluation (ATT-773, REQ-SET-064).
+     */
     fun calculateSimilarity(
         start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
         cluster: WorkoutCluster, 
         workoutName: String? = null,
-        workoutSportType: BSportType = BSportType.UNKNOWN
+        candidateSportTypes: Set<BSportType>
     ): Double {
         val s1 = (distanceBetween(start, LatLng(cluster.startLat, cluster.startLng)) / TrainingApplication.getClusterTolEndpoints()) * 0.25
         val s2 = (distanceBetween(end, LatLng(cluster.endLat, cluster.endLng)) / TrainingApplication.getClusterTolEndpoints()) * 0.25
@@ -652,10 +672,16 @@ class WorkoutClusterEngine private constructor(context: Context) {
         val s4 = (Math.abs(distance - cluster.refDistance) / cluster.refDistance / TrainingApplication.getClusterTolDistance()) * 0.25
         var totalScore = s1 + s2 + s3 + s4
         
-        // ATT-412: Tiered Sport Type Awareness
+        // ATT-412 / ATT-773: Tiered Sport Type Awareness with Multi-Sport Candidate Evaluation
         if (TrainingApplication.useSportTypeForClustering()) {
-            if (workoutSportType != cluster.bSportType) {
-                val penalty = if (workoutSportType != BSportType.UNKNOWN && cluster.bSportType != BSportType.UNKNOWN) 5.0 else 2.0
+            if (cluster.bSportType in candidateSportTypes) {
+                // Zero penalty if cluster matches any candidate sport supported by speed/hardware
+            } else if (candidateSportTypes.isEmpty()) {
+                if (cluster.bSportType != BSportType.UNKNOWN) {
+                    totalScore += 2.0
+                }
+            } else {
+                val penalty = if (cluster.bSportType != BSportType.UNKNOWN) 5.0 else 2.0
                 totalScore += penalty
             }
         }
@@ -667,6 +693,19 @@ class WorkoutClusterEngine private constructor(context: Context) {
         return totalScore
     }
 
+    /**
+     * Backward-compatible single sport type overload.
+     */
+    fun calculateSimilarity(
+        start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
+        cluster: WorkoutCluster, 
+        workoutName: String? = null,
+        workoutSportType: BSportType = BSportType.UNKNOWN
+    ): Double = calculateSimilarity(
+        start, end, apex, distance, cluster, workoutName,
+        if (workoutSportType != BSportType.UNKNOWN) setOf(workoutSportType) else emptySet()
+    )
+
     private fun normalizeName(name: String): String = name.replace(Regex(" (?:#|var) \\d+$", RegexOption.IGNORE_CASE), "").trim().lowercase()
     private fun stripHitCount(name: String): String = name.replace(Regex(" #\\d+$"), "").trim()
     @JvmOverloads
@@ -674,7 +713,12 @@ class WorkoutClusterEngine private constructor(context: Context) {
         dbManager.deleteAllClusters()
         migrateHistory(context, listener) 
     }
-    fun getClusterScores(start: LatLng, end: LatLng, apex: LatLng, distance: Double, workoutName: String? = null, workoutSportType: BSportType = BSportType.UNKNOWN): List<Pair<WorkoutCluster, Double>> {
+
+    fun getClusterScores(
+        start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
+        workoutName: String? = null, 
+        candidateSportTypes: Set<BSportType>
+    ): List<Pair<WorkoutCluster, Double>> {
         val summariesManager = WorkoutSummariesDatabaseManager.getInstance(appContext)
         val actualCounts = summariesManager.workoutCountsForAllClusters
         val clusters = dbManager.getAllClusters().map { cluster ->
@@ -690,9 +734,36 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 cluster
             }
         }
-        return scoreClusters(clusters, start, end, apex, distance, workoutName, workoutSportType)
+        return scoreClusters(clusters, start, end, apex, distance, workoutName, candidateSportTypes)
     }
-    fun scoreClusters(clusters: List<WorkoutCluster>, start: LatLng, end: LatLng, apex: LatLng, distance: Double, workoutName: String? = null, workoutSportType: BSportType = BSportType.UNKNOWN): List<Pair<WorkoutCluster, Double>> = clusters.map { it to calculateSimilarity(start, end, apex, distance, it, workoutName, workoutSportType) }.sortedBy { it.second }
+
+    fun getClusterScores(
+        start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
+        workoutName: String? = null, 
+        workoutSportType: BSportType = BSportType.UNKNOWN
+    ): List<Pair<WorkoutCluster, Double>> = getClusterScores(
+        start, end, apex, distance, workoutName,
+        if (workoutSportType != BSportType.UNKNOWN) setOf(workoutSportType) else emptySet()
+    )
+
+    fun scoreClusters(
+        clusters: List<WorkoutCluster>, 
+        start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
+        workoutName: String? = null, 
+        candidateSportTypes: Set<BSportType>
+    ): List<Pair<WorkoutCluster, Double>> = clusters.map { 
+        it to calculateSimilarity(start, end, apex, distance, it, workoutName, candidateSportTypes) 
+    }.sortedBy { it.second }
+
+    fun scoreClusters(
+        clusters: List<WorkoutCluster>, 
+        start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
+        workoutName: String? = null, 
+        workoutSportType: BSportType = BSportType.UNKNOWN
+    ): List<Pair<WorkoutCluster, Double>> = scoreClusters(
+        clusters, start, end, apex, distance, workoutName,
+        if (workoutSportType != BSportType.UNKNOWN) setOf(workoutSportType) else emptySet()
+    )
 
     fun moveWorkoutToCluster(context: Context, workoutId: Long, currentClusterId: Long, newClusterId: Long) {
         val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
