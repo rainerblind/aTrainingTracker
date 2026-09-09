@@ -759,6 +759,7 @@
     </plurals>
     <string name="cluster_ref_distance_label">Ref: %1$s</string>
     <string name="cluster_tuning_title">Parametry grupowania</string>
+    <string name="cluster_tuning_pre_import_desc">Dostosuj czułość grupowania tras, aby zoptymalizować dopasowywanie tras dla importowanych treningów.</string>
     <string name="cluster_tuning_master_label">Czułość grupowania</string>
     <string name="cluster_tuning_strict">Rygorystyczne</string>
     <string name="cluster_tuning_relaxed">Luźne</string>
