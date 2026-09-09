@@ -148,26 +148,13 @@ fun WorkoutClusterMetadataBlock(
 
         Spacer(modifier = Modifier.height(2.dp))
 
-        // 2. Sport Type & Total Distance Volume
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                text = sportName,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        // 2. Sport Type
+        Text(
+            text = sportName,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
 
-            if (stats != null && stats.totalDistanceMeters > 0.0) {
-                Text(
-                    text = "•  Σ ${distanceFormatter.format_with_units(stats.totalDistanceMeters)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
-                )
-            }
-
-        }
 
         // 3. Resulting Equipment
         if (linkedEquipment.isNotEmpty()) {
