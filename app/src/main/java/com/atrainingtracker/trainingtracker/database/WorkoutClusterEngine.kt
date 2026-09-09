@@ -63,6 +63,26 @@ class WorkoutClusterEngine private constructor(context: Context) {
             instance = newInstance
         }
 
+        /**
+         * Formats the user-facing workout name derived from a WorkoutCluster (REQ-SET-066, ATT-785).
+         *
+         * If [hitCount] <= 1, returns the clean [clusterName] without any numerical suffix.
+         * If [hitCount] >= 2, formats the name with the localized cluster_autoname_format (e.g., "%s #%d").
+         *
+         * @param context Application context for string resource resolution.
+         * @param clusterName Base name of the workout cluster.
+         * @param hitCount 1-based sequential display count of the workout within this cluster.
+         * @return Formatted workout name string.
+         */
+        @JvmStatic
+        fun formatClusterWorkoutName(context: Context, clusterName: String, hitCount: Int): String {
+            return if (hitCount <= 1) {
+                clusterName
+            } else {
+                context.getString(R.string.cluster_autoname_format, clusterName, hitCount)
+            }
+        }
+
         fun distanceBetween(p1: LatLng, p2: LatLng): Float {
             return try {
                 val res = FloatArray(1)
@@ -599,7 +619,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
             val fileBaseName = summariesManager.getString(workoutId, WorkoutSummaries.FILE_BASE_NAME)
             if (forceIdentity || currentName.isNullOrEmpty() || currentName == fileBaseName) {
                 val displayCount = if (previousClusterId == clusterId) cluster.hitCount else cluster.hitCount + 1
-                put(WorkoutSummaries.WORKOUT_NAME, context.getString(R.string.cluster_autoname_format, cluster.name, displayCount))
+                put(WorkoutSummaries.WORKOUT_NAME, formatClusterWorkoutName(context, cluster.name, displayCount))
             }
         }
         summariesManager.database.update(WorkoutSummaries.TABLE, values, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
@@ -836,7 +856,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
         minAltPos, maxAltPos
     )
 
-    private fun normalizeName(name: String): String = name.replace(Regex(" (?:#|var) \\d+$", RegexOption.IGNORE_CASE), "").trim().lowercase()
+    private fun normalizeName(name: String): String = name.replace(Regex(" (?:# ?|var )\\d+$", RegexOption.IGNORE_CASE), "").trim().lowercase()
     private fun stripHitCount(name: String): String = name.replace(Regex(" #\\d+$"), "").trim()
     @JvmOverloads
     fun recalculateHistory(context: Context, listener: ClusterMigrationListener? = null) { 

@@ -1197,7 +1197,8 @@ public class TrackerService extends Service {
                 // If hardware confidence is high, we only take the name from the cluster
                 if (identity.isHighConfidence()) {
                     ContentValues nameValues = new ContentValues();
-                    String autoName = getString(R.string.cluster_autoname_format, suggestion.getName(), suggestion.getHitCount() + 1);
+                    int displayCount = suggestion.getHitCount() + 1;
+                    String autoName = WorkoutClusterEngine.formatClusterWorkoutName(this, suggestion.getName(), displayCount);
                     nameValues.put(WorkoutSummaries.WORKOUT_NAME, autoName);
                     nameValues.put(WorkoutSummaries.CLUSTER_ID, suggestion.getId());
                     summariesManager.getDatabase().update(WorkoutSummaries.TABLE, nameValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(mWorkoutID)});
