@@ -1166,4 +1166,15 @@ proszę czekać</string>
     <string name="filter_section_recordings">Nagrania</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d nagrań</string>
     <string name="filter_no_matching_clusters">Żadne ulubione trasy nie pasują do aktywnych filtrów</string>
+    <!-- Cluster Algorithm Info (ATT-501) -->
+    <string name="cluster_info_title">Ulubione trasy i klastrowanie</string>
+    <string name="cluster_info_what_title">Czym są Ulubione trasy?</string>
+    <string name="cluster_info_what_desc">Gdy wielokrotnie trenujesz na tej samej trasie, aplikacja automatycznie to rozpoznaje i grupuje treningi w Ulubioną trasę (klaster). Umożliwia to automatyczne nazywanie (np. „Pętla wokół Jeziora Czorsztyńskiego #5”), przypisywanie sprzętu oraz porównywanie wyników na identycznych trasach.</string>
+    <string name="cluster_info_fingerprint_title">Topologiczny odcisk palca 3D</string>
+    <string name="cluster_info_fingerprint_desc">Trasy są porównywane za pomocą prostego, lecz zaskakująco dobrego algorytmu opartego na wielowymiarowym podpisie przestrzennym zamiast śladów GPS punkt po punkcie. Algorytm ten zapewnia tolerancję na drobne odchylenia, ale wyraźnie rozdziela treningi, gdy rzeczywiście się różnią:&#10;• Start i Meta: Współrzędne geograficzne punktu początkowego i końcowego (tolerancja: 200 m).&#10;• Wierzchołek (Apex): Punkt na trasie najbardziej oddalony od startu (tolerancja: 400 m).&#10;• Całkowity dystans: Długość całej trasy (tolerancja: 20%).&#10;• Min. i maks. wysokość: Współrzędne geograficzne najniższego i najwyższego punktu (tolerancja: 400 m, opcjonalnie). Pozwala to odróżnić trasy w dolinach od grzbietów górskich o podobnym zarysie.</string>
+    <string name="cluster_info_sports_title">Podział na dyscypliny i adaptacyjny środek ciężkości</string>
+    <string name="cluster_info_sports_desc">Ulubione trasy mogą rozróżniać dyscypliny sportowe, dzięki czemu jazdy rowerowe i biegi na tej samej ścieżce tworzą osobne klastry. Wraz z dodawaniem nowych treningów klaster dynamicznie dostosowuje współrzędne referencyjne, wyliczając ważony środek ciężkości (centroid).</string>
+    <string name="cluster_info_tuning_title">Czułość i dostrajanie parametrów</string>
+    <string name="cluster_info_tuning_desc">Za pomocą głównego suwaka czułości określasz stopień dopasowania: „Rygorystyczne” rozdziela niewielkie odchylenia na osobne klastry; „Luźne” łączy treningi z przesuniętym startem lub małymi objazdami. Poniżej możesz dostosować poszczególne tolerancje.</string>
+    <string name="cluster_info_close">Rozumiem</string>
 </resources>

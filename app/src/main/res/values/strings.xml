@@ -1375,4 +1375,15 @@
     <string name="filter_section_recordings">Recordings</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d recordings</string>
     <string name="filter_no_matching_clusters">No favorite tracks match the active filters</string>
+    <!-- Cluster Algorithm Info (ATT-501) -->
+    <string name="cluster_info_title">Favorite Tracks &amp; Clustering</string>
+    <string name="cluster_info_what_title">What are Favorite Tracks?</string>
+    <string name="cluster_info_what_desc">When you record multiple activities along the same route, the app automatically recognizes and groups them into a Favorite Track (Workout Cluster). This allows automatic naming (e.g. \"Lake Tahoe Loop #5\"), gear tracking, and comparing your performance across repeated efforts on identical courses.</string>
+    <string name="cluster_info_fingerprint_title">3D Topological Fingerprint</string>
+    <string name="cluster_info_fingerprint_desc">Routes are compared using a simple but surprisingly good algorithm based on a multidimensional spatial signature rather than point-by-point GPS traces. This algorithm gives some tolerance to small variations, but separates the workouts when they are really different:&#10;• Start &amp; End: Geographical start and finish locations (default tolerance: 200 m).&#10;• Apex (Furthest Point): The point along the route furthest away from the start (default tolerance: 400 m).&#10;• Total Distance: Overall route length (default tolerance: 20%).&#10;• Min &amp; Max Altitude: Geographical locations of lowest and highest elevation (default tolerance: 400 m, optional). This reliably separates valley routes from mountain ridges with otherwise similar footprints.</string>
+    <string name="cluster_info_sports_title">Sport Awareness &amp; Adaptive Centroid</string>
+    <string name="cluster_info_sports_desc">Favorite Tracks can enforce sport-type matching, ensuring bike rides and runs along the same trail are kept in distinct clusters. As you record more workouts on a route, the cluster automatically refines its reference coordinates by computing a weighted running average (centroid).</string>
+    <string name="cluster_info_tuning_title">Sensitivity &amp; Parameter Tuning</string>
+    <string name="cluster_info_tuning_desc">Use the Master Sensitivity Slider to adjust how strictly routes must match. Move towards \"Strict\" to separate slight route variations into distinct clusters, or towards \"Relaxed\" to group workouts with varied start points or minor detours. You can also fine-tune individual parameter tolerances below.</string>
+    <string name="cluster_info_close">Got it</string>
 </resources>

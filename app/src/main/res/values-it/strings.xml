@@ -1175,4 +1175,15 @@
     <string name="filter_section_recordings">Registrazioni</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d registrazioni</string>
     <string name="filter_no_matching_clusters">Nessun percorso preferito corrisponde ai filtri attivi</string>
+    <!-- Cluster Algorithm Info (ATT-501) -->
+    <string name="cluster_info_title">Percorsi preferiti e raggruppamento</string>
+    <string name="cluster_info_what_title">Cosa sono i Percorsi preferiti?</string>
+    <string name="cluster_info_what_desc">Quando ti alleni più volte sullo stesso itinerario, l\'app lo riconosce automaticamente e raggruppa le sessioni in un Percorso preferito (cluster). Ciò consente la denominazione automatica (es. «Giro del Lago di Garda #5»), la gestione dell\'attrezzatura e il confronto diretto delle prestazioni su percorsi identici.</string>
+    <string name="cluster_info_fingerprint_title">Impronta topologica 3D</string>
+    <string name="cluster_info_fingerprint_desc">I percorsi vengono confrontati tramite un algoritmo semplice ma sorprendentemente efficace, basato su una firma spaziale multidimensionale anziché su tracce GPS punto per punto. Questo algoritmo tollera piccole variazioni, ma separa nettamente gli allenamenti quando sono realmente diversi :&#10;• Partenza e Arrivo : Coordinate geografiche di inizio e fine (tolleranza : 200 m).&#10;• Apice (Punto più distante) : Il punto del tracciato più lontano dalla partenza (tolleranza : 400 m).&#10;• Distanza totale : Lunghezza complessiva del percorso (tolleranza : 20%).&#10;• Altitudine min e max : Posizioni geografiche della quota più bassa e più alta (tolleranza : 400 m, opzionale). Ciò differenzia chiaramente percorsi di fondovalle da creste montane.</string>
+    <string name="cluster_info_sports_title">Separazione per sport e baricentro adattivo</string>
+    <string name="cluster_info_sports_desc">I percorsi preferiti possono filtrare per tipo di sport, evitando di unire pedalate e corse a piedi sullo stesso sentiero. Con ogni nuovo allenamento, il cluster aggiorna dinamicamente le proprie coordinate di riferimento calcolando un baricentro ponderato.</string>
+    <string name="cluster_info_tuning_title">Sensibilità e regolazione dei parametri</string>
+    <string name="cluster_info_tuning_desc">Usa il cursore principale per regolare la rigidità del confronto: «Rigoroso» suddivide piccole variazioni in percorsi distinti ; «Rilassato» raggruppa anche sessioni con brevi deviazioni o partenze sfasate. Più in basso puoi personalizzare le singole tolleranze.</string>
+    <string name="cluster_info_close">Ho capito</string>
 </resources>
