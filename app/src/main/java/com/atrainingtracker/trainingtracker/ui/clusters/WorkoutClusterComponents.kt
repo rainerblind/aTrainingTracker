@@ -647,13 +647,14 @@ fun EditWorkoutClusterDialog(
     initialWorkoutName: String,
     onSelectCluster: (WorkoutCluster) -> Unit,
     onUnassignCluster: () -> Unit,
-    onCreateNewCluster: (String) -> Unit,
+    onCreateNewCluster: (String, Boolean) -> Unit,
     onDismiss: () -> Unit,
     sportNameResolver: (Long) -> String,
     bSportTypeResolver: (Long) -> BSportType
 ) {
     var isCreatingNew by remember { mutableStateOf(false) }
     var newClusterName by remember { mutableStateOf(initialWorkoutName) }
+    var newClusterHasCounter by remember { mutableStateOf(true) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -756,6 +757,30 @@ fun EditWorkoutClusterDialog(
                                 singleLine = true
                             )
                             Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                                    Text(
+                                        text = stringResource(R.string.cluster_counter_enabled_label),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.cluster_counter_enabled_description),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Switch(
+                                    checked = newClusterHasCounter,
+                                    onCheckedChange = { newClusterHasCounter = it }
+                                )
+                            }
+                            Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.End,
                                 verticalAlignment = Alignment.CenterVertically
@@ -766,7 +791,7 @@ fun EditWorkoutClusterDialog(
                                 Button(
                                     onClick = {
                                         if (newClusterName.isNotBlank()) {
-                                            onCreateNewCluster(newClusterName.trim())
+                                            onCreateNewCluster(newClusterName.trim(), newClusterHasCounter)
                                             onDismiss()
                                         }
                                     },

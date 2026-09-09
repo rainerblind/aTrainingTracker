@@ -1024,10 +1024,10 @@ class WorkoutRepository private constructor(private val application: Application
     /**
      * Creates a new cluster from the workout's spatial fingerprint and assigns the workout to it (REQ-SET-059).
      */
-    fun createNewClusterFromWorkout(workout: WorkoutData, customName: String? = null) {
+    fun createNewClusterFromWorkout(workout: WorkoutData, customName: String? = null, hasCounter: Boolean = true) {
         launch(Dispatchers.IO) {
             WorkoutClusterEngine.getInstance(application)
-                .createNewClusterFromWorkout(application, workout, customName)
+                .createNewClusterFromWorkout(application, workout, customName, hasCounter)
 
             reloadWorkoutData(workout.id)
             loadWorkout(workout.id)
@@ -1037,10 +1037,10 @@ class WorkoutRepository private constructor(private val application: Application
     /**
      * Creates a new cluster from raw workout metadata and assigns the workout to it (REQ-SET-059).
      */
-    fun createNewClusterFromWorkout(workoutId: Long, customName: String? = null) {
+    fun createNewClusterFromWorkout(workoutId: Long, customName: String? = null, hasCounter: Boolean = true) {
         launch(Dispatchers.IO) {
             WorkoutClusterEngine.getInstance(application)
-                .createNewClusterFromWorkout(application, workoutId, customName)
+                .createNewClusterFromWorkout(application, workoutId, customName, hasCounter)
 
             reloadWorkoutData(workoutId)
             loadWorkout(workoutId)

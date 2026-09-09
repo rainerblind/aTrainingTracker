@@ -1198,7 +1198,7 @@ public class TrackerService extends Service {
                 if (identity.isHighConfidence()) {
                     ContentValues nameValues = new ContentValues();
                     int displayCount = suggestion.getHitCount() + 1;
-                    String autoName = WorkoutClusterEngine.formatClusterWorkoutName(this, suggestion.getName(), displayCount);
+                    String autoName = WorkoutClusterEngine.formatClusterWorkoutName(this, suggestion.getName(), displayCount, suggestion.getHasCounter());
                     nameValues.put(WorkoutSummaries.WORKOUT_NAME, autoName);
                     nameValues.put(WorkoutSummaries.CLUSTER_ID, suggestion.getId());
                     summariesManager.getDatabase().update(WorkoutSummaries.TABLE, nameValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(mWorkoutID)});

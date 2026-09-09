@@ -1032,6 +1032,8 @@
     <string name="cluster_score_brackets_format">(%1$.3f)</string>
     <string name="cluster_suggestions_content_desc">Sugerencias</string>
     <string name="cluster_autoname_format">%1$s #%2$d</string>
+    <string name="cluster_counter_enabled_label">Contador de actividades</string>
+    <string name="cluster_counter_enabled_description">Añadir números secuenciales (#2, #3, …) a los nombres de entrenamientos</string>
     <string name="cluster_delete_title">Eliminar grupo de entrenamiento</string>
     <string name="cluster_delete_message">¿Estás seguro de que deseas eliminar este grupo de entrenamiento? Esto no eliminará los entrenamientos asociados, pero ya no estarán agrupados bajo este grupo.</string>
     <string name="cluster_migration_title">Analizando familias de rutas…</string>

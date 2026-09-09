@@ -1259,6 +1259,8 @@
     <string name="cluster_score_brackets_format">(%1$.3f)</string>
     <string name="cluster_suggestions_content_desc">Suggestions</string>
     <string name="cluster_autoname_format">%1$s #%2$d</string>
+    <string name="cluster_counter_enabled_label">Activity Counter</string>
+    <string name="cluster_counter_enabled_description">Append sequential numbers (#2, #3, …) to workout names</string>
     <string name="cluster_delete_title">Delete Workout Cluster</string>
     <string name="cluster_delete_message">Are you sure you want to delete this workout cluster? This will not delete the associated workouts, but they will no longer be grouped under this cluster.</string>
     <string name="cluster_migration_title">Analyzing route families…</string>

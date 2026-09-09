@@ -1028,6 +1028,8 @@
     <string name="cluster_score_brackets_format">(%1$.3f)</string>
     <string name="cluster_suggestions_content_desc">Suggestions</string>
     <string name="cluster_autoname_format">%1$s #%2$d</string>
+    <string name="cluster_counter_enabled_label">Compteur d\'activités</string>
+    <string name="cluster_counter_enabled_description">Ajouter des numéros séquentiels (#2, #3, …) aux noms des entraînements</string>
     <string name="cluster_delete_title">Supprimer le groupe d’itinéraires</string>
     <string name="cluster_delete_message">Êtes-vous sûr de vouloir supprimer ce groupe d’itinéraires ? Cela ne supprimera pas les entraînements associés, mais ils ne seront plus regroupés sous ce groupe.</string>
     <string name="cluster_migration_title">Analyse des familles d\'itinéraires…</string>

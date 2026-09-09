@@ -360,9 +360,9 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
         _peekedWorkoutDataWithTrack.value = null
     }
 
-    fun updateClusterIdentity(cluster: WorkoutCluster, newName: String, newSportId: Long) {
+    fun updateClusterIdentity(cluster: WorkoutCluster, newName: String, newSportId: Long, hasCounter: Boolean = cluster.hasCounter) {
         viewModelScope.launch {
-            val updated = cluster.copy(name = newName, probableSportId = newSportId)
+            val updated = cluster.copy(name = newName, probableSportId = newSportId, hasCounter = hasCounter)
             repository.updateCluster(updated)
             // Update selected cluster if it's the one modified
             if (_selectedCluster.value?.id == cluster.id) {
