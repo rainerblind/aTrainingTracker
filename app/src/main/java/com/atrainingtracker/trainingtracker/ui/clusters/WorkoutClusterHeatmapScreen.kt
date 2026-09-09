@@ -18,7 +18,9 @@ package com.atrainingtracker.trainingtracker.ui.clusters
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -72,6 +74,7 @@ fun WorkoutClusterHeatmapScreen(
 
     // --- FINGERPRINT EDIT STATE (SCRUM-197 Refined, ATT-502) ---
     var isEditingFingerprint by remember { mutableStateOf(false) }
+    var selectedEditMarkerType by remember { mutableStateOf<ClusterMarkerType?>(null) }
     var editStart by remember(cluster) { mutableStateOf(LatLng(cluster.startLat, cluster.startLng)) }
     var editEnd by remember(cluster) { mutableStateOf(LatLng(cluster.endLat, cluster.endLng)) }
     var editApex by remember(cluster) { mutableStateOf(LatLng(cluster.maxDispLat, cluster.maxDispLng)) }
@@ -92,7 +95,7 @@ fun WorkoutClusterHeatmapScreen(
     val minAltLabel = stringResource(R.string.marker_min_altitude)
     val maxAltLabel = stringResource(R.string.marker_max_altitude)
 
-    val fingerprintMarkers = remember(editStart, editEnd, editApex, editMinAlt, editMaxAlt, isEditingFingerprint, startLabel, endLabel, apexLabel, minAltLabel, maxAltLabel, enabledMarkerTypes) {
+    val fingerprintMarkers = remember(editStart, editEnd, editApex, editMinAlt, editMaxAlt, isEditingFingerprint, selectedEditMarkerType, startLabel, endLabel, apexLabel, minAltLabel, maxAltLabel, enabledMarkerTypes) {
         val list = mutableListOf<LocationMarker>()
         
         if (enabledMarkerTypes.contains(ClusterMarkerType.START)) {
@@ -102,7 +105,16 @@ fun WorkoutClusterHeatmapScreen(
                 title = startLabel,
                 iconDescriptor = createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint), // Green
                 draggable = isEditingFingerprint,
-                onDragEnd = { editStart = it }
+                onDragEnd = { 
+                    editStart = it
+                    selectedEditMarkerType = ClusterMarkerType.START
+                },
+                onClick = {
+                    if (isEditingFingerprint) {
+                        selectedEditMarkerType = ClusterMarkerType.START
+                        true
+                    } else false
+                }
             ))
         }
 
@@ -113,7 +125,16 @@ fun WorkoutClusterHeatmapScreen(
                 title = endLabel,
                 iconDescriptor = createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint), // Red
                 draggable = isEditingFingerprint,
-                onDragEnd = { editEnd = it }
+                onDragEnd = { 
+                    editEnd = it
+                    selectedEditMarkerType = ClusterMarkerType.END
+                },
+                onClick = {
+                    if (isEditingFingerprint) {
+                        selectedEditMarkerType = ClusterMarkerType.END
+                        true
+                    } else false
+                }
             ))
         }
 
@@ -124,7 +145,16 @@ fun WorkoutClusterHeatmapScreen(
                 title = apexLabel,
                 iconDescriptor = createSensorMarker(context, R.drawable.ic_distance, TTColor.ApexPoint), // Blue
                 draggable = isEditingFingerprint,
-                onDragEnd = { editApex = it }
+                onDragEnd = { 
+                    editApex = it
+                    selectedEditMarkerType = ClusterMarkerType.DISTANCE
+                },
+                onClick = {
+                    if (isEditingFingerprint) {
+                        selectedEditMarkerType = ClusterMarkerType.DISTANCE
+                        true
+                    } else false
+                }
             ))
         }
 
@@ -137,7 +167,16 @@ fun WorkoutClusterHeatmapScreen(
                     title = minAltLabel,
                     iconDescriptor = createSensorMarker(context, R.drawable.ic_altitude_min, TTColor.MinAltitude), // Blue (same as Apex)
                     draggable = isEditingFingerprint,
-                    onDragEnd = { editMinAlt = it }
+                    onDragEnd = { 
+                        editMinAlt = it
+                        selectedEditMarkerType = ClusterMarkerType.ALTITUDE_MIN
+                    },
+                    onClick = {
+                        if (isEditingFingerprint) {
+                            selectedEditMarkerType = ClusterMarkerType.ALTITUDE_MIN
+                            true
+                        } else false
+                    }
                 ))
             }
         }
@@ -151,7 +190,16 @@ fun WorkoutClusterHeatmapScreen(
                     title = maxAltLabel,
                     iconDescriptor = createSensorMarker(context, R.drawable.ic_altitude_max, TTColor.MaxAltitude), // Blue (same as Apex)
                     draggable = isEditingFingerprint,
-                    onDragEnd = { editMaxAlt = it }
+                    onDragEnd = { 
+                        editMaxAlt = it
+                        selectedEditMarkerType = ClusterMarkerType.ALTITUDE_MAX
+                    },
+                    onClick = {
+                        if (isEditingFingerprint) {
+                            selectedEditMarkerType = ClusterMarkerType.ALTITUDE_MAX
+                            true
+                        } else false
+                    }
                 ))
             }
         }
@@ -306,14 +354,42 @@ fun WorkoutClusterHeatmapScreen(
             initialBounds = clusterBounds,
             activeScrubPath = null,
             showElevationProfile = false,
+            onMapClick = { latLng ->
+                if (isEditingFingerprint && selectedEditMarkerType != null) {
+                    when (selectedEditMarkerType) {
+                        ClusterMarkerType.START -> editStart = latLng
+                        ClusterMarkerType.END -> editEnd = latLng
+                        ClusterMarkerType.DISTANCE -> editApex = latLng
+                        ClusterMarkerType.ALTITUDE_MIN -> editMinAlt = latLng
+                        ClusterMarkerType.ALTITUDE_MAX -> editMaxAlt = latLng
+                        null -> {}
+                    }
+                }
+            },
             header = {
                 WorkoutClusterSummaryHeader(
                     cluster = cluster,
                     viewModel = viewModel,
                     isEditing = isEditingFingerprint,
+                    selectedMarkerType = selectedEditMarkerType,
+                    onSelectMarkerType = { type ->
+                        selectedEditMarkerType = if (selectedEditMarkerType == type) null else type
+                        if (selectedEditMarkerType == type) {
+                            if (!enabledMarkerTypes.contains(type)) {
+                                viewModel.toggleMarkerType(type)
+                            }
+                            if (type == ClusterMarkerType.ALTITUDE_MIN && editMinAlt == null) {
+                                editMinAlt = editStart
+                            }
+                            if (type == ClusterMarkerType.ALTITUDE_MAX && editMaxAlt == null) {
+                                editMaxAlt = editApex
+                            }
+                        }
+                    },
                     onBack = {
                         if (isEditingFingerprint) {
                             isEditingFingerprint = false
+                            selectedEditMarkerType = null
                             // Revert changes
                             editStart = LatLng(cluster.startLat, cluster.startLng)
                             editEnd = LatLng(cluster.endLat, cluster.endLng)
@@ -325,10 +401,14 @@ fun WorkoutClusterHeatmapScreen(
                         }
                     },
                     onRename = { showEditDialog = true },
-                    onEditFingerprint = { isEditingFingerprint = true },
+                    onEditFingerprint = {
+                        isEditingFingerprint = true
+                        selectedEditMarkerType = ClusterMarkerType.START
+                    },
                     onSaveFingerprint = {
                         viewModel.updateClusterFingerprint(cluster, editStart, editEnd, editApex, editMinAlt, editMaxAlt)
                         isEditingFingerprint = false
+                        selectedEditMarkerType = null
                     },
                     onDeleteRequest = { showDeleteConfirmation = true },
                     onHitCountClick = { onHitCountClick(cluster) },
@@ -344,6 +424,49 @@ fun WorkoutClusterHeatmapScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+                
+                // ACTIVE EDIT MARKER BANNER
+                if (isEditingFingerprint && selectedEditMarkerType != null) {
+                    val (label, iconRes, color) = when (selectedEditMarkerType) {
+                        ClusterMarkerType.START -> Triple(stringResource(R.string.start), R.drawable.control_start, TTColor.StartPoint)
+                        ClusterMarkerType.END -> Triple(stringResource(R.string.end), R.drawable.control_stop, TTColor.EndPoint)
+                        ClusterMarkerType.DISTANCE -> Triple(stringResource(R.string.max_line_distance), R.drawable.ic_distance, TTColor.ApexPoint)
+                        ClusterMarkerType.ALTITUDE_MIN -> Triple(stringResource(R.string.marker_min_altitude), R.drawable.ic_altitude_min, TTColor.MinAltitude)
+                        ClusterMarkerType.ALTITUDE_MAX -> Triple(stringResource(R.string.marker_max_altitude), R.drawable.ic_altitude_max, TTColor.MaxAltitude)
+                        null -> Triple("", 0, Color.Unspecified)
+                    }
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 12.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
+                        shadowElevation = 6.dp,
+                        tonalElevation = 2.dp,
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, color)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            if (iconRes != 0) {
+                                Icon(
+                                    painter = painterResource(id = iconRes),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = color
+                                )
+                            }
+                            Text(
+                                text = stringResource(R.string.cluster_manual_tap_map_format, label),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 }
                 
@@ -436,6 +559,7 @@ fun WorkoutClusterHeatmapScreen(
             viewModel.clearPeekSelection()
         } else if (isEditingFingerprint) {
             isEditingFingerprint = false
+            selectedEditMarkerType = null
             editStart = LatLng(cluster.startLat, cluster.startLng)
             editEnd = LatLng(cluster.endLat, cluster.endLng)
             editApex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
@@ -452,6 +576,8 @@ fun WorkoutClusterSummaryHeader(
     cluster: WorkoutCluster,
     viewModel: WorkoutClustersViewModel,
     isEditing: Boolean,
+    selectedMarkerType: ClusterMarkerType? = null,
+    onSelectMarkerType: (ClusterMarkerType) -> Unit = {},
     onBack: () -> Unit,
     onRename: () -> Unit,
     onEditFingerprint: () -> Unit,
@@ -515,13 +641,57 @@ fun WorkoutClusterSummaryHeader(
                         onHitCountClick = onHitCountClick
                     )
                 } else {
-                    // Editing Mode Hint
-                    Text(
-                        text = stringResource(R.string.cluster_edit_fingerprint_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
+                    // Marker Type Selection Row (Active / Movable State)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val options = listOf(
+                            Triple(ClusterMarkerType.START, stringResource(R.string.start), R.drawable.control_start to TTColor.StartPoint),
+                            Triple(ClusterMarkerType.END, stringResource(R.string.end), R.drawable.control_stop to TTColor.EndPoint),
+                            Triple(ClusterMarkerType.DISTANCE, stringResource(R.string.max_line_distance), R.drawable.ic_distance to TTColor.ApexPoint),
+                            Triple(ClusterMarkerType.ALTITUDE_MIN, stringResource(R.string.marker_min_altitude), R.drawable.ic_altitude_min to TTColor.MinAltitude),
+                            Triple(ClusterMarkerType.ALTITUDE_MAX, stringResource(R.string.marker_max_altitude), R.drawable.ic_altitude_max to TTColor.MaxAltitude)
+                        )
+                        options.forEach { (type, label, iconColor) ->
+                            val (iconRes, color) = iconColor
+                            val isSelected = selectedMarkerType == type
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { onSelectMarkerType(type) },
+                                leadingIcon = {
+                                    Icon(
+                                        painter = painterResource(id = iconRes),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = if (isSelected) Color.White else color
+                                    )
+                                },
+                                label = {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = color,
+                                    selectedLabelColor = Color.White,
+                                    containerColor = color.copy(alpha = 0.08f),
+                                    labelColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = isSelected,
+                                    borderColor = color.copy(alpha = 0.4f),
+                                    selectedBorderColor = color
+                                )
+                            )
+                        }
+                    }
                 }
             }
 
