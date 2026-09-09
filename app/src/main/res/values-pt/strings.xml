@@ -969,6 +969,7 @@
     <string name="source_internal">Sensores internos do smartphone</string>
     <string name="source_none_configured">Nenhuma fonte configurada</string>
     <string name="marker_options">Opções de marcadores</string>
+    <string name="marker_min_altitude">Alt. mín.</string>
     <string name="marker_max_altitude">Alt. máx.</string>
     <string name="marker_max_distance">Dist. máx.</string>
     <string name="marker_start">Início</string>
@@ -997,6 +998,7 @@
     <string name="cluster_tuning_endpoint_label">Tolerância do ponto final</string>
     <string name="cluster_tuning_apex_label">Tolerância do ápice (deslocamento máx.)</string>
     <string name="cluster_tuning_distance_label">Tolerância de distância</string>
+    <string name="cluster_tuning_altitude_pos_label">Tolerância de posição de altitude</string>
     <string name="cluster_tuning_recalculate_button">Recalcular todos os grupos</string>
     <string name="cluster_tuning_warning">Aviso: Recalcular apagará todos os nomes de grupos aprendidos e agrupamentos, reconstruindo-os a partir do histórico usando estes novos parâmetros.</string>
     <string name="cluster_tuning_recalculating">Recalculando grupos…</string>
@@ -1110,6 +1112,8 @@
     <string name="cluster_migration_enriching">Enriquecendo metadados da família (%1$d de %2$d)…</string>
     <string name="cluster_tuning_use_sport_type_label">Levar em conta o tipo de esporte</string>
     <string name="cluster_tuning_use_sport_type_summary">Isole diferentes atividades (ex: corrida vs ciclismo) na mesma rota em famílias separadas.</string>
+    <string name="cluster_tuning_use_altitude_label">Levar em conta a altitude mín./máx.</string>
+    <string name="cluster_tuning_use_altitude_summary">Distingue rotas com perfis verticais diferentes com base nas coordenadas dos pontos de elevação mais baixa e mais alta.</string>
 
     <string name="workout_periods__migration_title">Otimizando a base de dados do histórico de treinos…</string>
 

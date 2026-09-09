@@ -380,8 +380,12 @@ fun PreImportTuningDialog(
                     onApexToleranceChange = { viewModel.apexTolerance = it },
                     distanceTolerance = viewModel.distanceTolerance,
                     onDistanceToleranceChange = { viewModel.distanceTolerance = it },
+                    altitudePositionTolerance = viewModel.altitudePositionTolerance,
+                    onAltitudePositionToleranceChange = { viewModel.altitudePositionTolerance = it },
                     useSportTypeForClustering = viewModel.useSportTypeForClustering,
                     onUseSportTypeChange = { viewModel.useSportTypeForClustering = it },
+                    useAltitudePosForClustering = viewModel.useAltitudePosForClustering,
+                    onUseAltitudePosChange = { viewModel.useAltitudePosForClustering = it },
                     isDialog = true
                 )
             }

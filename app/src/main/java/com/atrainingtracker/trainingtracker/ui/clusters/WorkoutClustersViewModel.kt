@@ -227,7 +227,9 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
     var endpointTolerance by mutableStateOf(TrainingApplication.getClusterTolEndpoints())
     var apexTolerance by mutableStateOf(TrainingApplication.getClusterTolApex())
     var distanceTolerance by mutableStateOf(TrainingApplication.getClusterTolDistance())
+    var altitudePositionTolerance by mutableStateOf(TrainingApplication.getClusterTolAltitudePos())
     var useSportTypeForClustering by mutableStateOf(TrainingApplication.useSportTypeForClustering())
+    var useAltitudePosForClustering by mutableStateOf(TrainingApplication.useAltitudePosForClustering())
 
     init {
         refresh()
@@ -250,7 +252,9 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
                 .putFloat(TrainingApplication.SP_CLUSTER_TOL_ENDPOINTS, endpointTolerance)
                 .putFloat(TrainingApplication.SP_CLUSTER_TOL_APEX, apexTolerance)
                 .putFloat(TrainingApplication.SP_CLUSTER_TOL_DISTANCE, distanceTolerance)
+                .putFloat(TrainingApplication.SP_CLUSTER_TOL_ALTITUDE_POS, altitudePositionTolerance)
                 .putBoolean(TrainingApplication.SP_CLUSTER_USE_SPORT_TYPE, useSportTypeForClustering)
+                .putBoolean(TrainingApplication.SP_CLUSTER_USE_ALTITUDE_POS, useAltitudePosForClustering)
                 .apply()
 
             repository.recalculateClustersWithProgress()
@@ -311,6 +315,8 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
                         w.startLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.control_start, application.getString(R.string.start), ClusterMarkerType.START)) }
                         w.endLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.control_stop, application.getString(R.string.end), ClusterMarkerType.END)) }
                         w.maxDisplacementLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.ic_distance, application.getString(R.string.max_line_distance), ClusterMarkerType.DISTANCE)) }
+                        w.minAltitudeLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.ic_altitude, application.getString(R.string.marker_min_altitude), ClusterMarkerType.ALTITUDE_MIN)) }
+                        w.maxAltitudeLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.ic_altitude, application.getString(R.string.marker_max_altitude), ClusterMarkerType.ALTITUDE_MAX)) }
                         list
                     }
 
@@ -423,7 +429,9 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
         cluster: WorkoutCluster,
         start: LatLng,
         end: LatLng,
-        apex: LatLng
+        apex: LatLng,
+        minAlt: LatLng? = null,
+        maxAlt: LatLng? = null
     ) {
         viewModelScope.launch {
             val updated = cluster.copy(
@@ -432,7 +440,11 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
                 endLat = end.latitude,
                 endLng = end.longitude,
                 maxDispLat = apex.latitude,
-                maxDispLng = apex.longitude
+                maxDispLng = apex.longitude,
+                minAltLat = minAlt?.latitude ?: cluster.minAltLat,
+                minAltLng = minAlt?.longitude ?: cluster.minAltLng,
+                maxAltLat = maxAlt?.latitude ?: cluster.maxAltLat,
+                maxAltLng = maxAlt?.longitude ?: cluster.maxAltLng
             )
             repository.updateCluster(updated)
             if (_selectedCluster.value?.id == cluster.id) {

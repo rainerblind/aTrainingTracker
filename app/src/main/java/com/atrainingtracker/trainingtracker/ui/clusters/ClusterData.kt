@@ -21,7 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.clusters
 import com.google.android.gms.maps.model.LatLng
 
 enum class ClusterMarkerType {
-    START, END, DISTANCE
+    START, END, DISTANCE, ALTITUDE_MIN, ALTITUDE_MAX
 }
 
 data class ClusterPeakMarker(

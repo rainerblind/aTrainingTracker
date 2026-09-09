@@ -260,6 +260,11 @@ object LegacyImportEngine {
             val parsedLaps = mutableListOf<ParsedLap>()
             var currentLap: ParsedLap? = null
             
+            var minAltVal = Double.MAX_VALUE
+            var minAltPos: LatLng? = null
+            var maxAltVal = -Double.MAX_VALUE
+            var maxAltPos: LatLng? = null
+
             val foundSensors = mutableSetOf<SensorType>()
             val bufferedSamples = mutableListOf<ContentValues>()
 
@@ -433,7 +438,18 @@ object LegacyImportEngine {
                                 }
 
                                 if (currentLat != null && currentLng != null) {
-                                    points.add(LatLng(currentLat!!, currentLng!!))
+                                    val pos = LatLng(currentLat!!, currentLng!!)
+                                    points.add(pos)
+                                    if (currentAlt != null) {
+                                        if (currentAlt!! < minAltVal) {
+                                            minAltVal = currentAlt!!
+                                            minAltPos = pos
+                                        }
+                                        if (currentAlt!! > maxAltVal) {
+                                            maxAltVal = currentAlt!!
+                                            maxAltPos = pos
+                                        }
+                                    }
                                 }
                                 currentAlt?.let { altitudes.add(it) }
                                 currentDist?.let { distances.add(it) }
@@ -533,6 +549,8 @@ object LegacyImportEngine {
                     workoutNotes = workoutNotes,
                     firstTime = firstTime,
                     lastTime = lastTime,
+                    minAltPos = minAltPos,
+                    maxAltPos = maxAltPos,
                     listener = listener
                 )
 
@@ -574,6 +592,8 @@ object LegacyImportEngine {
         workoutNotes: String? = null,
         firstTime: String? = null,
         lastTime: String? = null,
+        minAltPos: LatLng? = null,
+        maxAltPos: LatLng? = null,
         listener: ProgressListener? = null
     ) {
         val summariesDb = WorkoutSummariesDatabaseManager.getInstance(context)
@@ -727,7 +747,14 @@ object LegacyImportEngine {
             extremaTypes.forEach { type ->
                 val value = samplesDb.calcExtremaValue(summariesDb, baseFileName, type, sensor)
                 if (value != null && !value.isNaN()) {
-                    summariesDb.updateExtremaValue(workoutId, sensor, type, value, null)
+                    val pos = if (sensor == SensorType.ALTITUDE) {
+                        when (type) {
+                            ExtremaType.MIN -> minAltPos
+                            ExtremaType.MAX -> maxAltPos
+                            else -> null
+                        }
+                    } else null
+                    summariesDb.updateExtremaValue(workoutId, sensor, type, value, pos)
                 }
             }
         }
@@ -761,7 +788,7 @@ object LegacyImportEngine {
             }
 
             val clusterEngine = WorkoutClusterEngine.getInstance(context)
-            val matchingCluster = clusterEngine.suggestCluster(start, end, apex, totalDistance, null, bSportType)
+            val matchingCluster = clusterEngine.suggestCluster(start, end, apex, totalDistance, null, setOf(bSportType), minAltPos, maxAltPos)
             
             if (matchingCluster != null) {
                 var sportId = summariesDb.getLong(workoutId, WorkoutSummaries.SPORT_ID) ?: -1L
@@ -772,7 +799,7 @@ object LegacyImportEngine {
                 // ATT-316 Refinement: Only lock during the actual DB write/learning phase
                 recalculationMutex.withLock {
                     // Refine existing cluster (ATT-308: ensure sport type is propagated/stored)
-                    clusterEngine.learnFromWorkout(start, end, apex, totalDistance, matchingCluster.name, sportId, matchingCluster.id)
+                    clusterEngine.learnFromWorkout(start, end, apex, totalDistance, matchingCluster.name, sportId, matchingCluster.id, minAltPos = minAltPos, maxAltPos = maxAltPos)
                     clusterEngine.assignClusterToWorkout(context, workoutId, matchingCluster.id, false)
                 }
             } else {
@@ -793,7 +820,7 @@ object LegacyImportEngine {
                             sportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
                         }
                         if (cluster != null) {
-                            clusterEngine.learnFromWorkout(start, end, apex, totalDistance, cluster.name, sportId, existingId)
+                            clusterEngine.learnFromWorkout(start, end, apex, totalDistance, cluster.name, sportId, existingId, minAltPos = minAltPos, maxAltPos = maxAltPos)
                         }
                         clusterEngine.assignClusterToWorkout(context, workoutId, existingId, true)
                     } else if (!customName.isNullOrBlank()) {
@@ -801,7 +828,7 @@ object LegacyImportEngine {
                         if (sportId == -1L && bSportType != BSportType.UNKNOWN) {
                             sportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
                         }
-                        val newId = clusterEngine.learnFromWorkout(start, end, apex, totalDistance, customName, sportId, -1L)
+                        val newId = clusterEngine.learnFromWorkout(start, end, apex, totalDistance, customName, sportId, -1L, minAltPos = minAltPos, maxAltPos = maxAltPos)
                         clusterEngine.assignClusterToWorkout(context, workoutId, newId, true)
                     }
                 }

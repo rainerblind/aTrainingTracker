@@ -92,6 +92,7 @@ data class WorkoutData(
     val descentMeters: Long,
     val minAltitude: Double?,
     val maxAltitude: Double?,
+    val minAltitudeLatLng: LatLng? = null,
     val maxAltitudeLatLng: LatLng? = null,
     val maxDisplacementLatLng: LatLng? = null,
     val startLatLng: LatLng? = null,

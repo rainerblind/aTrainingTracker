@@ -1189,6 +1189,7 @@
     <string name="battery_level">Battery Level</string>
 
     <string name="marker_options">Marker Options</string>
+    <string name="marker_min_altitude">Min Altitude</string>
     <string name="marker_max_altitude">Max Altitude</string>
     <string name="marker_max_distance">Max Distance</string>
     <string name="marker_start">Start</string>
@@ -1219,10 +1220,13 @@
     <string name="cluster_tuning_endpoint_label">Endpoint Tolerance</string>
     <string name="cluster_tuning_apex_label">Apex (Max Displacement) Tolerance</string>
     <string name="cluster_tuning_distance_label">Distance Tolerance</string>
+    <string name="cluster_tuning_altitude_pos_label">Altitude Position Tolerance</string>
     <string name="cluster_tuning_recalculate_button">Recalculate All Clusters</string>
     <string name="cluster_tuning_warning">Warning: Recalculating will wipe all learned cluster names and grouping, then rebuild them from history using these new parameters.</string>
     <string name="cluster_tuning_use_sport_type_label">Take Sport Type into account</string>
     <string name="cluster_tuning_use_sport_type_summary">Isolate different activities (e.g. Run vs Bike) on the same route into separate families.</string>
+    <string name="cluster_tuning_use_altitude_label">Take Min/Max Altitude into account</string>
+    <string name="cluster_tuning_use_altitude_summary">Distinguish routes with different vertical profiles based on the coordinates of lowest and highest elevation points.</string>
     <string name="cluster_tuning_recalculating">Recalculating clusters…</string>
     <string name="cluster_tuning_take_while">This might take a while.</string>
 

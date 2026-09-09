@@ -77,8 +77,12 @@ fun ClusterTuningScreen(
                     onApexToleranceChange = { viewModel.apexTolerance = it },
                     distanceTolerance = viewModel.distanceTolerance,
                     onDistanceToleranceChange = { viewModel.distanceTolerance = it },
+                    altitudePositionTolerance = viewModel.altitudePositionTolerance,
+                    onAltitudePositionToleranceChange = { viewModel.altitudePositionTolerance = it },
                     useSportTypeForClustering = viewModel.useSportTypeForClustering,
-                    onUseSportTypeChange = { viewModel.useSportTypeForClustering = it }
+                    onUseSportTypeChange = { viewModel.useSportTypeForClustering = it },
+                    useAltitudePosForClustering = viewModel.useAltitudePosForClustering,
+                    onUseAltitudePosChange = { viewModel.useAltitudePosForClustering = it }
                 )
 
                 Spacer(modifier = Modifier.weight(1f))
@@ -109,8 +113,12 @@ fun ClusterTuningContent(
     onApexToleranceChange: (Float) -> Unit,
     distanceTolerance: Float,
     onDistanceToleranceChange: (Float) -> Unit,
-    useSportTypeForClustering: Boolean,
-    onUseSportTypeChange: (Boolean) -> Unit,
+    altitudePositionTolerance: Float = 400f,
+    onAltitudePositionToleranceChange: (Float) -> Unit = {},
+    useSportTypeForClustering: Boolean = true,
+    onUseSportTypeChange: (Boolean) -> Unit = {},
+    useAltitudePosForClustering: Boolean = true,
+    onUseAltitudePosChange: (Boolean) -> Unit = {},
     isDialog: Boolean = false
 ) {
     var showDetails by remember { mutableStateOf(false) }
@@ -119,13 +127,15 @@ fun ClusterTuningContent(
     val endRange = 10f..500f
     val apexRange = 10f..500f
     val distRange = 0.01f..0.2f
+    val altRange = 10f..500f
 
     // Derived master sensitivity (average of normalized values)
-    val currentMasterValue = remember(endpointTolerance, apexTolerance, distanceTolerance) {
+    val currentMasterValue = remember(endpointTolerance, apexTolerance, distanceTolerance, altitudePositionTolerance) {
         val nEnd = (endpointTolerance - endRange.start) / (endRange.endInclusive - endRange.start)
         val nApex = (apexTolerance - apexRange.start) / (apexRange.endInclusive - apexRange.start)
         val nDist = (distanceTolerance - distRange.start) / (distRange.endInclusive - distRange.start)
-        (nEnd + nApex + nDist) / 3f
+        val nAlt = (altitudePositionTolerance - altRange.start) / (altRange.endInclusive - altRange.start)
+        (nEnd + nApex + nDist + nAlt) / 4f
     }
 
     val verticalSpacing = if (isDialog) 12.dp else 24.dp
@@ -145,6 +155,7 @@ fun ClusterTuningContent(
                     onEndpointToleranceChange(endRange.start + (endRange.endInclusive - endRange.start) * sensitivity)
                     onApexToleranceChange(apexRange.start + (apexRange.endInclusive - apexRange.start) * sensitivity)
                     onDistanceToleranceChange(distRange.start + (distRange.endInclusive - distRange.start) * sensitivity)
+                    onAltitudePositionToleranceChange(altRange.start + (altRange.endInclusive - altRange.start) * sensitivity)
                 },
                 valueRange = 0f..1f
             )
@@ -205,6 +216,16 @@ fun ClusterTuningContent(
                 displayMultiplier = 100f,
                 decimalPlaces = 0
             )
+
+            TuningSlider(
+                label = stringResource(R.string.cluster_tuning_altitude_pos_label),
+                value = altitudePositionTolerance,
+                onValueChange = onAltitudePositionToleranceChange,
+                valueRange = altRange,
+                unit = lengthUnit,
+                displayMultiplier = lengthMultiplier,
+                decimalPlaces = 3
+            )
         }
 
         // 4. Sport Type Awareness (ATT-350)
@@ -227,6 +248,29 @@ fun ClusterTuningContent(
             Switch(
                 checked = useSportTypeForClustering,
                 onCheckedChange = onUseSportTypeChange
+            )
+        }
+
+        // 5. Altitude Extrema Awareness (ATT-502, REQ-SET-065)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.cluster_tuning_use_altitude_label),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = stringResource(R.string.cluster_tuning_use_altitude_summary),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = useAltitudePosForClustering,
+                onCheckedChange = onUseAltitudePosChange
             )
         }
     }

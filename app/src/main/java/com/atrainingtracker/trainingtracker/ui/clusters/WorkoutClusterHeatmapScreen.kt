@@ -70,23 +70,29 @@ fun WorkoutClusterHeatmapScreen(
     
     val sportType = remember(cluster.probableSportId) { viewModel.getBSportType(cluster.probableSportId) }
 
-    // --- FINGERPRINT EDIT STATE (SCRUM-197 Refined) ---
+    // --- FINGERPRINT EDIT STATE (SCRUM-197 Refined, ATT-502) ---
     var isEditingFingerprint by remember { mutableStateOf(false) }
     var editStart by remember(cluster) { mutableStateOf(LatLng(cluster.startLat, cluster.startLng)) }
     var editEnd by remember(cluster) { mutableStateOf(LatLng(cluster.endLat, cluster.endLng)) }
     var editApex by remember(cluster) { mutableStateOf(LatLng(cluster.maxDispLat, cluster.maxDispLng)) }
+    var editMinAlt by remember(cluster) { mutableStateOf(cluster.minAltLatLng) }
+    var editMaxAlt by remember(cluster) { mutableStateOf(cluster.maxAltLatLng) }
 
-    val hasChanges = remember(cluster, editStart, editEnd, editApex) {
+    val hasChanges = remember(cluster, editStart, editEnd, editApex, editMinAlt, editMaxAlt) {
         LatLng(cluster.startLat, cluster.startLng) != editStart ||
         LatLng(cluster.endLat, cluster.endLng) != editEnd ||
-        LatLng(cluster.maxDispLat, cluster.maxDispLng) != editApex
+        LatLng(cluster.maxDispLat, cluster.maxDispLng) != editApex ||
+        cluster.minAltLatLng != editMinAlt ||
+        cluster.maxAltLatLng != editMaxAlt
     }
 
     val startLabel = stringResource(R.string.start)
     val endLabel = stringResource(R.string.end)
     val apexLabel = stringResource(R.string.max_line_distance)
+    val minAltLabel = stringResource(R.string.marker_min_altitude)
+    val maxAltLabel = stringResource(R.string.marker_max_altitude)
 
-    val fingerprintMarkers = remember(editStart, editEnd, editApex, isEditingFingerprint, startLabel, endLabel, apexLabel, enabledMarkerTypes) {
+    val fingerprintMarkers = remember(editStart, editEnd, editApex, editMinAlt, editMaxAlt, isEditingFingerprint, startLabel, endLabel, apexLabel, minAltLabel, maxAltLabel, enabledMarkerTypes) {
         val list = mutableListOf<LocationMarker>()
         
         if (isEditingFingerprint || enabledMarkerTypes.contains(ClusterMarkerType.START)) {
@@ -121,6 +127,29 @@ fun WorkoutClusterHeatmapScreen(
                 onDragEnd = { editApex = it }
             ))
         }
+
+        if (editMinAlt != null && (isEditingFingerprint || enabledMarkerTypes.contains(ClusterMarkerType.ALTITUDE_MIN))) {
+            list.add(LocationMarker(
+                position = editMinAlt!!,
+                iconResId = R.drawable.ic_altitude,
+                title = minAltLabel,
+                iconDescriptor = createSensorMarker(context, R.drawable.ic_altitude, TTColor.MinAltitude), // Teal
+                draggable = isEditingFingerprint,
+                onDragEnd = { editMinAlt = it }
+            ))
+        }
+
+        if (editMaxAlt != null && (isEditingFingerprint || enabledMarkerTypes.contains(ClusterMarkerType.ALTITUDE_MAX))) {
+            list.add(LocationMarker(
+                position = editMaxAlt!!,
+                iconResId = R.drawable.ic_altitude,
+                title = maxAltLabel,
+                iconDescriptor = createSensorMarker(context, R.drawable.ic_altitude, TTColor.MaxAltitude), // Orange/Amber
+                draggable = isEditingFingerprint,
+                onDragEnd = { editMaxAlt = it }
+            ))
+        }
+
         list
     }
 
@@ -134,6 +163,8 @@ fun WorkoutClusterHeatmapScreen(
                     ClusterMarkerType.START -> TTColor.StartPoint
                     ClusterMarkerType.END -> TTColor.EndPoint
                     ClusterMarkerType.DISTANCE -> TTColor.ApexPoint
+                    ClusterMarkerType.ALTITUDE_MIN -> TTColor.MinAltitude
+                    ClusterMarkerType.ALTITUDE_MAX -> TTColor.MaxAltitude
                 }
                 LocationMarker(
                     position = marker.pos,
@@ -281,6 +312,8 @@ fun WorkoutClusterHeatmapScreen(
                             editStart = LatLng(cluster.startLat, cluster.startLng)
                             editEnd = LatLng(cluster.endLat, cluster.endLng)
                             editApex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
+                            editMinAlt = cluster.minAltLatLng
+                            editMaxAlt = cluster.maxAltLatLng
                         } else {
                             onBack()
                         }
@@ -288,7 +321,7 @@ fun WorkoutClusterHeatmapScreen(
                     onRename = { showEditDialog = true },
                     onEditFingerprint = { isEditingFingerprint = true },
                     onSaveFingerprint = {
-                        viewModel.updateClusterFingerprint(cluster, editStart, editEnd, editApex)
+                        viewModel.updateClusterFingerprint(cluster, editStart, editEnd, editApex, editMinAlt, editMaxAlt)
                         isEditingFingerprint = false
                     },
                     onDeleteRequest = { showDeleteConfirmation = true },
@@ -339,7 +372,7 @@ fun WorkoutClusterHeatmapScreen(
                                 ClusterMarkerType.entries.forEach { type ->
                                     DropdownMenuItem(
                                         text = {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 Checkbox(
                                                     checked = enabledMarkerTypes.contains(type),
                                                     onCheckedChange = null
@@ -350,6 +383,8 @@ fun WorkoutClusterHeatmapScreen(
                                                         ClusterMarkerType.DISTANCE -> stringResource(R.string.marker_max_distance)
                                                         ClusterMarkerType.START -> stringResource(R.string.marker_start)
                                                         ClusterMarkerType.END -> stringResource(R.string.marker_end)
+                                                        ClusterMarkerType.ALTITUDE_MIN -> stringResource(R.string.marker_min_altitude)
+                                                        ClusterMarkerType.ALTITUDE_MAX -> stringResource(R.string.marker_max_altitude)
                                                     }
                                                 )
                                             }

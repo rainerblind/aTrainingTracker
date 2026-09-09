@@ -86,7 +86,9 @@ class MyPreferenceManager(context: Context) {
         preferences[ENABLED_CLUSTER_MARKER_TYPES] ?: setOf(
             ClusterMarkerType.START.name,
             ClusterMarkerType.END.name,
-            ClusterMarkerType.DISTANCE.name
+            ClusterMarkerType.DISTANCE.name,
+            ClusterMarkerType.ALTITUDE_MIN.name,
+            ClusterMarkerType.ALTITUDE_MAX.name
         )
     }
 
@@ -95,7 +97,9 @@ class MyPreferenceManager(context: Context) {
             val current = preferences[ENABLED_CLUSTER_MARKER_TYPES] ?: setOf(
                 ClusterMarkerType.START.name,
                 ClusterMarkerType.END.name,
-                ClusterMarkerType.DISTANCE.name
+                ClusterMarkerType.DISTANCE.name,
+                ClusterMarkerType.ALTITUDE_MIN.name,
+                ClusterMarkerType.ALTITUDE_MAX.name
             )
             val updated = if (enabled) current + type else current - type
             preferences[ENABLED_CLUSTER_MARKER_TYPES] = updated
