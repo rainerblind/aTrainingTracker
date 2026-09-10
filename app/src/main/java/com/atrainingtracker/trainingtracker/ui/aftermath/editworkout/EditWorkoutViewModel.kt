@@ -72,6 +72,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     var suggestedEquipmentName by mutableStateOf<String?>(null)
     
     var currentBSportType by mutableStateOf(BSportType.UNKNOWN)
+    private var userManuallyChangedSport: Boolean = false
 
     // Constants for special spinner items
     val allSportTypes = application.getString(R.string.all_sports)
@@ -182,6 +183,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         }
 
         if (newSportName == workoutData.value?.sportName) return
+        userManuallyChangedSport = true
         val simpleSportTypeInfo = sportTypesList.find { it.name == newSportName }
         val newSportId = simpleSportTypeInfo?.id ?: -1
 
@@ -263,7 +265,13 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     // --- Smart handlers for suggestions (SCRUM-200) ---
 
     private fun updateSuggestedSportTypeNames(data: WorkoutData) {
-        val suggestedSports = discoveryManager.getSpeedBasedSportTypeNames(data.bSportType, data.avgSpeedMps).toMutableList()
+        val suggestedSports = if (!userManuallyChangedSport && (data.bSportType == BSportType.UNKNOWN || 
+                (discoveryManager.getLinkedSportTypeIds(data.id).isEmpty() && data.avgSpeedMps > 0.0 && 
+                 discoveryManager.getCandidateBSportTypes(BSportType.UNKNOWN, data.avgSpeedMps).contains(data.bSportType)))) {
+            discoveryManager.getSpeedBasedSportTypeNames(BSportType.UNKNOWN, data.avgSpeedMps).toMutableList()
+        } else {
+            discoveryManager.getSpeedBasedSportTypeNames(data.bSportType, data.avgSpeedMps).toMutableList()
+        }
         
         // Ensure current sport is in the list
         if (!suggestedSports.contains(data.sportName)) {
@@ -372,8 +380,36 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         val apex = workout.maxDisplacementLatLng ?: return
         
         viewModelScope.launch {
+            // Determine candidate sport types (REQ-SET-064, ATT-820)
+            val candidateSports: Set<BSportType> = when {
+                // Tier 1 & 2: Dedicated hardware sensors (REQ-SET-030)
+                discoveryManager.getLinkedSportTypeIds(workout.id).isNotEmpty() -> {
+                    val linkedSportIds = discoveryManager.getLinkedSportTypeIds(workout.id)
+                    linkedSportIds.mapNotNull { sportTypeDatabaseManager.getBSportType(it) }.toSet()
+                }
+                // User explicitly selected/changed the sport in the editor UI
+                userManuallyChangedSport && workout.bSportType != BSportType.UNKNOWN -> {
+                    setOf(workout.bSportType)
+                }
+                // Tier 3: Speed-Based Multi-Sport Candidate Set
+                workout.avgSpeedMps > 0.0 -> {
+                    val speedCandidates = discoveryManager.getCandidateBSportTypes(BSportType.UNKNOWN, workout.avgSpeedMps)
+                    if (workout.bSportType == BSportType.UNKNOWN || speedCandidates.contains(workout.bSportType)) {
+                        speedCandidates
+                    } else {
+                        setOf(workout.bSportType)
+                    }
+                }
+                workout.bSportType != BSportType.UNKNOWN -> setOf(workout.bSportType)
+                else -> emptySet()
+            }
+
             val suggestions = WorkoutClusterEngine.getInstance(getApplication())
-                .getClusterScores(start, end, apex, workout.totalDistance, workout.workoutName, workout.bSportType)
+                .getClusterScores(
+                    start, end, apex, workout.totalDistance, workout.workoutName,
+                    candidateSports,
+                    workout.minAltitudeLatLng, workout.maxAltitudeLatLng
+                )
             _clusterSuggestions.value = suggestions
         }
     }
