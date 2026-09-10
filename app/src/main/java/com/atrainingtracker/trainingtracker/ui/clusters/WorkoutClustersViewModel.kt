@@ -290,6 +290,7 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
             selectionJob = viewModelScope.launch {
                 _mapState.update { it.copy(isLoading = true) }
                 val workouts = repository.getWorkoutsForCluster(cluster.id)
+                _clusterWorkouts.value = workouts
                 ensureActive()
 
                 val route = routesRepository.getRouteByClusterId(cluster.id)
