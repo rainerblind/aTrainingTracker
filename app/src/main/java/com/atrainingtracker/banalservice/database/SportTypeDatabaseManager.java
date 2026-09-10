@@ -140,17 +140,18 @@ public class SportTypeDatabaseManager {
         List<Long> result = new LinkedList<>();
 
         SQLiteDatabase db = getDatabase();
-        Cursor cursor = db.query(SportType.TABLE,
-                null,
-                SportType.BASE_SPORT_TYPE + "=? AND " + SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?",
-                new String[]{bSportType.name(), Double.toString(avgSpd), Double.toString(avgSpd)},
-                null, null, null);
-        if (cursor.getCount() == 0   // nothing was found for the UNKNOWN sport type
-                && bSportType == BSportType.UNKNOWN) {
-            cursor = db.query(SportType.TABLE,   // => query again, ignoring the basic sport type
+        Cursor cursor;
+        if (bSportType == BSportType.UNKNOWN) {
+            cursor = db.query(SportType.TABLE,
                     null,
                     SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?",
                     new String[]{Double.toString(avgSpd), Double.toString(avgSpd)},
+                    null, null, null);
+        } else {
+            cursor = db.query(SportType.TABLE,
+                    null,
+                    SportType.BASE_SPORT_TYPE + "=? AND " + SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?",
+                    new String[]{bSportType.name(), Double.toString(avgSpd), Double.toString(avgSpd)},
                     null, null, null);
         }
 
@@ -176,18 +177,18 @@ public class SportTypeDatabaseManager {
         List<String> result = new LinkedList<>();
 
         SQLiteDatabase db = getDatabase();
-        Cursor cursor = db.query(SportType.TABLE,
-                null,
-                SportType.BASE_SPORT_TYPE + "=? AND " + SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?",
-                new String[]{bSportType.name(), Double.toString(avgSpd), Double.toString(avgSpd)},
-                null, null, null);
-        if (cursor.getCount() == 0
-                && bSportType == BSportType.UNKNOWN) {  // nothing was found for the UNKNOWN sport type
-            // => query again, ignoring the basic sport type
+        Cursor cursor;
+        if (bSportType == BSportType.UNKNOWN) {
             cursor = db.query(SportType.TABLE,
                     null,
                     SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?",
                     new String[]{Double.toString(avgSpd), Double.toString(avgSpd)},
+                    null, null, null);
+        } else {
+            cursor = db.query(SportType.TABLE,
+                    null,
+                    SportType.BASE_SPORT_TYPE + "=? AND " + SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?",
+                    new String[]{bSportType.name(), Double.toString(avgSpd), Double.toString(avgSpd)},
                     null, null, null);
         }
 
