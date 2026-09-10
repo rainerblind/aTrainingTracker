@@ -94,9 +94,10 @@ fun WorkoutList(
                     if (isCompactView) {
                         WorkoutSummaryCompact(
                             workoutData = workoutData,
-                            onEditWorkout = { onMapClick(workoutData) },
+                            onMapClick = { onMapClick(workoutData) },
                             onDeleteRequest = { onDeleteRequest(workoutData.id) },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            onEditWorkout = { onEditWorkout(workoutData.id) }
                         )
                     } else {
                         WorkoutSummary(

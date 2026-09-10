@@ -48,9 +48,10 @@ import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
 @Composable
 fun WorkoutSummaryCompact(
     workoutData: WorkoutData,
-    onEditWorkout: () -> Unit,
+    onMapClick: () -> Unit,
     onDeleteRequest: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onEditWorkout: (() -> Unit)? = null
 ) {
     // Maintain the "unfinished" state visual feedback
     val contentAlpha = if (workoutData.headerData.finished) TTAlpha.High else 0.5f
@@ -62,7 +63,7 @@ fun WorkoutSummaryCompact(
     Box {
         MappableListItem(
             modifier = modifier,
-            onClick = onEditWorkout,
+            onClick = onMapClick,
             onLongClick = { showContextMenu = true },
             alpha = contentAlpha
         ) {
@@ -173,6 +174,23 @@ fun WorkoutSummaryCompact(
                 expanded = showContextMenu,
                 onDismissRequest = { showContextMenu = false }
             ) {
+                if (onEditWorkout != null) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.edit_workout)) },
+                        onClick = {
+                            showContextMenu = false
+                            onEditWorkout()
+                        },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_table_edit),
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.delete)) },
                     onClick = {

@@ -69,10 +69,10 @@ fun WorkoutSummary(
     // When the workout is not yet finished (properly), we show it with an alpha of 0.5
     val contentAlpha = if (workoutData.headerData.finished) TTAlpha.High else 0.5f
 
-    // Shared modifier for the clickable sections
-    val editWorkoutModifier = Modifier.clickable {
+    // Shared modifier for the clickable body sections (navigates to map view, ATT-850)
+    val mapClickModifier = Modifier.clickable {
         if (workoutData.headerData.finished) {
-            onEditWorkout()
+            onMapClick()
         }
     }
     // TODO: Add functionality to show more detailed stats when clicking on the WorkoutDetails or Extrema Values.
@@ -84,12 +84,13 @@ fun WorkoutSummary(
         // 1. Header
         WorkoutHeader(
             data = workoutData.headerData,
-            onClicked = onEditWorkout,
+            onClicked = onMapClick,
             onExport = onExport,
             onSaveAsRoute = onSaveAsRoute,
             onDeleteRequest = onDeleteRequest,
             menuEnabled = workoutData.headerData.finished,
-            onClusterClick = onClusterClick
+            onClusterClick = onClusterClick,
+            onEditWorkout = onEditWorkout
         )
 
         HorizontalDivider(
@@ -102,19 +103,20 @@ fun WorkoutSummary(
         // Hidden automatically if all fields are null/blank
         WorkoutDescription(
             data = workoutData.descriptionData,
-            modifier = editWorkoutModifier
+            modifier = mapClickModifier
         )
 
         // 3. Main Details Section (Distance, Time, Speed/Pace)
         WorkoutDetails(
             data = workoutData.detailsData,
-            modifier = editWorkoutModifier
+            modifier = mapClickModifier
         )
 
         // 4. Extrema Values Section
         if (workoutData.extremaData.dataRows.isNotEmpty()) {
-            WorkoutExtrema(data = workoutData.extremaData,
-                modifier = editWorkoutModifier
+            WorkoutExtrema(
+                data = workoutData.extremaData,
+                modifier = mapClickModifier
             )
         }
 

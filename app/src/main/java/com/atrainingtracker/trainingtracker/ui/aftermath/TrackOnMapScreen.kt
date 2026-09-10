@@ -77,20 +77,9 @@ fun TrackOnMapScreen(
                 onSaveAsRoute = { },
                 onDeleteRequest = { },
                 onClusterClick = onClusterClick,
+                onEditWorkout = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
                 actions = {
                     headerActions()
-                    if (onEditWorkout != null) {
-                        IconButton(
-                            onClick = { onEditWorkout(workoutData.id) },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_table_edit),
-                                contentDescription = stringResource(R.string.edit_workout),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
                 }
             )
         },

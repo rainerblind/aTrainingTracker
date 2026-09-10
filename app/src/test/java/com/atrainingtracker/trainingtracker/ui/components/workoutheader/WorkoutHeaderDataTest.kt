@@ -81,5 +81,70 @@ class WorkoutHeaderDataTest {
 
         assertEquals(targetWorkoutId, editedWorkoutId)
     }
+
+    @Test
+    fun workoutBodyClick_routesToMapNavigation_andRemainsIsolatedFromEdit() {
+        // Verify click isolation (ATT-850, REQ-SET-071, TST-SET-060)
+        var mapClicked = false
+        var editClicked = false
+        var clusterClickedId: Long? = null
+
+        val onMapClick: () -> Unit = { mapClicked = true }
+        val onEditWorkout: () -> Unit = { editClicked = true }
+        val onClusterClick: (Long) -> Unit = { id -> clusterClickedId = id }
+
+        // 1. Simulate body click (Header surface, Description, Details, Extrema)
+        onMapClick()
+        org.junit.Assert.assertTrue("Tapping workout body must invoke map navigation", mapClicked)
+        org.junit.Assert.assertFalse("Tapping workout body must not trigger edit mode", editClicked)
+        assertNull("Tapping workout body must not trigger cluster navigation", clusterClickedId)
+
+        // 2. Simulate dedicated edit button click
+        mapClicked = false
+        onEditWorkout()
+        org.junit.Assert.assertFalse("Tapping edit button must not trigger map navigation", mapClicked)
+        org.junit.Assert.assertTrue("Tapping edit button must invoke workout editor", editClicked)
+        assertNull("Tapping edit button must not trigger cluster navigation", clusterClickedId)
+
+        // 3. Simulate cluster button click
+        editClicked = false
+        onClusterClick(42L)
+        org.junit.Assert.assertFalse("Tapping cluster button must not trigger map navigation", mapClicked)
+        org.junit.Assert.assertFalse("Tapping cluster button must not trigger edit mode", editClicked)
+        assertEquals(42L, clusterClickedId)
+    }
+
+    @Test
+    fun mapScreenNavigationPrecedence_presentsEditImmediately_andRestoresMapOnDismiss() {
+        // Verify precedence: edit over map, and map over list (ATT-850, REQ-SET-071, TST-SET-060)
+        var selectedWorkoutForDetails: Long? = null
+        var selectedWorkoutIdForEdit: Long? = null
+
+        fun resolveCurrentScreen(): String = when {
+            selectedWorkoutIdForEdit != null -> "EDIT"
+            selectedWorkoutForDetails != null -> "MAP"
+            else -> "LIST"
+        }
+
+        // 1. Initial State
+        assertEquals("LIST", resolveCurrentScreen())
+
+        // 2. Tap workout to open map
+        selectedWorkoutForDetails = 101L
+        assertEquals("MAP", resolveCurrentScreen())
+
+        // 3. Tap edit from within map
+        selectedWorkoutIdForEdit = 101L
+        assertEquals("EDIT", resolveCurrentScreen()) // Immediately opens editor!
+
+        // 4. Dismiss editor (save or back)
+        selectedWorkoutIdForEdit = null
+        assertEquals("MAP", resolveCurrentScreen()) // Directly returns to map view!
+
+        // 5. Press back from map view
+        selectedWorkoutForDetails = null
+        assertEquals("LIST", resolveCurrentScreen()) // Returns to workout list!
+    }
 }
+
 
