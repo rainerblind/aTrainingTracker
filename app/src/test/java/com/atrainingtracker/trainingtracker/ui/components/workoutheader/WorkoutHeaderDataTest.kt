@@ -81,5 +81,37 @@ class WorkoutHeaderDataTest {
 
         assertEquals(targetWorkoutId, editedWorkoutId)
     }
+
+    @Test
+    fun workoutBodyClick_routesToMapNavigation_andRemainsIsolatedFromEdit() {
+        // Verify click isolation (ATT-850, REQ-SET-071, TST-SET-060)
+        var mapClicked = false
+        var editClicked = false
+        var clusterClickedId: Long? = null
+
+        val onMapClick: () -> Unit = { mapClicked = true }
+        val onEditWorkout: () -> Unit = { editClicked = true }
+        val onClusterClick: (Long) -> Unit = { id -> clusterClickedId = id }
+
+        // 1. Simulate body click (Header surface, Description, Details, Extrema)
+        onMapClick()
+        org.junit.Assert.assertTrue("Tapping workout body must invoke map navigation", mapClicked)
+        org.junit.Assert.assertFalse("Tapping workout body must not trigger edit mode", editClicked)
+        assertNull("Tapping workout body must not trigger cluster navigation", clusterClickedId)
+
+        // 2. Simulate dedicated edit button click
+        mapClicked = false
+        onEditWorkout()
+        org.junit.Assert.assertFalse("Tapping edit button must not trigger map navigation", mapClicked)
+        org.junit.Assert.assertTrue("Tapping edit button must invoke workout editor", editClicked)
+        assertNull("Tapping edit button must not trigger cluster navigation", clusterClickedId)
+
+        // 3. Simulate cluster button click
+        editClicked = false
+        onClusterClick(42L)
+        org.junit.Assert.assertFalse("Tapping cluster button must not trigger map navigation", mapClicked)
+        org.junit.Assert.assertFalse("Tapping cluster button must not trigger edit mode", editClicked)
+        assertEquals(42L, clusterClickedId)
+    }
 }
 

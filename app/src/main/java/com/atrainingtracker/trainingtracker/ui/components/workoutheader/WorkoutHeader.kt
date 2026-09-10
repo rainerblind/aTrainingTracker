@@ -64,6 +64,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
  * @param modifier Optional [Modifier] for layout adjustments.
  * @param menuEnabled Whether the action menu and clickable behaviors are enabled.
  * @param onClusterClick Optional callback invoked when the user clicks the cluster navigation button.
+ * @param onEditWorkout Optional callback invoked when the user clicks the dedicated edit workout action.
  * @param actions Optional slot for trailing action buttons.
  */
 @Composable
@@ -76,6 +77,7 @@ fun WorkoutHeader(
     modifier: Modifier = Modifier,
     menuEnabled: Boolean = true,
     onClusterClick: ((Long) -> Unit)? = null,
+    onEditWorkout: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     // State to control menu visibility
@@ -323,6 +325,19 @@ fun WorkoutHeader(
                                 )
                             }
                         }
+                    }
+                }
+
+                if (onEditWorkout != null) {
+                    IconButton(
+                        onClick = onEditWorkout,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_table_edit),
+                            contentDescription = stringResource(R.string.edit_workout),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }
