@@ -72,7 +72,8 @@ fun WorkoutClusterHeatmapScreen(
     cluster: WorkoutCluster,
     viewModel: WorkoutClustersViewModel,
     onBack: () -> Unit,
-    onHitCountClick: (WorkoutCluster) -> Unit
+    onHitCountClick: (WorkoutCluster) -> Unit,
+    onEditWorkout: ((Long) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val linkedRoute by viewModel.linkedRoute.collectAsState()
@@ -359,7 +360,8 @@ fun WorkoutClusterHeatmapScreen(
                                             tint = MaterialTheme.colorScheme.primary
                                         )
                                     }
-                                }
+                                },
+                                onEditWorkout = onEditWorkout
                             )
                         }
                     }
@@ -734,14 +736,14 @@ fun WorkoutClusterSummaryHeader(
                         )
                     }
                 } else {
+                    IconButton(onClick = onEditFingerprint) {
+                        Icon(Icons.Default.EditLocationAlt, contentDescription = stringResource(R.string.cluster_edit_fingerprint_content_desc))
+                    }
                     IconButton(onClick = onRename) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_table_edit),
                             contentDescription = stringResource(R.string.edit_workout_name)
                         )
-                    }
-                    IconButton(onClick = onEditFingerprint) {
-                        Icon(Icons.Default.EditLocationAlt, contentDescription = stringResource(R.string.cluster_edit_fingerprint_content_desc))
                     }
                 }
             }

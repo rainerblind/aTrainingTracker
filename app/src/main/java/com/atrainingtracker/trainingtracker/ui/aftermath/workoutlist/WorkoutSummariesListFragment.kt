@@ -191,6 +191,7 @@ class WorkoutSummariesListFragment : Fragment() {
                                     onToggleTrackType = { trackOnMapViewModel.toggleTrackTypeEnabled(it) },
                                     showTechnicalTracks = true,
                                     onClusterClick = { clusterId -> WorkoutNavigationEvents.triggerCluster(clusterId) },
+                                    onEditWorkout = { id -> selectedWorkoutIdForEdit = id },
                                     modifier = Modifier
                                 )
 

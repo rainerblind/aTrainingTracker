@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.components.workoutheader
 
 import android.content.res.Configuration
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
@@ -68,7 +69,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 @Composable
 fun WorkoutHeader(
     data: WorkoutHeaderData,
-    onClicked: () -> Unit,
+    onClicked: (() -> Unit)? = null,
     onExport: (FileFormat) -> Unit,
     onSaveAsRoute: () -> Unit,
     onDeleteRequest: () -> Unit,
@@ -85,11 +86,13 @@ fun WorkoutHeader(
         modifier = if (menuEnabled) {
             modifier.fillMaxWidth()
                 .combinedClickable(
-                    onClick = onClicked,
+                    onClick = { onClicked?.invoke() },
                     onLongClick = { showContextMenu = true }
                 )
-        }
-        else {
+        } else if (onClicked != null) {
+            modifier.fillMaxWidth()
+                .clickable(onClick = onClicked)
+        } else {
             modifier.fillMaxWidth()
         },
         color = Color.Transparent
@@ -123,8 +126,8 @@ fun WorkoutHeader(
                         modifier = Modifier.weight(1f)
                     )
 
-                    // Spacer for the Menu Button area
-                    Spacer(modifier = Modifier.width(32.dp))
+                    // Spacer for the Action / Menu Button area
+                    Spacer(modifier = Modifier.width(72.dp))
                 }
 
                 // --- Workout Cluster Info (ATT-388 / ATT-503): Positioned directly below the name ---

@@ -28,7 +28,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
@@ -51,6 +51,7 @@ fun TrackOnMapScreen(
     useStatusBarsPadding: Boolean = true,
     showMap: Boolean = true,
     onClusterClick: ((Long) -> Unit)? = null,
+    onEditWorkout: ((Long) -> Unit)? = null,
     headerActions: @Composable RowScope.() -> Unit = {}
 ) {
     // PERFORMANCE: Memoize the filtered tracks list
@@ -71,12 +72,26 @@ fun TrackOnMapScreen(
                 modifier = Modifier.fillMaxWidth(),
                 data = workoutData.headerData,
                 menuEnabled = false,
-                onClicked = { },
+                onClicked = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
                 onExport = { },
                 onSaveAsRoute = { },
                 onDeleteRequest = { },
                 onClusterClick = onClusterClick,
-                actions = headerActions
+                actions = {
+                    headerActions()
+                    if (onEditWorkout != null) {
+                        IconButton(
+                            onClick = { onEditWorkout(workoutData.id) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_table_edit),
+                                contentDescription = stringResource(R.string.edit_workout),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
             )
         },
         mapContent = {

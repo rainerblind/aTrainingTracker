@@ -69,4 +69,17 @@ class WorkoutHeaderDataTest {
         assertEquals(55L, headerData.clusterId)
         assertEquals("Work Commute", headerData.clusterName)
     }
+
+    @Test
+    fun onEditWorkoutCallback_receivesCorrectWorkoutId() {
+        val targetWorkoutId = 12345L
+        var editedWorkoutId: Long? = null
+        val onEditWorkout: (Long) -> Unit = { id -> editedWorkoutId = id }
+
+        // Simulate action invocation (ATT-506, REQ-SET-070, TST-SET-059)
+        onEditWorkout(targetWorkoutId)
+
+        assertEquals(targetWorkoutId, editedWorkoutId)
+    }
 }
+

@@ -163,7 +163,13 @@ class WorkoutClustersFragment : Fragment() {
 
                             EditWorkoutScreen(
                                 viewModel = editViewModel,
-                                onBack = { editedWorkoutId = null }
+                                onBack = {
+                                    val id = editedWorkoutId
+                                    editedWorkoutId = null
+                                    if (id != null) {
+                                        viewModel.selectWorkoutForPeek(id)
+                                    }
+                                }
                             )
                         }
                         inspectedWorkout != null -> {
@@ -207,7 +213,8 @@ class WorkoutClustersFragment : Fragment() {
                                             contentDescription = stringResource(R.string.cluster_move_workout_title)
                                         )
                                     }
-                                }
+                                },
+                                onEditWorkout = { id -> editedWorkoutId = id }
                             )
 
                             if (workoutToCluster != null) {
@@ -303,7 +310,8 @@ class WorkoutClustersFragment : Fragment() {
                                         viewModel.selectCluster(null)
                                     }
                                 },
-                                onHitCountClick = { viewingWorkoutsForCluster = it }
+                                onHitCountClick = { viewingWorkoutsForCluster = it },
+                                onEditWorkout = { id -> editedWorkoutId = id }
                             )
                         }
                         else -> {
