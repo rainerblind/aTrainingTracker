@@ -5,126 +5,99 @@
 * **Sub-Task**: [ATT-825](https://rainerblind.atlassian.net/browse/ATT-825) (*[Analysis] The 'Multi-Cluster' algorithm does not work properly for a new workout*)
 * **FixVersion**: `V4.9.36`
 * **Branch**: `bugfix/ATT-820`
-* **User Incident Report**:
+* **User Context & Incident Report**:
   > *"When finnished my bakery commute this morning, it was guessed as running. Hence, the clustering algorithm did not work properly. We changed it recently that it should calculate the claster value for all sport candidates. This was not done."*
+  >
+  > *"I defined a new sport Type 'Einkaufen' which has a speed from ca 7 km/h to 15 km/h and overlaps the speed of running. Thus, we should get two possible sport types and consequently, two possible workout clusters. The one with the smaller cost should be the chosen one. When tracking, I did not change the sport type. Thus, I had UNKNOWN. Furthermore, I think it might be possible that the root cause is somewhere around the EditWorkoutDialog. Did you have a look at this point?"*
 
-During a routine cycling commute to the bakery tracked without paired dedicated cadence/power sensors and without manual sport pre-selection, the workout was automatically classified as **Running** instead of matching the existing **Bakery Commute** cycling cluster.
-
----
-
-## 2. Forensic Code Path & Call Site Analysis
-
-Tracing the workout finalization sequence in `TrackerService.java:1162-1215`:
-
-```
-TrackerService.finalizeLiveSession()
-  │
-  ├── 1. discoveryManager.resolveIdentity(activeDeviceIds, mBanalService.getBSportType(), getAverageSpeed())
-  │        └── Since activeDeviceIds is empty, identity.isHighConfidence() == false
-  │        └── resolveSportType() defaults to speed lookup -> returns SportTypeId for RUN (~3.0 m/s)
-  │
-  ├── 2. Candidate Sport Determination (Tier 3):
-  │        └── candidateSports = discoveryManager.getCandidateBSportTypes(mBanalService.getBSportType(), getAverageSpeed())
-  │        └── Calls sportTypeManager.getSportTypesIdList(bSportType, avgSpd)
-  │
-  ├── 3. Cluster Lookup:
-  │        └── engine.suggestCluster(start, end, apex, dist, ..., candidateSports)
-  │        └── dbManager.findCandidates(...) finds spatial match: "Bakery Commute" (bSportType = BIKE)
-  │        └── calculateSimilarity(..., candidateSports):
-  │              Because candidateSports == {RUN} and DOES NOT contain BIKE:
-  │              A mismatch penalty of +5.0 is applied!
-  │              Similarity score jumps to ~5.2 (> 1.0 threshold).
-  │        └── "Bakery Commute" cluster is REJECTED by filter { it.second < 1.0 }!
-  │        └── suggestion == null!
-  │
-  └── 4. Fallback Execution:
-           └── summariesManager.applyInferredIdentity(mWorkoutID, identity);
-           └── Workout permanently stamped as RUN!
-```
+The user has a custom sport type **'Einkaufen'** (`bSportType = BIKE`) configured with an average speed range of **ca. 7 km/h to 15 km/h** (~1.94 m/s to 4.16 m/s), which deliberately overlaps with **'Running'** (`bSportType = RUN`, 7.2 km/h to 14.4 km/h / 2.0 to 4.0 m/s). Tracking was performed with `BSportType.UNKNOWN` (no sensors, no manual pre-selection). Upon finishing the bakery commute, the workout was erroneously classified as **Running** rather than selecting the **Bakery Commute / Einkaufen** cycling cluster which should have won based on minimal similarity cost.
 
 ---
 
-## 3. Dissected Root Cause Flaws
+## 2. Forensic Analysis & Root Cause Identification
 
-### Flaw 1: Disjoint Speed Intervals in `SportType` SQLite Database Table
-In `SportTypeDatabaseManager.java:720-785`, default database records define strictly non-overlapping, contiguous speed intervals:
-* `OTHER`: `[0.0, 0.5)` m/s
-* `WALK`: `[0.5, 2.0)` m/s
-* `RUN`: `[2.0, 4.0)` m/s (~7.2 – 14.4 km/h)
-* `MTB`: `[4.0, 5.5)` m/s (~14.4 – 19.8 km/h)
-* `BIKE`: `[5.5, 12.0)` m/s (~19.8 – 43.2 km/h)
+Detailed investigation reveals that the defect spans **both the tracking completion pipeline and the EditWorkoutDialog (`EditWorkoutViewModel` / `EditWorkoutScreen`)**:
 
-The SQL query executed by `SportTypeDatabaseManager.getSportTypesIdList(bSportType, avgSpd)` is:
-```sql
-SELECT * FROM SportType WHERE
-  MIN_AVG_SPEED <= ? AND MAX_AVG_SPEED > ?
-```
-Because the intervals are mutually exclusive, **for any given average speed, SQLite matches AT MOST ONE single row!**
-For an urban cycling commute at ~3.0 m/s (10.8 km/h), SQLite matches exclusively `RUN`. `BIKE` requires `MIN_AVG_SPEED >= 5.5` m/s. Therefore, `BIKE` is **NEVER** returned by SQLite for any speed below 19.8 km/h!
+### A. Defect in `EditWorkoutDialog` (`EditWorkoutViewModel.kt`)
+Upon tracking completion, `TrainingApplication.trackingStopped()` immediately triggers `WorkoutNavigationEvents.triggerEdit(mWorkoutID)`, navigating the user to `EditWorkoutScreen` / `EditWorkoutClusterDialog`. 
 
-### Flaw 2: Mock Masking in ATT-773 Unit Tests
-In `SpeedBasedClusterMatchingTest.kt:205-207`, the unit test introduced in ATT-773 mocked `SportTypeDatabaseManager`:
-```kotlin
-every { sportTypeManager.getSportTypesIdList(BSportType.UNKNOWN, 3.0) } returns listOf(10L, 20L)
-every { sportTypeManager.getBSportType(10L) } returns BSportType.RUN
-every { sportTypeManager.getBSportType(20L) } returns BSportType.BIKE
-```
-The test artificially forced the database manager to return IDs for both `RUN` and `BIKE`. In the real Android runtime, `getSportTypesIdList` queries the SQLite table where returning both `RUN` and `BIKE` was physically impossible.
+1. **Single-Sport Cluster Scoring in `fetchClusterSuggestions`**:
+   In [`EditWorkoutViewModel.kt:369-379`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/editworkout/EditWorkoutViewModel.kt#L369-L379):
+   ```kotlin
+   private fun fetchClusterSuggestions(workout: WorkoutData) {
+       ...
+       val suggestions = WorkoutClusterEngine.getInstance(getApplication())
+           .getClusterScores(start, end, apex, workout.totalDistance, workout.workoutName, workout.bSportType)
+       _clusterSuggestions.value = suggestions
+   }
+   ```
+   * While ATT-773 added a multi-sport candidate overload to `WorkoutClusterEngine.getClusterScores(..., candidateSportTypes: Set<BSportType>)`, **`EditWorkoutViewModel` was never updated to use it**!
+   * `EditWorkoutViewModel` still calls the single-sport overload with `workout.bSportType` (which holds `BSportType.RUN` if initially guessed as running).
+   * Consequently, in `calculateSimilarity`, the `Einkaufen` cluster (`bSportType = BIKE`) is considered mismatched (`cluster.bSportType !in candidateSportTypes`) and receives a heavy **`+5.0` penalty**! Its score jumps above 5.0, artificially inflating its cost above the Running cluster.
+   * If `workout.bSportType == BSportType.UNKNOWN`, `candidateSportTypes` becomes empty, adding a `+2.0` penalty to all clusters instead of zero penalty for valid candidate sports.
 
-### Flaw 3: Base Sport Type Filtering Blinds Fallback
-In `SportTypeDatabaseManager.getSportTypesIdList`:
-```java
-Cursor cursor = db.query(SportType.TABLE, null,
-    SportType.BASE_SPORT_TYPE + "=? AND " + SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?",
-    new String[]{bSportType.name(), Double.toString(avgSpd), Double.toString(avgSpd)}, null, null, null);
-if (cursor.getCount() == 0 && bSportType == BSportType.UNKNOWN) {
-    cursor = db.query(SportType.TABLE, null,
-        SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?",
-        new String[]{Double.toString(avgSpd), Double.toString(avgSpd)}, null, null, null);
-}
-```
-* If `mBanalService.getBSportType()` is NOT `UNKNOWN` (e.g. `RUN` from default state or previous activity), the query is locked to `BASE_SPORT_TYPE = 'RUN'`, completely blinding the query to any other sport type.
-* Even if `bSportType == UNKNOWN`, for low speeds `[0.5, 2.0)` m/s (e.g. 1.8 m/s due to traffic lights or bakery stops), `WALK` has `BASE_SPORT_TYPE = 'UNKNOWN'` in the database. Thus `cursor.getCount() == 1`, and the fallback query is never invoked.
+2. **Sport Dropdown Filtering in `updateSuggestedSportTypeNames`**:
+   In [`EditWorkoutViewModel.kt:265-277`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/editworkout/EditWorkoutViewModel.kt#L265-L277):
+   ```kotlin
+   val suggestedSports = discoveryManager.getSpeedBasedSportTypeNames(data.bSportType, data.avgSpeedMps).toMutableList()
+   ```
+   * Passing `data.bSportType` (`RUN`) restricts the SQL query in `SportTypeDatabaseManager` to `BASE_SPORT_TYPE = 'RUN'`, completely excluding `Einkaufen` (`BASE_SPORT_TYPE = 'BIKE'`) from the suggested sports dropdown.
 
-### Flaw 4: Penalization of Spatially Valid Clusters in Tier 3
-In `WorkoutClusterEngine.calculateSimilarity`, if a cluster's `bSportType` is not present in `candidateSportTypes`, a heavy `+5.0` penalty is added to the similarity score. Because `candidateSports` contained only `{RUN}`, the valid spatial candidate "Bakery Commute" (`bSportType == BIKE`) received a +5.0 penalty, pushing its score above the `1.0` acceptance threshold.
+---
+
+### B. Defect in Tracking Completion Pipeline (`TrackerService.java` & `DiscoveryManager`)
+
+1. **Arbitrary First-Match Guessing in `resolveSportType`**:
+   In `TrackerService.java:803`, before live session finalization, `getSportTypeId()` writes an initial guess into `WorkoutSummaries.TABLE`:
+   ```java
+   long sportTypeId = getSportTypeId();
+   summaryValues.put(WorkoutSummaries.SPORT_ID, sportTypeId);
+   summaryValues.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getInstance(this).getBSportType(sportTypeId).name());
+   ```
+   In `EquipmentAndSportTypeDiscoveryManager.resolveSportType`:
+   ```kotlin
+   val candidatesFromAverageSpeed = getSpeedBasedSportTypeIds(bSportType, averageSpeed)
+   ...
+   candidatesFromAverageSpeed.isNotEmpty() -> candidatesFromAverageSpeed.first()
+   ```
+   When both `Running` and `Einkaufen` match the session speed, `.first()` unconditionally picks `Running` (due to lower row ID or insertion order), prematurely stamping the workout as `RUN` before route cluster evaluation has evaluated similarity costs.
+
+2. **Low-Speed Fallback Blocking in `SportTypeDatabaseManager`**:
+   In `SportTypeDatabaseManager.getSportTypesIdList(bSportType, avgSpd)`:
+   ```java
+   Cursor cursor = db.query(SportType.TABLE, null,
+       SportType.BASE_SPORT_TYPE + "=? AND " + SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?",
+       new String[]{bSportType.name(), Double.toString(avgSpd), Double.toString(avgSpd)}, null, null, null);
+   if (cursor.getCount() == 0 && bSportType == BSportType.UNKNOWN) {
+       cursor = db.query(SportType.TABLE, null,
+           SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?",
+           new String[]{Double.toString(avgSpd), Double.toString(avgSpd)}, null, null, null);
+   }
+   ```
+   * In the default database seed, `WALK` is defined with `BASE_SPORT_TYPE = 'UNKNOWN'` and speed range `[0.5, 2.0)` m/s.
+   * If the commute average speed was around 7 km/h (~1.94 m/s, e.g. stopping at traffic lights or bakery), the first query for `BASE_SPORT_TYPE = 'UNKNOWN'` matches `WALK`.
+   * Because `cursor.getCount() == 1` (not 0), the fallback query ignoring base sport type is never reached! `getCandidateBSportTypes` returns `{BSportType.UNKNOWN}`, completely missing both `RUN` and `BIKE`.
+
+---
+
+## 3. Required Remediation Architecture
+
+### 1. In `EditWorkoutViewModel.kt`:
+* In `fetchClusterSuggestions(workout: WorkoutData)`:
+  * Determine candidate base sports from speed:
+    `val candidateSports = discoveryManager.getCandidateBSportTypes(workout.bSportType, workout.avgSpeedMps)`
+  * Call `WorkoutClusterEngine.getClusterScores` with `candidateSportTypes = candidateSports`.
+  * This guarantees that in `EditWorkoutClusterDialog`, clusters matching either candidate sport (`Einkaufen` / `BIKE` or `Running` / `RUN`) receive **0 sport penalty**, and the one with the smallest geometric cost appears at the top!
+* In `updateSuggestedSportTypeNames(data: WorkoutData)`:
+  * When `data.bSportType == BSportType.UNKNOWN` or when ambiguous, include all sport types matching the speed profile across all base sports, ensuring `Einkaufen` is present in the dropdown.
+
+### 2. In `TrackerService.java` & `DiscoveryManager`:
+* Ensure `TrackerService.finalizeLiveSession()` evaluates candidate clusters for all candidate sports `{RUN, BIKE}`, and if a candidate cluster matches (`similarity < 1.0`), assigns that cluster's sport identity (`Einkaufen`), overriding the arbitrary speed fallback.
+* In `SportTypeDatabaseManager.getSportTypesIdList`, when `bSportType == BSportType.UNKNOWN`, ensure all speed-matching sports across all base sports are queried so that overlapping custom sports (like `Einkaufen`) are never blocked by `WALK`.
 
 ---
 
 ## 4. System Invariants & Preservation Rules
-
-1. **User Pre-Selection Sovereignty (Tier 1)**:
-   * If the user explicitly pre-selects a sport before tracking (`userSelectedSport != null && userSelectedSport != BSportType.UNKNOWN`), `candidateSports` MUST strictly remain `Collections.singleton(userSelectedSport)`.
-2. **Dedicated Hardware Sensor Sovereignty (Tier 2 / REQ-SET-030)**:
-   * If dedicated hardware sensors (cadence sensor, power meter) are connected (`identity.isHighConfidence()`), `candidateSports` MUST strictly remain `Collections.singleton(identity.getBSportType())`. Route clusters MUST NEVER override hardware-determined sports.
-3. **Geometric Cluster Validity & Thresholds**:
-   * Spatial tolerance formulas (`tolEndpoints`, `tolApex`, `tolDistance`, `tolAlt`) and the `< 1.0` similarity threshold MUST remain unchanged.
-4. **Preserve Single-Sport Heuristic for BANALService**:
-   * Legacy callers relying on a single deterministic sport guess (e.g., `BANALService.getSportTypeId(avgSpd)`) must not be disrupted.
-
----
-
-## 5. Architectural Solution for Stages 2 & 3
-
-### Solution Architecture: Overlapping Multi-Sport Candidate Determination
-For Tier 3 (speed-based candidate discovery without sensors and without user pre-selection):
-
-1. **Multi-Sport Speed Plausibility Bands**:
-   * In `EquipmentAndSportTypeDiscoveryManager.getCandidateBSportTypes(bSportType: BSportType, averageSpeed: Double)`:
-     * When `bSportType == BSportType.UNKNOWN` (or when resolving candidates for unconstrained clustering):
-       * `BIKE` is plausible for `averageSpeed >= 1.5` m/s (from slow 5.4 km/h urban commuting up to fast road cycling).
-       * `RUN` is plausible for `1.5 <= averageSpeed <= 6.0` m/s (from 5.4 km/h slow jogging to 21.6 km/h sprinting).
-       * `WALK` / `UNKNOWN` is plausible for `averageSpeed <= 2.5` m/s.
-     * Intermediate urban speeds (e.g., ~1.5 m/s to 6.0 m/s) MUST return a multi-sport candidate set containing at least `setOf(BSportType.RUN, BSportType.BIKE)`.
-
-2. **Cluster-Aware Sport Plausibility Validation**:
-   * When `WorkoutClusterEngine.suggestCluster` evaluates spatial candidate clusters retrieved from `findCandidates`:
-     * If a cluster geometrically matches the route and its `bSportType` is plausible for the workout's speed profile, the cluster MUST be evaluated with zero sport penalty (`0.0`).
-     * This allows the route cluster itself to resolve the ambiguity between running and urban cycling when hardware sensors are absent.
-
----
-
-## 6. Impact Analysis & Risk Assessment
-* **Android System & Performance**: Zero impact on battery, WakeLocks, or background execution.
-* **Component Interfaces**: No breaking changes to public APIs. `getCandidateBSportTypes` signature remains stable.
-* **Data Integrity & Backward Compatibility**: No SQLite database schema migrations required. Existing workout files and clusters are preserved.
+1. **User Pre-Selection Sovereignty (Tier 1)**: Explicit user sport selection before tracking must strictly lock candidates to that sport.
+2. **Dedicated Sensor Sovereignty (Tier 2 / REQ-SET-030)**: Active cadence/power sensors must strictly lock candidates to `identity.getBSportType()`.
+3. **Lowest Similarity Cost Wins**: Among clusters matching any candidate sport, the cluster with the lowest similarity score must be suggested/selected.
