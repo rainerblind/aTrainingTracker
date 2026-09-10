@@ -135,8 +135,8 @@ fun WorkoutHeader(
                         modifier = Modifier.height(30.dp),
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Subtle),
+                            contentColor = MaterialTheme.colorScheme.primary
                         )
                     ) {
                         Row(
@@ -147,7 +147,7 @@ fun WorkoutHeader(
                                 painter = painterResource(id = R.drawable.my_locations),
                                 contentDescription = null,
                                 modifier = Modifier.size(14.dp),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                tint = MaterialTheme.colorScheme.primary
                             )
                             Text(
                                 text = data.clusterName,
