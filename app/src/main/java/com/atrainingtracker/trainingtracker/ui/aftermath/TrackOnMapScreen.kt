@@ -50,6 +50,7 @@ fun TrackOnMapScreen(
     showTechnicalTracks: Boolean = false,
     useStatusBarsPadding: Boolean = true,
     showMap: Boolean = true,
+    onClusterClick: ((Long) -> Unit)? = null,
     headerActions: @Composable RowScope.() -> Unit = {}
 ) {
     // PERFORMANCE: Memoize the filtered tracks list
@@ -74,6 +75,7 @@ fun TrackOnMapScreen(
                 onExport = { },
                 onSaveAsRoute = { },
                 onDeleteRequest = { },
+                onClusterClick = onClusterClick,
                 actions = headerActions
             )
         },

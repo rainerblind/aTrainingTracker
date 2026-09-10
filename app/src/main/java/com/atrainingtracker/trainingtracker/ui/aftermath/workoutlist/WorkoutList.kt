@@ -59,7 +59,8 @@ fun WorkoutList(
     onMapClick: (WorkoutData) -> Unit,
     isCompactView: Boolean,
     appBarOffsetPx: Int,
-    headerHeightPx: Float
+    headerHeightPx: Float,
+    onClusterClick: ((Long) -> Unit)? = null
 ) {
     val density = LocalDensity.current
     val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
@@ -105,7 +106,8 @@ fun WorkoutList(
                             onSaveAsRoute = { onSaveAsRoute(workoutData) },
                             onDeleteRequest = { onDeleteRequest(workoutData.id) },
                             onEditWorkout = { onEditWorkout(workoutData.id) },
-                            onMapClick = { onMapClick(workoutData) }
+                            onMapClick = { onMapClick(workoutData) },
+                            onClusterClick = onClusterClick
                         )
                     }
                 }

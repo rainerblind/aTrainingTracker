@@ -137,6 +137,7 @@ data class WorkoutData(
             trainer = trainer,
             uploadToStrava = uploadToStrava,
             stravaSportName = stravaSportName,
+            clusterId = clusterId,
             clusterName = clusterName
         )
 

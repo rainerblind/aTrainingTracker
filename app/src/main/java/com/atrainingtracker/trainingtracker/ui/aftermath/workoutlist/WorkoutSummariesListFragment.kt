@@ -58,6 +58,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.stringResource
+import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
@@ -189,6 +190,7 @@ class WorkoutSummariesListFragment : Fragment() {
                                     enabledTrackTypes = enabledTrackTypes,
                                     onToggleTrackType = { trackOnMapViewModel.toggleTrackTypeEnabled(it) },
                                     showTechnicalTracks = true,
+                                    onClusterClick = { clusterId -> WorkoutNavigationEvents.triggerCluster(clusterId) },
                                     modifier = Modifier
                                 )
 
@@ -275,7 +277,8 @@ class WorkoutSummariesListFragment : Fragment() {
                                         },
                                         isCompactView = viewModel.isCompactView.collectAsStateWithLifecycle().value,
                                         appBarOffsetPx = connection.appBarOffset,
-                                        headerHeightPx = headerHeightPx.toFloat()
+                                        headerHeightPx = headerHeightPx.toFloat(),
+                                        onClusterClick = { clusterId -> WorkoutNavigationEvents.triggerCluster(clusterId) }
                                     )
 
                                     // THE HEADER (Titles)

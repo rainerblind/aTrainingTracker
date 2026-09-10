@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.components.workoutheader
 import android.content.res.Configuration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -48,6 +49,22 @@ import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 
+/**
+ * Reusable header component for workout summaries and map detail views (ATT-503).
+ *
+ * Displays the sport icon, workout title, date/time, and an interactive cluster navigation
+ * button when linked to a [com.atrainingtracker.trainingtracker.database.WorkoutCluster].
+ *
+ * @param data Header metadata including cluster identification and formatting.
+ * @param onClicked Callback invoked when the user clicks the general header area (opens editor).
+ * @param onExport Callback for file export action.
+ * @param onSaveAsRoute Callback for saving the workout session as an authoritative route.
+ * @param onDeleteRequest Callback for requesting workout deletion.
+ * @param modifier Optional [Modifier] for layout adjustments.
+ * @param menuEnabled Whether the action menu and clickable behaviors are enabled.
+ * @param onClusterClick Optional callback invoked when the user clicks the cluster navigation button.
+ * @param actions Optional slot for trailing action buttons.
+ */
 @Composable
 fun WorkoutHeader(
     data: WorkoutHeaderData,
@@ -57,6 +74,7 @@ fun WorkoutHeader(
     onDeleteRequest: () -> Unit,
     modifier: Modifier = Modifier,
     menuEnabled: Boolean = true,
+    onClusterClick: ((Long) -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     // State to control menu visibility
@@ -109,26 +127,58 @@ fun WorkoutHeader(
                     Spacer(modifier = Modifier.width(32.dp))
                 }
 
-                // --- Workout Cluster Info (ATT-388): Positioned directly below the name ---
-                val clusterLabel = data.clusterName ?: stringResource(R.string.unclustered)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.my_locations),
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
-                    )
-                    Text(
-                        text = clusterLabel,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
-                        fontWeight = if (data.clusterName != null) FontWeight.Bold else FontWeight.Normal,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                // --- Workout Cluster Info (ATT-388 / ATT-503): Positioned directly below the name ---
+                if (data.clusterId > 0 && !data.clusterName.isNullOrBlank()) {
+                    Button(
+                        onClick = { onClusterClick?.invoke(data.clusterId) },
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                        modifier = Modifier.height(30.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.my_locations),
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Text(
+                                text = data.clusterName,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                } else {
+                    val clusterLabel = data.clusterName ?: stringResource(R.string.unclustered)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.my_locations),
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+                        )
+                        Text(
+                            text = clusterLabel,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
+                            fontWeight = FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
 
                 // 2. BOTTOM CONTENT: Organized in horizontal rows

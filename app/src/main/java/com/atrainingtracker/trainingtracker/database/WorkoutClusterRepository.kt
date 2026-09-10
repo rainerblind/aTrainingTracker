@@ -242,6 +242,10 @@ class WorkoutClusterRepository private constructor(private val context: Context)
         _clusterStats.value[clusterId] ?: summariesManager.getWorkoutClusterStats(clusterId)
     }
 
+    suspend fun getClusterById(clusterId: Long): WorkoutCluster? = withContext(Dispatchers.IO) {
+        _allClusters.value.find { it.id == clusterId } ?: clusterDb.getClusterById(clusterId)
+    }
+
     suspend fun updateCluster(cluster: WorkoutCluster) = withContext(Dispatchers.IO) {
         clusterDb.updateCluster(cluster)
         refreshClusters()
