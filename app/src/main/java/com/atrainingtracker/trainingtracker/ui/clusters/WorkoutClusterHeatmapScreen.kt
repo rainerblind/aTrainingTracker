@@ -330,34 +330,44 @@ fun WorkoutClusterHeatmapScreen(
         } else null
     }
 
-    BottomSheetScaffold(
-        scaffoldState = scaffoldState,
-        sheetPeekHeight = if (peekedWorkoutDataWithTrack != null && !isEditingFingerprint) 120.dp + navBarHeight else 0.dp,
-        sheetDragHandle = null,
-        sheetContent = {
-            peekedWorkoutDataWithTrack?.workoutData?.let { workoutData ->
-                TrackOnMapScreen(
-                    workoutData = workoutData,
-                    tracks = listOf(MapTrack(workoutData.id, TrackType.BEST, workoutData.bSportType, peekedWorkoutDataWithTrack!!.trackPoints)),
-                    markers = peekedWorkoutDataWithTrack!!.markers,
-                    modifier = Modifier,
-                    useStatusBarsPadding = false,
-                    headerActions = {
-                        IconButton(
-                            onClick = { workoutToMove = workoutData },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.SwapHoriz,
-                                contentDescription = stringResource(R.string.cluster_move_content_desc),
-                                tint = MaterialTheme.colorScheme.primary
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        val maxSheetHeight = maxHeight - statusBarHeight
+
+        BottomSheetScaffold(
+            scaffoldState = scaffoldState,
+            sheetPeekHeight = if (peekedWorkoutDataWithTrack != null && !isEditingFingerprint) 120.dp + navBarHeight else 0.dp,
+            sheetDragHandle = null,
+            sheetContent = {
+                if (peekedWorkoutDataWithTrack != null) {
+                    Box(modifier = Modifier.fillMaxWidth().height(maxSheetHeight)) {
+                        peekedWorkoutDataWithTrack?.workoutData?.let { workoutData ->
+                            TrackOnMapScreen(
+                                workoutData = workoutData,
+                                tracks = listOf(MapTrack(workoutData.id, TrackType.BEST, workoutData.bSportType, peekedWorkoutDataWithTrack!!.trackPoints)),
+                                markers = peekedWorkoutDataWithTrack!!.markers,
+                                modifier = Modifier.fillMaxSize(),
+                                useStatusBarsPadding = false,
+                                headerActions = {
+                                    IconButton(
+                                        onClick = { workoutToMove = workoutData },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.SwapHoriz,
+                                            contentDescription = stringResource(R.string.cluster_move_content_desc),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
                             )
                         }
                     }
-                )
+                } else {
+                    Spacer(modifier = Modifier.height(1.dp))
+                }
             }
-        }
-    ) {
+        ) {
         MapDetailLayout(
             bSportType = sportType,
             zoomFocus = if (clusterBounds != null) MapZoomFocus.EXPLICIT_BOUNDS else MapZoomFocus.FIT_PRIMARY,
@@ -562,6 +572,7 @@ fun WorkoutClusterHeatmapScreen(
             },
             modifier = Modifier.fillMaxSize()
         )
+    }
     }
 
     BackHandler {

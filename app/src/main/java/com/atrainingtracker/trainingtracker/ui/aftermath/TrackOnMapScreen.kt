@@ -68,7 +68,7 @@ fun TrackOnMapScreen(
         showMap = showMap,
         header = {
             WorkoutHeader(
-                modifier = modifier,
+                modifier = Modifier.fillMaxWidth(),
                 data = workoutData.headerData,
                 menuEnabled = false,
                 onClicked = { },

@@ -24,12 +24,16 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,6 +47,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.unit.dp
@@ -109,61 +114,72 @@ class MapFragmentWithTrack : Fragment() {
 
                     val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-                    BottomSheetScaffold(
-                        scaffoldState = scaffoldState,
-                        sheetPeekHeight = if (selectedSegmentId != null) 185.dp + navBarHeight
-                        else if (selectedRouteId != null) 100.dp + navBarHeight
-                        else 0.dp,
-                        sheetDragHandle = null,
-                        sheetContent = {
-                            when {
-                                selectedSegmentId != null -> {
-                                    // --- THE SHEET CONTENT: The Entire SimpleSegmentOnMapScreen ---
-                                    val selectedSegment =
-                                        uiState.segments.find { it.stravaId == selectedSegmentId }
+                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                        val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+                        val maxSheetHeight = maxHeight - statusBarHeight
 
-                                    SegmentOnMapScreen(
-                                        segmentSummary = liveSegments.find { it.summary.stravaId == selectedSegmentId }?.summary,
-                                        segment = selectedSegment,
-                                        modifier = Modifier,
-                                        useStatusBarsPadding = false
-                                    )
-                                }
-                                selectedRouteId != null -> {
-                                    val selectedRoute =
-                                        uiState.routes.find {it.id == selectedRouteId }
+                        BottomSheetScaffold(
+                            scaffoldState = scaffoldState,
+                            sheetPeekHeight = if (selectedSegmentId != null) 185.dp + navBarHeight
+                            else if (selectedRouteId != null) 100.dp + navBarHeight
+                            else 0.dp,
+                            sheetDragHandle = null,
+                            sheetContent = {
+                                if (selectedSegmentId != null || selectedRouteId != null) {
+                                    Box(modifier = Modifier.fillMaxWidth().height(maxSheetHeight)) {
+                                        when {
+                                            selectedSegmentId != null -> {
+                                                // --- THE SHEET CONTENT: The Entire SimpleSegmentOnMapScreen ---
+                                                val selectedSegment =
+                                                    uiState.segments.find { it.stravaId == selectedSegmentId }
 
-                                    RouteOnMapScreen(
-                                        route = selectedRoute,
-                                        routeSummary = allRoutes.find { it.summary.id == selectedRouteId}?.summary,
-                                        onToggleSelection = { viewModel.onToggleRoute(
-                                            id = selectedRouteId!!,
-                                            selected = it
-                                        ) },
-                                        modifier = Modifier,
-                                        useStatusBarsPadding = false
-                                    )
+                                                SegmentOnMapScreen(
+                                                    segmentSummary = liveSegments.find { it.summary.stravaId == selectedSegmentId }?.summary,
+                                                    segment = selectedSegment,
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    useStatusBarsPadding = false
+                                                )
+                                            }
+                                            selectedRouteId != null -> {
+                                                val selectedRoute =
+                                                    uiState.routes.find { it.id == selectedRouteId }
+
+                                                RouteOnMapScreen(
+                                                    route = selectedRoute,
+                                                    routeSummary = allRoutes.find { it.summary.id == selectedRouteId }?.summary,
+                                                    onToggleSelection = { viewModel.onToggleRoute(
+                                                        id = selectedRouteId!!,
+                                                        selected = it
+                                                    ) },
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    useStatusBarsPadding = false
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Spacer(modifier = Modifier.height(1.dp))
                                 }
                             }
-                        }
-                    ) { innerPadding ->
-                        // --- THE MAIN BODY: The Track Map ---
-                        ATrainingTrackerMap(
-                            zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
-                            bSportType = uiState.bSportType,
-                            currentLocationFlow = MutableStateFlow(currentLocation),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            segments(uiState.segments, onSegmentClick = { id ->
-                                selectedRouteId = null
-                                selectedSegmentId = id
-                            })
-                            routes(uiState.routes, onRouteClick = { id ->
-                                selectedSegmentId = null
-                                selectedRouteId = id
-                            })
-                            markers(uiState.markers)
-                            liveTrack(uiState.currentTrack)
+                        ) { innerPadding ->
+                            // --- THE MAIN BODY: The Track Map ---
+                            ATrainingTrackerMap(
+                                zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
+                                bSportType = uiState.bSportType,
+                                currentLocationFlow = MutableStateFlow(currentLocation),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                segments(uiState.segments, onSegmentClick = { id ->
+                                    selectedRouteId = null
+                                    selectedSegmentId = id
+                                })
+                                routes(uiState.routes, onRouteClick = { id ->
+                                    selectedSegmentId = null
+                                    selectedRouteId = id
+                                })
+                                markers(uiState.markers)
+                                liveTrack(uiState.currentTrack)
+                            }
                         }
                     }
 
