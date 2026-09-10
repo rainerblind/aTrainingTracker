@@ -105,7 +105,8 @@ fun PeriodMapScreen(
     onWorkoutClick: (Long) -> Unit,
     peekedWorkoutDataWithTrack: WorkoutDataWithTrack?,
     clearPeekSelection: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onEditWorkout: ((Long) -> Unit)? = null
 ) {
     val df = DistanceFormatter()
     val tf = TimeFormatter()
@@ -232,7 +233,8 @@ fun PeriodMapScreen(
                                 useStatusBarsPadding = false,
                                 onClusterClick = { clusterId ->
                                     WorkoutNavigationEvents.triggerCluster(clusterId)
-                                }
+                                },
+                                onEditWorkout = onEditWorkout
                             )
                         }
                     }

@@ -22,15 +22,23 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutScreen
+import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModel
+import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelFactory
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
@@ -67,6 +75,8 @@ class PeriodsFragment : Fragment() {
 
                     val peekedWorkoutDataWithTrack by viewModel.peekedWorkoutDataWithTrack.collectAsStateWithLifecycle()
 
+                    var editedWorkoutId by rememberSaveable { mutableStateOf<Long?>(null) }
+
                     // 1. HOIST SCROLL STATES
                     // These will live as long as the Fragment's View is alive
                     val pagerState = rememberPagerState(
@@ -74,7 +84,26 @@ class PeriodsFragment : Fragment() {
                         initialPage = 1) // Set the initial page to the weeks.
                     val listStates = List(groups.size) { rememberLazyListState() }
 
-                    if (selectedPeriod != null) {
+                    if (editedWorkoutId != null) {
+                        val editViewModel: EditWorkoutViewModel = viewModel(
+                            key = "edit_workout_${editedWorkoutId}",
+                            factory = EditWorkoutViewModelFactory(requireActivity().application, editedWorkoutId!!)
+                        )
+
+                        BackHandler { editedWorkoutId = null }
+
+                        EditWorkoutScreen(
+                            viewModel = editViewModel,
+                            onBack = {
+                                val id = editedWorkoutId
+                                editedWorkoutId = null
+                                viewModel.loadPeriods()
+                                if (id != null && selectedPeriod != null) {
+                                    viewModel.selectWorkoutForPeek(id)
+                                }
+                            }
+                        )
+                    } else if (selectedPeriod != null) {
                         val mapState by viewModel.mapState.collectAsStateWithLifecycle()
                         PeriodMapScreen(
                             summary = selectedPeriod!!,
@@ -84,7 +113,8 @@ class PeriodsFragment : Fragment() {
                             onWorkoutClick = { id -> viewModel.selectWorkoutForPeek(id) },
                             peekedWorkoutDataWithTrack = peekedWorkoutDataWithTrack,
                             clearPeekSelection = { viewModel.clearPeekSelection() },
-                            onBack = { viewModel.dismissPeriodMap() }
+                            onBack = { viewModel.dismissPeriodMap() },
+                            onEditWorkout = { id -> editedWorkoutId = id }
                         )
                     }
                     else {
