@@ -152,8 +152,12 @@ class WorkoutClustersFragment : Fragment() {
                             val workout = inspectedWorkout!!
                             var workoutToCluster by remember { mutableStateOf<WorkoutData?>(null) }
                             
+                            val aftermathUIState by trackOnMapViewModel.uiState.collectAsStateWithLifecycle()
+                            val enabledTrackTypes by trackOnMapViewModel.enabledTrackTypes.collectAsStateWithLifecycle()
+
                             LaunchedEffect(workout.id) {
                                 viewModel.selectWorkoutForPeek(workout.id)
+                                trackOnMapViewModel.loadAftermathData(workout)
                             }
                             
                             BackHandler { 
@@ -163,23 +167,17 @@ class WorkoutClustersFragment : Fragment() {
 
                             // PERFORMANCE: Immediate feedback using summarized data while high-fidelity samples load
                             val initialTrack = remember(workout) { workout.toMapTrack() }
-                            val isDataLoaded = peekedWithTrack?.workoutData?.id == workout.id
 
                             TrackOnMapScreen(
                                 workoutData = workout,
-                                tracks = if (isDataLoaded) {
-                                    peekedWithTrack?.trackPoints?.let { points ->
-                                        listOf(MapTrack(
-                                            id = workout.id,
-                                            type = TrackType.BEST,
-                                            bSportType = workout.bSportType,
-                                            path = points
-                                        ))
-                                    } ?: listOf(initialTrack)
-                                } else {
-                                    listOf(initialTrack)
-                                },
-                                markers = if (isDataLoaded) peekedWithTrack!!.markers else emptyList(),
+                                tracks = aftermathUIState.tracks.ifEmpty { listOf(initialTrack) },
+                                availableTrackTypes = aftermathUIState.availableTrackTypes,
+                                segments = aftermathUIState.segments,
+                                routes = aftermathUIState.routes,
+                                markers = aftermathUIState.markers,
+                                enabledTrackTypes = enabledTrackTypes,
+                                onToggleTrackType = { trackOnMapViewModel.toggleTrackTypeEnabled(it) },
+                                showTechnicalTracks = true,
                                 headerActions = {
                                     IconButton(onClick = { workoutToCluster = workout }) {
                                         Icon(
