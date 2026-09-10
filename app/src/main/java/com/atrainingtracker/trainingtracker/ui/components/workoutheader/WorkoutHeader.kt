@@ -135,9 +135,10 @@ fun WorkoutHeader(
                         modifier = Modifier.height(30.dp),
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Subtle),
+                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Faint),
                             contentColor = MaterialTheme.colorScheme.primary
-                        )
+                        ),
+                        elevation = null
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -152,7 +153,7 @@ fun WorkoutHeader(
                             Text(
                                 text = data.clusterName,
                                 style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
