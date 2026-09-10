@@ -75,11 +75,27 @@ Executed full clean-room unit test suite:
 ```bash
 ./gradlew testDebugUnitTest
 ```
-**Result**: `BUILD SUCCESSFUL in 1m 46s` (32 actionable tasks, 0 failures, 0 regressions).
+**Result**: `BUILD SUCCESSFUL in 1m 7s` (32 actionable tasks, 0 failures, 0 regressions).
 
 ### 3.2 Targeted Action & Navigation Test
 Executed `WorkoutHeaderDataTest`:
 ```bash
 ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataTest"
 ```
-**Result**: `BUILD SUCCESSFUL in 13s` (all 3 tests passed).
+**Result**: `BUILD SUCCESSFUL` (all 4 tests passed).
+
+### 3.3 On-Device Live Verification (Pixel 10 / Android 17)
+
+Interactive end-to-end verification was conducted on an attached Google Pixel 10 (`66020DLCR002FL`):
+1. **Header Action Ordering**: Edit icon (`ic_table_edit`) is positioned to the left of the 3-dots context menu (`more_vert`).
+2. **Reliable Clickability**: Tapping the edit button triggers immediately without interception by the scrollbar (`[859, 1972][943, 2098]` on Pixel 10).
+3. **Map Navigation Precedence**: Tapping edit from `TrackOnMapScreen` immediately opens `EditWorkoutScreen` and returns cleanly to map view upon dismissal.
+
+---
+
+## 4. Stage Status & Gate Readiness
+
+* **Sub-Task**: [ATT-864](https://rainerblind.atlassian.net/browse/ATT-864) ([Implementation] Iteration 2) in **`Freigabe (Human)`**.
+* **Fix Version**: `V4.9.36` (inherited from [ATT-850](https://rainerblind.atlassian.net/browse/ATT-850)).
+* **Follow-up Bug**: [ATT-861](https://rainerblind.atlassian.net/browse/ATT-861) logged for root-cause fix of FastScrollbar touch interception.
+
