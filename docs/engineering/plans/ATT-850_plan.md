@@ -27,9 +27,9 @@ Under this plan:
 - Add parameter: `onEditWorkout: (() -> Unit)? = null`.
 - In the top-end action row:
   - Place `actions()` (caller-provided actions, e.g. `SwapHoriz`) on the left.
-  - Place `more_vert` export button (when `menuEnabled == true`) in the middle.
-  - When `onEditWorkout != null`, render `IconButton(onClick = onEditWorkout, modifier = Modifier.size(32.dp))` with `R.drawable.ic_table_edit`, tinted with `MaterialTheme.colorScheme.primary` and content description `@string/edit_workout` on the **very right**.
-- This enforces the unified header action layout (`actions` $\rightarrow$ `more_vert` $\rightarrow$ `ic_table_edit`) across all screens.
+  - When `onEditWorkout != null`, render `IconButton(onClick = onEditWorkout, modifier = Modifier.size(32.dp))` with `R.drawable.ic_table_edit`, tinted with `MaterialTheme.colorScheme.primary` and content description `@string/edit_workout`.
+  - Place `more_vert` export button (when `menuEnabled == true`) on the **very right**.
+- This enforces the revised action layout (`actions` $\rightarrow$ `ic_table_edit` $\rightarrow$ `more_vert`), keeping the edit button clearly separated from the screen edge and out of the scrollbar overlay.
 
 ---
 
@@ -88,6 +88,24 @@ Under this plan:
   - Pass `onMapClick = { onMapClick(workoutData) }`
   - Pass `onEditWorkout = { onEditWorkout(workoutData.id) }`
   - Pass `onDeleteRequest = { onDeleteRequest(workoutData.id) }`
+
+---
+
+### Component 5: Map View Edit Navigation Precedence
+#### [MODIFY] [`WorkoutSummariesTabbedFragment.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummariesTabbedFragment.kt) & [`WorkoutSummariesListFragment.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummariesListFragment.kt)
+- Invert condition evaluation order in `Scaffold` body:
+  ```kotlin
+  if (selectedWorkoutIdForEdit != null) {
+      EditWorkoutScreen(...)
+  } else if (selectedWorkoutForDetails != null) {
+      TrackOnMapScreen(...)
+  } else {
+      // List
+  }
+  ```
+- Ensures that tapping the edit action button within `TrackOnMapScreen` immediately launches `EditWorkoutScreen`.
+- Dismissing `EditWorkoutScreen` returns directly to `TrackOnMapScreen`.
+- Pressing Back from `TrackOnMapScreen` returns cleanly to the workout list.
 
 ---
 
