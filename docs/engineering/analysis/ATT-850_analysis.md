@@ -79,7 +79,49 @@ In compact list view ([`WorkoutSummaryCompact.kt`](file:///home/rainer/AndroidSt
 
 ---
 
-## 4. Risk & Invariant Assessment
-- **Zero Accidental Edit Triggers**: Users browsing past workouts will no longer accidentally trigger edit mode when scrolling or tapping a card.
-- **Unified Action Hierarchy**: Uniform button ordering across all workout-related headers eliminates cognitive friction.
-- **Back Stack Integrity**: System Back button from `TrackOnMapScreen` returns directly to the list scroll position without losing context.
+## 5. Iteration 2 Feedback Analysis (ATT-860)
+
+Following initial on-device verification, the user identified three interaction defects:
+1. *Button Order*: Switch the edit workout button and three-dots context menu in `WorkoutHeader`.
+2. *Touch Target Obscuration*: The edit workout button on the right edge was difficult or impossible to tap due to the scrollbar.
+3. *Map Screen Edit Navigation Precedence*: Clicking the edit button in `TrackOnMapScreen` did nothing immediately; `EditWorkoutScreen` only appeared after pressing Back.
+
+### 5.1 Root Cause 1: Button Order in `WorkoutHeader.kt`
+- In `WorkoutHeader.kt` action row:
+  Currently: `actions()` -> `menuEnabled` (3-dots) -> `onEditWorkout` (edit icon).
+- Resolution: Swap `onEditWorkout` and `menuEnabled` so the order becomes:
+  `actions()` -> `onEditWorkout` (`ic_table_edit`) -> `menuEnabled` (`more_vert` / 3-dots).
+  This places the edit icon immediately to the left of the trailing 3-dots export button.
+
+### 5.2 Root Cause 2: Touch Interception by `FastScrollbar.kt`
+- In `WorkoutList.kt`, `FastScrollbar` is aligned to `Alignment.CenterEnd` with `width(32.dp)`.
+- In `FastScrollbar.kt`, `pointerInput(state) { detectDragGestures { ... } }` is applied to the full-height outer container Box rather than strictly to the draggable thumb Box.
+- When `ic_table_edit` was positioned at the very right of `WorkoutHeader` (within 12dp–44dp of the screen edge), touches landed in the 32dp gesture detection overlay of `FastScrollbar`, intercepting the touch events.
+- Immediate Resolution (ATT-850):
+  Swapping `ic_table_edit` to the left of the 3-dots button moves it inward by 32dp (to 44dp–76dp from the screen edge), placing it completely outside the scrollbar's touch zone and making it reliably clickable.
+- Systemic Resolution (New Bug Ticket):
+  Logged ticket **ATT-861** (`[Bug] FastScrollbar full-height touch overlay intercepts clicks on right-aligned list item actions`) with Fix Version `V4.9.36` to constrain gesture detection strictly to the draggable thumb.
+
+### 5.3 Root Cause 3: Screen Precedence in `WorkoutSummariesTabbedFragment.kt` & `WorkoutSummariesListFragment.kt`
+- In both fragments:
+  ```kotlin
+  if (selectedWorkoutForDetails != null) {
+      TrackOnMapScreen(...)
+  } else if (selectedWorkoutIdForEdit != null) {
+      EditWorkoutScreen(...)
+  }
+  ```
+- When `TrackOnMapScreen` is active, `selectedWorkoutForDetails` is non-null. Tapping the edit button sets `selectedWorkoutIdForEdit = id`, but the `if` branch condition `selectedWorkoutForDetails != null` still evaluates first, so `TrackOnMapScreen` stays on screen.
+- When Back was pressed, `selectedWorkoutForDetails` was set to null, causing the next recomposition to hit the `else if (selectedWorkoutIdForEdit != null)` branch, belatedly showing `EditWorkoutScreen`.
+- Resolution:
+  Invert the condition order in both fragments:
+  ```kotlin
+  if (selectedWorkoutIdForEdit != null) {
+      EditWorkoutScreen(...)
+  } else if (selectedWorkoutForDetails != null) {
+      TrackOnMapScreen(...)
+  } else {
+      // List
+  }
+  ```
+  This immediately opens `EditWorkoutScreen` on top of `TrackOnMapScreen`, returns to `TrackOnMapScreen` when edit is dismissed, and returns to the workout list when Back is pressed from `TrackOnMapScreen`.
