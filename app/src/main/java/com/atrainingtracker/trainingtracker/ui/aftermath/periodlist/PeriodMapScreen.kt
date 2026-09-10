@@ -82,6 +82,7 @@ import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.helpers.combineAndShare
+import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.map.MapTrack
@@ -220,7 +221,10 @@ fun PeriodMapScreen(
                     workoutData = workoutData,
                     tracks = peekedTracks,
                     modifier = Modifier,
-                    useStatusBarsPadding = false
+                    useStatusBarsPadding = false,
+                    onClusterClick = { clusterId ->
+                        WorkoutNavigationEvents.triggerCluster(clusterId)
+                    }
                 )
             }
         }

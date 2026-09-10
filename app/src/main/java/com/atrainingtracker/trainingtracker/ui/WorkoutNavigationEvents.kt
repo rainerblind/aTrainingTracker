@@ -24,9 +24,15 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
+/**
+ * Central decoupled navigation event bus for workout-related destinations (ATT-503).
+ *
+ * Facilitates loosely coupled communication between child composable screens
+ * and the hosting Activity navigation controller.
+ */
 object WorkoutNavigationEvents {
     private val _navigateToEdit = MutableSharedFlow<Long?>(
-        replay = 1, // <--- This makes the event "sticky"
+        replay = 1, // Sticky event
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
     val navigateToEdit = _navigateToEdit.asSharedFlow()
@@ -39,8 +45,33 @@ object WorkoutNavigationEvents {
         _navigateToEdit.tryEmit(workoutId)
     }
 
-    // Clear the event after it's handled
+    // Clear the edit event after it's handled
     fun reset() {
         _navigateToEdit.tryEmit(null)
+    }
+
+    private val _navigateToCluster = MutableSharedFlow<Long?>(
+        replay = 1, // Sticky event
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val navigateToCluster = _navigateToCluster.asSharedFlow()
+
+    @JvmStatic
+    val navigateToClusterLiveData: LiveData<Long?> = _navigateToCluster.asLiveData()
+
+    /**
+     * Triggers navigation to the cluster detail heatmap screen for [clusterId].
+     */
+    @JvmStatic
+    fun triggerCluster(clusterId: Long) {
+        _navigateToCluster.tryEmit(clusterId)
+    }
+
+    /**
+     * Clears the active cluster navigation event after consumption.
+     */
+    @JvmStatic
+    fun resetCluster() {
+        _navigateToCluster.tryEmit(null)
     }
 }

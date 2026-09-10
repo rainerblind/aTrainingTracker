@@ -26,6 +26,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterStats
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
@@ -279,6 +280,21 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
             
             _isRecalculating.value = false
             _recalculationFinished.emit(Unit)
+        }
+    }
+
+    /**
+     * Resolves and selects a [WorkoutCluster] by its unique [clusterId] (ATT-503).
+     *
+     * Queries in-memory [allClusters] first; falls back to [WorkoutClusterDatabaseManager] on [Dispatchers.IO].
+     *
+     * @param clusterId The database ID of the target cluster.
+     */
+    fun selectClusterById(clusterId: Long) {
+        viewModelScope.launch {
+            val cluster = allClusters.value.find { it.id == clusterId }
+                ?: repository.getClusterById(clusterId)
+            selectCluster(cluster)
         }
     }
 

@@ -94,7 +94,8 @@ fun WorkoutTabsScreen(
     allWorkouts: List<WorkoutData> = workouts,
     onApplyFilterCriteria: (WorkoutFilterCriteria) -> Unit = {},
     onClearAllFilters: () -> Unit = {},
-    onUpdateFilterCriteria: ((WorkoutFilterCriteria) -> WorkoutFilterCriteria) -> Unit = {}
+    onUpdateFilterCriteria: ((WorkoutFilterCriteria) -> WorkoutFilterCriteria) -> Unit = {},
+    onClusterClick: ((Long) -> Unit)? = null
 ) {
     val tabs = listOf(
         stringResource(R.string.workout_summaries_tab_all),
@@ -215,7 +216,8 @@ fun WorkoutTabsScreen(
                     isCompactView = isCompactView,
                     // Use a Spacer or contentPadding that reacts to the offset
                     appBarOffsetPx = connection.appBarOffset,
-                    headerHeightPx = appBarMaxHeightPx.toFloat()
+                    headerHeightPx = appBarMaxHeightPx.toFloat(),
+                    onClusterClick = onClusterClick
                 )
             }
 

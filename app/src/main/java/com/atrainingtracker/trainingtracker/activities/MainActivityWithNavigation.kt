@@ -488,6 +488,23 @@ class MainActivityWithNavigation :
                 .replace(R.id.content, fragment, tag)
                 .commit()
         }
+
+        WorkoutNavigationEvents.navigateToClusterLiveData.observe(this) { clusterId: Long? ->
+            if (clusterId == null || clusterId <= 0) return@observe
+
+            mSelectedFragmentId = R.id.drawer_my_locations
+            mDrawerController.selectedItemId = mSelectedFragmentId
+            val fragment = WorkoutClustersFragment.newInstance(clusterId)
+            mFragment = fragment
+            val tag = WorkoutClustersFragment.TAG
+
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.content, fragment, tag)
+                .addToBackStack(null)
+                .commit()
+
+            WorkoutNavigationEvents.resetCluster()
+        }
     }
 
     private fun getPermissions(): List<String> {

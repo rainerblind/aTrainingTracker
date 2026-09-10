@@ -283,4 +283,44 @@ class WorkoutClustersViewModelTest {
         assertTrue(viewModel.clusterWorkouts.value.isEmpty())
         assertNull(viewModel.peekedWorkoutDataWithTrack.value)
     }
+
+    @Test
+    fun selectClusterById_whenClusterInList_selectsDirectly() = runTest(testDispatcher) {
+        val cluster = createCluster(42L, "Morning Ride")
+        allClustersFlow.value = listOf(cluster)
+
+        coEvery { mockClusterRepo.getWorkoutsForCluster(42L) } returns emptyList()
+        coEvery { mockRoutesRepo.getRouteByClusterId(42L) } returns null
+
+        val viewModel = WorkoutClustersViewModel(mockApplication)
+        activeViewModel = viewModel
+        advanceUntilIdle()
+
+        viewModel.selectClusterById(42L)
+        advanceUntilIdle()
+
+        assertEquals(42L, viewModel.selectedCluster.value?.id)
+        assertEquals("Morning Ride", viewModel.selectedCluster.value?.name)
+    }
+
+    @Test
+    fun selectClusterById_whenClusterNotInList_queriesRepository() = runTest(testDispatcher) {
+        val cluster = createCluster(99L, "Evening Commute")
+        allClustersFlow.value = emptyList()
+
+        coEvery { mockClusterRepo.getClusterById(99L) } returns cluster
+        coEvery { mockClusterRepo.getWorkoutsForCluster(99L) } returns emptyList()
+        coEvery { mockRoutesRepo.getRouteByClusterId(99L) } returns null
+
+        val viewModel = WorkoutClustersViewModel(mockApplication)
+        activeViewModel = viewModel
+        advanceUntilIdle()
+
+        viewModel.selectClusterById(99L)
+        advanceUntilIdle()
+
+        assertEquals(99L, viewModel.selectedCluster.value?.id)
+        assertEquals("Evening Commute", viewModel.selectedCluster.value?.name)
+    }
 }
+

@@ -63,7 +63,8 @@ fun WorkoutSummary(
     onDeleteRequest: () -> Unit,
     onEditWorkout: () -> Unit,
     onMapClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClusterClick: ((Long) -> Unit)? = null
 ) {
     // When the workout is not yet finished (properly), we show it with an alpha of 0.5
     val contentAlpha = if (workoutData.headerData.finished) TTAlpha.High else 0.5f
@@ -87,7 +88,8 @@ fun WorkoutSummary(
             onExport = onExport,
             onSaveAsRoute = onSaveAsRoute,
             onDeleteRequest = onDeleteRequest,
-            menuEnabled = workoutData.headerData.finished
+            menuEnabled = workoutData.headerData.finished,
+            onClusterClick = onClusterClick
         )
 
         HorizontalDivider(

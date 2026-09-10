@@ -209,6 +209,7 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                                     enabledTrackTypes = enabledTrackTypes,
                                     onToggleTrackType = { trackOnMapViewModel.toggleTrackTypeEnabled(it) },
                                     showTechnicalTracks = true,
+                                    onClusterClick = { clusterId -> WorkoutNavigationEvents.triggerCluster(clusterId) },
                                     modifier = Modifier
                                 )
 
@@ -278,7 +279,8 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                                     allWorkouts = allWorkouts,
                                     onApplyFilterCriteria = { viewModel.setFilterCriteria(it) },
                                     onClearAllFilters = { viewModel.clearFilterCriteria() },
-                                    onUpdateFilterCriteria = { viewModel.updateFilterCriteria(it) }
+                                    onUpdateFilterCriteria = { viewModel.updateFilterCriteria(it) },
+                                    onClusterClick = { clusterId -> WorkoutNavigationEvents.triggerCluster(clusterId) }
                                 )
                             }
                         }

@@ -70,7 +70,18 @@ class WorkoutClustersFragment : Fragment() {
 
     companion object {
         const val TAG = "WorkoutClustersFragment"
-        fun newInstance() = WorkoutClustersFragment()
+        const val ARG_CLUSTER_ID = "ARG_CLUSTER_ID"
+
+        /**
+         * Creates a new instance of [WorkoutClustersFragment], optionally targeting a specific [clusterId] (ATT-503).
+         */
+        fun newInstance(clusterId: Long? = null) = WorkoutClustersFragment().apply {
+            if (clusterId != null && clusterId > 0) {
+                arguments = Bundle().apply {
+                    putLong(ARG_CLUSTER_ID, clusterId)
+                }
+            }
+        }
     }
 
     private val viewModel: WorkoutClustersViewModel by viewModels()
@@ -104,6 +115,13 @@ class WorkoutClustersFragment : Fragment() {
                     val unclusteredListState = rememberLazyListState()
                     
                     var clusterToDelete by remember { mutableStateOf<WorkoutCluster?>(null) }
+
+                    val initialClusterId = remember { arguments?.getLong(ARG_CLUSTER_ID, -1L)?.takeIf { it > 0 } }
+                    LaunchedEffect(initialClusterId) {
+                        if (initialClusterId != null) {
+                            viewModel.selectClusterById(initialClusterId)
+                        }
+                    }
 
                     LaunchedEffect(Unit) {
                         viewModel.recalculationFinished.collectLatest {
@@ -178,6 +196,10 @@ class WorkoutClustersFragment : Fragment() {
                                 enabledTrackTypes = enabledTrackTypes,
                                 onToggleTrackType = { trackOnMapViewModel.toggleTrackTypeEnabled(it) },
                                 showTechnicalTracks = true,
+                                onClusterClick = { clusterId ->
+                                    viewModel.selectClusterById(clusterId)
+                                    inspectedWorkout = null
+                                },
                                 headerActions = {
                                     IconButton(onClick = { workoutToCluster = workout }) {
                                         Icon(
@@ -256,17 +278,31 @@ class WorkoutClustersFragment : Fragment() {
                                         },
                                         isCompactView = isCompactView,
                                         appBarOffsetPx = 0,
-                                        headerHeightPx = 0f
+                                        headerHeightPx = 0f,
+                                        onClusterClick = { viewingWorkoutsForCluster = null }
                                     )
                                 }
                             }
                         }
                         selectedCluster != null -> {
-                            BackHandler { viewModel.selectCluster(null) }
+                            val isDirectNavigation = initialClusterId != null
+                            BackHandler {
+                                if (isDirectNavigation) {
+                                    parentFragmentManager.popBackStack()
+                                } else {
+                                    viewModel.selectCluster(null)
+                                }
+                            }
                             WorkoutClusterHeatmapScreen(
                                 cluster = selectedCluster!!,
                                 viewModel = viewModel,
-                                onBack = { viewModel.selectCluster(null) },
+                                onBack = {
+                                    if (isDirectNavigation) {
+                                        parentFragmentManager.popBackStack()
+                                    } else {
+                                        viewModel.selectCluster(null)
+                                    }
+                                },
                                 onHitCountClick = { viewingWorkoutsForCluster = it }
                             )
                         }

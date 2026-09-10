@@ -962,14 +962,15 @@ fun WorkoutClusterDetailDashboard(
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     modifier = Modifier.height(32.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Faint),
+                        contentColor = MaterialTheme.colorScheme.primary
+                    ),
+                    elevation = null
                 ) {
                     Text(
                         text = pluralStringResource(R.plurals.cluster_recordings, cluster.hitCount, cluster.hitCount),
                         style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
 

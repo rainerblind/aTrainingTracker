@@ -28,6 +28,7 @@ object TTAlpha {
     const val Disabled = 0.38f
     const val Subtle = 0.12f
     const val Ghost = 0.1f
+    const val Faint = 0.05f
 }
 
 // Light Theme Colors from color.xml
