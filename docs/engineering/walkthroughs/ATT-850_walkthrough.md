@@ -28,8 +28,9 @@ Under ATT-850:
 
 ### 2.1 Action Row & Edit Action Encapsulation ([`WorkoutHeader.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutheader/WorkoutHeader.kt))
 * Added parameter `onEditWorkout: (() -> Unit)? = null`.
-* In top-end action row, placed `actions()` on the left, `more_vert` export button in the middle, and `IconButton` with `R.drawable.ic_table_edit` on the **very right** whenever `onEditWorkout != null`.
-* Enforces unified action ordering across `WorkoutHeader`, `TrackOnMapScreen`, and `ClusterSummaryHeader`.
+* In top-end action row, placed `actions()` on the left, `IconButton` with `R.drawable.ic_table_edit` in the middle whenever `onEditWorkout != null`, and `more_vert` export button on the **very right** (when `menuEnabled == true`).
+* Resulting layout: `actions` $\rightarrow$ `ic_table_edit` $\rightarrow$ `more_vert`.
+* Shifts the edit button 32dp away from the screen edge, ensuring it is cleanly accessible and completely avoids the fast scrollbar touch overlay.
 
 ### 2.2 Click-to-Map Navigation & Header Edit Wiring ([`WorkoutSummary.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummary.kt))
 * Re-wired `WorkoutHeader`:
@@ -54,6 +55,16 @@ Under ATT-850:
   * Body click triggers `onMapClick` without triggering edit or cluster navigation.
   * Edit button click triggers `onEditWorkout` without triggering map or cluster navigation.
   * Cluster button click triggers `onClusterClick` without triggering map or edit navigation.
+* Added unit test `mapScreenNavigationPrecedence_presentsEditImmediately_andRestoresMapOnDismiss` validating:
+  * Tapping edit within `TrackOnMapScreen` immediately resolves active screen to `EDIT`.
+  * Dismissing editor directly restores `MAP` view.
+  * Pressing back from `MAP` view cleanly restores `LIST` view.
+
+### 2.6 Map View Edit Navigation Precedence ([`WorkoutSummariesTabbedFragment.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummariesTabbedFragment.kt) & [`WorkoutSummariesListFragment.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummariesListFragment.kt))
+* Inverted condition evaluation order: `if (selectedWorkoutIdForEdit != null)` evaluated before `else if (selectedWorkoutForDetails != null)`.
+* Tapping edit in `TrackOnMapScreen` immediately opens `EditWorkoutScreen` without requiring back navigation.
+* Dismissing `EditWorkoutScreen` returns directly to `TrackOnMapScreen`.
+* Pressing Back from `TrackOnMapScreen` returns cleanly to the workout list at the preserved scroll position.
 
 ---
 
