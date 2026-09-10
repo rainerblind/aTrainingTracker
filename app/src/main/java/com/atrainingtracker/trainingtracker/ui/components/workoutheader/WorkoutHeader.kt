@@ -250,6 +250,19 @@ fun WorkoutHeader(
                 // Custom actions provided by caller
                 actions()
 
+                if (onEditWorkout != null) {
+                    IconButton(
+                        onClick = onEditWorkout,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_table_edit),
+                            contentDescription = stringResource(R.string.edit_workout),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
                 if (menuEnabled) {
                     Box {
                         IconButton(
@@ -325,19 +338,6 @@ fun WorkoutHeader(
                                 )
                             }
                         }
-                    }
-                }
-
-                if (onEditWorkout != null) {
-                    IconButton(
-                        onClick = onEditWorkout,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_table_edit),
-                            contentDescription = stringResource(R.string.edit_workout),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
                     }
                 }
             }

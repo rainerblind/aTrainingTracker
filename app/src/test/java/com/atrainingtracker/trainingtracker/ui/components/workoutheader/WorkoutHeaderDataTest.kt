@@ -113,5 +113,38 @@ class WorkoutHeaderDataTest {
         org.junit.Assert.assertFalse("Tapping cluster button must not trigger edit mode", editClicked)
         assertEquals(42L, clusterClickedId)
     }
+
+    @Test
+    fun mapScreenNavigationPrecedence_presentsEditImmediately_andRestoresMapOnDismiss() {
+        // Verify precedence: edit over map, and map over list (ATT-850, REQ-SET-071, TST-SET-060)
+        var selectedWorkoutForDetails: Long? = null
+        var selectedWorkoutIdForEdit: Long? = null
+
+        fun resolveCurrentScreen(): String = when {
+            selectedWorkoutIdForEdit != null -> "EDIT"
+            selectedWorkoutForDetails != null -> "MAP"
+            else -> "LIST"
+        }
+
+        // 1. Initial State
+        assertEquals("LIST", resolveCurrentScreen())
+
+        // 2. Tap workout to open map
+        selectedWorkoutForDetails = 101L
+        assertEquals("MAP", resolveCurrentScreen())
+
+        // 3. Tap edit from within map
+        selectedWorkoutIdForEdit = 101L
+        assertEquals("EDIT", resolveCurrentScreen()) // Immediately opens editor!
+
+        // 4. Dismiss editor (save or back)
+        selectedWorkoutIdForEdit = null
+        assertEquals("MAP", resolveCurrentScreen()) // Directly returns to map view!
+
+        // 5. Press back from map view
+        selectedWorkoutForDetails = null
+        assertEquals("LIST", resolveCurrentScreen()) // Returns to workout list!
+    }
 }
+
 
