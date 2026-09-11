@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.systemBars
+import com.atrainingtracker.trainingtracker.ui.components.FastScrollableBox
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -71,29 +72,35 @@ fun PeriodList(
             hint = stringResource(R.string.no_periods_available_hint)
         )
     } else {
-        LazyColumn(
+        FastScrollableBox(
             state = scrollState,
             modifier = modifier,
-            contentPadding = PaddingValues(
-                top = 8.dp,
-                bottom = bottomPadding + 16.dp,
-                start = 8.dp,
-                end = 8.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            bottomPadding = bottomPadding
         ) {
-            items(
-                items = periods,
-                key = { "${it.periodType.name}_${it.startTimestampS}" }
-            ) { periodSummary ->
-                PeriodSummaryCard(
-                    summary = periodSummary,
-                    isPlayServiceAvailable = isPlayServiceAvailable,
-                    onHeaderClick = onHeaderClick,
-                    onMapClick = { onMapClick(periodSummary) },
-                    onSportClick = onSportClick,
-                    onLongestWorkoutClick = onLongestWorkoutClick
-                )
+            LazyColumn(
+                state = scrollState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = 8.dp,
+                    bottom = bottomPadding + 16.dp,
+                    start = 8.dp,
+                    end = 8.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(
+                    items = periods,
+                    key = { "${it.periodType.name}_${it.startTimestampS}" }
+                ) { periodSummary ->
+                    PeriodSummaryCard(
+                        summary = periodSummary,
+                        isPlayServiceAvailable = isPlayServiceAvailable,
+                        onHeaderClick = onHeaderClick,
+                        onMapClick = { onMapClick(periodSummary) },
+                        onSportClick = onSportClick,
+                        onLongestWorkoutClick = onLongestWorkoutClick
+                    )
+                }
             }
         }
     }

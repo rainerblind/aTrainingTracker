@@ -27,10 +27,45 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+
+/**
+ * A shared layout container that overlays [FastScrollbar] flush on the right edge of a scrollable composable (ATT-866).
+ *
+ * @param state The [LazyListState] governing the contained list.
+ * @param modifier Modifier applied to the outer Box container.
+ * @param topPadding Top inset padding applied to the scrollbar (e.g. for collapsing headers).
+ * @param bottomPadding Bottom inset padding applied to the scrollbar (e.g. for system navigation bar or FABs).
+ * @param thumbColor Color of the scrollbar thumb pill.
+ * @param trackColor Color of the background scrollbar track.
+ * @param content Composable lambda containing the [androidx.compose.foundation.lazy.LazyColumn] or other content.
+ */
+@Composable
+fun FastScrollableBox(
+    state: LazyListState,
+    modifier: Modifier = Modifier,
+    topPadding: Dp = 0.dp,
+    bottomPadding: Dp = 0.dp,
+    thumbColor: Color = MaterialTheme.colorScheme.primary,
+    trackColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
+    content: @Composable BoxScope.() -> Unit
+) {
+    Box(modifier = modifier.fillMaxSize()) {
+        content()
+        FastScrollbar(
+            state = state,
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(top = topPadding, bottom = bottomPadding),
+            thumbColor = thumbColor,
+            trackColor = trackColor
+        )
+    }
+}
 
 /**
  * A draggable fast-scroll bar for LazyColumn (ATT-303).

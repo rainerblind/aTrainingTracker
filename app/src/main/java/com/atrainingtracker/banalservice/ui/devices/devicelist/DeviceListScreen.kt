@@ -41,6 +41,7 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.helpers.UIHelper
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
+import com.atrainingtracker.trainingtracker.ui.components.FastScrollableBox
 
 @Composable
 fun DeviceListScreen(
@@ -93,24 +94,32 @@ fun DeviceListScreen(
                 hint = "" // Information is now prominently in the header
             )
         } else {
-            LazyColumn(
+            val scrollbarTop = if (isSearching) 0.dp else topPadding
+            FastScrollableBox(
                 state = scrollState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = if (isSearching) 8.dp else topPadding + 8.dp,
-                    bottom = navigationBarBottom + 16.dp,
-                    start = 8.dp,
-                    end = 8.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                topPadding = scrollbarTop,
+                bottomPadding = navigationBarBottom
             ) {
-                items(devices, key = { it.id }) { device ->
-                    DeviceItem(
-                        device = device,
-                        onPairClick = { viewModel.onPairedChanged(device.id, !device.isPaired) },
-                        onItemClick = { onDeviceSelected(device.id) },
-                        onLongClick = { onDeleteDevice(device) }
-                    )
+                LazyColumn(
+                    state = scrollState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        top = if (isSearching) 8.dp else topPadding + 8.dp,
+                        bottom = navigationBarBottom + 16.dp,
+                        start = 8.dp,
+                        end = 8.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(devices, key = { it.id }) { device ->
+                        DeviceItem(
+                            device = device,
+                            onPairClick = { viewModel.onPairedChanged(device.id, !device.isPaired) },
+                            onItemClick = { onDeviceSelected(device.id) },
+                            onLongClick = { onDeleteDevice(device) }
+                        )
+                    }
                 }
             }
         }
