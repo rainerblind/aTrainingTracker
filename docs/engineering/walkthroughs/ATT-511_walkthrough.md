@@ -60,7 +60,16 @@ Key capabilities delivered:
 
 ---
 
-## 3. Verification & Validation Results
+## 3. Iterative UI Layout Refinements (User Testing Feedback)
+
+Following physical device evaluation on Google Pixel 10:
+1. **Scaffold & Status Bar Boundary**: Constrained the sheet container with `Modifier.statusBarsPadding()` so that when expanded/drawn up, the sheet is drawn strictly up to the status bar and never overlays system status bar elements.
+2. **Header Simplification & Row Order Toggle**: Removed redundant close (`'X'`) button; toggled the header rows so that the primary action bar `(Cancel) (Store)` sits at the top, directly followed by the sequential navigation bar `< Previous | Lap X / Y | Next >`.
+3. **Initial Popup Height & Map Revelation**: Configured partial expansion (`skipPartiallyExpanded = false`) so that the initial popup displays the edit controls down to the comments text field with its bottom aligned to the top of the navigation bar, keeping the map hidden until the user slides or scrolls upwards.
+
+---
+
+## 4. Verification & Validation Results
 
 ### Automated Clean-Room Unit Tests
 Executed via `./gradlew testDebugUnitTest`:
@@ -68,4 +77,4 @@ Executed via `./gradlew testDebugUnitTest`:
 2. `WorkoutRepositoryLapUpdateTest`: **2 / 2 passed** (100%)
 3. `WorkoutLapsTest`: **7 / 7 passed** (100%)
 4. `TranslationParityTest`: **7 / 7 passed** (100% key parity across all 9 locales)
-5. Full clean-room test suite: **BUILD SUCCESSFUL in 56s** across all test modules with 0 regressions.
+5. Full clean-room test suite: **BUILD SUCCESSFUL in 1m 6s** across all test modules with 0 regressions.

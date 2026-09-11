@@ -103,37 +103,90 @@ fun LapEditBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
-        modifier = modifier
+        modifier = modifier.statusBarsPadding()
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
+                .imePadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // 1. Top Header Row: Title and Dismiss button
+            // 1. Top Header: Title
+            Text(
+                text = stringResource(R.string.edit_lap_title, lapDisplayIndex),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            // 2. Action Bar: Cancel & Store
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onDismissRequest,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.cancel))
+                }
+                Button(
+                    onClick = {
+                        saveCurrentLap()
+                        onDismissRequest()
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.save))
+                }
+            }
+
+            // 3. Sequential Lap Navigation Bar (< Previous | X / Y | Next >)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                OutlinedButton(
+                    onClick = {
+                        if (currentIndex > 0) {
+                            saveCurrentLap()
+                            currentLapNr = laps[currentIndex - 1].lapNr
+                        }
+                    },
+                    enabled = currentIndex > 0
+                ) {
+                    Icon(Icons.Default.ChevronLeft, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(stringResource(R.string.previous_lap))
+                }
+
                 Text(
-                    text = stringResource(R.string.edit_lap_title, lapDisplayIndex),
-                    style = MaterialTheme.typography.titleLarge,
+                    text = "$lapDisplayIndex / $totalLaps",
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                IconButton(onClick = onDismissRequest) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = stringResource(R.string.cancel)
-                    )
+
+                OutlinedButton(
+                    onClick = {
+                        if (currentIndex < totalLaps - 1) {
+                            saveCurrentLap()
+                            currentLapNr = laps[currentIndex + 1].lapNr
+                        }
+                    },
+                    enabled = currentIndex < totalLaps - 1
+                ) {
+                    Text(stringResource(R.string.next_lap))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(Icons.Default.ChevronRight, contentDescription = null)
                 }
             }
 
-            // 2. Split Metrics Card
+            // 4. Split Metrics Card
             val speedPaceFormatted = if (isRunningSport) {
                 if (currentLap.speedAverageMps > 0.001) {
                     formatters.pace.format_with_units(1.0 / currentLap.speedAverageMps)
@@ -182,7 +235,7 @@ fun LapEditBottomSheet(
                 }
             }
 
-            // 3. Quick-Tag Preset Chips
+            // 5. Quick-Tag Preset Chips
             val quickTags = listOf(
                 stringResource(R.string.quick_tag_warmup),
                 stringResource(R.string.quick_tag_interval),
@@ -211,7 +264,7 @@ fun LapEditBottomSheet(
                 }
             }
 
-            // 4. Text Fields: Name & Description
+            // 6. Text Fields: Name & Description
             OutlinedTextField(
                 value = nameText,
                 onValueChange = { nameText = it },
@@ -240,7 +293,7 @@ fun LapEditBottomSheet(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // 5. Segment Map Preview / Fallback
+            // 7. Segment Map Preview / Fallback
             if (isPlayServiceAvailable && workoutData.mapPolyline.isNotEmpty()) {
                 val context = LocalContext.current
                 val allPoints = remember(workoutData.mapPolyline) {
@@ -352,71 +405,8 @@ fun LapEditBottomSheet(
                 NoGpsTrackCard()
             }
 
-            // 6. Sequential Lap Navigation Bar (< Previous | X / Y | Next >)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedButton(
-                    onClick = {
-                        if (currentIndex > 0) {
-                            saveCurrentLap()
-                            currentLapNr = laps[currentIndex - 1].lapNr
-                        }
-                    },
-                    enabled = currentIndex > 0
-                ) {
-                    Icon(Icons.Default.ChevronLeft, contentDescription = null)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.previous_lap))
-                }
-
-                Text(
-                    text = "$lapDisplayIndex / $totalLaps",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                OutlinedButton(
-                    onClick = {
-                        if (currentIndex < totalLaps - 1) {
-                            saveCurrentLap()
-                            currentLapNr = laps[currentIndex + 1].lapNr
-                        }
-                    },
-                    enabled = currentIndex < totalLaps - 1
-                ) {
-                    Text(stringResource(R.string.next_lap))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(Icons.Default.ChevronRight, contentDescription = null)
-                }
-            }
-
-            // 7. Action Bar: Cancel & Save
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onDismissRequest,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.cancel))
-                }
-                Button(
-                    onClick = {
-                        saveCurrentLap()
-                        onDismissRequest()
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.save))
-                }
-            }
+            // Bottom Spacer for generous scrolling breathing room above navigation bar
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
