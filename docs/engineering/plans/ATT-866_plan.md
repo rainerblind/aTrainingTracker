@@ -11,136 +11,170 @@
 
 ## 1. Overview & Architecture
 
-Following the verification of the edge-aligned, continuous drag-accumulating `FastScrollbar` in `WorkoutList` (under ATT-861), ATT-866 scales this fast-scroll capability across all 7 primary `LazyColumn` collection screens in the application:
+Following user alignment, we adopt **Approach 1 (`FastScrollableBox`)** to maximize code sharing and eliminate boilerplate across all collection views. 
 
-1. **Periods (Zeiträume)**: [`PeriodList.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodList.kt)
-2. **Routes (Routen)**: [`RouteList.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteList.kt)
-3. **Favorite Tracks (Lieblingsstrecken)**: [`WorkoutClustersList.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersList.kt) (`WorkoutClustersClusteredList` & `UnclusteredWorkoutsList`)
-4. **Segments (Segmente)**: [`SegmentList.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/segmentlist/SegmentList.kt)
-5. **Equipment (Ausrüstung)**: [`EquipmentTabsScreen.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/equipment/EquipmentTabsScreen.kt)
-6. **Sport Types (Sportarten)**: [`SportTypesTabsScreen.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/banalservice/ui/sporttype/SportTypesTabsScreen.kt)
-7. **Connected Devices (Geräte)**: [`DeviceListScreen.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/banalservice/ui/devices/devicelist/DeviceListScreen.kt)
+Instead of manually duplicating `Box(modifier = Modifier.fillMaxSize())` and `FastScrollbar(modifier = Modifier.align(Alignment.CenterEnd)...)` across every screen, we introduce a shared container composable `FastScrollableBox` in [`FastScrollbar.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/FastScrollbar.kt). This shared container encapsulates the Box overlay and flush right-edge alignment while accepting screen-specific `topPadding` and `bottomPadding` insets.
 
 ---
 
 ## 2. Proposed Changes by Component
 
-### 2.1 Periods View ([`PeriodList.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodList.kt))
-* **Change**: Wrap non-empty `LazyColumn` inside a `Box(modifier = modifier.fillMaxSize())`.
-* **Add FastScrollbar**:
+### 2.1 Shared Component ([`FastScrollbar.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/FastScrollbar.kt))
+* **New Composable**: `FastScrollableBox`:
   ```kotlin
-  FastScrollbar(
-      state = scrollState,
-      modifier = Modifier
-          .align(Alignment.CenterEnd)
-          .padding(bottom = bottomPadding)
-  )
+  /**
+   * A shared layout container that overlays [FastScrollbar] flush on the right edge of a scrollable composable.
+   *
+   * @param state The [LazyListState] governing the contained list.
+   * @param modifier Modifier applied to the outer Box container.
+   * @param topPadding Top inset padding applied to the scrollbar (e.g. for collapsing headers).
+   * @param bottomPadding Bottom inset padding applied to the scrollbar (e.g. for system navigation bar or FABs).
+   * @param thumbColor Color of the scrollbar thumb pill.
+   * @param trackColor Color of the background scrollbar track.
+   * @param content Composable lambda containing the [LazyColumn] or other content.
+   */
+  @Composable
+  fun FastScrollableBox(
+      state: LazyListState,
+      modifier: Modifier = Modifier,
+      topPadding: Dp = 0.dp,
+      bottomPadding: Dp = 0.dp,
+      thumbColor: Color = MaterialTheme.colorScheme.primary,
+      trackColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
+      content: @Composable BoxScope.() -> Unit
+  ) {
+      Box(modifier = modifier.fillMaxSize()) {
+          content()
+          FastScrollbar(
+              state = state,
+              modifier = Modifier
+                  .align(Alignment.CenterEnd)
+                  .padding(top = topPadding, bottom = bottomPadding),
+              thumbColor = thumbColor,
+              trackColor = trackColor
+          )
+      }
+  }
   ```
-* **Preserved Behavior**: `EmptyStatePlaceholder` remains unaffected when periods are empty; bottom system bar padding is preserved.
 
 ---
 
-### 2.2 Routes View ([`RouteList.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteList.kt))
-* **Change**: Wrap `LazyColumn` in a `Box(modifier = Modifier.fillMaxSize())`.
-* **Add FastScrollbar**:
+### 2.2 Periods View ([`PeriodList.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodList.kt))
+* **Change**: Wrap non-empty list with `FastScrollableBox`:
+  ```kotlin
+  FastScrollableBox(
+      state = scrollState,
+      modifier = modifier,
+      bottomPadding = bottomPadding
+  ) {
+      LazyColumn(state = scrollState, ...) { ... }
+  }
+  ```
+
+---
+
+### 2.3 Routes View ([`RouteList.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteList.kt))
+* **Change**: Wrap list with `FastScrollableBox`:
   ```kotlin
   val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
-  FastScrollbar(
+  FastScrollableBox(
       state = scrollState,
-      modifier = Modifier
-          .align(Alignment.CenterEnd)
-          .padding(top = topPadding, bottom = bottomPadding)
-  )
+      topPadding = topPadding,
+      bottomPadding = bottomPadding
+  ) {
+      LazyColumn(state = scrollState, ...) { ... }
+  }
   ```
-* **Preserved Behavior**: Collapsing toolbar connection (`appBarOffsetPx`) dynamically offsets the top bounds of the scrollbar in sync with the header.
 
 ---
 
-### 2.3 Favorite Tracks / Clusters View ([`WorkoutClustersList.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersList.kt))
+### 2.4 Favorite Tracks / Clusters View ([`WorkoutClustersList.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersList.kt))
 * **Change**:
-  * In `WorkoutClustersClusteredList`: Wrap `LazyColumn` in a `Box(modifier = Modifier.fillMaxSize())`.
+  * In `WorkoutClustersClusteredList`:
     ```kotlin
     val topPadding = headerHeightDp + currentAppBarOffsetDp
-    FastScrollbar(
+    FastScrollableBox(
         state = scrollState,
-        modifier = Modifier
-            .align(Alignment.CenterEnd)
-            .padding(top = topPadding, bottom = 80.dp)
-    )
+        topPadding = topPadding,
+        bottomPadding = 80.dp // Space for FAB
+    ) {
+        LazyColumn(state = scrollState, ...) { ... }
+    }
     ```
-  * In `UnclusteredWorkoutsList`: Apply identical `Box` wrapping and `FastScrollbar`.
-* **Preserved Behavior**: Bottom padding of `80.dp` ensures the scrollbar does not clip behind the FloatingActionButton (FAB).
+  * In `UnclusteredWorkoutsList`:
+    Apply identical `FastScrollableBox` wrapping with `80.dp` bottom padding.
 
 ---
 
-### 2.4 Segments View ([`SegmentList.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/segmentlist/SegmentList.kt))
-* **Change**: Wrap `LazyColumn` in a `Box(modifier = Modifier.fillMaxSize())`.
-* **Add FastScrollbar**:
+### 2.5 Segments View ([`SegmentList.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/segmentlist/SegmentList.kt))
+* **Change**: Wrap list with `FastScrollableBox`:
   ```kotlin
   val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
-  FastScrollbar(
+  FastScrollableBox(
       state = scrollState,
-      modifier = Modifier
-          .align(Alignment.CenterEnd)
-          .padding(top = topPadding, bottom = bottomPadding)
-  )
+      topPadding = topPadding,
+      bottomPadding = bottomPadding
+  ) {
+      LazyColumn(state = scrollState, ...) { ... }
+  }
   ```
-* **Preserved Behavior**: Collapsing app bar offset and system bottom padding preserved; Strava badge and segment cards untouched.
 
 ---
 
-### 2.5 Equipment View ([`EquipmentTabsScreen.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/equipment/EquipmentTabsScreen.kt))
-* **Change**: In `EquipmentList`, add default parameter `scrollState: LazyListState = rememberLazyListState()`, wrap `LazyColumn` in a `Box(modifier = Modifier.fillMaxSize())`.
-* **Add FastScrollbar**:
+### 2.6 Equipment View ([`EquipmentTabsScreen.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/equipment/EquipmentTabsScreen.kt))
+* **Change**: Expose `scrollState: LazyListState = rememberLazyListState()` in `EquipmentList` and wrap with `FastScrollableBox`:
   ```kotlin
   val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
-  FastScrollbar(
+  FastScrollableBox(
       state = scrollState,
-      modifier = Modifier
-          .align(Alignment.CenterEnd)
-          .padding(top = topPadding, bottom = bottomPadding)
-  )
+      topPadding = topPadding,
+      bottomPadding = bottomPadding
+  ) {
+      LazyColumn(state = scrollState, ...) { ... }
+  }
   ```
-* **Preserved Behavior**: Bike and shoe card options menu, stats sheet, and delete workflows untouched.
 
 ---
 
-### 2.6 Sport Types View ([`SportTypesTabsScreen.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/banalservice/ui/sporttype/SportTypesTabsScreen.kt))
-* **Change**: In `SportTypesTabsScreen`, allocate `val scrollState = rememberLazyListState()`, pass `state = scrollState` to `LazyColumn`, and wrap in `Box(modifier = Modifier.fillMaxSize())`.
-* **Add FastScrollbar**:
+### 2.7 Sport Types View ([`SportTypesTabsScreen.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/banalservice/ui/sporttype/SportTypesTabsScreen.kt))
+* **Change**: Allocate `val scrollState = rememberLazyListState()` and wrap with `FastScrollableBox`:
   ```kotlin
-  val topScrollbarPadding = with(density) { (appBarMaxHeightPx.toFloat() + connection.appBarOffset).toDp() }
-  FastScrollbar(
+  val topPadding = with(density) { (appBarMaxHeightPx.toFloat() + connection.appBarOffset).toDp() }
+  FastScrollableBox(
       state = scrollState,
-      modifier = Modifier
-          .align(Alignment.CenterEnd)
-          .padding(top = topScrollbarPadding, bottom = bottomPadding)
-  )
+      topPadding = topPadding,
+      bottomPadding = bottomPadding
+  ) {
+      LazyColumn(state = scrollState, ...) { ... }
+  }
   ```
-* **Preserved Behavior**: Card clicks, edit dialogs, stats bottom sheet, and delete triggers remain 100% accessible.
 
 ---
 
-### 2.7 Connected Devices View ([`DeviceListScreen.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/banalservice/ui/devices/devicelist/DeviceListScreen.kt))
-* **Change**: In `DeviceListContent`, wrap `LazyColumn` in a `Box(modifier = Modifier.fillMaxSize())`.
-* **Add FastScrollbar**:
+### 2.8 Connected Devices View ([`DeviceListScreen.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/banalservice/ui/devices/devicelist/DeviceListScreen.kt))
+* **Change**: Wrap `LazyColumn` in `DeviceListContent` with `FastScrollableBox`:
   ```kotlin
-  val topScrollbarPadding = if (isSearching) 0.dp else topPadding
-  FastScrollbar(
+  val topPadding = if (isSearching) 0.dp else topPadding
+  FastScrollableBox(
       state = scrollState,
-      modifier = Modifier
-          .align(Alignment.CenterEnd)
-          .padding(top = topScrollbarPadding, bottom = navigationBarBottom)
-  )
+      topPadding = topPadding,
+      bottomPadding = navigationBarBottom
+  ) {
+      LazyColumn(state = scrollState, ...) { ... }
+  }
   ```
-* **Preserved Behavior**: Pair toggle button, device inspection clicks, and long-click deletion remain 100% accessible.
+
+---
+
+### 2.9 Workout List ([`WorkoutList.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutList.kt))
+* **Refactor for Consistency**: Migrate `WorkoutList.kt` to also use `FastScrollableBox`, unifying all 8 scrollable lists in the codebase under the same clean abstraction.
 
 ---
 
 ## 3. System Invariants Checklist
 
-1. **Auto-Hiding Invariant**: `FastScrollbar`'s internal guard (`totalItems <= visibleItems || totalItems == 0`) ensures that when collections are short or empty, the scrollbar returns early and renders nothing.
-2. **Touch Isolation Invariant**: The thumb's 48dp hit detection (`28.dp` wide, `8.dp` visual pill) leaves 95%+ of the right track area transparent to touch, guaranteeing that right-aligned controls (e.g. 3-dots menus, pairing switches, edit icons) receive tap events without dead zones or interception.
+1. **Auto-Hiding Invariant**: When lists have fewer items than the viewport, `FastScrollbar` automatically returns early and renders nothing.
+2. **Touch Isolation Invariant**: The thumb's 48dp hit detection (`28.dp` wide at `Alignment.TopEnd` containing `8.dp` visual pill) leaves 95%+ of the right track area transparent to touches, guaranteeing that right-aligned controls (e.g. 3-dots menus, pairing switches, edit icons) receive tap events without dead zones or interception.
 3. **Collapsing App Bar Invariant**: The scrollbar top padding connects reactively with `appBarOffsetPx`, preventing the thumb from clipping into collapsing toolbars.
 4. **Zero Regressions**: No database DAOs, ViewModel logic, or data models are modified.
 
