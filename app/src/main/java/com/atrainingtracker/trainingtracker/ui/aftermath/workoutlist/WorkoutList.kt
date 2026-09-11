@@ -114,13 +114,12 @@ fun WorkoutList(
                 }
             }
 
-            // Fast Scroll Bar (ATT-303)
+            // Fast Scroll Bar (ATT-303, ATT-861)
             FastScrollbar(
                 state = scrollState,
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .padding(top = topPadding, bottom = bottomPadding)
-                    .padding(end = 4.dp)
             )
         }
     }

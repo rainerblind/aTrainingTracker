@@ -61,14 +61,12 @@ fun FastScrollbar(
                 val firstVisibleItem = layoutInfo.visibleItemsInfo.firstOrNull()
                 if (firstVisibleItem == null) 0f
                 else {
-                    val index = state.firstVisibleItemIndex
-                    val offset = state.firstVisibleItemScrollOffset
-                    val itemSize = firstVisibleItem.size
-                    if (itemSize == 0) 0f
-                    else {
-                        val progress = (index.toFloat() + offset.toFloat() / itemSize) / totalItemsCount.toFloat()
-                        progress.coerceIn(0f, 1f)
-                    }
+                    calculateScrollProgress(
+                        firstVisibleIndex = state.firstVisibleItemIndex,
+                        firstVisibleOffset = state.firstVisibleItemScrollOffset,
+                        itemSize = firstVisibleItem.size,
+                        totalItems = totalItemsCount
+                    )
                 }
             }
         }
@@ -90,48 +88,81 @@ fun FastScrollbar(
     Box(
         modifier = modifier
             .fillMaxHeight()
-            .width(32.dp) // Wider touch target for better UX
+            .width(16.dp)
             .alpha(alpha)
             .onGloballyPositioned { trackHeightPx = it.size.height }
-            .pointerInput(state) {
-                detectDragGestures(
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        val totalItemsCount = state.layoutInfo.totalItemsCount
-                        if (trackHeightPx > 0 && totalItemsCount > 0) {
-                            val deltaProgress = dragAmount.y / trackHeightPx
-                            val newProgress = (scrollProgress + deltaProgress).coerceIn(0f, 1f)
-                            val targetIndex = (newProgress * totalItemsCount).toInt().coerceIn(0, totalItemsCount - 1)
-                            coroutineScope.launch {
-                                state.scrollToItem(targetIndex)
-                            }
-                        }
-                    }
-                )
-            }
     ) {
-        // Track Background
+        // Track Background (Right-aligned, flush against viewport edge)
         Box(
             modifier = Modifier
                 .fillMaxHeight()
                 .width(4.dp)
                 .background(trackColor)
-                .align(Alignment.Center)
+                .align(Alignment.CenterEnd)
         )
 
-        // Draggable Thumb
+        // Draggable Thumb (Right-aligned, touch target with scoped drag detection)
         Box(
             modifier = Modifier
                 .offset {
                     val maxOffsetPx = (trackHeightPx - thumbHeightPx).coerceAtLeast(0f)
                     IntOffset(0, (scrollProgress * maxOffsetPx).roundToInt().coerceIn(0, maxOffsetPx.roundToInt()))
                 }
-                .padding(horizontal = 12.dp)
                 .height(thumbHeightDp)
-                .width(8.dp)
-                .clip(CircleShape)
-                .background(thumbColor)
-                .align(Alignment.TopCenter)
-        )
+                .width(16.dp)
+                .align(Alignment.TopEnd)
+                .pointerInput(state) {
+                    detectDragGestures(
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            val totalItemsCount = state.layoutInfo.totalItemsCount
+                            if (trackHeightPx > 0 && totalItemsCount > 0) {
+                                val deltaProgress = dragAmount.y / trackHeightPx
+                                val targetIndex = calculateTargetIndex(scrollProgress, deltaProgress, totalItemsCount)
+                                coroutineScope.launch {
+                                    state.scrollToItem(targetIndex)
+                                }
+                            }
+                        }
+                    )
+                }
+        ) {
+            // Visual Thumb Pill
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(8.dp)
+                    .clip(CircleShape)
+                    .background(thumbColor)
+                    .align(Alignment.CenterEnd)
+            )
+        }
     }
+}
+
+/**
+ * Calculates the current scroll progress (0.0 to 1.0) based on the first visible item and total item count.
+ */
+fun calculateScrollProgress(
+    firstVisibleIndex: Int,
+    firstVisibleOffset: Int,
+    itemSize: Int,
+    totalItems: Int
+): Float {
+    if (totalItems <= 0 || itemSize <= 0) return 0f
+    val progress = (firstVisibleIndex.toFloat() + firstVisibleOffset.toFloat() / itemSize) / totalItems.toFloat()
+    return progress.coerceIn(0f, 1f)
+}
+
+/**
+ * Calculates the target item index when dragging the scrollbar by a given progress delta.
+ */
+fun calculateTargetIndex(
+    currentProgress: Float,
+    deltaProgress: Float,
+    totalItems: Int
+): Int {
+    if (totalItems <= 0) return 0
+    val newProgress = (currentProgress + deltaProgress).coerceIn(0f, 1f)
+    return (newProgress * totalItems).toInt().coerceIn(0, totalItems - 1)
 }
