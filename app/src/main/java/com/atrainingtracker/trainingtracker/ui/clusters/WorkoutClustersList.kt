@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
+import com.atrainingtracker.trainingtracker.ui.components.FastScrollableBox
 import androidx.compose.material.icons.filled.History
 
 /**
@@ -56,25 +57,33 @@ fun WorkoutClustersList(
             message = emptyMessage
         )
     } else {
-        LazyColumn(
+        val topPadding = headerHeightDp + currentAppBarOffsetDp
+        FastScrollableBox(
             state = scrollState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                top = headerHeightDp + currentAppBarOffsetDp + 8.dp,
-                bottom = 80.dp, // Space for FAB
-                start = 8.dp,
-                end = 8.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            topPadding = topPadding,
+            bottomPadding = 80.dp
         ) {
-            items(clusters) { cluster ->
-                ClusterItem(
-                    cluster = cluster,
-                    viewModel = viewModel,
-                    onClick = { onClusterClick(cluster) },
-                    onDeleteRequest = onDeleteRequest,
-                    onHitCountClick = onHitCountClick
-                )
+            LazyColumn(
+                state = scrollState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = topPadding + 8.dp,
+                    bottom = 80.dp, // Space for FAB
+                    start = 8.dp,
+                    end = 8.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(clusters) { cluster ->
+                    ClusterItem(
+                        cluster = cluster,
+                        viewModel = viewModel,
+                        onClick = { onClusterClick(cluster) },
+                        onDeleteRequest = onDeleteRequest,
+                        onHitCountClick = onHitCountClick
+                    )
+                }
             }
         }
     }
@@ -103,23 +112,31 @@ fun UnclusteredWorkoutsList(
             message = emptyMessage
         )
     } else {
-        LazyColumn(
+        val topPadding = headerHeightDp + currentAppBarOffsetDp
+        FastScrollableBox(
             state = scrollState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                top = headerHeightDp + currentAppBarOffsetDp + 8.dp,
-                bottom = 80.dp,
-                start = 8.dp,
-                end = 8.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            topPadding = topPadding,
+            bottomPadding = 80.dp
         ) {
-            items(workouts) { workout ->
-                UnclusteredWorkoutItem(
-                    workout = workout,
-                    viewModel = viewModel,
-                    onClick = { onWorkoutClick(workout) }
-                )
+            LazyColumn(
+                state = scrollState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = topPadding + 8.dp,
+                    bottom = 80.dp,
+                    start = 8.dp,
+                    end = 8.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(workouts) { workout ->
+                    UnclusteredWorkoutItem(
+                        workout = workout,
+                        viewModel = viewModel,
+                        onClick = { onWorkoutClick(workout) }
+                    )
+                }
             }
         }
     }

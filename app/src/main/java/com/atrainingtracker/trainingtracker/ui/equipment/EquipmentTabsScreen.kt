@@ -25,7 +25,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.atrainingtracker.trainingtracker.ui.components.FastScrollableBox
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -274,7 +277,8 @@ fun EquipmentList(
     onStatsClick: (EquipmentItem) -> Unit,
     onDelete: (EquipmentItem) -> Unit,
     appBarOffsetPx: Int,
-    headerHeightPx: Float
+    headerHeightPx: Float,
+    scrollState: LazyListState = rememberLazyListState()
 ) {
     val density = LocalDensity.current
     val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
@@ -288,25 +292,33 @@ fun EquipmentList(
     } else {
         val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
-        LazyColumn(
+        FastScrollableBox(
+            state = scrollState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                // Calculation: The initial header height (px) + the current offset (px)
-                // convert the final result to Dp.
-                top = with(density) { (headerHeightPx + appBarOffsetPx).toDp() + 16.dp },
-                bottom = bottomPadding + 16.dp,
-                start = 4.dp,
-                end = 4.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            topPadding = topPadding,
+            bottomPadding = bottomPadding
         ) {
-            items(items) { item ->
-                EquipmentItem(
-                    item = item,
-                    onConfigClick = onConfigClick,
-                    onStatsClick = onStatsClick,
-                    onDelete = { onDelete(item) }
-                )
+            LazyColumn(
+                state = scrollState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    // Calculation: The initial header height (px) + the current offset (px)
+                    // convert the final result to Dp.
+                    top = topPadding + 16.dp,
+                    bottom = bottomPadding + 16.dp,
+                    start = 4.dp,
+                    end = 4.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(items) { item ->
+                    EquipmentItem(
+                        item = item,
+                        onConfigClick = onConfigClick,
+                        onStatsClick = onStatsClick,
+                        onDelete = { onDelete(item) }
+                    )
+                }
             }
         }
     }

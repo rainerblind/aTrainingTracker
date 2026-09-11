@@ -40,7 +40,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
-import com.atrainingtracker.trainingtracker.ui.components.FastScrollbar
+import com.atrainingtracker.trainingtracker.ui.components.FastScrollableBox
 
 /**
  * The scrollable list of WorkoutSummaries.
@@ -73,7 +73,12 @@ fun WorkoutList(
             message = stringResource(R.string.no_workouts_available)
         )
     } else {
-        Box(modifier = Modifier.fillMaxSize()) {
+        FastScrollableBox(
+            state = scrollState,
+            modifier = Modifier.fillMaxSize(),
+            topPadding = topPadding,
+            bottomPadding = bottomPadding
+        ) {
             LazyColumn(
                 state = scrollState,
                 modifier = Modifier.fillMaxSize(),
@@ -113,14 +118,6 @@ fun WorkoutList(
                     }
                 }
             }
-
-            // Fast Scroll Bar (ATT-303, ATT-861)
-            FastScrollbar(
-                state = scrollState,
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(top = topPadding, bottom = bottomPadding)
-            )
         }
     }
 }
