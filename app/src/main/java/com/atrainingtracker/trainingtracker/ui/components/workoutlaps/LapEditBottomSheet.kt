@@ -18,7 +18,18 @@
 
 package com.atrainingtracker.trainingtracker.ui.components.workoutlaps
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,18 +38,23 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.aftermath.LapData
@@ -55,17 +71,18 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.PolyUtil
 import com.google.maps.android.compose.*
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 /**
- * Material 3 modal bottom sheet for inspecting and editing individual lap details (ATT-511).
+ * Modal bottom sheet for inspecting and editing individual lap details (ATT-511).
  *
- * Features:
- * 1. Split summary header with active time, distance, and speed/pace.
- * 2. Quick-tag preset chips for one-tap activity tagging (Warm-up, Interval, Recovery, etc.).
- * 3. Text fields for custom lap name and multi-line notes.
- * 4. Sequential lap navigation (< Previous / Next >) with auto-save across laps.
- * 5. Interactive map segment showing the entire workout path and the active lap highlighted in foreground.
- * 6. Graceful zero-GPS fallback.
+ * Behavior:
+ * 1. Initial popup height matches the edit controls exactly: the bottom of the comments/description
+ *    text field aligns with the top of the navigation bar, and the map is not shown initially.
+ * 2. Swiping the popup upwards smoothly expands it up to the status bar, revealing the map segment.
+ * 3. Swiping downwards collapses it back to the initial height, or dismisses when swiped down further.
+ * 4. Cancel & Store action buttons are positioned above the sequential (< Previous / Next >) navigation row.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,315 +115,509 @@ fun LapEditBottomSheet(
         onSaveLap(currentLap.lapNr, cleanName, cleanDesc)
     }
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val coroutineScope = rememberCoroutineScope()
+    var isClosing by remember { mutableStateOf(false) }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismissRequest,
-        sheetState = sheetState,
-        modifier = modifier.statusBarsPadding()
+    Dialog(
+        onDismissRequest = {
+            if (!isClosing) {
+                isClosing = true
+                onDismissRequest()
+            }
+        },
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
     ) {
-        Column(
+        val density = LocalDensity.current
+        val statusBarTopPx = WindowInsets.statusBars.getTop(density).toFloat()
+        val navBarBottomPx = WindowInsets.navigationBars.getBottom(density).toFloat()
+
+        BoxWithConstraints(
             modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
+                .fillMaxSize()
                 .imePadding()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // 1. Top Header: Title
-            Text(
-                text = stringResource(R.string.edit_lap_title, lapDisplayIndex),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            val screenHeightPx = constraints.maxHeight.toFloat()
+            val offsetY = remember { Animatable(screenHeightPx) }
+            var editControlsHeightPx by remember { mutableFloatStateOf(0f) }
+            var dragHandleHeightPx by remember { mutableFloatStateOf(0f) }
+            val topPaddingPx = with(density) { 4.dp.toPx() }
 
-            // 2. Action Bar: Cancel & Store
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onDismissRequest,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.cancel))
-                }
-                Button(
-                    onClick = {
-                        saveCurrentLap()
-                        onDismissRequest()
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.save))
-                }
-            }
-
-            // 3. Sequential Lap Navigation Bar (< Previous | X / Y | Next >)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedButton(
-                    onClick = {
-                        if (currentIndex > 0) {
-                            saveCurrentLap()
-                            currentLapNr = laps[currentIndex - 1].lapNr
-                        }
-                    },
-                    enabled = currentIndex > 0
-                ) {
-                    Icon(Icons.Default.ChevronLeft, contentDescription = null)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.previous_lap))
-                }
-
-                Text(
-                    text = "$lapDisplayIndex / $totalLaps",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                OutlinedButton(
-                    onClick = {
-                        if (currentIndex < totalLaps - 1) {
-                            saveCurrentLap()
-                            currentLapNr = laps[currentIndex + 1].lapNr
-                        }
-                    },
-                    enabled = currentIndex < totalLaps - 1
-                ) {
-                    Text(stringResource(R.string.next_lap))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(Icons.Default.ChevronRight, contentDescription = null)
-                }
-            }
-
-            // 4. Split Metrics Card
-            val speedPaceFormatted = if (isRunningSport) {
-                if (currentLap.speedAverageMps > 0.001) {
-                    formatters.pace.format_with_units(1.0 / currentLap.speedAverageMps)
-                } else {
-                    "--"
-                }
+            // Partial offset: height from top such that the bottom of the comments text field
+            // aligns exactly with the top of the navigation bar.
+            val totalEditControlsHeightPx = dragHandleHeightPx + topPaddingPx + editControlsHeightPx
+            val partialOffset = if (editControlsHeightPx > 0f && dragHandleHeightPx > 0f) {
+                (screenHeightPx - navBarBottomPx - totalEditControlsHeightPx).coerceAtLeast(statusBarTopPx)
             } else {
-                formatters.speed.format_with_units(currentLap.speedAverageMps)
+                screenHeightPx
             }
+            val expandedOffset = statusBarTopPx
+            val hiddenOffset = screenHeightPx
 
-            Card(
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceAround
-                ) {
-                    MetricItem(
-                        iconRes = R.drawable.ic_time_active,
-                        label = stringResource(R.string.time_active),
-                        value = formatters.time.format(currentLap.timeTotalS.toLong()),
-                        layout = MetricLayout.VERTICAL,
-                        iconSize = 22.dp,
-                        modifier = Modifier.weight(1f)
-                    )
-                    MetricItem(
-                        iconRes = R.drawable.ic_distance,
-                        label = stringResource(R.string.distance),
-                        value = formatters.distance.format_with_units(currentLap.distanceTotalM),
-                        layout = MetricLayout.VERTICAL,
-                        iconSize = 22.dp,
-                        modifier = Modifier.weight(1f)
-                    )
-                    MetricItem(
-                        iconRes = R.drawable.ic_speed,
-                        label = if (isRunningSport) stringResource(R.string.pace) else stringResource(R.string.speed),
-                        value = speedPaceFormatted,
-                        layout = MetricLayout.VERTICAL,
-                        iconSize = 22.dp,
-                        modifier = Modifier.weight(1f)
-                    )
+            var isExpanded by remember { mutableStateOf(false) }
+
+            // Animate sheet into view and keep synced with measured partialOffset
+            LaunchedEffect(partialOffset, isExpanded) {
+                if (!isClosing && partialOffset < screenHeightPx) {
+                    if (isExpanded) {
+                        offsetY.animateTo(
+                            targetValue = expandedOffset,
+                            animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing)
+                        )
+                    } else {
+                        offsetY.animateTo(
+                            targetValue = partialOffset,
+                            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                        )
+                    }
                 }
             }
 
-            // 5. Quick-Tag Preset Chips
-            val quickTags = listOf(
-                stringResource(R.string.quick_tag_warmup),
-                stringResource(R.string.quick_tag_interval),
-                stringResource(R.string.quick_tag_recovery),
-                stringResource(R.string.quick_tag_hill_climb),
-                stringResource(R.string.quick_tag_tempo),
-                stringResource(R.string.quick_tag_sprint),
-                stringResource(R.string.quick_tag_cooldown)
+            fun animateDismiss() {
+                if (!isClosing) {
+                    isClosing = true
+                    coroutineScope.launch {
+                        offsetY.animateTo(
+                            targetValue = hiddenOffset,
+                            animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing)
+                        )
+                        onDismissRequest()
+                    }
+                }
+            }
+
+            BackHandler(enabled = true) {
+                if (isExpanded) {
+                    coroutineScope.launch {
+                        isExpanded = false
+                        offsetY.animateTo(partialOffset, animationSpec = tween(250))
+                    }
+                } else {
+                    animateDismiss()
+                }
+            }
+
+            // Scrim: darkens as sheet rises
+            val scrimAlpha = if (hiddenOffset > partialOffset) {
+                (0.4f * ((hiddenOffset - offsetY.value) / (hiddenOffset - partialOffset)).coerceIn(0f, 1f))
+            } else 0f
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = scrimAlpha))
+                    .pointerInput(Unit) {
+                        detectTapGestures {
+                            animateDismiss()
+                        }
+                    }
             )
 
-            Row(
+            // Sheet Draggable state
+            val draggableState = rememberDraggableState { delta ->
+                coroutineScope.launch {
+                    val newOffset = (offsetY.value + delta).coerceIn(expandedOffset, hiddenOffset)
+                    offsetY.snapTo(newOffset)
+                }
+            }
+
+            fun handleDragEnd(velocity: Float = 0f) {
+                coroutineScope.launch {
+                    val currentVal = offsetY.value
+                    val midPoint = (partialOffset + expandedOffset) / 2f
+                    if (velocity < -800f) {
+                        // Strong swipe upwards -> expand
+                        isExpanded = true
+                        offsetY.animateTo(expandedOffset, animationSpec = tween(250, easing = FastOutSlowInEasing))
+                    } else if (velocity > 800f) {
+                        // Strong swipe downwards
+                        if (isExpanded && currentVal < partialOffset) {
+                            isExpanded = false
+                            offsetY.animateTo(partialOffset, animationSpec = tween(250, easing = FastOutSlowInEasing))
+                        } else {
+                            animateDismiss()
+                        }
+                    } else {
+                        // Position-based snap
+                        if (currentVal < midPoint) {
+                            isExpanded = true
+                            offsetY.animateTo(expandedOffset, animationSpec = tween(250, easing = FastOutSlowInEasing))
+                        } else if (currentVal < partialOffset + with(density) { 60.dp.toPx() }) {
+                            isExpanded = false
+                            offsetY.animateTo(partialOffset, animationSpec = tween(250, easing = FastOutSlowInEasing))
+                        } else {
+                            animateDismiss()
+                        }
+                    }
+                }
+            }
+
+            // Bottom sheet Surface
+            Surface(
+                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .align(Alignment.TopCenter)
+                    .offset { IntOffset(0, offsetY.value.roundToInt()) }
+                    .heightIn(max = with(density) { (screenHeightPx - statusBarTopPx).toDp() })
             ) {
-                quickTags.forEach { tag ->
-                    val isSelected = (nameText.trim() == tag)
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = {
-                            nameText = tag
-                        },
-                        label = { Text(text = tag) }
-                    )
-                }
-            }
-
-            // 6. Text Fields: Name & Description
-            OutlinedTextField(
-                value = nameText,
-                onValueChange = { nameText = it },
-                label = { Text(stringResource(R.string.lap_name_label)) },
-                placeholder = { Text("Lap $lapDisplayIndex") },
-                singleLine = true,
-                trailingIcon = {
-                    if (nameText.isNotEmpty()) {
-                        IconButton(onClick = { nameText = "" }) {
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = null
-                            )
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            OutlinedTextField(
-                value = descriptionText,
-                onValueChange = { descriptionText = it },
-                label = { Text(stringResource(R.string.lap_description_label)) },
-                minLines = 2,
-                maxLines = 4,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // 7. Segment Map Preview / Fallback
-            if (isPlayServiceAvailable && workoutData.mapPolyline.isNotEmpty()) {
-                val context = LocalContext.current
-                val allPoints = remember(workoutData.mapPolyline) {
-                    try {
-                        PolyUtil.decode(workoutData.mapPolyline)
-                    } catch (e: Exception) {
-                        emptyList()
-                    }
-                }
-                val allDistances = remember(workoutData.encodedDistances) {
-                    try {
-                        NumericalEncodingUtils.decodeDoubles(workoutData.encodedDistances)
-                    } catch (e: Exception) {
-                        emptyList()
-                    }
-                }
-
-                val (startDistM, endDistM) = remember(workoutData.laps, currentLap.lapNr) {
-                    LapSegmentUtils.calculateLapDistanceRange(workoutData.laps, currentLap.lapNr)
-                }
-                val lapSegment = remember(allPoints, allDistances, startDistM, endDistM) {
-                    LapSegmentUtils.sliceLapSegment(allPoints, allDistances, startDistM, endDistM)
-                }
-                val lapBounds = remember(lapSegment) {
-                    LapSegmentUtils.calculateLapBounds(lapSegment)
-                }
-
-                if (allPoints.isNotEmpty()) {
-                    Card(
-                        shape = RoundedCornerShape(12.dp),
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .draggable(
+                            state = draggableState,
+                            orientation = Orientation.Vertical,
+                            onDragStopped = { velocity -> handleDragEnd(velocity) }
+                        )
+                ) {
+                    // Top Drag Handle (tappable to toggle, draggable)
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(200.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        val cameraPositionState = rememberCameraPositionState()
-                        var isMapLoaded by remember { mutableStateOf(false) }
-
-                        LaunchedEffect(lapBounds, isMapLoaded) {
-                            if (isMapLoaded && lapBounds != null) {
-                                try {
-                                    cameraPositionState.animate(
-                                        CameraUpdateFactory.newLatLngBounds(lapBounds, 70),
-                                        durationMs = 500
-                                    )
-                                } catch (e: Exception) {
-                                    try {
-                                        cameraPositionState.move(
-                                            CameraUpdateFactory.newLatLngBounds(lapBounds, 70)
-                                        )
-                                    } catch (ignored: Exception) {}
-                                }
+                            .onSizeChanged { size ->
+                                dragHandleHeightPx = size.height.toFloat()
                             }
-                        }
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                coroutineScope.launch {
+                                    if (isExpanded) {
+                                        isExpanded = false
+                                        offsetY.animateTo(partialOffset, animationSpec = tween(250))
+                                    } else {
+                                        isExpanded = true
+                                        offsetY.animateTo(expandedOffset, animationSpec = tween(250))
+                                    }
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        BottomSheetDefaults.DragHandle()
+                    }
 
-                        GoogleMap(
-                            modifier = Modifier.fillMaxSize(),
-                            cameraPositionState = cameraPositionState,
-                            uiSettings = MapUiSettings(
-                                zoomControlsEnabled = false,
-                                compassEnabled = false,
-                                mapToolbarEnabled = false,
-                                myLocationButtonEnabled = false,
-                                scrollGesturesEnabled = true,
-                                zoomGesturesEnabled = true,
-                                rotationGesturesEnabled = false,
-                                tiltGesturesEnabled = false
-                            ),
-                            properties = MapProperties(mapType = MapType.TERRAIN),
-                            onMapLoaded = { isMapLoaded = true }
+                    // Main Sheet Content
+                    val scrollState = rememberScrollState()
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(scrollState, enabled = isExpanded)
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Section 1 to 6: Edit Controls (Measured for initial partial popup height)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onSizeChanged { size ->
+                                    editControlsHeightPx = size.height.toFloat()
+                                },
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            // Subtle background polyline representing full workout
-                            Polyline(
-                                points = allPoints,
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
-                                width = 4f
+                            // 1. Top Header: Title
+                            Text(
+                                text = stringResource(R.string.edit_lap_title, lapDisplayIndex),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
 
-                            // Vibrant foreground polyline for active lap segment
-                            if (lapSegment.isNotEmpty()) {
-                                Polyline(
-                                    points = lapSegment,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    width = 10f
-                                )
+                            // 2. Action Bar: Cancel & Store (Toggled above sequential navigation row)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = { animateDismiss() },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(stringResource(R.string.cancel))
+                                }
+                                Button(
+                                    onClick = {
+                                        saveCurrentLap()
+                                        animateDismiss()
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(stringResource(R.string.save))
+                                }
+                            }
 
-                                // Lap start marker
-                                lapSegment.firstOrNull()?.let { startPoint ->
-                                    Marker(
-                                        state = remember(startPoint) { MarkerState(position = startPoint) },
-                                        icon = remember { createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint) }
-                                    )
+                            // 3. Sequential Lap Navigation Bar (< Previous | X / Y | Next >)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedButton(
+                                    onClick = {
+                                        if (currentIndex > 0) {
+                                            saveCurrentLap()
+                                            currentLapNr = laps[currentIndex - 1].lapNr
+                                        }
+                                    },
+                                    enabled = currentIndex > 0
+                                ) {
+                                    Icon(Icons.Default.ChevronLeft, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(stringResource(R.string.previous_lap))
                                 }
 
-                                // Lap stop marker
-                                lapSegment.lastOrNull()?.let { stopPoint ->
-                                    Marker(
-                                        state = remember(stopPoint) { MarkerState(position = stopPoint) },
-                                        icon = remember { createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint) }
+                                Text(
+                                    text = "$lapDisplayIndex / $totalLaps",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+
+                                OutlinedButton(
+                                    onClick = {
+                                        if (currentIndex < totalLaps - 1) {
+                                            saveCurrentLap()
+                                            currentLapNr = laps[currentIndex + 1].lapNr
+                                        }
+                                    },
+                                    enabled = currentIndex < totalLaps - 1
+                                ) {
+                                    Text(stringResource(R.string.next_lap))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(Icons.Default.ChevronRight, contentDescription = null)
+                                }
+                            }
+
+                            // 4. Split Metrics Card
+                            val speedPaceFormatted = if (isRunningSport) {
+                                if (currentLap.speedAverageMps > 0.001) {
+                                    formatters.pace.format_with_units(1.0 / currentLap.speedAverageMps)
+                                } else {
+                                    "--"
+                                }
+                            } else {
+                                formatters.speed.format_with_units(currentLap.speedAverageMps)
+                            }
+
+                            Card(
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                    horizontalArrangement = Arrangement.SpaceAround
+                                ) {
+                                    MetricItem(
+                                        iconRes = R.drawable.ic_time_active,
+                                        label = stringResource(R.string.time_active),
+                                        value = formatters.time.format(currentLap.timeTotalS.toLong()),
+                                        layout = MetricLayout.VERTICAL,
+                                        iconSize = 22.dp,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    MetricItem(
+                                        iconRes = R.drawable.ic_distance,
+                                        label = stringResource(R.string.distance),
+                                        value = formatters.distance.format_with_units(currentLap.distanceTotalM),
+                                        layout = MetricLayout.VERTICAL,
+                                        iconSize = 22.dp,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    MetricItem(
+                                        iconRes = R.drawable.ic_speed,
+                                        label = if (isRunningSport) stringResource(R.string.pace) else stringResource(R.string.speed),
+                                        value = speedPaceFormatted,
+                                        layout = MetricLayout.VERTICAL,
+                                        iconSize = 22.dp,
+                                        modifier = Modifier.weight(1f)
                                     )
                                 }
                             }
-                        }
-                    }
-                } else {
-                    NoGpsTrackCard()
-                }
-            } else {
-                NoGpsTrackCard()
-            }
 
-            // Bottom Spacer for generous scrolling breathing room above navigation bar
-            Spacer(modifier = Modifier.height(16.dp))
+                            // 5. Quick-Tag Preset Chips
+                            val quickTags = listOf(
+                                stringResource(R.string.quick_tag_warmup),
+                                stringResource(R.string.quick_tag_interval),
+                                stringResource(R.string.quick_tag_recovery),
+                                stringResource(R.string.quick_tag_hill_climb),
+                                stringResource(R.string.quick_tag_tempo),
+                                stringResource(R.string.quick_tag_sprint),
+                                stringResource(R.string.quick_tag_cooldown)
+                            )
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                quickTags.forEach { tag ->
+                                    val isSelected = (nameText.trim() == tag)
+                                    FilterChip(
+                                        selected = isSelected,
+                                        onClick = {
+                                            nameText = tag
+                                        },
+                                        label = { Text(text = tag) }
+                                    )
+                                }
+                            }
+
+                            // 6. Text Fields: Name & Description (Comments)
+                            OutlinedTextField(
+                                value = nameText,
+                                onValueChange = { nameText = it },
+                                label = { Text(stringResource(R.string.lap_name_label)) },
+                                placeholder = { Text("Lap $lapDisplayIndex") },
+                                singleLine = true,
+                                trailingIcon = {
+                                    if (nameText.isNotEmpty()) {
+                                        IconButton(onClick = { nameText = "" }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Clear,
+                                                contentDescription = null
+                                            )
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+                                value = descriptionText,
+                                onValueChange = { descriptionText = it },
+                                label = { Text(stringResource(R.string.lap_description_label)) },
+                                minLines = 2,
+                                maxLines = 4,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        // Navigation bar height spacer ensures the map begins below the bottom of the screen
+                        // at the initial partial height, so it is revealed smoothly when swiped up.
+                        Spacer(modifier = Modifier.height(with(density) { navBarBottomPx.toDp() }))
+
+                        // Section 7: Map Segment (Always included in popup, revealed when swiped up)
+                        if (isPlayServiceAvailable && workoutData.mapPolyline.isNotEmpty()) {
+                            val context = LocalContext.current
+                            val allPoints = remember(workoutData.mapPolyline) {
+                                try {
+                                    PolyUtil.decode(workoutData.mapPolyline)
+                                } catch (e: Exception) {
+                                    emptyList()
+                                }
+                            }
+                            val allDistances = remember(workoutData.encodedDistances) {
+                                try {
+                                    NumericalEncodingUtils.decodeDoubles(workoutData.encodedDistances)
+                                } catch (e: Exception) {
+                                    emptyList()
+                                }
+                            }
+
+                            val (startDistM, endDistM) = remember(workoutData.laps, currentLap.lapNr) {
+                                LapSegmentUtils.calculateLapDistanceRange(workoutData.laps, currentLap.lapNr)
+                            }
+                            val lapSegment = remember(allPoints, allDistances, startDistM, endDistM) {
+                                LapSegmentUtils.sliceLapSegment(allPoints, allDistances, startDistM, endDistM)
+                            }
+                            val lapBounds = remember(lapSegment) {
+                                LapSegmentUtils.calculateLapBounds(lapSegment)
+                            }
+
+                            if (allPoints.isNotEmpty()) {
+                                Card(
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(200.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                ) {
+                                    val cameraPositionState = rememberCameraPositionState()
+                                    var isMapLoaded by remember { mutableStateOf(false) }
+
+                                    LaunchedEffect(lapBounds, isMapLoaded) {
+                                        if (isMapLoaded && lapBounds != null) {
+                                            try {
+                                                cameraPositionState.animate(
+                                                    CameraUpdateFactory.newLatLngBounds(lapBounds, 70),
+                                                    durationMs = 500
+                                                )
+                                            } catch (e: Exception) {
+                                                try {
+                                                    cameraPositionState.move(
+                                                        CameraUpdateFactory.newLatLngBounds(lapBounds, 70)
+                                                    )
+                                                } catch (ignored: Exception) {}
+                                            }
+                                        }
+                                    }
+
+                                    GoogleMap(
+                                        modifier = Modifier.fillMaxSize(),
+                                        cameraPositionState = cameraPositionState,
+                                        uiSettings = MapUiSettings(
+                                            zoomControlsEnabled = false,
+                                            compassEnabled = false,
+                                            mapToolbarEnabled = false,
+                                            myLocationButtonEnabled = false,
+                                            scrollGesturesEnabled = true,
+                                            zoomGesturesEnabled = true,
+                                            rotationGesturesEnabled = false,
+                                            tiltGesturesEnabled = false
+                                        ),
+                                        properties = MapProperties(mapType = MapType.TERRAIN),
+                                        onMapLoaded = { isMapLoaded = true }
+                                    ) {
+                                        // Full workout polyline in subtle color
+                                        Polyline(
+                                            points = allPoints,
+                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
+                                            width = 4f
+                                        )
+
+                                        // Highlighted active lap segment in vibrant primary color
+                                        if (lapSegment.isNotEmpty()) {
+                                            Polyline(
+                                                points = lapSegment,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                width = 10f
+                                            )
+
+                                            lapSegment.firstOrNull()?.let { startPoint ->
+                                                Marker(
+                                                    state = remember(startPoint) { MarkerState(position = startPoint) },
+                                                    icon = remember { createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint) }
+                                                )
+                                            }
+
+                                            lapSegment.lastOrNull()?.let { stopPoint ->
+                                                Marker(
+                                                    state = remember(stopPoint) { MarkerState(position = stopPoint) },
+                                                    icon = remember { createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint) }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                NoGpsTrackCard()
+                            }
+                        } else {
+                            NoGpsTrackCard()
+                        }
+
+                        // Navigation bar padding and bottom margin
+                        Spacer(modifier = Modifier.navigationBarsPadding())
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+            }
         }
     }
 }
