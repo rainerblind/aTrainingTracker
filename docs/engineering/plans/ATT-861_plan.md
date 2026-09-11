@@ -1,139 +1,165 @@
-# Implementation Plan: Right-Aligned Edge FastScrollbar & Isolated Thumb Touch Target (ATT-861)
+# Implementation Plan: Right-Aligned Edge FastScrollbar, Isolated Thumb Touch Target & Continuous Drag Accumulation (ATT-861)
+
+* **Parent Ticket**: [ATT-861](https://rainerblind.atlassian.net/browse/ATT-861) (*[Bug] FastScrollbar full-height touch overlay intercepts clicks on right-aligned list item actions*)
+* **Active Sub-Task**: [ATT-879](https://rainerblind.atlassian.net/browse/ATT-879) (*[Impl-Plan] FastScrollbar full-height touch overlay intercepts clicks on right-aligned list item actions*)
+* **Target Version**: `V4.9.36`
+* **Requirement**: [`REQ-UI-139`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/requirements.md#L271) (*Right-Aligned Edge FastScrollbar, Isolated Thumb Touch Target & Continuous Drag Accumulation*)
+* **Test Specification**: [`TST-UI-092`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/tests.md#L306) (*FastScrollbar Edge Alignment, Continuous Drag Accumulation & Action Non-Interference Verification*)
+* **Branch**: `bugfix/ATT-861`
+
+---
 
 ## 1. Overview & Architecture
-This plan resolves [ATT-861](https://rainerblind.atlassian.net/browse/ATT-861) and implements user feedback requesting the fast scrollbar to be moved flush to the very right of the viewport.
 
-### 1.1 Problem Summary
-In [`WorkoutList.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutList.kt), [`FastScrollbar`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/FastScrollbar.kt) currently sits 18dp–22dp inward from the right display edge due to a combination of:
-1. `.padding(end = 4.dp)` in `WorkoutList.kt:123`.
-2. Centering a 4dp track and 8dp thumb horizontally inside a 32dp container Box in `FastScrollbar.kt:90-136`.
+This implementation plan resolves [ATT-861](https://rainerblind.atlassian.net/browse/ATT-861) and addresses user testing feedback from Iteration 1, where the scrollbar could not move the list under normal finger dragging.
 
-Crucially, `pointerInput(state) { detectDragGestures { ... } }` is attached to the **entire full-height 32dp container Box**, intercepting and consuming tap and drag events along the rightmost 36dp column of the display. This blocks taps directed at card action buttons (such as the 3-dots export menu and edit button in [`WorkoutHeader.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutheader/WorkoutHeader.kt)) across the entire vertical height of the list, even when the scrollbar thumb is located elsewhere.
+### 1.1 Problem Summary & Root Causes
+1. **Truncation & Loss of Drag Displacement**: In Iteration 1, `detectDragGestures` computed `deltaProgress = dragAmount.y / trackHeightPx` per 16ms frame (~2–10px) and calculated `(scrollProgress + deltaProgress) * totalItems`. Because `deltaProgress * totalItems` ($0.0025 \times 20 = 0.05$) is smaller than 1.0, `.toInt()` truncated the fraction to 0 on every single frame. Displacement was discarded continuously, leaving the list stuck at the current item.
+2. **Frozen Visual Thumb**: The thumb position was derived purely from `scrollProgress` in `LazyListState`. Because the list never moved, the thumb stayed locked in place, producing an unresponsive UI feel.
+3. **Narrow Hit Box (16dp)**: At 420dpi, 16dp is ~42px wide at the extreme display bezel, making it difficult for human thumbs (~40dp wide) to grab.
+4. **Touch Overlay Interception (Original Bug)**: Prior to ATT-861, `pointerInput` on the outer full-height 32dp container intercepted clicks destined for list item cards (such as the 3-dots export menu and edit button).
 
-### 1.2 Target Solution
-1. **Move Flush to the Right Edge**:
-   - In `WorkoutList.kt`, remove `.padding(end = 4.dp)` so that `FastScrollbar` aligns flush to `Alignment.CenterEnd`.
-   - In `FastScrollbar.kt`, reduce container width (e.g. 16dp), and right-align both track and thumb to `Alignment.CenterEnd` and `Alignment.TopEnd`.
-   - Because `LazyColumn` uses `contentPadding(end = 8.dp)`, list cards end at $\text{screenWidth} - 8\text{dp}$. Positioning the scrollbar within the rightmost 0–8dp bounds physically isolates it from card surfaces and button click areas.
-2. **Isolate Gesture Detection Strictly to the Draggable Thumb**:
-   - Move `pointerInput(state) { detectDragGestures { ... } }` from the outer full-height container Box to the draggable thumb Box.
-   - The thumb Box provides an ergonomic touch target (e.g. width 16dp–20dp, height 48dp), while the full track above and below the thumb remains completely click-through.
-   - Tapping any card action button outside the active thumb passes directly to the button without interference.
-3. **Extract Pure Calculation Logic for Robust Unit Testing**:
-   - Extract `calculateScrollProgress(...)` and `calculateTargetIndex(...)` as testable utility functions in `FastScrollbar.kt`.
-
-### 1.3 Traceability
-- **Requirement**: [`REQ-UI-139`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/requirements.md#L271) (*Right-Aligned Edge FastScrollbar & Isolated Thumb Touch Target*)
-- **Test Specification**: [`TST-UI-092`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/tests.md#L306) (*FastScrollbar Edge Alignment & Action Button Non-Interference Verification*)
+### 1.2 Target Solution Architecture
+1. **Continuous Drag Progress Accumulator**:
+   - Introduce `isDragging: Boolean` and continuous `dragProgress: Float` ($0.0 \dots 1.0$).
+   - On `onDragStart`: set `isDragging = true` and initialize `dragProgress = scrollProgress`.
+   - On `onDrag`: continuously accumulate displacement:
+     $$\text{dragProgress} = \left(\text{dragProgress} + \frac{\text{dragAmount.y}}{\text{maxOffsetPx}}\right)\!.coerceIn(0f, 1f)$$
+     $$\text{targetIndex} = \left(\text{dragProgress} \times (\text{totalItems} - 1)\right)\!.roundToInt()$$
+     `coroutineScope.launch { state.scrollToItem(targetIndex) }`
+   - On `onDragEnd` / `onDragCancel`: set `isDragging = false`.
+2. **Zero-Latency Visual Feedback**:
+   - Drive the visual thumb offset using `effectiveProgress = if (isDragging) dragProgress else scrollProgress`.
+   - The thumb tracks the user's finger with 1:1 precision and zero lag.
+3. **Ergonomic Thumb Hit Box & Flush Edge Alignment**:
+   - Set thumb touch hit box to **`28.dp`** width (`Alignment.TopEnd`), containing an 8dp visual pill (`Alignment.CenterEnd`).
+   - `pointerInput` is attached strictly to the 48dp thumb Box. The remaining 95% of the track has zero gesture consumption, guaranteeing full click-through accessibility for card action buttons.
+   - FastScrollbar in `WorkoutList.kt` maintains 0dp end padding, flush against the viewport edge.
 
 ---
 
 ## 2. Proposed Source Code Changes
 
-### Component 1: `WorkoutList.kt` Edge Alignment
-#### [MODIFY] [`WorkoutList.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutList.kt)
-- In the `FastScrollbar` invocation (lines 118–125):
-  - Remove `.padding(end = 4.dp)`.
-  - Maintain `.align(Alignment.CenterEnd)` and vertical insets (`.padding(top = topPadding, bottom = bottomPadding)`).
-
-```kotlin
-// Fast Scroll Bar (ATT-303, ATT-861)
-FastScrollbar(
-    state = scrollState,
-    modifier = Modifier
-        .align(Alignment.CenterEnd)
-        .padding(top = topPadding, bottom = bottomPadding)
-)
-```
-
----
-
-### Component 2: `FastScrollbar.kt` Architecture & Isolated Thumb Dragging
+### Component 1: `FastScrollbar.kt` Drag Accumulation & Touch Ergonomics
 #### [MODIFY] [`FastScrollbar.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/FastScrollbar.kt)
-1. **Extract Testable Pure Functions**:
-   ```kotlin
-   fun calculateScrollProgress(firstVisibleIndex: Int, firstVisibleOffset: Int, itemSize: Int, totalItems: Int): Float {
-       if (totalItems <= 0 || itemSize <= 0) return 0f
-       val progress = (firstVisibleIndex.toFloat() + firstVisibleOffset.toFloat() / itemSize) / totalItems.toFloat()
-       return progress.coerceIn(0f, 1f)
-   }
 
-   fun calculateTargetIndex(currentProgress: Float, deltaProgress: Float, totalItems: Int): Int {
-       if (totalItems <= 0) return 0
-       val newProgress = (currentProgress + deltaProgress).coerceIn(0f, 1f)
-       return (newProgress * totalItems).toInt().coerceIn(0, totalItems - 1)
+1. **State-Driven Drag Tracking**:
+   ```kotlin
+   var isDragging by remember { mutableStateOf(false) }
+   var dragProgress by remember { mutableFloatStateOf(0f) }
+
+   LaunchedEffect(scrollProgress, isDragging) {
+       if (!isDragging) {
+           dragProgress = scrollProgress
+       }
    }
    ```
-2. **Outer Container Adjustments**:
-   - Container width reduced from `32.dp` to `16.dp` (compact margin).
-   - Remove `pointerInput(state) { detectDragGestures { ... } }` from the outer Box.
-   - Retain `.alpha(alpha)` and `.onGloballyPositioned { trackHeightPx = it.size.height }`.
-3. **Track Alignment**:
-   - Track `Box`: `width(4.dp)`, `background(trackColor)`, aligned to `Alignment.CenterEnd`.
-4. **Draggable Thumb & Gesture Attachment**:
-   - Thumb `Box`:
-     - Aligned to `Alignment.TopEnd`.
-     - Offset derived from `scrollProgress * (trackHeightPx - thumbHeightPx)`.
-     - Height: `48.dp`, Width: `16.dp` (touch target) with inner or direct visual shape `width(8.dp)`.
-     - Attach `pointerInput(state) { detectDragGestures { ... } }` strictly to this thumb Box:
-       ```kotlin
-       .pointerInput(state) {
-           detectDragGestures(
-               onDrag = { change, dragAmount ->
-                   change.consume()
-                   val totalItemsCount = state.layoutInfo.totalItemsCount
-                   if (trackHeightPx > 0 && totalItemsCount > 0) {
-                       val deltaProgress = dragAmount.y / trackHeightPx
-                       val targetIndex = calculateTargetIndex(scrollProgress, deltaProgress, totalItemsCount)
-                       coroutineScope.launch {
-                           state.scrollToItem(targetIndex)
+
+2. **Thumb Offset & Touch Dimensions**:
+   ```kotlin
+   val effectiveProgress = if (isDragging) dragProgress else scrollProgress
+   val maxOffsetPx = (trackHeightPx - thumbHeightPx).coerceAtLeast(0f)
+
+   Box(
+       modifier = Modifier
+           .offset {
+               IntOffset(0, (effectiveProgress * maxOffsetPx).roundToInt().coerceIn(0, maxOffsetPx.roundToInt()))
+           }
+           .height(thumbHeightDp)
+           .width(28.dp) // Generous hit box for effortless thumb grabbing
+           .align(Alignment.TopEnd)
+           .pointerInput(state) {
+               detectDragGestures(
+                   onDragStart = {
+                       isDragging = true
+                       dragProgress = scrollProgress
+                   },
+                   onDragEnd = { isDragging = false },
+                   onDragCancel = { isDragging = false },
+                   onDrag = { change, dragAmount ->
+                       change.consume()
+                       val totalItemsCount = state.layoutInfo.totalItemsCount
+                       val travelDistancePx = (trackHeightPx - thumbHeightPx).coerceAtLeast(1f)
+                       if (totalItemsCount > 0) {
+                           dragProgress = calculateAccumulatedProgress(dragProgress, dragAmount.y, travelDistancePx)
+                           val targetIndex = calculateTargetIndexFromProgress(dragProgress, totalItemsCount)
+                           coroutineScope.launch {
+                               state.scrollToItem(targetIndex)
+                           }
                        }
                    }
-               }
-           )
-       }
-       ```
+               )
+           }
+   ) {
+       // Visual Thumb Pill (8dp width, aligned flush to right edge)
+       Box(
+           modifier = Modifier
+               .fillMaxHeight()
+               .width(8.dp)
+               .clip(CircleShape)
+               .background(thumbColor)
+               .align(Alignment.CenterEnd)
+       )
+   }
+   ```
+
+3. **Pure Math Helper Functions**:
+   ```kotlin
+   fun calculateAccumulatedProgress(
+       currentProgress: Float,
+       dragDeltaY: Float,
+       trackLengthPx: Float
+   ): Float {
+       if (trackLengthPx <= 0f) return currentProgress.coerceIn(0f, 1f)
+       return (currentProgress + dragDeltaY / trackLengthPx).coerceIn(0f, 1f)
+   }
+
+   fun calculateTargetIndexFromProgress(
+       progress: Float,
+       totalItems: Int
+   ): Int {
+       if (totalItems <= 0) return 0
+       return (progress.coerceIn(0f, 1f) * (totalItems - 1)).roundToInt().coerceIn(0, totalItems - 1)
+   }
+   ```
 
 ---
 
-### Component 3: Unit Tests for FastScrollbar Logic
-#### [NEW] [`FastScrollbarTest.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/test/java/com/atrainingtracker/trainingtracker/ui/components/FastScrollbarTest.kt)
-- Unit tests verifying:
-  1. `calculateScrollProgress` with 0 items, single item, boundary offsets, and multi-item progress.
-  2. `calculateTargetIndex` with downward drag, upward drag, boundary clamping at index 0 and index $N-1$.
-  3. Progress coercing between `0f` and `1f`.
+### Component 2: Automated Unit Tests
+#### [MODIFY] [`FastScrollbarTest.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/test/java/com/atrainingtracker/trainingtracker/ui/components/FastScrollbarTest.kt)
+
+1. Test small delta accumulation:
+   * Simulate 60 frames of 5px deltas over a 2000px track; verify `dragProgress` advances from 0.0 to 0.15 and increments `targetIndex` smoothly.
+2. Test progress-to-index mapping:
+   * Progress 0.0 maps to index 0.
+   * Progress 1.0 maps to index `totalItems - 1`.
+   * Mid-range progress maps proportionally with rounding.
+3. Test boundary clamping:
+   * Negative deltas clamp at 0.0 / index 0.
+   * Overflow deltas clamp at 1.0 / index `totalItems - 1`.
+   * Edge cases: `totalItems = 0`, `totalItems = 1`, `trackLengthPx <= 0`.
 
 ---
 
-## 3. Invariants & System Integrity ("What MUST NOT Change")
-1. **Dynamic Alpha Transition**: FastScrollbar's 500ms alpha fade (0.4f idle to 1.0f active scroll) MUST remain intact.
-2. **Card Layout & Click Handling**: Padding, elevation, and touch handlers on `WorkoutSummary`, `WorkoutSummaryCompact`, and `WorkoutHeader` MUST remain completely unaltered.
-3. **Smooth Coroutine Scrolling**: `state.scrollToItem(targetIndex)` MUST continue to scroll smoothly and responsively without lag or deadlocks.
-
----
-
-## 4. Verification Plan
+## 3. Verification Plan
 
 ### Automated Tests
-- Run unit test suite:
-  ```bash
-  ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.components.FastScrollbarTest"
-  ```
-- Run full regression suite:
-  ```bash
-  ./gradlew testDebugUnitTest
-  ```
-
-### On-Device Verification (Pixel 10)
-1. Install debug build on device:
+1. Unit test suite for fast scrollbar math:
    ```bash
-   ./gradlew installDebug
+   ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.components.FastScrollbarTest"
    ```
-2. Open Workout History:
-   - Verify fast scrollbar sits flush against the right edge of the screen.
-   - Verify scrollbar thumb and track do not overlap or float awkwardly over workout cards.
-3. Verify Action Button Non-Interference:
-   - Tap the 3-dots export menu button on various workout cards (at the top, middle, and bottom of the screen): verify the export menu opens immediately every time.
-   - Tap the edit button on workout cards: verify `EditWorkoutScreen` opens immediately.
-4. Verify Thumb Dragging:
-   - Grab the thumb directly and drag vertically: verify list scrolls smoothly to match thumb movement.
+2. Clean-room regression suite:
+   ```bash
+   ./gradlew testDebugUnitTest
+   ```
+
+### On-Device Hardware Verification (Google Pixel 10)
+1. Deploy build: `./gradlew installDebug`.
+2. Verify list action accessibility:
+   * Tap 3-dots export menu at `(1001, 2212)` -> popup menu opens immediately.
+   * Tap edit button at `(900, 2212)` -> editor opens immediately.
+3. Verify human finger scroll responsiveness:
+   * Perform a slow, normal finger drag on the 28dp thumb hit box (~5px per frame).
+   * Confirm thumb moves with zero visual lag.
+   * Confirm `LazyColumn` scrolls smoothly from first item down through all items.
+4. Capture screenshots and document test evidence in walkthrough.
