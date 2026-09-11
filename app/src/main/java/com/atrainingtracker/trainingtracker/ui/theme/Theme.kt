@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.theme
 
 import android.app.Activity
+import android.content.ContextWrapper
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -127,9 +128,15 @@ fun ATrainingTrackerTheme(
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.surface.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            var context = view.context
+            while (context is ContextWrapper) {
+                if (context is Activity) break
+                context = context.baseContext
+            }
+            (context as? Activity)?.window?.let { window ->
+                window.statusBarColor = colorScheme.surface.toArgb()
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            }
         }
     }
 

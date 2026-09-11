@@ -1195,7 +1195,7 @@
     <string name="show_all_laps">すべての %1$d ラップを表示</string>
     <string name="show_fewer_laps">少なく表示</string>
     <string name="fastest_lap">最速ラップ</string>
-    <string name="slowest_lap">最も遅いラップ</string>
+    <string name="slowest_lap">最遅ラップ</string>
 
     <!-- ATT-511: Edit Lap Details -->
     <string name="edit_lap_title">ラップ %1$d を編集</string>

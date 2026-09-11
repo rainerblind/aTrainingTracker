@@ -63,6 +63,7 @@ import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.components.MetricLayout
 import com.atrainingtracker.trainingtracker.ui.map.LapSegmentUtils
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
@@ -130,15 +131,16 @@ fun LapEditBottomSheet(
             decorFitsSystemWindows = false
         )
     ) {
-        val density = LocalDensity.current
-        val statusBarTopPx = WindowInsets.statusBars.getTop(density).toFloat()
-        val navBarBottomPx = WindowInsets.navigationBars.getBottom(density).toFloat()
+        ATrainingTrackerTheme {
+            val density = LocalDensity.current
+            val statusBarTopPx = WindowInsets.statusBars.getTop(density).toFloat()
+            val navBarBottomPx = WindowInsets.navigationBars.getBottom(density).toFloat()
 
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .imePadding()
-        ) {
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .imePadding()
+            ) {
             val screenHeightPx = constraints.maxHeight.toFloat()
             val offsetY = remember { Animatable(screenHeightPx) }
             var editControlsHeightPx by remember { mutableFloatStateOf(0f) }
@@ -258,7 +260,8 @@ fun LapEditBottomSheet(
             Surface(
                 shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
                 color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 6.dp,
+                tonalElevation = 0.dp,
+                shadowElevation = 8.dp,
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
@@ -401,9 +404,9 @@ fun LapEditBottomSheet(
                                 formatters.speed.format_with_units(currentLap.speedAverageMps)
                             }
 
-                            Card(
+                            OutlinedCard(
                                 shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                                colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
@@ -531,12 +534,11 @@ fun LapEditBottomSheet(
                             }
 
                             if (allPoints.isNotEmpty()) {
-                                Card(
+                                OutlinedCard(
                                     shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(200.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                        .height(200.dp)
                                 ) {
                                     val cameraPositionState = rememberCameraPositionState()
                                     var isMapLoaded by remember { mutableStateOf(false) }
@@ -621,13 +623,14 @@ fun LapEditBottomSheet(
         }
     }
 }
+}
 
 @Composable
 private fun NoGpsTrackCard() {
-    Card(
+    OutlinedCard(
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier
