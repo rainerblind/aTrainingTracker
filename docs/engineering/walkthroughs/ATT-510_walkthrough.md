@@ -1,7 +1,7 @@
 # Walkthrough: Overview of Laps in Workout Summaries (ATT-510)
 
 * **Parent Ticket**: [ATT-510](https://rainerblind.atlassian.net/browse/ATT-510) (*[Feature] Overview of laps in Workout Summaries*)
-* **Subtask**: [ATT-894](https://rainerblind.atlassian.net/browse/ATT-894) (*[Implementation] Overview of laps in Workout Summaries*)
+* **Subtask**: [ATT-894](https://rainerblind.atlassian.net/browse/ATT-894) (*[Implementation]*), [ATT-895](https://rainerblind.atlassian.net/browse/ATT-895) (*[Test]*)
 * **Requirement**: `REQ-UI-141`
 * **Test Specification**: `TST-UI-094`
 * **Target Version**: `V4.9.36`
@@ -64,3 +64,16 @@ Ran test suites via `./gradlew testDebugUnitTest`:
    - `WorkoutLapsTest`: 7 / 7 passed
 2. `TranslationParityTest`: 7 / 7 passed (100% string coverage across 9 languages)
 3. Full test suite: **BUILD SUCCESSFUL** across all modules with 0 failures and 0 regressions.
+
+### Physical Device Verification (Google Pixel 10 - `66020DLCR002FL`)
+Verified live in the application on a connected Google Pixel 10 physical device:
+* **Laps Section Display**: `WorkoutSummary` displays `Runden (5)` with individual lap rows (time, distance, speed).
+* **Collapsible Threshold**: Displays first 3 laps initially with "Alle 5 Runden anzeigen" toggle button.
+* **Toggle Expansion**: Tapping "Alle 5 Runden anzeigen" expands all 5 laps and updates button text to "Weniger anzeigen".
+* **Badge Suppression**: Correctly verifies that indoor workout sessions with 0 speed across all laps suppress performance badges, preventing false badges.
+* **Non-Interference**: Card touch navigation to `TrackOnMapScreen` remains fully intact.
+
+| Collapsed (Default: 3 Laps) | Expanded (All 5 Laps) |
+| :---: | :---: |
+| ![Collapsed Laps](/home/rainer/.gemini/antigravity-ide/brain/bc3ded02-ac2b-4ebc-8bb3-12779cf3090d/screen_laps_collapsed.png) | ![Expanded Laps](/home/rainer/.gemini/antigravity-ide/brain/bc3ded02-ac2b-4ebc-8bb3-12779cf3090d/screen_laps_expanded.png) |
+
