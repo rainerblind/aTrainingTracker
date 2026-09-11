@@ -43,6 +43,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.Wor
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetails
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
+import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLaps
 import com.atrainingtracker.trainingtracker.ui.components.strava.StravaActivitySection
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.PathPreviewMap
@@ -116,6 +117,20 @@ fun WorkoutSummary(
         if (workoutData.extremaData.dataRows.isNotEmpty()) {
             WorkoutExtrema(
                 data = workoutData.extremaData,
+                modifier = mapClickModifier
+            )
+        }
+
+        // ATT-510: Laps Overview Section
+        if (workoutData.laps.isNotEmpty()) {
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 12.dp),
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+            WorkoutLaps(
+                laps = workoutData.laps,
+                bSportType = workoutData.bSportType,
                 modifier = mapClickModifier
             )
         }

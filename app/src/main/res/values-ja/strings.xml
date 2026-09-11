@@ -1189,4 +1189,11 @@
     <string name="cluster_stats_yesterday">昨日</string>
     <string name="cluster_stats_days_ago">%1$d日前</string>
     <string name="cluster_stats_weeks_ago">%1$d週間前</string>
+
+    <!-- ATT-510: Lap Overview & Performance Highlights -->
+    <string name="laps_header">ラップ (%1$d)</string>
+    <string name="show_all_laps">すべての %1$d ラップを表示</string>
+    <string name="show_fewer_laps">少なく表示</string>
+    <string name="fastest_lap">最速ラップ</string>
+    <string name="slowest_lap">最遅ラップ</string>
 </resources>

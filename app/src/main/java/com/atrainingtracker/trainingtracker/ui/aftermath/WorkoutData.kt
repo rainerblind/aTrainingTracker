@@ -116,7 +116,8 @@ data class WorkoutData(
 
     // --- 3. Heavy/Live Data ---
     val exportStatuses: List<ExportStatusGroupData> = emptyList(),
-    val extremaRows: List<ExtremaDataRow> = emptyList()
+    val extremaRows: List<ExtremaDataRow> = emptyList(),
+    val laps: List<LapData> = emptyList()
 ) {
 
     // --- 3. Computed Component Properties ---

@@ -111,9 +111,9 @@ public class LapsDatabaseManager {
      * @param lapDistance The total distance of the lap in meters.
      * @param averageSpeed The average speed of the lap in m/s.
      */
-    public void saveLap(long workoutId, long lapNr, @Nullable String timeStart, int lapTime, double lapDistance, double averageSpeed) {
+    public void saveLap(long workoutId, long lapNr, @Nullable String timeStart, int lapTime, double lapDistance, double averageSpeed, @Nullable String name, @Nullable String description) {
         if (DEBUG)
-            Log.i(TAG, "saveLap: workoutId=" + workoutId + ", lapNr=" + lapNr + ", timeStart=" + timeStart + ", lapTime=" + lapTime + ", lapDistance=" + lapDistance);
+            Log.i(TAG, "saveLap: workoutId=" + workoutId + ", lapNr=" + lapNr + ", timeStart=" + timeStart + ", lapTime=" + lapTime + ", lapDistance=" + lapDistance + ", name=" + name);
 
         // Create and fill content values
         ContentValues values = new ContentValues();
@@ -125,12 +125,22 @@ public class LapsDatabaseManager {
         values.put(Laps.TIME_TOTAL_s, lapTime);
         values.put(Laps.DISTANCE_TOTAL_m, lapDistance);
         values.put(Laps.SPEED_AVERAGE_mps, averageSpeed);
+        if (name != null) {
+            values.put(Laps.NAME, name);
+        }
+        if (description != null) {
+            values.put(Laps.DESCRIPTION, description);
+        }
 
         try {
             getDatabase().insertOrThrow(Laps.TABLE, null, values);
         } catch (Exception e) {
             Log.e(TAG, "Error saving lap for workoutId: " + workoutId, e);
         }
+    }
+
+    public void saveLap(long workoutId, long lapNr, @Nullable String timeStart, int lapTime, double lapDistance, double averageSpeed) {
+        saveLap(workoutId, lapNr, timeStart, lapTime, lapDistance, averageSpeed, null, null);
     }
 
     /**
@@ -143,7 +153,7 @@ public class LapsDatabaseManager {
      * @param averageSpeed The average speed of the lap in m/s.
      */
     public void saveLap(long workoutId, long lapNr, int lapTime, double lapDistance, double averageSpeed) {
-        saveLap(workoutId, lapNr, null, lapTime, lapDistance, averageSpeed);
+        saveLap(workoutId, lapNr, null, lapTime, lapDistance, averageSpeed, null, null);
     }
 
     /**
@@ -161,6 +171,155 @@ public class LapsDatabaseManager {
         }
     }
 
+    /**
+     * Retrieves all recorded laps for a specific workout, ordered by lap number ascending.
+     *
+     * @param workoutId The workout ID.
+     * @return List of LapData objects, or empty list if no laps found.
+     */
+    @NonNull
+    public java.util.List<com.atrainingtracker.trainingtracker.ui.aftermath.LapData> getLaps(long workoutId) {
+        java.util.List<com.atrainingtracker.trainingtracker.ui.aftermath.LapData> laps = new java.util.ArrayList<>();
+        SQLiteDatabase db = getDatabase();
+        try (Cursor cursor = db.query(
+                Laps.TABLE,
+                null,
+                Laps.WORKOUT_ID + " = ?",
+                new String[]{String.valueOf(workoutId)},
+                null,
+                null,
+                Laps.LAP_NR + " ASC, " + Laps.C_ID + " ASC"
+        )) {
+            if (cursor != null) {
+                int idIdx = cursor.getColumnIndexOrThrow(Laps.C_ID);
+                int workoutIdIdx = cursor.getColumnIndexOrThrow(Laps.WORKOUT_ID);
+                int lapNrIdx = cursor.getColumnIndexOrThrow(Laps.LAP_NR);
+                int timeStartIdx = cursor.getColumnIndex(Laps.TIME_START);
+                int timeTotalIdx = cursor.getColumnIndexOrThrow(Laps.TIME_TOTAL_s);
+                int distTotalIdx = cursor.getColumnIndexOrThrow(Laps.DISTANCE_TOTAL_m);
+                int speedAvgIdx = cursor.getColumnIndexOrThrow(Laps.SPEED_AVERAGE_mps);
+                int nameIdx = cursor.getColumnIndex(Laps.NAME);
+                int descIdx = cursor.getColumnIndex(Laps.DESCRIPTION);
+
+                while (cursor.moveToNext()) {
+                    long id = cursor.getLong(idIdx);
+                    long wId = cursor.getLong(workoutIdIdx);
+                    long lapNr = cursor.getLong(lapNrIdx);
+                    String timeStart = timeStartIdx != -1 && !cursor.isNull(timeStartIdx) ? cursor.getString(timeStartIdx) : null;
+                    int timeTotal = cursor.getInt(timeTotalIdx);
+                    double distTotal = cursor.getDouble(distTotalIdx);
+                    double speedAvg = cursor.getDouble(speedAvgIdx);
+                    String name = nameIdx != -1 && !cursor.isNull(nameIdx) ? cursor.getString(nameIdx) : null;
+                    String desc = descIdx != -1 && !cursor.isNull(descIdx) ? cursor.getString(descIdx) : null;
+
+                    laps.add(new com.atrainingtracker.trainingtracker.ui.aftermath.LapData(
+                            id, wId, lapNr, timeStart, timeTotal, distTotal, speedAvg, name, desc
+                    ));
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying laps for workoutId=" + workoutId, e);
+        }
+        return laps;
+    }
+
+    /**
+     * Retrieves laps for multiple workouts in chunked vectorized queries, eliminating N+1 operations.
+     *
+     * @param workoutIds The collection of workout IDs.
+     * @return Map of workoutId to list of LapData objects.
+     */
+    @NonNull
+    public java.util.Map<Long, java.util.List<com.atrainingtracker.trainingtracker.ui.aftermath.LapData>> getLapsForWorkouts(@NonNull java.util.List<Long> workoutIds) {
+        java.util.Map<Long, java.util.List<com.atrainingtracker.trainingtracker.ui.aftermath.LapData>> result = new java.util.HashMap<>();
+        if (workoutIds.isEmpty()) {
+            return result;
+        }
+
+        SQLiteDatabase db = getDatabase();
+        final int chunkSize = 500;
+        for (int i = 0; i < workoutIds.size(); i += chunkSize) {
+            java.util.List<Long> chunk = workoutIds.subList(i, Math.min(i + chunkSize, workoutIds.size()));
+            StringBuilder sb = new StringBuilder();
+            String[] args = new String[chunk.size()];
+            for (int k = 0; k < chunk.size(); k++) {
+                if (k > 0) sb.append(",");
+                sb.append("?");
+                args[k] = String.valueOf(chunk.get(k));
+            }
+
+            try (Cursor cursor = db.query(
+                    Laps.TABLE,
+                    null,
+                    Laps.WORKOUT_ID + " IN (" + sb.toString() + ")",
+                    args,
+                    null,
+                    null,
+                    Laps.WORKOUT_ID + " ASC, " + Laps.LAP_NR + " ASC, " + Laps.C_ID + " ASC"
+            )) {
+                if (cursor != null) {
+                    int idIdx = cursor.getColumnIndexOrThrow(Laps.C_ID);
+                    int workoutIdIdx = cursor.getColumnIndexOrThrow(Laps.WORKOUT_ID);
+                    int lapNrIdx = cursor.getColumnIndexOrThrow(Laps.LAP_NR);
+                    int timeStartIdx = cursor.getColumnIndex(Laps.TIME_START);
+                    int timeTotalIdx = cursor.getColumnIndexOrThrow(Laps.TIME_TOTAL_s);
+                    int distTotalIdx = cursor.getColumnIndexOrThrow(Laps.DISTANCE_TOTAL_m);
+                    int speedAvgIdx = cursor.getColumnIndexOrThrow(Laps.SPEED_AVERAGE_mps);
+                    int nameIdx = cursor.getColumnIndex(Laps.NAME);
+                    int descIdx = cursor.getColumnIndex(Laps.DESCRIPTION);
+
+                    while (cursor.moveToNext()) {
+                        long id = cursor.getLong(idIdx);
+                        long wId = cursor.getLong(workoutIdIdx);
+                        long lapNr = cursor.getLong(lapNrIdx);
+                        String timeStart = timeStartIdx != -1 && !cursor.isNull(timeStartIdx) ? cursor.getString(timeStartIdx) : null;
+                        int timeTotal = cursor.getInt(timeTotalIdx);
+                        double distTotal = cursor.getDouble(distTotalIdx);
+                        double speedAvg = cursor.getDouble(speedAvgIdx);
+                        String name = nameIdx != -1 && !cursor.isNull(nameIdx) ? cursor.getString(nameIdx) : null;
+                        String desc = descIdx != -1 && !cursor.isNull(descIdx) ? cursor.getString(descIdx) : null;
+
+                        java.util.List<com.atrainingtracker.trainingtracker.ui.aftermath.LapData> list = result.get(wId);
+                        if (list == null) {
+                            list = new java.util.ArrayList<>();
+                            result.put(wId, list);
+                        }
+                        list.add(new com.atrainingtracker.trainingtracker.ui.aftermath.LapData(
+                                id, wId, lapNr, timeStart, timeTotal, distTotal, speedAvg, name, desc
+                        ));
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error batch querying laps for workouts", e);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Updates custom name and description for an existing lap.
+     *
+     * @param workoutId The workout ID.
+     * @param lapNr The lap number.
+     * @param name The custom name or null.
+     * @param description The custom description or null.
+     * @return true if updated successfully, false otherwise.
+     */
+    public boolean updateLapDetails(long workoutId, long lapNr, @Nullable String name, @Nullable String description) {
+        SQLiteDatabase db = getDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(Laps.NAME, name);
+        cv.put(Laps.DESCRIPTION, description);
+        try {
+            int updated = db.update(Laps.TABLE, cv, Laps.WORKOUT_ID + " = ? AND " + Laps.LAP_NR + " = ?",
+                    new String[]{String.valueOf(workoutId), String.valueOf(lapNr)});
+            return updated > 0;
+        } catch (Exception e) {
+            Log.e(TAG, "Error updating lap details: workoutId=" + workoutId + ", lapNr=" + lapNr, e);
+            return false;
+        }
+    }
+
 
     // the columns of the table
     public static final class Laps {
@@ -173,11 +332,13 @@ public class LapsDatabaseManager {
         public static final String TIME_TOTAL_s = "timeTotal_s";
         public static final String DISTANCE_TOTAL_m = "distanceTotal_m";
         public static final String SPEED_AVERAGE_mps = "speedAverage_mps";
+        public static final String NAME = "name";
+        public static final String DESCRIPTION = "description";
     }
 
     public static class LapsDbHelper extends SQLiteOpenHelper {
         public static final String DB_NAME = "Laps.db";
-        public static final int DB_VERSION = 1;
+        public static final int DB_VERSION = 2;
         protected static final String CREATE_TABLE = "create table " + Laps.TABLE + " ("
                 + Laps.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + Laps.WORKOUT_ID + " int,"
@@ -185,7 +346,9 @@ public class LapsDatabaseManager {
                 + Laps.TIME_START + " DATETIME DEFAULT CURRENT_TIMESTAMP,"
                 + Laps.TIME_TOTAL_s + " int,"
                 + Laps.DISTANCE_TOTAL_m + " real,"
-                + Laps.SPEED_AVERAGE_mps + " real)";
+                + Laps.SPEED_AVERAGE_mps + " real,"
+                + Laps.NAME + " TEXT,"
+                + Laps.DESCRIPTION + " TEXT)";
         private static final String TAG = "LapsDbHelper";
         private static final boolean DEBUG = false;
 
@@ -206,12 +369,20 @@ public class LapsDatabaseManager {
         //Called whenever newVersion != oldVersion
         @Override
         public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
-            // TODO: alter table instead of deleting!
+            if (oldVersion < 2) {
+                try {
+                    db.execSQL("ALTER TABLE " + Laps.TABLE + " ADD COLUMN " + Laps.NAME + " TEXT;");
+                } catch (Exception e) {
+                    Log.w(TAG, "Failed adding column " + Laps.NAME + ", may already exist", e);
+                }
+                try {
+                    db.execSQL("ALTER TABLE " + Laps.TABLE + " ADD COLUMN " + Laps.DESCRIPTION + " TEXT;");
+                } catch (Exception e) {
+                    Log.w(TAG, "Failed adding column " + Laps.DESCRIPTION + ", may already exist", e);
+                }
+            }
 
-            db.execSQL("drop table if exists " + Laps.TABLE);
-
-            if (DEBUG) Log.d(TAG, "onUpgraded");
-            onCreate(db);  // run onCreate to get new database
+            if (DEBUG) Log.d(TAG, "onUpgraded from " + oldVersion + " to " + newVersion);
         }
     }
 

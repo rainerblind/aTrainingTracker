@@ -1203,4 +1203,11 @@
     <string name="cluster_stats_yesterday">Ieri</string>
     <string name="cluster_stats_days_ago">%1$d giorni fa</string>
     <string name="cluster_stats_weeks_ago">%1$d settimane fa</string>
+
+    <!-- ATT-510: Lap Overview & Performance Highlights -->
+    <string name="laps_header">Giri (%1$d)</string>
+    <string name="show_all_laps">Mostra tutti i %1$d giri</string>
+    <string name="show_fewer_laps">Mostra meno</string>
+    <string name="fastest_lap">Giro più veloce</string>
+    <string name="slowest_lap">Giro più lento</string>
 </resources>

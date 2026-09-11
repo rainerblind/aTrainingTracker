@@ -1194,4 +1194,11 @@ proszę czekać</string>
     <string name="cluster_stats_yesterday">Wczoraj</string>
     <string name="cluster_stats_days_ago">%1$d dni temu</string>
     <string name="cluster_stats_weeks_ago">%1$d tyg. temu</string>
+
+    <!-- ATT-510: Lap Overview & Performance Highlights -->
+    <string name="laps_header">Okrążenia (%1$d)</string>
+    <string name="show_all_laps">Pokaż wszystkie %1$d okrążenia</string>
+    <string name="show_fewer_laps">Pokaż mniej</string>
+    <string name="fastest_lap">Najszybsze okrążenie</string>
+    <string name="slowest_lap">Najwolniejsze okrążenie</string>
 </resources>

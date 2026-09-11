@@ -1204,4 +1204,11 @@
     <string name="cluster_stats_yesterday">Hier</string>
     <string name="cluster_stats_days_ago">il y a %1$d jours</string>
     <string name="cluster_stats_weeks_ago">il y a %1$d semaines</string>
+
+    <!-- ATT-510: Lap Overview & Performance Highlights -->
+    <string name="laps_header">Tours (%1$d)</string>
+    <string name="show_all_laps">Afficher les %1$d tours</string>
+    <string name="show_fewer_laps">Moins afficher</string>
+    <string name="fastest_lap">Tour le plus rapide</string>
+    <string name="slowest_lap">Tour le plus lent</string>
 </resources>
