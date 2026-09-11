@@ -648,6 +648,23 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     /**
+     * Updates the custom name and description for a specific lap (ATT-511).
+     * Persists changes to LapsDatabaseManager on Dispatchers.IO and atomically
+     * updates the in-memory cache so UI updates reactively without reloading.
+     */
+    suspend fun updateLapDetails(workoutId: Long, lapNr: Long, name: String?, description: String?) {
+        withContext(Dispatchers.IO) {
+            LapsDatabaseManager.getInstance(application).updateLapDetails(workoutId, lapNr, name, description)
+        }
+        updateWorkoutInMemory(workoutId) { current ->
+            val updatedLaps = current.laps.map { lap ->
+                if (lap.lapNr == lapNr) lap.copy(name = name, description = description) else lap
+            }
+            current.copy(laps = updatedLaps)
+        }
+    }
+
+    /**
      * Atomically updates a workout session in memory while handling potential race conditions.
      *
      * Implementation: If the workout is already cached, it applies the [block] transform.

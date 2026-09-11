@@ -1210,4 +1210,19 @@
     <string name="show_fewer_laps">Minder weergeven</string>
     <string name="fastest_lap">Snelste ronde</string>
     <string name="slowest_lap">Langzaamste ronde</string>
+
+    <!-- ATT-511: Edit Lap Details -->
+    <string name="edit_lap_title">Ronde %1$d bewerken</string>
+    <string name="lap_name_label">Rondenaam</string>
+    <string name="lap_description_label">Notities &amp; beschrijving</string>
+    <string name="quick_tag_warmup">Warming-up</string>
+    <string name="quick_tag_interval">Interval</string>
+    <string name="quick_tag_recovery">Herstel</string>
+    <string name="quick_tag_hill_climb">Klim</string>
+    <string name="quick_tag_tempo">Tempo</string>
+    <string name="quick_tag_sprint">Sprint</string>
+    <string name="quick_tag_cooldown">Cooling-down</string>
+    <string name="previous_lap">Vorige</string>
+    <string name="next_lap">Volgende</string>
+    <string name="no_gps_track_available">Geen GPS-track geregistreerd voor deze training</string>
 </resources>

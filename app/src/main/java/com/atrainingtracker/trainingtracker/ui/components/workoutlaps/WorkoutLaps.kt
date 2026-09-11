@@ -43,7 +43,8 @@ import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
 fun WorkoutLaps(
     laps: List<LapData>,
     bSportType: BSportType = BSportType.UNKNOWN,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onLapClick: ((LapData) -> Unit)? = null
 ) {
     if (laps.isEmpty()) return
 
@@ -137,6 +138,7 @@ fun WorkoutLaps(
                     speedPaceFormatted = speedPaceFormatted,
                     badgeEmoji = badgeEmoji,
                     badgeDescription = badgeDescription,
+                    onClick = if (onLapClick != null) { { onLapClick(lap) } } else null,
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
 
@@ -182,10 +184,13 @@ private fun LapRow(
     speedPaceFormatted: String,
     badgeEmoji: String?,
     badgeDescription: String?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Col 1: Lap Name & optional description

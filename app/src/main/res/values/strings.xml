@@ -1410,4 +1410,19 @@
     <string name="show_fewer_laps">Show fewer</string>
     <string name="fastest_lap">Fastest lap</string>
     <string name="slowest_lap">Slowest lap</string>
+
+    <!-- ATT-511: Edit Lap Details -->
+    <string name="edit_lap_title">Edit Lap %1$d</string>
+    <string name="lap_name_label">Lap Name</string>
+    <string name="lap_description_label">Notes &amp; Description</string>
+    <string name="quick_tag_warmup">Warm-up</string>
+    <string name="quick_tag_interval">Interval</string>
+    <string name="quick_tag_recovery">Recovery</string>
+    <string name="quick_tag_hill_climb">Hill Climb</string>
+    <string name="quick_tag_tempo">Tempo</string>
+    <string name="quick_tag_sprint">Sprint</string>
+    <string name="quick_tag_cooldown">Cool-down</string>
+    <string name="previous_lap">Previous</string>
+    <string name="next_lap">Next</string>
+    <string name="no_gps_track_available">No GPS track recorded for this workout</string>
 </resources>

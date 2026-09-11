@@ -30,13 +30,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import android.app.Application
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.ui.aftermath.LapData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapEditBottomSheet
+import kotlinx.coroutines.launch
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatus
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.WorkoutDescription
@@ -69,6 +80,8 @@ fun WorkoutSummary(
 ) {
     // When the workout is not yet finished (properly), we show it with an alpha of 0.5
     val contentAlpha = if (workoutData.headerData.finished) TTAlpha.High else 0.5f
+
+    var activeEditingLap by remember { mutableStateOf<LapData?>(null) }
 
     // Shared modifier for the clickable body sections (navigates to map view, ATT-850)
     val mapClickModifier = Modifier.clickable {
@@ -131,7 +144,7 @@ fun WorkoutSummary(
             WorkoutLaps(
                 laps = workoutData.laps,
                 bSportType = workoutData.bSportType,
-                modifier = mapClickModifier
+                onLapClick = { lap -> activeEditingLap = lap }
             )
         }
 
@@ -162,6 +175,23 @@ fun WorkoutSummary(
 
         // Final spacing at the bottom of the summary
         Spacer(modifier = Modifier.height(12.dp))
+    }
+
+    activeEditingLap?.let { lap ->
+        val context = LocalContext.current
+        val coroutineScope = rememberCoroutineScope()
+        LapEditBottomSheet(
+            workoutData = workoutData,
+            initialLapNr = lap.lapNr,
+            isPlayServiceAvailable = isPlayServiceAvailable,
+            onDismissRequest = { activeEditingLap = null },
+            onSaveLap = { lapNr, name, description ->
+                coroutineScope.launch {
+                    WorkoutRepository.getInstance(context.applicationContext as Application)
+                        .updateLapDetails(workoutData.id, lapNr, name, description)
+                }
+            }
+        )
     }
 }
 
