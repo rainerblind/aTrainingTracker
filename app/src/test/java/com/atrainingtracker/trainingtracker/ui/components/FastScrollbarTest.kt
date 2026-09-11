@@ -133,4 +133,48 @@ class FastScrollbarTest {
         )
         assertEquals(19, target)
     }
+
+    @Test
+    fun calculateAccumulatedProgress_continuousSmallDeltas_accumulatesWithoutTruncation() {
+        var progress = 0.0f
+        val trackLengthPx = 2000.0f
+        val frameDeltaPx = 5.0f
+
+        // Simulate 60 frames of 5px movements (total 300px)
+        for (i in 1..60) {
+            progress = calculateAccumulatedProgress(progress, frameDeltaPx, trackLengthPx)
+        }
+
+        // 300px / 2000px = 0.15f
+        assertEquals(0.15f, progress, 0.001f)
+    }
+
+    @Test
+    fun calculateAccumulatedProgress_boundsClamping_clampsBetweenZeroAndOne() {
+        val clampedBottom = calculateAccumulatedProgress(currentProgress = 0.9f, dragDeltaY = 500f, trackLengthPx = 1000f)
+        assertEquals(1.0f, clampedBottom, 0.001f)
+
+        val clampedTop = calculateAccumulatedProgress(currentProgress = 0.1f, dragDeltaY = -500f, trackLengthPx = 1000f)
+        assertEquals(0.0f, clampedTop, 0.001f)
+
+        val invalidTrack = calculateAccumulatedProgress(currentProgress = 0.5f, dragDeltaY = 50f, trackLengthPx = 0f)
+        assertEquals(0.5f, invalidTrack, 0.001f)
+    }
+
+    @Test
+    fun calculateTargetIndexFromProgress_mapsCleanlyAcrossEntireList() {
+        val totalItems = 20
+
+        assertEquals(0, calculateTargetIndexFromProgress(progress = 0.0f, totalItems = totalItems))
+        assertEquals(19, calculateTargetIndexFromProgress(progress = 1.0f, totalItems = totalItems))
+        assertEquals(10, calculateTargetIndexFromProgress(progress = 0.5f, totalItems = totalItems))
+    }
+
+    @Test
+    fun calculateTargetIndexFromProgress_edgeCases_handlesZeroAndOneItem() {
+        assertEquals(0, calculateTargetIndexFromProgress(progress = 0.5f, totalItems = 0))
+        assertEquals(0, calculateTargetIndexFromProgress(progress = 0.5f, totalItems = 1))
+        assertEquals(0, calculateTargetIndexFromProgress(progress = -1.0f, totalItems = 10))
+        assertEquals(9, calculateTargetIndexFromProgress(progress = 2.0f, totalItems = 10))
+    }
 }
