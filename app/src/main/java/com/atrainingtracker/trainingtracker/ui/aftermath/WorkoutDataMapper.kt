@@ -31,6 +31,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
@@ -184,7 +185,8 @@ class WorkoutDataMapper(
                 rows
             },
 
-            exportStatuses = emptyList() // will be added/merged by the viewModel
+            exportStatuses = emptyList(), // will be added/merged by the viewModel
+            laps = LapsDatabaseManager.getInstance(context).getLaps(workoutId)
         )
     }
 
@@ -194,7 +196,8 @@ class WorkoutDataMapper(
     data class BatchMetadata(
         val extrema: Map<Long, List<WorkoutSummariesDatabaseManager.ExtremaRecord>>,
         val stravaData: Map<String, String>,
-        val clusterNames: Map<Long, String> = emptyMap()
+        val clusterNames: Map<Long, String> = emptyMap(),
+        val laps: Map<Long, List<LapData>> = emptyMap()
     )
 
     /**
@@ -311,7 +314,8 @@ class WorkoutDataMapper(
                 }
                 rows
             },
-            exportStatuses = emptyList()
+            exportStatuses = emptyList(),
+            laps = batch.laps[workoutId] ?: emptyList()
         )
     }
 

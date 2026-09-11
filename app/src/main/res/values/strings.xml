@@ -1403,4 +1403,11 @@
     <string name="cluster_stats_yesterday">Yesterday</string>
     <string name="cluster_stats_days_ago">%1$d days ago</string>
     <string name="cluster_stats_weeks_ago">%1$d weeks ago</string>
+
+    <!-- ATT-510: Lap Overview & Performance Highlights -->
+    <string name="laps_header">Laps (%1$d)</string>
+    <string name="show_all_laps">Show all %1$d laps</string>
+    <string name="show_fewer_laps">Show fewer</string>
+    <string name="fastest_lap">Fastest lap</string>
+    <string name="slowest_lap">Slowest lap</string>
 </resources>

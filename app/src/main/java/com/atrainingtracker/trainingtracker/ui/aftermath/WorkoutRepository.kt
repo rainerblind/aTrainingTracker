@@ -37,6 +37,7 @@ import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
@@ -511,11 +512,13 @@ class WorkoutRepository private constructor(private val application: Application
                         val extremaList = summariesManager.getExtremaForWorkouts(chunkIds)
                         val stravaDataMap = stravaUploadDbHelper.getStravaActivityDataForWorkouts(chunkNames)
                         val clusterNamesMap = WorkoutClusterDatabaseManager.getInstance(application).getClusterNamesForIds(chunkClusterIds)
+                        val lapsMap = LapsDatabaseManager.getInstance(application).getLapsForWorkouts(chunkIds)
 
                         val batchMetadata = WorkoutDataMapper.BatchMetadata(
                             extrema = extremaList.groupBy { it.workoutId },
                             stravaData = stravaDataMap,
-                            clusterNames = clusterNamesMap
+                            clusterNames = clusterNamesMap,
+                            laps = lapsMap
                         )
 
                         // 3. Map the chunk

@@ -1203,4 +1203,11 @@
     <string name="cluster_stats_yesterday">Ontem</string>
     <string name="cluster_stats_days_ago">há %1$d dias</string>
     <string name="cluster_stats_weeks_ago">há %1$d semanas</string>
+
+    <!-- ATT-510: Lap Overview & Performance Highlights -->
+    <string name="laps_header">Voltas (%1$d)</string>
+    <string name="show_all_laps">Mostrar todas as %1$d voltas</string>
+    <string name="show_fewer_laps">Mostrar menos</string>
+    <string name="fastest_lap">Volta mais rápida</string>
+    <string name="slowest_lap">Volta mais lenta</string>
 </resources>

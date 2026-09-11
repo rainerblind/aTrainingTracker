@@ -1203,4 +1203,11 @@
     <string name="cluster_stats_yesterday">Gisteren</string>
     <string name="cluster_stats_days_ago">%1$d dagen geleden</string>
     <string name="cluster_stats_weeks_ago">%1$d weken geleden</string>
+
+    <!-- ATT-510: Lap Overview & Performance Highlights -->
+    <string name="laps_header">Ronden (%1$d)</string>
+    <string name="show_all_laps">Toon alle %1$d ronden</string>
+    <string name="show_fewer_laps">Minder weergeven</string>
+    <string name="fastest_lap">Snelste ronde</string>
+    <string name="slowest_lap">Langzaamste ronde</string>
 </resources>

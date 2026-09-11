@@ -1290,4 +1290,11 @@
     <string name="cluster_stats_yesterday">Gestern</string>
     <string name="cluster_stats_days_ago">vor %1$d Tagen</string>
     <string name="cluster_stats_weeks_ago">vor %1$d Wochen</string>
+
+    <!-- ATT-510: Lap Overview & Performance Highlights -->
+    <string name="laps_header">Runden (%1$d)</string>
+    <string name="show_all_laps">Alle %1$d Runden anzeigen</string>
+    <string name="show_fewer_laps">Weniger anzeigen</string>
+    <string name="fastest_lap">Schnellste Runde</string>
+    <string name="slowest_lap">Langsamste Runde</string>
 </resources>
