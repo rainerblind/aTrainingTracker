@@ -91,8 +91,68 @@ Because `pointerInput(state) { detectDragGestures { ... } }` is attached to the 
 
 ---
 
-## 5. System Invariants ("What MUST NOT Change")
+## 6. Iteration 2 Analysis (ATT-877): Why the Scrollbar Failed to Move the List
+
+During initial on-device user testing of Iteration 1, the user reported:
+> *"Unfortuantely, I can not move the list with the scrollbar. Thus, the ticket is moved back to Analysis."*
+
+Deep mathematical simulation and code analysis uncovered the precise root causes:
+
+### 6.1 RCA 3: Discretization & Truncation Loss in Drag Calculation (The "Stuck Index" Bug)
+In the Iteration 1 implementation:
+```kotlin
+val deltaProgress = dragAmount.y / trackHeightPx
+val targetIndex = calculateTargetIndex(scrollProgress, deltaProgress, totalItemsCount)
+```
+Where `calculateTargetIndex` computed:
+```kotlin
+val newProgress = (currentProgress + deltaProgress).coerceIn(0f, 1f)
+return (newProgress * totalItems).toInt().coerceIn(0, totalItems - 1)
+```
+1. In Jetpack Compose, `detectDragGestures(onDrag = { change, dragAmount -> ... })` provides `dragAmount.y` as the incremental pointer delta **per touch event / frame** (typically 2 to 10 pixels at 60Hz/120Hz), NOT the accumulated displacement from touch-down.
+2. On a device with track height $\approx 2000\text{px}$ and a list of 20 workouts, a normal finger drag of 5px yields:
+   $$\Delta_{\text{progress}} = \frac{5\text{px}}{2000\text{px}} = 0.0025$$
+   $$\Delta_{\text{index}} = 0.0025 \times 20 = 0.05$$
+3. Because $\Delta_{\text{index}} = 0.05 < 1.0$, `(newProgress * totalItems).toInt()` truncates the fraction and evaluates **to the exact current item index**.
+4. `state.scrollToItem(currentIndex)` is a no-op; the list does not move.
+5. In the subsequent touch frame 16ms later, `scrollProgress` is still unchanged (at 0.0). The new 5px delta is again added to 0.0 and truncated to 0.
+6. **Mathematical Proof**: Moving 300px across 60 frames with 5px per frame results in `targetIndex = 0` across all 60 frames. Unless a user flings their finger faster than $100\text{px} / 16\text{ms} \approx 1.5\text{ m/s}$, the index calculation never increments!
+
+### 6.2 RCA 4: Frozen Visual Thumb Offset
+The thumb offset was calculated strictly from `scrollProgress * maxOffsetPx`, which derives from `state.firstVisibleItemIndex`. Because `targetIndex` never changed, `scrollProgress` remained static, and the thumb stayed visually locked in place despite physical finger movement.
+
+### 6.3 RCA 5: Undersized Touch Target (16dp)
+Reducing the thumb container width to 16dp (~42px on 420dpi) at the extreme right bezel edge made it physically difficult for human finger pads (~40dp wide) to grab without slipping off the hit box.
+
+---
+
+## 7. Solution Architecture for Iteration 2 (ATT-877)
+
+### 7.1 Drag Accumulator & State-Driven Thumb Tracking
+1. Maintain continuous drag state:
+   - `isDragging: Boolean` (active drag gesture flag).
+   - `dragProgress: Float` (accumulated continuous progress $0.0 \dots 1.0$).
+2. Gesture lifecycle:
+   - **`onDragStart`**: Set `isDragging = true` and initialize `dragProgress = scrollProgress`.
+   - **`onDrag`**:
+     $$\text{dragProgress} = \left(\text{dragProgress} + \frac{\text{dragAmount.y}}{\text{maxOffsetPx}}\right)\!.coerceIn(0f, 1f)$$
+     $$\text{targetIndex} = \left(\text{dragProgress} \times (\text{totalItems} - 1)\right)\!.roundToInt()$$
+     Dispatches `coroutineScope.launch { state.scrollToItem(targetIndex) }`.
+   - **`onDragEnd` / `onDragCancel`**: Set `isDragging = false`.
+3. **Visual Thumb Position**:
+   Use `effectiveProgress = if (isDragging) dragProgress else scrollProgress`.
+   This ensures the thumb follows the finger with **zero latency** and **1:1 visual fidelity**, while seamlessly synchronizing with list scroll state when idle.
+
+### 7.2 Ergonomic Thumb Touch Target
+Increase the thumb hit box width to **`28.dp`** (or `32.dp`) aligned to `Alignment.TopEnd`.
+- Because pointer handling is strictly confined to the thumb (`height = 48.dp`), the remaining $95\%$ of the screen height has **zero gesture interception**, guaranteeing all list action buttons (3-dots export menu, edit button) remain 100% clickable.
+- The 28dp width provides an effortless, comfortable grab target for fingers and thumbs.
+
+---
+
+## 8. System Invariants ("What MUST NOT Change")
 
 1. **Scroll Progress & Item Position Calculation**: The mathematical derivation of `scrollProgress` based on `firstVisibleItemIndex`, `firstVisibleItemScrollOffset`, and `totalItemsCount` MUST remain unchanged.
 2. **Alpha Animation Contract**: The 500ms tween transition between 0.4f (idle) and 1.0f (active scroll) MUST be preserved.
 3. **List & Card Layout Integrity**: Card content padding, layout structure in `WorkoutSummary` and `WorkoutSummaryCompact`, and `WorkoutHeader` action buttons MUST NOT be altered.
+
