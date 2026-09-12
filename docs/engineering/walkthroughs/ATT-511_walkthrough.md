@@ -1,9 +1,11 @@
 # Walkthrough: Edit Lap Details & Interactive Segment Map (ATT-511)
 
 * **Parent Ticket**: [ATT-511](https://rainerblind.atlassian.net/browse/ATT-511) (*[Feature] Edit Lap details*)
-* **Subtask**: [ATT-899](https://rainerblind.atlassian.net/browse/ATT-899) (*[Subtask] [Implementation] Edit Lap details*)
-* **Requirement**: `REQ-UI-142`
-* **Test Specification**: `TST-UI-095`
+* **Subtasks**: 
+  - [ATT-899](https://rainerblind.atlassian.net/browse/ATT-899) (*[Subtask] [Implementation] Edit Lap details*)
+  - [ATT-901](https://rainerblind.atlassian.net/browse/ATT-901) (*[Subtask] [Test] Edit Lap details*)
+* **Requirement**: `REQ-UI-142` (Verified)
+* **Test Specification**: `TST-UI-095` (Verified)
 * **Target Version**: `V4.9.36`
 * **Branch**: `feature/ATT-511`
 
@@ -54,18 +56,23 @@ Key capabilities delivered:
 | **UI Integration** | `WorkoutLaps.kt` [MODIFY] | Added `onLapClick: ((LapData) -> Unit)? = null` and wrapped individual `LapRow` items with click handlers. |
 | **UI Integration** | `WorkoutSummary.kt` [MODIFY] | Managed `activeEditingLap` state, launched `LapEditBottomSheet`, and connected save callback. |
 | **Repository** | `WorkoutRepository.kt` [MODIFY] | Added `suspend fun updateLapDetails` with `Dispatchers.IO` DB write and atomic `_allWorkouts` cache update. |
-| **Localization** | `strings.xml` (9 locales) | Added `edit_lap_title`, `lap_name_label`, `lap_description_label`, 7 quick tags, `previous_lap`, `next_lap`, and `no_gps_track_available`. |
+| **Theme / Core** | `Theme.kt` [MODIFY] | Safely unwrapped `ContextWrapper` chain to `Activity` for Dialog window status bar styling without `ClassCastException`. |
+| **Localization** | `strings.xml` (9 locales) | Added `edit_lap_title`, `lap_name_label`, `lap_description_label`, 7 quick tags, `previous_lap`, `next_lap`, and `no_gps_track_available`. Reverted unintended modification in `values-ja/strings.xml`. |
 | **Unit Tests** | `LapSegmentUtilsTest.kt` [NEW] | 5 unit tests covering range calculation, coordinate slicing, boundary anchors, bounds calculation, and zero-area safety. |
 | **Unit Tests** | `WorkoutRepositoryLapUpdateTest.kt` [NEW] | 2 unit tests verifying DB persistence and atomic in-memory cache update. |
 
 ---
 
-## 3. Iterative UI Layout Refinements (User Testing Feedback)
+## 3. Iterative UI Layout & Styling Refinements (User Testing Feedback)
 
-Following physical device evaluation on Google Pixel 10:
+Following physical device evaluation on Google Pixel 10 (`66020DLCR002FL`):
 1. **Scaffold & Status Bar Boundary**: Constrained the sheet container with `Modifier.statusBarsPadding()` so that when expanded/drawn up, the sheet is drawn strictly up to the status bar and never overlays system status bar elements.
 2. **Header Simplification & Row Order Toggle**: Removed redundant close (`'X'`) button; toggled the header rows so that the primary action bar `(Cancel) (Store)` sits at the top, directly followed by the sequential navigation bar `< Previous | Lap X / Y | Next >`.
 3. **Initial Popup Height & Map Revelation**: Configured partial expansion (`skipPartiallyExpanded = false`) so that the initial popup displays the edit controls down to the comments text field with its bottom aligned to the top of the navigation bar, keeping the map hidden until the user slides or scrolls upwards.
+4. **Theme & Pure White Surface Color**:
+   - Wrapped Dialog content in `ATrainingTrackerTheme`.
+   - Set `Surface` background with `tonalElevation = 0.dp` and `shadowElevation = 8.dp`, eliminating Material 3 surface elevation overlays and ensuring pure crisp white `#FFFFFF`.
+   - Transformed Metrics Card, Segment Map Container, and `NoGpsTrackCard` to `OutlinedCard(containerColor = surface)` to match the app's clean card aesthetic.
 
 ---
 
@@ -73,8 +80,27 @@ Following physical device evaluation on Google Pixel 10:
 
 ### Automated Clean-Room Unit Tests
 Executed via `./gradlew testDebugUnitTest`:
-1. `LapSegmentUtilsTest`: **5 / 5 passed** (100%)
-2. `WorkoutRepositoryLapUpdateTest`: **2 / 2 passed** (100%)
-3. `WorkoutLapsTest`: **7 / 7 passed** (100%)
-4. `TranslationParityTest`: **7 / 7 passed** (100% key parity across all 9 locales)
-5. Full clean-room test suite: **BUILD SUCCESSFUL in 1m 6s** across all test modules with 0 regressions.
+* **Result**: `BUILD SUCCESSFUL in 1m 55s` (32 actionable tasks: 12 executed, 20 up-to-date)
+* **Pass Rate**: 100% (0 failures, 0 errors across all test modules)
+* Key test suites verified:
+  1. `LapSegmentUtilsTest`: **5 / 5 passed** (100%)
+  2. `WorkoutRepositoryLapUpdateTest`: **2 / 2 passed** (100%)
+  3. `WorkoutLapsTest`: **7 / 7 passed** (100%)
+  4. `TranslationParityTest`: **7 / 7 passed** (100% key parity across all 9 locales)
+
+### Physical Device Verification (Google Pixel 10)
+* **Collapsed Popup State**: Opens smoothly with pure white `#FFFFFF` surface; comments field bottom aligns with navigation bar; action buttons and quick-tags visible and responsive.
+* **Expanded Map State**: Swiping up smoothly expands the popup to the status bar, rendering the workout polyline and highlighted lap segment within its outlined container.
+* **Dismissal**: Tapping `Abbrechen` smoothly dismisses the popup and restores workout summary view.
+* **Localization**: Japanese strings verified; zero regression across all 9 locales.
+
+---
+
+## 5. Traceability & ASPICE Sign-Off
+
+| Artifact | Identifier | Status |
+| :--- | :--- | :--- |
+| **System Requirement** | `REQ-UI-142` | **Verified** |
+| **Test Specification** | `TST-UI-095` | **Verified** |
+| **Jira Feature** | `ATT-511` | In Test (V4.9.36) |
+| **Jira Subtask (Test)** | `ATT-901` | **Freigabe (Human)** |
