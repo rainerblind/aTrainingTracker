@@ -299,7 +299,7 @@ public abstract class BaseExporter {
 
 
 
-    protected static class ExportResult {
+    public static class ExportResult {
         private final boolean mSuccess;
         private final boolean mPleaseRetryWhenFailed;
         private final String mAnswer;

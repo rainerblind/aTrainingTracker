@@ -62,7 +62,9 @@ data class ParsedLap(
     var maxSpeed: Double? = null,
     var calories: Int? = null,
     var avgHeartRate: Int? = null,
-    var maxHeartRate: Int? = null
+    var maxHeartRate: Int? = null,
+    var name: String? = null,
+    var description: String? = null
 )
 
 /**
@@ -274,6 +276,7 @@ object LegacyImportEngine {
                 
                 var eventType = parser.eventType
                 var values = ContentValues()
+                var inLap = false
                 var inTrackpoint = false
                 var currentLat: Double? = null
                 var currentLng: Double? = null
@@ -298,6 +301,7 @@ object LegacyImportEngine {
                                     }
                                 }
                                 "Lap" -> {
+                                    inLap = true
                                     val rawStartTime = parser.getAttributeValue(null, "StartTime") ?: run {
                                         for (i in 0 until parser.attributeCount) {
                                             if (parser.getAttributeName(i).equals("StartTime", ignoreCase = true)) {
@@ -331,7 +335,56 @@ object LegacyImportEngine {
                                 "Notes" -> if (!inTrackpoint) {
                                     val text = parser.nextText()
                                     if (!text.isNullOrBlank()) {
-                                        workoutNotes = text
+                                        if (inLap && currentLap != null) {
+                                            val trimmed = text.trim()
+                                            val bracketMatch = Regex("""^\[(.*?)\](?:\s*(.*))?$""", RegexOption.DOT_MATCHES_ALL).find(trimmed)
+                                            if (bracketMatch != null) {
+                                                val extractedName = bracketMatch.groupValues[1].trim()
+                                                val extractedDesc = bracketMatch.groupValues.getOrNull(2)?.trim()
+                                                if (currentLap.name.isNullOrBlank() && extractedName.isNotEmpty()) {
+                                                    currentLap.name = extractedName
+                                                }
+                                                if (currentLap.description.isNullOrBlank() && !extractedDesc.isNullOrEmpty()) {
+                                                    currentLap.description = extractedDesc
+                                                }
+                                            } else {
+                                                val lines = trimmed.lines()
+                                                if (lines.size > 1) {
+                                                    val firstLine = lines.first().trim()
+                                                    if (currentLap.name.isNullOrBlank() && firstLine.length <= 40) {
+                                                        currentLap.name = firstLine
+                                                        if (currentLap.description.isNullOrBlank()) {
+                                                            val remaining = lines.drop(1).joinToString("\n").trim()
+                                                            if (remaining.isNotEmpty()) {
+                                                                currentLap.description = remaining
+                                                            }
+                                                        }
+                                                    } else if (currentLap.description.isNullOrBlank()) {
+                                                        currentLap.description = trimmed
+                                                    }
+                                                } else {
+                                                    if (trimmed.length <= 40 && currentLap.name.isNullOrBlank()) {
+                                                        currentLap.name = trimmed
+                                                    } else if (currentLap.description.isNullOrBlank()) {
+                                                        currentLap.description = trimmed
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            workoutNotes = text
+                                        }
+                                    }
+                                }
+                                "Name" -> if (inLap && currentLap != null && !inTrackpoint) {
+                                    val text = parser.nextText()
+                                    if (!text.isNullOrBlank()) {
+                                        currentLap.name = text.trim()
+                                    }
+                                }
+                                "Description" -> if (inLap && currentLap != null && !inTrackpoint) {
+                                    val text = parser.nextText()
+                                    if (!text.isNullOrBlank()) {
+                                        currentLap.description = text.trim()
                                     }
                                 }
                                 "Trackpoint" -> {
@@ -432,6 +485,10 @@ object LegacyImportEngine {
                             }
                         }
                         XmlPullParser.END_TAG -> {
+                            if (name == "Lap") {
+                                inLap = false
+                                currentLap = null
+                            }
                             if (name == "Trackpoint") {
                                 if (values.containsKey("time")) {
                                     bufferedSamples.add(values)
@@ -671,7 +728,27 @@ object LegacyImportEngine {
                     val lapDuration = if (lap.totalTimeSeconds > 0) lap.totalTimeSeconds.toInt() else activeTime
                     val lapDistance = if (lap.distanceMeters > 0) lap.distanceMeters else totalDistance
                     val lapAvgSpeed = if (lapDuration > 0) lapDistance / lapDuration else 0.0
-                    lapsDb.saveLap(workoutId, lap.lapNr, lap.startTime ?: firstTime, lapDuration, lapDistance, lapAvgSpeed)
+                    if (lap.name != null || lap.description != null) {
+                        lapsDb.saveLap(
+                            workoutId,
+                            lap.lapNr,
+                            lap.startTime ?: firstTime,
+                            lapDuration,
+                            lapDistance,
+                            lapAvgSpeed,
+                            lap.name,
+                            lap.description
+                        )
+                    } else {
+                        lapsDb.saveLap(
+                            workoutId,
+                            lap.lapNr,
+                            lap.startTime ?: firstTime,
+                            lapDuration,
+                            lapDistance,
+                            lapAvgSpeed
+                        )
+                    }
                 }
             } else {
                 val avgSpeed = if (activeTime > 0) totalDistance / activeTime else 0.0
