@@ -1201,4 +1201,19 @@ proszę czekać</string>
     <string name="show_fewer_laps">Pokaż mniej</string>
     <string name="fastest_lap">Najszybsze okrążenie</string>
     <string name="slowest_lap">Najwolniejsze okrążenie</string>
+
+    <!-- ATT-511: Edit Lap Details -->
+    <string name="edit_lap_title">Edytuj okrążenie %1$d</string>
+    <string name="lap_name_label">Nazwa okrążenia</string>
+    <string name="lap_description_label">Notatki i opis</string>
+    <string name="quick_tag_warmup">Rozgrzewka</string>
+    <string name="quick_tag_interval">Interwał</string>
+    <string name="quick_tag_recovery">Regeneracja</string>
+    <string name="quick_tag_hill_climb">Podjazd</string>
+    <string name="quick_tag_tempo">Tempo</string>
+    <string name="quick_tag_sprint">Sprint</string>
+    <string name="quick_tag_cooldown">Schłodzenie</string>
+    <string name="previous_lap">Poprzednie</string>
+    <string name="next_lap">Następne</string>
+    <string name="no_gps_track_available">Brak zarejestrowanej trasy GPS dla tego treningu</string>
 </resources>

@@ -1196,4 +1196,19 @@
     <string name="show_fewer_laps">少なく表示</string>
     <string name="fastest_lap">最速ラップ</string>
     <string name="slowest_lap">最遅ラップ</string>
+
+    <!-- ATT-511: Edit Lap Details -->
+    <string name="edit_lap_title">ラップ %1$d を編集</string>
+    <string name="lap_name_label">ラップ名</string>
+    <string name="lap_description_label">メモ・説明</string>
+    <string name="quick_tag_warmup">ウォーミングアップ</string>
+    <string name="quick_tag_interval">インターバル</string>
+    <string name="quick_tag_recovery">リカバリー</string>
+    <string name="quick_tag_hill_climb">ヒルクライム</string>
+    <string name="quick_tag_tempo">ペース走</string>
+    <string name="quick_tag_sprint">スプリント</string>
+    <string name="quick_tag_cooldown">クールダウン</string>
+    <string name="previous_lap">前へ</string>
+    <string name="next_lap">次へ</string>
+    <string name="no_gps_track_available">このワークアウトのGPSトラックは記録されていません</string>
 </resources>

@@ -1297,4 +1297,19 @@
     <string name="show_fewer_laps">Weniger anzeigen</string>
     <string name="fastest_lap">Schnellste Runde</string>
     <string name="slowest_lap">Langsamste Runde</string>
+
+    <!-- ATT-511: Edit Lap Details -->
+    <string name="edit_lap_title">Runde %1$d bearbeiten</string>
+    <string name="lap_name_label">Rundenname</string>
+    <string name="lap_description_label">Notizen &amp; Beschreibung</string>
+    <string name="quick_tag_warmup">Aufwärmen</string>
+    <string name="quick_tag_interval">Intervall</string>
+    <string name="quick_tag_recovery">Erholung</string>
+    <string name="quick_tag_hill_climb">Berganstieg</string>
+    <string name="quick_tag_tempo">Tempo</string>
+    <string name="quick_tag_sprint">Sprint</string>
+    <string name="quick_tag_cooldown">Auslaufen</string>
+    <string name="previous_lap">Vorherige</string>
+    <string name="next_lap">Nächste</string>
+    <string name="no_gps_track_available">Kein GPS-Track für diese Einheit aufgezeichnet</string>
 </resources>

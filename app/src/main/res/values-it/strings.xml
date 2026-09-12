@@ -1210,4 +1210,19 @@
     <string name="show_fewer_laps">Mostra meno</string>
     <string name="fastest_lap">Giro più veloce</string>
     <string name="slowest_lap">Giro più lento</string>
+
+    <!-- ATT-511: Edit Lap Details -->
+    <string name="edit_lap_title">Modifica giro %1$d</string>
+    <string name="lap_name_label">Nome giro</string>
+    <string name="lap_description_label">Note e descrizione</string>
+    <string name="quick_tag_warmup">Riscaldamento</string>
+    <string name="quick_tag_interval">Intervallo</string>
+    <string name="quick_tag_recovery">Recupero</string>
+    <string name="quick_tag_hill_climb">Salita</string>
+    <string name="quick_tag_tempo">Ritmo</string>
+    <string name="quick_tag_sprint">Sprint</string>
+    <string name="quick_tag_cooldown">Defaticamento</string>
+    <string name="previous_lap">Precedente</string>
+    <string name="next_lap">Successivo</string>
+    <string name="no_gps_track_available">Nessuna traccia GPS registrata per questo allenamento</string>
 </resources>
