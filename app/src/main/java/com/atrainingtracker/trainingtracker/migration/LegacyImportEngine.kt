@@ -256,6 +256,7 @@ object LegacyImportEngine {
             var lastTime: String? = null
             var sportName: String? = null
             var workoutNotes: String? = null
+            var workoutName: String? = null
             val points = mutableListOf<LatLng>()
             val altitudes = mutableListOf<Double>()
             val distances = mutableListOf<Double>()
@@ -276,8 +277,11 @@ object LegacyImportEngine {
                 
                 var eventType = parser.eventType
                 var values = ContentValues()
+                var inActivity = false
                 var inLap = false
                 var inTrackpoint = false
+                var inCreator = false
+                var inAuthor = false
                 var currentLat: Double? = null
                 var currentLng: Double? = null
                 var currentAlt: Double? = null
@@ -290,6 +294,7 @@ object LegacyImportEngine {
                         XmlPullParser.START_TAG -> {
                             when (name) {
                                 "Activity" -> {
+                                    inActivity = true
                                     sportName = parser.getAttributeValue(null, "Sport")
                                     if (sportName == null) {
                                         for (i in 0 until parser.attributeCount) {
@@ -300,6 +305,8 @@ object LegacyImportEngine {
                                         }
                                     }
                                 }
+                                "Creator" -> inCreator = true
+                                "Author" -> inAuthor = true
                                 "Lap" -> {
                                     inLap = true
                                     val rawStartTime = parser.getAttributeValue(null, "StartTime") ?: run {
@@ -371,20 +378,59 @@ object LegacyImportEngine {
                                                 }
                                             }
                                         } else {
-                                            workoutNotes = text
+                                            val trimmed = text.trim()
+                                            val bracketMatch = Regex("""^\[(.*?)\](?:\s*(.*))?$""", RegexOption.DOT_MATCHES_ALL).find(trimmed)
+                                            if (bracketMatch != null) {
+                                                val extractedName = bracketMatch.groupValues[1].trim()
+                                                val extractedDesc = bracketMatch.groupValues.getOrNull(2)?.trim()
+                                                if (workoutName.isNullOrBlank() && extractedName.isNotEmpty()) {
+                                                    workoutName = extractedName
+                                                }
+                                                if (workoutNotes.isNullOrBlank() && !extractedDesc.isNullOrEmpty()) {
+                                                    workoutNotes = extractedDesc
+                                                }
+                                            } else {
+                                                val lines = trimmed.lines()
+                                                if (lines.size > 1) {
+                                                    val firstLine = lines.first().trim()
+                                                    if (workoutName.isNullOrBlank() && firstLine.length <= 60) {
+                                                        workoutName = firstLine
+                                                        if (workoutNotes.isNullOrBlank()) {
+                                                            val remaining = lines.drop(1).joinToString("\n").trim()
+                                                            if (remaining.isNotEmpty()) {
+                                                                workoutNotes = remaining
+                                                            }
+                                                        }
+                                                    } else if (workoutNotes.isNullOrBlank()) {
+                                                        workoutNotes = trimmed
+                                                    }
+                                                } else {
+                                                    if (workoutNotes.isNullOrBlank()) {
+                                                        workoutNotes = trimmed
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
-                                "Name" -> if (inLap && currentLap != null && !inTrackpoint) {
+                                "Name" -> if (!inTrackpoint) {
                                     val text = parser.nextText()
                                     if (!text.isNullOrBlank()) {
-                                        currentLap.name = text.trim()
+                                        if (inLap && currentLap != null) {
+                                            currentLap.name = text.trim()
+                                        } else if (inActivity && !inLap && !inCreator && !inAuthor) {
+                                            workoutName = text.trim()
+                                        }
                                     }
                                 }
-                                "Description" -> if (inLap && currentLap != null && !inTrackpoint) {
+                                "Description" -> if (!inTrackpoint) {
                                     val text = parser.nextText()
                                     if (!text.isNullOrBlank()) {
-                                        currentLap.description = text.trim()
+                                        if (inLap && currentLap != null) {
+                                            currentLap.description = text.trim()
+                                        } else if (inActivity && !inLap && !inCreator && !inAuthor) {
+                                            workoutNotes = text.trim()
+                                        }
                                     }
                                 }
                                 "Trackpoint" -> {
@@ -485,6 +531,15 @@ object LegacyImportEngine {
                             }
                         }
                         XmlPullParser.END_TAG -> {
+                            if (name == "Activity") {
+                                inActivity = false
+                            }
+                            if (name == "Creator") {
+                                inCreator = false
+                            }
+                            if (name == "Author") {
+                                inAuthor = false
+                            }
                             if (name == "Lap") {
                                 inLap = false
                                 currentLap = null
@@ -551,7 +606,7 @@ object LegacyImportEngine {
                 if (workoutId == -1L) {
                     val summaryValues = ContentValues().apply {
                         put(WorkoutSummaries.FILE_BASE_NAME, baseFileName)
-                        put(WorkoutSummaries.WORKOUT_NAME, baseFileName)
+                        put(WorkoutSummaries.WORKOUT_NAME, if (!workoutName.isNullOrBlank()) workoutName!!.trim() else baseFileName)
                         put(WorkoutSummaries.TIME_START, firstTime)
                         put(WorkoutSummaries.SPORT_ID, -1L)
                         put(WorkoutSummaries.EQUIPMENT_ID, -1L)
@@ -604,6 +659,7 @@ object LegacyImportEngine {
                     foundSensors = foundSensors,
                     parsedLaps = parsedLaps,
                     workoutNotes = workoutNotes,
+                    workoutName = workoutName,
                     firstTime = firstTime,
                     lastTime = lastTime,
                     minAltPos = minAltPos,
@@ -647,6 +703,7 @@ object LegacyImportEngine {
         foundSensors: Set<SensorType> = emptySet(),
         parsedLaps: List<ParsedLap> = emptyList(),
         workoutNotes: String? = null,
+        workoutName: String? = null,
         firstTime: String? = null,
         lastTime: String? = null,
         minAltPos: LatLng? = null,
@@ -699,6 +756,11 @@ object LegacyImportEngine {
         // ATT-617: Persist workout notes if present
         if (!workoutNotes.isNullOrBlank()) {
             values.put(WorkoutSummaries.DESCRIPTION, workoutNotes.trim())
+        }
+
+        // ATT-922: Persist workout name if present
+        if (!workoutName.isNullOrBlank()) {
+            values.put(WorkoutSummaries.WORKOUT_NAME, workoutName.trim())
         }
 
         // ATT-617: Persist lap count
