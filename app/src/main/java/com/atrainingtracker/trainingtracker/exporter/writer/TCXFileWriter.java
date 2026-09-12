@@ -35,11 +35,16 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManag
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper;
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
 
+import com.atrainingtracker.trainingtracker.ui.aftermath.LapData;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 
 public class TCXFileWriter extends BaseFileWriter {
@@ -61,6 +66,49 @@ public class TCXFileWriter extends BaseFileWriter {
     }
 
     @NonNull
+    protected static String escapeXml(String text) {
+        if (text == null) return "";
+        return text.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&apos;");
+    }
+
+    private void writeLapNotesAndExtensions(@NonNull BufferedWriter bufferedWriter, long lapNr, @NonNull Map<Long, LapData> lapDataMap) throws IOException {
+        LapData lapData = lapDataMap.get(lapNr);
+        if (lapData != null) {
+            String name = lapData.getName();
+            String desc = lapData.getDescription();
+            boolean hasName = name != null && !name.trim().isEmpty();
+            boolean hasDesc = desc != null && !desc.trim().isEmpty();
+
+            if (hasName || hasDesc) {
+                String noteContent;
+                if (hasName && hasDesc) {
+                    noteContent = "[" + name.trim() + "] " + desc.trim();
+                } else if (hasName) {
+                    noteContent = "[" + name.trim() + "]";
+                } else {
+                    noteContent = desc.trim();
+                }
+                bufferedWriter.write("        <Notes>" + escapeXml(noteContent) + "</Notes>\n");
+
+                bufferedWriter.write("        <Extensions>\n");
+                bufferedWriter.write("          <att:LapExtension xmlns:att=\"http://atrainingtracker.com/xmlschemas/TrainingCenterDatabaseExtensions/v1\">\n");
+                if (hasName) {
+                    bufferedWriter.write("            <att:Name>" + escapeXml(name.trim()) + "</att:Name>\n");
+                }
+                if (hasDesc) {
+                    bufferedWriter.write("            <att:Description>" + escapeXml(desc.trim()) + "</att:Description>\n");
+                }
+                bufferedWriter.write("          </att:LapExtension>\n");
+                bufferedWriter.write("        </Extensions>\n");
+            }
+        }
+    }
+
+    @NonNull
     @Override
     protected ExportResult doExport(@NonNull ExportInfo exportInfo)
             throws IOException, ParseException {
@@ -76,6 +124,12 @@ public class TCXFileWriter extends BaseFileWriter {
         bufferedWriter.write("  <Activities>\n");
         bufferedWriter.write("    <Activity Sport=\"" + SportTypeDatabaseManager.getInstance(mContext).getTcxName(sportTypeId) + "\">\n");
         bufferedWriter.write("      <Id>" + dbTime2XMLTime(startTime) + "</Id>\n");
+
+        List<LapData> lapsList = LapsDatabaseManager.getInstance(mContext).getLaps(workoutID);
+        Map<Long, LapData> lapDataMap = new HashMap<>();
+        for (LapData lapData : lapsList) {
+            lapDataMap.put(lapData.getLapNr(), lapData);
+        }
 
         SQLiteDatabase db = WorkoutSamplesDatabaseManager.getInstance(mContext).getDatabase();
         Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
@@ -105,32 +159,35 @@ public class TCXFileWriter extends BaseFileWriter {
             int lap = cursor.getInt(cursor.getColumnIndexOrThrow(SensorType.LAP_NR.name()));
             if (prevLineLap != lap) { // new lap
 
-                if (lap != BANALService.INIT_LAP_NR) { // finish previous lap
+                if (prevLineLap != BANALService.INIT_LAP_NR - 1) { // finish previous lap
                     bufferedWriter.write("        </Track>\n");
+                    writeLapNotesAndExtensions(bufferedWriter, prevLineLap, lapDataMap);
                     bufferedWriter.write("      </Lap>\n");
                 }
 
                 // get the lap data
-                SQLiteDatabase lapDb = LapsDatabaseManager.getInstance(mContext).getDatabase();
-
-                Cursor lapCursor = lapDb.query(LapsDatabaseManager.Laps.TABLE,
-                        null,
-                        LapsDatabaseManager.Laps.WORKOUT_ID + "=? AND " + LapsDatabaseManager.Laps.LAP_NR + "=?",
-                        new String[]{workoutID + "", lap + ""},
-                        null,
-                        null,
-                        null);
-                if (DEBUG)
-                    Log.d(TAG, "getting lap data: workoutID: " + workoutID + ", lapNr: " + lap + " found: "
-                            + lapCursor.getCount() + ", " + lapCursor.getColumnCount());
-
-                lapCursor.moveToFirst();
-
-                // get the data for the lap
-                totalTime = myGet(lapCursor, LapsDatabaseManager.Laps.TIME_TOTAL_s, "0");
-                totalDistance = myGet(lapCursor, LapsDatabaseManager.Laps.DISTANCE_TOTAL_m, "0");
-
-                lapCursor.close();
+                LapData lapData = lapDataMap.get((long) lap);
+                if (lapData != null) {
+                    totalTime = String.valueOf(lapData.getTimeTotalS());
+                    totalDistance = String.valueOf(lapData.getDistanceTotalM());
+                } else {
+                    SQLiteDatabase lapDb = LapsDatabaseManager.getInstance(mContext).getDatabase();
+                    Cursor lapCursor = lapDb.query(LapsDatabaseManager.Laps.TABLE,
+                            null,
+                            LapsDatabaseManager.Laps.WORKOUT_ID + "=? AND " + LapsDatabaseManager.Laps.LAP_NR + "=?",
+                            new String[]{workoutID + "", lap + ""},
+                            null,
+                            null,
+                            null);
+                    if (lapCursor.moveToFirst()) {
+                        totalTime = myGet(lapCursor, LapsDatabaseManager.Laps.TIME_TOTAL_s, "0");
+                        totalDistance = myGet(lapCursor, LapsDatabaseManager.Laps.DISTANCE_TOTAL_m, "0");
+                    } else {
+                        totalTime = "0";
+                        totalDistance = "0";
+                    }
+                    lapCursor.close();
+                }
 
                 // write the lap data
                 bufferedWriter.write("      <Lap StartTime=\"" + dbTime2XMLTime(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSamplesDbHelper.TIME))) + "\">\n");
@@ -227,7 +284,13 @@ public class TCXFileWriter extends BaseFileWriter {
 
         // now the tail
         bufferedWriter.write("        </Track>\n");
+        if (prevLineLap != BANALService.INIT_LAP_NR - 1) {
+            writeLapNotesAndExtensions(bufferedWriter, prevLineLap, lapDataMap);
+        }
         bufferedWriter.write("      </Lap>\n");
+        if (description != null && !description.trim().isEmpty()) {
+            bufferedWriter.write("      <Notes>" + escapeXml(description.trim()) + "</Notes>\n");
+        }
         bufferedWriter.write("    </Activity>\n");
         bufferedWriter.write("  </Activities>\n");
         bufferedWriter.write("  <Creator xsi:type=\"Device_t\">\n");
