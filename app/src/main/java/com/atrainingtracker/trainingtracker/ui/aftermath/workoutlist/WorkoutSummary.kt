@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
+import android.app.Application
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -30,7 +32,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import android.app.Application
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -96,6 +97,7 @@ fun WorkoutSummary(
         modifier = modifier
     ) {
         // 1. Header
+        val canDelete = !TrainingApplication.isActivelyTracked(workoutData.id)
         WorkoutHeader(
             data = workoutData.headerData,
             onClicked = onMapClick,
@@ -103,6 +105,7 @@ fun WorkoutSummary(
             onSaveAsRoute = onSaveAsRoute,
             onDeleteRequest = onDeleteRequest,
             menuEnabled = workoutData.headerData.finished,
+            canDelete = canDelete,
             onClusterClick = onClusterClick,
             onEditWorkout = onEditWorkout
         )
