@@ -90,6 +90,9 @@ class WorkoutClusterEngine private constructor(context: Context) {
             }
         }
 
+        @JvmStatic
+        fun stripHitCount(name: String): String = name.replace(Regex(" #\\d+$"), "").trim()
+
         fun distanceBetween(p1: LatLng, p2: LatLng): Float {
             return try {
                 val res = FloatArray(1)
@@ -609,7 +612,13 @@ class WorkoutClusterEngine private constructor(context: Context) {
     }
 
     @JvmOverloads
-    fun assignClusterToWorkout(context: Context, workoutId: Long, clusterId: Long, forceIdentity: Boolean = false) {
+    fun assignClusterToWorkout(
+        context: Context,
+        workoutId: Long,
+        clusterId: Long,
+        forceIdentity: Boolean = false,
+        customWorkoutName: String? = null
+    ) {
         if (clusterId <= 0L) {
             unassignClusterFromWorkout(context, workoutId)
             return
@@ -624,7 +633,9 @@ class WorkoutClusterEngine private constructor(context: Context) {
             put(WorkoutSummaries.CLUSTER_ID, clusterId)
             val currentName = summariesManager.getString(workoutId, WorkoutSummaries.WORKOUT_NAME)
             val fileBaseName = summariesManager.getString(workoutId, WorkoutSummaries.FILE_BASE_NAME)
-            if (forceIdentity || currentName.isNullOrEmpty() || currentName == fileBaseName) {
+            if (customWorkoutName != null) {
+                put(WorkoutSummaries.WORKOUT_NAME, customWorkoutName)
+            } else if (forceIdentity || currentName.isNullOrEmpty() || currentName == fileBaseName) {
                 val displayCount = if (previousClusterId == clusterId) cluster.hitCount else cluster.hitCount + 1
                 put(WorkoutSummaries.WORKOUT_NAME, formatClusterWorkoutName(context, cluster.name, displayCount, cluster.hasCounter))
             }
@@ -699,9 +710,16 @@ class WorkoutClusterEngine private constructor(context: Context) {
     }
 
     /**
-     * Creates a new workout cluster from the workout's spatial fingerprint and assigns the workout to it (REQ-SET-059).
+     * Creates a new workout cluster from the workout's spatial fingerprint and assigns the workout to it (REQ-SET-059, REQ-SET-072).
      */
-    fun createNewClusterFromWorkout(context: Context, workout: WorkoutData, customName: String? = null, hasCounter: Boolean = true): Long {
+    @JvmOverloads
+    fun createNewClusterFromWorkout(
+        context: Context,
+        workout: WorkoutData,
+        customName: String? = null,
+        hasCounter: Boolean = true,
+        customWorkoutName: String? = null
+    ): Long {
         val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
         val start = workout.startLatLng ?: summariesManager.getExtremaPosition(workout.id, SensorType.LATITUDE, ExtremaType.START) ?: return -1L
         val end = workout.endLatLng ?: summariesManager.getExtremaPosition(workout.id, SensorType.LATITUDE, ExtremaType.END) ?: return -1L
@@ -735,14 +753,27 @@ class WorkoutClusterEngine private constructor(context: Context) {
             hasCounter = hasCounter
         )
         val newClusterId = dbManager.insertCluster(newCluster)
-        assignClusterToWorkout(context, workout.id, newClusterId, forceIdentity = false)
+        assignClusterToWorkout(
+            context,
+            workout.id,
+            newClusterId,
+            forceIdentity = true,
+            customWorkoutName = customWorkoutName
+        )
         return newClusterId
     }
 
     /**
-     * Creates a new workout cluster from raw database metadata and assigns the workout to it (REQ-SET-059).
+     * Creates a new workout cluster from raw database metadata and assigns the workout to it (REQ-SET-059, REQ-SET-072).
      */
-    fun createNewClusterFromWorkout(context: Context, workoutId: Long, customName: String? = null, hasCounter: Boolean = true): Long {
+    @JvmOverloads
+    fun createNewClusterFromWorkout(
+        context: Context,
+        workoutId: Long,
+        customName: String? = null,
+        hasCounter: Boolean = true,
+        customWorkoutName: String? = null
+    ): Long {
         val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
         val start = summariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.START) ?: return -1L
         val end = summariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.END) ?: return -1L
@@ -781,7 +812,13 @@ class WorkoutClusterEngine private constructor(context: Context) {
             hasCounter = hasCounter
         )
         val newClusterId = dbManager.insertCluster(newCluster)
-        assignClusterToWorkout(context, workoutId, newClusterId, forceIdentity = false)
+        assignClusterToWorkout(
+            context,
+            workoutId,
+            newClusterId,
+            forceIdentity = true,
+            customWorkoutName = customWorkoutName
+        )
         return newClusterId
     }
 
@@ -866,7 +903,6 @@ class WorkoutClusterEngine private constructor(context: Context) {
     )
 
     private fun normalizeName(name: String): String = name.replace(Regex(" (?:# ?|var )\\d+$", RegexOption.IGNORE_CASE), "").trim().lowercase()
-    private fun stripHitCount(name: String): String = name.replace(Regex(" #\\d+$"), "").trim()
     @JvmOverloads
     fun recalculateHistory(context: Context, listener: ClusterMigrationListener? = null) { 
         dbManager.deleteAllClusters()

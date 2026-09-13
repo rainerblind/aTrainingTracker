@@ -84,6 +84,9 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     private val _clusterSuggestions = MutableStateFlow<List<Pair<WorkoutCluster, Double>>>(emptyList())
     val clusterSuggestions: StateFlow<List<Pair<WorkoutCluster, Double>>> = _clusterSuggestions.asStateFlow()
 
+    var userManuallyChangedWorkoutName: Boolean = false
+        private set
+
     init {
         loadWorkoutData()
 
@@ -112,7 +115,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                     // If we already have data and are just updating identity, merge it
                     if (current != null) {
                         current.copy(
-                            workoutName = data.workoutName,
+                            workoutName = if (userManuallyChangedWorkoutName) current.workoutName else data.workoutName,
                             sportId = data.sportId,
                             sportName = data.sportName,
                             bSportType = data.bSportType,
@@ -170,6 +173,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     }
 
     fun updateWorkoutName(newName: String) {
+        userManuallyChangedWorkoutName = true
         _workoutData.update { it?.copy(workoutName = newName) }
     }
 
@@ -445,11 +449,27 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     }
 
     fun createNewCluster(customName: String, hasCounter: Boolean = true) {
+        val trimmedName = customName.trim()
         val current = _workoutData.value
-        if (current != null) {
-            repository.createNewClusterFromWorkout(current, customName, hasCounter)
+        val customWorkoutName = if (userManuallyChangedWorkoutName) current?.workoutName else null
+        val resolvedWorkoutName = if (userManuallyChangedWorkoutName) {
+            current?.workoutName ?: trimmedName
         } else {
-            repository.createNewClusterFromWorkout(workoutId, customName, hasCounter)
+            WorkoutClusterEngine.formatClusterWorkoutName(application, trimmedName, 1, hasCounter)
+        }
+
+        // Synchronous in-memory update so UI reflects the new route and name immediately (REQ-SET-072)
+        _workoutData.update { curr ->
+            curr?.copy(
+                clusterName = trimmedName,
+                workoutName = resolvedWorkoutName
+            )
+        }
+
+        if (current != null) {
+            repository.createNewClusterFromWorkout(current, trimmedName, hasCounter, customWorkoutName)
+        } else {
+            repository.createNewClusterFromWorkout(workoutId, trimmedName, hasCounter, customWorkoutName)
         }
     }
 

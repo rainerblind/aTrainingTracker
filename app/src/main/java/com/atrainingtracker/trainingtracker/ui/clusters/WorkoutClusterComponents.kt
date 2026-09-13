@@ -43,6 +43,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
@@ -686,7 +687,9 @@ fun EditWorkoutClusterDialog(
     bSportTypeResolver: (Long) -> BSportType
 ) {
     var isCreatingNew by remember { mutableStateOf(false) }
-    var newClusterName by remember { mutableStateOf(initialWorkoutName) }
+    var newClusterName by remember(initialWorkoutName) {
+        mutableStateOf(WorkoutClusterEngine.stripHitCount(initialWorkoutName))
+    }
     var newClusterHasCounter by remember { mutableStateOf(true) }
 
     AlertDialog(
