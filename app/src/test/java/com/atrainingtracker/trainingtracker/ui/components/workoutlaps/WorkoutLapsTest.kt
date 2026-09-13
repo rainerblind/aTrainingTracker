@@ -138,4 +138,42 @@ class WorkoutLapsTest {
         // When empty list, returns empty list
         assertTrue(WorkoutLapsHelper.getDisplayedLaps(emptyList(), isExpanded = false).isEmpty())
     }
+
+    @Test
+    fun testColumnWeightsAndBadgeWidth_constantsIntegrity() {
+        assertEquals("Lap name column weight must be 1.35f", 1.35f, WorkoutLapsHelper.WEIGHT_LAP_NAME, 0.001f)
+        assertEquals("Time column weight must be 0.9f", 0.9f, WorkoutLapsHelper.WEIGHT_TIME, 0.001f)
+        assertEquals("Distance column weight must be 1.2f for longer distances", 1.2f, WorkoutLapsHelper.WEIGHT_DISTANCE, 0.001f)
+        assertEquals("Pace/Speed column weight must be 0.8f for compact unit", 0.8f, WorkoutLapsHelper.WEIGHT_PACE_SPEED, 0.001f)
+        assertEquals("Badge Box width must be 26dp", 26, WorkoutLapsHelper.BADGE_WIDTH_DP)
+    }
+
+    @Test
+    fun testNumericalFormatting_pureNumbersWithoutEmbeddedUnits() {
+        val mockPrefs = io.mockk.mockk<android.content.SharedPreferences>(relaxed = true)
+        io.mockk.every { mockPrefs.getString(com.atrainingtracker.trainingtracker.TrainingApplication.SP_UNITS, any()) } returns "METRIC"
+        val field = com.atrainingtracker.trainingtracker.TrainingApplication::class.java.getDeclaredField("cSharedPreferences")
+        field.isAccessible = true
+        val originalPrefs = field.get(null)
+        field.set(null, mockPrefs)
+
+        try {
+            val paceFormatter = com.atrainingtracker.banalservice.sensor.formater.PaceFormatter()
+            val speedFormatter = com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter()
+
+            // 3.3333 m/s ≈ 12 km/h ≈ 5:00 min/km
+            val paceNumeric = paceFormatter.format(1.0 / 3.3333333333333335)
+            assertFalse("Pace cell must not contain unit text min/km", paceNumeric.contains("min/km"))
+            assertFalse("Pace cell must not contain unit text min/mile", paceNumeric.contains("min/mile"))
+            assertTrue("Pace numeric string must match mm:ss format: $paceNumeric", paceNumeric.matches(Regex("\\d+:\\d{2}")))
+
+            // 5.0 m/s = 18.0 km/h
+            val speedNumeric = speedFormatter.format(5.0)
+            assertFalse("Speed cell must not contain unit text km/h", speedNumeric.contains("km/h"))
+            assertFalse("Speed cell must not contain unit text mile/h", speedNumeric.contains("mile/h"))
+            assertTrue("Speed numeric string must be pure decimal number: $speedNumeric", speedNumeric.matches(Regex("\\d+[.,]\\d+")))
+        } finally {
+            field.set(null, originalPrefs)
+        }
+    }
 }
