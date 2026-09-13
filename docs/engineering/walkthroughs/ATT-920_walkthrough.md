@@ -23,7 +23,7 @@ We resolved these issues by introducing a dedicated, subtle table header (`LapTa
 Key improvements delivered:
 1. **Dedicated Table Header Row (`LapTableHeader`)**:
    - Styled consistently with `WorkoutExtrema` (`MaterialTheme.typography.labelSmall`, `onSurfaceVariant`, `includeFontPadding = false`).
-   - Identifies columns: Lap (`Runde`), Time (`Zeit`), Distance (`Distanz`), and Pace / Speed with bracketed unit (`Tempo [min/km]` or `Geschw. [km/h]`).
+   - Identifies columns: Lap (`Runde`), Time (`Zeit`), Distance (`Distanz`), and Pace / Speed unit directly (`min/km` or `km/h`).
    - Fixed `26.dp` spacer matching badge column alignment in data rows.
 2. **Pure Numerical Cell Formatting & Zero-Wrap Guarantee**:
    - Pace and speed values in data cells format pure numerical values (`formatters.pace.format` / `formatters.speed.format`) without repeating unit strings.
@@ -32,12 +32,12 @@ Key improvements delivered:
    - Lap Name widened by +25% from `1.3f` to `1.6f` weight, providing generous space for custom names (e.g. `1. Pause am Bach`).
    - Time tightened from `0.9f` to `0.85f` weight.
    - Distance tightened from `1.0f` to `0.85f` weight.
-   - Pace / Speed: `1.1f` weight.
+   - Pace / Speed: `1.1f` weight, with concise unit-only header (`min/km` / `km/h`) to prevent excessive width.
    - Badge Box: `26.dp` fixed width.
 4. **Vertical Badge Alignment**:
    - Performance highlight badges (🐇 Rabbit and 🦔 Hedgehog) are vertically centered within the single-line row height.
 5. **100% Localization Parity Across 9 Locales**:
-   - 5 string keys translated across EN, DE, ES, FR, IT, JA, NL, PL, and PT (45 strings total), verified by automated tests.
+   - String keys translated across EN, DE, ES, FR, IT, JA, NL, PL, and PT, verified by automated tests.
 
 ---
 
@@ -45,7 +45,7 @@ Key improvements delivered:
 
 | Area | Component | Change | Description |
 | :--- | :--- | :--- | :--- |
-| **Laps Table UI** | `WorkoutLaps.kt` | [MODIFY] | Added `LapTableHeader`, switched to pure numeric cell formatting, rebalanced column weights via `WorkoutLapsHelper`, and vertically centered badges. |
+| **Laps Table UI** | `WorkoutLaps.kt` | [MODIFY] | Added `LapTableHeader` with concise unit header, switched to pure numeric cell formatting, rebalanced column weights via `WorkoutLapsHelper`, and vertically centered badges. |
 | **Localization** | `res/values*/strings.xml` | [MODIFY] | Added `lap_table_header_lap`, `lap_table_header_time`, `lap_table_header_distance`, `lap_table_header_pace`, and `lap_table_header_speed` across all 9 locales. |
 | **Unit Tests** | `WorkoutLapsTest.kt` | [MODIFY] | Added unit tests verifying column weights constants integrity and pure numerical formatting without embedded units. |
 | **Requirements** | `docs/requirements.md` | [MODIFY] | Updated `REQ-UI-143` status to `Verified`. |

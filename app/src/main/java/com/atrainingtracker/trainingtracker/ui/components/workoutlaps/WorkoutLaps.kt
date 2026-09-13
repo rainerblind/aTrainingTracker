@@ -193,9 +193,6 @@ private fun LapTableHeader(
     val speedPaceUnit = stringResource(
         MyHelper.getUnitsId(if (isRunningSport) SensorType.PACE_spm else SensorType.SPEED_mps)
     )
-    val speedPaceLabel = stringResource(
-        if (isRunningSport) R.string.lap_table_header_pace else R.string.lap_table_header_speed
-    )
 
     val headerStyle = MaterialTheme.typography.labelSmall.copy(
         platformStyle = PlatformTextStyle(includeFontPadding = false),
@@ -238,9 +235,9 @@ private fun LapTableHeader(
             maxLines = 1
         )
 
-        // Col 4: Pace / Speed with unit (weight 1.1f)
+        // Col 4: Pace / Speed unit (weight 1.1f)
         Text(
-            text = "$speedPaceLabel [$speedPaceUnit]",
+            text = speedPaceUnit,
             style = headerStyle,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.End,
