@@ -62,7 +62,8 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
  * @param onSaveAsRoute Callback for saving the workout session as an authoritative route.
  * @param onDeleteRequest Callback for requesting workout deletion.
  * @param modifier Optional [Modifier] for layout adjustments.
- * @param menuEnabled Whether the action menu and clickable behaviors are enabled.
+ * @param menuEnabled Whether the action menu and export behaviors are enabled.
+ * @param canDelete Whether the workout deletion context menu is enabled (ATT-917).
  * @param onClusterClick Optional callback invoked when the user clicks the cluster navigation button.
  * @param onEditWorkout Optional callback invoked when the user clicks the dedicated edit workout action.
  * @param actions Optional slot for trailing action buttons.
@@ -76,6 +77,7 @@ fun WorkoutHeader(
     onDeleteRequest: () -> Unit,
     modifier: Modifier = Modifier,
     menuEnabled: Boolean = true,
+    canDelete: Boolean = menuEnabled,
     onClusterClick: ((Long) -> Unit)? = null,
     onEditWorkout: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
@@ -85,15 +87,12 @@ fun WorkoutHeader(
     var showContextMenu by remember { mutableStateOf(false) }
 
     Surface(
-        modifier = if (menuEnabled) {
+        modifier = if (canDelete || onClicked != null) {
             modifier.fillMaxWidth()
                 .combinedClickable(
                     onClick = { onClicked?.invoke() },
-                    onLongClick = { showContextMenu = true }
+                    onLongClick = if (canDelete) { { showContextMenu = true } } else null
                 )
-        } else if (onClicked != null) {
-            modifier.fillMaxWidth()
-                .clickable(onClick = onClicked)
         } else {
             modifier.fillMaxWidth()
         },

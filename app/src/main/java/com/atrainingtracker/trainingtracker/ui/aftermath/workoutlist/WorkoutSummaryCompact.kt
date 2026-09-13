@@ -37,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.SensorType
@@ -59,12 +60,14 @@ fun WorkoutSummaryCompact(
     var showContextMenu by remember { mutableStateOf(false) }
 
     val formatters = LocalMetricFormatter.current
+    val canDelete = !TrainingApplication.isActivelyTracked(workoutData.id)
+    val hasContextMenu = canDelete || onEditWorkout != null
 
     Box {
         MappableListItem(
             modifier = modifier,
             onClick = onMapClick,
-            onLongClick = { showContextMenu = true },
+            onLongClick = if (hasContextMenu) { { showContextMenu = true } } else null,
             alpha = contentAlpha
         ) {
             Column(
@@ -191,14 +194,16 @@ fun WorkoutSummaryCompact(
                         }
                     )
                 }
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.delete)) },
-                    onClick = {
-                        showContextMenu = false
-                        onDeleteRequest()
-                    },
-                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
-                )
+                if (canDelete) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.delete)) },
+                        onClick = {
+                            showContextMenu = false
+                            onDeleteRequest()
+                        },
+                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                    )
+                }
             }
         }
     }

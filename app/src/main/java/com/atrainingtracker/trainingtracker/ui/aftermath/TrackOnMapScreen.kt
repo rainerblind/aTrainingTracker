@@ -72,6 +72,7 @@ fun TrackOnMapScreen(
                 modifier = Modifier.fillMaxWidth(),
                 data = workoutData.headerData,
                 menuEnabled = false,
+                canDelete = false,
                 onClicked = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
                 onExport = { },
                 onSaveAsRoute = { },

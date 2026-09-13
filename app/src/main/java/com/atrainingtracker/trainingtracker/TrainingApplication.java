@@ -209,6 +209,7 @@ public class TrainingApplication extends Application {
     public TrackOnMapHelper trackOnMapHelper;
     private final HashMap<Long, Boolean> mSegmentListUpdating = new HashMap<>();
     private long mWorkoutID = -1;
+    private static volatile long sActiveWorkoutId = -1;
     protected final BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, @NonNull Intent intent) {
             setWorkoutID(intent.getLongExtra(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_ID, -1));
@@ -833,6 +834,22 @@ public class TrainingApplication extends Application {
         return cTrackingMode != TrackingMode.READY;
     }  // correct?
 
+    public static long getActiveWorkoutID() {
+        return sActiveWorkoutId;
+    }
+
+    public static boolean isActivelyTracked(long workoutId) {
+        return isTracking() && workoutId > 0 && workoutId == sActiveWorkoutId;
+    }
+
+    public static void setActiveWorkoutIdForTesting(long workoutId) {
+        sActiveWorkoutId = workoutId;
+    }
+
+    public static void setTrackingModeForTesting(@NonNull TrackingMode trackingMode) {
+        cTrackingMode = trackingMode;
+    }
+
     @NonNull
     public static TrackingMode getTrackingMode() {
         return cTrackingMode;
@@ -1093,6 +1110,7 @@ public class TrainingApplication extends Application {
 
     public void setWorkoutID(long workoutID) {
         mWorkoutID = workoutID;
+        sActiveWorkoutId = workoutID;
     }
 
     public void todo(Context context, String text) {
@@ -1178,6 +1196,7 @@ public class TrainingApplication extends Application {
         stopService(new Intent(this, TrackerService.class));
 
         cTrackingMode = TrackingMode.READY;
+        sActiveWorkoutId = -1;
         notifyTrackingStateChanged();
     }
 
