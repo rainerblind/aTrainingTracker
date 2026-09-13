@@ -288,8 +288,32 @@ public class TCXFileWriter extends BaseFileWriter {
             writeLapNotesAndExtensions(bufferedWriter, prevLineLap, lapDataMap);
         }
         bufferedWriter.write("      </Lap>\n");
-        if (description != null && !description.trim().isEmpty()) {
-            bufferedWriter.write("      <Notes>" + escapeXml(description.trim()) + "</Notes>\n");
+        String activityWorkoutName = (workoutName != null && !workoutName.trim().isEmpty() && !workoutName.equals(exportInfo.getFileBaseName()))
+                ? workoutName.trim() : null;
+        String activityDesc = (description != null && !description.trim().isEmpty())
+                ? description.trim() : null;
+
+        if (activityWorkoutName != null || activityDesc != null) {
+            String noteContent;
+            if (activityWorkoutName != null && activityDesc != null) {
+                noteContent = "[" + activityWorkoutName + "] " + activityDesc;
+            } else if (activityWorkoutName != null) {
+                noteContent = "[" + activityWorkoutName + "]";
+            } else {
+                noteContent = activityDesc;
+            }
+            bufferedWriter.write("      <Notes>" + escapeXml(noteContent) + "</Notes>\n");
+
+            bufferedWriter.write("      <Extensions>\n");
+            bufferedWriter.write("        <att:ActivityExtension xmlns:att=\"http://atrainingtracker.com/xmlschemas/TrainingCenterDatabaseExtensions/v1\">\n");
+            if (activityWorkoutName != null) {
+                bufferedWriter.write("          <att:Name>" + escapeXml(activityWorkoutName) + "</att:Name>\n");
+            }
+            if (activityDesc != null) {
+                bufferedWriter.write("          <att:Description>" + escapeXml(activityDesc) + "</att:Description>\n");
+            }
+            bufferedWriter.write("        </att:ActivityExtension>\n");
+            bufferedWriter.write("      </Extensions>\n");
         }
         bufferedWriter.write("    </Activity>\n");
         bufferedWriter.write("  </Activities>\n");

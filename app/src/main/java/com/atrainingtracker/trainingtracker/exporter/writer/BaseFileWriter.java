@@ -41,7 +41,7 @@ public abstract class BaseFileWriter extends BaseExporter {
     protected static final int MIN_DATA_POINTS_FOR_UPLOAD = 10;
     private static final String TAG = "BaseFileExporter";
     private static final boolean DEBUG = false;
-    String startTime, totalTime, data, goal, method, totalDistance, description;
+    String startTime, totalTime, data, goal, method, totalDistance, description, workoutName;
     boolean indoorTrainerSession, haveDistance, haveSpeed, havePower, haveHR, haveCadence, haveRunCadence, haveBikeCadence, haveTorque, haveAltitude, haveGeo;
     long workoutID, sportTypeId;
 
@@ -78,6 +78,7 @@ public abstract class BaseFileWriter extends BaseExporter {
         method = myGet(cursor, WorkoutSummaries.METHOD, "");
         totalDistance = myGet(cursor, WorkoutSummaries.DISTANCE_TOTAL_m, "0");
         description = myGet(cursor, WorkoutSummaries.DESCRIPTION, "");
+        workoutName = myGet(cursor, WorkoutSummaries.WORKOUT_NAME, "");
         workoutID = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
         sportTypeId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.SPORT_ID));
         indoorTrainerSession = cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.TRAINER)) > 0;
