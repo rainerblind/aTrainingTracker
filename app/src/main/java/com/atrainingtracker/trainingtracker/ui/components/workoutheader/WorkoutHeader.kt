@@ -20,9 +20,12 @@ package com.atrainingtracker.trainingtracker.ui.components.workoutheader
 
 import android.content.res.Configuration
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -48,30 +51,53 @@ import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 
+/**
+ * Reusable header component for workout summaries and map detail views (ATT-503).
+ *
+ * Displays the sport icon, workout title, date/time, and an interactive cluster navigation
+ * button when linked to a [com.atrainingtracker.trainingtracker.database.WorkoutCluster].
+ *
+ * @param data Header metadata including cluster identification and formatting.
+ * @param onClicked Callback invoked when the user clicks the general header area (opens editor).
+ * @param onExport Callback for file export action.
+ * @param onSaveAsRoute Callback for saving the workout session as an authoritative route.
+ * @param onDeleteRequest Callback for requesting workout deletion.
+ * @param modifier Optional [Modifier] for layout adjustments.
+ * @param menuEnabled Whether the action menu and export behaviors are enabled.
+ * @param canDelete Whether the workout deletion context menu is enabled (ATT-917).
+ * @param onClusterClick Optional callback invoked when the user clicks the cluster navigation button.
+ * @param onEditWorkout Optional callback invoked when the user clicks the dedicated edit workout action.
+ * @param actions Optional slot for trailing action buttons.
+ */
 @Composable
 fun WorkoutHeader(
     data: WorkoutHeaderData,
-    onClicked: () -> Unit,
+    onClicked: (() -> Unit)? = null,
     onExport: (FileFormat) -> Unit,
     onSaveAsRoute: () -> Unit,
     onDeleteRequest: () -> Unit,
     modifier: Modifier = Modifier,
     menuEnabled: Boolean = true,
+    canDelete: Boolean = menuEnabled,
+    onMarkFinished: (() -> Unit)? = null,
+    onClusterClick: ((Long) -> Unit)? = null,
+    onEditWorkout: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     // State to control menu visibility
     var showMenu by remember { mutableStateOf(false) }
     var showContextMenu by remember { mutableStateOf(false) }
 
+    val hasLongClick = canDelete || (!data.finished && onMarkFinished != null)
+
     Surface(
-        modifier = if (menuEnabled) {
+        modifier = if (hasLongClick || onClicked != null) {
             modifier.fillMaxWidth()
                 .combinedClickable(
-                    onClick = onClicked,
-                    onLongClick = { showContextMenu = true }
+                    onClick = { onClicked?.invoke() },
+                    onLongClick = if (hasLongClick) { { showContextMenu = true } } else null
                 )
-        }
-        else {
+        } else {
             modifier.fillMaxWidth()
         },
         color = Color.Transparent
@@ -105,30 +131,63 @@ fun WorkoutHeader(
                         modifier = Modifier.weight(1f)
                     )
 
-                    // Spacer for the Menu Button area
-                    Spacer(modifier = Modifier.width(32.dp))
+                    // Spacer for the Action / Menu Button area
+                    Spacer(modifier = Modifier.width(72.dp))
                 }
 
-                // --- Workout Cluster Info (ATT-388): Positioned directly below the name ---
-                val clusterLabel = data.clusterName ?: stringResource(R.string.unclustered)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.my_locations),
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
-                    )
-                    Text(
-                        text = clusterLabel,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
-                        fontWeight = if (data.clusterName != null) FontWeight.Bold else FontWeight.Normal,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                // --- Workout Cluster Info (ATT-388 / ATT-503): Positioned directly below the name ---
+                if (data.clusterId > 0 && !data.clusterName.isNullOrBlank()) {
+                    Button(
+                        onClick = { onClusterClick?.invoke(data.clusterId) },
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                        modifier = Modifier.height(30.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Faint),
+                            contentColor = MaterialTheme.colorScheme.primary
+                        ),
+                        elevation = null
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.my_locations),
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = data.clusterName,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                } else {
+                    val clusterLabel = data.clusterName ?: stringResource(R.string.unclustered)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.my_locations),
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+                        )
+                        Text(
+                            text = clusterLabel,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
+                            fontWeight = FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
 
                 // 2. BOTTOM CONTENT: Organized in horizontal rows
@@ -193,6 +252,19 @@ fun WorkoutHeader(
             ) {
                 // Custom actions provided by caller
                 actions()
+
+                if (onEditWorkout != null) {
+                    IconButton(
+                        onClick = onEditWorkout,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_table_edit),
+                            contentDescription = stringResource(R.string.edit_workout),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
 
                 if (menuEnabled) {
                     Box {
@@ -285,11 +357,20 @@ fun WorkoutHeader(
                     onDismissRequest = { showContextMenu = false },
                     containerColor = MaterialTheme.colorScheme.surface
                 ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.delete)) },
-                        onClick = { showContextMenu = false; onDeleteRequest() },
-                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
-                    )
+                    if (!data.finished && onMarkFinished != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.mark_as_finished)) },
+                            onClick = { showContextMenu = false; onMarkFinished() },
+                            leadingIcon = { Icon(Icons.Default.Check, contentDescription = null) }
+                        )
+                    }
+                    if (canDelete) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.delete)) },
+                            onClick = { showContextMenu = false; onDeleteRequest() },
+                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                        )
+                    }
                 }
             }
         }

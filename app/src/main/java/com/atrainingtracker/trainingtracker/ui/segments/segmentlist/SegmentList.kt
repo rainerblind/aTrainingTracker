@@ -50,6 +50,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Map
+import com.atrainingtracker.trainingtracker.ui.components.FastScrollableBox
 import com.atrainingtracker.trainingtracker.ui.components.strava.PoweredByStrava
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,7 +62,8 @@ fun SegmentList(
     onConnectToStrava: () -> Unit,
     onSegmentClick: (Long) -> Unit,
     appBarOffsetPx: Int,
-    headerHeightPx: Float
+    headerHeightPx: Float,
+    isFilterActive: Boolean = false
 ) {
     val density = LocalDensity.current
     val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
@@ -81,39 +83,52 @@ fun SegmentList(
                     onConnectToStrava()
                 })
             }
+        } else if (isFilterActive && segmentsWithPath.isEmpty()) {
+            EmptyStatePlaceholder(
+                modifier = Modifier.padding(top = topPadding),
+                icon = Icons.Default.Map,
+                message = stringResource(R.string.filter_no_matching_segments)
+            )
         }
         else {
-            LazyColumn(
+            FastScrollableBox(
                 state = scrollState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    // Calculation: The initial header height (px) + the current offset (px)
-                    // convert the final result to Dp.
-                    top = with(density) { (headerHeightPx + appBarOffsetPx).toDp() + 8.dp },
-                    bottom = bottomPadding + 16.dp,
-                    start = 8.dp,
-                    end = 8.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                topPadding = topPadding,
+                bottomPadding = bottomPadding
             ) {
-                if (segmentsWithPath.isNotEmpty()) {
-                    item {
-                        PoweredByStrava(
-                            height = 18.dp,
-                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                LazyColumn(
+                    state = scrollState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        // Calculation: The initial header height (px) + the current offset (px)
+                        // convert the final result to Dp.
+                        top = topPadding + 8.dp,
+                        bottom = bottomPadding + 16.dp,
+                        start = 8.dp,
+                        end = 8.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (segmentsWithPath.isNotEmpty()) {
+                        item {
+                            PoweredByStrava(
+                                height = 18.dp,
+                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                            )
+                        }
+                    }
+
+                    items(
+                        items = segmentsWithPath,
+                        key = { it.summary.stravaId } // Improves performance and scroll position handling
+                    ) { segmentWithPath ->
+                        SegmentItem(
+                            summary = segmentWithPath.summary,
+                            pathPoints = segmentWithPath.path,
+                            onSegmentClick = onSegmentClick
                         )
                     }
-                }
-
-                items(
-                    items = segmentsWithPath,
-                    key = { it.summary.stravaId } // Improves performance and scroll position handling
-                ) { segmentWithPath ->
-                    SegmentItem(
-                        summary = segmentWithPath.summary,
-                        pathPoints = segmentWithPath.path,
-                        onSegmentClick = onSegmentClick
-                    )
                 }
             }
         }

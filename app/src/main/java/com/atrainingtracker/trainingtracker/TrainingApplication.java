@@ -106,6 +106,7 @@ public class TrainingApplication extends Application {
     public static final String SP_UPLOAD_TO_DROPBOX = "uploadToDropbox";
     public static final String PREFERENCE_SCREEN_STRAVA = "psUploadToStrava";
     public static final String SP_UPLOAD_TO_STRAVA = "uploadToStrava";
+    public static final String SP_IMPORT_TCX_UPLOAD_TO_STRAVA = "import_tcx_upload_to_strava";
     public static final String SP_STRAVA_TOKEN = "stravaToken";
     public static final String SP_STRAVA_REFRESH_TOKEN = "stravaRefreshToken";
     public static final String SP_STRAVA_TOKEN_EXPIRES_AT = "stravaTokenExpiresAt";
@@ -114,8 +115,12 @@ public class TrainingApplication extends Application {
     public static final String SP_CLUSTER_TOL_APEX = "clusterTolApex";
     public static final String SP_CLUSTER_TOL_DISTANCE = "clusterTolDistance";
     public static final String SP_CLUSTER_USE_SPORT_TYPE = "clusterUseSportType";
+    public static final String SP_CLUSTER_USE_ALTITUDE_POS = "clusterUseAltitudePos";
+    public static final String SP_CLUSTER_TOL_ALTITUDE_POS = "clusterTolAltitudePos";
     public static final String UPDATE_STRAVA_EQUIPMENT = "updateStravaEquipment";
     public static final String SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT = "lastUpdateTimeOfStravaEquipment";
+    public static final String UPDATE_STRAVA_ROUTES = "updateStravaRoutes";
+    public static final String SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES = "lastUpdateTimeOfStravaRoutes";
     public static final String SP_STRAVA_ATHLETE_ID = "stravaAthleteId";
     public static final String PREFERENCE_SCREEN_RUNKEEPER = "psUploadToRunkeeper";
     public static final String SP_UPLOAD_TO_RUNKEEPER = "uploadToRunkeeper";
@@ -147,7 +152,7 @@ public class TrainingApplication extends Application {
     public static final String SP_CONFIGURE_PEBBLE_DISPLAY = "configurePebbleDisplays";
 
     protected static final String NOTIFICATION_CHANNEL__TRACKING = "NOTIFICATION_CHANNEL__TRACKING";
-    protected static final String NOTIFICATION_CHANNEL__TRACKING_2 = "NOTIFICATION_CHANNEL__TRACKING_2";
+    public static final String NOTIFICATION_CHANNEL__TRACKING_2 = "NOTIFICATION_CHANNEL__TRACKING_2";
     public static final String NOTIFICATION_CHANNEL__EXPORT = "NOTIFICATION_CHANNEL__EXPORT";
     public static final int TRACKING_NOTIFICATION_ID = 1;
 
@@ -204,6 +209,7 @@ public class TrainingApplication extends Application {
     public TrackOnMapHelper trackOnMapHelper;
     private final HashMap<Long, Boolean> mSegmentListUpdating = new HashMap<>();
     private long mWorkoutID = -1;
+    private static volatile long sActiveWorkoutId = -1;
     protected final BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, @NonNull Intent intent) {
             setWorkoutID(intent.getLongExtra(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_ID, -1));
@@ -493,12 +499,18 @@ public class TrainingApplication extends Application {
     }
 
     public static DbxCredential readDropboxCredential() {
+        if (cSharedPreferences == null) {
+            return null;
+        }
         String credential = cSharedPreferences.getString(SP_DROPBOX_CREDENTIAL, null);
+        if (credential == null || credential.trim().isEmpty()) {
+            return null;
+        }
         DbxCredential dbxCredential = null;
         try {
             dbxCredential = DbxCredential.Reader.readFully(credential);
-        } catch (JsonReadException e) {
-            // do nothing
+        } catch (Exception e) {
+            Log.e(TAG, "Error reading dropbox credential: " + e.getMessage());
         }
         return dbxCredential;
     }
@@ -520,8 +532,24 @@ public class TrainingApplication extends Application {
         cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_STRAVA, value).apply();
     }
 
+    public static boolean uploadImportedWorkoutsToStrava() {
+        if (cSharedPreferences == null) {
+            return false;
+        }
+        return cSharedPreferences.getBoolean(SP_IMPORT_TCX_UPLOAD_TO_STRAVA, false);
+    }
+
+    public static void setUploadImportedWorkoutsToStrava(boolean value) {
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putBoolean(SP_IMPORT_TCX_UPLOAD_TO_STRAVA, value).apply();
+        }
+    }
+
     @Nullable
     public static String getStravaAccessToken() {
+        if (cSharedPreferences == null) {
+            return null;
+        }
         return cSharedPreferences.getString(SP_STRAVA_TOKEN, null);
     }
 
@@ -572,6 +600,15 @@ public class TrainingApplication extends Application {
     public static float getClusterTolApex() { return cSharedPreferences.getFloat(SP_CLUSTER_TOL_APEX, 400f); }
     public static float getClusterTolDistance() { return cSharedPreferences.getFloat(SP_CLUSTER_TOL_DISTANCE, 0.20f); }
     public static boolean useSportTypeForClustering() { return cSharedPreferences.getBoolean(SP_CLUSTER_USE_SPORT_TYPE, true); }
+    public static boolean useAltitudePosForClustering() { return cSharedPreferences.getBoolean(SP_CLUSTER_USE_ALTITUDE_POS, true); }
+    public static float getClusterTolAltitudePos() { return cSharedPreferences.getFloat(SP_CLUSTER_TOL_ALTITUDE_POS, 400f); }
+
+    public static void setClusterTolEndpoints(float val) { cSharedPreferences.edit().putFloat(SP_CLUSTER_TOL_ENDPOINTS, val).apply(); }
+    public static void setClusterTolApex(float val) { cSharedPreferences.edit().putFloat(SP_CLUSTER_TOL_APEX, val).apply(); }
+    public static void setClusterTolDistance(float val) { cSharedPreferences.edit().putFloat(SP_CLUSTER_TOL_DISTANCE, val).apply(); }
+    public static void setUseSportTypeForClustering(boolean val) { cSharedPreferences.edit().putBoolean(SP_CLUSTER_USE_SPORT_TYPE, val).apply(); }
+    public static void setUseAltitudePosForClustering(boolean val) { cSharedPreferences.edit().putBoolean(SP_CLUSTER_USE_ALTITUDE_POS, val).apply(); }
+    public static void setClusterTolAltitudePos(float val) { cSharedPreferences.edit().putFloat(SP_CLUSTER_TOL_ALTITUDE_POS, val).apply(); }
 
     @NonNull
     public static String getLastUpdateTimeOfStravaEquipment() {
@@ -580,6 +617,15 @@ public class TrainingApplication extends Application {
 
     public static void setLastUpdateTimeOfStravaEquipment(String updateTime) {
         cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT, updateTime).apply();
+    }
+
+    @NonNull
+    public static String getLastUpdateTimeOfStravaRoutes() {
+        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES, cAppContext.getString(R.string.lastUpdateOfRoutesNever));
+    }
+
+    public static void setLastUpdateTimeOfStravaRoutes(String updateTime) {
+        cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES, updateTime).apply();
     }
 
     public static int getStravaAthleteId() {
@@ -788,6 +834,22 @@ public class TrainingApplication extends Application {
         return cTrackingMode != TrackingMode.READY;
     }  // correct?
 
+    public static long getActiveWorkoutID() {
+        return sActiveWorkoutId;
+    }
+
+    public static boolean isActivelyTracked(long workoutId) {
+        return isTracking() && workoutId > 0 && workoutId == sActiveWorkoutId;
+    }
+
+    public static void setActiveWorkoutIdForTesting(long workoutId) {
+        sActiveWorkoutId = workoutId;
+    }
+
+    public static void setTrackingModeForTesting(@NonNull TrackingMode trackingMode) {
+        cTrackingMode = trackingMode;
+    }
+
     @NonNull
     public static TrackingMode getTrackingMode() {
         return cTrackingMode;
@@ -797,6 +859,37 @@ public class TrainingApplication extends Application {
         cResumeFromCrash = resumeFromCrash;
     }
 
+    public static boolean isResumeFromCrash() {
+        return cResumeFromCrash;
+    }
+
+    private static boolean sWorkManagerAvailable = false;
+
+    public static boolean isWorkManagerAvailable() {
+        return sWorkManagerAvailable;
+    }
+
+    public static void setWorkManagerAvailableForTesting(boolean available) {
+        sWorkManagerAvailable = available;
+    }
+
+    private void initWorkManager() {
+        try {
+            androidx.work.Configuration config = new androidx.work.Configuration.Builder().build();
+            try {
+                WorkManager.initialize(this, config);
+            } catch (IllegalStateException e) {
+                if (DEBUG) Log.w(TAG, "WorkManager already initialized: " + e.getMessage());
+            }
+            WorkManager.getInstance(this);
+            sWorkManagerAvailable = true;
+            if (DEBUG) Log.i(TAG, "WorkManager initialized successfully");
+        } catch (Throwable t) {
+            sWorkManagerAvailable = false;
+            Log.e(TAG, "WorkManager failed to initialize (non-standard platform JobScheduler)", t);
+        }
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -804,7 +897,12 @@ public class TrainingApplication extends Application {
 
         cAppContext = getApplicationContext();
 
-        com.atrainingtracker.trainingtracker.migration.BackupWorker.Companion.schedule(this);
+        initWorkManager();
+        if (sWorkManagerAvailable) {
+            com.atrainingtracker.trainingtracker.migration.BackupWorker.Companion.schedule(this);
+        } else {
+            Log.w(TAG, "Skipping BackupWorker scheduling because WorkManager is unavailable on this device.");
+        }
 
         trackOnMapHelper = new TrackOnMapHelper();
 
@@ -1012,6 +1110,7 @@ public class TrainingApplication extends Application {
 
     public void setWorkoutID(long workoutID) {
         mWorkoutID = workoutID;
+        sActiveWorkoutId = workoutID;
     }
 
     public void todo(Context context, String text) {
@@ -1041,6 +1140,7 @@ public class TrainingApplication extends Application {
         Intent intent = new Intent(this, TrackerService.class);
         if (cResumeFromCrash) {
             intent.putExtra(TrackerService.START_TYPE, TrackerService.StartType.RESUME_BY_USER.name());
+            cResumeFromCrash = false;
         } else {
             intent.putExtra(TrackerService.START_TYPE, TrackerService.StartType.START_NORMAL.name());
         }
@@ -1051,17 +1151,33 @@ public class TrainingApplication extends Application {
         notifyTrackingStateChanged();
     }
 
+    /**
+     * Pauses the active tracking session without splitting or creating laps.
+     *
+     * <p>Functional Description: Transitions the tracking state to {@link TrackingMode#PAUSED}
+     * and notifies registered listeners. Accumulators in {@code BANALService} and {@code ClockDevice}
+     * halt metric accumulation via {@link #isPaused()}.
+     *
+     * <p>Implementation Logic: In accordance with {@code REQ-TRK-002}, pausing is an interruption
+     * of tracking rather than an athletic lap split. No {@link #REQUEST_NEW_LAP} broadcast is sent,
+     * ensuring the active lap remains open across pauses.
+     */
     protected void pauseTracking() {
         if (DEBUG) Log.d(TAG, "pause tracking");
-
-        sendBroadcast(new Intent(REQUEST_NEW_LAP)
-                .putExtra(BANALService.IS_PAUSE, true)
-                .setPackage(getPackageName()));
 
         cTrackingMode = TrackingMode.PAUSED;
         notifyTrackingStateChanged();
     }
 
+    /**
+     * Resumes an active tracking session from a paused state.
+     *
+     * <p>Functional Description: Re-engages active tracking, triggers device discovery if configured,
+     * transitions the state to {@link TrackingMode#TRACKING}, and notifies registered observers.
+     *
+     * <p>Implementation Logic: In accordance with {@code REQ-TRK-002}, resuming continues the
+     * active lap seamlessly without sending {@link #REQUEST_NEW_LAP}.
+     */
     protected void resumeFromPaused() {
         if (DEBUG) Log.d(TAG, "resume tracking");
 
@@ -1069,10 +1185,6 @@ public class TrainingApplication extends Application {
             sendBroadcast(new Intent(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
                     .setPackage(getPackageName()));
         }
-
-        sendBroadcast(new Intent(REQUEST_NEW_LAP)
-                .putExtra(BANALService.IS_PAUSE, true)
-                .setPackage(getPackageName()));
 
         cTrackingMode = TrackingMode.TRACKING;
         notifyTrackingStateChanged();
@@ -1084,6 +1196,7 @@ public class TrainingApplication extends Application {
         stopService(new Intent(this, TrackerService.class));
 
         cTrackingMode = TrackingMode.READY;
+        sActiveWorkoutId = -1;
         notifyTrackingStateChanged();
     }
 

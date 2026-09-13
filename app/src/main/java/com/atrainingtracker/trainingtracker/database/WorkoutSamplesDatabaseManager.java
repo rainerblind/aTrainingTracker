@@ -348,9 +348,10 @@ public class WorkoutSamplesDatabaseManager {
                     // probably due to problems with converting and storing doubles?
 
                     String orderBy = sensorType.name() + " " + ((extremaType == ExtremaType.MAX) ? "DESC" : "ASC");
+                    String spatialSelection = SensorType.LATITUDE.name() + " IS NOT NULL AND " + SensorType.LONGITUDE.name() + " IS NOT NULL";
                     cursor = samplesDb.query(WorkoutSamplesDatabaseManager.getTableName(baseFileName), // table
                             null, // columns
-                            null, // selection
+                            spatialSelection, // selection: ensure we only inspect points with valid spatial coordinates
                             null, // selectionArgs
                             null, // groupBy
                             null, // having

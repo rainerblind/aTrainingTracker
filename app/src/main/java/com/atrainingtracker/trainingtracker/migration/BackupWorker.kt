@@ -71,30 +71,39 @@ class BackupWorker(
         private const val WORK_NAME = "automated_backup_work"
 
         fun schedule(context: Context) {
-            val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-            val automatedEnabled = prefs.getBoolean("automated_backups", true)
-            val intervalDays = prefs.getString("backup_interval_days", "1")?.toLong() ?: 1L
+            try {
+                if (!TrainingApplication.isWorkManagerAvailable()) {
+                    Log.w(TAG, "WorkManager is unavailable on this device; cannot schedule automated backups.")
+                    return
+                }
 
-            if (!automatedEnabled) {
-                WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
-                return
+                val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+                val automatedEnabled = prefs.getBoolean("automated_backups", true)
+                val intervalDays = prefs.getString("backup_interval_days", "1")?.toLong() ?: 1L
+
+                if (!automatedEnabled) {
+                    WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
+                    return
+                }
+
+                val constraints = Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.UNMETERED) // Only on Wi-Fi
+                    .setRequiresBatteryNotLow(true)
+                    .build()
+
+                val workRequest = PeriodicWorkRequestBuilder<BackupWorker>(intervalDays, TimeUnit.DAYS)
+                    .setConstraints(constraints)
+                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.HOURS)
+                    .build()
+
+                WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                    WORK_NAME,
+                    ExistingPeriodicWorkPolicy.REPLACE, // REPLACE to ensure interval change is applied
+                    workRequest
+                )
+            } catch (t: Throwable) {
+                Log.e(TAG, "Failed to schedule BackupWorker with WorkManager", t)
             }
-
-            val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.UNMETERED) // Only on Wi-Fi
-                .setRequiresBatteryNotLow(true)
-                .build()
-
-            val workRequest = PeriodicWorkRequestBuilder<BackupWorker>(intervalDays, TimeUnit.DAYS)
-                .setConstraints(constraints)
-                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.HOURS)
-                .build()
-
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                WORK_NAME,
-                ExistingPeriodicWorkPolicy.REPLACE, // REPLACE to ensure interval change is applied
-                workRequest
-            )
         }
     }
 }

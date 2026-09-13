@@ -28,6 +28,7 @@ import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
@@ -70,66 +71,107 @@ public class StravaEquipmentSynchronizeThread extends Thread {
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     private final Context mContext;
-    @NonNull
+    @Nullable
     private final ProgressDialog mProgressDialog;
-    @NonNull
+    @Nullable
     private final Handler mMainHandler;
 
     public StravaEquipmentSynchronizeThread(Context context) {
+        this(context, createSafeProgressDialog(context), createSafeHandler());
+    }
+
+    StravaEquipmentSynchronizeThread(Context context, @Nullable ProgressDialog progressDialog, @Nullable Handler handler) {
         mContext = context;
-        mProgressDialog = new ProgressDialog(context);
-        mMainHandler = new Handler(Looper.getMainLooper());
+        mProgressDialog = progressDialog;
+        mMainHandler = handler;
+    }
+
+    private static ProgressDialog createSafeProgressDialog(Context context) {
+        try {
+            return new ProgressDialog(context);
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    private static Handler createSafeHandler() {
+        try {
+            return new Handler(Looper.getMainLooper());
+        } catch (Throwable t) {
+            return null;
+        }
     }
 
     private void publishProgress(String progress) {
-        mMainHandler.post(() -> {
-            if (mProgressDialog != null && mProgressDialog.isShowing()) {
-                mProgressDialog.setMessage(progress);
-            }
-        });
+        if (mMainHandler != null) {
+            mMainHandler.post(() -> {
+                if (mProgressDialog != null && mProgressDialog.isShowing()) {
+                    mProgressDialog.setMessage(progress);
+                }
+            });
+        }
     }
 
     @Override
     public void run() {
-        mMainHandler.post(() -> {
-            try {
-                mProgressDialog.setMessage(mContext.getString(R.string.getting_equipment_from_strava));
-                mProgressDialog.show();
-            } catch (Exception e) {
-                // Window might not be attached
-            }
-        });
+        if (mMainHandler != null) {
+            mMainHandler.post(() -> {
+                try {
+                    if (mProgressDialog != null) {
+                        mProgressDialog.setMessage(mContext.getString(R.string.getting_equipment_from_strava));
+                        mProgressDialog.show();
+                    }
+                } catch (Exception e) {
+                    // Window might not be attached
+                }
+            });
+        }
 
         final String result = getStravaEquipment();
 
-        mMainHandler.post(() -> {
-            if (DEBUG) Log.d(TAG, "updated Strava equipment");
+        if (mMainHandler != null) {
+            mMainHandler.post(() -> {
+                if (DEBUG) Log.d(TAG, "updated Strava equipment");
 
-            if (mProgressDialog != null && mProgressDialog.isShowing()) {
-                try {
-                    mProgressDialog.dismiss();
-                } catch (IllegalArgumentException e) {
-                    // View not attached to window manager
+                if (mProgressDialog != null && mProgressDialog.isShowing()) {
+                    try {
+                        mProgressDialog.dismiss();
+                    } catch (IllegalArgumentException e) {
+                        // View not attached to window manager
+                    }
                 }
-            }
 
+                TrainingApplication.setLastUpdateTimeOfStravaEquipment(result);
+
+                mContext.sendBroadcast(new Intent(SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED)
+                        .setPackage(mContext.getPackageName()));
+            });
+        } else {
             TrainingApplication.setLastUpdateTimeOfStravaEquipment(result);
-
-            mContext.sendBroadcast(new Intent(SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED)
-                    .setPackage(mContext.getPackageName()));
-        });
+            try {
+                mContext.sendBroadcast(new Intent(SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED)
+                        .setPackage(mContext.getPackageName()));
+            } catch (Exception e) {
+                // Mock context in unit test
+            }
+        }
     }
 
     @NonNull
     private String getStravaEquipment() {
         if (DEBUG) Log.d(TAG, "getStravaEquipment");
 
+        String accessToken = StravaHelper.getRefreshedAccessToken();
+        if (accessToken == null || accessToken.trim().isEmpty()) {
+            Log.e(TAG, "Not connected to Strava (null or empty access token)");
+            return "Not connected to Strava";
+        }
+
         HttpURLConnection urlConnection = null;
         try {
             URL url = new URL(STRAVA_URL_ATHLETE);
             urlConnection = (HttpURLConnection) url.openConnection();
             urlConnection.setRequestMethod("GET");
-            String accessToken = StravaHelper.getRefreshedAccessToken();
             urlConnection.setRequestProperty(AUTHORIZATION, BEARER + " " + accessToken);
             //urlConnection.addRequestProperty(AUTHORIZATION, BEARER + " " + StravaHelper.getRefreshedAccessToken());
             urlConnection.setConnectTimeout(15000);
@@ -163,7 +205,12 @@ public class StravaEquipmentSynchronizeThread extends Thread {
     }
 
     @NonNull
-    private String fillDbFromJsonObject(@NonNull JSONObject jsonObject) {
+    String fillDbFromJsonObject(@NonNull JSONObject jsonObject) {
+        if (!jsonObject.has(SHOES) && !jsonObject.has(BIKES)) {
+            Log.w(TAG, "Strava athlete payload missing gear arrays (profile:read_all permission missing)");
+            return "No gear returned (missing profile:read_all permission)";
+        }
+
         try (SQLiteDatabase equipmentDb = new EquipmentDbHelper(mContext).getWritableDatabase()) {
             ContentValues values = new ContentValues();
 
@@ -188,6 +235,15 @@ public class StravaEquipmentSynchronizeThread extends Thread {
                             values,
                             EquipmentDbHelper.STRAVA_ID + "=?",
                             new String[]{id});
+
+                    if (updates < 1) {
+                        // Check if an unlinked shoe with matching name already exists locally
+                        values.put(EquipmentDbHelper.STRAVA_ID, id);
+                        updates = equipmentDb.update(EquipmentDbHelper.EQUIPMENT,
+                                values,
+                                EquipmentDbHelper.NAME + "=? AND (" + EquipmentDbHelper.STRAVA_ID + " IS NULL OR " + EquipmentDbHelper.STRAVA_ID + "='')",
+                                new String[]{name});
+                    }
 
                     if (updates < 1) {
                         if (DEBUG) Log.d(TAG, "adding shoe: " + name + " id: " + id);
@@ -220,6 +276,15 @@ public class StravaEquipmentSynchronizeThread extends Thread {
                             values,
                             EquipmentDbHelper.STRAVA_ID + "=?",
                             new String[]{id});
+
+                    if (updates < 1) {
+                        // Check if an unlinked bike with matching name already exists locally
+                        values.put(EquipmentDbHelper.STRAVA_ID, id);
+                        updates = equipmentDb.update(EquipmentDbHelper.EQUIPMENT,
+                                values,
+                                EquipmentDbHelper.NAME + "=? AND (" + EquipmentDbHelper.STRAVA_ID + " IS NULL OR " + EquipmentDbHelper.STRAVA_ID + "='')",
+                                new String[]{name});
+                    }
 
                     if (updates < 1) {
                         if (DEBUG) Log.d(TAG, "creating bike: " + name);

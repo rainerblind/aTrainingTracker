@@ -30,14 +30,47 @@ data class StravaSegmentEffort(
     val name: String,
     val elapsedTimeSec: Int,
     val prRank: Int?, // 1, 2, 3
-    val komRank: Int? // 1
+    val komRank: Int?, // 1
+    val isStarred: Boolean = false,
+    val segmentId: Long? = null
 )
+
+val StravaSegmentEffort.isHighlight: Boolean
+    get() = isStarred || prRank != null || komRank != null
 
 data class StravaBestEffort(
     val name: String,
     val elapsedTimeSec: Int,
-    val prRank: Int?
+    val prRank: Int? = null,
+    val distanceMeters: Double = 0.0
 )
+
+val StravaBestEffort.isHighlight: Boolean
+    get() = prRank != null && prRank in 1..3
+
+val StravaBestEffort.isMileEffort: Boolean
+    get() = name.contains("mile", ignoreCase = true) || name.contains(" mi", ignoreCase = true)
+
+val StravaBestEffort.effectiveDistanceMeters: Double
+    get() {
+        if (distanceMeters > 0.0) return distanceMeters
+        val lower = name.trim().lowercase()
+        return when {
+            lower == "400m" -> 400.0
+            lower.contains("1/2") && lower.contains("mile") -> 804.672
+            lower == "1k" -> 1000.0
+            lower == "1 mile" || lower == "1 mi" -> 1609.344
+            lower == "2 miles" || lower == "2 mi" -> 3218.688
+            lower == "5k" -> 5000.0
+            lower == "10k" -> 10000.0
+            lower == "15k" -> 15000.0
+            lower == "10 miles" || lower == "10 mi" -> 16093.44
+            lower == "20k" -> 20000.0
+            lower.contains("half") && lower.contains("marathon") -> 21097.5
+            lower.contains("marathon") -> 42195.0
+            else -> 0.0
+        }
+    }
 
 object StravaActivityParser {
     fun parse(jsonString: String?): StravaActivity? {
@@ -50,12 +83,50 @@ object StravaActivityParser {
             json.optJSONArray("segment_efforts")?.let { array ->
                 for (i in 0 until array.length()) {
                     val item = array.getJSONObject(i)
+                    val segmentObj = item.optJSONObject("segment")
+                    val isStarred = item.optBoolean("starred", false) ||
+                            item.optBoolean("is_starred", false) ||
+                            (item.has("starred_date") && !item.isNull("starred_date") && item.optString("starred_date").isNotBlank()) ||
+                            (segmentObj != null && (
+                                segmentObj.optBoolean("starred", false) ||
+                                segmentObj.optBoolean("is_starred", false) ||
+                                (segmentObj.has("starred_date") && !segmentObj.isNull("starred_date") && segmentObj.optString("starred_date").isNotBlank())
+                            ))
+                    val segmentId = if (segmentObj != null && segmentObj.has("id") && !segmentObj.isNull("id")) {
+                        segmentObj.optLong("id")
+                    } else if (item.has("segment_id") && !item.isNull("segment_id")) {
+                        item.optLong("segment_id")
+                    } else {
+                        null
+                    }
+
+                    var prRank = if (item.has("pr_rank") && !item.isNull("pr_rank")) item.optInt("pr_rank") else null
+                    var komRank = if (item.has("kom_rank") && !item.isNull("kom_rank")) item.optInt("kom_rank") else null
+
+                    // Check achievements array if pr_rank or kom_rank is omitted
+                    item.optJSONArray("achievements")?.let { achievementsArray ->
+                        for (a in 0 until achievementsArray.length()) {
+                            val ach = achievementsArray.optJSONObject(a) ?: continue
+                            val type = ach.optString("type")
+                            val typeId = ach.optInt("type_id", -1)
+                            val rank = if (ach.has("rank") && !ach.isNull("rank")) ach.optInt("rank") else 1
+                            if (prRank == null && (type.equals("pr", ignoreCase = true) || typeId == 2 || typeId == 3)) {
+                                prRank = rank
+                            }
+                            if (komRank == null && (type.equals("overall", ignoreCase = true) || type.equals("kom", ignoreCase = true))) {
+                                komRank = rank
+                            }
+                        }
+                    }
+
                     segmentEfforts.add(
                         StravaSegmentEffort(
                             name = item.optString("name"),
                             elapsedTimeSec = item.optInt("elapsed_time"),
-                            prRank = if (item.has("pr_rank") && !item.isNull("pr_rank")) item.optInt("pr_rank") else null,
-                            komRank = if (item.has("kom_rank") && !item.isNull("kom_rank")) item.optInt("kom_rank") else null
+                            prRank = prRank,
+                            komRank = komRank,
+                            isStarred = isStarred,
+                            segmentId = segmentId
                         )
                     )
                 }
@@ -65,11 +136,28 @@ object StravaActivityParser {
             json.optJSONArray("best_efforts")?.let { array ->
                 for (i in 0 until array.length()) {
                     val item = array.getJSONObject(i)
+                    var prRank = if (item.has("pr_rank") && !item.isNull("pr_rank")) item.optInt("pr_rank") else null
+                    if (prRank == null) {
+                        item.optJSONArray("achievements")?.let { achArray ->
+                            for (a in 0 until achArray.length()) {
+                                val ach = achArray.optJSONObject(a) ?: continue
+                                val type = ach.optString("type")
+                                val typeId = ach.optInt("type_id", -1)
+                                val rank = if (ach.has("rank") && !ach.isNull("rank")) ach.optInt("rank") else 1
+                                if (type.equals("pr", ignoreCase = true) || typeId == 2 || typeId == 3) {
+                                    prRank = rank
+                                    break
+                                }
+                            }
+                        }
+                    }
+                    val distanceMeters = if (item.has("distance") && !item.isNull("distance")) item.optDouble("distance", 0.0) else 0.0
                     bestEfforts.add(
                         StravaBestEffort(
                             name = item.optString("name"),
                             elapsedTimeSec = item.optInt("elapsed_time"),
-                            prRank = if (item.has("pr_rank") && !item.isNull("pr_rank")) item.optInt("pr_rank") else null
+                            prRank = prRank,
+                            distanceMeters = distanceMeters
                         )
                     )
                 }

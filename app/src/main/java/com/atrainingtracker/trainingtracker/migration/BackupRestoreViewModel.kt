@@ -13,6 +13,7 @@ package com.atrainingtracker.trainingtracker.migration
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -22,10 +23,14 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -71,8 +76,8 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         .map { it.size }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    // Backpressure control: Limit pending UI interactions to 10 to ensure prompt naming (ATT-349)
-    private val interactionSemaphore = Semaphore(10)
+    // Backpressure control: Limit pending UI interactions to 3 to ensure prompt naming (ATT-493 / ATT-349)
+    private val interactionSemaphore = Semaphore(3)
 
     fun provideClusterDecision(clusterId: Long?, name: String?) {
         val currentQueue = _interactionQueue.value
@@ -110,11 +115,21 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
     var backupIntervalDays by mutableIntStateOf(prefs.getString("backup_interval_days", "1")?.toInt() ?: 1)
         private set
 
-    // Clustering Tolerances (ATT-315/350)
+    // Clustering Tolerances (ATT-315/350/502)
     var endpointTolerance by mutableStateOf(TrainingApplication.getClusterTolEndpoints())
     var apexTolerance by mutableStateOf(TrainingApplication.getClusterTolApex())
     var distanceTolerance by mutableStateOf(TrainingApplication.getClusterTolDistance())
+    var altitudePositionTolerance by mutableStateOf(TrainingApplication.getClusterTolAltitudePos())
     var useSportTypeForClustering by mutableStateOf(TrainingApplication.useSportTypeForClustering())
+    var useAltitudePosForClustering by mutableStateOf(TrainingApplication.useAltitudePosForClustering())
+
+    var uploadToStravaOnImport by mutableStateOf(TrainingApplication.uploadImportedWorkoutsToStrava())
+        private set
+
+    fun updateUploadToStravaOnImport(enabled: Boolean) {
+        uploadToStravaOnImport = enabled
+        TrainingApplication.setUploadImportedWorkoutsToStrava(enabled)
+    }
 
     fun updateAutomatedBackupsEnabled(enabled: Boolean) {
         prefs.edit().putBoolean("automated_backups", enabled).apply()
@@ -133,7 +148,9 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             .putFloat(TrainingApplication.SP_CLUSTER_TOL_ENDPOINTS, endpointTolerance)
             .putFloat(TrainingApplication.SP_CLUSTER_TOL_APEX, apexTolerance)
             .putFloat(TrainingApplication.SP_CLUSTER_TOL_DISTANCE, distanceTolerance)
+            .putFloat(TrainingApplication.SP_CLUSTER_TOL_ALTITUDE_POS, altitudePositionTolerance)
             .putBoolean(TrainingApplication.SP_CLUSTER_USE_SPORT_TYPE, useSportTypeForClustering)
+            .putBoolean(TrainingApplication.SP_CLUSTER_USE_ALTITUDE_POS, useAltitudePosForClustering)
             .apply()
     }
 
@@ -157,6 +174,11 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
 
     fun uploadToDropbox(context: Context) {
         viewModelScope.launch {
+            val credential = TrainingApplication.readDropboxCredential()
+            if (credential == null || !TrainingApplication.uploadToDropbox()) {
+                _uiState.value = UiState.Error(context.getString(R.string.dropbox_disconnected_status))
+                return@launch
+            }
             _uiState.value = UiState.Loading("Creating backup...")
             val backupFile = withContext(Dispatchers.IO) { 
                 BackupManager.createBackup(context, object : BackupManager.ProgressListener {
@@ -181,6 +203,11 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
 
     fun restoreFromDropbox(context: Context) {
         viewModelScope.launch {
+            val credential = TrainingApplication.readDropboxCredential()
+            if (credential == null || !TrainingApplication.uploadToDropbox()) {
+                _uiState.value = UiState.Error(context.getString(R.string.dropbox_disconnected_status))
+                return@launch
+            }
             _uiState.value = UiState.Loading("Downloading from Dropbox...")
             val tempFile = File(context.cacheDir, "dropbox_restore.attbackup")
             val downloadSuccess = DropboxBackupManager.downloadBackup(context, tempFile)
@@ -284,16 +311,36 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         saveClusteringTolerances()
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = UiState.Loading("Importing legacy file...")
-            val tempFile = File(context.cacheDir, "legacy_import.$format")
+            val displayName = try {
+                context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                        if (idx != -1) cursor.getString(idx) else null
+                    } else null
+                }
+            } catch (e: Exception) {
+                null
+            }
+            val fileName = displayName?.takeIf { it.isNotBlank() } ?: "legacy_import_${System.currentTimeMillis()}.$format"
+            val tempFile = File(context.cacheDir, fileName)
             context.contentResolver.openInputStream(uri)?.use { input ->
                 tempFile.outputStream().use { output -> input.copyTo(output) }
             }
             val success = when (format.lowercase()) {
-                "tcx" -> LegacyImportEngine.importFromTcx(context, tempFile, createLegacyListener())
+                "tcx" -> LegacyImportEngine.importFromTcx(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
                 else -> false
             }
             tempFile.delete()
             if (success) {
+                // ATT-909 / REQ-MIG-026: Post-import reactive reconciliation
+                try {
+                    val app = getApplication<Application>()
+                    WorkoutRepository.getInstance(app).loadAllWorkouts()
+                    PeriodsRepository.getInstance(app).syncPeriodsIfDiscrepancy()
+                    WorkoutClusterRepository.getInstance(app).refreshClusters()
+                } catch (e: Exception) {
+                    Log.w("BackupRestoreVM", "Post-import reconciliation failed: ${e.message}")
+                }
                 _uiState.value = UiState.Success("Successfully imported workout from $format file.")
             } else {
                 _uiState.value = UiState.Error("Failed to import workout. It might already exist or the file format is invalid.")
@@ -304,9 +351,47 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
     fun bulkRecoverLegacyData(context: Context, format: String) {
         saveClusteringTolerances()
         viewModelScope.launch(Dispatchers.IO) {
+            val credential = TrainingApplication.readDropboxCredential()
+            if (credential == null || !TrainingApplication.uploadToDropbox()) {
+                _uiState.value = UiState.Error(context.getString(R.string.dropbox_disconnected_status))
+                return@launch
+            }
             _uiState.value = UiState.Loading("Initializing legacy recovery...")
-            val count = LegacyImportEngine.bulkRecoverFromDropbox(context, format, createLegacyListener())
-            _uiState.value = UiState.Success("Recovery finished. Imported $count new workouts from $format files.")
+            val result = LegacyImportEngine.bulkRecoverFromDropbox(context, format, createLegacyListener(), uploadToStravaOnImport)
+            val app = getApplication<Application>()
+            val message = if (result.failedCount > 0) {
+                app.getString(
+                    R.string.legacy_import__finished_with_failed,
+                    result.importedCount,
+                    result.skippedCount,
+                    result.failedCount,
+                    result.totalScanned
+                )
+            } else if (result.skippedCount > 0) {
+                app.getString(
+                    R.string.legacy_import__finished_with_skipped,
+                    result.importedCount,
+                    result.skippedCount,
+                    result.totalScanned
+                )
+            } else {
+                app.getString(
+                    R.string.legacy_import__finished_all_new,
+                    result.importedCount,
+                    result.totalScanned
+                )
+            }
+            if (result.importedCount > 0) {
+                // ATT-909 / REQ-MIG-026: Post-bulk recovery reactive reconciliation
+                try {
+                    WorkoutRepository.getInstance(app).loadAllWorkouts()
+                    PeriodsRepository.getInstance(app).syncPeriodsIfDiscrepancy()
+                    WorkoutClusterRepository.getInstance(app).refreshClusters()
+                } catch (e: Exception) {
+                    Log.w("BackupRestoreVM", "Post-bulk recovery reconciliation failed: ${e.message}")
+                }
+            }
+            _uiState.value = UiState.Success(message)
         }
     }
 

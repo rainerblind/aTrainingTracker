@@ -58,6 +58,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.ui.common.filters.FilterActionButton
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
@@ -96,6 +98,10 @@ fun RouteTabbedScreen(
     onSortOrderChange: (RouteSortOrder) -> Unit,
     scrollToTop: Boolean,
     isLocationAvailable: Boolean,
+    filterCriteria: RouteFilterCriteria = RouteFilterCriteria(),
+    onApplyFilterCriteria: (RouteFilterCriteria) -> Unit = {},
+    onClearAllFilters: () -> Unit = {},
+    onUpdateFilterCriteria: ((RouteFilterCriteria) -> RouteFilterCriteria) -> Unit = {}
 ) {
     // Define our tabs mapping to BSportType
     val tabs = listOf(
@@ -108,8 +114,20 @@ fun RouteTabbedScreen(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
+    var showFilterBottomSheet by rememberSaveable { mutableStateOf(false) }
+
+    if (showFilterBottomSheet) {
+        RouteFilterBottomSheet(
+            criteria = filterCriteria,
+            onApplyCriteria = onApplyFilterCriteria,
+            onClearAll = onClearAllFilters,
+            onDismissRequest = { showFilterBottomSheet = false }
+        )
+    }
+
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val appBarMaxHeightPx = with(density) { (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT).roundToPx() }
+    val chipsRowHeight = if (filterCriteria.isNotEmpty) 40.dp else 0.dp
+    val appBarMaxHeightPx = with(density) { (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT + chipsRowHeight).roundToPx() }
 
     val connection = remember(appBarMaxHeightPx) {
         CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
@@ -157,6 +175,7 @@ fun RouteTabbedScreen(
                     onDeleteConfirmed = onDeleteConfirmed,
                     appBarOffsetPx = connection.appBarOffset,
                     headerHeightPx = appBarMaxHeightPx.toFloat(),
+                    isFilterActive = filterCriteria.isNotEmpty,
                 )
             }
 
@@ -335,6 +354,13 @@ fun RouteTabbedScreen(
                                     }
                                 }
 
+                                // --- FILTER BUTTON ---
+                                FilterActionButton(
+                                    onClick = { showFilterBottomSheet = true },
+                                    isFilterActive = filterCriteria.isNotEmpty,
+                                    activeFilterCount = filterCriteria.activeFilterCount,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
                             }
                         }
                     }
@@ -348,6 +374,24 @@ fun RouteTabbedScreen(
                                 selected = pagerState.currentPage == index,
                                 onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
                                 text = { Text(text = tab.first) }
+                            )
+                        }
+                    }
+
+                    // Active Filter Chips Strip (ATT-736)
+                    if (filterCriteria.isNotEmpty) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            ActiveRouteFilterChipsRow(
+                                criteria = filterCriteria,
+                                onRemoveQuery = { onUpdateFilterCriteria { it.copy(query = "") } },
+                                onRemoveSource = { onUpdateFilterCriteria { it.copy(source = null) } },
+                                onRemoveSelected = { onUpdateFilterCriteria { it.copy(isSelected = null) } },
+                                onRemoveMinDistance = { onUpdateFilterCriteria { it.copy(minDistanceMeters = null) } },
+                                onRemoveMinElevation = { onUpdateFilterCriteria { it.copy(minElevationGainMeters = null) } },
+                                onClearAll = onClearAllFilters
                             )
                         }
                     }

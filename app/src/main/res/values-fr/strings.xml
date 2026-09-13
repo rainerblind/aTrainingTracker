@@ -47,12 +47,14 @@
     <string name="edit_wheel_circumference">modifier la circonférence de la roue</string>
     <string name="edit_calibration_factor">modifier le facteur de calibration</string>
     <string name="delete">supprimer</string>
+    <string name="mark_as_finished">Marquer comme terminé</string>
     <string name="delete_device">supprimer l\'appareil</string>
     <string name="delete_pebble_view">supprimer la vue Pebble</string>
     <string name="delete_tracking_view">supprimer la vue d\'entraînement</string>
     <string name="delete_workout">supprimer l\'entraînement</string>
     <string name="deleteOldWorkouts">supprimer les anciens entraînements</string>
     <string name="deleteWorkoutsThatAreOlderThanDays">supprimer les entraînements de plus de … jours</string>
+    <string name="really_delete_old_workouts_format">Voulez-vous vraiment supprimer tous les entraînements de plus de %1$d jours ?</string>
     <string name="delete_sensor">supprimer</string>
     <string name="really_delete_workout">Voulez-vous vraiment supprimer cet entraînement ?</string>
     <string name="really_delete_pebble_view_format">Voulez-vous vraiment supprimer la vue Pebble "%1$s" ?</string>
@@ -74,6 +76,8 @@
     <string name="start_or_resume_dialog_message">L\'entraînement précédent n\'a pas été terminé.\nVoulez-vous en démarrer un nouveau ou reprendre le précédent ?</string>
     <string name="start_new_workout">Nouveau</string>
     <string name="resume_workout">Reprendre</string>
+    <string name="tracking_interrupted_notification_title">Enregistrement interrompu</string>
+    <string name="tracking_interrupted_notification_text">L\'enregistrement a été suspendu par Android. Appuyez pour reprendre.</string>
     <string name="SD_card">Carte SD</string>
     <string name="File">Fichier</string>
     <string name="Community">Communauté</string>
@@ -335,6 +339,8 @@
     <string name="prefsStartLocationsSummary">Configurer l\'altitude des lieux</string>
     <string name="updateStravaEquipment">Mettre à jour matériel Strava</string>
     <string name="lastUpdateOfEquipmentNever">jamais mis à jour</string>
+    <string name="updateStravaRoutes">Mettre à jour les itinéraires Strava</string>
+    <string name="lastUpdateOfRoutesNever">jamais mis à jour</string>
 
     <string name="getting_equipment_from_strava">récupération matériel Strava…\npatientez</string>
     <string name="got_shoe">chaussures Strava reçues\nreçu : %1$s</string>
@@ -944,6 +950,12 @@
     </plurals>
     <string name="strava_kom_description">KOM / Record du segment</string>
     <string name="strava_pr_description">Record personnel #%1$d</string>
+    <string name="strava_show_all_segments_format">▼ Afficher les %1$d segments (+%2$d de plus)</string>
+    <string name="strava_show_less_segments_format">▲ Afficher uniquement les favoris et records personnels (%1$d)</string>
+    <string name="strava_no_highlights">Aucun segment favori ou record personnel</string>
+    <string name="strava_show_all_best_efforts_format">▼ Afficher les %1$d meilleurs temps (+%2$d de plus)</string>
+    <string name="strava_show_less_best_efforts_format">▲ Afficher moins (%1$d)</string>
+    <string name="strava_show_less_best_efforts">▲ Afficher moins</string>
 
     <string name="strava_connected_status">Connecté à Strava</string>
     <string name="strava_disconnected_status">Non connecté à Strava</string>
@@ -960,6 +972,7 @@
     <string name="source_internal">Capteurs internes du smartphone</string>
     <string name="source_none_configured">Aucune source configurée</string>
     <string name="marker_options">Options des marqueurs</string>
+    <string name="marker_min_altitude">Alt. min</string>
     <string name="marker_max_altitude">Alt. max</string>
     <string name="marker_max_distance">Dist. max</string>
     <string name="marker_start">Début</string>
@@ -975,8 +988,15 @@
     <string name="cluster_total_recordings">Total des enregistrements</string>
     <string name="cluster_average_distance">Distance moyenne</string>
     <string name="cluster_recordings_format">%1$d enregistrements</string>
+    <plurals name="cluster_recordings">
+        <item quantity="one">%d enregistrement</item>
+        <item quantity="other">%d enregistrements</item>
+    </plurals>
     <string name="cluster_ref_distance_label">Réf : %1$s</string>
     <string name="cluster_tuning_title">Paramètres de regroupement</string>
+    <string name="cluster_tuning_pre_import_desc">Ajustez la sensibilité du regroupement de parcours pour optimiser la correspondance des entraînements importés.</string>
+    <string name="import_upload_to_strava_label">Télécharger vers Strava</string>
+    <string name="import_upload_to_strava_summary">Télécharger automatiquement les entraînements importés vers Strava.</string>
     <string name="cluster_tuning_master_label">Sensibilité du regroupement</string>
     <string name="cluster_tuning_strict">Strict</string>
     <string name="cluster_tuning_relaxed">Relâché</string>
@@ -984,6 +1004,7 @@
     <string name="cluster_tuning_endpoint_label">Tolérance du point final</string>
     <string name="cluster_tuning_apex_label">Tolérance de l’apex (déplacement max.)</string>
     <string name="cluster_tuning_distance_label">Tolérance de distance</string>
+    <string name="cluster_tuning_altitude_pos_label">Tolérance de position d\'altitude</string>
     <string name="cluster_tuning_recalculate_button">Recalculer tous les groupes</string>
     <string name="cluster_tuning_warning">Avertissement : Le recalcul effacera tous les noms de groupes appris et les regroupements, puis les reconstruira à partir de l’historique en utilisant ces nouveaux paramètres.</string>
     <string name="cluster_tuning_recalculating">Recalcul des groupes…</string>
@@ -1013,6 +1034,8 @@
     <string name="cluster_score_brackets_format">(%1$.3f)</string>
     <string name="cluster_suggestions_content_desc">Suggestions</string>
     <string name="cluster_autoname_format">%1$s #%2$d</string>
+    <string name="cluster_counter_enabled_label">Compteur d\'activités</string>
+    <string name="cluster_counter_enabled_description">Ajouter des numéros séquentiels (#2, #3, …) aux noms des entraînements</string>
     <string name="cluster_delete_title">Supprimer le groupe d’itinéraires</string>
     <string name="cluster_delete_message">Êtes-vous sûr de vouloir supprimer ce groupe d’itinéraires ? Cela ne supprimera pas les entraînements associés, mais ils ne seront plus regroupés sous ce groupe.</string>
     <string name="cluster_migration_title">Analyse des familles d\'itinéraires…</string>
@@ -1023,6 +1046,19 @@
     <string name="cluster_migration_processing_workouts">Traitement de l\'entraînement %1$d sur %2$d…</string>
     <string name="legacy_import__scanning_dropbox">Analyse de %1$s sur Dropbox…</string>
     <string name="legacy_import__downloading_dropbox">Téléchargement de %1$s depuis Dropbox…</string>
+    <string name="legacy_import__finished_with_skipped">Importation terminée : %1$d nouvel(s) entraînement(s) importé(s) (%2$d ignoré(s)) sur %3$d fichiers analysés.</string>
+    <string name="legacy_import__finished_all_new">Importation terminée : %1$d nouvel(s) entraînement(s) importé(s) sur %2$d fichiers analysés.</string>
+    <string name="legacy_import__finished_with_failed">Importation terminée : %1$d importés, %2$d ignorés, %3$d échoués sur %4$d fichiers analysés.</string>
+    <string name="cluster_naming__select_existing_route">Sélectionner un itinéraire existant</string>
+    <string name="cluster_naming__title">Attribuer l\'entraînement à un itinéraire</string>
+    <string name="cluster_naming__found_recurring">Nouvel itinéraire trouvé du %1$s.</string>
+    <string name="cluster_naming__task_count">Tâche %1$d sur %2$d</string>
+    <string name="cluster_naming__assignment_label">Attribution d\'itinéraire :</string>
+    <string name="cluster_naming__create_new">Créer nouveau…</string>
+    <string name="cluster_naming__selected_route_label">Itinéraire sélectionné</string>
+    <string name="cluster_naming__new_name_prompt">Ou donnez-lui un nouveau nom :</string>
+    <string name="cluster_naming__new_route_name_label">Nom du nouvel itinéraire</string>
+    <string name="cluster_naming__leave_unclustered">Laisser non groupé</string>
     <string name="migration_phase_label">Phase %1$d : %2$s</string>
 
     <string name="unclustered">Ouvert</string>
@@ -1035,6 +1071,8 @@
     <string name="get_extremaType_of_sportType_format">Obtenez les %1$s positions de vos %2$s entraînements.</string>
     <string name="no_sport_types_available">Aucun type de sport disponible</string>
     <string name="no_workouts_available">Aucun entraînement disponible</string>
+    <string name="no_periods_available">Aucun résumé de période disponible</string>
+    <string name="no_periods_available_hint">Enregistrez des séances pour voir les résumés de périodes</string>
     <string name="really_delete_format">Voulez-vous vraiment supprimer "%1$s" ?</string>
     <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/master/privacy.md</string>
 
@@ -1084,6 +1122,8 @@
     <string name="cluster_migration_enriching">Enrichissement des métadonnées de la famille (%1$d sur %2$d)…</string>
     <string name="cluster_tuning_use_sport_type_label">Prendre en compte le type de sport</string>
     <string name="cluster_tuning_use_sport_type_summary">Isolez les différentes activités (ex: course vs vélo) sur le même parcours dans des familles distinctes.</string>
+    <string name="cluster_tuning_use_altitude_label">Prendre en compte l\'altitude min/max</string>
+    <string name="cluster_tuning_use_altitude_summary">Distinguer les itinéraires avec des profils verticaux différents selon les coordonnées d\'élévation minimale et maximale.</string>
 
     <string name="workout_periods__migration_title">Optimisation de la base de données de l\'historique d\'entraînement…</string>
 
@@ -1100,4 +1140,101 @@
     <string name="legacy_recovery_description">Importez votre historique d\'entraînement à partir de fichiers TCX (par ex. depuis un ancien appareil). Les doublons seront ignorés.</string>
     <string name="scan_tcx">Scanner Dropbox</string>
     <string name="import_single_file">Importer un fichier TCX</string>
+    <!-- Workout Filtering (ATT-128) -->
+    <string name="filter_workouts_title">Filtrer les entraînements</string>
+    <string name="filter_action">Filtrer</string>
+    <string name="filter_clear_all">Tout effacer</string>
+    <string name="filter_search_hint">Rechercher titre, notes, description…</string>
+    <string name="filter_section_time">Temps et période</string>
+    <string name="filter_section_sport">Type de sport</string>
+    <string name="filter_section_equipment">Équipement</string>
+    <string name="filter_section_attributes">Attributs</string>
+    <string name="filter_section_thresholds">Distance et durée</string>
+    <string name="filter_commute">Trajet travail</string>
+    <string name="filter_trainer">Intérieur / Home-trainer</string>
+    <string name="filter_has_gps">Avec trace GPS</string>
+    <string name="filter_min_distance_format">&gt; %1$s km</string>
+    <string name="filter_min_duration_format">&gt; %1$s min</string>
+    <string name="filter_no_matching_workouts">Aucun entraînement ne correspond aux filtres actifs</string>
+    <!-- Route Filtering (ATT-736) -->
+    <string name="filter_routes_title">Filtrer les parcours</string>
+    <string name="filter_search_routes_hint">Rechercher nom, description…</string>
+    <string name="filter_route_source">Source</string>
+    <string name="filter_route_selected">Sélectionnés uniquement</string>
+    <string name="filter_min_elevation_format">&gt; %1$s m</string>
+    <string name="filter_no_matching_routes">Aucun parcours ne correspond aux filtres actifs</string>
+    <!-- Segment Filtering (ATT-735) -->
+    <string name="filter_segments_title">Filtrer les segments</string>
+    <string name="filter_search_segments_hint">Rechercher nom, ville…</string>
+    <string name="filter_section_climb_category">Catégorie de côte</string>
+    <string name="filter_climb_cat_4">Cat. 4+</string>
+    <string name="filter_climb_cat_3">Cat. 3+</string>
+    <string name="filter_climb_cat_2">Cat. 2+</string>
+    <string name="filter_climb_cat_1">Cat. 1+</string>
+    <string name="filter_climb_cat_hc">HC uniquement</string>
+    <string name="filter_climb_chip_cat4">≥ Cat. 4</string>
+    <string name="filter_climb_chip_cat3">≥ Cat. 3</string>
+    <string name="filter_climb_chip_cat2">≥ Cat. 2</string>
+    <string name="filter_climb_chip_cat1">≥ Cat. 1</string>
+    <string name="filter_climb_chip_hc">HC</string>
+    <string name="filter_has_pr">Record personnel (PR)</string>
+    <string name="filter_no_matching_segments">Aucun segment ne correspond aux filtres actifs</string>
+    <!-- Favorite Tracks Filtering (ATT-737) -->
+    <string name="filter_clusters_title">Filtrer les parcours favoris</string>
+    <string name="filter_search_clusters_hint">Rechercher le nom du parcours…</string>
+    <string name="filter_section_recordings">Enregistrements</string>
+    <string name="filter_min_recordings_chip_format">≥ %1$d enregistrements</string>
+    <string name="filter_no_matching_clusters">Aucun parcours favori ne correspond aux filtres actifs</string>
+    <!-- Cluster Algorithm Info (ATT-501) -->
+    <string name="cluster_info_title">Parcours favoris et regroupement</string>
+    <string name="cluster_info_what_title">Que sont les Parcours favoris ?</string>
+    <string name="cluster_info_what_desc">Lorsque vous vous entraînez plusieurs fois sur le même itinéraire, l\'application le détecte automatiquement et regroupe ces séances au sein d\'un Parcours favori (cluster). Cela permet un nommage automatique (ex. « Tour du Lac d\'Annecy #5 »), le suivi de l\'équipement et la comparaison des performances sur des trajets identiques.</string>
+    <string name="cluster_info_fingerprint_title">Empreinte topologique 3D</string>
+    <string name="cluster_info_fingerprint_desc">Les itinéraires sont comparés à l\'aide d\'un algorithme simple mais étonnamment efficace, basé sur une signature spatiale multidimensionnelle plutôt que sur des tracés GPS point par point. Cet algorithme tolère de petites variations, mais sépare nettement les entraînements lorsqu\'ils sont réellement différents :&#10;• Départ &amp; Arrivée : Coordonnées géographiques de départ et d\'arrivée (tolérance : 200 m).&#10;• Apex (Point le plus éloigné) : Le point le plus distant du départ (tolérance : 400 m).&#10;• Distance totale : Longueur totale du parcours (tolérance : 20 %).&#10;• Altitude min. et max. : Emplacements géographiques des altitudes minimale et maximale (tolérance : 400 m, facultatif). Cela sépare nettement les vallées des crêtes aux tracés comparables.</string>
+    <string name="cluster_info_sports_title">Séparation par sport et centroïde adaptatif</string>
+    <string name="cluster_info_sports_desc">Les parcours favoris peuvent séparer les sports, garantissant que sorties vélo et courses à pied ne se mélangent pas. Au fil de vos entraînements, le cluster ajuste dynamiquement ses coordonnées de référence via un centroïde pondéré.</string>
+    <string name="cluster_info_tuning_title">Sensibilité et réglage des paramètres</string>
+    <string name="cluster_info_tuning_desc">Ajustez le curseur principal pour définir le niveau d\'exigence : « Strict » sépare les légères variations ; « Relâché » regroupe les séances malgré de petits détours ou décalages. Vous pouvez également affiner chaque tolérance individuellement ci-dessous.</string>
+    <string name="cluster_info_close">Compris</string>
+
+    <!-- Workout Cluster Stats -->
+    <string name="cluster_stats_best_time">Meilleur temps</string>
+    <string name="cluster_stats_avg_time">Temps</string>
+    <string name="cluster_stats_avg_speed">Vitesse</string>
+    <string name="cluster_stats_avg_pace">Allure</string>
+    <string name="cluster_stats_total_distance">Distance</string>
+    <string name="cluster_stats_total_elevation">Dénivelé +</string>
+    <string name="cluster_stats_total_time">Temps</string>
+    <string name="cluster_stats_last_activity">Dernière activité</string>
+    <string name="cluster_stats_today">Aujourd\'hui</string>
+    <string name="cluster_stats_yesterday">Hier</string>
+    <string name="cluster_stats_days_ago">il y a %1$d jours</string>
+    <string name="cluster_stats_weeks_ago">il y a %1$d semaines</string>
+
+    <!-- ATT-510: Lap Overview & Performance Highlights -->
+    <string name="laps_header">Tours (%1$d)</string>
+    <string name="show_all_laps">Afficher les %1$d tours</string>
+    <string name="show_fewer_laps">Moins afficher</string>
+    <string name="fastest_lap">Tour le plus rapide</string>
+    <string name="slowest_lap">Tour le plus lent</string>
+
+    <!-- ATT-511: Edit Lap Details -->
+    <string name="edit_lap_title">Modifier le tour %1$d</string>
+    <string name="lap_name_label">Nom du tour</string>
+    <string name="lap_description_label">Notes &amp; description</string>
+    <string name="quick_tag_warmup">Échauffement</string>
+    <string name="quick_tag_interval">Intervalle</string>
+    <string name="quick_tag_recovery">Récupération</string>
+    <string name="quick_tag_hill_climb">Montée</string>
+    <string name="quick_tag_tempo">Tempo</string>
+    <string name="quick_tag_sprint">Sprint</string>
+    <string name="quick_tag_cooldown">Retour au calme</string>
+    <string name="previous_lap">Précédent</string>
+    <string name="next_lap">Suivant</string>
+    <string name="no_gps_track_available">Aucun tracé GPS enregistré pour cet entraînement</string>
+
+    <!-- ATT-920: Lap Table Headers -->
+    <string name="lap_table_header_lap">Tour</string>
+    <string name="lap_table_header_time">Temps</string>
+    <string name="lap_table_header_distance">Distance</string>
 </resources>

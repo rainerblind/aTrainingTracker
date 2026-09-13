@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
@@ -55,6 +56,7 @@ class RoutesViewModel(application: Application) :
     private val routesRepository = RoutesRepository.getInstance(application)
     private val banalServiceRepository = BANALServiceRepository.getInstance(application)
     private val segmentsRepository = SegmentsRepository.getInstance(application)
+    private val preferenceManager = MyPreferenceManager(application)
 
     private val _isSyncingStrava = MutableStateFlow(false)
     val isSyncingStrava = _isSyncingStrava.asStateFlow()
@@ -82,33 +84,43 @@ class RoutesViewModel(application: Application) :
             initialValue = emptyList()
         )
 
-    // The list of routes to display; properly sorted
+    val filterCriteria: StateFlow<RouteFilterCriteria> = preferenceManager.routeFilterCriteriaFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = RouteFilterCriteria()
+        )
+
+    // The list of routes to display; properly filtered and sorted
     val routes: StateFlow<List<RouteWithPath>> = combine(
         routesRepository.allRoutes,
         _sortOrder,
-        banalServiceRepository.currentLocation // Directly observing the BANALService source
-    ) { routes, order, location ->
+        banalServiceRepository.currentLocation,
+        filterCriteria
+    ) { allRoutes, order, location, criteria ->
+        val filtered = if (criteria.isEmpty) allRoutes else allRoutes.filter { criteria.matches(it) }
+
         when (order) {
             RouteSortOrder.NAME ->
-                routes.sortedBy { it.summary.name.lowercase() }
+                filtered.sortedBy { it.summary.name.lowercase() }
 
             RouteSortOrder.TOTAL_ELEVATION_GAIN ->
-                routes.sortedWith(
+                filtered.sortedWith(
                     compareByDescending<RouteWithPath> { it.summary.elevationGain }
                         .thenBy { it.summary.name.lowercase() }
                 )
 
             RouteSortOrder.ROUTE_DISTANCE ->
-                routes.sortedWith(
+                filtered.sortedWith(
                     compareByDescending<RouteWithPath> { it.summary.distance }
                         .thenBy { it.summary.name.lowercase() }
                 )
 
             RouteSortOrder.DISTANCE_TO_USER -> {
                 if (location == null) {
-                    routes.sortedBy { it.summary.name.lowercase() }
+                    filtered.sortedBy { it.summary.name.lowercase() }
                 } else {
-                    routes.sortedBy { route ->
+                    filtered.sortedBy { route ->
                         val startPoint = route.path.firstOrNull()
                         if (startPoint != null) {
                             calculateDistance(
@@ -127,6 +139,21 @@ class RoutesViewModel(application: Application) :
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
+
+    fun setFilterCriteria(criteria: RouteFilterCriteria) {
+        viewModelScope.launch {
+            preferenceManager.setRouteFilterCriteria(criteria)
+        }
+    }
+
+    fun clearFilterCriteria() {
+        preferenceManager.clearRouteFilterCriteria()
+    }
+
+    fun updateFilterCriteria(transform: (RouteFilterCriteria) -> RouteFilterCriteria) {
+        val updated = transform(filterCriteria.value)
+        setFilterCriteria(updated)
+    }
 
 
 

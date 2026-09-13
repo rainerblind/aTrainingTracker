@@ -74,6 +74,11 @@ class SportTypesRepository private constructor(private val application: Applicat
                 }
             }
         }
+
+        @androidx.annotation.VisibleForTesting
+        fun resetForTesting(newInstance: SportTypesRepository? = null) {
+            INSTANCE = newInstance
+        }
     }
 
 }

@@ -24,6 +24,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -36,7 +37,9 @@ import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
@@ -52,6 +55,7 @@ import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutDeletionNotificationManager
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
@@ -113,6 +117,11 @@ class WorkoutRepository private constructor(private val application: Application
                 }
             }
         }
+
+        @androidx.annotation.VisibleForTesting
+        fun resetForTesting(newInstance: WorkoutRepository? = null) {
+            INSTANCE = newInstance
+        }
     }
 
     private val job = SupervisorJob()
@@ -145,6 +154,7 @@ class WorkoutRepository private constructor(private val application: Application
      */
     private val _allWorkouts = MutableStateFlow<List<WorkoutData>>(emptyList())
     val allWorkouts: StateFlow<List<WorkoutData>> = _allWorkouts.asStateFlow()
+    private val reloadingWorkoutIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
 
     /**
      * Provides a reactive stream for a specific workout ID.
@@ -172,6 +182,9 @@ class WorkoutRepository private constructor(private val application: Application
      */
     private val _deletionProgress = MutableLiveData<DeletionProgress>(DeletionProgress.Idle)
     val deletionProgress: LiveData<DeletionProgress> = _deletionProgress
+
+    @VisibleForTesting
+    var notificationManagerProvider: ((Context) -> WorkoutDeletionNotificationManager)? = null
 
 
 
@@ -499,11 +512,13 @@ class WorkoutRepository private constructor(private val application: Application
                         val extremaList = summariesManager.getExtremaForWorkouts(chunkIds)
                         val stravaDataMap = stravaUploadDbHelper.getStravaActivityDataForWorkouts(chunkNames)
                         val clusterNamesMap = WorkoutClusterDatabaseManager.getInstance(application).getClusterNamesForIds(chunkClusterIds)
+                        val lapsMap = LapsDatabaseManager.getInstance(application).getLapsForWorkouts(chunkIds)
 
                         val batchMetadata = WorkoutDataMapper.BatchMetadata(
                             extrema = extremaList.groupBy { it.workoutId },
                             stravaData = stravaDataMap,
-                            clusterNames = clusterNamesMap
+                            clusterNames = clusterNamesMap,
+                            laps = lapsMap
                         )
 
                         // 3. Map the chunk
@@ -593,6 +608,25 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     /**
+     * Marks an old unfinished workout as finished in database and memory,
+     * and rolls its metrics into historical period summaries (ATT-987 / REQ-UI-146).
+     */
+    fun markWorkoutFinished(workoutId: Long) {
+        launch {
+            withContext(Dispatchers.IO) {
+                summariesManager.setWorkoutFinished(workoutId)
+            }
+            updateWorkoutInMemory(workoutId) { current ->
+                current.copy(finished = true)
+            }
+            val updatedWorkout = _allWorkouts.value.firstOrNull { it.id == workoutId }
+            if (updatedWorkout != null) {
+                PeriodsRepository.getInstance(application).onWorkoutFinished(updatedWorkout)
+            }
+        }
+    }
+
+    /**
      * Updates a specific sensor peak (Extremum) for a workout in memory.
      *
      * Implementation: Updates both the flat [WorkoutData] fields and the specific
@@ -629,6 +663,23 @@ class WorkoutRepository private constructor(private val application: Application
                 } else row
             }
             updated.copy(extremaRows = updatedRows)
+        }
+    }
+
+    /**
+     * Updates the custom name and description for a specific lap (ATT-511).
+     * Persists changes to LapsDatabaseManager on Dispatchers.IO and atomically
+     * updates the in-memory cache so UI updates reactively without reloading.
+     */
+    suspend fun updateLapDetails(workoutId: Long, lapNr: Long, name: String?, description: String?) {
+        withContext(Dispatchers.IO) {
+            LapsDatabaseManager.getInstance(application).updateLapDetails(workoutId, lapNr, name, description)
+        }
+        updateWorkoutInMemory(workoutId) { current ->
+            val updatedLaps = current.laps.map { lap ->
+                if (lap.lapNr == lapNr) lap.copy(name = name, description = description) else lap
+            }
+            current.copy(laps = updatedLaps)
         }
     }
 
@@ -730,27 +781,38 @@ class WorkoutRepository private constructor(private val application: Application
      * @param workoutId The primary key of the session to reload.
      */
     suspend fun reloadWorkoutData(workoutId: Long) {
-        if (DEBUG) Log.i(TAG, "reloadWorkoutData: workoutId=$workoutId")
+        if (!reloadingWorkoutIds.add(workoutId)) {
+            if (DEBUG) Log.d(TAG, "reloadWorkoutData: workoutId=$workoutId already reloading, skipping duplicate pass")
+            return
+        }
+        try {
+            if (DEBUG) Log.i(TAG, "reloadWorkoutData: workoutId=$workoutId")
 
-        withContext(Dispatchers.IO) {
-            summariesManager.getWorkoutCursor(workoutId).use { cursor ->
-                if (cursor?.moveToFirst() == true) {
-                    // Get the fresh data from the database.
-                    val freshWorkoutData = mapper.fromCursor(cursor)
-                    
-                    // --- SURGICAL PERIOD UPDATE (ATT-346) ---
-                    val existing = allWorkouts.value.find { it.id == workoutId }
-                    val isNewFinish = (existing == null || !existing.finished) && freshWorkoutData.finished
-                    
-                    if (isNewFinish) {
-                        PeriodsRepository.getInstance(application).onWorkoutFinished(freshWorkoutData)
-                        // --- SURGICAL CLUSTER UPDATE (ATT-354) ---
-                        WorkoutClusterEngine.getInstance(application).onWorkoutFinished(application, freshWorkoutData)
+            withContext(Dispatchers.IO) {
+                summariesManager.getWorkoutCursor(workoutId).use { cursor ->
+                    if (cursor?.moveToFirst() == true) {
+                        // Get the fresh data from the database.
+                        val freshWorkoutData = mapper.fromCursor(cursor)
+                        
+                        // --- SURGICAL PERIOD UPDATE (ATT-346) & CLUSTER UPDATE (ATT-354 / REQ-MIG-025) ---
+                        val existing = allWorkouts.value.find { it.id == workoutId }
+                        val isLiveSessionFinish = (existing != null && !existing.finished) && freshWorkoutData.finished
+                        val isNewImportOrFinish = (existing == null || !existing.finished) && freshWorkoutData.finished
+                        
+                        if (isNewImportOrFinish) {
+                            PeriodsRepository.getInstance(application).onWorkoutFinished(freshWorkoutData)
+                        }
+
+                        if (isLiveSessionFinish && freshWorkoutData.clusterId != -1L) {
+                            WorkoutClusterEngine.getInstance(application).onWorkoutFinished(application, freshWorkoutData)
+                        }
+
+                        addOrUpdateWorkout(freshWorkoutData)
                     }
-
-                    addOrUpdateWorkout(freshWorkoutData)
                 }
             }
+        } finally {
+            reloadingWorkoutIds.remove(workoutId)
         }
     }
 
@@ -905,32 +967,33 @@ class WorkoutRepository private constructor(private val application: Application
      */
     suspend fun deleteOldWorkouts(daysToKeep: Int) {
         withContext(Dispatchers.IO) {
+            val notificationManager = notificationManagerProvider?.invoke(application)
+                ?: WorkoutDeletionNotificationManager(application)
             try {
-                // The callback lambda that will be executed inside the helper.
-                val progressCallback: (Long) -> Unit = { workoutId ->
-                    // Find the workout name from the current list to display it.
+                // The callback invoked inside the helper to update UI progress.
+                val progressCallback = WorkoutDeletionHelper.DeletionProgressCallback { current, total, workoutId ->
                     val workout = allWorkouts.value.find { it.id == workoutId }
                     val workoutName = workout?.headerData?.workoutName ?: "Workout ID: $workoutId"
-
-                    // --- SURGICAL UPDATES (ATT-346 / ATT-354) ---
-                    workout?.let { 
-                        PeriodsRepository.getInstance(application).onWorkoutDeleted(it)
-                        WorkoutClusterEngine.getInstance(application).onWorkoutDeleted(application, it)
-                    }
-
-                    // Post the detailed progress to the LiveData.
-                    _deletionProgress.postValue(DeletionProgress.InProgress(workoutName, workoutId))
+                    _deletionProgress.postValue(DeletionProgress.Deleting(current, total, workoutName, workoutId))
+                    notificationManager.showProgressNotification(current, total, workoutName)
                 }
 
                 val success = deletionHelper.deleteOldWorkouts(daysToKeep, progressCallback)
 
-                // After deleting, reload the data so the UI updates automatically.
+                // After deleting, reload workouts and resynchronize downstream analytical caches (REQ-DAT-011).
                 if (success) {
+                    _deletionProgress.postValue(DeletionProgress.Resyncing)
+                    notificationManager.showResyncNotification()
+
                     loadAllWorkouts()
+                    PeriodsRepository.getInstance(application).resyncAllPeriods()
+                    WorkoutClusterRepository.getInstance(application).refreshClusters(forceShowProgress = false, forceCheckIntegrity = true)
+                    WorkoutClusterEngine.getInstance(application).enrichAllClusterMetadata(application)
                 }
             } finally {
                 // Reset the state to Idle when done or if an error occurs.
                 _deletionProgress.postValue(DeletionProgress.Idle)
+                notificationManager.cancelNotification()
             }
         }
     }
@@ -979,6 +1042,55 @@ class WorkoutRepository private constructor(private val application: Application
                 .assignClusterToWorkout(application, workoutId, clusterId, forceIdentity = true)
 
             // Reload fresh data from DB to propagate inferred identity to UI
+            reloadWorkoutData(workoutId)
+            loadWorkout(workoutId)
+        }
+    }
+
+    /**
+     * Unassigns the workout from its cluster, decrementing the cluster's hit count (REQ-SET-059).
+     */
+    fun unassignClusterFromWorkout(workoutId: Long) {
+        launch(Dispatchers.IO) {
+            WorkoutClusterEngine.getInstance(application)
+                .unassignClusterFromWorkout(application, workoutId)
+
+            reloadWorkoutData(workoutId)
+            loadWorkout(workoutId)
+        }
+    }
+
+    /**
+     * Creates a new cluster from the workout's spatial fingerprint and assigns the workout to it (REQ-SET-059, REQ-SET-072).
+     */
+    fun createNewClusterFromWorkout(
+        workout: WorkoutData,
+        customName: String? = null,
+        hasCounter: Boolean = true,
+        customWorkoutName: String? = null
+    ) {
+        launch(Dispatchers.IO) {
+            WorkoutClusterEngine.getInstance(application)
+                .createNewClusterFromWorkout(application, workout, customName, hasCounter, customWorkoutName)
+
+            reloadWorkoutData(workout.id)
+            loadWorkout(workout.id)
+        }
+    }
+
+    /**
+     * Creates a new cluster from raw workout metadata and assigns the workout to it (REQ-SET-059, REQ-SET-072).
+     */
+    fun createNewClusterFromWorkout(
+        workoutId: Long,
+        customName: String? = null,
+        hasCounter: Boolean = true,
+        customWorkoutName: String? = null
+    ) {
+        launch(Dispatchers.IO) {
+            WorkoutClusterEngine.getInstance(application)
+                .createNewClusterFromWorkout(application, workoutId, customName, hasCounter, customWorkoutName)
+
             reloadWorkoutData(workoutId)
             loadWorkout(workoutId)
         }

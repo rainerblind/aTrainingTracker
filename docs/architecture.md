@@ -59,9 +59,9 @@ This document defines the high-level design and component interfaces of the proj
 | **Hardware Layer** | `REQ-CON-001`, `REQ-CON-002`, `REQ-CON-006` |
 | **BANALService** | `REQ-CON-003`, `REQ-CON-004`, `REQ-FIL-001`, `REQ-FIL-002`, `REQ-FIL-003` |
 | **TrackerService** | `REQ-TRK-001`, `REQ-TRK-003`, `REQ-TRK-005`, `REQ-TRK-007` |
-| **Data Layer (SQL)** | `REQ-FIL-004`, `REQ-TRK-002`, `REQ-SET-002`, `REQ-SET-004`, `REQ-SET-006` |
+| **Data Layer (SQL)** | `REQ-FIL-004`, `REQ-TRK-002`, `REQ-SET-002`, `REQ-SET-004`, `REQ-SET-006`, `REQ-UI-141` |
 | **Learning Engine** | `REQ-SET-007`, `REQ-SET-008`, `REQ-SET-009` |
-| **UI Layer** | `REQ-UI-001`, `REQ-UI-002`, `REQ-UI-006`, `REQ-SET-001` |
+| **UI Layer** | `REQ-UI-001`, `REQ-UI-002`, `REQ-UI-006`, `REQ-SET-001`, `REQ-UI-141` |
 | **Protocol/Process** | `REQ-PRO-001` |
 
 ---
@@ -84,7 +84,8 @@ This document defines the high-level design and component interfaces of the proj
 ## 3. Data Integrity & Persistence
 *   **Primary Source**: `WorkoutSamples.db` (Per-second high-fidelity data).
 *   **Metadata Source**: `WorkoutSummaries.db` (Extrema, sport types, equipment).
-*   **Schema Strategy**: Dynamic evolution. `TrackerService` detects missing columns for new sensors and executes `ALTER TABLE` on-the-fly.
+*   **Laps Source**: `Laps.db` (`LapsDatabaseManager.java`, `DB_VERSION = 2`). Stores split duration, distance, average speed, custom lap names, and descriptions. Schema migration in `onUpgrade` executes non-destructive `ALTER TABLE` operations to guarantee zero data loss.
+*   **Schema Strategy**: Dynamic evolution. `TrackerService` detects missing columns for new sensors and executes `ALTER TABLE` on-the-fly. Database managers employ idempotent `ALTER TABLE` migrations.
 
 ## 4. Signal Processing Pipeline (SWE.3)
 1.  **Raw Input**: ANT+/BLE/GPS callbacks.

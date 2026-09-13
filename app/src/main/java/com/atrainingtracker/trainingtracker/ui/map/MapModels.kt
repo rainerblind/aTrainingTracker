@@ -30,6 +30,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
@@ -272,19 +273,59 @@ enum class MapZoomFocus {
 }
 
 /**
- * Extension function to convert WorkoutData into a Map-ready Track.
- * This decodes the polyline and simplifies it for display.
+ * Extension function to convert [WorkoutData] into a Map-ready Track.
+ * Decodes the polyline and associated delta-encoded altitude and distance streams
+ * to produce full-fidelity [PathPoint] samples.
  */
 fun WorkoutData.toMapTrack(): MapTrack {
-    val decoded = PolyUtil.decode(this.mapPolyline)
-    // Simplify for preview performance
-    val finalPoints = if (decoded.size > 100) PolyUtil.simplify(decoded, 10.0) else decoded
+    if (this.mapPolyline.isEmpty()) {
+        return MapTrack(
+            id = this.id,
+            type = TrackType.BEST,
+            bSportType = this.bSportType,
+            path = emptyList(),
+            minLat = this.minLat,
+            minLng = this.minLng,
+            maxLat = this.maxLat,
+            maxLng = this.maxLng
+        )
+    }
+
+    val decoded = try {
+        PolyUtil.decode(this.mapPolyline)
+    } catch (e: Exception) {
+        emptyList()
+    }
+
+    val alts = if (this.encodedAltitudes.isNotEmpty()) {
+        try {
+            NumericalEncodingUtils.decodeDoubles(this.encodedAltitudes)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    } else emptyList()
+
+    val dists = if (this.encodedDistances.isNotEmpty()) {
+        try {
+            NumericalEncodingUtils.decodeDoubles(this.encodedDistances)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    } else emptyList()
+
+    val pathPoints = decoded.mapIndexed { index, latLng ->
+        PathPoint(
+            distance = dists.getOrElse(index) { 0.0 },
+            latLng = latLng,
+            altitude = alts.getOrElse(index) { 0.0 }
+        )
+    }
 
     return MapTrack(
         id = this.id,
         type = TrackType.BEST,
         bSportType = this.bSportType,
-        path = finalPoints.map { PathPoint(0.0, it, 0.0) },
+        path = pathPoints,
         minLat = this.minLat,
         minLng = this.minLng,
         maxLat = this.maxLat,

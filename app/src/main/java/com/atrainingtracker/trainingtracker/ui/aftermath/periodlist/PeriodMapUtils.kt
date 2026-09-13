@@ -46,10 +46,11 @@ fun getPeriodMapVisuals(
         if (allPaths.isEmpty() || periodType == PeriodType.DAY) {
             null
         } else {
+            // ATT-504 Fix: Calibrated opacity levels (0.4-0.6) so terrain, roads, and map labels remain legible
             val opacity = when (periodType) {
-                PeriodType.WEEK -> 0.6
-                PeriodType.MONTH -> 0.8
-                PeriodType.YEAR -> 1.0
+                PeriodType.WEEK -> 0.4
+                PeriodType.MONTH -> 0.5
+                PeriodType.YEAR -> 0.6
                 else -> 0.0
             }
 
@@ -72,15 +73,11 @@ fun getPeriodMapVisuals(
                 }
             }
 
-            // ATT-342 Refinement: Even tighter radius at low zoom to prevent bloating.
-            // NOTE: HeatmapTileProvider requires radius between 10 and 50.
+            // ATT-500 Refinement: Strict radius clamping (10-15px) prevents the heatmap from bloating into a wide band.
             val radius = if (zoom == null) {
                 10 // Safe minimum for summary cards
             } else {
-                // Adaptive formula: base 10 + drift from zoom 12.
-                // It stays at 10px until zoom 12, then grows.
-                // Clamped between 10 and 50 pixels to stay within HeatmapTileProvider bounds.
-                (10 + (zoom - 12).coerceAtLeast(0f) * 4.0f).toInt().coerceIn(10, 50)
+                (10 + (zoom - 14).coerceAtLeast(0f) * 1.0f).toInt().coerceIn(10, 15)
             }
 
             // ATT-342 OOM Fix: Define point caps to protect heap

@@ -30,6 +30,7 @@
     <string name="devices_tab_available">Conectados</string>
     <string name="devices_tab_paired">Vinculados</string>
     <string name="devices_tab_known">Conocidos</string>
+    <string name="devices_sensors_title">Sensores</string>
     <string name="devices_available">conectado</string>
     <string name="devices_not_connected">no conectado</string>
 

@@ -23,13 +23,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.ViewHeadline
 import androidx.compose.material.icons.filled.ViewStream
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import com.atrainingtracker.trainingtracker.ui.common.filters.FilterActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,11 +43,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.atrainingtracker.R
 
 /**
- * Reusable actions for workout lists: Toggling between compact/detailed view and sorting.
+ * Reusable actions for workout lists: Toggling between compact/detailed view, sorting,
+ * filtering, and bulk-deleting old workouts.
  */
 @Composable
 fun WorkoutListActions(
@@ -52,12 +58,27 @@ fun WorkoutListActions(
     sortOrder: WorkoutSortOrder,
     onSortOrderChange: (WorkoutSortOrder) -> Unit,
     modifier: Modifier = Modifier,
+    onDeleteOldWorkoutsClicked: (() -> Unit)? = null,
+    onFilterClicked: (() -> Unit)? = null,
+    isFilterActive: Boolean = false,
+    activeFilterCount: Int = 0,
     tint: Color = MaterialTheme.colorScheme.onPrimaryContainer
 ) {
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Delete Old Workouts Button (ATT-296)
+        if (onDeleteOldWorkoutsClicked != null) {
+            IconButton(onClick = onDeleteOldWorkoutsClicked) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_baseline_delete_sweep_24),
+                    contentDescription = stringResource(R.string.deleteOldWorkouts),
+                    tint = tint
+                )
+            }
+        }
+
         // Toggle View Mode Button
         IconButton(onClick = onToggleCompactView) {
             Icon(
@@ -93,7 +114,7 @@ fun WorkoutListActions(
                         leadingIcon = {
                             if (sortOrder == order) {
                                 Icon(
-                                    Icons.Default.Check,
+                                    imageVector = Icons.Default.Check,
                                     contentDescription = null
                                 )
                             }
@@ -101,6 +122,16 @@ fun WorkoutListActions(
                     )
                 }
             }
+        }
+
+        // Filter Button (ATT-128 / ATT-742 / ATT-736)
+        if (onFilterClicked != null) {
+            FilterActionButton(
+                onClick = onFilterClicked,
+                isFilterActive = isFilterActive,
+                activeFilterCount = activeFilterCount,
+                tint = tint
+            )
         }
     }
 }

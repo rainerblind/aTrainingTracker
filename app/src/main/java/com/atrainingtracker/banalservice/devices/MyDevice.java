@@ -63,10 +63,13 @@ public abstract class MyDevice {
                 if (mySensor instanceof MyAccumulatorSensor) {
                     ((MyAccumulatorSensor) mySensor).reset();
                 }
-
             }
+            onAccumulatorsReset();
         }
     };
+
+    protected void onAccumulatorsReset() {
+    }
 
     public MyDevice(Context context, MySensorManager mySensorManager, DeviceType deviceType) {
         mContext = context;

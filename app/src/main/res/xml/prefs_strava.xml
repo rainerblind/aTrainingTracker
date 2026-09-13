@@ -24,6 +24,12 @@
         android:title="@string/updateStravaEquipment"
         android:layout="@layout/preference_slim"/>
 
+    <Preference
+        android:key="updateStravaRoutes"
+        android:summary="@string/lastUpdateOfRoutesNever"
+        android:title="@string/updateStravaRoutes"
+        android:layout="@layout/preference_slim"/>
+
     <PreferenceCategory android:key="strava_selective_upload_category" android:title="@string/selectiveUpload">
         <CheckBoxPreference
             android:defaultValue="true"

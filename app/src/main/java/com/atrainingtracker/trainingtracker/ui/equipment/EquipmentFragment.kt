@@ -81,6 +81,34 @@ class EquipmentFragment : Fragment() {
             .commit()
     }
 
+    private val syncReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
+            viewModel.loadEquipment()
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val filter = android.content.IntentFilter(
+            com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSynchronizeThread.SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED
+        )
+        androidx.core.content.ContextCompat.registerReceiver(
+            requireContext(),
+            syncReceiver,
+            filter,
+            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+    }
+
+    override fun onStop() {
+        super.onStop()
+        try {
+            requireContext().unregisterReceiver(syncReceiver)
+        } catch (e: IllegalArgumentException) {
+            // Receiver not registered
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         viewModel.loadEquipment()

@@ -20,19 +20,24 @@ package com.atrainingtracker.trainingtracker.ui.aftermath
 
 import android.content.Context
 import android.database.Cursor
+import android.location.Location
 import android.util.Log
 import com.atrainingtracker.R
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.PolyUtil
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataRow
+import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
@@ -70,7 +75,7 @@ class WorkoutDataMapper(
         val sportName = sportTypeDatabaseManager.getUIName(sportId)
 
         val equipmentId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.EQUIPMENT_ID))
-        val equipmentName = equipmentDbHelper.getEquipmentNameFromId(equipmentId)
+        val equipmentName = if (equipmentId > 0) equipmentDbHelper.getEquipmentNameFromId(equipmentId) else null
 
         val dateTimeResult = formatDateTime(cursor)
 
@@ -80,7 +85,20 @@ class WorkoutDataMapper(
         val totalDistance = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m))
         val startLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.START)
         val endLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.END)
-        val maxDispLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
+        val rawMaxDispLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
+        val rawMaxDisplacement = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
+        val mapPolyline = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.MAP_POLYLINE)) ?: ""
+
+        val resolvedApex = resolveAuthoritativeApex(workoutId, startLatLng, mapPolyline, rawMaxDisplacement, rawMaxDispLatLng)
+        val maxDisplacement = resolvedApex.first
+        val maxDispLatLng = resolvedApex.second
+
+        val encodedAltitudes = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.ALTITUDE_STREAM)) ?: ""
+        val rawMinAltitude = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.ALTITUDE, ExtremaType.MIN)
+        val rawMaxAltitude = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.ALTITUDE, ExtremaType.MAX)
+        val resolvedAltitudeExtrema = reconcileAltitudeExtrema(workoutId, encodedAltitudes, rawMinAltitude, rawMaxAltitude)
+        val minAltitude = resolvedAltitudeExtrema.first
+        val maxAltitude = resolvedAltitudeExtrema.second
 
         val workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME))
         val clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID))
@@ -116,14 +134,15 @@ class WorkoutDataMapper(
             maxLng = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LNG))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LNG)),
 
             totalDistance = totalDistance,
-            maxDisplacement = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX),
+            maxDisplacement = maxDisplacement,
             activeTimeSec = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s)),
             totalTimeSec = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_TOTAL_s)),
             avgSpeedMps = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPEED_AVERAGE_mps)),
             ascentMeters = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.ASCENDING)),
             descentMeters = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.DESCENDING)),
-            minAltitude = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.ALTITUDE, ExtremaType.MIN),
-            maxAltitude = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.ALTITUDE, ExtremaType.MAX),
+            minAltitude = minAltitude,
+            maxAltitude = maxAltitude,
+            minAltitudeLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MIN),
             maxAltitudeLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MAX),
             maxDisplacementLatLng = maxDispLatLng,
             startLatLng = startLatLng,
@@ -166,7 +185,8 @@ class WorkoutDataMapper(
                 rows
             },
 
-            exportStatuses = emptyList() // will be added/merged by the viewModel
+            exportStatuses = emptyList(), // will be added/merged by the viewModel
+            laps = LapsDatabaseManager.getInstance(context).getLaps(workoutId)
         )
     }
 
@@ -176,7 +196,8 @@ class WorkoutDataMapper(
     data class BatchMetadata(
         val extrema: Map<Long, List<WorkoutSummariesDatabaseManager.ExtremaRecord>>,
         val stravaData: Map<String, String>,
-        val clusterNames: Map<Long, String> = emptyMap()
+        val clusterNames: Map<Long, String> = emptyMap(),
+        val laps: Map<Long, List<LapData>> = emptyMap()
     )
 
     /**
@@ -191,7 +212,7 @@ class WorkoutDataMapper(
         val sportName = sportTypeDatabaseManager.getUIName(sportId)
 
         val equipmentId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.EQUIPMENT_ID))
-        val equipmentName = equipmentDbHelper.getEquipmentNameFromId(equipmentId)
+        val equipmentName = if (equipmentId > 0) equipmentDbHelper.getEquipmentNameFromId(equipmentId) else null
 
         val dateTimeResult = formatDateTime(cursor)
         val fileBaseName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME))
@@ -203,9 +224,22 @@ class WorkoutDataMapper(
         fun getBatchPos(sensor: SensorType, type: ExtremaType) = workoutExtrema.find { it.sensorType == sensor && it.extremaType == type }?.position
 
         val totalDistance = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m))
+        val mapPolyline = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.MAP_POLYLINE)) ?: ""
         val startLatLng = getBatchPos(SensorType.LATITUDE, ExtremaType.START)
         val endLatLng = getBatchPos(SensorType.LATITUDE, ExtremaType.END)
-        val maxDispLatLng = getBatchPos(SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
+        val rawMaxDispLatLng = getBatchPos(SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
+        val rawMaxDisplacement = getBatchVal(SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
+
+        val resolvedApex = resolveAuthoritativeApex(workoutId, startLatLng, mapPolyline, rawMaxDisplacement, rawMaxDispLatLng)
+        val maxDisplacement = resolvedApex.first
+        val maxDispLatLng = resolvedApex.second
+
+        val encodedAltitudes = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.ALTITUDE_STREAM)) ?: ""
+        val rawMinAltitude = getBatchVal(SensorType.ALTITUDE, ExtremaType.MIN)
+        val rawMaxAltitude = getBatchVal(SensorType.ALTITUDE, ExtremaType.MAX)
+        val resolvedAltitudeExtrema = reconcileAltitudeExtrema(workoutId, encodedAltitudes, rawMinAltitude, rawMaxAltitude)
+        val minAltitude = resolvedAltitudeExtrema.first
+        val maxAltitude = resolvedAltitudeExtrema.second
 
         val workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME))
         val clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID))
@@ -240,14 +274,15 @@ class WorkoutDataMapper(
             maxLng = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LNG))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LNG)),
 
             totalDistance = totalDistance,
-            maxDisplacement = getBatchVal(SensorType.LINE_DISTANCE_m, ExtremaType.MAX),
+            maxDisplacement = maxDisplacement,
             activeTimeSec = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s)),
             totalTimeSec = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_TOTAL_s)),
             avgSpeedMps = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPEED_AVERAGE_mps)),
             ascentMeters = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.ASCENDING)),
             descentMeters = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.DESCENDING)),
-            minAltitude = getBatchVal(SensorType.ALTITUDE, ExtremaType.MIN),
-            maxAltitude = getBatchVal(SensorType.ALTITUDE, ExtremaType.MAX),
+            minAltitude = minAltitude,
+            maxAltitude = maxAltitude,
+            minAltitudeLatLng = getBatchPos(SensorType.ALTITUDE, ExtremaType.MIN),
             maxAltitudeLatLng = getBatchPos(SensorType.ALTITUDE, ExtremaType.MAX),
             maxDisplacementLatLng = maxDispLatLng,
             startLatLng = startLatLng,
@@ -279,7 +314,8 @@ class WorkoutDataMapper(
                 }
                 rows
             },
-            exportStatuses = emptyList()
+            exportStatuses = emptyList(),
+            laps = batch.laps[workoutId] ?: emptyList()
         )
     }
 
@@ -398,5 +434,129 @@ class WorkoutDataMapper(
         }
     }
 
+    /**
+     * Resolves the authoritative maximum line distance (Apex) coordinate and value.
+     *
+     * REQ-MAP-020 (ATT-528): If maxDispLatLng is missing, or if the recorded apex is geometrically
+     * inconsistent with the recorded polyline track (e.g. displacement is substantially smaller than
+     * the furthest track point due to pre-tracking GPS state or accumulator corruption), this helper
+     * derives the true apex from the decoded track points and heals the database.
+     */
+    private fun resolveAuthoritativeApex(
+        workoutId: Long,
+        startLatLng: LatLng?,
+        mapPolyline: String,
+        recordedMaxDisp: Double?,
+        recordedApex: LatLng?
+    ): Pair<Double?, LatLng?> {
+        if (startLatLng == null || mapPolyline.isEmpty()) {
+            return Pair(recordedMaxDisp, recordedApex)
+        }
+        try {
+            val points = PolyUtil.decode(mapPolyline)
+            if (points.isEmpty()) {
+                return Pair(recordedMaxDisp, recordedApex)
+            }
+            var calculatedMax = -1.0
+            var calculatedApex: LatLng = points.first()
+            for (pt in points) {
+                val d = com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.distanceBetween(startLatLng, pt).toDouble()
+                if (d > calculatedMax) {
+                    calculatedMax = d
+                    calculatedApex = pt
+                }
+            }
+
+            val recordedDistToApex = if (recordedApex != null) {
+                com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.distanceBetween(startLatLng, recordedApex).toDouble()
+            } else -1.0
+
+            if (recordedApex == null || recordedMaxDisp == null || calculatedMax > recordedDistToApex + 25.0) {
+                workoutSummariesDatabaseManager.updateExtremaValue(
+                    workoutId,
+                    SensorType.LINE_DISTANCE_m,
+                    ExtremaType.MAX,
+                    calculatedMax,
+                    calculatedApex
+                )
+                return Pair(calculatedMax, calculatedApex)
+            }
+        } catch (e: Exception) {
+            Log.w("WorkoutDataMapper", "Failed to derive authoritative apex for workout $workoutId", e)
+        }
+        return Pair(recordedMaxDisp, recordedApex)
+    }
+
+    /**
+     * ATT-508 / REQ-DAT-009: Reconciles recorded altitude extrema against the authoritative decoded
+     * altitude stream points, self-healing legacy workouts polluted by cold-start GPS spikes prior to ATT-499.
+     *
+     * Implementation Logic: If [encodedAltitudes] exists and can be decoded, checks whether [recordedMin]
+     * or [recordedMax] deviates excessively (> 15.0m) from the actual stream envelope. If corruption is
+     * detected, computes the true stream min/max, updates the database via [WorkoutSummariesDatabaseManager.updateExtremaValue],
+     * and returns the healed pair. If extrema are legitimate or stream is absent, returns the original pair
+     * without database writes.
+     *
+     * @param workoutId The unique identifier of the workout.
+     * @param encodedAltitudes Delta-encoded altitude stream string.
+     * @param recordedMin Currently recorded minimum altitude from database extrema table.
+     * @param recordedMax Currently recorded maximum altitude from database extrema table.
+     * @return A Pair containing the authoritative (reconciled or original) minimum and maximum altitudes.
+     */
+    fun reconcileAltitudeExtrema(
+        workoutId: Long,
+        encodedAltitudes: String,
+        recordedMin: Double?,
+        recordedMax: Double?
+    ): Pair<Double?, Double?> {
+        if (encodedAltitudes.isEmpty()) {
+            return Pair(recordedMin, recordedMax)
+        }
+        try {
+            val streamPoints = NumericalEncodingUtils.decodeDoubles(encodedAltitudes)
+            if (streamPoints.isEmpty()) {
+                return Pair(recordedMin, recordedMax)
+            }
+            val streamMin = streamPoints.minOrNull() ?: return Pair(recordedMin, recordedMax)
+            val streamMax = streamPoints.maxOrNull() ?: return Pair(recordedMin, recordedMax)
+
+            var needUpdate = false
+
+            val authoritativeMin = if (recordedMin == null || recordedMin < streamMin - 15.0 || recordedMin > streamMin) {
+                needUpdate = true
+                streamMin
+            } else {
+                recordedMin
+            }
+
+            val authoritativeMax = if (recordedMax == null || recordedMax > streamMax + 15.0 || recordedMax < streamMax) {
+                needUpdate = true
+                streamMax
+            } else {
+                recordedMax
+            }
+
+            if (needUpdate) {
+                workoutSummariesDatabaseManager.updateExtremaValue(
+                    workoutId,
+                    SensorType.ALTITUDE,
+                    ExtremaType.MIN,
+                    authoritativeMin,
+                    null
+                )
+                workoutSummariesDatabaseManager.updateExtremaValue(
+                    workoutId,
+                    SensorType.ALTITUDE,
+                    ExtremaType.MAX,
+                    authoritativeMax,
+                    null
+                )
+                return Pair(authoritativeMin, authoritativeMax)
+            }
+        } catch (e: Exception) {
+            Log.w("WorkoutDataMapper", "Failed to reconcile altitude extrema for workout $workoutId", e)
+        }
+        return Pair(recordedMin, recordedMax)
+    }
 
 }

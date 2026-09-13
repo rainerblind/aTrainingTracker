@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
+import com.atrainingtracker.trainingtracker.ui.common.filters.FilterActionButton
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
@@ -87,7 +88,11 @@ fun SegmentsTabsScreen(
     sortOrder: SegmentSortOrder,
     scrollToTop: Boolean,
     onSortOrderChange: (SegmentSortOrder) -> Unit,
-    isLocationAvailable: Boolean
+    isLocationAvailable: Boolean,
+    filterCriteria: SegmentFilterCriteria,
+    onFilterApply: (SegmentFilterCriteria) -> Unit,
+    onFilterClear: () -> Unit,
+    onFilterUpdate: ((SegmentFilterCriteria) -> SegmentFilterCriteria) -> Unit
 ) {
     val tabs = listOf(
         Pair(stringResource(R.string.workout_summaries_tab_bike), BSportType.BIKE),
@@ -97,8 +102,13 @@ fun SegmentsTabsScreen(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
+    // Chips row adds 40dp to the collapsing header height when active
+    val filterChipsRowHeightDp = if (filterCriteria.isNotEmpty) 40.dp else 0.dp
+
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val appBarMaxHeightPx = with(density) { (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT).roundToPx() }
+    val appBarMaxHeightPx = with(density) {
+        (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT + filterChipsRowHeightDp).roundToPx()
+    }
 
     val connection = remember(appBarMaxHeightPx) {
         CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
@@ -114,6 +124,7 @@ fun SegmentsTabsScreen(
     }
 
     var showSortMenu by remember { mutableStateOf(false) } // Track sort order menu visibility
+    var showFilterSheet by remember { mutableStateOf(false) } // Track filter sheet visibility
 
     // Determine the sport type of the currently visible tab for the header actions
     val activeSport = tabs[pagerState.currentPage].second
@@ -139,7 +150,8 @@ fun SegmentsTabsScreen(
                     onConnectToStrava = onConnectToStrava,
                     onSegmentClick = onSegmentClick,
                     appBarOffsetPx = connection.appBarOffset,
-                    headerHeightPx = appBarMaxHeightPx.toFloat()
+                    headerHeightPx = appBarMaxHeightPx.toFloat(),
+                    isFilterActive = filterCriteria.isNotEmpty
                 )
             }
 
@@ -241,6 +253,14 @@ fun SegmentsTabsScreen(
                                     }
                                 }
                             }
+
+                            // FILTER BUTTON
+                            FilterActionButton(
+                                onClick = { showFilterSheet = true },
+                                isFilterActive = filterCriteria.isNotEmpty,
+                                activeFilterCount = filterCriteria.activeFilterCount,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
                         }
                     }
                     PrimaryScrollableTabRow(
@@ -256,8 +276,46 @@ fun SegmentsTabsScreen(
                             )
                         }
                     }
+
+                    // Active filter chip strip (shown below tabs when filters are active)
+                    if (filterCriteria.isNotEmpty) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            ActiveSegmentFilterChipsRow(
+                                criteria = filterCriteria,
+                                onRemoveQuery = {
+                                    onFilterUpdate { it.copy(query = "") }
+                                },
+                                onRemoveClimbCategory = {
+                                    onFilterUpdate { it.copy(minClimbCategory = null) }
+                                },
+                                onRemoveMinDistance = {
+                                    onFilterUpdate { it.copy(minDistanceMeters = null) }
+                                },
+                                onRemoveMinElevation = {
+                                    onFilterUpdate { it.copy(minElevationGainMeters = null) }
+                                },
+                                onRemoveHasPR = {
+                                    onFilterUpdate { it.copy(hasPR = null) }
+                                },
+                                onClearAll = onFilterClear
+                            )
+                        }
+                    }
                 }
             }
         }
+    }
+
+    // Filter bottom sheet
+    if (showFilterSheet) {
+        SegmentFilterBottomSheet(
+            criteria = filterCriteria,
+            onApplyCriteria = onFilterApply,
+            onClearAll = onFilterClear,
+            onDismissRequest = { showFilterSheet = false }
+        )
     }
 }

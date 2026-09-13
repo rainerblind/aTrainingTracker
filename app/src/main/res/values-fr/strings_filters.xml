@@ -26,6 +26,7 @@
     <string name="filter_moving_average">moyenne mobile</string>
     <string name="filter_exponential_smoothing_format">lissage exponentiel α=%1$1.2f</string>
     <string name="filter_exponential_smoothing_short_format">exp α=%1$1.1f</string>
+    <string name="filter_max">max</string>
 
     <string name="filter_details__instantaneous">Affiche la valeur actuelle.</string>
     <string name="filter_details__average">Affiche la moyenne de toute la séance.</string>

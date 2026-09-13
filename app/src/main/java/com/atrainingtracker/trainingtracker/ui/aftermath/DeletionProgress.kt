@@ -25,6 +25,20 @@ sealed class DeletionProgress {
     // Represents the idle state where no deletion is happening.
     object Idle : DeletionProgress()
 
-    // Represents the state where deletion is in progress for a specific workout.
+    // Represents the state where deletion is in progress for a specific workout (single workout deletion or legacy).
     data class InProgress(val workoutName: String, val workoutId: Long) : DeletionProgress()
+
+    // Represents granular bulk deletion progress.
+    data class Deleting(
+        val current: Int,
+        val total: Int,
+        val workoutName: String,
+        val workoutId: Long
+    ) : DeletionProgress() {
+        val progress: Float
+            get() = if (total > 0) current.toFloat() / total.toFloat() else 0f
+    }
+
+    // Represents downstream analytical cache resynchronization (Periods & Clusters).
+    object Resyncing : DeletionProgress()
 }

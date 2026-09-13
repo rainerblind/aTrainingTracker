@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
+import android.app.Application
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -31,18 +33,29 @@ import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.ui.aftermath.LapData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapEditBottomSheet
+import kotlinx.coroutines.launch
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatus
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.WorkoutDescription
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetails
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
+import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLaps
 import com.atrainingtracker.trainingtracker.ui.components.strava.StravaActivitySection
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.PathPreviewMap
@@ -63,15 +76,19 @@ fun WorkoutSummary(
     onDeleteRequest: () -> Unit,
     onEditWorkout: () -> Unit,
     onMapClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClusterClick: ((Long) -> Unit)? = null,
+    onMarkFinished: (() -> Unit)? = null
 ) {
     // When the workout is not yet finished (properly), we show it with an alpha of 0.5
     val contentAlpha = if (workoutData.headerData.finished) TTAlpha.High else 0.5f
 
-    // Shared modifier for the clickable sections
-    val editWorkoutModifier = Modifier.clickable {
+    var activeEditingLap by remember { mutableStateOf<LapData?>(null) }
+
+    // Shared modifier for the clickable body sections (navigates to map view, ATT-850)
+    val mapClickModifier = Modifier.clickable {
         if (workoutData.headerData.finished) {
-            onEditWorkout()
+            onMapClick()
         }
     }
     // TODO: Add functionality to show more detailed stats when clicking on the WorkoutDetails or Extrema Values.
@@ -81,13 +98,20 @@ fun WorkoutSummary(
         modifier = modifier
     ) {
         // 1. Header
+        val isActivelyTracked = TrainingApplication.isActivelyTracked(workoutData.id)
+        val canDelete = !isActivelyTracked
+        val canMarkFinished = !workoutData.headerData.finished && !isActivelyTracked
         WorkoutHeader(
             data = workoutData.headerData,
-            onClicked = onEditWorkout,
+            onClicked = onMapClick,
             onExport = onExport,
             onSaveAsRoute = onSaveAsRoute,
             onDeleteRequest = onDeleteRequest,
-            menuEnabled = workoutData.headerData.finished
+            menuEnabled = workoutData.headerData.finished,
+            canDelete = canDelete,
+            onMarkFinished = if (canMarkFinished && onMarkFinished != null) onMarkFinished else null,
+            onClusterClick = onClusterClick,
+            onEditWorkout = onEditWorkout
         )
 
         HorizontalDivider(
@@ -100,19 +124,34 @@ fun WorkoutSummary(
         // Hidden automatically if all fields are null/blank
         WorkoutDescription(
             data = workoutData.descriptionData,
-            modifier = editWorkoutModifier
+            modifier = mapClickModifier
         )
 
         // 3. Main Details Section (Distance, Time, Speed/Pace)
         WorkoutDetails(
             data = workoutData.detailsData,
-            modifier = editWorkoutModifier
+            modifier = mapClickModifier
         )
 
         // 4. Extrema Values Section
         if (workoutData.extremaData.dataRows.isNotEmpty()) {
-            WorkoutExtrema(data = workoutData.extremaData,
-                modifier = editWorkoutModifier
+            WorkoutExtrema(
+                data = workoutData.extremaData,
+                modifier = mapClickModifier
+            )
+        }
+
+        // ATT-510: Laps Overview Section
+        if (workoutData.laps.isNotEmpty()) {
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 12.dp),
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+            WorkoutLaps(
+                laps = workoutData.laps,
+                bSportType = workoutData.bSportType,
+                onLapClick = { lap -> activeEditingLap = lap }
             )
         }
 
@@ -143,6 +182,23 @@ fun WorkoutSummary(
 
         // Final spacing at the bottom of the summary
         Spacer(modifier = Modifier.height(12.dp))
+    }
+
+    activeEditingLap?.let { lap ->
+        val context = LocalContext.current
+        val coroutineScope = rememberCoroutineScope()
+        LapEditBottomSheet(
+            workoutData = workoutData,
+            initialLapNr = lap.lapNr,
+            isPlayServiceAvailable = isPlayServiceAvailable,
+            onDismissRequest = { activeEditingLap = null },
+            onSaveLap = { lapNr, name, description ->
+                coroutineScope.launch {
+                    WorkoutRepository.getInstance(context.applicationContext as Application)
+                        .updateLapDetails(workoutData.id, lapNr, name, description)
+                }
+            }
+        )
     }
 }
 

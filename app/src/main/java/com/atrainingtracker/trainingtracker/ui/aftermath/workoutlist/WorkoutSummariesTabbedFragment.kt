@@ -38,6 +38,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -48,6 +49,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -57,6 +59,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
+import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModel
@@ -71,7 +74,7 @@ import kotlin.getValue
 class WorkoutSummariesTabbedFragment : Fragment() {
 
     // Initialize the existing ViewModel
-    private val viewModel: WorkoutSummariesViewModel by viewModels()
+    private val viewModel: WorkoutSummariesViewModel by activityViewModels()
     private val trackOnMapViewModel: TrackOnMapAftermathViewModel by viewModels()
 
 
@@ -145,6 +148,9 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                     }
                     val sortOrder by viewModel.sortOrder.collectAsState()
                     val isCompactView by viewModel.isCompactView.collectAsState()
+                    val filterCriteria by viewModel.filterCriteria.collectAsStateWithLifecycle()
+                    val allWorkouts by viewModel.allWorkouts.collectAsStateWithLifecycle()
+                    val deletionProgress by viewModel.deletionProgress.observeAsState(DeletionProgress.Idle)
 
                     // --- SNACKBAR FEEDBACK ---
                     val snackbarHostState = remember { SnackbarHostState() }
@@ -190,27 +196,7 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                         contentWindowInsets = WindowInsets(0.dp)
                     ) { paddingValues ->
                         Box(modifier = Modifier.padding(paddingValues)) {
-                            if (selectedWorkoutForDetails != null) {
-                                val aftermathUIState by trackOnMapViewModel.uiState.collectAsStateWithLifecycle()
-                                val enabledTrackTypes by trackOnMapViewModel.enabledTrackTypes.collectAsStateWithLifecycle()
-                                TrackOnMapScreen(
-                                    workoutData = selectedWorkoutForDetails,
-                                    tracks = aftermathUIState.tracks,
-                                    availableTrackTypes = aftermathUIState.availableTrackTypes,
-                                    segments = aftermathUIState.segments,
-                                    routes = aftermathUIState.routes,
-                                    markers = aftermathUIState.markers,
-                                    enabledTrackTypes = enabledTrackTypes,
-                                    onToggleTrackType = { trackOnMapViewModel.toggleTrackTypeEnabled(it) },
-                                    showTechnicalTracks = true,
-                                    modifier = Modifier
-                                )
-
-                                // 4. Handle System Back Button
-                                BackHandler {
-                                    selectedWorkoutIdForDetails = null
-                                }
-                            } else if (selectedWorkoutIdForEdit != null) {
+                            if (selectedWorkoutIdForEdit != null) {
                                 val editViewModel: EditWorkoutViewModel = viewModel(
                                     key = "edit_workout_$selectedWorkoutIdForEdit",
                                     factory = EditWorkoutViewModelFactory(
@@ -233,6 +219,28 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                                     WorkoutNavigationEvents.reset()
                                 }
 
+                            } else if (selectedWorkoutForDetails != null) {
+                                val aftermathUIState by trackOnMapViewModel.uiState.collectAsStateWithLifecycle()
+                                val enabledTrackTypes by trackOnMapViewModel.enabledTrackTypes.collectAsStateWithLifecycle()
+                                TrackOnMapScreen(
+                                    workoutData = selectedWorkoutForDetails,
+                                    tracks = aftermathUIState.tracks,
+                                    availableTrackTypes = aftermathUIState.availableTrackTypes,
+                                    segments = aftermathUIState.segments,
+                                    routes = aftermathUIState.routes,
+                                    markers = aftermathUIState.markers,
+                                    enabledTrackTypes = enabledTrackTypes,
+                                    onToggleTrackType = { trackOnMapViewModel.toggleTrackTypeEnabled(it) },
+                                    showTechnicalTracks = true,
+                                    onClusterClick = { clusterId -> WorkoutNavigationEvents.triggerCluster(clusterId) },
+                                    onEditWorkout = { id -> selectedWorkoutIdForEdit = id },
+                                    modifier = Modifier
+                                )
+
+                                // 4. Handle System Back Button
+                                BackHandler {
+                                    selectedWorkoutIdForDetails = null
+                                }
                             } else {
                                 // 3. Render the Tabbed UI
                                 WorkoutTabsScreen(
@@ -264,6 +272,17 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                                     scrollToTop = viewModel.shouldScrollToTop(sortOrder),
                                     isCompactView = isCompactView,
                                     onToggleCompactView = { viewModel.toggleCompactView() },
+                                    onDeleteOldWorkouts = { daysToKeep ->
+                                        viewModel.executeDeleteOldWorkouts(daysToKeep)
+                                    },
+                                    deletionProgress = deletionProgress,
+                                    filterCriteria = filterCriteria,
+                                    allWorkouts = allWorkouts,
+                                    onApplyFilterCriteria = { viewModel.setFilterCriteria(it) },
+                                    onClearAllFilters = { viewModel.clearFilterCriteria() },
+                                    onUpdateFilterCriteria = { viewModel.updateFilterCriteria(it) },
+                                    onClusterClick = { clusterId -> WorkoutNavigationEvents.triggerCluster(clusterId) },
+                                    onMarkFinished = { workoutId -> viewModel.markWorkoutFinished(workoutId) }
                                 )
                             }
                         }
@@ -279,6 +298,14 @@ class WorkoutSummariesTabbedFragment : Fragment() {
         // Handle deletion events or other one-time events from the ViewModel
         viewModel.confirmDeleteWorkoutEvent.observe(viewLifecycleOwner) { workoutId ->
             // Trigger your existing Delete Dialog logic here if needed
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // ATT-742: Clear active filters when navigating away from workouts view (unless rotating screen)
+        if (activity?.isChangingConfigurations != true) {
+            viewModel.clearFilterCriteria()
         }
     }
 

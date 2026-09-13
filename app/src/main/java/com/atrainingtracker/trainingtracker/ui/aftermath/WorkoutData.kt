@@ -92,6 +92,7 @@ data class WorkoutData(
     val descentMeters: Long,
     val minAltitude: Double?,
     val maxAltitude: Double?,
+    val minAltitudeLatLng: LatLng? = null,
     val maxAltitudeLatLng: LatLng? = null,
     val maxDisplacementLatLng: LatLng? = null,
     val startLatLng: LatLng? = null,
@@ -115,7 +116,8 @@ data class WorkoutData(
 
     // --- 3. Heavy/Live Data ---
     val exportStatuses: List<ExportStatusGroupData> = emptyList(),
-    val extremaRows: List<ExtremaDataRow> = emptyList()
+    val extremaRows: List<ExtremaDataRow> = emptyList(),
+    val laps: List<LapData> = emptyList()
 ) {
 
     // --- 3. Computed Component Properties ---
@@ -136,6 +138,7 @@ data class WorkoutData(
             trainer = trainer,
             uploadToStrava = uploadToStrava,
             stravaSportName = stravaSportName,
+            clusterId = clusterId,
             clusterName = clusterName
         )
 

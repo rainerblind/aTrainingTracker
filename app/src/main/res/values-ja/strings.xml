@@ -47,12 +47,14 @@
     <string name="edit_wheel_circumference">タイヤ周長を編集</string>
     <string name="edit_calibration_factor">補正係数を編集</string>
     <string name="delete">削除</string>
+    <string name="mark_as_finished">完了としてマーク</string>
     <string name="delete_device">デバイス削除</string>
     <string name="delete_pebble_view">Pebble表示を削除</string>
     <string name="delete_tracking_view">トレーニング表示を削除</string>
     <string name="delete_workout">トレーニングを削除</string>
     <string name="deleteOldWorkouts">古いトレーニングを削除</string>
     <string name="deleteWorkoutsThatAreOlderThanDays">指定日数より古いトレーニングを削除</string>
+    <string name="really_delete_old_workouts_format">%1$d日より古いすべてのトレーニングを本当に削除しますか？</string>
     <string name="delete_sensor">削除</string>
     <string name="really_delete_workout">このトレーニングを削除しますか？</string>
     <string name="really_delete_pebble_view_format">Pebble表示 "%1$s" を削除しますか？</string>
@@ -74,6 +76,8 @@
     <string name="start_or_resume_dialog_message">前回のトレーニングが正常に終了していません。\n新しく開始しますか、それとも再開しますか？</string>
     <string name="start_new_workout">新しく開始</string>
     <string name="resume_workout">再開</string>
+    <string name="tracking_interrupted_notification_title">記録が中断されました</string>
+    <string name="tracking_interrupted_notification_text">Androidにより記録が一時停止されました。タップして再開します。</string>
     <string name="SD_card">SDカード</string>
     <string name="File">ファイル</string>
     <string name="Community">コミュニティ</string>
@@ -335,6 +339,8 @@
     <string name="prefsStartLocationsSummary">地点の高度を設定</string>
     <string name="updateStravaEquipment">Strava 装備を更新</string>
     <string name="lastUpdateOfEquipmentNever">未更新</string>
+    <string name="updateStravaRoutes">Strava ルートを更新</string>
+    <string name="lastUpdateOfRoutesNever">未更新</string>
 
     <string name="getting_equipment_from_strava">Strava から装備を取得中…\nお待ちください</string>
     <string name="got_shoe">シューズを取得完了\n取得: %1$s</string>
@@ -451,11 +457,11 @@
 
     <!-- notification -->
     <string name="notification_title">%1$s を %2$s へ</string>
-    <string name="notification_export_file">%1$s ファイルをローカルへ出力中\n%3$s</string>
-    <string name="notification_export_dropbox">%1$s ファイルを Dropbox へ送信中\n%3$s</string>
+    <string name="notification_export_file">%1$s %2$s ファイルをローカルへ出力中\n%3$s</string>
+    <string name="notification_export_dropbox">%1$s %2$s ファイルを Dropbox へ送信中\n%3$s</string>
     <string name="notification_export_community">%1$s を %2$s へ送信中\n%3$s</string>
-    <string name="notification_finished_file">%1$s をローカルへ出力完了\n%3$s</string>
-    <string name="notification_finished_dropbox">%1$s を Dropbox へ送信完了\n%3$s</string>
+    <string name="notification_finished_file">%1$s %2$s をローカルへ出力完了\n%3$s</string>
+    <string name="notification_finished_dropbox">%1$s %2$s を Dropbox へ送信完了\n%3$s</string>
     <string name="notification_finished_community">%1$s を %2$s へ送信完了\n%3$s</string>
     <string name="notification_exporting_finished">エクスポート完了</string>
     <string name="notification_tracking_a_workout">トレーニングを記録中</string>
@@ -928,6 +934,12 @@
     </plurals>
     <string name="strava_kom_description">KOM / コースレコード</string>
     <string name="strava_pr_description">自己ベスト #%1$d</string>
+    <string name="strava_show_all_segments_format">▼ すべての%1$d件のセグメントを表示（他%2$d件）</string>
+    <string name="strava_show_less_segments_format">▲ スター付きと自己ベストのみ表示（%1$d）</string>
+    <string name="strava_no_highlights">スター付きセグメントまたは自己ベストはありません</string>
+    <string name="strava_show_all_best_efforts_format">▼ すべての%1$d件の自己ベストを表示（他%2$d件）</string>
+    <string name="strava_show_less_best_efforts_format">▲ 折りたたむ（%1$d）</string>
+    <string name="strava_show_less_best_efforts">▲ 折りたたむ</string>
 
     <string name="strava_connected_status">Strava 接続中</string>
     <string name="strava_disconnected_status">Strava 未接続</string>
@@ -944,6 +956,7 @@
     <string name="source_internal">スマートフォンの内蔵センサー</string>
     <string name="source_none_configured">ソースが設定されていません</string>
     <string name="marker_options">マーカーオプション</string>
+    <string name="marker_min_altitude">最低高度</string>
     <string name="marker_max_altitude">最高高度</string>
     <string name="marker_max_distance">最長距離</string>
     <string name="marker_start">開始</string>
@@ -959,8 +972,14 @@
     <string name="cluster_total_recordings">総記録数</string>
     <string name="cluster_average_distance">平均距離</string>
     <string name="cluster_recordings_format">%1$d 件の記録</string>
+    <plurals name="cluster_recordings">
+        <item quantity="other">%d 件の記録</item>
+    </plurals>
     <string name="cluster_ref_distance_label">参照: %1$s</string>
     <string name="cluster_tuning_title">クラスタリングパラメータ</string>
+    <string name="cluster_tuning_pre_import_desc">インポートされたワークアウトのルート照合を最適化するために、クラスタリングの感度を調整します。</string>
+    <string name="import_upload_to_strava_label">Stravaにアップロード</string>
+    <string name="import_upload_to_strava_summary">インポートしたワークアウトを自動的にStravaにアップロードします。</string>
     <string name="cluster_tuning_master_label">グループ化感度</string>
     <string name="cluster_tuning_strict">厳格</string>
     <string name="cluster_tuning_relaxed">緩和</string>
@@ -968,6 +987,7 @@
     <string name="cluster_tuning_endpoint_label">終点許容範囲</string>
     <string name="cluster_tuning_apex_label">頂点（最大変位）許容範囲</string>
     <string name="cluster_tuning_distance_label">距離許容範囲</string>
+    <string name="cluster_tuning_altitude_pos_label">高度位置の許容誤差</string>
     <string name="cluster_tuning_recalculate_button">すべてのクラスターを再計算</string>
     <string name="cluster_tuning_warning">警告：再計算すると、学習したすべてのクラスター名とグループ化が消去され、これらの新しいパラメータを使用して履歴から再構築されます。</string>
     <string name="cluster_tuning_recalculating">クラスターを再計算中…</string>
@@ -997,6 +1017,8 @@
     <string name="cluster_score_brackets_format">(%1$.3f)</string>
     <string name="cluster_suggestions_content_desc">提案</string>
     <string name="cluster_autoname_format">%1$s #%2$d</string>
+    <string name="cluster_counter_enabled_label">アクティビティカウンター</string>
+    <string name="cluster_counter_enabled_description">ワークアウト名に連番（#2, #3, …）を追加</string>
     <string name="cluster_delete_title">ワークアウトクラスターを削除</string>
     <string name="cluster_delete_message">このワークアウトクラスターを削除してもよろしいですか？関連するワークアウトは削除されませんが、このクラスターの下にはグループ化されなくなります。</string>
     <string name="cluster_migration_title">ルートファミリーを分析中…</string>
@@ -1007,6 +1029,19 @@
     <string name="cluster_migration_processing_workouts">トレーニング %1$d / %2$d を処理中…</string>
     <string name="legacy_import__scanning_dropbox">Dropbox の %1$s をスキャン中…</string>
     <string name="legacy_import__downloading_dropbox">Dropbox から %1$s をダウンロード中…</string>
+    <string name="legacy_import__finished_with_skipped">インポート完了: %3$d個のスキャン済みファイルのうち、%1$d個の新しいワークアウトをインポートしました（%2$d個をスキップ）。</string>
+    <string name="legacy_import__finished_all_new">インポート完了: %2$d個のスキャン済みファイルのうち、%1$d個の新しいワークアウトをインポートしました。</string>
+    <string name="legacy_import__finished_with_failed">インポート完了: %4$d個のスキャン済みファイルのうち、%1$d個をインポート、%2$d個をスキップ、%3$d個が失敗しました。</string>
+    <string name="cluster_naming__select_existing_route">既存のルートを選択</string>
+    <string name="cluster_naming__title">ワークアウトをルートに割り当て</string>
+    <string name="cluster_naming__found_recurring">%1$s からの新しいルートが見つかりました。</string>
+    <string name="cluster_naming__task_count">タスク %1$d / %2$d</string>
+    <string name="cluster_naming__assignment_label">ルートの割り当て:</string>
+    <string name="cluster_naming__create_new">新規作成…</string>
+    <string name="cluster_naming__selected_route_label">選択されたルート</string>
+    <string name="cluster_naming__new_name_prompt">または新しい名前を指定:</string>
+    <string name="cluster_naming__new_route_name_label">新しいルート名</string>
+    <string name="cluster_naming__leave_unclustered">未分類のままにする</string>
     <string name="migration_phase_label">フェーズ %1$d: %2$s</string>
 
     <string name="unclustered">未分類</string>
@@ -1022,6 +1057,8 @@
     <string name="getting_my_locations">既知の場所を検索中...</string>
     <string name="no_sport_types_available">利用可能なスポーツタイプはありません</string>
     <string name="no_workouts_available">利用可能なワークアウトはありません</string>
+    <string name="no_periods_available">利用可能な期間の概要はありません</string>
+    <string name="no_periods_available_hint">期間の概要を表示するにはワークアウトを記録してください</string>
     <string name="really_delete_format">本当に "%1$s" を削除しますか？</string>
     <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/master/privacy.md</string>
     <string name="LocationNameText">自宅</string>
@@ -1070,6 +1107,8 @@
     <string name="cluster_migration_enriching">ファミリーメタデータを強化中（%1$d/%2$d）…</string>
     <string name="cluster_tuning_use_sport_type_label">スポーツタイプを考慮する</string>
     <string name="cluster_tuning_use_sport_type_summary">同じルート上の異なるアクティビティ（例：ランニング対サイクリング）を別々のファミリーに隔離します。</string>
+    <string name="cluster_tuning_use_altitude_label">最低/最高高度を考慮する</string>
+    <string name="cluster_tuning_use_altitude_summary">最低標高と最高標高の座標に基づいて、異なる高度プロファイルのルートを区別します。</string>
 
     <string name="workout_periods__migration_title">トレーニング履歴データベースを最適化中…</string>
 
@@ -1086,4 +1125,101 @@
     <string name="legacy_recovery_description">以前のデバイスなどから TCX ファイルを使用してトレーニング履歴をインポートします。既存の記録はスキップされます。</string>
     <string name="scan_tcx">Dropbox をスキャン</string>
     <string name="import_single_file">TCX ファイルをインポート</string>
+    <!-- Workout Filtering (ATT-128) -->
+    <string name="filter_workouts_title">ワークアウトをフィルター</string>
+    <string name="filter_action">フィルター</string>
+    <string name="filter_clear_all">すべてクリア</string>
+    <string name="filter_search_hint">タイトル、メモ、説明を検索…</string>
+    <string name="filter_section_time">期間と日時</string>
+    <string name="filter_section_sport">スポーツの種類</string>
+    <string name="filter_section_equipment">装備</string>
+    <string name="filter_section_attributes">属性</string>
+    <string name="filter_section_thresholds">距離と時間</string>
+    <string name="filter_commute">通勤・通学</string>
+    <string name="filter_trainer">インドア / ローラー台</string>
+    <string name="filter_has_gps">GPSログあり</string>
+    <string name="filter_min_distance_format">&gt; %1$s km</string>
+    <string name="filter_min_duration_format">&gt; %1$s min</string>
+    <string name="filter_no_matching_workouts">有効なフィルターに一致するワークアウトはありません</string>
+    <!-- Route Filtering (ATT-736) -->
+    <string name="filter_routes_title">ルートをフィルター</string>
+    <string name="filter_search_routes_hint">名前、説明を検索…</string>
+    <string name="filter_route_source">ソース</string>
+    <string name="filter_route_selected">選択中のみ</string>
+    <string name="filter_min_elevation_format">&gt; %1$s m</string>
+    <string name="filter_no_matching_routes">有効なフィルターに一致するルートはありません</string>
+    <!-- Segment Filtering (ATT-735) -->
+    <string name="filter_segments_title">セグメントをフィルター</string>
+    <string name="filter_search_segments_hint">名前、市区町村を検索…</string>
+    <string name="filter_section_climb_category">山岳カテゴリー</string>
+    <string name="filter_climb_cat_4">カテゴリー4以上</string>
+    <string name="filter_climb_cat_3">カテゴリー3以上</string>
+    <string name="filter_climb_cat_2">カテゴリー2以上</string>
+    <string name="filter_climb_cat_1">カテゴリー1以上</string>
+    <string name="filter_climb_cat_hc">超級(HC)のみ</string>
+    <string name="filter_climb_chip_cat4">≥ カテ4</string>
+    <string name="filter_climb_chip_cat3">≥ カテ3</string>
+    <string name="filter_climb_chip_cat2">≥ カテ2</string>
+    <string name="filter_climb_chip_cat1">≥ カテ1</string>
+    <string name="filter_climb_chip_hc">HC</string>
+    <string name="filter_has_pr">自己ベスト(PR)あり</string>
+    <string name="filter_no_matching_segments">有効なフィルターに一致するセグメントはありません</string>
+    <!-- Cluster Filtering (ATT-737) -->
+    <string name="filter_clusters_title">お気に入りトラックを絞り込み</string>
+    <string name="filter_search_clusters_hint">トラック名を検索…</string>
+    <string name="filter_section_recordings">記録</string>
+    <string name="filter_min_recordings_chip_format">≥ %1$d 件の記録</string>
+    <string name="filter_no_matching_clusters">一致するお気に入りトラックはありません</string>
+    <!-- Cluster Algorithm Info (ATT-501) -->
+    <string name="cluster_info_title">お気に入りルートとクラスタリング</string>
+    <string name="cluster_info_what_title">お気に入りルートとは？</string>
+    <string name="cluster_info_what_desc">同じコースで複数回トレーニングを行うと、アプリが自動的に検知してお気に入りルート（クラスタ）としてグループ化します。これにより、自動命名（例:「琵琶湖一周 #5」）、ギアの自動割り当て、同一コースでのパフォーマンス比較が可能になります。</string>
+    <string name="cluster_info_fingerprint_title">3Dトポロジカル指紋</string>
+    <string name="cluster_info_fingerprint_desc">ルートはGPSの点単位ではなく、多次元の空間シグネチャに基づく「シンプルでありながら驚くほど優れたアルゴリズム」によって比較されます。このアルゴリズムはわずかなルートの違いに寛容でありながら、実際に異なるコースのワークアウトは確実に分離します:&#10;• スタートとゴール: 地理的な開始点と終了点（許容範囲: 200 m）。&#10;• エイペックス（最遠点）: スタートから最も離れたコース上の地点（許容範囲: 400 m）。&#10;• 総距離: ルートの全体距離（許容範囲: 20%）。&#10;• 最低・最高高度位置: 最低地点および最高地点の地理的位置（許容範囲: 400 m、オプション）。これにより、輪郭が似た谷沿いのルートと尾根ルートを確実に区別します。</string>
+    <string name="cluster_info_sports_title">スポーツ種別の分離と適応重心</string>
+    <string name="cluster_info_sports_desc">お気に入りルートはスポーツ種別ごとに分離できるため、同じ道でのサイクリングとランニングが混ざりません。ワークアウトが追加されるたびに、加重移動平均（重心）によって参照座標が自動的に微調整されます。</string>
+    <string name="cluster_info_tuning_title">感度とパラメータ調整</string>
+    <string name="cluster_info_tuning_desc">マスタースライダーでルートの一致基準を調整します。「厳格」にするとわずかなルートの違いを別クラスタに分け、「緩和」にするとスタート位置のズレや小さな回り道があっても同じクラスタにまとめます。個別の許容値も下部で微調整できます。</string>
+    <string name="cluster_info_close">了解</string>
+
+    <!-- Workout Cluster Stats -->
+    <string name="cluster_stats_best_time">ベストタイム</string>
+    <string name="cluster_stats_avg_time">タイム</string>
+    <string name="cluster_stats_avg_speed">速度</string>
+    <string name="cluster_stats_avg_pace">ペース</string>
+    <string name="cluster_stats_total_distance">距離</string>
+    <string name="cluster_stats_total_elevation">獲得標高</string>
+    <string name="cluster_stats_total_time">時間</string>
+    <string name="cluster_stats_last_activity">最後のアクティビティ</string>
+    <string name="cluster_stats_today">今日</string>
+    <string name="cluster_stats_yesterday">昨日</string>
+    <string name="cluster_stats_days_ago">%1$d日前</string>
+    <string name="cluster_stats_weeks_ago">%1$d週間前</string>
+
+    <!-- ATT-510: Lap Overview & Performance Highlights -->
+    <string name="laps_header">ラップ (%1$d)</string>
+    <string name="show_all_laps">すべての %1$d ラップを表示</string>
+    <string name="show_fewer_laps">少なく表示</string>
+    <string name="fastest_lap">最速ラップ</string>
+    <string name="slowest_lap">最遅ラップ</string>
+
+    <!-- ATT-511: Edit Lap Details -->
+    <string name="edit_lap_title">ラップ %1$d を編集</string>
+    <string name="lap_name_label">ラップ名</string>
+    <string name="lap_description_label">メモ・説明</string>
+    <string name="quick_tag_warmup">ウォーミングアップ</string>
+    <string name="quick_tag_interval">インターバル</string>
+    <string name="quick_tag_recovery">リカバリー</string>
+    <string name="quick_tag_hill_climb">ヒルクライム</string>
+    <string name="quick_tag_tempo">ペース走</string>
+    <string name="quick_tag_sprint">スプリント</string>
+    <string name="quick_tag_cooldown">クールダウン</string>
+    <string name="previous_lap">前へ</string>
+    <string name="next_lap">次へ</string>
+    <string name="no_gps_track_available">このワークアウトのGPSトラックは記録されていません</string>
+
+    <!-- ATT-920: Lap Table Headers -->
+    <string name="lap_table_header_lap">ラップ</string>
+    <string name="lap_table_header_time">時間</string>
+    <string name="lap_table_header_distance">距離</string>
 </resources>

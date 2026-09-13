@@ -22,8 +22,10 @@ import android.content.Intent
 import android.net.Uri
 import java.text.DateFormat
 import java.util.Date
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -55,6 +57,8 @@ import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManag
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialog
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterTuningContent
+import com.atrainingtracker.trainingtracker.ui.clusters.ClusterInfoDialog
+import androidx.compose.material.icons.outlined.Info
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
@@ -96,6 +100,10 @@ fun ImportBackupTabsScreen(
     // ATT-315: Pre-import Tuning state
     var showTuningDialogForBulk by remember { mutableStateOf(false) }
     var pendingSingleLegacyUri by remember { mutableStateOf<Uri?>(null) }
+    var showDropboxDisconnectedDialog by remember { mutableStateOf(false) }
+    val isDropboxConnected = remember(uiState) {
+        TrainingApplication.uploadToDropbox() && TrainingApplication.readDropboxCredential() != null
+    }
     
     val isBusy = uiState is BackupRestoreViewModel.UiState.Loading || uiState is BackupRestoreViewModel.UiState.Progress
 
@@ -187,12 +195,20 @@ fun ImportBackupTabsScreen(
                 when (pageIndex) {
                     0 -> ImportTabContent(
                         isBusy = isBusy,
-                        onBulkRecoverClick = { showTuningDialogForBulk = true },
+                        isDropboxConnected = isDropboxConnected,
+                        onBulkRecoverClick = {
+                            if (isDropboxConnected) {
+                                showTuningDialogForBulk = true
+                            } else {
+                                showDropboxDisconnectedDialog = true
+                            }
+                        },
                         onSingleLegacyImportClick = { pickLegacyFileLauncher.launch(arrayOf("*/*")) }
                     )
                     1 -> BackupTabContent(
                         viewModel = viewModel,
                         isBusy = isBusy,
+                        isDropboxConnected = isDropboxConnected,
                         onCreateBackupClick = {
                             viewModel.createBackup(context) { uri ->
                                 val intent = Intent(Intent.ACTION_SEND).apply {
@@ -203,13 +219,26 @@ fun ImportBackupTabsScreen(
                                 context.startActivity(Intent.createChooser(intent, createBackupChooserTitle))
                             }
                         },
-                        onUploadToDropboxClick = { viewModel.uploadToDropbox(context) }
+                        onUploadToDropboxClick = {
+                            if (isDropboxConnected) {
+                                viewModel.uploadToDropbox(context)
+                            } else {
+                                showDropboxDisconnectedDialog = true
+                            }
+                        }
                     )
                     2 -> RestoreTabContent(
                         isBusy = isBusy,
+                        isDropboxConnected = isDropboxConnected,
                         onIncrementalImportClick = { pickImportLauncher.launch(arrayOf("*/*")) },
                         onLocalRestoreClick = { pickFullRestoreLauncher.launch(arrayOf("*/*")) },
-                        onDropboxRestoreClick = { showDropboxRestoreConfirm = true }
+                        onDropboxRestoreClick = {
+                            if (isDropboxConnected) {
+                                showDropboxRestoreConfirm = true
+                            } else {
+                                showDropboxDisconnectedDialog = true
+                            }
+                        }
                     )
                 }
             }
@@ -265,6 +294,19 @@ fun ImportBackupTabsScreen(
         )
     }
 
+    if (showDropboxDisconnectedDialog) {
+        AlertDialog(
+            onDismissRequest = { showDropboxDisconnectedDialog = false },
+            title = { Text(stringResource(R.string.Dropbox)) },
+            text = { Text(stringResource(R.string.dropbox_disconnected_status)) },
+            confirmButton = {
+                TextButton(onClick = { showDropboxDisconnectedDialog = false }) {
+                    Text(stringResource(R.string.OK))
+                }
+            }
+        )
+    }
+
     showMappingDialog?.let { data ->
         ImportMappingDialog(
             analysis = data.analysis,
@@ -289,9 +331,9 @@ fun ImportBackupTabsScreen(
         )
     }
 
-    // ATT-315: Pre-import Tuning Dialogs
+    // ATT-315 / ATT-793: Pre-import Tuning Bottom Sheets
     if (showTuningDialogForBulk) {
-        PreImportTuningDialog(
+        PreImportTuningBottomSheet(
             viewModel = viewModel,
             onConfirm = {
                 showTuningDialogForBulk = false
@@ -302,7 +344,7 @@ fun ImportBackupTabsScreen(
     }
 
     pendingSingleLegacyUri?.let { uri ->
-        PreImportTuningDialog(
+        PreImportTuningBottomSheet(
             viewModel = viewModel,
             onConfirm = {
                 viewModel.importLegacyFile(context, uri, "tcx")
@@ -313,20 +355,76 @@ fun ImportBackupTabsScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PreImportTuningDialog(
+fun PreImportTuningBottomSheet(
     viewModel: BackupRestoreViewModel,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    var showInfoDialog by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    if (showInfoDialog) {
+        ClusterInfoDialog(onDismissRequest = { showInfoDialog = false })
+    }
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.cluster_tuning_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        sheetState = sheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+        ) {
+            // Header Bar: Title, Info button, and Close button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 24.dp, end = 12.dp, top = 4.dp, bottom = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = "Adjust the clustering sensitivity to optimize route matching for the imported files.",
-                    style = MaterialTheme.typography.bodyMedium
+                    text = stringResource(R.string.cluster_tuning_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { showInfoDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = stringResource(R.string.cluster_info_title),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringResource(R.string.cancel),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            // Scrollable Content
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.cluster_tuning_pre_import_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 ClusterTuningContent(
                     endpointTolerance = viewModel.endpointTolerance,
@@ -335,21 +433,99 @@ fun PreImportTuningDialog(
                     onApexToleranceChange = { viewModel.apexTolerance = it },
                     distanceTolerance = viewModel.distanceTolerance,
                     onDistanceToleranceChange = { viewModel.distanceTolerance = it },
+                    altitudePositionTolerance = viewModel.altitudePositionTolerance,
+                    onAltitudePositionToleranceChange = { viewModel.altitudePositionTolerance = it },
                     useSportTypeForClustering = viewModel.useSportTypeForClustering,
-                    onUseSportTypeChange = { viewModel.useSportTypeForClustering = it }
+                    onUseSportTypeChange = { 
+                        viewModel.useSportTypeForClustering = it
+                        viewModel.saveClusteringTolerances()
+                    },
+                    useAltitudePosForClustering = viewModel.useAltitudePosForClustering,
+                    onUseAltitudePosChange = { 
+                        viewModel.useAltitudePosForClustering = it
+                        viewModel.saveClusteringTolerances()
+                    },
+                    onValueChangeFinished = { viewModel.saveClusteringTolerances() },
+                    isDialog = false
                 )
+
+                if (TrainingApplication.uploadToStrava()) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.updateUploadToStravaOnImport(!viewModel.uploadToStravaOnImport)
+                            }
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 16.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.import_upload_to_strava_label),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = stringResource(R.string.import_upload_to_strava_summary),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = viewModel.uploadToStravaOnImport,
+                            onCheckedChange = { viewModel.updateUploadToStravaOnImport(it) }
+                        )
+                    }
+                }
             }
-        },
-        confirmButton = {
-            Button(onClick = onConfirm) {
-                Text(stringResource(R.string.OK))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
+
+            // Action Buttons
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.cancel))
+                }
+                Button(
+                    onClick = {
+                        viewModel.saveClusteringTolerances()
+                        onConfirm()
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.OK))
+                }
             }
         }
+    }
+}
+
+@Composable
+fun PreImportTuningDialog(
+    viewModel: BackupRestoreViewModel,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    PreImportTuningBottomSheet(
+        viewModel = viewModel,
+        onConfirm = onConfirm,
+        onDismiss = onDismiss
     )
 }
 
@@ -402,7 +578,7 @@ fun ClusterNamingDialog(
         }
 
         WorkoutClusterSelectionDialog(
-            title = "Select Existing Route",
+            title = stringResource(R.string.cluster_naming__select_existing_route),
             candidates = candidatesWithScores,
             onSelect = { 
                 selectedCluster = it
@@ -418,7 +594,7 @@ fun ClusterNamingDialog(
         onDismissRequest = onDismiss,
         title = { 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Assign Workout to Route")
+                Text(stringResource(R.string.cluster_naming__title))
                 if (queueCount > 1) {
                     Spacer(modifier = Modifier.weight(1f))
                     Badge { Text("$queueCount") }
@@ -427,7 +603,7 @@ fun ClusterNamingDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Found a recurring route from ${state.date}.")
+                Text(stringResource(R.string.cluster_naming__found_recurring, state.date))
 
                 // --- ATT-304: Show sport type & distance ---
                 Row(
@@ -465,7 +641,7 @@ fun ClusterNamingDialog(
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ) {
                             Text(
-                                text = "Task 1 of $queueCount",
+                                text = stringResource(R.string.cluster_naming__task_count, 1, queueCount),
                                 modifier = Modifier.padding(horizontal = 4.dp)
                             )
                         }
@@ -488,31 +664,31 @@ fun ClusterNamingDialog(
                         )
                         Marker(
                             state = remember(state.start) { MarkerState(position = state.start) }, 
-                            title = "Start",
+                            title = stringResource(R.string.marker_start),
                             icon = remember { createSensorMarker(localContext, R.drawable.control_start, TTColor.StartPoint) }
                         )
                         Marker(
                             state = remember(state.end) { MarkerState(position = state.end) }, 
-                            title = "End",
+                            title = stringResource(R.string.marker_end),
                             icon = remember { createSensorMarker(localContext, R.drawable.control_stop, TTColor.EndPoint) }
                         )
                         Marker(
                             state = remember(state.apex) { MarkerState(position = state.apex) }, 
-                            title = "Apex",
+                            title = stringResource(R.string.marker_max_distance),
                             icon = remember { createSensorMarker(localContext, R.drawable.ic_distance, TTColor.ApexPoint) }
                         )
                     }
                 }
 
                 // --- ATT-305: Same dropdown (using button + dialog pattern) ---
-                Text("Route Assignment:", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.cluster_naming__assignment_label), style = MaterialTheme.typography.labelLarge)
                 
                 OutlinedTextField(
-                    value = selectedCluster?.name ?: "Create New...",
+                    value = selectedCluster?.name ?: stringResource(R.string.cluster_naming__create_new),
                     onValueChange = {},
                     readOnly = true,
                     modifier = Modifier.fillMaxWidth().clickable { showSelectionDialog = true },
-                    label = { Text("Selected Route") },
+                    label = { Text(stringResource(R.string.cluster_naming__selected_route_label)) },
                     trailingIcon = {
                         IconButton(onClick = { showSelectionDialog = true }) {
                             Icon(painter = painterResource(id = R.drawable.my_locations), contentDescription = null)
@@ -522,11 +698,11 @@ fun ClusterNamingDialog(
 
                 if (selectedCluster == null) {
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Or give it a new name:", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.cluster_naming__new_name_prompt), style = MaterialTheme.typography.labelLarge)
                     TextField(
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text("New Route Name") },
+                        label = { Text(stringResource(R.string.cluster_naming__new_route_name_label)) },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -545,7 +721,7 @@ fun ClusterNamingDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Leave Unclustered")
+                Text(stringResource(R.string.cluster_naming__leave_unclustered))
             }
         }
     )
@@ -731,9 +907,23 @@ private fun StateOverlaySection(uiState: BackupRestoreViewModel.UiState, onClear
 @Composable
 private fun ImportTabContent(
     isBusy: Boolean,
+    isDropboxConnected: Boolean,
     onBulkRecoverClick: () -> Unit,
     onSingleLegacyImportClick: () -> Unit
 ) {
+    val scanButtonColors = if (isDropboxConnected) {
+        ButtonDefaults.outlinedButtonColors()
+    } else {
+        ButtonDefaults.outlinedButtonColors(
+            contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        )
+    }
+    val scanBorder = if (isDropboxConnected) {
+        ButtonDefaults.outlinedButtonBorder(enabled = !isBusy)
+    } else {
+        BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+    }
+
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -749,7 +939,13 @@ private fun ImportTabContent(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(text = stringResource(R.string.legacy_recovery_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(onClick = onBulkRecoverClick, modifier = Modifier.fillMaxWidth(), enabled = !isBusy) {
+                OutlinedButton(
+                    onClick = onBulkRecoverClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isBusy,
+                    colors = scanButtonColors,
+                    border = scanBorder
+                ) {
                     Text(stringResource(R.string.scan_tcx))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -768,10 +964,19 @@ private fun ImportTabContent(
 private fun BackupTabContent(
     viewModel: BackupRestoreViewModel,
     isBusy: Boolean,
+    isDropboxConnected: Boolean,
     onCreateBackupClick: () -> Unit,
     onUploadToDropboxClick: () -> Unit
 ) {
     val lastBackupInfo by viewModel.lastBackupInfo.collectAsState()
+    val uploadButtonColors = if (isDropboxConnected) {
+        ButtonDefaults.buttonColors()
+    } else {
+        ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        )
+    }
     
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -792,7 +997,12 @@ private fun BackupTabContent(
                     Text(stringResource(R.string.create_backup))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = onUploadToDropboxClick, modifier = Modifier.fillMaxWidth(), enabled = !isBusy) {
+                Button(
+                    onClick = onUploadToDropboxClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isBusy,
+                    colors = uploadButtonColors
+                ) {
                     Icon(Icons.Default.CloudUpload, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.create_and_upload_to_dropbox))
@@ -847,10 +1057,22 @@ private fun BackupTabContent(
 @Composable
 private fun RestoreTabContent(
     isBusy: Boolean,
+    isDropboxConnected: Boolean,
     onIncrementalImportClick: () -> Unit,
     onLocalRestoreClick: () -> Unit,
     onDropboxRestoreClick: () -> Unit
 ) {
+    val dropboxRestoreColors = if (isDropboxConnected) {
+        ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+    } else {
+        ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+    }
+    val dropboxRestoreBorder = if (isDropboxConnected) {
+        ButtonDefaults.outlinedButtonBorder(enabled = !isBusy)
+    } else {
+        BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+    }
+
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -891,7 +1113,13 @@ private fun RestoreTabContent(
                     Text("Local: " + stringResource(R.string.restore_backup))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(onClick = onDropboxRestoreClick, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error), enabled = !isBusy) {
+                OutlinedButton(
+                    onClick = onDropboxRestoreClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = dropboxRestoreColors,
+                    border = dropboxRestoreBorder,
+                    enabled = !isBusy
+                ) {
                     Icon(Icons.Default.CloudUpload, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Dropbox: " + stringResource(R.string.restore_backup))

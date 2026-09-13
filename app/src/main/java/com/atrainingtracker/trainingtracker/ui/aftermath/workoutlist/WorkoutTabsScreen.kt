@@ -47,6 +47,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
@@ -85,7 +87,16 @@ fun WorkoutTabsScreen(
     onSortOrderChange: (WorkoutSortOrder) -> Unit,
     scrollToTop: Boolean,
     isCompactView: Boolean,
-    onToggleCompactView: () -> Unit
+    onToggleCompactView: () -> Unit,
+    onDeleteOldWorkouts: (Int) -> Unit,
+    deletionProgress: DeletionProgress = DeletionProgress.Idle,
+    filterCriteria: WorkoutFilterCriteria = WorkoutFilterCriteria(),
+    allWorkouts: List<WorkoutData> = workouts,
+    onApplyFilterCriteria: (WorkoutFilterCriteria) -> Unit = {},
+    onClearAllFilters: () -> Unit = {},
+    onUpdateFilterCriteria: ((WorkoutFilterCriteria) -> WorkoutFilterCriteria) -> Unit = {},
+    onClusterClick: ((Long) -> Unit)? = null,
+    onMarkFinished: (Long) -> Unit = {}
 ) {
     val tabs = listOf(
         stringResource(R.string.workout_summaries_tab_all),
@@ -105,9 +116,22 @@ fun WorkoutTabsScreen(
         }
     }
 
-    // 1. Calculate the total height of the Header (Status Bar + Content Height)
+    var showFilterBottomSheet by rememberSaveable { mutableStateOf(false) }
+
+    if (showFilterBottomSheet) {
+        WorkoutFilterBottomSheet(
+            criteria = filterCriteria,
+            allWorkouts = allWorkouts,
+            onApplyCriteria = onApplyFilterCriteria,
+            onClearAll = onClearAllFilters,
+            onDismissRequest = { showFilterBottomSheet = false }
+        )
+    }
+
+    // 1. Calculate the total height of the Header (Status Bar + Content Height + optional active chips)
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val appBarMaxHeightPx = with(density) { (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT).roundToPx() }
+    val chipsRowHeight = if (filterCriteria.isNotEmpty) 40.dp else 0.dp
+    val appBarMaxHeightPx = with(density) { (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT + chipsRowHeight).roundToPx() }
 
     // 2. Initialize the Connection
     val connection = remember(appBarMaxHeightPx) {
@@ -126,6 +150,33 @@ fun WorkoutTabsScreen(
             onDismiss = { workoutIdToDelete = -1L }
         )
     }
+
+    var showDeleteOldWorkoutsDialog by rememberSaveable { mutableStateOf(false) }
+    var daysToConfirmDelete by rememberSaveable { mutableStateOf<Int?>(null) }
+
+    if (showDeleteOldWorkoutsDialog) {
+        DeleteOldWorkoutsDialog(
+            onConfirm = { daysToKeep ->
+                showDeleteOldWorkoutsDialog = false
+                daysToConfirmDelete = daysToKeep
+            },
+            onDismiss = { showDeleteOldWorkoutsDialog = false }
+        )
+    }
+
+    daysToConfirmDelete?.let { days ->
+        com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog(
+            title = stringResource(R.string.deleteOldWorkouts),
+            message = stringResource(R.string.really_delete_old_workouts_format, days),
+            onConfirm = {
+                onDeleteOldWorkouts(days)
+                daysToConfirmDelete = null
+            },
+            onDismiss = { daysToConfirmDelete = null }
+        )
+    }
+
+    WorkoutDeletionProgressDialog(progress = deletionProgress)
 
     // This is the root container
     Surface(
@@ -166,7 +217,9 @@ fun WorkoutTabsScreen(
                     isCompactView = isCompactView,
                     // Use a Spacer or contentPadding that reacts to the offset
                     appBarOffsetPx = connection.appBarOffset,
-                    headerHeightPx = appBarMaxHeightPx.toFloat()
+                    headerHeightPx = appBarMaxHeightPx.toFloat(),
+                    onClusterClick = onClusterClick,
+                    onMarkFinished = onMarkFinished
                 )
             }
 
@@ -196,6 +249,10 @@ fun WorkoutTabsScreen(
                             onToggleCompactView = onToggleCompactView,
                             sortOrder = sortOrder,
                             onSortOrderChange = onSortOrderChange,
+                            onDeleteOldWorkoutsClicked = { showDeleteOldWorkoutsDialog = true },
+                            onFilterClicked = { showFilterBottomSheet = true },
+                            isFilterActive = filterCriteria.isNotEmpty,
+                            activeFilterCount = filterCriteria.activeFilterCount,
                             tint = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
@@ -209,6 +266,42 @@ fun WorkoutTabsScreen(
                                 selected = pagerState.currentPage == index,
                                 onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
                                 text = { Text(text = title) }
+                            )
+                        }
+                    }
+
+                    // Active Filter Chips Strip (ATT-128)
+                    if (filterCriteria.isNotEmpty) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            val sportName = remember(filterCriteria.sportTypeId, allWorkouts) {
+                                filterCriteria.sportTypeId?.let { id ->
+                                    allWorkouts.find { it.sportId == id }?.sportName
+                                }
+                            }
+                            val equipName = remember(filterCriteria.equipmentId, allWorkouts) {
+                                filterCriteria.equipmentId?.let { id ->
+                                    allWorkouts.find { it.equipmentId == id }?.equipmentName
+                                }
+                            }
+                            ActiveFilterChipsRow(
+                                criteria = filterCriteria,
+                                onRemoveQuery = { onUpdateFilterCriteria { it.copy(query = "") } },
+                                onRemoveYear = { onUpdateFilterCriteria { it.copy(year = null) } },
+                                onRemoveMonth = { onUpdateFilterCriteria { it.copy(month = null) } },
+                                onRemoveDateRange = { onUpdateFilterCriteria { it.copy(startDateS = null, endDateS = null) } },
+                                onRemoveSport = { onUpdateFilterCriteria { it.copy(sportTypeId = null) } },
+                                onRemoveEquipment = { onUpdateFilterCriteria { it.copy(equipmentId = null) } },
+                                onRemoveCommute = { onUpdateFilterCriteria { it.copy(isCommute = null) } },
+                                onRemoveTrainer = { onUpdateFilterCriteria { it.copy(isTrainer = null) } },
+                                onRemoveGpsTrack = { onUpdateFilterCriteria { it.copy(hasGpsTrack = null) } },
+                                onRemoveMinDistance = { onUpdateFilterCriteria { it.copy(minDistanceMeters = null) } },
+                                onRemoveMinDuration = { onUpdateFilterCriteria { it.copy(minDurationSec = null) } },
+                                onClearAll = onClearAllFilters,
+                                sportName = sportName,
+                                equipmentName = equipName
                             )
                         }
                     }

@@ -58,6 +58,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.stringResource
+import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
@@ -175,28 +176,7 @@ class WorkoutSummariesListFragment : Fragment() {
                         contentWindowInsets = WindowInsets(0.dp)
                     ) { paddingValues ->
                         Box(modifier = Modifier.padding(paddingValues)) {
-                            if (selectedWorkoutForDetailsData != null) {
-                                // 3. Render the Detail Map Screen
-                                val aftermathUIState by trackOnMapViewModel.uiState.collectAsStateWithLifecycle()
-                                val enabledTrackTypes by trackOnMapViewModel.enabledTrackTypes.collectAsStateWithLifecycle()
-                                TrackOnMapScreen(
-                                    workoutData = selectedWorkoutForDetailsData,
-                                    tracks = aftermathUIState.tracks,
-                                    availableTrackTypes = aftermathUIState.availableTrackTypes,
-                                    segments = aftermathUIState.segments,
-                                    routes = aftermathUIState.routes,
-                                    markers = aftermathUIState.markers,
-                                    enabledTrackTypes = enabledTrackTypes,
-                                    onToggleTrackType = { trackOnMapViewModel.toggleTrackTypeEnabled(it) },
-                                    showTechnicalTracks = true,
-                                    modifier = Modifier
-                                )
-
-                                // 4. Handle System Back Button
-                                BackHandler {
-                                    selectedWorkoutForDetails = null
-                                }
-                            } else if (selectedWorkoutIdForEdit != null) {
+                            if (selectedWorkoutIdForEdit != null) {
                                 val editViewModel: EditWorkoutViewModel = viewModel(
                                     key = "edit_workout_$selectedWorkoutIdForEdit",
                                     factory = EditWorkoutViewModelFactory(
@@ -215,6 +195,29 @@ class WorkoutSummariesListFragment : Fragment() {
                                 // 4. Handle System Back Button
                                 BackHandler {
                                     selectedWorkoutIdForEdit = null
+                                }
+                            } else if (selectedWorkoutForDetailsData != null) {
+                                // 3. Render the Detail Map Screen
+                                val aftermathUIState by trackOnMapViewModel.uiState.collectAsStateWithLifecycle()
+                                val enabledTrackTypes by trackOnMapViewModel.enabledTrackTypes.collectAsStateWithLifecycle()
+                                TrackOnMapScreen(
+                                    workoutData = selectedWorkoutForDetailsData,
+                                    tracks = aftermathUIState.tracks,
+                                    availableTrackTypes = aftermathUIState.availableTrackTypes,
+                                    segments = aftermathUIState.segments,
+                                    routes = aftermathUIState.routes,
+                                    markers = aftermathUIState.markers,
+                                    enabledTrackTypes = enabledTrackTypes,
+                                    onToggleTrackType = { trackOnMapViewModel.toggleTrackTypeEnabled(it) },
+                                    showTechnicalTracks = true,
+                                    onClusterClick = { clusterId -> WorkoutNavigationEvents.triggerCluster(clusterId) },
+                                    onEditWorkout = { id -> selectedWorkoutIdForEdit = id },
+                                    modifier = Modifier
+                                )
+
+                                // 4. Handle System Back Button
+                                BackHandler {
+                                    selectedWorkoutForDetails = null
                                 }
                             } else {
                                 Box(
@@ -275,7 +278,9 @@ class WorkoutSummariesListFragment : Fragment() {
                                         },
                                         isCompactView = viewModel.isCompactView.collectAsStateWithLifecycle().value,
                                         appBarOffsetPx = connection.appBarOffset,
-                                        headerHeightPx = headerHeightPx.toFloat()
+                                        headerHeightPx = headerHeightPx.toFloat(),
+                                        onClusterClick = { clusterId -> WorkoutNavigationEvents.triggerCluster(clusterId) },
+                                        onMarkFinished = { workoutId -> viewModel.markWorkoutFinished(workoutId) }
                                     )
 
                                     // THE HEADER (Titles)

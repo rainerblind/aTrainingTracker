@@ -59,6 +59,9 @@ class WorkoutClusterRepository private constructor(private val context: Context)
     private val _migrationStatus = MutableStateFlow<MigrationStatus?>(null)
     val migrationStatus: StateFlow<MigrationStatus?> = _migrationStatus.asStateFlow()
 
+    private val _clusterStats = MutableStateFlow<Map<Long, WorkoutClusterStats>>(emptyMap())
+    val clusterStats: StateFlow<Map<Long, WorkoutClusterStats>> = _clusterStats.asStateFlow()
+
     companion object {
         private const val SP_KEY_LAST_BOUNDS_REPAIR = "last_cluster_bounds_repair_v5"
         @Volatile
@@ -70,9 +73,14 @@ class WorkoutClusterRepository private constructor(private val context: Context)
                 instance ?: WorkoutClusterRepository(context.applicationContext).also { instance = it }
             }
         }
+
+        @androidx.annotation.VisibleForTesting
+        fun resetForTesting(testInstance: WorkoutClusterRepository? = null) {
+            instance = testInstance
+        }
     }
 
-    suspend fun refreshClusters(forceShowProgress: Boolean = false): Unit = withContext(Dispatchers.IO) {
+    suspend fun refreshClusters(forceShowProgress: Boolean = false, forceCheckIntegrity: Boolean = false): Unit = withContext(Dispatchers.IO) {
         val currentClusters = clusterDb.getAllClusters()
         
         // --- SELF-HEALING BOOTSTRAPPER (ATT-392 Refinement) ---
@@ -103,7 +111,8 @@ class WorkoutClusterRepository private constructor(private val context: Context)
             )
         }
         
-        if (!needsEnrichment && !forceShowProgress) {
+        if (!needsEnrichment && !forceShowProgress && !forceCheckIntegrity) {
+            _clusterStats.value = summariesManager.getWorkoutClusterStatsForAllClusters()
             _allClusters.value = currentClusters.sortedByDescending { it.hitCount }
             return@withContext
         }
@@ -150,11 +159,29 @@ class WorkoutClusterRepository private constructor(private val context: Context)
                 )
             }
 
-            // Update hit count if reality differs (Self-Healing)
+            // Check actual counts from WorkoutSummaries (surviving workouts)
             val realCount = actualCounts[cluster.id] ?: 0
-            val updatedCluster = if (cluster.hitCount != realCount) {
-                if (DEBUG) android.util.Log.i("WorkoutClusterRepo", "Correcting hit count for ${cluster.name}: ${cluster.hitCount} -> $realCount")
-                cluster.copy(hitCount = realCount)
+            
+            // Check for explicit route link to preserve imported/created routes (REQ-SET-062 Invariant)
+            val linkedRoute = routesDb.getRouteByClusterId(cluster.id)
+            val isRouteLinked = linkedRoute != null || !cluster.routePolyline.isNullOrEmpty()
+
+            if (realCount == 0 && !isRouteLinked) {
+                if (DEBUG) android.util.Log.i("WorkoutClusterRepo", "Purging unlinked zero-workout orphan cluster: ${cluster.name} (id: ${cluster.id})")
+                clusterDb.deleteCluster(cluster.id)
+                return@mapIndexed null
+            }
+
+            // For surviving workout clusters, keep counters untouched (ATT-296: bulk deletion preserves lifetime hitCount)
+            val preservedHitCount = if (realCount > 0) maxOf(cluster.hitCount, realCount) else 0
+            val updatedCluster = if (cluster.hitCount != preservedHitCount || (realCount == 0 && cluster.previewPaths.isNotEmpty())) {
+                if (DEBUG && cluster.hitCount != preservedHitCount) {
+                    android.util.Log.i("WorkoutClusterRepo", "Updating hit count for ${cluster.name}: ${cluster.hitCount} -> $preservedHitCount")
+                }
+                cluster.copy(
+                    hitCount = preservedHitCount,
+                    previewPaths = if (realCount == 0) emptyList() else cluster.previewPaths
+                )
             } else cluster
 
             // --- POPULATE PREVIEW PATHS (SCRUM-224 / ATT-441) ---
@@ -163,7 +190,6 @@ class WorkoutClusterRepository private constructor(private val context: Context)
             
             if (previewPaths.isEmpty() && updatedCluster.hitCount > 0) {
                 // 1. Check for linked route
-                val linkedRoute = routesDb.getRouteByClusterId(updatedCluster.id)
                 routePolyline = if (linkedRoute != null && linkedRoute.path.isNotEmpty()) {
                     PolyUtil.encode(linkedRoute.path.map { it.latLng })
                 } else null
@@ -201,10 +227,23 @@ class WorkoutClusterRepository private constructor(private val context: Context)
             finalCluster
         }
         
-        _allClusters.value = enriched.sortedByDescending { it.hitCount }
+        _clusterStats.value = summariesManager.getWorkoutClusterStatsForAllClusters()
+        _allClusters.value = enriched.filterNotNull().sortedByDescending { it.hitCount }
         if (showProgress) {
             _migrationStatus.value = null
         }
+    }
+
+    suspend fun refreshClusterStats(): Unit = withContext(Dispatchers.IO) {
+        _clusterStats.value = summariesManager.getWorkoutClusterStatsForAllClusters()
+    }
+
+    suspend fun getStatsForCluster(clusterId: Long): WorkoutClusterStats = withContext(Dispatchers.IO) {
+        _clusterStats.value[clusterId] ?: summariesManager.getWorkoutClusterStats(clusterId)
+    }
+
+    suspend fun getClusterById(clusterId: Long): WorkoutCluster? = withContext(Dispatchers.IO) {
+        _allClusters.value.find { it.id == clusterId } ?: clusterDb.getClusterById(clusterId)
     }
 
     suspend fun updateCluster(cluster: WorkoutCluster) = withContext(Dispatchers.IO) {

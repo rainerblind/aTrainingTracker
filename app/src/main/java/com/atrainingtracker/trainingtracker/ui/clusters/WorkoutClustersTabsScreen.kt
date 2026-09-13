@@ -20,8 +20,12 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
+
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +43,9 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
+
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.atrainingtracker.trainingtracker.ui.common.filters.FilterActionButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,6 +67,29 @@ fun WorkoutClustersTabsScreen(
 ) {
     val clusters by viewModel.allClusters.collectAsState()
     val unclusteredWorkouts by viewModel.unclusteredWorkouts.collectAsState()
+    val filterCriteria by viewModel.filterCriteria.collectAsState()
+    val availableEquipment by viewModel.availableEquipment.collectAsState()
+    val sortOrder by viewModel.sortOrder.collectAsState()
+    val currentLocation by viewModel.currentLocation.collectAsState()
+    val isLocationAvailable by viewModel.isLocationAvailable.collectAsState()
+
+
+    var showFilterBottomSheet by rememberSaveable { mutableStateOf(false) }
+    var showInfoDialog by rememberSaveable { mutableStateOf(false) }
+
+    if (showInfoDialog) {
+        ClusterInfoDialog(onDismissRequest = { showInfoDialog = false })
+    }
+
+    if (showFilterBottomSheet) {
+        ClusterFilterBottomSheet(
+            criteria = filterCriteria,
+            availableEquipment = availableEquipment,
+            onApplyCriteria = { viewModel.setFilterCriteria(it) },
+            onClearAll = { viewModel.clearFilterCriteria() },
+            onDismissRequest = { showFilterBottomSheet = false }
+        )
+    }
     
     val tabs = listOf(
         stringResource(R.string.sport_type_tab_all) to null,
@@ -75,7 +105,8 @@ fun WorkoutClustersTabsScreen(
     val density = LocalDensity.current
 
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val headerHeightDp = statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT
+    val chipsRowHeight = if (filterCriteria.isNotEmpty) 40.dp else 0.dp
+    val headerHeightDp = statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT + chipsRowHeight
     val headerHeightPx = with(density) { headerHeightDp.roundToPx() }
 
     val connection = remember(headerHeightPx) {
@@ -116,24 +147,43 @@ fun WorkoutClustersTabsScreen(
                         emptyMessage = stringResource(R.string.no_unclustered_workouts)
                     )
                 } else {
-                    val filteredClusters = if (currentSport == null) {
+                    val sportFilteredClusters = if (currentSport == null) {
                         clusters
                     } else {
                         clusters.filter { it.bSportType == currentSport }
                     }
 
+                    val filteredClusters = if (filterCriteria.isEmpty) {
+                        sportFilteredClusters
+                    } else {
+                        sportFilteredClusters.filter { cluster ->
+                            val linkedEquipment = viewModel.getLinkedEquipmentSet(cluster.probableSportId)
+                            filterCriteria.matches(cluster, linkedEquipment)
+                        }
+                    }
+
+                    val finalClusters = remember(filteredClusters, sortOrder, currentLocation) {
+                        viewModel.sortClusters(filteredClusters, sortOrder, currentLocation)
+                    }
+
+                    val emptyMessage = when {
+                        filterCriteria.isNotEmpty -> stringResource(R.string.filter_no_matching_clusters)
+                        currentSport == null -> stringResource(R.string.absolutely_no_clusters_available)
+                        else -> stringResource(R.string.no_clusters_available, tabs[pageIndex].first)
+                    }
+
                     WorkoutClustersList(
-                        clusters = filteredClusters,
+                        clusters = finalClusters,
                         viewModel = viewModel,
                         onClusterClick = onClusterClick,
                         onDeleteRequest = onDeleteRequest,
                         onHitCountClick = onHitCountClick,
                         scrollState = listState,
                         appBarOffsetPx = connection.appBarOffset,
+
                         headerHeightDp = headerHeightDp,
                         density = density,
-                        emptyMessage = if (currentSport == null) stringResource(R.string.absolutely_no_clusters_available)
-                                       else stringResource(R.string.no_clusters_available, tabs[pageIndex].first)
+                        emptyMessage = emptyMessage
                     )
                 }
             }
@@ -211,13 +261,84 @@ fun WorkoutClustersTabsScreen(
                                 overflow = TextOverflow.Ellipsis
                             )
 
-                            IconButton(onClick = onTuneClick) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_settings_24),
-                                    contentDescription = stringResource(R.string.cluster_tuning_content_desc),
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = onTuneClick) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_settings_24),
+                                        contentDescription = stringResource(R.string.cluster_tuning_content_desc),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+
+                                // --- INFO BUTTON (ATT-501) ---
+                                IconButton(onClick = { showInfoDialog = true }) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Info,
+                                        contentDescription = stringResource(R.string.cluster_info_title),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+
+                                // --- SORT BUTTON (ATT-761) ---
+                                var showSortMenu by remember { mutableStateOf(false) }
+
+                                Box {
+                                    IconButton(onClick = { showSortMenu = true }) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.Sort,
+                                            contentDescription = stringResource(R.string.sort),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+
+                                    DropdownMenu(
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                        expanded = showSortMenu,
+                                        onDismissRequest = { showSortMenu = false }
+                                    ) {
+                                        ClusterSortOrder.entries.forEach { order ->
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Text(
+                                                        text = stringResource(order.labelResId),
+                                                        color = if (order == ClusterSortOrder.DISTANCE_TO_USER && !isLocationAvailable) {
+                                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                                        } else {
+                                                            MaterialTheme.colorScheme.onSurface
+                                                        }
+                                                    )
+                                                },
+                                                onClick = {
+                                                    viewModel.setSortOrder(order)
+                                                    showSortMenu = false
+                                                },
+                                                leadingIcon = {
+                                                    if (sortOrder == order) {
+                                                        Icon(
+                                                            Icons.Default.Check,
+                                                            contentDescription = null,
+                                                            tint = if (order == ClusterSortOrder.DISTANCE_TO_USER && !isLocationAvailable) {
+                                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                                            } else {
+                                                                MaterialTheme.colorScheme.onSurface
+                                                            }
+                                                        )
+                                                    }
+                                                },
+                                                enabled = !(order == ClusterSortOrder.DISTANCE_TO_USER && !isLocationAvailable)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                FilterActionButton(
+                                    onClick = { showFilterBottomSheet = true },
+                                    isFilterActive = filterCriteria.isNotEmpty,
+                                    activeFilterCount = filterCriteria.activeFilterCount,
                                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
+
                         }
                     }
                     
@@ -231,6 +352,23 @@ fun WorkoutClustersTabsScreen(
                                 selected = pagerState.currentPage == index,
                                 onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
                                 text = { Text(text = tab.first) }
+                            )
+                        }
+                    }
+
+                    // Active Filter Chips Strip (ATT-737)
+                    if (filterCriteria.isNotEmpty) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            ActiveClusterFilterChipsRow(
+                                criteria = filterCriteria,
+                                onRemoveQuery = { viewModel.updateFilterCriteria { it.copy(query = "") } },
+                                onRemoveEquipment = { viewModel.updateFilterCriteria { it.copy(equipmentName = null) } },
+                                onRemoveMinDistance = { viewModel.updateFilterCriteria { it.copy(minDistanceMeters = null) } },
+                                onRemoveMinHitCount = { viewModel.updateFilterCriteria { it.copy(minHitCount = null) } },
+                                onClearAll = { viewModel.clearFilterCriteria() }
                             )
                         }
                     }

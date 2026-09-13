@@ -26,6 +26,7 @@
     <string name="filter_moving_average">media móvil</string>
     <string name="filter_exponential_smoothing_format">suavizado exponencial con α=%1$1.2f</string>
     <string name="filter_exponential_smoothing_short_format">exp α=%1$1.1f</string>
+    <string name="filter_max">máx</string>
 
     <string name="filter_details__instantaneous">Mostrar el valor actual.</string>
     <string name="filter_details__average">Mostrar el valor medio de todo el entrenamiento.</string>

@@ -26,6 +26,7 @@
     <string name="filter_moving_average">Gleitender Durchschnitt</string>
     <string name="filter_exponential_smoothing_format">Exponentielle Glättung (α=%1$1.2f)</string>
     <string name="filter_exponential_smoothing_short_format">Exp α=%1$1.1f</string>
+    <string name="filter_max">Max</string>
 
     <string name="filter_details__instantaneous">Der aktuelle Wert wird angezeigt.</string>
     <string name="filter_details__average">Der Durchschnitt von der gesamten Einheit wird angezeigt.</string>

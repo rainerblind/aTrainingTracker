@@ -37,6 +37,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
+import com.atrainingtracker.trainingtracker.ui.components.FastScrollableBox
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Route
 import androidx.compose.ui.platform.LocalContext
@@ -51,7 +52,8 @@ fun RouteList(
     onHeaderClick: (Long) -> Unit,
     onDeleteConfirmed: (Long) -> Unit,
     appBarOffsetPx: Int,
-    headerHeightPx: Float
+    headerHeightPx: Float,
+    isFilterActive: Boolean = false
 ) {
     val density = LocalDensity.current
     // val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
@@ -63,43 +65,51 @@ fun RouteList(
         EmptyStatePlaceholder(
             modifier = Modifier.padding(top = topPadding),
             icon = Icons.Default.Route,
-            message = if (bSportType != null) {
+            message = if (isFilterActive) {
+                stringResource(R.string.filter_no_matching_routes)
+            } else if (bSportType != null) {
                 stringResource(R.string.no_routes_available, bSportType.getName(context))
             } else {
                 stringResource(R.string.absolutely_no_routes_available)
             },
-            hint = stringResource(R.string.routes_import_hint)
+            hint = if (isFilterActive) "" else stringResource(R.string.routes_import_hint)
         )
     }
     else {
-
-        LazyColumn(
+        FastScrollableBox(
             state = scrollState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                // Calculation: The initial header height (px) + the current offset (px)
-                // convert the final result to Dp.
-                top = with(density) { (headerHeightPx + appBarOffsetPx).toDp() + 8.dp },
-                bottom = bottomPadding + 16.dp,
-                start = 8.dp,
-                end = 8.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            topPadding = topPadding,
+            bottomPadding = bottomPadding
         ) {
-            items(
-                routes,
-                key = { it.summary.id }
-            ) { route ->
-                RouteItem(
-                    summary = route.summary,
-                    pathPoints = route.path,
-                    onToggleSelection = onToggleSelection,
-                    // onDelete = { onDelete(route.summary.id) },
-                    onMapClick = onMapClick,
-                    onHeaderClick = onHeaderClick,
-                    onDeleteConfirmed = onDeleteConfirmed,
-                    modifier = Modifier
-                )
+            LazyColumn(
+                state = scrollState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    // Calculation: The initial header height (px) + the current offset (px)
+                    // convert the final result to Dp.
+                    top = topPadding + 8.dp,
+                    bottom = bottomPadding + 16.dp,
+                    start = 8.dp,
+                    end = 8.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(
+                    routes,
+                    key = { route -> route.summary.id }
+                ) { route ->
+                    RouteItem(
+                        summary = route.summary,
+                        pathPoints = route.path,
+                        onToggleSelection = onToggleSelection,
+                        // onDelete = { onDelete(route.summary.id) },
+                        onMapClick = onMapClick,
+                        onHeaderClick = onHeaderClick,
+                        onDeleteConfirmed = onDeleteConfirmed,
+                        modifier = Modifier
+                    )
+                }
             }
         }
     }

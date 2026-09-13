@@ -59,6 +59,95 @@ private data class CachedProfileData(
 )
 
 /**
+ * ATT-508 / REQ-UI-126: Encapsulates sanitized vertical elevation bounds and calculated range.
+ *
+ * @property min The sanitized effective minimum altitude (in meters).
+ * @property max The sanitized effective maximum altitude (in meters).
+ * @property range The effective vertical range (max - min), guaranteed to be >= 1.0.
+ */
+data class ElevationBounds(
+    val min: Double,
+    val max: Double,
+    val range: Double
+)
+
+/**
+ * ATT-508 / REQ-UI-126: Pure helper to calculate sanitized vertical elevation bounds for the profile chart.
+ *
+ * Scrutinizes [minAltitudeOverride] and [maxAltitudeOverride] against the actual [pathPoints]
+ * envelope. If an override deviates from stream bounds by more than [outlierToleranceMeters] (e.g. from
+ * historical GPS cold-start spikes), it is clamped to the stream envelope. Furthermore, enforces an aesthetic
+ * minimum vertical span ([minSpanMeters]) centered around the route elevation to prevent flat routes
+ * (such as coastal rides) from compressing into a hairline or magnifying millibar noise.
+ *
+ * @param pathPoints The list of route points containing altitude values.
+ * @param minAltitudeOverride Optional persisted minimum altitude override from database summary extrema.
+ * @param maxAltitudeOverride Optional persisted maximum altitude override from database summary extrema.
+ * @param outlierToleranceMeters Tolerance threshold in meters beyond which an override is treated as corrupt.
+ * @param minSpanMeters Aesthetic minimum vertical span in meters centered around route midpoint.
+ * @return [ElevationBounds] containing sanitized min, max, and range.
+ */
+fun calculateElevationBounds(
+    pathPoints: List<PathPoint>,
+    minAltitudeOverride: Double? = null,
+    maxAltitudeOverride: Double? = null,
+    outlierToleranceMeters: Double = 15.0,
+    minSpanMeters: Double = 20.0
+): ElevationBounds {
+    if (pathPoints.isEmpty()) {
+        val fallbackMin = minAltitudeOverride ?: 0.0
+        val fallbackMax = maxAltitudeOverride ?: (fallbackMin + minSpanMeters)
+        val range = (fallbackMax - fallbackMin).coerceAtLeast(1.0)
+        return ElevationBounds(fallbackMin, fallbackMax, range)
+    }
+
+    val streamMin = pathPoints.minOf { it.altitude }
+    val streamMax = pathPoints.maxOf { it.altitude }
+
+    // Sanitize min override:
+    // If override is an outlier (< streamMin - 15) OR higher than stream points (> streamMin),
+    // clamp to streamMin to guarantee that rendered points never drop below the chart baseline.
+    val sanitizedMin = if (minAltitudeOverride != null) {
+        if (minAltitudeOverride < streamMin - outlierToleranceMeters || minAltitudeOverride > streamMin) {
+            streamMin
+        } else {
+            minAltitudeOverride
+        }
+    } else {
+        streamMin
+    }
+
+    // Sanitize max override:
+    // If override is an outlier (> streamMax + 15) OR lower than stream points (< streamMax),
+    // clamp to streamMax to guarantee that rendered points never clip above the chart ceiling.
+    val sanitizedMax = if (maxAltitudeOverride != null) {
+        if (maxAltitudeOverride > streamMax + outlierToleranceMeters || maxAltitudeOverride < streamMax) {
+            streamMax
+        } else {
+            maxAltitudeOverride
+        }
+    } else {
+        streamMax
+    }
+
+    // Ensure valid order and envelope containment
+    val effectiveMinRaw = minOf(sanitizedMin, streamMin)
+    val effectiveMaxRaw = maxOf(sanitizedMax, streamMax)
+    val currentSpan = effectiveMaxRaw - effectiveMinRaw
+
+    // Enforce aesthetic minimum vertical span centered on the route
+    return if (currentSpan < minSpanMeters) {
+        val mid = (effectiveMinRaw + effectiveMaxRaw) / 2.0
+        val expandedMin = minOf(mid - (minSpanMeters / 2.0), streamMin)
+        val expandedMax = maxOf(mid + (minSpanMeters / 2.0), streamMax)
+        val span = expandedMax - expandedMin
+        ElevationBounds(expandedMin, expandedMax, span.coerceAtLeast(1.0))
+    } else {
+        ElevationBounds(effectiveMinRaw, effectiveMaxRaw, currentSpan.coerceAtLeast(1.0))
+    }
+}
+
+/**
  * Calculates height based on altitude range.
  * Min: 70dp, Max: 200dp (at 1000m range)
  */
@@ -150,9 +239,14 @@ fun ElevationProfile(
             sum / count
         }
 
-        val min = minAltitudeOverride ?: (pathPointsDownsampled.minOfOrNull { it.altitude } ?: 0.0)
-        val max = maxAltitudeOverride ?: (pathPointsDownsampled.maxOfOrNull { it.altitude } ?: 1.0)
-        val range = (max - min).coerceAtLeast(1.0)
+        val bounds = calculateElevationBounds(
+            pathPoints = pathPointsDownsampled,
+            minAltitudeOverride = minAltitudeOverride,
+            maxAltitudeOverride = maxAltitudeOverride
+        )
+        val min = bounds.min
+        val max = bounds.max
+        val range = bounds.range
 
         val distStep = if (unit == MyUnits.METRIC) {
             when {

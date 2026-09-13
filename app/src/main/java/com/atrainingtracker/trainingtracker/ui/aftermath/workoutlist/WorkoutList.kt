@@ -40,7 +40,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
-import com.atrainingtracker.trainingtracker.ui.components.FastScrollbar
+import com.atrainingtracker.trainingtracker.ui.components.FastScrollableBox
 
 /**
  * The scrollable list of WorkoutSummaries.
@@ -59,7 +59,9 @@ fun WorkoutList(
     onMapClick: (WorkoutData) -> Unit,
     isCompactView: Boolean,
     appBarOffsetPx: Int,
-    headerHeightPx: Float
+    headerHeightPx: Float,
+    onClusterClick: ((Long) -> Unit)? = null,
+    onMarkFinished: (Long) -> Unit = {}
 ) {
     val density = LocalDensity.current
     val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
@@ -72,7 +74,12 @@ fun WorkoutList(
             message = stringResource(R.string.no_workouts_available)
         )
     } else {
-        Box(modifier = Modifier.fillMaxSize()) {
+        FastScrollableBox(
+            state = scrollState,
+            modifier = Modifier.fillMaxSize(),
+            topPadding = topPadding,
+            bottomPadding = bottomPadding
+        ) {
             LazyColumn(
                 state = scrollState,
                 modifier = Modifier.fillMaxSize(),
@@ -93,9 +100,10 @@ fun WorkoutList(
                     if (isCompactView) {
                         WorkoutSummaryCompact(
                             workoutData = workoutData,
-                            onEditWorkout = { onMapClick(workoutData) },
+                            onMapClick = { onMapClick(workoutData) },
                             onDeleteRequest = { onDeleteRequest(workoutData.id) },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            onMarkFinished = { onMarkFinished(workoutData.id) }
                         )
                     } else {
                         WorkoutSummary(
@@ -105,20 +113,13 @@ fun WorkoutList(
                             onSaveAsRoute = { onSaveAsRoute(workoutData) },
                             onDeleteRequest = { onDeleteRequest(workoutData.id) },
                             onEditWorkout = { onEditWorkout(workoutData.id) },
-                            onMapClick = { onMapClick(workoutData) }
+                            onMapClick = { onMapClick(workoutData) },
+                            onClusterClick = onClusterClick,
+                            onMarkFinished = { onMarkFinished(workoutData.id) }
                         )
                     }
                 }
             }
-
-            // Fast Scroll Bar (ATT-303)
-            FastScrollbar(
-                state = scrollState,
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(top = topPadding, bottom = bottomPadding)
-                    .padding(end = 4.dp)
-            )
         }
     }
 }

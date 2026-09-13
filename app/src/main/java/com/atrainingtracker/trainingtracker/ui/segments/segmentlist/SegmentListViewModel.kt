@@ -27,6 +27,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
@@ -61,6 +62,8 @@ class SegmentListViewModel(
     private val banalServiceRepository: BANALServiceRepository
 ) : BaseMappableListViewModel<SegmentWithPath, SegmentSortOrder>(application, SegmentSortOrder.DISTANCE_TO_USER, SegmentSortOrder.DISTANCE_TO_USER) {
 
+    private val preferenceManager = MyPreferenceManager(application)
+
     val connectedToStrava = segmentsRepository.connectedToStrava
 
     // Observation of other map context
@@ -76,46 +79,57 @@ class SegmentListViewModel(
             initialValue = false
         )
 
-    // Reactive sorted list
+    // Reactive filter criteria from DataStore
+    val filterCriteria: StateFlow<SegmentFilterCriteria> = preferenceManager.segmentFilterCriteriaFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = SegmentFilterCriteria()
+        )
+
+    // Reactive sorted and filtered list (4-way combine: segments + sort + location + filter)
     val segmentsWithPath: StateFlow<List<SegmentWithPath>> = combine(
         segmentsRepository.allSegmentsWithPath,
         _sortOrder,
-        banalServiceRepository.currentLocation // Directly observing the BANALService source
-    ) { segments, order, location ->
+        banalServiceRepository.currentLocation, // Directly observing the BANALService source
+        filterCriteria
+    ) { segments, order, location, criteria ->
+        // Apply filter predicate before sort
+        val filtered = if (criteria.isEmpty) segments else segments.filter { criteria.matches(it) }
         when (order) {
             SegmentSortOrder.NAME ->
-                segments.sortedBy { it.summary.name.lowercase() }
+                filtered.sortedBy { it.summary.name.lowercase() }
 
             SegmentSortOrder.CLIMB_CATEGORY ->
-                segments.sortedWith(
+                filtered.sortedWith(
                     compareByDescending<SegmentWithPath> { it.summary.climbCategory_raw }
                         .thenByDescending { it.summary.elevationGain_raw }
                         .thenBy { it.summary.name.lowercase() }
                 )
 
             SegmentSortOrder.TOTAL_ELEVATION_GAIN ->
-                segments.sortedWith(
+                filtered.sortedWith(
                     compareByDescending<SegmentWithPath> { it.summary.elevationGain_raw }
                         .thenBy { it.summary.name.lowercase() }
                 )
 
             SegmentSortOrder.AVERAGE_GRADE ->
-                segments.sortedWith(
+                filtered.sortedWith(
                     compareByDescending<SegmentWithPath> { it.summary.averageGrade_raw }
                         .thenBy { it.summary.name.lowercase() }
                 )
 
             SegmentSortOrder.SEGMENT_DISTANCE ->
-                segments.sortedWith(
+                filtered.sortedWith(
                     compareByDescending<SegmentWithPath> { it.summary.distance_raw }
                         .thenBy { it.summary.name.lowercase() }
                 )
 
             SegmentSortOrder.DISTANCE_TO_USER -> {
                 if (location == null) {
-                    segments.sortedBy { it.summary.name.lowercase() }
+                    filtered.sortedBy { it.summary.name.lowercase() }
                 } else {
-                    segments.sortedBy { segment ->
+                    filtered.sortedBy { segment ->
                         val startPoint = segment.path.firstOrNull()
                         if (startPoint != null) {
                             calculateDistance(
@@ -142,6 +156,21 @@ class SegmentListViewModel(
         viewModelScope.launch {
             segmentsRepository.syncStarredSegments(sport)
         }
+    }
+
+    fun setFilterCriteria(criteria: SegmentFilterCriteria) {
+        viewModelScope.launch {
+            preferenceManager.setSegmentFilterCriteria(criteria)
+        }
+    }
+
+    fun clearFilterCriteria() {
+        preferenceManager.clearSegmentFilterCriteria()
+    }
+
+    fun updateFilterCriteria(transform: (SegmentFilterCriteria) -> SegmentFilterCriteria) {
+        val updated = transform(filterCriteria.value)
+        setFilterCriteria(updated)
     }
 
     class SegmentListViewModelFactory(private val context: Context) : ViewModelProvider.Factory {

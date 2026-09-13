@@ -26,6 +26,7 @@
     <string name="filter_moving_average">voortschrijdend gemiddelde</string>
     <string name="filter_exponential_smoothing_format">exponentiële smoothing met α=%1$1.2f</string>
     <string name="filter_exponential_smoothing_short_format">exp α=%1$1.1f</string>
+    <string name="filter_max">max</string>
 
     <string name="filter_details__instantaneous">Toont de huidige waarde.</string>
     <string name="filter_details__average">Toont het gemiddelde van de hele training.</string>

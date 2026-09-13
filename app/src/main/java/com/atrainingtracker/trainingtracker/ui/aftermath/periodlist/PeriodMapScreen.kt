@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -32,6 +33,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -82,6 +84,7 @@ import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.helpers.combineAndShare
+import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.map.MapTrack
@@ -102,7 +105,8 @@ fun PeriodMapScreen(
     onWorkoutClick: (Long) -> Unit,
     peekedWorkoutDataWithTrack: WorkoutDataWithTrack?,
     clearPeekSelection: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onEditWorkout: ((Long) -> Unit)? = null
 ) {
     val df = DistanceFormatter()
     val tf = TimeFormatter()
@@ -209,34 +213,48 @@ fun PeriodMapScreen(
 
     val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-    BottomSheetScaffold(
-        scaffoldState = scaffoldState,
-        sheetPeekHeight = if (peekedWorkoutDataWithTrack != null) 120.dp + navBarHeight else 0.dp,
-        sheetDragHandle = null,
-        sheetContent = {
-            peekedWorkoutDataWithTrack?.workoutData?.let { workoutData ->
-                // Here we show the TrackOnMapScreen for the specific workout
-                TrackOnMapScreen(
-                    workoutData = workoutData,
-                    tracks = peekedTracks,
-                    modifier = Modifier,
-                    useStatusBarsPadding = false
-                )
-            }
-        }
-    ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize()) {
-            // 1. HEADER (Stats) - Wrapped in GraphicsLayer for sharing
-            Surface(
-                modifier = Modifier
-                    .statusBarsPadding()
-                    .drawWithContent {
-                    statsGraphicsLayer.record {
-                        this@drawWithContent.drawContent()
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        val maxSheetHeight = maxHeight - statusBarHeight
+
+        BottomSheetScaffold(
+            scaffoldState = scaffoldState,
+            sheetPeekHeight = if (peekedWorkoutDataWithTrack != null) 120.dp + navBarHeight else 0.dp,
+            sheetDragHandle = null,
+            sheetContent = {
+                if (peekedWorkoutDataWithTrack != null) {
+                    Box(modifier = Modifier.fillMaxWidth().height(maxSheetHeight)) {
+                        peekedWorkoutDataWithTrack.workoutData?.let { workoutData ->
+                            // Here we show the TrackOnMapScreen for the specific workout
+                            TrackOnMapScreen(
+                                workoutData = workoutData,
+                                tracks = peekedTracks,
+                                modifier = Modifier.fillMaxSize(),
+                                useStatusBarsPadding = false,
+                                onClusterClick = { clusterId ->
+                                    WorkoutNavigationEvents.triggerCluster(clusterId)
+                                },
+                                onEditWorkout = onEditWorkout
+                            )
+                        }
                     }
-                    drawLayer(statsGraphicsLayer)
+                } else {
+                    Spacer(modifier = Modifier.height(1.dp))
                 }
-            ) {
+            }
+        ) { innerPadding ->
+            Column(modifier = Modifier.fillMaxSize()) {
+                // 1. HEADER (Stats) - Wrapped in GraphicsLayer for sharing
+                Surface(
+                    modifier = Modifier
+                        .statusBarsPadding()
+                        .drawWithContent {
+                            statsGraphicsLayer.record {
+                                this@drawWithContent.drawContent()
+                            }
+                            drawLayer(statsGraphicsLayer)
+                        }
+                ) {
                 Column(
                     modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 8.dp)
                 ) {
@@ -444,6 +462,7 @@ fun PeriodMapScreen(
                 }
             }
         }
+    }
     }
 
     // Handle Back Press to remove the peeked workout or return to list

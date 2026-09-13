@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -37,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.SensorType
@@ -48,9 +50,10 @@ import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
 @Composable
 fun WorkoutSummaryCompact(
     workoutData: WorkoutData,
-    onEditWorkout: () -> Unit,
+    onMapClick: () -> Unit,
     onDeleteRequest: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onMarkFinished: (() -> Unit)? = null
 ) {
     // Maintain the "unfinished" state visual feedback
     val contentAlpha = if (workoutData.headerData.finished) TTAlpha.High else 0.5f
@@ -58,12 +61,16 @@ fun WorkoutSummaryCompact(
     var showContextMenu by remember { mutableStateOf(false) }
 
     val formatters = LocalMetricFormatter.current
+    val isActivelyTracked = TrainingApplication.isActivelyTracked(workoutData.id)
+    val canDelete = !isActivelyTracked
+    val canMarkFinished = !workoutData.headerData.finished && !isActivelyTracked && onMarkFinished != null
+    val hasContextMenu = canDelete || canMarkFinished
 
     Box {
         MappableListItem(
             modifier = modifier,
-            onClick = onEditWorkout,
-            onLongClick = { showContextMenu = true },
+            onClick = onMapClick,
+            onLongClick = if (hasContextMenu) { { showContextMenu = true } } else null,
             alpha = contentAlpha
         ) {
             Column(
@@ -173,14 +180,26 @@ fun WorkoutSummaryCompact(
                 expanded = showContextMenu,
                 onDismissRequest = { showContextMenu = false }
             ) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.delete)) },
-                    onClick = {
-                        showContextMenu = false
-                        onDeleteRequest()
-                    },
-                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
-                )
+                if (canMarkFinished) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.mark_as_finished)) },
+                        onClick = {
+                            showContextMenu = false
+                            onMarkFinished()
+                        },
+                        leadingIcon = { Icon(Icons.Default.Check, contentDescription = null) }
+                    )
+                }
+                if (canDelete) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.delete)) },
+                        onClick = {
+                            showContextMenu = false
+                            onDeleteRequest()
+                        },
+                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                    )
+                }
             }
         }
     }

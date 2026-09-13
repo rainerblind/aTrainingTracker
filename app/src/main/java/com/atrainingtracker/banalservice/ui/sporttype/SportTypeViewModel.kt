@@ -86,7 +86,7 @@ class SportTypeViewModel(application: Application) : AndroidViewModel(applicatio
                     val id = it.getLong(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.C_ID))
 
                     val linkedEquipIds = dbLinksHelper.getEquipmentIdsForSport(id)
-                    val linkedEquipmentNames = linkedEquipIds.mapNotNull { equipId ->
+                    val linkedEquipmentNames = linkedEquipIds.filter { it > 0 }.mapNotNull { equipId ->
                         dbEquipmentHelper.getEquipmentNameFromId(equipId)
                     }.joinToString(", ")
 

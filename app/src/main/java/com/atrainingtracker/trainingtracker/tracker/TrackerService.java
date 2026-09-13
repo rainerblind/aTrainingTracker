@@ -32,14 +32,21 @@ import android.content.pm.ServiceInfo;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
+import android.location.Location;
 import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import android.app.PendingIntent;
+import android.content.pm.PackageManager;
+import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
@@ -69,10 +76,13 @@ import com.google.maps.android.PolyUtil;
 
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.HashSet;
+import java.util.Set;
+import com.atrainingtracker.banalservice.BSportType;
 import java.util.Locale;
 import java.util.Map;
 import java.util.SortedSet;
@@ -164,17 +174,32 @@ public class TrackerService extends Service {
     // double mPrevLapDistanceTotal_m  = 0.0;
 
 
-    // private long mSportTypeId = SportTypeDatabaseManager.getDefaultSportTypeId();
+    public static final int TRACKING_INTERRUPTED_NOTIFICATION_ID = 2;
+    private boolean mTrackingInterrupted = false;
     private long mWorkoutID;
     private LiveWorkoutSession mLiveSession;
-    private final BroadcastReceiver mLapSummaryReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mLapSummaryReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, @NonNull Intent intent) {
             if (DEBUG) Log.i(TAG, "received lap summary intent");
 
+            int lapTime = intent.getIntExtra(BANALService.PREV_LAP_TIME_S, 0);
+            double lapDistance = intent.getDoubleExtra(BANALService.PREV_LAP_DISTANCE_m, 0);
+
+            // ATT-896 / REQ-TRK-002: Discard empty split summaries
+            if (lapTime <= 0 && lapDistance <= 0.0) {
+                if (DEBUG) Log.i(TAG, "Ignoring zero-duration lap summary broadcast");
+                return;
+            }
+
+            double lapSpeed = intent.getDoubleExtra(BANALService.PREV_LAP_SPEED_mps, 0);
+            if (Double.isNaN(lapSpeed) || Double.isInfinite(lapSpeed)) {
+                lapSpeed = (lapTime > 0) ? (lapDistance / lapTime) : 0.0;
+            }
+
             saveLap(intent.getIntExtra(BANALService.PREV_LAP_NR, 0),
-                    intent.getIntExtra(BANALService.PREV_LAP_TIME_S, 0),
-                    intent.getDoubleExtra(BANALService.PREV_LAP_DISTANCE_m, 0),
-                    intent.getDoubleExtra(BANALService.PREV_LAP_SPEED_mps, 0));
+                    lapTime,
+                    lapDistance,
+                    lapSpeed);
         }
     };
     private String mBaseFileName;
@@ -343,12 +368,12 @@ public class TrackerService extends Service {
         }
     }
 
-    private boolean hasLocationPermission() {
+    protected boolean hasLocationPermission() {
         return ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
                 || ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED;
     }
 
-    private boolean hasBackgroundLocationPermission() {
+    protected boolean hasBackgroundLocationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             return ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_BACKGROUND_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED;
         }
@@ -357,9 +382,20 @@ public class TrackerService extends Service {
 
     @Override
     public int onStartCommand(@Nullable Intent intent, int flags, int startId) {
-        super.onStartCommand(intent, flags, startId);
         if (DEBUG) {
             Log.d(TAG, "onStartCommand Received start id " + startId + ": " + intent);
+        }
+
+        // On Android 14+ (API 34+), promoting a background service to a foreground service of type location
+        // requires background location permission. If the service was recreated by the OS after being killed
+        // (intent == null) and the user has not granted background location permission, starting the FGS
+        // will throw a fatal SecurityException. We catch this condition early, notify the user, and gracefully stop.
+        if (intent == null && !hasBackgroundLocationPermission()) {
+            Log.w(TAG, "Recreating TrackerService in background without background location permission. Cannot start location FGS.");
+            mTrackingInterrupted = true;
+            showTrackingInterruptedNotification();
+            performStopSelf();
+            return Service.START_STICKY;
         }
 
         StartType startType;
@@ -390,7 +426,9 @@ public class TrackerService extends Service {
 
             case RESUME_SERVICE_RECREATION:
                 Log.d(TAG, "resuming after killed service");
-                mTrainingApplication.setTracking();
+                if (mTrainingApplication != null) {
+                    mTrainingApplication.setTracking();
+                }
                 if (mBanalService != null) {
                     recreateValuesWhenResuming();
                     // mBanalService.resumeTracking(); already started by broadcast?
@@ -412,40 +450,84 @@ public class TrackerService extends Service {
                 TimeUnit.SECONDS);
 
         // notify others
-        Intent trackingStartedIntent = new Intent(TRACKING_STARTED_INTENT)
-                .putExtra(WorkoutSummaries.WORKOUT_ID, mWorkoutID)
-                .setPackage(this.getPackageName());
-        this.sendBroadcast(trackingStartedIntent);
+        notifyTrackingStarted(mWorkoutID);
 
-        Notification notification = mTrainingApplication.getSearchingAndTrackingNotification();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) { // API 34+
-            // On API 34+, we MUST specify the type if it's in the manifest.
-            // If permissions are missing or if we are in background without background permission,
-            // it will throw SecurityException.
-            int fgsType = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION;
-            
-            // If we are resuming after being killed, we are likely in the background.
-            // We should check if we have the necessary background permission if we want to use location type.
-            if (intent == null && !hasBackgroundLocationPermission()) {
-                Log.w(TAG, "Resuming TrackerService in background without background location permission. FGS might fail.");
+        Notification notification = mTrainingApplication != null ? mTrainingApplication.getSearchingAndTrackingNotification() : null;
+        if (notification != null) {
+            try {
+                performStartForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+            } catch (SecurityException | IllegalStateException e) {
+                Log.e(TAG, "Failed to start foreground service: " + e.getMessage(), e);
+                mTrackingInterrupted = true;
+                if (mTrackerHandle != null) {
+                    mTrackerHandle.cancel(true);
+                    mTrackerHandle = null;
+                }
+                showTrackingInterruptedNotification();
+                performStopSelf();
+                return Service.START_STICKY;
             }
-            
-            if (!hasLocationPermission()) {
-                Log.w(TAG, "Starting TrackerService without foreground location permission granted.");
-            }
-
-            startForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification, fgsType);
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { // API 29-33
-            startForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
-        } else {
-            startForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification);
         }
-
 
         // We want this service to continue running until it is explicitly stopped, so return sticky.
         // When the service is stopped due to a lack of memory, it will be recreated and this method called with a null intent, see:
         // https://android-developers.googleblog.com/2010/02/service-api-changes-starting-with.html
         return Service.START_STICKY;
+    }
+
+    protected void performStopSelf() {
+        stopSelf();
+    }
+
+    protected void performStartForeground(int id, Notification notification, int foregroundServiceType) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(id, notification, foregroundServiceType);
+        } else {
+            startForeground(id, notification);
+        }
+    }
+
+    protected void showTrackingInterruptedNotification() {
+        Context context = getApplicationContext();
+        if (context == null) {
+            context = this;
+        }
+        Intent resumeIntent = new Intent(context, MainActivityWithNavigation.class);
+        resumeIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        resumeIntent.putExtra(MainActivityWithNavigation.SELECTED_FRAGMENT, MainActivityWithNavigation.SelectedFragment.START_OR_TRACKING.name());
+        resumeIntent.putExtra(MainActivityWithNavigation.EXTRA_RESUME_INTERRUPTED_WORKOUT, true);
+
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            flags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, resumeIntent, flags);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, TrainingApplication.NOTIFICATION_CHANNEL__TRACKING_2)
+                .setSmallIcon(R.drawable.logo)
+                .setContentTitle(getString(R.string.tracking_interrupted_notification_title))
+                .setContentText(getString(R.string.tracking_interrupted_notification_text))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true);
+
+        try {
+            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
+            if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                    || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                notificationManager.notify(TRACKING_INTERRUPTED_NOTIFICATION_ID, builder.build());
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to show tracking interrupted notification: " + e.getMessage(), e);
+        }
+    }
+
+    public boolean isTrackingInterrupted() {
+        return mTrackingInterrupted;
+    }
+
+    void setTrackingInterruptedForTesting(boolean interrupted) {
+        this.mTrackingInterrupted = interrupted;
     }
 
     @Override
@@ -454,9 +536,20 @@ public class TrackerService extends Service {
         return null;
     }
 
+    protected void notifyTrackingStarted(long workoutId) {
+        Intent trackingStartedIntent = new Intent(TRACKING_STARTED_INTENT)
+                .putExtra(WorkoutSummaries.WORKOUT_ID, workoutId)
+                .setPackage(this.getPackageName());
+        this.sendBroadcast(trackingStartedIntent);
+    }
+
+    protected void performSuperOnDestroy() {
+        super.onDestroy();
+    }
+
     @Override
     public void onDestroy() {
-        super.onDestroy();
+        performSuperOnDestroy();
         if (DEBUG) Log.d(TAG, "onDestroy");
 
         // first of all, stop the trackerHandle
@@ -474,7 +567,9 @@ public class TrackerService extends Service {
         }
 
         // mTrainingApplication.setTracking(false);
-        endWorkout();
+        if (!mTrackingInterrupted) {
+            endWorkout();
+        }
 
         unbindService(mBanalConnection);
         mBanalService = null;
@@ -519,7 +614,18 @@ public class TrackerService extends Service {
         BANALService.setInitialSensorValue(SensorType.DISTANCE_m, mDistanceTotal_m);
     }
 
-    // NullPointerException when mBanalService is null!
+    /**
+     * Finalizes and records the currently active lap at the conclusion of a workout session.
+     *
+     * <p>Functional Description: Queries {@link BANALService} for accumulated lap metrics
+     * (lap number, lap time, and lap distance). If the lap metrics represent non-zero athletic effort,
+     * it calculates the average lap speed and persists the lap record to {@link LapsDatabaseManager}.
+     *
+     * <p>Implementation Logic: In accordance with {@code REQ-TRK-002} and defect fix {@code ATT-896},
+     * zero-duration/zero-distance phantom laps are strictly discarded to avoid persisting empty 0s splits
+     * when a session is ended without active movement or immediately following a split. Additionally,
+     * division by zero when calculating {@code lapSpeed} is safely guarded.
+     */
     protected void createNewLap() {
         if (DEBUG) Log.i(TAG, "createNewLap");
 
@@ -549,7 +655,13 @@ public class TrackerService extends Service {
                 lapDistance = (Double) sensorData.getValue();
             }
 
-            double lapSpeed = lapDistance / lapTime_s;
+            // ATT-896 / REQ-TRK-002: Guard against saving zero-duration / zero-distance phantom laps
+            if (lapTime_s <= 0 && lapDistance <= 0.0) {
+                if (DEBUG) Log.i(TAG, "Discarding zero-duration/zero-distance lap in createNewLap");
+                return;
+            }
+
+            double lapSpeed = (lapTime_s > 0) ? (lapDistance / lapTime_s) : 0.0;
 
             saveLap(prevLapNr, lapTime_s, lapDistance, lapSpeed);
         }
@@ -664,7 +776,22 @@ public class TrackerService extends Service {
 
     // TODO: the database entries should be correct even when this method is not called due to a crash
     // some stuff could be written earlier, others from the calling part (and then also executed when a crash is detected...), ...
-    // might be best to use a method that is executed ever minute (or only every 5 or 10 minutes?)
+    /**
+     * Finalizes the active recording session and persists terminal summaries.
+     *
+     * <p>Functional Description: Closes out active laps, saves accumulated sensor types and
+     * hardware metadata, marks the workout as finished in the summaries database, and dispatches
+     * completion broadcasts.
+     *
+     * <p>Implementation Logic:
+     * 1. Creates a final lap and persists active sensor devices and GC data.
+     * 2. Sets {@link WorkoutSummaries#FINISHED} flag in {@link WorkoutSummaries#TABLE}.
+     * 3. Finalizes live session auto-naming, triggers file export via {@link ExportManager}.
+     * 4. Dispatches a system-level {@link #TRACKING_FINISHED_INTENT} with {@link #WORKOUT_ID} for app-level listeners.
+     * 5. Dispatches {@link #WORKOUT_UPDATED_INTENT} and {@link #TRACKING_FINISHED_INTENT} containing {@link #WORKOUT_ID}
+     *    via {@link LocalBroadcastManager} to notify internal data layers (e.g. {@code WorkoutRepository},
+     *    {@code PeriodsRepository}, and {@code WorkoutClusterEngine}) for reactive period and cluster aggregation.
+     */
     public void endWorkout() {
         if (DEBUG) {
             Log.d(TAG, "endWorkout");
@@ -678,15 +805,19 @@ public class TrackerService extends Service {
         SQLiteDatabase activeDevicesDb = new ActiveDevicesDbHelper(this).getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(ActiveDevices.WORKOUT_ID, mWorkoutID);
-        for (long deviceDbId : mBanalService.getDatabaseIdsOfActiveRemoteDevices()) {
-            if (DEBUG) Log.d(TAG, "adding deviceId " + deviceDbId + " to list of active devices");
-            values.put(ActiveDevices.DEVICE_DB_ID, deviceDbId);
-            activeDevicesDb.insert(ActiveDevices.TABLE, null, values);
+        if (mBanalService != null) {
+            for (long deviceDbId : mBanalService.getDatabaseIdsOfActiveRemoteDevices()) {
+                if (DEBUG) Log.d(TAG, "adding deviceId " + deviceDbId + " to list of active devices");
+                values.put(ActiveDevices.DEVICE_DB_ID, deviceDbId);
+                activeDevicesDb.insert(ActiveDevices.TABLE, null, values);
+            }
         }
 
         WorkoutSummariesDatabaseManager summariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
         // save the accumulated SensorTypes
-        summariesDatabaseManager.saveAccumulatedSensorTypes(mWorkoutID, mBanalService.getAccumulatedSensorTypeSet());
+        if (mBanalService != null) {
+            summariesDatabaseManager.saveAccumulatedSensorTypes(mWorkoutID, mBanalService.getAccumulatedSensorTypeSet());
+        }
 
         // update the summaries
         ContentValues summaryValues = new ContentValues();
@@ -696,7 +827,9 @@ public class TrackerService extends Service {
         // Thus, use a return statement at the very beginning for debugging
 
         // TODO: store at very beginning, end of ANT and BTLE searching, GPS found
-        summaryValues.put(WorkoutSummaries.GC_DATA, mBanalService.getAccumulatedGCDataString());
+        if (mBanalService != null) {
+            summaryValues.put(WorkoutSummaries.GC_DATA, mBanalService.getAccumulatedGCDataString());
+        }
 
         long sportTypeId = getSportTypeId();
         summaryValues.put(WorkoutSummaries.SPORT_ID, sportTypeId);
@@ -716,8 +849,17 @@ public class TrackerService extends Service {
         ExportManager exportManager = new ExportManager(this);
         exportManager.workoutFinished(mBaseFileName);
 
-        sendBroadcast(new Intent(TRACKING_FINISHED_INTENT)
-                .setPackage(getPackageName()));
+        // 1. Broadcast TRACKING_FINISHED_INTENT with WORKOUT_ID at system level
+        Intent finishedIntent = new Intent(TRACKING_FINISHED_INTENT)
+                .setPackage(getPackageName())
+                .putExtra(WORKOUT_ID, mWorkoutID);
+        sendBroadcast(finishedIntent);
+
+        // 2. Broadcast TRACKING_FINISHED_INTENT via LocalBroadcastManager
+        // for internal components (WorkoutRepository, etc.) to trigger reactive period & cluster updates (REQ-TRK-010, ATT-505)
+        Intent localFinishedIntent = new Intent(TRACKING_FINISHED_INTENT)
+                .putExtra(WORKOUT_ID, mWorkoutID);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(localFinishedIntent);
     }
 
     private void sampleAndWriteToDb() {
@@ -775,14 +917,19 @@ public class TrackerService extends Service {
 
         Map<String, SensorValueType> sensorName2Type = new HashMap<>();
 
-        // 1. Capture all data on the 1Hz sampling thread
-        for (SensorData<Number> sensorData : mBanalService.getAllSensorData()) {
-            if (sensorData == null || sensorData.getValue() == null) continue;
+        // 1. Update LiveSession running statistics ONLY from authoritative best sensor telemetry (REQ-MAP-019, ATT-499)
+        if (mLiveSession != null) {
+            for (SensorType sensorType : SENSORS_TO_TRACK) {
+                SensorData<Number> bestData = mBanalService.getBestSensorData(sensorType);
+                if (bestData == null || bestData.getValue() == null) continue;
 
-            SensorType sensorType = sensorData.getSensorType();
+                double sampleVal = bestData.getValue().doubleValue();
+                // REQ-MAP-020 (ATT-528): Authoritative dynamic line distance anchored to session start
+                if (sensorType == SensorType.LINE_DISTANCE_m && currentPos != null && mLiveSession.getStartLatLng() != null) {
+                    sampleVal = WorkoutClusterEngine.Companion.distanceBetween(mLiveSession.getStartLatLng(), currentPos);
+                }
 
-            if (mLiveSession != null && SENSORS_TO_TRACK.contains(sensorType)) {
-                int changed = mLiveSession.addSample(sensorType, sensorData.getValue().doubleValue(), currentPos);
+                int changed = mLiveSession.addSample(sensorType, sampleVal, currentPos);
 
                 if (changed != 0) {
                     LiveWorkoutSession.RunningStats stats = mLiveSession.getSensorStats().get(sensorType);
@@ -807,6 +954,13 @@ public class TrackerService extends Service {
                     }
                 }
             }
+        }
+
+        // 2. Capture multi-sensor telemetry for raw samples database and session accumulators
+        for (SensorData<Number> sensorData : mBanalService.getAllSensorData()) {
+            if (sensorData == null || sensorData.getValue() == null) continue;
+
+            SensorType sensorType = sensorData.getSensorType();
 
             String sensorName = sensorType.name();
             String deviceName = sensorData.getDeviceName();
@@ -1019,6 +1173,23 @@ public class TrackerService extends Service {
             }
         }
 
+        // REQ-MAP-020 (ATT-528): Authoritative deterministic calculation of max line distance and apex from recorded track
+        if (startPos != null && mLiveSession.getSampledLatLngs() != null && !mLiveSession.getSampledLatLngs().isEmpty()) {
+            double calculatedMaxDisp = 0.0;
+            LatLng calculatedApex = startPos;
+            for (LatLng pt : mLiveSession.getSampledLatLngs()) {
+                if (pt != null) {
+                    float dist = WorkoutClusterEngine.Companion.distanceBetween(startPos, pt);
+                    if (dist > calculatedMaxDisp) {
+                        calculatedMaxDisp = dist;
+                        calculatedApex = pt;
+                    }
+                }
+            }
+            summariesManager.updateExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, calculatedMaxDisp, calculatedApex);
+            repository.updateExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, calculatedMaxDisp, calculatedApex);
+        }
+
         // 3. Guess Commute and Trainer
         guessCommuteAndTrainer();
 
@@ -1035,12 +1206,30 @@ public class TrackerService extends Service {
 
         if (startPosRaw != null && endPosRaw != null && maxDispPos != null) {
             WorkoutClusterEngine engine = WorkoutClusterEngine.Companion.getInstance(this);
-            WorkoutCluster suggestion = engine.suggestCluster(startPosRaw, endPosRaw, maxDispPos, mDistanceTotal_m, null, mBanalService.getBSportType());
+
+            // Determine candidate sport types for clustering (ATT-773, REQ-SET-064)
+            Set<BSportType> candidateSports;
+            BSportType userSelectedSport = mBanalService.getUserSelectedBSportType();
+            if (userSelectedSport != null && userSelectedSport != BSportType.UNKNOWN) {
+                // Tier 1: User Pre-Selection Sovereignty (Option A)
+                candidateSports = Collections.singleton(userSelectedSport);
+            } else if (identity.isHighConfidence()) {
+                // Tier 2: Dedicated Hardware Sensor Sovereignty (REQ-SET-030)
+                candidateSports = Collections.singleton(identity.getBSportType());
+            } else {
+                // Tier 3: Speed-Based Multi-Sport Candidate Set
+                candidateSports = discoveryManager.getCandidateBSportTypes(mBanalService.getBSportType(), getAverageSpeed());
+            }
+
+            LatLng minAltPos = summariesManager.getExtremaPosition(mWorkoutID, SensorType.ALTITUDE, ExtremaType.MIN);
+            LatLng maxAltPos = summariesManager.getExtremaPosition(mWorkoutID, SensorType.ALTITUDE, ExtremaType.MAX);
+            WorkoutCluster suggestion = engine.suggestCluster(startPosRaw, endPosRaw, maxDispPos, mDistanceTotal_m, null, candidateSports, minAltPos, maxAltPos);
             if (suggestion != null) {
                 // If hardware confidence is high, we only take the name from the cluster
                 if (identity.isHighConfidence()) {
                     ContentValues nameValues = new ContentValues();
-                    String autoName = getString(R.string.cluster_autoname_format, suggestion.getName(), suggestion.getHitCount() + 1);
+                    int displayCount = suggestion.getHitCount() + 1;
+                    String autoName = WorkoutClusterEngine.formatClusterWorkoutName(this, suggestion.getName(), displayCount, suggestion.getHasCounter());
                     nameValues.put(WorkoutSummaries.WORKOUT_NAME, autoName);
                     nameValues.put(WorkoutSummaries.CLUSTER_ID, suggestion.getId());
                     summariesManager.getDatabase().update(WorkoutSummaries.TABLE, nameValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(mWorkoutID)});
@@ -1048,7 +1237,7 @@ public class TrackerService extends Service {
                     // Apply hardware-based identity (Sport, Gear, Strava)
                     summariesManager.applyInferredIdentity(mWorkoutID, identity);
                 } else {
-                    // Low hardware confidence -> Workout Cluster wins everything
+                    // Low hardware confidence -> Workout Cluster wins everything and resolves ambiguous sport type
                     engine.assignClusterToWorkout(this, mWorkoutID, suggestion.getId());
                 }
             } else {

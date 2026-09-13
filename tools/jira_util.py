@@ -71,18 +71,45 @@ def list_sprint_issues():
     print(f"Active Sprint: {sprints[0]['name']}")
 
     # 3. Get issues
-    issues = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype")["issues"]
+    issues = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype,fixVersions")["issues"]
     for i in issues:
         itype = i['fields']['issuetype']['name']
-        print(f"{i['key']}: [{itype}] {i['fields']['summary']} [{i['fields']['status']['name']}]")
+        fvs = [v.get('name', '') for v in i['fields'].get('fixVersions', [])]
+        fv_str = f" [FixVersion: {', '.join(fvs)}]" if fvs else " [No FixVersion!]"
+        print(f"{i['key']}: [{itype}] {i['fields']['summary']} [{i['fields']['status']['name']}]{fv_str}")
 
 def show_issue(issue_key):
     config = get_config()
-    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=summary,description,comment,attachment,parent,issuetype"
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=summary,description,comment,attachment,parent,issuetype,status,subtasks,fixVersions"
     issue = jira_request(url)
 
     itype = issue['fields']['issuetype']['name']
+    status = issue['fields'].get('status', {}).get('name', 'Unknown')
     print(f"h1. {issue['key']}: [{itype}] {issue['fields']['summary']}")
+    print(f"\n*Status*: {status}")
+
+    # Fix Version / Lösungsversion
+    fix_versions = issue['fields'].get('fixVersions', [])
+    if fix_versions:
+        fv_names = ", ".join([v.get('name', '') for v in fix_versions])
+        print(f"\n*Lösungsversion (Fix Version/s)*: {fv_names}")
+    else:
+        # Check if parent has a fixVersion if this is a subtask
+        parent_fv = None
+        if issue['fields'].get('parent'):
+            parent_key = issue['fields']['parent']['key']
+            parent_url = f"{config['JIRA_URL']}/rest/api/2/issue/{parent_key}?fields=fixVersions"
+            try:
+                parent_res = jira_request(parent_url)
+                pfvs = parent_res.get('fields', {}).get('fixVersions', [])
+                if pfvs:
+                    parent_fv = ", ".join([v.get('name', '') for v in pfvs])
+            except Exception:
+                pass
+        if parent_fv:
+            print(f"\n*Lösungsversion (Fix Version/s)*: None on subtask (Inherited from Parent: {parent_fv})")
+        else:
+            print(f"\n*Lösungsversion (Fix Version/s)*: None (WARNING: Mandatory field missing!)")
 
     # Epic/Parent context
     parent = issue['fields'].get('parent')
@@ -99,6 +126,16 @@ def show_issue(issue_key):
             epic_desc = epic['fields'].get('description', 'No description')
             print(f"\n*Epic Description*:\n{epic_desc}")
 
+    print("\n*Sub-tasks*:")
+    subtasks = issue['fields'].get('subtasks', [])
+    if not subtasks:
+        print("None")
+    for st in subtasks:
+        st_key = st.get('key')
+        st_summary = st.get('fields', {}).get('summary', '')
+        st_status = st.get('fields', {}).get('status', {}).get('name', 'Unknown')
+        print(f"* {st_key}: {st_summary} [{st_status}]")
+
     print(f"\n*Description*:\n{issue['fields']['description']}")
 
     print("\n*Attachments*:")
@@ -111,6 +148,56 @@ def show_issue(issue_key):
     print("\n*Comments*:")
     for c in issue['fields']['comment']['comments']:
         print(f"--- {c['author']['displayName']} ({c['created']}) ---\n{c['body']}\n")
+
+def list_versions():
+    config = get_config()
+    url = f"{config['JIRA_URL']}/rest/api/2/project/ATT/versions"
+    versions = jira_request(url)
+    print("Project ATT Versions (Lösungsversionen):")
+    for v in versions:
+        status = "RELEASED" if v.get("released") else ("ARCHIVED" if v.get("archived") else "ACTIVE/UNRELEASED")
+        print(f"- {v.get('name')} (id: {v.get('id')}) [{status}]")
+
+def set_fix_version(issue_key, version_name):
+    config = get_config()
+    # Validate against project ATT versions
+    url_versions = f"{config['JIRA_URL']}/rest/api/2/project/ATT/versions"
+    versions = jira_request(url_versions)
+    valid_names = [v.get('name') for v in versions]
+    if version_name not in valid_names:
+        active_versions = [v.get('name') for v in versions if not v.get('released') and not v.get('archived')]
+        print(f"Error: Version '{version_name}' not found in project ATT.")
+        print(f"Available active unreleased versions: {', '.join(active_versions)}")
+        sys.exit(1)
+
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}"
+    payload = {
+        "fields": {
+            "fixVersions": [{"name": version_name}]
+        }
+    }
+    jira_request(url, method="PUT", payload=payload)
+    print(f"Lösungsversion (Fix Version) '{version_name}' successfully set on {issue_key}.")
+
+def print_status(issue_key):
+    config = get_config()
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=status"
+    issue = jira_request(url)
+    status = issue['fields'].get('status', {}).get('name', 'Unknown')
+    print(f"{issue_key} status: {status}")
+    return status
+
+def check_gate(issue_key):
+    config = get_config()
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=status"
+    issue = jira_request(url)
+    status = issue['fields'].get('status', {}).get('name', 'Unknown')
+    if status == "Erledigt":
+        print(f"GATE_PASSED: {issue_key} is Erledigt")
+        sys.exit(0)
+    else:
+        print(f"GATE_BLOCKED: {issue_key} is in status '{status}' (Expected: Erledigt)")
+        sys.exit(1)
 
 def download_attachment(url, filename):
     print(f"Downloading {filename}...")
@@ -138,15 +225,56 @@ def download_all_attachments(issue_key):
         download_attachment(a['content'], a['filename'])
 
 def transition_issue(issue_key, status_name):
+    # Strict Human Gate Guard: Prohibit AI agents from moving to Erledigt / Freigabe erteilt
+    prohibited_targets = ["erledigt", "done", "freigabe erteilt"]
+    normalized_input = status_name.lower().strip()
+    if normalized_input in prohibited_targets:
+        print(f"ERROR: Transitioning '{issue_key}' to '{status_name}' is strictly prohibited for AI agents.\n"
+              f"Moving tickets or sub-tasks to 'Erledigt' ('Freigabe erteilt') is a Human Decision Gate reserved exclusively for the human user.")
+        sys.exit(1)
+
     config = get_config()
-    trans_id = TRANSITIONS.get(status_name)
-    if not trans_id:
-        print(f"Error: Unknown transition '{status_name}'. Use: {list(TRANSITIONS.keys())}")
+    url = f"{config['JIRA_URL']}/rest/api/3/issue/{issue_key}/transitions"
+    data = jira_request(url)
+    available_transitions = data.get("transitions", [])
+
+    aliases = {
+        "todo": "zu erledigen",
+        "in_progress": "in bearbeitung",
+        "in_review": "in überprüfung",
+        "review": "in überprüfung",
+        "freigabe": "freigabe (human)",
+        "human": "freigabe (human)"
+    }
+    normalized_target = aliases.get(normalized_input, normalized_input)
+
+    chosen_trans = None
+    for t in available_transitions:
+        target_name = t.get("to", {}).get("name", "").lower()
+        trans_name = t.get("name", "").lower()
+        if (normalized_target == target_name or 
+            normalized_target == trans_name or 
+            normalized_target in target_name or 
+            normalized_target in trans_name):
+            chosen_trans = t
+            break
+
+    if not chosen_trans:
+        avail_str = ", ".join([f"'{t['name']}' -> '{t.get('to', {}).get('name')}' (id {t['id']})" for t in available_transitions])
+        print(f"Error: Cannot transition '{issue_key}' to '{status_name}'. Available transitions: {avail_str}")
         return
 
-    url = f"{config['JIRA_URL']}/rest/api/3/issue/{issue_key}/transitions"
+    target_name = chosen_trans.get("to", {}).get("name", "").lower()
+    trans_name = chosen_trans.get("name", "").lower()
+    if target_name == "erledigt" or trans_name == "freigabe erteilt":
+        print(f"ERROR: Transition '{chosen_trans['name']}' to '{chosen_trans.get('to', {}).get('name')}' is strictly prohibited for AI agents.\n"
+              f"This transition is a Human Decision Gate reserved exclusively for the human user.")
+        sys.exit(1)
+
+    trans_id = chosen_trans["id"]
     jira_request(url, method="POST", payload={"transition": {"id": trans_id}})
-    print(f"Successfully moved {issue_key} to {status_name}.")
+    target_status = chosen_trans.get("to", {}).get("name", status_name)
+    print(f"Successfully moved {issue_key} to '{target_status}' via transition '{chosen_trans['name']}'.")
 
 def add_comment(issue_key, text):
     config = get_config()
@@ -201,8 +329,9 @@ def create_subtask(parent_key, summary, description):
     }
     data = jira_request(url, method="POST", payload=payload)
     print(f"Sub-task {data['key']} created for parent {parent_key}.")
+    return data['key']
 
-def create_issue(summary, description, issuetype_id="10005", parent_key=None):
+def create_issue(summary, description, issuetype_id="10008", parent_key=None):
     config = get_config()
     url = f"{config['JIRA_URL']}/rest/api/2/issue"
     fields = {
@@ -217,10 +346,25 @@ def create_issue(summary, description, issuetype_id="10005", parent_key=None):
     payload = {"fields": fields}
     data = jira_request(url, method="POST", payload=payload)
     print(f"Issue {data['key']} created.")
+    return data['key']
+
+def add_to_active_sprint(issue_key):
+    config = get_config()
+    boards = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/board")["values"]
+    board_id = boards[0]["id"]
+    sprints = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/board/{board_id}/sprint?state=active")["values"]
+    if not sprints:
+        print("No active sprint found.")
+        return
+    sprint_id = sprints[0]["id"]
+    url = f"{config['JIRA_URL']}/rest/agile/1.0/sprint/{sprint_id}/issue"
+    payload = {"issues": [issue_key]}
+    jira_request(url, method="POST", payload=payload)
+    print(f"Added {issue_key} to active sprint '{sprints[0]['name']}' (id {sprint_id}).")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: jira_util.py [list | show KEY | move KEY todo|in_progress|in_review|done | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY]]")
+        print("Usage: jira_util.py [list | show KEY | status KEY | check-gate KEY | versions | set-fixversion KEY VERSION | move KEY todo|in_progress|in_review|freigabe | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY] | add-to-sprint KEY]")
         sys.exit(1)
 
     cmd = sys.argv[1]
@@ -228,6 +372,14 @@ if __name__ == "__main__":
         list_sprint_issues()
     elif cmd == "show" and len(sys.argv) == 3:
         show_issue(sys.argv[2])
+    elif cmd == "status" and len(sys.argv) == 3:
+        print_status(sys.argv[2])
+    elif cmd == "check-gate" and len(sys.argv) == 3:
+        check_gate(sys.argv[2])
+    elif cmd == "versions":
+        list_versions()
+    elif cmd == "set-fixversion" and len(sys.argv) == 4:
+        set_fix_version(sys.argv[2], sys.argv[3])
     elif cmd == "download" and len(sys.argv) == 4:
         download_attachment(sys.argv[2], sys.argv[3])
     elif cmd == "download-all" and len(sys.argv) == 3:
@@ -245,8 +397,10 @@ if __name__ == "__main__":
     elif cmd == "create-issue" and len(sys.argv) >= 4:
         summary = sys.argv[2]
         desc = sys.argv[3]
-        type_id = sys.argv[4] if len(sys.argv) >= 5 else "10005"
+        type_id = sys.argv[4] if len(sys.argv) >= 5 else "10008"
         parent = sys.argv[5] if len(sys.argv) == 6 else None
         create_issue(summary, desc, type_id, parent)
+    elif cmd == "add-to-sprint" and len(sys.argv) == 3:
+        add_to_active_sprint(sys.argv[2])
     else:
         print("Invalid command or arguments.")

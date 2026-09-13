@@ -20,6 +20,24 @@ package com.atrainingtracker.trainingtracker.ui.components.workoutheader
 
 import com.atrainingtracker.banalservice.BSportType
 
+/**
+ * Presentation data model encapsulating header-level workout metadata (ATT-503).
+ *
+ * @property workoutName The display title of the workout session.
+ * @property formattedDate Pre-formatted date string.
+ * @property formattedTime Pre-formatted start time string.
+ * @property startTimeS Epoch start timestamp in seconds.
+ * @property bSportType Sport type classification for icon and styling.
+ * @property sportName Localized name of the sport type.
+ * @property equipmentName Linked equipment / gear name if assigned.
+ * @property commute Flag indicating whether the activity was a commute.
+ * @property trainer Flag indicating whether the session was on a stationary trainer.
+ * @property uploadToStrava Strava upload sync status code.
+ * @property stravaSportName Strava-specific sport name override.
+ * @property clusterId Unique identifier of the linked [com.atrainingtracker.trainingtracker.database.WorkoutCluster].
+ * @property clusterName Display name of the linked Workout Cluster.
+ * @property finished Completion state of the workout recording.
+ */
 data class WorkoutHeaderData(
     val workoutName: String,    // TODO: Add Id?
     val formattedDate: String,
@@ -32,6 +50,7 @@ data class WorkoutHeaderData(
     var trainer: Boolean,
     val uploadToStrava: Int,
     val stravaSportName: String? = null,
+    val clusterId: Long = -1L,
     val clusterName: String? = null,
     val finished: Boolean
 )

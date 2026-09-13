@@ -24,5 +24,5 @@
     android:tint="#000000">
     <path
         android:fillColor="@android:color/white"
-        android:pathData="M480,720L240,400L720,400L480,720Z"/>
+        android:pathData="M760,920L600,640L920,640ZM40,580L280,260L460,500L760,500L560,234L460,366L410,300L560,100L920,580L40,580Z"/>
 </vector>

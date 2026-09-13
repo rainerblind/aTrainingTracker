@@ -202,7 +202,7 @@ fun MarkerLayer(
     context: Context
 ) {
     markers.forEach { markerData ->
-        key(markerData.title, markerData.iconResId) {
+        key(markerData.title, markerData.iconResId, markerData.draggable) {
             val icon = markerData.iconDescriptor ?: remember(markerData.iconResId, primaryColor) {
                 val color = when (markerData.iconResId) {
                     R.drawable.control_start -> TTColor.StartPoint
@@ -212,8 +212,8 @@ fun MarkerLayer(
                 }
                 createSensorMarker(context, markerData.iconResId, color, Color.White)
             }
-            // Use a composite key for marker identity
-            val markerState = remember(markerData.title, markerData.iconResId) { MarkerState(position = markerData.position) }
+            // Use a composite key for marker identity including draggable state
+            val markerState = remember(markerData.title, markerData.iconResId, markerData.draggable) { MarkerState(position = markerData.position) }
             val haptic = LocalHapticFeedback.current
 
             // Sync marker position with external state changes (e.g. Cancel)

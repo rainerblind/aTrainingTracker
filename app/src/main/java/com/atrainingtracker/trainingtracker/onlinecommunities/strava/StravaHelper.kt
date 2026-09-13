@@ -47,6 +47,7 @@ object StravaHelper {
     const val REFRESH_TOKEN = "refresh_token"
     const val EXPIRES_AT = "expires_at"
     const val SCOPE = "scope"
+    const val PROFILE_READ_ALL = "profile:read_all"
     private const val APPROVAL_PROMPT = "approval_prompt"
     private const val AUTO = "auto"
     private const val STRAVA_AUTHORITY = "www.strava.com"
@@ -95,18 +96,22 @@ object StravaHelper {
 
     @JvmStatic
     fun getAuthorizationUrl(): String {
-        return Uri.Builder().apply {
-            scheme(HTTPS)
-            authority(STRAVA_AUTHORITY)
-            appendPath(OAUTH)
-            appendPath(MOBILE)
-            appendPath(AUTHORIZE)
-            appendQueryParameter(CLIENT_ID, MY_CLIENT_ID)
-            appendQueryParameter(REDIRECT_URI, getRedirectUri())
-            appendQueryParameter(RESPONSE_TYPE, CODE)
-            appendQueryParameter(APPROVAL_PROMPT, AUTO)
-            appendQueryParameter(SCOPE, "read,read_all,activity:write,activity:read_all")
-        }.build().toString()
+        return try {
+            Uri.Builder().apply {
+                scheme(HTTPS)
+                authority(STRAVA_AUTHORITY)
+                appendPath(OAUTH)
+                appendPath(MOBILE)
+                appendPath(AUTHORIZE)
+                appendQueryParameter(CLIENT_ID, MY_CLIENT_ID)
+                appendQueryParameter(REDIRECT_URI, getRedirectUri())
+                appendQueryParameter(RESPONSE_TYPE, CODE)
+                appendQueryParameter(APPROVAL_PROMPT, AUTO)
+                appendQueryParameter(SCOPE, "read,read_all,profile:read_all,activity:read_all,activity:write")
+            }.build().toString()
+        } catch (e: RuntimeException) {
+            "$HTTPS://$STRAVA_AUTHORITY/$OAUTH/$MOBILE/$AUTHORIZE?$CLIENT_ID=$MY_CLIENT_ID&$REDIRECT_URI=${getRedirectUri()}&$RESPONSE_TYPE=$CODE&$APPROVAL_PROMPT=$AUTO&$SCOPE=read,read_all,profile:read_all,activity:read_all,activity:write"
+        }
     }
 
     @JvmStatic
@@ -142,12 +147,20 @@ object StravaHelper {
     fun getRefreshedAccessToken(): String? {
         if (DEBUG) Log.i(TAG, "getRefreshedAccessToken()")
         
-        if (System.currentTimeMillis() / 1000 < TrainingApplication.getStravaTokenExpiresAt()) {
-            return TrainingApplication.getStravaAccessToken()
+        try {
+            if (System.currentTimeMillis() / 1000 < TrainingApplication.getStravaTokenExpiresAt()) {
+                return TrainingApplication.getStravaAccessToken()
+            }
+        } catch (e: Exception) {
+            return null
         }
 
         val refreshUrl = "https://www.strava.com/oauth/token"
-        val refreshToken = TrainingApplication.getStravaRefreshToken() ?: return null
+        val refreshToken = try {
+            TrainingApplication.getStravaRefreshToken()
+        } catch (e: Exception) {
+            null
+        } ?: return null
         
         val formBody = FormBody.Builder()
             .add(CLIENT_ID, MY_CLIENT_ID)

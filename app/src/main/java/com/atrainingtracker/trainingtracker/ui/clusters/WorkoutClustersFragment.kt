@@ -70,7 +70,18 @@ class WorkoutClustersFragment : Fragment() {
 
     companion object {
         const val TAG = "WorkoutClustersFragment"
-        fun newInstance() = WorkoutClustersFragment()
+        const val ARG_CLUSTER_ID = "ARG_CLUSTER_ID"
+
+        /**
+         * Creates a new instance of [WorkoutClustersFragment], optionally targeting a specific [clusterId] (ATT-503).
+         */
+        fun newInstance(clusterId: Long? = null) = WorkoutClustersFragment().apply {
+            if (clusterId != null && clusterId > 0) {
+                arguments = Bundle().apply {
+                    putLong(ARG_CLUSTER_ID, clusterId)
+                }
+            }
+        }
     }
 
     private val viewModel: WorkoutClustersViewModel by viewModels()
@@ -105,6 +116,13 @@ class WorkoutClustersFragment : Fragment() {
                     
                     var clusterToDelete by remember { mutableStateOf<WorkoutCluster?>(null) }
 
+                    val initialClusterId = remember { arguments?.getLong(ARG_CLUSTER_ID, -1L)?.takeIf { it > 0 } }
+                    LaunchedEffect(initialClusterId) {
+                        if (initialClusterId != null) {
+                            viewModel.selectClusterById(initialClusterId)
+                        }
+                    }
+
                     LaunchedEffect(Unit) {
                         viewModel.recalculationFinished.collectLatest {
                             isTuning = false
@@ -113,10 +131,16 @@ class WorkoutClustersFragment : Fragment() {
 
                     when {
                         isTuning -> {
-                            BackHandler { isTuning = false }
+                            BackHandler {
+                                viewModel.saveTuningParameters()
+                                isTuning = false
+                            }
                             ClusterTuningScreen(
                                 viewModel = viewModel,
-                                onBack = { isTuning = false }
+                                onBack = {
+                                    viewModel.saveTuningParameters()
+                                    isTuning = false
+                                }
                             )
                         }
                         isAdding -> {
@@ -139,15 +163,25 @@ class WorkoutClustersFragment : Fragment() {
 
                             EditWorkoutScreen(
                                 viewModel = editViewModel,
-                                onBack = { editedWorkoutId = null }
+                                onBack = {
+                                    val id = editedWorkoutId
+                                    editedWorkoutId = null
+                                    if (id != null) {
+                                        viewModel.selectWorkoutForPeek(id)
+                                    }
+                                }
                             )
                         }
                         inspectedWorkout != null -> {
                             val workout = inspectedWorkout!!
                             var workoutToCluster by remember { mutableStateOf<WorkoutData?>(null) }
                             
+                            val aftermathUIState by trackOnMapViewModel.uiState.collectAsStateWithLifecycle()
+                            val enabledTrackTypes by trackOnMapViewModel.enabledTrackTypes.collectAsStateWithLifecycle()
+
                             LaunchedEffect(workout.id) {
                                 viewModel.selectWorkoutForPeek(workout.id)
+                                trackOnMapViewModel.loadAftermathData(workout)
                             }
                             
                             BackHandler { 
@@ -157,23 +191,21 @@ class WorkoutClustersFragment : Fragment() {
 
                             // PERFORMANCE: Immediate feedback using summarized data while high-fidelity samples load
                             val initialTrack = remember(workout) { workout.toMapTrack() }
-                            val isDataLoaded = peekedWithTrack?.workoutData?.id == workout.id
 
                             TrackOnMapScreen(
                                 workoutData = workout,
-                                tracks = if (isDataLoaded) {
-                                    peekedWithTrack?.trackPoints?.let { points ->
-                                        listOf(MapTrack(
-                                            id = workout.id,
-                                            type = TrackType.BEST,
-                                            bSportType = workout.bSportType,
-                                            path = points
-                                        ))
-                                    } ?: listOf(initialTrack)
-                                } else {
-                                    listOf(initialTrack)
+                                tracks = aftermathUIState.tracks.ifEmpty { listOf(initialTrack) },
+                                availableTrackTypes = aftermathUIState.availableTrackTypes,
+                                segments = aftermathUIState.segments,
+                                routes = aftermathUIState.routes,
+                                markers = aftermathUIState.markers,
+                                enabledTrackTypes = enabledTrackTypes,
+                                onToggleTrackType = { trackOnMapViewModel.toggleTrackTypeEnabled(it) },
+                                showTechnicalTracks = true,
+                                onClusterClick = { clusterId ->
+                                    viewModel.selectClusterById(clusterId)
+                                    inspectedWorkout = null
                                 },
-                                markers = if (isDataLoaded) peekedWithTrack!!.markers else emptyList(),
                                 headerActions = {
                                     IconButton(onClick = { workoutToCluster = workout }) {
                                         Icon(
@@ -181,7 +213,8 @@ class WorkoutClustersFragment : Fragment() {
                                             contentDescription = stringResource(R.string.cluster_move_workout_title)
                                         )
                                     }
-                                }
+                                },
+                                onEditWorkout = { id -> editedWorkoutId = id }
                             )
 
                             if (workoutToCluster != null) {
@@ -252,18 +285,34 @@ class WorkoutClustersFragment : Fragment() {
                                         },
                                         isCompactView = isCompactView,
                                         appBarOffsetPx = 0,
-                                        headerHeightPx = 0f
+                                        headerHeightPx = 0f,
+                                        onClusterClick = { viewingWorkoutsForCluster = null },
+                                        onMarkFinished = { workoutId -> summariesViewModel.markWorkoutFinished(workoutId) }
                                     )
                                 }
                             }
                         }
                         selectedCluster != null -> {
-                            BackHandler { viewModel.selectCluster(null) }
+                            val isDirectNavigation = initialClusterId != null
+                            BackHandler {
+                                if (isDirectNavigation) {
+                                    parentFragmentManager.popBackStack()
+                                } else {
+                                    viewModel.selectCluster(null)
+                                }
+                            }
                             WorkoutClusterHeatmapScreen(
                                 cluster = selectedCluster!!,
                                 viewModel = viewModel,
-                                onBack = { viewModel.selectCluster(null) },
-                                onHitCountClick = { viewingWorkoutsForCluster = it }
+                                onBack = {
+                                    if (isDirectNavigation) {
+                                        parentFragmentManager.popBackStack()
+                                    } else {
+                                        viewModel.selectCluster(null)
+                                    }
+                                },
+                                onHitCountClick = { viewingWorkoutsForCluster = it },
+                                onEditWorkout = { id -> editedWorkoutId = id }
                             )
                         }
                         else -> {

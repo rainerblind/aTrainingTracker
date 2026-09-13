@@ -33,7 +33,7 @@ class EquipmentDataProvider(
         val equipmentId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.EQUIPMENT_ID))
 
         val bSportType = sportTypeDatabaseManager.getBSportType(sportId)
-        val equipmentName = equipmentDbHelper.getEquipmentNameFromId(equipmentId)
+        val equipmentName = if (equipmentId > 0) equipmentDbHelper.getEquipmentNameFromId(equipmentId) else null
 
         return EquipmentData(
             bSportType = bSportType,

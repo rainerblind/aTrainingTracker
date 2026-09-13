@@ -293,7 +293,7 @@ fun SportStatsRow(
 
             // NESTED DETAILS
             val longestWorkout = stats.longestWorkout
-            val showLongestWorkout = stats.count > 1 && longestWorkout != null
+            val showLongestWorkout = stats.count > 1 && longestWorkout != null && longestWorkout.durationSec > 0
             if (showDetails && (stats.detailedSportStats.size > 1 || showLongestWorkout)) {
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 10.dp),

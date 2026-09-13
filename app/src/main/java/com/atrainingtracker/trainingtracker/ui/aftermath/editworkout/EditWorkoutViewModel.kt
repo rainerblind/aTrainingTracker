@@ -72,10 +72,10 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     var suggestedEquipmentName by mutableStateOf<String?>(null)
     
     var currentBSportType by mutableStateOf(BSportType.UNKNOWN)
+    private var userManuallyChangedSport: Boolean = false
 
     // Constants for special spinner items
     val allSportTypes = application.getString(R.string.all_sports)
-    val allEquipment = application.getString(R.string.all_equipment)
     val allShoes = application.getString(R.string.all_shoes)
     val allBikes = application.getString(R.string.all_bikes)
     val noEquipment = application.getString(R.string.no_equipment)
@@ -83,6 +83,9 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     // Suggested Clusters for the Auto-Name dialog (SCRUM-214)
     private val _clusterSuggestions = MutableStateFlow<List<Pair<WorkoutCluster, Double>>>(emptyList())
     val clusterSuggestions: StateFlow<List<Pair<WorkoutCluster, Double>>> = _clusterSuggestions.asStateFlow()
+
+    var userManuallyChangedWorkoutName: Boolean = false
+        private set
 
     init {
         loadWorkoutData()
@@ -112,13 +115,14 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                     // If we already have data and are just updating identity, merge it
                     if (current != null) {
                         current.copy(
-                            workoutName = data.workoutName,
+                            workoutName = if (userManuallyChangedWorkoutName) current.workoutName else data.workoutName,
                             sportId = data.sportId,
                             sportName = data.sportName,
                             bSportType = data.bSportType,
                             equipmentId = data.equipmentId,
                             equipmentName = data.equipmentName,
                             clusterId = data.clusterId,
+                            clusterName = data.clusterName,
                             stravaSportName = data.stravaSportName
                         )
                     } else {
@@ -128,7 +132,40 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                 
                 suggestedSportTypeName = data.sportName
                 currentBSportType = data.bSportType
-                suggestedEquipmentName = data.equipmentName
+
+                val linkedEquipment = getFilteredLinkedEquipment(data.sportName, data.bSportType)
+                val finalEquipmentName: String?
+                val finalEquipmentId: Long
+
+                if (data.equipmentName != null) {
+                    val currentEquip = equipmentList.find { it.name == data.equipmentName }
+                    if (currentEquip != null && (data.bSportType == BSportType.UNKNOWN || currentEquip.sportType == data.bSportType)) {
+                        finalEquipmentName = data.equipmentName
+                        finalEquipmentId = data.equipmentId
+                    } else if (linkedEquipment.size == 1) {
+                        val linkedName = linkedEquipment.first()
+                        finalEquipmentName = linkedName
+                        finalEquipmentId = equipmentList.find { it.name == linkedName }?.id ?: -1L
+                    } else {
+                        finalEquipmentName = null
+                        finalEquipmentId = -1L
+                    }
+                } else {
+                    if (linkedEquipment.size == 1) {
+                        val linkedName = linkedEquipment.first()
+                        finalEquipmentName = linkedName
+                        finalEquipmentId = equipmentList.find { it.name == linkedName }?.id ?: -1L
+                    } else {
+                        finalEquipmentName = null
+                        finalEquipmentId = -1L
+                    }
+                }
+
+                if (finalEquipmentName != data.equipmentName || finalEquipmentId != data.equipmentId) {
+                    _workoutData.update { it?.copy(equipmentName = finalEquipmentName, equipmentId = finalEquipmentId) }
+                }
+
+                suggestedEquipmentName = finalEquipmentName
                 updateSuggestedSportTypeNames(data)
                 updateSuggestedEquipmentNames(data.sportName)
             }
@@ -136,6 +173,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     }
 
     fun updateWorkoutName(newName: String) {
+        userManuallyChangedWorkoutName = true
         _workoutData.update { it?.copy(workoutName = newName) }
     }
 
@@ -149,38 +187,61 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         }
 
         if (newSportName == workoutData.value?.sportName) return
+        userManuallyChangedSport = true
         val simpleSportTypeInfo = sportTypesList.find { it.name == newSportName }
         val newSportId = simpleSportTypeInfo?.id ?: -1
 
-        // Automatically infer equipment and Strava upload (SCRUM-200)
-        val identity = discoveryManager.inferIdentityFromSport(newSportId)
-        val inferredEquipmentName = equipmentList.find { it.id == identity.equipmentId }?.name
+        val previousBSportType = currentBSportType
+        val newBSportType = sportTypeDatabaseManager.getBSportType(newSportId)
+        currentBSportType = newBSportType
+        suggestedSportTypeName = newSportName
+
+        // Query linked equipment for the new sport
+        val linkedEquipment = getFilteredLinkedEquipment(newSportName, newBSportType)
+
+        // Determine preselected equipment based on REQ-UI-130
+        val targetEquipmentName: String?
+        val targetEquipmentId: Long
+
+        if (linkedEquipment.size == 1) {
+            // Case 2 (N == 1): The uniquely linked equipment is preselected
+            targetEquipmentName = linkedEquipment.first()
+            targetEquipmentId = equipmentList.find { it.name == targetEquipmentName }?.id ?: -1L
+        } else if (newBSportType == previousBSportType && previousBSportType != BSportType.UNKNOWN) {
+            // Same base sport: If current equipment is valid for this base sport, retain it
+            val currentEquipName = workoutData.value?.equipmentName
+            val currentEquip = equipmentList.find { it.name == currentEquipName }
+            if (currentEquip != null && currentEquip.sportType == newBSportType) {
+                targetEquipmentName = currentEquipName
+                targetEquipmentId = currentEquip.id
+            } else {
+                targetEquipmentName = null
+                targetEquipmentId = -1L
+            }
+        } else {
+            // Different base sport or UNKNOWN: reset to - none -
+            targetEquipmentName = null
+            targetEquipmentId = -1L
+        }
+
+        val stravaSportName = sportTypeDatabaseManager.getStravaName(newSportId)
 
         _workoutData.update { current ->
             current?.copy(
                 sportName = newSportName,
-                bSportType = identity.bSportType,
+                bSportType = newBSportType,
                 sportId = newSportId,
-                stravaSportName = identity.stravaSportName,
-                uploadToStrava = identity.uploadToStrava,
-                equipmentName = inferredEquipmentName,
-                equipmentId = identity.equipmentId
+                stravaSportName = stravaSportName,
+                uploadToStrava = if (stravaSportName != null) 1 else 0,
+                equipmentName = targetEquipmentName,
+                equipmentId = targetEquipmentId
             )
         }
-        
-        // Synchronize suggested equipment name for UI (SCRUM-200)
-        suggestedEquipmentName = inferredEquipmentName
 
-        // first, get the new sportId and bSportType
-        val newBSportType = sportTypeDatabaseManager.getBSportType(newSportId)
+        suggestedEquipmentName = targetEquipmentName
 
-
-        currentBSportType = newBSportType
-        suggestedSportTypeName = newSportName
-        
-        // Use current data for sport suggestion context, but update based on new selection
         workoutData.value?.let { current ->
-            val updatedForSuggestions = current.copy(sportName = newSportName, bSportType = identity.bSportType)
+            val updatedForSuggestions = current.copy(sportName = newSportName, bSportType = newBSportType)
             updateSuggestedSportTypeNames(updatedForSuggestions)
         }
         updateSuggestedEquipmentNames(newSportName)
@@ -190,9 +251,12 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     fun updateEquipmentName(newName: String) {
         when (newName) {
-            allEquipment -> showAllEquipment()
             allShoes -> showAllShoes()
             allBikes -> showAllBikes()
+            noEquipment -> {
+                _workoutData.update { it?.copy(equipmentName = null, equipmentId = -1L) }
+                suggestedEquipmentName = null
+            }
             else -> {
                 val equipment = equipmentList.find { it.name == newName }
                 val newId = equipment?.id ?: -1L
@@ -205,7 +269,13 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     // --- Smart handlers for suggestions (SCRUM-200) ---
 
     private fun updateSuggestedSportTypeNames(data: WorkoutData) {
-        val suggestedSports = discoveryManager.getSpeedBasedSportTypeNames(data.bSportType, data.avgSpeedMps).toMutableList()
+        val suggestedSports = if (!userManuallyChangedSport && (data.bSportType == BSportType.UNKNOWN || 
+                (discoveryManager.getLinkedSportTypeIds(data.id).isEmpty() && data.avgSpeedMps > 0.0 && 
+                 discoveryManager.getCandidateBSportTypes(BSportType.UNKNOWN, data.avgSpeedMps).contains(data.bSportType)))) {
+            discoveryManager.getSpeedBasedSportTypeNames(BSportType.UNKNOWN, data.avgSpeedMps).toMutableList()
+        } else {
+            discoveryManager.getSpeedBasedSportTypeNames(data.bSportType, data.avgSpeedMps).toMutableList()
+        }
         
         // Ensure current sport is in the list
         if (!suggestedSports.contains(data.sportName)) {
@@ -218,49 +288,57 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         _sportTypeNames.value = suggestedSports
     }
 
+    private fun getFilteredLinkedEquipment(sportName: String, bSportType: BSportType): List<String> {
+        return discoveryManager.getEquipmentNamesForSport(sportName)
+            .filter { name ->
+                val eq = equipmentList.find { it.name == name }
+                eq != null && (bSportType == BSportType.UNKNOWN || eq.sportType == bSportType)
+            }
+    }
+
     private fun updateSuggestedEquipmentNames(sportName: String) {
-        val linkedEquipment = discoveryManager.getEquipmentNamesForSport(sportName).toList()
-        if (linkedEquipment.isNotEmpty()) {
-            val options = mutableListOf<String>()
-            options.addAll(linkedEquipment)
-            options.add(noEquipment)
-            options.add(allEquipment)
-            
-            // Add categorical filters based on BSportType
-            if (currentBSportType == BSportType.RUN) options.add(allShoes)
-            if (currentBSportType == BSportType.BIKE) options.add(allBikes)
-            
-            _equipmentNames.value = options
-        } else {
-            showAllEquipment()
+        val linkedEquipment = getFilteredLinkedEquipment(sportName, currentBSportType)
+        val options = mutableListOf<String>()
+        options.add(noEquipment)
+
+        val sportEquipment = when (currentBSportType) {
+            BSportType.BIKE -> equipmentList.filter { it.sportType == BSportType.BIKE }.map { it.name }
+            BSportType.RUN -> equipmentList.filter { it.sportType == BSportType.RUN }.map { it.name }
+            else -> emptyList()
         }
+
+        if (linkedEquipment.size > 1) {
+            // Case 1 (N > 1): [- none -, <linked equipment...>, + all bikes/shoes +]
+            options.addAll(linkedEquipment)
+            when (currentBSportType) {
+                BSportType.BIKE -> options.add(allBikes)
+                BSportType.RUN -> options.add(allShoes)
+                else -> { /* no expansion token for UNKNOWN / OTHER */ }
+            }
+        } else {
+            // Case 2 (N == 1) & Case 3 (N == 0): [- none -, <all equipment of that sport>]
+            options.addAll(sportEquipment)
+        }
+
+        _equipmentNames.value = options.distinct()
     }
 
     private fun showAllSportTypes() {
         _sportTypeNames.value = sportTypesList.map { it.name }
     }
 
-    private fun showAllEquipment() {
-        val options = mutableListOf<String>()
-        options.add(noEquipment)
-        options.addAll(equipmentList.map { it.name })
-        _equipmentNames.value = options
-    }
-
     private fun showAllShoes() {
         val options = mutableListOf<String>()
         options.add(noEquipment)
         options.addAll(equipmentList.filter { it.sportType == BSportType.RUN }.map { it.name })
-        options.add(allEquipment)
-        _equipmentNames.value = options
+        _equipmentNames.value = options.distinct()
     }
 
     private fun showAllBikes() {
         val options = mutableListOf<String>()
         options.add(noEquipment)
         options.addAll(equipmentList.filter { it.sportType == BSportType.BIKE }.map { it.name })
-        options.add(allEquipment)
-        _equipmentNames.value = options
+        _equipmentNames.value = options.distinct()
     }
 
 
@@ -306,18 +384,48 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         val apex = workout.maxDisplacementLatLng ?: return
         
         viewModelScope.launch {
+            // Determine candidate sport types (REQ-SET-064, ATT-820)
+            val candidateSports: Set<BSportType> = when {
+                // Tier 1 & 2: Dedicated hardware sensors (REQ-SET-030)
+                discoveryManager.getLinkedSportTypeIds(workout.id).isNotEmpty() -> {
+                    val linkedSportIds = discoveryManager.getLinkedSportTypeIds(workout.id)
+                    linkedSportIds.mapNotNull { sportTypeDatabaseManager.getBSportType(it) }.toSet()
+                }
+                // User explicitly selected/changed the sport in the editor UI
+                userManuallyChangedSport && workout.bSportType != BSportType.UNKNOWN -> {
+                    setOf(workout.bSportType)
+                }
+                // Tier 3: Speed-Based Multi-Sport Candidate Set
+                workout.avgSpeedMps > 0.0 -> {
+                    val speedCandidates = discoveryManager.getCandidateBSportTypes(BSportType.UNKNOWN, workout.avgSpeedMps)
+                    if (workout.bSportType == BSportType.UNKNOWN || speedCandidates.contains(workout.bSportType)) {
+                        speedCandidates
+                    } else {
+                        setOf(workout.bSportType)
+                    }
+                }
+                workout.bSportType != BSportType.UNKNOWN -> setOf(workout.bSportType)
+                else -> emptySet()
+            }
+
             val suggestions = WorkoutClusterEngine.getInstance(getApplication())
-                .getClusterScores(start, end, apex, workout.totalDistance, workout.workoutName, workout.bSportType)
+                .getClusterScores(
+                    start, end, apex, workout.totalDistance, workout.workoutName,
+                    candidateSports,
+                    workout.minAltitudeLatLng, workout.maxAltitudeLatLng
+                )
             _clusterSuggestions.value = suggestions
         }
     }
 
     fun applyClusterIdentity(cluster: WorkoutCluster) {
+        val displayCount = cluster.hitCount + 1
+        val formattedName = WorkoutClusterEngine.formatClusterWorkoutName(application, cluster.name, displayCount, cluster.hasCounter)
         _workoutData.update { current ->
             current?.copy(
                 clusterId = cluster.id,
                 clusterName = cluster.name,
-                workoutName = application.getString(R.string.cluster_autoname_format, cluster.name, cluster.hitCount + 1),
+                workoutName = formattedName,
                 sportId = cluster.probableSportId,
                 bSportType = cluster.bSportType
             )
@@ -328,6 +436,41 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
         // ATT-388: Persist the new cluster identity immediately
         repository.assignClusterToWorkout(workoutId, cluster.id)
+    }
+
+    fun unassignCluster() {
+        _workoutData.update { current ->
+            current?.copy(
+                clusterId = -1L,
+                clusterName = null
+            )
+        }
+        repository.unassignClusterFromWorkout(workoutId)
+    }
+
+    fun createNewCluster(customName: String, hasCounter: Boolean = true) {
+        val trimmedName = customName.trim()
+        val current = _workoutData.value
+        val customWorkoutName = if (userManuallyChangedWorkoutName) current?.workoutName else null
+        val resolvedWorkoutName = if (userManuallyChangedWorkoutName) {
+            current?.workoutName ?: trimmedName
+        } else {
+            WorkoutClusterEngine.formatClusterWorkoutName(application, trimmedName, 1, hasCounter)
+        }
+
+        // Synchronous in-memory update so UI reflects the new route and name immediately (REQ-SET-072)
+        _workoutData.update { curr ->
+            curr?.copy(
+                clusterName = trimmedName,
+                workoutName = resolvedWorkoutName
+            )
+        }
+
+        if (current != null) {
+            repository.createNewClusterFromWorkout(current, trimmedName, hasCounter, customWorkoutName)
+        } else {
+            repository.createNewClusterFromWorkout(workoutId, trimmedName, hasCounter, customWorkoutName)
+        }
     }
 
     fun getSportName(sportId: Long): String {

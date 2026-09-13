@@ -37,7 +37,10 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.atrainingtracker.trainingtracker.ui.components.FastScrollableBox
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -149,7 +152,9 @@ fun SportTypesTabsScreen(
 
                 val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
-                val topPadding = with(density) { (appBarMaxHeightPx.toFloat() + connection.appBarOffset).toDp() + 16.dp }
+                val scrollbarTopPadding = with(density) { (appBarMaxHeightPx.toFloat() + connection.appBarOffset).toDp() }
+                val topPadding = scrollbarTopPadding + 16.dp
+                val scrollState = rememberLazyListState()
 
                 if (filteredList.isEmpty()) {
                     EmptyStatePlaceholder(
@@ -157,33 +162,41 @@ fun SportTypesTabsScreen(
                         message = stringResource(R.string.no_sport_types_available)
                     )
                 } else {
-                    LazyColumn(
+                    FastScrollableBox(
+                        state = scrollState,
                         modifier = Modifier.fillMaxSize(),
-
-                        contentPadding = PaddingValues(
-                            // Calculation: The initial header height (px) + the current offset (px)
-                            // convert the final result to Dp.
-                            top = topPadding,
-                            bottom = bottomPadding + 16.dp,
-                            start = 4.dp,
-                            end = 4.dp
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(12.dp) // Matching Equipment spacing
+                        topPadding = scrollbarTopPadding,
+                        bottomPadding = bottomPadding
                     ) {
-                        items(filteredList, key = { it.id }) { item ->
-                            SportTypeCard(
-                                item = item,
-                                onConfigClick = { itemToEdit = item },
-                                onStatsClick = { item ->
-                                    // 1. Fetch detailed periods from ViewModel
-                                    val periods = viewModel.getDetailedStats(item.name, item.id, item.firstUsed)
-                                    // 2. Combine with the "Total" stats already in the item
-                                    val allStats = listOf(item.statsData) + periods
-                                    // 3. Show the sheet
-                                    statsToShow = Pair(item.name, allStats)
-                                },
-                                onDelete = { itemToDelete = item }
-                            )
+                        LazyColumn(
+                            state = scrollState,
+                            modifier = Modifier.fillMaxSize(),
+
+                            contentPadding = PaddingValues(
+                                // Calculation: The initial header height (px) + the current offset (px)
+                                // convert the final result to Dp.
+                                top = topPadding,
+                                bottom = bottomPadding + 16.dp,
+                                start = 4.dp,
+                                end = 4.dp
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(12.dp) // Matching Equipment spacing
+                        ) {
+                            items(filteredList, key = { it.id }) { item ->
+                                SportTypeCard(
+                                    item = item,
+                                    onConfigClick = { itemToEdit = item },
+                                    onStatsClick = { item ->
+                                        // 1. Fetch detailed periods from ViewModel
+                                        val periods = viewModel.getDetailedStats(item.name, item.id, item.firstUsed)
+                                        // 2. Combine with the "Total" stats already in the item
+                                        val allStats = listOf(item.statsData) + periods
+                                        // 3. Show the sheet
+                                        statsToShow = Pair(item.name, allStats)
+                                    },
+                                    onDelete = { itemToDelete = item }
+                                )
+                            }
                         }
                     }
                 }

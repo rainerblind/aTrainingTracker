@@ -47,12 +47,14 @@
     <string name="edit_wheel_circumference">edytuj obwód koła</string>
     <string name="edit_calibration_factor">edytuj współczynnik kalibracji</string>
     <string name="delete">usuń</string>
+    <string name="mark_as_finished">Oznacz jako zakończony</string>
     <string name="delete_device">usuń urządzenie</string>
     <string name="delete_pebble_view">usuń widok Pebble</string>
     <string name="delete_tracking_view">usuń widok treningu</string>
     <string name="delete_workout">usuń trening</string>
     <string name="deleteOldWorkouts">usuń stare treningi</string>
     <string name="deleteWorkoutsThatAreOlderThanDays">usuń treningi starsze niż … dni</string>
+    <string name="really_delete_old_workouts_format">Czy na pewno chcesz usunąć wszystkie treningi starsze niż %1$d dni?</string>
     <string name="delete_sensor">usuń</string>
     <string name="really_delete_workout">Czy na pewno chcesz usunąć ten trening?</string>
     <string name="really_delete_pebble_view_format">Czy na pewno chcesz usunąć widok Pebble "%1$s"?</string>
@@ -74,6 +76,8 @@
     <string name="start_or_resume_dialog_message">Poprzedni trening nie został ukończony.\nCzy chcesz rozpocząć nowy czy wznowić poprzedni?</string>
     <string name="start_new_workout">Nowy</string>
     <string name="resume_workout">Wznów</string>
+    <string name="tracking_interrupted_notification_title">Śledzenie przerwane</string>
+    <string name="tracking_interrupted_notification_text">Śledzenie treningu zostało wstrzymane przez system Android. Dotknij, aby wznowić.</string>
     <string name="SD_card">Karta SD</string>
     <string name="File">Plik</string>
     <string name="Community">Społeczność</string>
@@ -395,88 +399,88 @@
     <!-- waiting  -->
     <plurals name="export_notification__detail__File_waiting">
         <item quantity="one">⏳ Oczekiwanie na zapis pliku %1$s.</item>
-        <item quantity="few">⏳ Oczekiwanie na zapis %1$d plików %2$s.</item>
-        <item quantity="many">⏳ Oczekiwanie na zapis %1$d plików %2$s.</item>
+        <item quantity="few">⏳ Oczekiwanie na zapis plików %1$s.</item>
+        <item quantity="many">⏳ Oczekiwanie na zapis plików %1$s.</item>
         <item quantity="other">⏳ Oczekiwanie na zapis plików %1$s.</item>
     </plurals>
 
     <plurals name="export_notification__detail__Dropbox_waiting">
         <item quantity="one">⏳ Oczekiwanie na wysyłkę %1$s do Dropbox.</item>
-        <item quantity="few">⏳ Oczekiwanie na wysyłkę %1$d plików %2$s do Dropbox.</item>
-        <item quantity="many">⏳ Oczekiwanie na wysyłkę %1$d plików %2$s do Dropbox.</item>
+        <item quantity="few">⏳ Oczekiwanie na wysyłkę plików %1$s do Dropbox.</item>
+        <item quantity="many">⏳ Oczekiwanie na wysyłkę plików %1$s do Dropbox.</item>
         <item quantity="other">⏳ Oczekiwanie na wysyłkę %1$s do Dropbox.</item>
     </plurals>
 
     <plurals name="export_notification__detail__Community_waiting">
         <item quantity="one">⏳ Oczekiwanie na wysyłkę do %1$s.</item>
-        <item quantity="few">⏳ Oczekiwanie na wysyłkę do %1$d społeczności %2$s.</item>
-        <item quantity="many">⏳ Oczekiwanie na wysyłkę do %1$d społeczności %2$s.</item>
+        <item quantity="few">⏳ Oczekiwanie na wysyłkę do społeczności %1$s.</item>
+        <item quantity="many">⏳ Oczekiwanie na wysyłkę do społeczności %1$s.</item>
         <item quantity="other">⏳ Oczekiwanie na wysyłkę do %1$s.</item>
     </plurals>
 
     <!-- ongoing -->
     <plurals name="export_notification__detail__File_ongoing">
         <item quantity="one">💾 Zapisywanie pliku %1$s.</item>
-        <item quantity="few">💾 Zapisywanie %1$d plików %2$s.</item>
-        <item quantity="many">💾 Zapisywanie %1$d plików %2$s.</item>
+        <item quantity="few">💾 Zapisywanie plików %1$s.</item>
+        <item quantity="many">💾 Zapisywanie plików %1$s.</item>
         <item quantity="other">💾 Zapisywanie plików %1$s.</item>
     </plurals>
 
     <plurals name="export_notification__detail__Dropbox_ongoing">
         <item quantity="one">📤 Wysyłanie %1$s do Dropbox.</item>
-        <item quantity="few">📤 Wysyłanie %1$d plików %2$s do Dropbox.</item>
-        <item quantity="many">📤 Wysyłanie %1$d plików %2$s do Dropbox.</item>
+        <item quantity="few">📤 Wysyłanie plików %1$s do Dropbox.</item>
+        <item quantity="many">📤 Wysyłanie plików %1$s do Dropbox.</item>
         <item quantity="other">📤 Wysyłanie %1$s do Dropbox.</item>
     </plurals>
 
     <plurals name="export_notification__detail__Community_ongoing">
         <item quantity="one">📤 Wysyłanie do %1$s.</item>
-        <item quantity="few">📤 Wysyłanie do %1$d społeczności %2$s.</item>
-        <item quantity="many">📤 Wysyłanie do %1$d społeczności %2$s.</item>
+        <item quantity="few">📤 Wysyłanie do społeczności %1$s.</item>
+        <item quantity="many">📤 Wysyłanie do społeczności %1$s.</item>
         <item quantity="other">📤 Wysyłanie do %1$s.</item>
     </plurals>
 
     <!-- success -->
     <plurals name="export_notification__detail__File_success">
         <item quantity="one">✅ Plik %1$s zapisany pomyślnie.</item>
-        <item quantity="few">✅ %1$d pliki %2$s zapisane pomyślnie.</item>
-        <item quantity="many">✅ %1$d plików %2$s zapisanych pomyślnie.</item>
+        <item quantity="few">✅ Pliki %1$s zapisane pomyślnie.</item>
+        <item quantity="many">✅ Pliki %1$s zapisane pomyślnie.</item>
         <item quantity="other">✅ Pliki %1$s zapisane pomyślnie.</item>
     </plurals>
 
     <plurals name="export_notification__detail__Dropbox_success">
         <item quantity="one">✅ %1$s przesłany do Dropbox.</item>
-        <item quantity="few">✅ %1$d pliki %2$s przesłane do Dropbox.</item>
-        <item quantity="many">✅ %1$d plików %2$s przesłanych do Dropbox.</item>
+        <item quantity="few">✅ Pliki %1$s przesłane do Dropbox.</item>
+        <item quantity="many">✅ Pliki %1$s przesłane do Dropbox.</item>
         <item quantity="other">✅ %1$s przesłane do Dropbox.</item>
     </plurals>
 
     <plurals name="export_notification__detail__Community_success">
         <item quantity="one">✅ Przesłano pomyślnie do %1$s.</item>
-        <item quantity="few">✅ Przesłano pomyślnie do %1$d społeczności %2$s.</item>
-        <item quantity="many">✅ Przesłano pomyślnie do %1$d społeczności %2$s.</item>
+        <item quantity="few">✅ Przesłano pomyślnie do społeczności %1$s.</item>
+        <item quantity="many">✅ Przesłano pomyślnie do społeczności %1$s.</item>
         <item quantity="other">✅ Przesłano pomyślnie do %1$s.</item>
     </plurals>
 
     <!-- failed -->
     <plurals name="export_notification__detail__File_failed">
         <item quantity="one">❌ Błąd zapisu pliku %1$s.</item>
-        <item quantity="few">❌ Błąd zapisu %1$d plików %2$s.</item>
-        <item quantity="many">❌ Błąd zapisu %1$d plików %2$s.</item>
+        <item quantity="few">❌ Błąd zapisu plików %1$s.</item>
+        <item quantity="many">❌ Błąd zapisu plików %1$s.</item>
         <item quantity="other">❌ Błąd zapisu plików %1$s.</item>
     </plurals>
 
     <plurals name="export_notification__detail__Dropbox_failed">
         <item quantity="one">❌ Błąd przesyłania %1$s do Dropbox.</item>
-        <item quantity="few">❌ Błąd przesyłania %1$d plików %2$s do Dropbox.</item>
-        <item quantity="many">❌ Błąd przesyłania %1$d plików %2$s do Dropbox.</item>
+        <item quantity="few">❌ Błąd przesyłania plików %1$s do Dropbox.</item>
+        <item quantity="many">❌ Błąd przesyłania plików %1$s do Dropbox.</item>
         <item quantity="other">❌ Błąd przesyłania %1$s do Dropbox.</item>
     </plurals>
 
     <plurals name="export_notification__detail__Community_failed">
         <item quantity="one">❌ Błąd przesyłania do %1$s.</item>
-        <item quantity="few">❌ Błąd przesyłania do %1$d społeczności %2$s.</item>
-        <item quantity="many">❌ Błąd przesyłania do %1$d społeczności %2$s.</item>
+        <item quantity="few">❌ Błąd przesyłania do społeczności %1$s.</item>
+        <item quantity="many">❌ Błąd przesyłania do społeczności %1$s.</item>
         <item quantity="other">❌ Błąd przesyłania do %1$s.</item>
     </plurals>
 
@@ -713,6 +717,12 @@
     </plurals>
     <string name="strava_kom_description">KOM / Rekord trasy</string>
     <string name="strava_pr_description">Rekord życiowy #%1$d</string>
+    <string name="strava_show_all_segments_format">▼ Pokaż wszystkie %1$d segmenty (+%2$d więcej)</string>
+    <string name="strava_show_less_segments_format">▲ Pokaż tylko z gwiazdką i rekordami (%1$d)</string>
+    <string name="strava_no_highlights">Brak oznaczonych segmentów i rekordów życiowych</string>
+    <string name="strava_show_all_best_efforts_format">▼ Pokaż wszystkie %1$d najlepsze czasy (+%2$d więcej)</string>
+    <string name="strava_show_less_best_efforts_format">▲ Pokaż mniej (%1$d)</string>
+    <string name="strava_show_less_best_efforts">▲ Pokaż mniej</string>
 
     <string name="strava_connected_status">Połączono ze Strava</string>
     <string name="strava_disconnected_status">Nie połączono ze Strava</string>
@@ -729,6 +739,7 @@
     <string name="source_internal">Wewnętrzne czujniki smartfona</string>
     <string name="source_none_configured">Brak skonfigurowanego źródła</string>
     <string name="marker_options">Opcje markerów</string>
+    <string name="marker_min_altitude">Min. wys.</string>
     <string name="marker_max_altitude">Maks. wys.</string>
     <string name="marker_max_distance">Maks. dystans</string>
     <string name="marker_start">Start</string>
@@ -744,8 +755,17 @@
     <string name="cluster_total_recordings">Całkowita liczba nagrań</string>
     <string name="cluster_average_distance">Średni dystans</string>
     <string name="cluster_recordings_format">%1$d nagrań</string>
+    <plurals name="cluster_recordings">
+        <item quantity="one">%d nagranie</item>
+        <item quantity="few">%d nagrania</item>
+        <item quantity="many">%d nagrań</item>
+        <item quantity="other">%d nagrań</item>
+    </plurals>
     <string name="cluster_ref_distance_label">Ref: %1$s</string>
     <string name="cluster_tuning_title">Parametry grupowania</string>
+    <string name="cluster_tuning_pre_import_desc">Dostosuj czułość grupowania tras, aby zoptymalizować dopasowywanie tras dla importowanych treningów.</string>
+    <string name="import_upload_to_strava_label">Prześlij do Strava</string>
+    <string name="import_upload_to_strava_summary">Automatycznie przesyłaj zaimportowane treningi do Strava.</string>
     <string name="cluster_tuning_master_label">Czułość grupowania</string>
     <string name="cluster_tuning_strict">Rygorystyczne</string>
     <string name="cluster_tuning_relaxed">Luźne</string>
@@ -753,6 +773,7 @@
     <string name="cluster_tuning_endpoint_label">Tolerancja punktu końcowego</string>
     <string name="cluster_tuning_apex_label">Tolerancja wierzchołka (maks. przesunięcie)</string>
     <string name="cluster_tuning_distance_label">Tolerancja dystansu</string>
+    <string name="cluster_tuning_altitude_pos_label">Tolerancja pozycji wysokości</string>
     <string name="cluster_tuning_recalculate_button">Przelicz wszystkie klastry</string>
     <string name="cluster_tuning_warning">Ostrzeżenie: Przeliczenie spowoduje usunięcie wszystkich wyuczonych nazw klastrów i grupowań, a następnie ich ponowne utworzenie z historii przy użyciu nowych parametrów.</string>
     <string name="cluster_tuning_recalculating">Przeliczanie klastrów…</string>
@@ -782,6 +803,8 @@
     <string name="cluster_score_brackets_format">(%1$.3f)</string>
     <string name="cluster_suggestions_content_desc">Sugestie</string>
     <string name="cluster_autoname_format">%1$s #%2$d</string>
+    <string name="cluster_counter_enabled_label">Licznik aktywności</string>
+    <string name="cluster_counter_enabled_description">Dodawaj kolejne numery (#2, #3, …) do nazw treningów</string>
     <string name="cluster_delete_title">Usuń klaster treningu</string>
     <string name="cluster_delete_message">Czy na pewno chcesz usunąć ten klaster treningu? Nie spowoduje to usunięcia powiązanych treningów, ale nie będą one już grupowane w ramach tego klastra.</string>
     <string name="cluster_migration_title">Analiza rodzin tras…</string>
@@ -792,6 +815,19 @@
     <string name="cluster_migration_processing_workouts">Przetwarzanie treningu %1$d z %2$d…</string>
     <string name="legacy_import__scanning_dropbox">Skanowanie %1$s w Dropbox…</string>
     <string name="legacy_import__downloading_dropbox">Pobieranie %1$s z Dropbox…</string>
+    <string name="legacy_import__finished_with_skipped">Import zakończony: zaimportowano %1$d nowych treningów (%2$d pominięto) z %3$d zeskanowanych plików.</string>
+    <string name="legacy_import__finished_all_new">Import zakończony: zaimportowano %1$d nowych treningów z %2$d zeskanowanych plików.</string>
+    <string name="legacy_import__finished_with_failed">Import zakończony: %1$d zaimportowanych, %2$d pominiętych, %3$d nieudanych z %4$d zeskanowanych plików.</string>
+    <string name="cluster_naming__select_existing_route">Wybierz istniejącą trasę</string>
+    <string name="cluster_naming__title">Przypisz trening do trasy</string>
+    <string name="cluster_naming__found_recurring">Znaleziono nową trasę z %1$s.</string>
+    <string name="cluster_naming__task_count">Zadanie %1$d z %2$d</string>
+    <string name="cluster_naming__assignment_label">Przypisanie trasy:</string>
+    <string name="cluster_naming__create_new">Utwórz nową…</string>
+    <string name="cluster_naming__selected_route_label">Wybrana trasa</string>
+    <string name="cluster_naming__new_name_prompt">LUB podaj nową nazwę:</string>
+    <string name="cluster_naming__new_route_name_label">Nazwa nowej trasy</string>
+    <string name="cluster_naming__leave_unclustered">Pozostaw niepogrupowane</string>
     <string name="migration_phase_label">Faza %1$d: %2$s</string>
 
     <string name="unclustered">Otwarte</string>
@@ -911,6 +947,8 @@ proszę czekać</string>
     <string name="pairedText">sparowano</string>
     <string name="unpairing">rozparowywanie</string>
     <string name="updateStravaEquipment">Aktualizuj sprzęt Strava</string>
+    <string name="updateStravaRoutes">Aktualizuj trasy Strava</string>
+    <string name="lastUpdateOfRoutesNever">nigdy nie aktualizowano</string>
     <string name="battery_level">Poziom baterii</string>
     <string name="bike_power__accumulated_energy">• Skumulowana energia</string>
     <string name="bike_power__accumulated_torque">• Skumulowany moment obrotowy</string>
@@ -1041,7 +1079,9 @@ proszę czekać</string>
     <string name="notification_pause_and_searching_format">pauza i szukanie %1$s</string>
     <string name="really_delete_format">Czy na pewno chcesz usunąć "%1$s"?</string>
     <string name="no_sport_types_available">No sport types available</string>
-    <string name="no_workouts_available">No workouts available</string>
+    <string name="no_workouts_available">Brak dostępnych treningów</string>
+    <string name="no_periods_available">Brak podsumowań okresów</string>
+    <string name="no_periods_available_hint">Zarejestruj treningi, aby wyświetlić podsumowania okresów</string>
 
     <!-- smartphone devices -->
     <string name="notification_tracking_a_workout">Rejestrowanie treningu</string>
@@ -1072,6 +1112,8 @@ proszę czekać</string>
     <string name="cluster_migration_enriching">Wzbogacanie metadanych rodziny (%1$d z %2$d)…</string>
     <string name="cluster_tuning_use_sport_type_label">Uwzględnij typ sportu</string>
     <string name="cluster_tuning_use_sport_type_summary">Izoluj różne aktywności (np. bieg vs rower) na tej samej trasie do oddzielnych rodzin.</string>
+    <string name="cluster_tuning_use_altitude_label">Uwzględnij min./maks. wysokość</string>
+    <string name="cluster_tuning_use_altitude_summary">Rozróżnia trasy o różnych profilach wysokościowych na podstawie współrzędnych najniższego i najwyższego punktu.</string>
 
     <string name="workout_periods__migration_title">Optymalizacja bazy danych historii treningów…</string>
 
@@ -1088,4 +1130,101 @@ proszę czekać</string>
     <string name="legacy_recovery_description">Importuj historię treningów z plików TCX (np. z poprzedniego urządzenia). Istniejące rekordy zostaną pominięte.</string>
     <string name="scan_tcx">Skanuj Dropbox</string>
     <string name="import_single_file">Importuj plik TCX</string>
+    <!-- Workout Filtering (ATT-128) -->
+    <string name="filter_workouts_title">Filtruj treningi</string>
+    <string name="filter_action">Filtruj</string>
+    <string name="filter_clear_all">Wyczyść wszystko</string>
+    <string name="filter_search_hint">Szukaj tytułu, notatek, opisu…</string>
+    <string name="filter_section_time">Czas i okres</string>
+    <string name="filter_section_sport">Dyscyplina</string>
+    <string name="filter_section_equipment">Sprzęt</string>
+    <string name="filter_section_attributes">Atrybuty</string>
+    <string name="filter_section_thresholds">Dystans i czas trwania</string>
+    <string name="filter_commute">Dojazd</string>
+    <string name="filter_trainer">Trenażer / Wewnątrz</string>
+    <string name="filter_has_gps">Z trasą GPS</string>
+    <string name="filter_min_distance_format">&gt; %1$s km</string>
+    <string name="filter_min_duration_format">&gt; %1$s min</string>
+    <string name="filter_no_matching_workouts">Brak treningów pasujących do aktywnych filtrów</string>
+    <!-- Route Filtering (ATT-736) -->
+    <string name="filter_routes_title">Filtruj trasy</string>
+    <string name="filter_search_routes_hint">Szukaj nazwy, opisu…</string>
+    <string name="filter_route_source">Źródło</string>
+    <string name="filter_route_selected">Tylko wybrane</string>
+    <string name="filter_min_elevation_format">&gt; %1$s m</string>
+    <string name="filter_no_matching_routes">Brak tras pasujących do aktywnych filtrów</string>
+    <!-- Segment Filtering (ATT-735) -->
+    <string name="filter_segments_title">Filtruj segmenty</string>
+    <string name="filter_search_segments_hint">Szukaj nazwy, miasta…</string>
+    <string name="filter_section_climb_category">Kategoria podjazdu</string>
+    <string name="filter_climb_cat_4">Kat. 4+</string>
+    <string name="filter_climb_cat_3">Kat. 3+</string>
+    <string name="filter_climb_cat_2">Kat. 2+</string>
+    <string name="filter_climb_cat_1">Kat. 1+</string>
+    <string name="filter_climb_cat_hc">Tylko HC</string>
+    <string name="filter_climb_chip_cat4">≥ Kat. 4</string>
+    <string name="filter_climb_chip_cat3">≥ Kat. 3</string>
+    <string name="filter_climb_chip_cat2">≥ Kat. 2</string>
+    <string name="filter_climb_chip_cat1">≥ Kat. 1</string>
+    <string name="filter_climb_chip_hc">HC</string>
+    <string name="filter_has_pr">Rekord życiowy (PR)</string>
+    <string name="filter_no_matching_segments">Brak segmentów pasujących do aktywnych filtrów</string>
+    <!-- Cluster Filtering (ATT-737) -->
+    <string name="filter_clusters_title">Filtruj ulubione trasy</string>
+    <string name="filter_search_clusters_hint">Szukaj nazwy trasy…</string>
+    <string name="filter_section_recordings">Nagrania</string>
+    <string name="filter_min_recordings_chip_format">≥ %1$d nagrań</string>
+    <string name="filter_no_matching_clusters">Żadne ulubione trasy nie pasują do aktywnych filtrów</string>
+    <!-- Cluster Algorithm Info (ATT-501) -->
+    <string name="cluster_info_title">Ulubione trasy i klastrowanie</string>
+    <string name="cluster_info_what_title">Czym są Ulubione trasy?</string>
+    <string name="cluster_info_what_desc">Gdy wielokrotnie trenujesz na tej samej trasie, aplikacja automatycznie to rozpoznaje i grupuje treningi w Ulubioną trasę (klaster). Umożliwia to automatyczne nazywanie (np. „Pętla wokół Jeziora Czorsztyńskiego #5”), przypisywanie sprzętu oraz porównywanie wyników na identycznych trasach.</string>
+    <string name="cluster_info_fingerprint_title">Topologiczny odcisk palca 3D</string>
+    <string name="cluster_info_fingerprint_desc">Trasy są porównywane za pomocą prostego, lecz zaskakująco dobrego algorytmu opartego na wielowymiarowym podpisie przestrzennym zamiast śladów GPS punkt po punkcie. Algorytm ten zapewnia tolerancję na drobne odchylenia, ale wyraźnie rozdziela treningi, gdy rzeczywiście się różnią:&#10;• Start i Meta: Współrzędne geograficzne punktu początkowego i końcowego (tolerancja: 200 m).&#10;• Wierzchołek (Apex): Punkt na trasie najbardziej oddalony od startu (tolerancja: 400 m).&#10;• Całkowity dystans: Długość całej trasy (tolerancja: 20%).&#10;• Min. i maks. wysokość: Współrzędne geograficzne najniższego i najwyższego punktu (tolerancja: 400 m, opcjonalnie). Pozwala to odróżnić trasy w dolinach od grzbietów górskich o podobnym zarysie.</string>
+    <string name="cluster_info_sports_title">Podział na dyscypliny i adaptacyjny środek ciężkości</string>
+    <string name="cluster_info_sports_desc">Ulubione trasy mogą rozróżniać dyscypliny sportowe, dzięki czemu jazdy rowerowe i biegi na tej samej ścieżce tworzą osobne klastry. Wraz z dodawaniem nowych treningów klaster dynamicznie dostosowuje współrzędne referencyjne, wyliczając ważony środek ciężkości (centroid).</string>
+    <string name="cluster_info_tuning_title">Czułość i dostrajanie parametrów</string>
+    <string name="cluster_info_tuning_desc">Za pomocą głównego suwaka czułości określasz stopień dopasowania: „Rygorystyczne” rozdziela niewielkie odchylenia na osobne klastry; „Luźne” łączy treningi z przesuniętym startem lub małymi objazdami. Poniżej możesz dostosować poszczególne tolerancje.</string>
+    <string name="cluster_info_close">Rozumiem</string>
+
+    <!-- Workout Cluster Stats -->
+    <string name="cluster_stats_best_time">Najlepszy czas</string>
+    <string name="cluster_stats_avg_time">Czas</string>
+    <string name="cluster_stats_avg_speed">Prędkość</string>
+    <string name="cluster_stats_avg_pace">Tempo</string>
+    <string name="cluster_stats_total_distance">Dystans</string>
+    <string name="cluster_stats_total_elevation">Wzniesienie</string>
+    <string name="cluster_stats_total_time">Czas</string>
+    <string name="cluster_stats_last_activity">Ostatnia aktywność</string>
+    <string name="cluster_stats_today">Dzisiaj</string>
+    <string name="cluster_stats_yesterday">Wczoraj</string>
+    <string name="cluster_stats_days_ago">%1$d dni temu</string>
+    <string name="cluster_stats_weeks_ago">%1$d tyg. temu</string>
+
+    <!-- ATT-510: Lap Overview & Performance Highlights -->
+    <string name="laps_header">Okrążenia (%1$d)</string>
+    <string name="show_all_laps">Pokaż wszystkie %1$d okrążenia</string>
+    <string name="show_fewer_laps">Pokaż mniej</string>
+    <string name="fastest_lap">Najszybsze okrążenie</string>
+    <string name="slowest_lap">Najwolniejsze okrążenie</string>
+
+    <!-- ATT-511: Edit Lap Details -->
+    <string name="edit_lap_title">Edytuj okrążenie %1$d</string>
+    <string name="lap_name_label">Nazwa okrążenia</string>
+    <string name="lap_description_label">Notatki i opis</string>
+    <string name="quick_tag_warmup">Rozgrzewka</string>
+    <string name="quick_tag_interval">Interwał</string>
+    <string name="quick_tag_recovery">Regeneracja</string>
+    <string name="quick_tag_hill_climb">Podjazd</string>
+    <string name="quick_tag_tempo">Tempo</string>
+    <string name="quick_tag_sprint">Sprint</string>
+    <string name="quick_tag_cooldown">Schłodzenie</string>
+    <string name="previous_lap">Poprzednie</string>
+    <string name="next_lap">Następne</string>
+    <string name="no_gps_track_available">Brak zarejestrowanej trasy GPS dla tego treningu</string>
+
+    <!-- ATT-920: Lap Table Headers -->
+    <string name="lap_table_header_lap">Okrążenie</string>
+    <string name="lap_table_header_time">Czas</string>
+    <string name="lap_table_header_distance">Dystans</string>
 </resources>

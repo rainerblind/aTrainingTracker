@@ -26,6 +26,8 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterStats
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
@@ -107,6 +109,15 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
     private val _selectedCluster = MutableStateFlow<WorkoutCluster?>(null)
     val selectedCluster: StateFlow<WorkoutCluster?> = _selectedCluster.asStateFlow()
 
+    val clusterStats: StateFlow<Map<Long, WorkoutClusterStats>> = repository.clusterStats
+
+    val selectedClusterStats: StateFlow<WorkoutClusterStats?> = combine(
+        _selectedCluster,
+        repository.clusterStats
+    ) { cluster, statsMap ->
+        cluster?.let { statsMap[it.id] }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     private val _isRecalculating = MutableStateFlow(false)
     val isRecalculating: StateFlow<Boolean> = _isRecalculating.asStateFlow()
 
@@ -117,6 +128,101 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
             }.toSet()
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ClusterMarkerType.entries.toSet())
+
+    val filterCriteria: StateFlow<ClusterFilterCriteria> = preferenceManager.clusterFilterCriteriaFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = ClusterFilterCriteria()
+        )
+
+    private val _sortOrder = MutableStateFlow(ClusterSortOrder.RECORDINGS)
+    val sortOrder: StateFlow<ClusterSortOrder> = _sortOrder.asStateFlow()
+
+    val isLocationAvailable: StateFlow<Boolean> = currentLocation
+        .map { it != null }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = currentLocation.value != null
+        )
+
+    fun setSortOrder(order: ClusterSortOrder) {
+        _sortOrder.value = order
+    }
+
+    /**
+     * Calculates geodetic distance between two geographical coordinates in meters.
+     */
+    fun calculateDistance(uLat: Double, uLon: Double, cLat: Double, cLon: Double): Float {
+        val results = FloatArray(1)
+        android.location.Location.distanceBetween(uLat, uLon, cLat, cLon, results)
+        return results[0]
+    }
+
+    /**
+     * Sorts a list of [WorkoutCluster]s according to the specified [ClusterSortOrder].
+     */
+    fun sortClusters(
+        clusters: List<WorkoutCluster>,
+        order: ClusterSortOrder,
+        location: LatLng?
+    ): List<WorkoutCluster> {
+        return when (order) {
+            ClusterSortOrder.RECORDINGS ->
+                clusters.sortedWith(
+                    compareByDescending<WorkoutCluster> { it.hitCount }
+                        .thenBy { it.name.lowercase() }
+                )
+            ClusterSortOrder.DISTANCE ->
+                clusters.sortedWith(
+                    compareByDescending<WorkoutCluster> { it.refDistance }
+                        .thenBy { it.name.lowercase() }
+                )
+            ClusterSortOrder.NAME ->
+                clusters.sortedBy { it.name.lowercase() }
+            ClusterSortOrder.DISTANCE_TO_USER -> {
+                if (location == null) {
+                    clusters.sortedBy { it.name.lowercase() }
+                } else {
+                    clusters.sortedBy { cluster ->
+                        calculateDistance(
+                            location.latitude, location.longitude,
+                            cluster.startLat, cluster.startLng
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+
+    val availableEquipment: StateFlow<List<String>> = allClusters
+        .map { clusters ->
+            clusters.flatMap { cluster ->
+                getLinkedEquipment(cluster.probableSportId)
+            }.distinct().sorted()
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    fun setFilterCriteria(criteria: ClusterFilterCriteria) {
+        viewModelScope.launch {
+            preferenceManager.setClusterFilterCriteria(criteria)
+        }
+    }
+
+    fun clearFilterCriteria() {
+        preferenceManager.clearClusterFilterCriteria()
+    }
+
+    fun updateFilterCriteria(transform: (ClusterFilterCriteria) -> ClusterFilterCriteria) {
+        val newCriteria = transform(filterCriteria.value)
+        setFilterCriteria(newCriteria)
+    }
 
     fun toggleMarkerType(type: ClusterMarkerType) {
         viewModelScope.launch {
@@ -132,7 +238,9 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
     var endpointTolerance by mutableStateOf(TrainingApplication.getClusterTolEndpoints())
     var apexTolerance by mutableStateOf(TrainingApplication.getClusterTolApex())
     var distanceTolerance by mutableStateOf(TrainingApplication.getClusterTolDistance())
+    var altitudePositionTolerance by mutableStateOf(TrainingApplication.getClusterTolAltitudePos())
     var useSportTypeForClustering by mutableStateOf(TrainingApplication.useSportTypeForClustering())
+    var useAltitudePosForClustering by mutableStateOf(TrainingApplication.useAltitudePosForClustering())
 
     init {
         refresh()
@@ -141,27 +249,52 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
     fun refresh() {
         viewModelScope.launch {
             repository.refreshClusters()
+            repository.refreshClusterStats()
             _unclusteredWorkouts.value = repository.getUnclusteredWorkouts()
         }
+    }
+
+    suspend fun getStatsForCluster(clusterId: Long): WorkoutClusterStats {
+        return repository.getStatsForCluster(clusterId)
+    }
+
+    fun saveTuningParameters() {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(getApplication())
+        prefs.edit()
+            .putFloat(TrainingApplication.SP_CLUSTER_TOL_ENDPOINTS, endpointTolerance)
+            .putFloat(TrainingApplication.SP_CLUSTER_TOL_APEX, apexTolerance)
+            .putFloat(TrainingApplication.SP_CLUSTER_TOL_DISTANCE, distanceTolerance)
+            .putFloat(TrainingApplication.SP_CLUSTER_TOL_ALTITUDE_POS, altitudePositionTolerance)
+            .putBoolean(TrainingApplication.SP_CLUSTER_USE_SPORT_TYPE, useSportTypeForClustering)
+            .putBoolean(TrainingApplication.SP_CLUSTER_USE_ALTITUDE_POS, useAltitudePosForClustering)
+            .apply()
     }
 
     fun recalculateClusters() {
         viewModelScope.launch {
             _isRecalculating.value = true
             
-            // Save current parameters to SP first
-            val prefs = PreferenceManager.getDefaultSharedPreferences(getApplication())
-            prefs.edit()
-                .putFloat(TrainingApplication.SP_CLUSTER_TOL_ENDPOINTS, endpointTolerance)
-                .putFloat(TrainingApplication.SP_CLUSTER_TOL_APEX, apexTolerance)
-                .putFloat(TrainingApplication.SP_CLUSTER_TOL_DISTANCE, distanceTolerance)
-                .putBoolean(TrainingApplication.SP_CLUSTER_USE_SPORT_TYPE, useSportTypeForClustering)
-                .apply()
+            saveTuningParameters()
 
             repository.recalculateClustersWithProgress()
             
             _isRecalculating.value = false
             _recalculationFinished.emit(Unit)
+        }
+    }
+
+    /**
+     * Resolves and selects a [WorkoutCluster] by its unique [clusterId] (ATT-503).
+     *
+     * Queries in-memory [allClusters] first; falls back to [WorkoutClusterDatabaseManager] on [Dispatchers.IO].
+     *
+     * @param clusterId The database ID of the target cluster.
+     */
+    fun selectClusterById(clusterId: Long) {
+        viewModelScope.launch {
+            val cluster = allClusters.value.find { it.id == clusterId }
+                ?: repository.getClusterById(clusterId)
+            selectCluster(cluster)
         }
     }
 
@@ -173,10 +306,11 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
             selectionJob = viewModelScope.launch {
                 _mapState.update { it.copy(isLoading = true) }
                 val workouts = repository.getWorkoutsForCluster(cluster.id)
+                _clusterWorkouts.value = workouts
                 ensureActive()
 
-                _clusterWorkouts.value = workouts
-                _linkedRoute.value = routesRepository.getRouteByClusterId(cluster.id)
+                val route = routesRepository.getRouteByClusterId(cluster.id)
+                _linkedRoute.value = route
                 
                 // --- ATT-359: Background Map Processing ---
                 withContext(Dispatchers.Default) {
@@ -188,6 +322,24 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
                         ensureActive()
                         if (it.mapPolyline.isNotEmpty()) PolyUtil.decode(it.mapPolyline) else null 
                     }
+
+                    // Self-healing apex re-anchoring (REQ-SET-063, ATT-498)
+                    val engine = WorkoutClusterEngine.getInstance(getApplication())
+                    val candidatePoints = route?.path?.map { it.latLng } ?: heatmapPaths.flatten()
+                    if (candidatePoints.isNotEmpty()) {
+                        val start = LatLng(cluster.startLat, cluster.startLng)
+                        val trueApex = engine.findApexFromPoints(start, candidatePoints)
+                        val currentApex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
+                        if (cluster.maxDispLat == 0.0 || engine.distanceBetween(currentApex, trueApex) > 100.0) {
+                            val updatedCluster = cluster.copy(maxDispLat = trueApex.latitude, maxDispLng = trueApex.longitude)
+                            repository.updateCluster(updatedCluster)
+                            withContext(Dispatchers.Main) {
+                                if (_selectedCluster.value?.id == cluster.id) {
+                                    _selectedCluster.value = updatedCluster
+                                }
+                            }
+                        }
+                    }
                     
                     // Pre-calculate markers to avoid UI jank (SCRUM-199)
                     val markers = workouts.flatMap { w ->
@@ -198,6 +350,8 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
                         w.startLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.control_start, application.getString(R.string.start), ClusterMarkerType.START)) }
                         w.endLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.control_stop, application.getString(R.string.end), ClusterMarkerType.END)) }
                         w.maxDisplacementLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.ic_distance, application.getString(R.string.max_line_distance), ClusterMarkerType.DISTANCE)) }
+                        w.minAltitudeLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.ic_altitude_min, application.getString(R.string.marker_min_altitude), ClusterMarkerType.ALTITUDE_MIN)) }
+                        w.maxAltitudeLatLng?.let { list.add(ClusterPeakMarker(w.id, it, R.drawable.ic_altitude_max, application.getString(R.string.marker_max_altitude), ClusterMarkerType.ALTITUDE_MAX)) }
                         list
                     }
 
@@ -238,9 +392,9 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
         _peekedWorkoutDataWithTrack.value = null
     }
 
-    fun updateClusterIdentity(cluster: WorkoutCluster, newName: String, newSportId: Long) {
+    fun updateClusterIdentity(cluster: WorkoutCluster, newName: String, newSportId: Long, hasCounter: Boolean = cluster.hasCounter) {
         viewModelScope.launch {
-            val updated = cluster.copy(name = newName, probableSportId = newSportId)
+            val updated = cluster.copy(name = newName, probableSportId = newSportId, hasCounter = hasCounter)
             repository.updateCluster(updated)
             // Update selected cluster if it's the one modified
             if (_selectedCluster.value?.id == cluster.id) {
@@ -310,7 +464,9 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
         cluster: WorkoutCluster,
         start: LatLng,
         end: LatLng,
-        apex: LatLng
+        apex: LatLng,
+        minAlt: LatLng? = null,
+        maxAlt: LatLng? = null
     ) {
         viewModelScope.launch {
             val updated = cluster.copy(
@@ -319,7 +475,11 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
                 endLat = end.latitude,
                 endLng = end.longitude,
                 maxDispLat = apex.latitude,
-                maxDispLng = apex.longitude
+                maxDispLng = apex.longitude,
+                minAltLat = minAlt?.latitude ?: cluster.minAltLat,
+                minAltLng = minAlt?.longitude ?: cluster.minAltLng,
+                maxAltLat = maxAlt?.latitude ?: cluster.maxAltLat,
+                maxAltLng = maxAlt?.longitude ?: cluster.maxAltLng
             )
             repository.updateCluster(updated)
             if (_selectedCluster.value?.id == cluster.id) {
@@ -334,5 +494,10 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
     fun getLinkedEquipment(sportId: Long): List<String> {
         val sportName = getSportName(sportId)
         return discoveryManager.getEquipmentNamesForSport(sportName).toList()
+    }
+
+    fun getLinkedEquipmentSet(sportId: Long): Set<String> {
+        val sportName = getSportName(sportId)
+        return discoveryManager.getEquipmentNamesForSport(sportName)
     }
 }

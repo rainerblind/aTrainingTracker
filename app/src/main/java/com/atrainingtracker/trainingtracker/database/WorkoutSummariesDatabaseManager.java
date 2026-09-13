@@ -42,9 +42,11 @@ import com.google.maps.android.PolyUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -66,11 +68,13 @@ public class WorkoutSummariesDatabaseManager {
     private SQLiteDatabase mDatabase = null;
 
     /**
-     * Private constructor to prevent direct instantiation and ensure singleton pattern.
+     * Protected constructor to allow subclassing in unit tests.
      */
-    private WorkoutSummariesDatabaseManager(Context context) {
-        // The helper is instantiated with the application context, making it safe.
-        cWorkoutSummariesDbHelper = new WorkoutSummariesDbHelper(context);
+    protected WorkoutSummariesDatabaseManager(Context context) {
+        if (context != null) {
+            Context appContext = context.getApplicationContext();
+            cWorkoutSummariesDbHelper = new WorkoutSummariesDbHelper(appContext != null ? appContext : context);
+        }
     }
 
     /**
@@ -92,6 +96,12 @@ public class WorkoutSummariesDatabaseManager {
             }
         }
         return cInstance;
+    }
+
+    public static void setInstanceForTesting(@Nullable WorkoutSummariesDatabaseManager instance) {
+        synchronized (WorkoutSummariesDatabaseManager.class) {
+            cInstance = instance;
+        }
     }
 
     /**
@@ -227,6 +237,152 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * Calculates comprehensive performance, volume, and recency statistics for all Workout Clusters (REQ-SET-068).
+     *
+     * @return Map of clusterId to WorkoutClusterStats.
+     */
+    @NonNull
+    public Map<Long, WorkoutClusterStats> getWorkoutClusterStatsForAllClusters() {
+        Map<Long, WorkoutClusterStats> results = new HashMap<>();
+        String sql = "SELECT " +
+                WorkoutSummaries.CLUSTER_ID + ", " +
+                "COUNT(*) AS cnt, " +
+                "MAX(strftime('%s', " + WorkoutSummaries.TIME_START + ")) AS lastHitEpochS, " +
+                "MAX(" + WorkoutSummaries.TIME_START + ") AS lastHitDateStr, " +
+                "AVG(" + WorkoutSummaries.SPEED_AVERAGE_mps + ") AS avgSpeedMps, " +
+                "AVG(" + WorkoutSummaries.TIME_ACTIVE_s + ") AS avgDurationSec, " +
+                "MIN(CASE WHEN " + WorkoutSummaries.FINISHED + " = 1 AND " + WorkoutSummaries.TIME_ACTIVE_s + " > 0 THEN " + WorkoutSummaries.TIME_ACTIVE_s + " ELSE NULL END) AS bestDurationSec, " +
+                "SUM(" + WorkoutSummaries.DISTANCE_TOTAL_m + ") AS totalDistanceMeters, " +
+                "SUM(" + WorkoutSummaries.ASCENDING + ") AS totalAscentMeters, " +
+                "SUM(" + WorkoutSummaries.TIME_ACTIVE_s + ") AS totalActiveTimeSec " +
+                "FROM " + WorkoutSummaries.TABLE + " " +
+                "WHERE " + WorkoutSummaries.CLUSTER_ID + " > 0 " +
+                "GROUP BY " + WorkoutSummaries.CLUSTER_ID;
+
+        try (Cursor cursor = getDatabase().rawQuery(sql, null)) {
+            while (cursor.moveToNext()) {
+                long clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID));
+                int workoutCount = cursor.getInt(cursor.getColumnIndexOrThrow("cnt"));
+
+                int epochCol = cursor.getColumnIndexOrThrow("lastHitEpochS");
+                Long lastHitEpochS = cursor.isNull(epochCol) ? null : cursor.getLong(epochCol);
+
+                int dateCol = cursor.getColumnIndexOrThrow("lastHitDateStr");
+                String lastHitDateStr = cursor.isNull(dateCol) ? null : cursor.getString(dateCol);
+
+                int speedCol = cursor.getColumnIndexOrThrow("avgSpeedMps");
+                double avgSpeedMps = cursor.isNull(speedCol) ? 0.0 : cursor.getDouble(speedCol);
+
+                int avgDurCol = cursor.getColumnIndexOrThrow("avgDurationSec");
+                long avgDurationSec = cursor.isNull(avgDurCol) ? 0L : cursor.getLong(avgDurCol);
+
+                int bestDurCol = cursor.getColumnIndexOrThrow("bestDurationSec");
+                Long bestDurationSec = cursor.isNull(bestDurCol) ? null : cursor.getLong(bestDurCol);
+
+                int distCol = cursor.getColumnIndexOrThrow("totalDistanceMeters");
+                double totalDistanceMeters = cursor.isNull(distCol) ? 0.0 : cursor.getDouble(distCol);
+
+                int ascentCol = cursor.getColumnIndexOrThrow("totalAscentMeters");
+                long totalAscentMeters = cursor.isNull(ascentCol) ? 0L : cursor.getLong(ascentCol);
+
+                int activeTimeCol = cursor.getColumnIndexOrThrow("totalActiveTimeSec");
+                long totalActiveTimeSec = cursor.isNull(activeTimeCol) ? 0L : cursor.getLong(activeTimeCol);
+
+                WorkoutClusterStats stats = new WorkoutClusterStats(
+                        clusterId,
+                        workoutCount,
+                        lastHitEpochS,
+                        lastHitDateStr,
+                        avgSpeedMps,
+                        avgDurationSec,
+                        bestDurationSec,
+                        totalDistanceMeters,
+                        totalAscentMeters,
+                        totalActiveTimeSec
+                );
+                results.put(clusterId, stats);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error calculating workout cluster stats", e);
+        }
+        return results;
+    }
+
+    /**
+     * Calculates performance, volume, and recency statistics for a single Workout Cluster (REQ-SET-068).
+     *
+     * @param clusterId The ID of the workout cluster.
+     * @return WorkoutClusterStats for the cluster, or default empty stats if none found.
+     */
+    @NonNull
+    public WorkoutClusterStats getWorkoutClusterStats(long clusterId) {
+        if (clusterId <= 0) {
+            return new WorkoutClusterStats(clusterId, 0, null, null, 0.0, 0L, null, 0.0, 0L, 0L);
+        }
+        String sql = "SELECT " +
+                WorkoutSummaries.CLUSTER_ID + ", " +
+                "COUNT(*) AS cnt, " +
+                "MAX(strftime('%s', " + WorkoutSummaries.TIME_START + ")) AS lastHitEpochS, " +
+                "MAX(" + WorkoutSummaries.TIME_START + ") AS lastHitDateStr, " +
+                "AVG(" + WorkoutSummaries.SPEED_AVERAGE_mps + ") AS avgSpeedMps, " +
+                "AVG(" + WorkoutSummaries.TIME_ACTIVE_s + ") AS avgDurationSec, " +
+                "MIN(CASE WHEN " + WorkoutSummaries.FINISHED + " = 1 AND " + WorkoutSummaries.TIME_ACTIVE_s + " > 0 THEN " + WorkoutSummaries.TIME_ACTIVE_s + " ELSE NULL END) AS bestDurationSec, " +
+                "SUM(" + WorkoutSummaries.DISTANCE_TOTAL_m + ") AS totalDistanceMeters, " +
+                "SUM(" + WorkoutSummaries.ASCENDING + ") AS totalAscentMeters, " +
+                "SUM(" + WorkoutSummaries.TIME_ACTIVE_s + ") AS totalActiveTimeSec " +
+                "FROM " + WorkoutSummaries.TABLE + " " +
+                "WHERE " + WorkoutSummaries.CLUSTER_ID + " = ?";
+
+        try (Cursor cursor = getDatabase().rawQuery(sql, new String[]{String.valueOf(clusterId)})) {
+            if (cursor.moveToFirst()) {
+                int countCol = cursor.getColumnIndexOrThrow("cnt");
+                int workoutCount = cursor.getInt(countCol);
+                if (workoutCount > 0) {
+                    int epochCol = cursor.getColumnIndexOrThrow("lastHitEpochS");
+                    Long lastHitEpochS = cursor.isNull(epochCol) ? null : cursor.getLong(epochCol);
+
+                    int dateCol = cursor.getColumnIndexOrThrow("lastHitDateStr");
+                    String lastHitDateStr = cursor.isNull(dateCol) ? null : cursor.getString(dateCol);
+
+                    int speedCol = cursor.getColumnIndexOrThrow("avgSpeedMps");
+                    double avgSpeedMps = cursor.isNull(speedCol) ? 0.0 : cursor.getDouble(speedCol);
+
+                    int avgDurCol = cursor.getColumnIndexOrThrow("avgDurationSec");
+                    long avgDurationSec = cursor.isNull(avgDurCol) ? 0L : cursor.getLong(avgDurCol);
+
+                    int bestDurCol = cursor.getColumnIndexOrThrow("bestDurationSec");
+                    Long bestDurationSec = cursor.isNull(bestDurCol) ? null : cursor.getLong(bestDurCol);
+
+                    int distCol = cursor.getColumnIndexOrThrow("totalDistanceMeters");
+                    double totalDistanceMeters = cursor.isNull(distCol) ? 0.0 : cursor.getDouble(distCol);
+
+                    int ascentCol = cursor.getColumnIndexOrThrow("totalAscentMeters");
+                    long totalAscentMeters = cursor.isNull(ascentCol) ? 0L : cursor.getLong(ascentCol);
+
+                    int activeTimeCol = cursor.getColumnIndexOrThrow("totalActiveTimeSec");
+                    long totalActiveTimeSec = cursor.isNull(activeTimeCol) ? 0L : cursor.getLong(activeTimeCol);
+
+                    return new WorkoutClusterStats(
+                            clusterId,
+                            workoutCount,
+                            lastHitEpochS,
+                            lastHitDateStr,
+                            avgSpeedMps,
+                            avgDurationSec,
+                            bestDurationSec,
+                            totalDistanceMeters,
+                            totalAscentMeters,
+                            totalActiveTimeSec
+                    );
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error calculating stats for cluster " + clusterId, e);
+        }
+        return new WorkoutClusterStats(clusterId, 0, null, null, 0.0, 0L, null, 0.0, 0L, 0L);
+    }
+
+    /**
      * Retrieves a cursor for a specific workout ID.
      */
     public Cursor getWorkoutCursor(long workoutId) {
@@ -257,6 +413,20 @@ public class WorkoutSummariesDatabaseManager {
                 null, null, null, null, null,
                 WorkoutSummaries.TIME_START + " ASC"
         );
+    }
+
+    /**
+     * Returns the total count of finished workouts in WorkoutSummaries.
+     * Used for O(1) self-healing integrity verification in PeriodsRepository (REQ-MIG-026 / ATT-909).
+     */
+    public int getFinishedWorkoutCount() {
+        String query = "SELECT COUNT(*) FROM " + WorkoutSummaries.TABLE + " WHERE " + WorkoutSummaries.FINISHED + " = 1";
+        try (Cursor c = getDatabase().rawQuery(query, null)) {
+            return (c != null && c.moveToFirst()) ? c.getInt(0) : 0;
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying finished workout count: " + e.getMessage(), e);
+            return 0;
+        }
     }
 
     /**
@@ -436,6 +606,37 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * Retrieves the authoritative count of workouts currently assigned to a cluster (ATT-318).
+     */
+    public int getWorkoutCountForCluster(long clusterId) {
+        if (clusterId <= 0) return 0;
+        try (Cursor cursor = getDatabase().rawQuery(
+                "SELECT COUNT(*) FROM " + WorkoutSummaries.TABLE + " WHERE " + WorkoutSummaries.CLUSTER_ID + " = ?",
+                new String[]{String.valueOf(clusterId)})) {
+            if (cursor.moveToFirst()) {
+                return cursor.getInt(0);
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Retrieves the authoritative workout counts for all clusters in one query (ATT-318).
+     */
+    public java.util.Map<Long, Integer> getWorkoutCountsForAllClusters() {
+        java.util.Map<Long, Integer> counts = new java.util.HashMap<>();
+        try (Cursor cursor = getDatabase().rawQuery(
+                "SELECT " + WorkoutSummaries.CLUSTER_ID + ", COUNT(*) FROM " + WorkoutSummaries.TABLE +
+                " WHERE " + WorkoutSummaries.CLUSTER_ID + " > 0 GROUP BY " + WorkoutSummaries.CLUSTER_ID,
+                null)) {
+            while (cursor.moveToNext()) {
+                counts.put(cursor.getLong(0), cursor.getInt(1));
+            }
+        }
+        return counts;
+    }
+
+    /**
      * Retrieves the peak value (Min/Mean/Max) for a specific sensor in a workout.
      */
     @Nullable
@@ -553,6 +754,74 @@ public class WorkoutSummariesDatabaseManager {
             }
         }
         return records;
+    }
+
+    /**
+     * Checks if there is an unfinalized workout in the database (ATT-635).
+     *
+     * @return true if the most recent workout exists and has FINISHED == 0.
+     */
+    public boolean hasUnfinishedWorkout() {
+        SQLiteDatabase db = getDatabase();
+        if (db == null || !db.isOpen()) {
+            return false;
+        }
+        try (Cursor cursor = db.query(
+                WorkoutSummaries.TABLE,
+                new String[]{WorkoutSummaries.C_ID, WorkoutSummaries.FINISHED},
+                null,
+                null,
+                null,
+                null,
+                WorkoutSummaries.C_ID + " DESC",
+                "1"
+        )) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int finishedCol = cursor.getColumnIndex(WorkoutSummaries.FINISHED);
+                if (finishedCol != -1) {
+                    return cursor.getInt(finishedCol) == 0;
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking for unfinished workout: " + e.getMessage(), e);
+        }
+        return false;
+    }
+
+    /**
+     * Finalizes any unfinished workout in the database (ATT-635).
+     */
+    public void discardOrFinishUnfinishedWorkout() {
+        SQLiteDatabase db = getDatabase();
+        if (db == null || !db.isOpen()) {
+            return;
+        }
+        try {
+            ContentValues values = new ContentValues();
+            values.put(WorkoutSummaries.FINISHED, 1);
+            db.update(WorkoutSummaries.TABLE, values, WorkoutSummaries.FINISHED + " = 0", null);
+        } catch (Exception e) {
+            Log.e(TAG, "Error finalizing unfinished workout: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Marks a specific workout as finished (ATT-987 / REQ-UI-146).
+     *
+     * @param workoutId ID of the workout to mark as finished.
+     */
+    public void setWorkoutFinished(long workoutId) {
+        SQLiteDatabase db = getDatabase();
+        if (db == null || !db.isOpen()) {
+            return;
+        }
+        try {
+            ContentValues values = new ContentValues();
+            values.put(WorkoutSummaries.FINISHED, 1);
+            db.update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + " = ?", new String[]{String.valueOf(workoutId)});
+        } catch (Exception e) {
+            Log.e(TAG, "Error setting workout " + workoutId + " to finished: " + e.getMessage(), e);
+        }
     }
 
     /**
@@ -708,7 +977,10 @@ public class WorkoutSummariesDatabaseManager {
 
 
     /**
-     * Returns a list of workout IDs that are older than the specified number of days.
+     * Retrieves all workout IDs whose start time is older than the specified retention threshold.
+     *
+     * @param days Number of days of workout history to preserve.
+     * @return List of unique workout IDs older than {@code days} days.
      */
     @NonNull
     public List<Long> getOldWorkouts(int days) {
@@ -716,13 +988,14 @@ public class WorkoutSummariesDatabaseManager {
 
         List<Long> oldWorkoutIds = new LinkedList<>();
 
-        try(Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE,
-                new String[]{WorkoutSummaries.C_ID}, // columns,
-                WorkoutSummaries.TIME_START + " <= datetime('now', '-" + days + " day')", // selection
-                null, null, null, null)) { // selectionArgs, groupBy, having, orderBy)
+        try (Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE,
+                new String[]{WorkoutSummaries.C_ID}, // columns
+                WorkoutSummaries.TIME_START + " <= datetime('now', '-' || ? || ' days')", // selection
+                new String[]{String.valueOf(days)}, // selectionArgs
+                null, null, null)) { // groupBy, having, orderBy
 
             while (cursor.moveToNext()) {
-                long workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
+                long workoutId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID));
                 if (DEBUG) Log.i(TAG, "adding " + workoutId + " to oldWorkoutId List");
                 oldWorkoutIds.add(workoutId);
             }

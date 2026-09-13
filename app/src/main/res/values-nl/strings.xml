@@ -47,12 +47,14 @@
     <string name="edit_wheel_circumference">wielomtrek bewerken</string>
     <string name="edit_calibration_factor">kalibratiefactor bewerken</string>
     <string name="delete">verwijderen</string>
+    <string name="mark_as_finished">Markeren als voltooid</string>
     <string name="delete_device">apparaat verwijderen</string>
     <string name="delete_pebble_view">Pebble weergave verwijderen</string>
     <string name="delete_tracking_view">trainingsweergave verwijderen</string>
     <string name="delete_workout">training verwijderen</string>
     <string name="deleteOldWorkouts">oude trainingen verwijderen</string>
     <string name="deleteWorkoutsThatAreOlderThanDays">trainingen ouder dan … dagen verwijderen</string>
+    <string name="really_delete_old_workouts_format">Wil je echt alle trainingen ouder dan %1$d dagen verwijderen?</string>
     <string name="delete_sensor">verwijderen</string>
     <string name="really_delete_workout">Wilt u deze training echt verwijderen?</string>
     <string name="really_delete_pebble_view_format">Pebble weergave "%1$s" verwijderen?</string>
@@ -74,6 +76,8 @@
     <string name="start_or_resume_dialog_message">De vorige training is niet correct afgesloten.\nWilt u een nieuwe training starten of de vorige hervatten?</string>
     <string name="start_new_workout">Nieuw</string>
     <string name="resume_workout">Hervatten</string>
+    <string name="tracking_interrupted_notification_title">Registratie onderbroken</string>
+    <string name="tracking_interrupted_notification_text">Registratie is gepauzeerd door Android. Tik om te hervatten.</string>
     <string name="SD_card">SD-kaart</string>
     <string name="File">Bestand</string>
     <string name="Community">Community</string>
@@ -335,6 +339,8 @@
     <string name="prefsStartLocationsSummary">Hoogte van bekende locaties configureren</string>
     <string name="updateStravaEquipment">Strava materiaal bijwerken</string>
     <string name="lastUpdateOfEquipmentNever">nooit bijgewerkt</string>
+    <string name="updateStravaRoutes">Strava routes bijwerken</string>
+    <string name="lastUpdateOfRoutesNever">nooit bijgewerkt</string>
 
     <string name="getting_equipment_from_strava">Strava materiaal ophalen…\neven geduld</string>
     <string name="got_shoe">Strava schoenen opgehaald\nontvangen: %1$s</string>
@@ -945,6 +951,12 @@
     </plurals>
     <string name="strava_kom_description">KOM / Segmentrecord</string>
     <string name="strava_pr_description">Persoonlijk record #%1$d</string>
+    <string name="strava_show_all_segments_format">▼ Toon alle %1$d segmenten (+%2$d meer)</string>
+    <string name="strava_show_less_segments_format">▲ Alleen met ster &amp; PR\'s tonen (%1$d)</string>
+    <string name="strava_no_highlights">Geen segmenten met ster of PR\'s</string>
+    <string name="strava_show_all_best_efforts_format">▼ Toon alle %1$d beste prestaties (+%2$d meer)</string>
+    <string name="strava_show_less_best_efforts_format">▲ Minder tonen (%1$d)</string>
+    <string name="strava_show_less_best_efforts">▲ Minder tonen</string>
 
     <string name="strava_connected_status">Verbonden met Strava</string>
     <string name="strava_disconnected_status">Niet verbonden met Strava</string>
@@ -961,6 +973,7 @@
     <string name="source_internal">Interne smartphone-sensoren</string>
     <string name="source_none_configured">Geen bron geconfigureerd</string>
     <string name="marker_options">Marker opties</string>
+    <string name="marker_min_altitude">Min. hoogte</string>
     <string name="marker_max_altitude">Max. hoogte</string>
     <string name="marker_max_distance">Max. afstand</string>
     <string name="marker_start">Start</string>
@@ -976,8 +989,15 @@
     <string name="cluster_total_recordings">Totaal aantal opnamen</string>
     <string name="cluster_average_distance">Gemiddelde afstand</string>
     <string name="cluster_recordings_format">%1$d opnamen</string>
+    <plurals name="cluster_recordings">
+        <item quantity="one">%d opname</item>
+        <item quantity="other">%d opnamen</item>
+    </plurals>
     <string name="cluster_ref_distance_label">Ref: %1$s</string>
     <string name="cluster_tuning_title">Groeperingsparameters</string>
+    <string name="cluster_tuning_pre_import_desc">Pas de gevoeligheid voor routegroepering aan om de routevergelijking voor geïmporteerde workouts te optimaliseren.</string>
+    <string name="import_upload_to_strava_label">Uploaden naar Strava</string>
+    <string name="import_upload_to_strava_summary">Geïmporteerde trainingen automatisch uploaden naar Strava.</string>
     <string name="cluster_tuning_master_label">Groeperingsgevoeligheid</string>
     <string name="cluster_tuning_strict">Strikt</string>
     <string name="cluster_tuning_relaxed">Ontspannen</string>
@@ -985,6 +1005,7 @@
     <string name="cluster_tuning_endpoint_label">Eindpunttolerantie</string>
     <string name="cluster_tuning_apex_label">Apextolerantie (max. verplaatsing)</string>
     <string name="cluster_tuning_distance_label">Afstandstolerantie</string>
+    <string name="cluster_tuning_altitude_pos_label">Tolerantie hoogtepositie</string>
     <string name="cluster_tuning_recalculate_button">Bereken alle clusters opnieuw</string>
     <string name="cluster_tuning_warning">Waarschuwing: Herberekenen wist alle geleerde clusternamen en groeperingen en bouwt ze vervolgens opnieuw op uit de geschiedenis met deze nieuwe parameters.</string>
     <string name="cluster_tuning_recalculating">Clusters opnieuw berekenen…</string>
@@ -1014,6 +1035,8 @@
     <string name="cluster_score_brackets_format">(%1$.3f)</string>
     <string name="cluster_suggestions_content_desc">Suggesties</string>
     <string name="cluster_autoname_format">%1$s #%2$d</string>
+    <string name="cluster_counter_enabled_label">Activiteitenteller</string>
+    <string name="cluster_counter_enabled_description">Volgnummers (#2, #3, …) toevoegen aan workoutnamen</string>
     <string name="cluster_delete_title">Workoutcluster verwijderen</string>
     <string name="cluster_delete_message">Weet u zeker dat u dit workoutcluster wilt verwijderen? De bijbehorende trainingen worden nicht verwijderd, maar ze worden niet meer onder dit cluster gegroepeerd.</string>
     <string name="cluster_migration_title">Routefamilies analyseren…</string>
@@ -1024,6 +1047,19 @@
     <string name="cluster_migration_processing_workouts">Training %1$d van %2$d verwerken…</string>
     <string name="legacy_import__scanning_dropbox">%1$s scannen op Dropbox…</string>
     <string name="legacy_import__downloading_dropbox">%1$s downloaden van Dropbox…</string>
+    <string name="legacy_import__finished_with_skipped">Import voltooid: %1$d nieuwe workout(s) geïmporteerd (%2$d overgeslagen) van %3$d gescande bestanden.</string>
+    <string name="legacy_import__finished_all_new">Import voltooid: %1$d nieuwe workout(s) geïmporteerd van %2$d gescande bestanden.</string>
+    <string name="legacy_import__finished_with_failed">Import voltooid: %1$d geïmporteerd, %2$d overgeslagen, %3$d mislukt van %4$d gescande bestanden.</string>
+    <string name="cluster_naming__select_existing_route">Bestaande route selecteren</string>
+    <string name="cluster_naming__title">Workout aan route toewijzen</string>
+    <string name="cluster_naming__found_recurring">Nieuwe route gevonden van %1$s.</string>
+    <string name="cluster_naming__task_count">Taak %1$d van %2$d</string>
+    <string name="cluster_naming__assignment_label">Routetoewijzing:</string>
+    <string name="cluster_naming__create_new">Nieuwe maken…</string>
+    <string name="cluster_naming__selected_route_label">Geselecteerde route</string>
+    <string name="cluster_naming__new_name_prompt">Of geef een nieuwe naam:</string>
+    <string name="cluster_naming__new_route_name_label">Nieuwe routenaam</string>
+    <string name="cluster_naming__leave_unclustered">Niet-gegroepeerd laten</string>
     <string name="migration_phase_label">Fase %1$d: %2$s</string>
 
     <string name="unclustered">Open</string>
@@ -1039,6 +1075,8 @@
     <string name="getting_my_locations">Zoeken naar bekende locaties.</string>
     <string name="no_sport_types_available">Geen sporttypes beschikbaar</string>
     <string name="no_workouts_available">Geen workouts beschikbaar</string>
+    <string name="no_periods_available">Geen periodeoverzichten beschikbaar</string>
+    <string name="no_periods_available_hint">Registreer workouts om periodeoverzichten te zien</string>
     <string name="really_delete_format">Wil je "%1$s" echt verwijderen?</string>
     <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/master/privacy.md</string>
     <string name="LocationNameText">Thuis</string>
@@ -1083,6 +1121,8 @@
     <string name="cluster_migration_enriching">Verrijken van familie-metadata (%1$d van %2$d)…</string>
     <string name="cluster_tuning_use_sport_type_label">Sporttype in overweging nemen</string>
     <string name="cluster_tuning_use_sport_type_summary">Isoleer verschillende activiteiten (bijv. hardlopen vs. fietsen) op dezelfde route in afzonderlijke families.</string>
+    <string name="cluster_tuning_use_altitude_label">Min/max hoogte in overweging nemen</string>
+    <string name="cluster_tuning_use_altitude_summary">Onderscheid routes met verschillende hoogteprofielen op basis van de coördinaten van het laagste en hoogste punt.</string>
 
     <string name="workout_periods__migration_title">Optimaliseren van de database met trainingsgeschiedenis…</string>
 
@@ -1099,4 +1139,101 @@
     <string name="legacy_recovery_description">Importeer je trainingsgeschiedenis uit TCX-bestanden (bijv. van een vorig apparaat). Bestaande records worden overgeslagen.</string>
     <string name="scan_tcx">Dropbox scannen</string>
     <string name="import_single_file">TCX-bestand importeren</string>
+    <!-- Workout Filtering (ATT-128) -->
+    <string name="filter_workouts_title">Workouts filteren</string>
+    <string name="filter_action">Filteren</string>
+    <string name="filter_clear_all">Alles wissen</string>
+    <string name="filter_search_hint">Zoek titel, notities, beschrijving…</string>
+    <string name="filter_section_time">Tijd &amp; periode</string>
+    <string name="filter_section_sport">Sporttype</string>
+    <string name="filter_section_equipment">Uitrusting</string>
+    <string name="filter_section_attributes">Kenmerken</string>
+    <string name="filter_section_thresholds">Afstand &amp; tijdsduur</string>
+    <string name="filter_commute">Woon-werkverkeer</string>
+    <string name="filter_trainer">Binnen / Fietstrainer</string>
+    <string name="filter_has_gps">Met GPS-route</string>
+    <string name="filter_min_distance_format">&gt; %1$s km</string>
+    <string name="filter_min_duration_format">&gt; %1$s min</string>
+    <string name="filter_no_matching_workouts">Geen workouts komen overeen met de actieve filters</string>
+    <!-- Route Filtering (ATT-736) -->
+    <string name="filter_routes_title">Routes filteren</string>
+    <string name="filter_search_routes_hint">Zoek naam, beschrijving…</string>
+    <string name="filter_route_source">Bron</string>
+    <string name="filter_route_selected">Alleen geselecteerde</string>
+    <string name="filter_min_elevation_format">&gt; %1$s m</string>
+    <string name="filter_no_matching_routes">Geen routes komen overeen met de actieve filters</string>
+    <!-- Segment Filtering (ATT-735) -->
+    <string name="filter_segments_title">Segmenten filteren</string>
+    <string name="filter_search_segments_hint">Zoek naam, plaats…</string>
+    <string name="filter_section_climb_category">Klimcategorie</string>
+    <string name="filter_climb_cat_4">Cat. 4+</string>
+    <string name="filter_climb_cat_3">Cat. 3+</string>
+    <string name="filter_climb_cat_2">Cat. 2+</string>
+    <string name="filter_climb_cat_1">Cat. 1+</string>
+    <string name="filter_climb_cat_hc">Alleen HC</string>
+    <string name="filter_climb_chip_cat4">≥ Cat. 4</string>
+    <string name="filter_climb_chip_cat3">≥ Cat. 3</string>
+    <string name="filter_climb_chip_cat2">≥ Cat. 2</string>
+    <string name="filter_climb_chip_cat1">≥ Cat. 1</string>
+    <string name="filter_climb_chip_hc">HC</string>
+    <string name="filter_has_pr">Persoonlijk record (PR)</string>
+    <string name="filter_no_matching_segments">Geen segmenten komen overeen met de actieve filters</string>
+    <!-- Cluster Filtering (ATT-737) -->
+    <string name="filter_clusters_title">Favoriete tracks filteren</string>
+    <string name="filter_search_clusters_hint">Zoek tracknaam…</string>
+    <string name="filter_section_recordings">Opnamen</string>
+    <string name="filter_min_recordings_chip_format">≥ %1$d opnamen</string>
+    <string name="filter_no_matching_clusters">Geen favoriete tracks komen overeen met de actieve filters</string>
+    <!-- Cluster Algorithm Info (ATT-501) -->
+    <string name="cluster_info_title">Favoriete routes en clustering</string>
+    <string name="cluster_info_what_title">Wat zijn Favoriete routes?</string>
+    <string name="cluster_info_what_desc">Wanneer je herhaaldelijk dezelfde route aflegt, herkent de app dit automatisch en groepeert de sessies in een Favoriete route (cluster). Dit maakt automatische naamgeving mogelijk (bijv. „Rondje IJsselmeer #5”), evenals uitrustingsregistratie en directe prestatievergelijkingen over identieke trajecten.</string>
+    <string name="cluster_info_fingerprint_title">3D Topologische vingerafdruk</string>
+    <string name="cluster_info_fingerprint_desc">Routes worden vergeleken met een eenvoudig maar verrassend goed algoritme op basis van een multidimensionale ruimtelijke handtekening in plaats van punt-voor-punt GPS-sporen. Dit algoritme biedt tolerantie voor kleine variaties, maar scheidt trainingen betrouwbaar wanneer ze echt verschillend zijn:&#10;• Start &amp; Finish: Geografische begin- en eindpunten (tolerantie: 200 m).&#10;• Apex (Verste punt): Het punt op de route dat het verst van de start ligt (tolerantie: 400 m).&#10;• Totale afstand: Totale routelengte (tolerantie: 20%).&#10;• Min &amp; Max hoogte: Geografische locaties van het laagste en hoogste punt (tolerantie: 400 m, optioneel). Dit onderscheidt dalroutes betrouwbaar van bergkammen met vergelijkbare omtrekken.</string>
+    <string name="cluster_info_sports_title">Sportonderscheid &amp; Lerend zwaartepunt</string>
+    <string name="cluster_info_sports_desc">Favoriete routes kunnen sporttypes scheiden, zodat fietstochten en hardloopsessies op hetzelfde pad niet worden samengevoegd. Naarmate er meer trainingen worden toegevoegd, past het cluster zijn referentiecoördinaten dynamisch aan via een gewogen zwaartepunt (centroid).</string>
+    <string name="cluster_info_tuning_title">Gevoeligheid &amp; Parameterinstellingen</string>
+    <string name="cluster_info_tuning_desc">Gebruik de hoofdschuifregelaar om de overeenkomststerkte te bepalen: „Strikt” scheidt kleine routewijzigingen in aparte clusters; „Ontspannen” combineert sessies met afwijkende startpunten of omwegen. Daaronder kun je individuele toleranties afstemmen.</string>
+    <string name="cluster_info_close">Begrepen</string>
+
+    <!-- Workout Cluster Stats -->
+    <string name="cluster_stats_best_time">Beste tijd</string>
+    <string name="cluster_stats_avg_time">Tijd</string>
+    <string name="cluster_stats_avg_speed">Snelheid</string>
+    <string name="cluster_stats_avg_pace">Tempo</string>
+    <string name="cluster_stats_total_distance">Afstand</string>
+    <string name="cluster_stats_total_elevation">Stijging</string>
+    <string name="cluster_stats_total_time">Tijd</string>
+    <string name="cluster_stats_last_activity">Laatste activiteit</string>
+    <string name="cluster_stats_today">Vandaag</string>
+    <string name="cluster_stats_yesterday">Gisteren</string>
+    <string name="cluster_stats_days_ago">%1$d dagen geleden</string>
+    <string name="cluster_stats_weeks_ago">%1$d weken geleden</string>
+
+    <!-- ATT-510: Lap Overview & Performance Highlights -->
+    <string name="laps_header">Ronden (%1$d)</string>
+    <string name="show_all_laps">Toon alle %1$d ronden</string>
+    <string name="show_fewer_laps">Minder weergeven</string>
+    <string name="fastest_lap">Snelste ronde</string>
+    <string name="slowest_lap">Langzaamste ronde</string>
+
+    <!-- ATT-511: Edit Lap Details -->
+    <string name="edit_lap_title">Ronde %1$d bewerken</string>
+    <string name="lap_name_label">Rondenaam</string>
+    <string name="lap_description_label">Notities &amp; beschrijving</string>
+    <string name="quick_tag_warmup">Warming-up</string>
+    <string name="quick_tag_interval">Interval</string>
+    <string name="quick_tag_recovery">Herstel</string>
+    <string name="quick_tag_hill_climb">Klim</string>
+    <string name="quick_tag_tempo">Tempo</string>
+    <string name="quick_tag_sprint">Sprint</string>
+    <string name="quick_tag_cooldown">Cooling-down</string>
+    <string name="previous_lap">Vorige</string>
+    <string name="next_lap">Volgende</string>
+    <string name="no_gps_track_available">Geen GPS-track geregistreerd voor deze training</string>
+
+    <!-- ATT-920: Lap Table Headers -->
+    <string name="lap_table_header_lap">Ronde</string>
+    <string name="lap_table_header_time">Tijd</string>
+    <string name="lap_table_header_distance">Afstand</string>
 </resources>

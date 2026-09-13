@@ -18,13 +18,16 @@ package com.atrainingtracker.trainingtracker.ui.clusters
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.EditLocationAlt
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -37,18 +40,27 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
+import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter
+import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
+import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterStats
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.DropdownSelector
+import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.map.*
+
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.model.LatLng
@@ -60,7 +72,8 @@ fun WorkoutClusterHeatmapScreen(
     cluster: WorkoutCluster,
     viewModel: WorkoutClustersViewModel,
     onBack: () -> Unit,
-    onHitCountClick: (WorkoutCluster) -> Unit
+    onHitCountClick: (WorkoutCluster) -> Unit,
+    onEditWorkout: ((Long) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val linkedRoute by viewModel.linkedRoute.collectAsState()
@@ -70,57 +83,138 @@ fun WorkoutClusterHeatmapScreen(
     
     val sportType = remember(cluster.probableSportId) { viewModel.getBSportType(cluster.probableSportId) }
 
-    // --- FINGERPRINT EDIT STATE (SCRUM-197 Refined) ---
+    // --- FINGERPRINT EDIT STATE (SCRUM-197 Refined, ATT-502) ---
     var isEditingFingerprint by remember { mutableStateOf(false) }
+    var selectedEditMarkerType by remember { mutableStateOf<ClusterMarkerType?>(null) }
     var editStart by remember(cluster) { mutableStateOf(LatLng(cluster.startLat, cluster.startLng)) }
     var editEnd by remember(cluster) { mutableStateOf(LatLng(cluster.endLat, cluster.endLng)) }
     var editApex by remember(cluster) { mutableStateOf(LatLng(cluster.maxDispLat, cluster.maxDispLng)) }
+    var editMinAlt by remember(cluster) { mutableStateOf(cluster.minAltLatLng) }
+    var editMaxAlt by remember(cluster) { mutableStateOf(cluster.maxAltLatLng) }
 
-    val hasChanges = remember(cluster, editStart, editEnd, editApex) {
+    val hasChanges = remember(cluster, editStart, editEnd, editApex, editMinAlt, editMaxAlt) {
         LatLng(cluster.startLat, cluster.startLng) != editStart ||
         LatLng(cluster.endLat, cluster.endLng) != editEnd ||
-        LatLng(cluster.maxDispLat, cluster.maxDispLng) != editApex
+        LatLng(cluster.maxDispLat, cluster.maxDispLng) != editApex ||
+        cluster.minAltLatLng != editMinAlt ||
+        cluster.maxAltLatLng != editMaxAlt
     }
 
     val startLabel = stringResource(R.string.start)
     val endLabel = stringResource(R.string.end)
     val apexLabel = stringResource(R.string.max_line_distance)
+    val minAltLabel = stringResource(R.string.marker_min_altitude)
+    val maxAltLabel = stringResource(R.string.marker_max_altitude)
 
-    val fingerprintMarkers = remember(editStart, editEnd, editApex, isEditingFingerprint, startLabel, endLabel, apexLabel, enabledMarkerTypes) {
+    val fingerprintMarkers = remember(editStart, editEnd, editApex, editMinAlt, editMaxAlt, isEditingFingerprint, selectedEditMarkerType, startLabel, endLabel, apexLabel, minAltLabel, maxAltLabel, enabledMarkerTypes) {
         val list = mutableListOf<LocationMarker>()
         
-        if (isEditingFingerprint || enabledMarkerTypes.contains(ClusterMarkerType.START)) {
+        if (enabledMarkerTypes.contains(ClusterMarkerType.START)) {
             list.add(LocationMarker(
                 position = editStart,
                 iconResId = R.drawable.control_start,
                 title = startLabel,
                 iconDescriptor = createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint), // Green
                 draggable = isEditingFingerprint,
-                onDragEnd = { editStart = it }
+                onDragEnd = { 
+                    editStart = it
+                    selectedEditMarkerType = ClusterMarkerType.START
+                },
+                onClick = {
+                    if (isEditingFingerprint) {
+                        selectedEditMarkerType = ClusterMarkerType.START
+                        true
+                    } else false
+                }
             ))
         }
 
-        if (isEditingFingerprint || enabledMarkerTypes.contains(ClusterMarkerType.END)) {
+        if (enabledMarkerTypes.contains(ClusterMarkerType.END)) {
             list.add(LocationMarker(
                 position = editEnd,
                 iconResId = R.drawable.control_stop,
                 title = endLabel,
                 iconDescriptor = createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint), // Red
                 draggable = isEditingFingerprint,
-                onDragEnd = { editEnd = it }
+                onDragEnd = { 
+                    editEnd = it
+                    selectedEditMarkerType = ClusterMarkerType.END
+                },
+                onClick = {
+                    if (isEditingFingerprint) {
+                        selectedEditMarkerType = ClusterMarkerType.END
+                        true
+                    } else false
+                }
             ))
         }
 
-        if (isEditingFingerprint || enabledMarkerTypes.contains(ClusterMarkerType.DISTANCE)) {
+        if (enabledMarkerTypes.contains(ClusterMarkerType.DISTANCE)) {
             list.add(LocationMarker(
                 position = editApex,
                 iconResId = R.drawable.ic_distance,
                 title = apexLabel,
                 iconDescriptor = createSensorMarker(context, R.drawable.ic_distance, TTColor.ApexPoint), // Blue
                 draggable = isEditingFingerprint,
-                onDragEnd = { editApex = it }
+                onDragEnd = { 
+                    editApex = it
+                    selectedEditMarkerType = ClusterMarkerType.DISTANCE
+                },
+                onClick = {
+                    if (isEditingFingerprint) {
+                        selectedEditMarkerType = ClusterMarkerType.DISTANCE
+                        true
+                    } else false
+                }
             ))
         }
+
+        if (enabledMarkerTypes.contains(ClusterMarkerType.ALTITUDE_MIN)) {
+            val minAltPos = editMinAlt ?: if (isEditingFingerprint) editStart else null
+            if (minAltPos != null) {
+                list.add(LocationMarker(
+                    position = minAltPos,
+                    iconResId = R.drawable.ic_altitude_min,
+                    title = minAltLabel,
+                    iconDescriptor = createSensorMarker(context, R.drawable.ic_altitude_min, TTColor.MinAltitude), // Blue (same as Apex)
+                    draggable = isEditingFingerprint,
+                    onDragEnd = { 
+                        editMinAlt = it
+                        selectedEditMarkerType = ClusterMarkerType.ALTITUDE_MIN
+                    },
+                    onClick = {
+                        if (isEditingFingerprint) {
+                            selectedEditMarkerType = ClusterMarkerType.ALTITUDE_MIN
+                            true
+                        } else false
+                    }
+                ))
+            }
+        }
+
+        if (enabledMarkerTypes.contains(ClusterMarkerType.ALTITUDE_MAX)) {
+            val maxAltPos = editMaxAlt ?: if (isEditingFingerprint) editApex else null
+            if (maxAltPos != null) {
+                list.add(LocationMarker(
+                    position = maxAltPos,
+                    iconResId = R.drawable.ic_altitude_max,
+                    title = maxAltLabel,
+                    iconDescriptor = createSensorMarker(context, R.drawable.ic_altitude_max, TTColor.MaxAltitude), // Blue (same as Apex)
+                    draggable = isEditingFingerprint,
+                    onDragEnd = { 
+                        editMaxAlt = it
+                        selectedEditMarkerType = ClusterMarkerType.ALTITUDE_MAX
+                    },
+                    onClick = {
+                        if (isEditingFingerprint) {
+                            selectedEditMarkerType = ClusterMarkerType.ALTITUDE_MAX
+                            true
+                        } else false
+                    }
+                ))
+            }
+        }
+
         list
     }
 
@@ -134,6 +228,8 @@ fun WorkoutClusterHeatmapScreen(
                     ClusterMarkerType.START -> TTColor.StartPoint
                     ClusterMarkerType.END -> TTColor.EndPoint
                     ClusterMarkerType.DISTANCE -> TTColor.ApexPoint
+                    ClusterMarkerType.ALTITUDE_MIN -> TTColor.MinAltitude
+                    ClusterMarkerType.ALTITUDE_MAX -> TTColor.MaxAltitude
                 }
                 LocationMarker(
                     position = marker.pos,
@@ -163,8 +259,8 @@ fun WorkoutClusterHeatmapScreen(
     if (showEditDialog) {
         EditWorkoutClusterIdentityDialog(
             cluster = cluster,
-            onConfirm = { newName, newSportId ->
-                viewModel.updateClusterIdentity(cluster, newName, newSportId)
+            onConfirm = { newName, newSportId, hasCounter ->
+                viewModel.updateClusterIdentity(cluster, newName, newSportId, hasCounter)
                 showEditDialog = false
             },
             onDismiss = { showEditDialog = false }
@@ -235,61 +331,106 @@ fun WorkoutClusterHeatmapScreen(
         } else null
     }
 
-    BottomSheetScaffold(
-        scaffoldState = scaffoldState,
-        sheetPeekHeight = if (peekedWorkoutDataWithTrack != null && !isEditingFingerprint) 120.dp + navBarHeight else 0.dp,
-        sheetDragHandle = null,
-        sheetContent = {
-            peekedWorkoutDataWithTrack?.workoutData?.let { workoutData ->
-                TrackOnMapScreen(
-                    workoutData = workoutData,
-                    tracks = listOf(MapTrack(workoutData.id, TrackType.BEST, workoutData.bSportType, peekedWorkoutDataWithTrack!!.trackPoints)),
-                    markers = peekedWorkoutDataWithTrack!!.markers,
-                    modifier = Modifier,
-                    useStatusBarsPadding = false,
-                    headerActions = {
-                        IconButton(
-                            onClick = { workoutToMove = workoutData },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.SwapHoriz,
-                                contentDescription = stringResource(R.string.cluster_move_content_desc),
-                                tint = MaterialTheme.colorScheme.primary
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        val maxSheetHeight = maxHeight - statusBarHeight
+
+        BottomSheetScaffold(
+            scaffoldState = scaffoldState,
+            sheetPeekHeight = if (peekedWorkoutDataWithTrack != null && !isEditingFingerprint) 120.dp + navBarHeight else 0.dp,
+            sheetDragHandle = null,
+            sheetContent = {
+                if (peekedWorkoutDataWithTrack != null) {
+                    Box(modifier = Modifier.fillMaxWidth().height(maxSheetHeight)) {
+                        peekedWorkoutDataWithTrack?.workoutData?.let { workoutData ->
+                            TrackOnMapScreen(
+                                workoutData = workoutData,
+                                tracks = listOf(MapTrack(workoutData.id, TrackType.BEST, workoutData.bSportType, peekedWorkoutDataWithTrack!!.trackPoints)),
+                                markers = peekedWorkoutDataWithTrack!!.markers,
+                                modifier = Modifier.fillMaxSize(),
+                                useStatusBarsPadding = false,
+                                headerActions = {
+                                    IconButton(
+                                        onClick = { workoutToMove = workoutData },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.SwapHoriz,
+                                            contentDescription = stringResource(R.string.cluster_move_content_desc),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                },
+                                onEditWorkout = onEditWorkout
                             )
                         }
                     }
-                )
+                } else {
+                    Spacer(modifier = Modifier.height(1.dp))
+                }
             }
-        }
-    ) {
+        ) {
         MapDetailLayout(
             bSportType = sportType,
             zoomFocus = if (clusterBounds != null) MapZoomFocus.EXPLICIT_BOUNDS else MapZoomFocus.FIT_PRIMARY,
             initialBounds = clusterBounds,
             activeScrubPath = null,
             showElevationProfile = false,
+            onMapClick = { latLng ->
+                if (isEditingFingerprint && selectedEditMarkerType != null) {
+                    when (selectedEditMarkerType) {
+                        ClusterMarkerType.START -> editStart = latLng
+                        ClusterMarkerType.END -> editEnd = latLng
+                        ClusterMarkerType.DISTANCE -> editApex = latLng
+                        ClusterMarkerType.ALTITUDE_MIN -> editMinAlt = latLng
+                        ClusterMarkerType.ALTITUDE_MAX -> editMaxAlt = latLng
+                        null -> {}
+                    }
+                }
+            },
             header = {
                 WorkoutClusterSummaryHeader(
                     cluster = cluster,
                     viewModel = viewModel,
                     isEditing = isEditingFingerprint,
+                    selectedMarkerType = selectedEditMarkerType,
+                    onSelectMarkerType = { type ->
+                        selectedEditMarkerType = if (selectedEditMarkerType == type) null else type
+                        if (selectedEditMarkerType == type) {
+                            if (!enabledMarkerTypes.contains(type)) {
+                                viewModel.toggleMarkerType(type)
+                            }
+                            if (type == ClusterMarkerType.ALTITUDE_MIN && editMinAlt == null) {
+                                editMinAlt = editStart
+                            }
+                            if (type == ClusterMarkerType.ALTITUDE_MAX && editMaxAlt == null) {
+                                editMaxAlt = editApex
+                            }
+                        }
+                    },
                     onBack = {
                         if (isEditingFingerprint) {
                             isEditingFingerprint = false
+                            selectedEditMarkerType = null
                             // Revert changes
                             editStart = LatLng(cluster.startLat, cluster.startLng)
                             editEnd = LatLng(cluster.endLat, cluster.endLng)
                             editApex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
+                            editMinAlt = cluster.minAltLatLng
+                            editMaxAlt = cluster.maxAltLatLng
                         } else {
                             onBack()
                         }
                     },
                     onRename = { showEditDialog = true },
-                    onEditFingerprint = { isEditingFingerprint = true },
+                    onEditFingerprint = {
+                        isEditingFingerprint = true
+                        selectedEditMarkerType = ClusterMarkerType.START
+                    },
                     onSaveFingerprint = {
-                        viewModel.updateClusterFingerprint(cluster, editStart, editEnd, editApex)
+                        viewModel.updateClusterFingerprint(cluster, editStart, editEnd, editApex, editMinAlt, editMaxAlt)
                         isEditingFingerprint = false
+                        selectedEditMarkerType = null
                     },
                     onDeleteRequest = { showDeleteConfirmation = true },
                     onHitCountClick = { onHitCountClick(cluster) },
@@ -308,55 +449,98 @@ fun WorkoutClusterHeatmapScreen(
                     }
                 }
                 
-                // MARKER DROPDOWN BUTTON (ATT-463)
-                if (!isEditingFingerprint) {
-                    Box(modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 76.dp, end = 16.dp), contentAlignment = Alignment.TopEnd) {
-                        var showMarkerMenu by remember { mutableStateOf(false) }
-                        Box {
-                            Surface(
-                                onClick = { showMarkerMenu = true },
-                                modifier = Modifier.size(44.dp),
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
-                                shadowElevation = 6.dp,
-                                tonalElevation = 2.dp
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Default.Place,
-                                        contentDescription = stringResource(R.string.marker_options),
-                                        modifier = Modifier.size(22.dp),
-                                        tint = if (enabledMarkerTypes.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Disabled)
-                                    )
-                                }
+                // ACTIVE EDIT MARKER BANNER
+                if (isEditingFingerprint && selectedEditMarkerType != null) {
+                    val (label, iconRes, color) = when (selectedEditMarkerType) {
+                        ClusterMarkerType.START -> Triple(stringResource(R.string.start), R.drawable.control_start, TTColor.StartPoint)
+                        ClusterMarkerType.END -> Triple(stringResource(R.string.end), R.drawable.control_stop, TTColor.EndPoint)
+                        ClusterMarkerType.DISTANCE -> Triple(stringResource(R.string.max_line_distance), R.drawable.ic_distance, TTColor.ApexPoint)
+                        ClusterMarkerType.ALTITUDE_MIN -> Triple(stringResource(R.string.marker_min_altitude), R.drawable.ic_altitude_min, TTColor.MinAltitude)
+                        ClusterMarkerType.ALTITUDE_MAX -> Triple(stringResource(R.string.marker_max_altitude), R.drawable.ic_altitude_max, TTColor.MaxAltitude)
+                        null -> Triple("", 0, Color.Unspecified)
+                    }
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 12.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
+                        shadowElevation = 6.dp,
+                        tonalElevation = 2.dp,
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, color)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            if (iconRes != 0) {
+                                Icon(
+                                    painter = painterResource(id = iconRes),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = color
+                                )
                             }
-                            DropdownMenu(
-                                expanded = showMarkerMenu,
-                                onDismissRequest = { showMarkerMenu = false }
-                            ) {
-                                ClusterMarkerType.entries.forEach { type ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Checkbox(
-                                                    checked = enabledMarkerTypes.contains(type),
-                                                    onCheckedChange = null
-                                                )
-                                                Spacer(Modifier.width(8.dp))
-                                                Text(
-                                                    text = when (type) {
-                                                        ClusterMarkerType.DISTANCE -> stringResource(R.string.marker_max_distance)
-                                                        ClusterMarkerType.START -> stringResource(R.string.marker_start)
-                                                        ClusterMarkerType.END -> stringResource(R.string.marker_end)
-                                                    }
-                                                )
-                                            }
-                                        },
-                                        onClick = { viewModel.toggleMarkerType(type) }
-                                    )
-                                }
+                            Text(
+                                text = stringResource(R.string.cluster_manual_tap_map_format, label),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+                
+                // MARKER DROPDOWN BUTTON (ATT-463)
+                Box(modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 76.dp, end = 16.dp), contentAlignment = Alignment.TopEnd) {
+                    var showMarkerMenu by remember { mutableStateOf(false) }
+                    Box {
+                        Surface(
+                            onClick = { showMarkerMenu = true },
+                            modifier = Modifier.size(44.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
+                            shadowElevation = 6.dp,
+                            tonalElevation = 2.dp
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Place,
+                                    contentDescription = stringResource(R.string.marker_options),
+                                    modifier = Modifier.size(22.dp),
+                                    tint = if (enabledMarkerTypes.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Disabled)
+                                )
+                            }
+                        }
+                        DropdownMenu(
+                            expanded = showMarkerMenu,
+                            onDismissRequest = { showMarkerMenu = false }
+                        ) {
+                            ClusterMarkerType.entries.forEach { type ->
+                                DropdownMenuItem(
+                                    text = {
+                                         Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Checkbox(
+                                                checked = enabledMarkerTypes.contains(type),
+                                                onCheckedChange = null
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                text = when (type) {
+                                                    ClusterMarkerType.DISTANCE -> stringResource(R.string.marker_max_distance)
+                                                    ClusterMarkerType.START -> stringResource(R.string.marker_start)
+                                                    ClusterMarkerType.END -> stringResource(R.string.marker_end)
+                                                    ClusterMarkerType.ALTITUDE_MIN -> stringResource(R.string.marker_min_altitude)
+                                                    ClusterMarkerType.ALTITUDE_MAX -> stringResource(R.string.marker_max_altitude)
+                                                }
+                                            )
+                                        }
+                                    },
+                                    onClick = { viewModel.toggleMarkerType(type) }
+                                )
                             }
                         }
                     }
@@ -391,15 +575,19 @@ fun WorkoutClusterHeatmapScreen(
             modifier = Modifier.fillMaxSize()
         )
     }
+    }
 
     BackHandler {
         if (peekedWorkoutDataWithTrack != null) {
             viewModel.clearPeekSelection()
         } else if (isEditingFingerprint) {
             isEditingFingerprint = false
+            selectedEditMarkerType = null
             editStart = LatLng(cluster.startLat, cluster.startLng)
             editEnd = LatLng(cluster.endLat, cluster.endLng)
             editApex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
+            editMinAlt = cluster.minAltLatLng
+            editMaxAlt = cluster.maxAltLatLng
         } else {
             onBack()
         }
@@ -411,6 +599,8 @@ fun WorkoutClusterSummaryHeader(
     cluster: WorkoutCluster,
     viewModel: WorkoutClustersViewModel,
     isEditing: Boolean,
+    selectedMarkerType: ClusterMarkerType? = null,
+    onSelectMarkerType: (ClusterMarkerType) -> Unit = {},
     onBack: () -> Unit,
     onRename: () -> Unit,
     onEditFingerprint: () -> Unit,
@@ -468,19 +658,64 @@ fun WorkoutClusterSummaryHeader(
                 }
 
                 if (!isEditing) {
-                    WorkoutClusterMetadataBlock(
+                    WorkoutClusterDetailDashboard(
                         cluster = cluster,
                         viewModel = viewModel,
                         onHitCountClick = onHitCountClick
                     )
                 } else {
-                    // Editing Mode Hint
-                    Text(
-                        text = stringResource(R.string.cluster_edit_fingerprint_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
+
+                    // Marker Type Selection Row (Active / Movable State)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val options = listOf(
+                            Triple(ClusterMarkerType.START, stringResource(R.string.start), R.drawable.control_start to TTColor.StartPoint),
+                            Triple(ClusterMarkerType.END, stringResource(R.string.end), R.drawable.control_stop to TTColor.EndPoint),
+                            Triple(ClusterMarkerType.DISTANCE, stringResource(R.string.max_line_distance), R.drawable.ic_distance to TTColor.ApexPoint),
+                            Triple(ClusterMarkerType.ALTITUDE_MIN, stringResource(R.string.marker_min_altitude), R.drawable.ic_altitude_min to TTColor.MinAltitude),
+                            Triple(ClusterMarkerType.ALTITUDE_MAX, stringResource(R.string.marker_max_altitude), R.drawable.ic_altitude_max to TTColor.MaxAltitude)
+                        )
+                        options.forEach { (type, label, iconColor) ->
+                            val (iconRes, color) = iconColor
+                            val isSelected = selectedMarkerType == type
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { onSelectMarkerType(type) },
+                                leadingIcon = {
+                                    Icon(
+                                        painter = painterResource(id = iconRes),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = if (isSelected) Color.White else color
+                                    )
+                                },
+                                label = {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = color,
+                                    selectedLabelColor = Color.White,
+                                    containerColor = color.copy(alpha = 0.08f),
+                                    labelColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = isSelected,
+                                    borderColor = color.copy(alpha = 0.4f),
+                                    selectedBorderColor = color
+                                )
+                            )
+                        }
+                    }
                 }
             }
 
@@ -501,14 +736,14 @@ fun WorkoutClusterSummaryHeader(
                         )
                     }
                 } else {
+                    IconButton(onClick = onEditFingerprint) {
+                        Icon(Icons.Default.EditLocationAlt, contentDescription = stringResource(R.string.cluster_edit_fingerprint_content_desc))
+                    }
                     IconButton(onClick = onRename) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_table_edit),
                             contentDescription = stringResource(R.string.edit_workout_name)
                         )
-                    }
-                    IconButton(onClick = onEditFingerprint) {
-                        Icon(Icons.Default.EditLocationAlt, contentDescription = stringResource(R.string.cluster_edit_fingerprint_content_desc))
                     }
                 }
             }
@@ -529,13 +764,261 @@ fun WorkoutClusterSummaryHeader(
     }
 }
 
+/**
+ * 3-Tier Performance, Cumulative Volume, and Recency Dashboard for Workout Cluster Details (REQ-SET-068).
+ */
+@Composable
+fun WorkoutClusterDetailDashboard(
+    cluster: WorkoutCluster,
+    viewModel: WorkoutClustersViewModel,
+    onHitCountClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val distanceFormatter = remember { DistanceFormatter() }
+    val timeFormatter = remember { TimeFormatter() }
+    val altitudeFormatter = remember { AltitudeFormatter() }
+    val speedFormatter = remember { SpeedFormatter() }
+    val paceFormatter = remember { PaceFormatter() }
+
+    val sportName = remember(cluster.probableSportId) { viewModel.getSportName(cluster.probableSportId) }
+    val bSportType = remember(cluster.probableSportId) { viewModel.getBSportType(cluster.probableSportId) }
+    val linkedEquipment = remember(cluster.probableSportId) { viewModel.getLinkedEquipment(cluster.probableSportId) }
+
+    val statsMap by viewModel.clusterStats.collectAsState()
+    val stats = statsMap[cluster.id] ?: WorkoutClusterStats.EMPTY
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        // Base metadata row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            MetricItem(
+                iconRes = R.drawable.ic_distance,
+                value = distanceFormatter.format_with_units(cluster.refDistance),
+                isPrimary = false,
+                valueColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                iconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+            )
+
+            Text(
+                text = sportName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            if (linkedEquipment.isNotEmpty()) {
+                Text(
+                    text = "•  ${linkedEquipment.joinToString(", ")}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        // --- TIER 1: Performance Card (Best Time, Average Time, Pace/Speed) ---
+        Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Best Time (PR)
+                Column(horizontalAlignment = Alignment.Start) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.EmojiEvents,
+                            contentDescription = null,
+                            tint = Color(0xFFFFD700),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.cluster_stats_best_time),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        text = stats.bestDurationSec?.let { timeFormatter.format(it) } ?: "--:--:--",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                // Average Time
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Ø " + stringResource(R.string.cluster_stats_avg_time),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = if (stats.avgDurationSec > 0) timeFormatter.format(stats.avgDurationSec) else "--:--:--",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                // Sport-Adaptive Velocity (Pace vs Speed)
+                val isRun = bSportType == BSportType.RUN
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "Ø " + stringResource(if (isRun) R.string.cluster_stats_avg_pace else R.string.cluster_stats_avg_speed),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    val velocityStr = if (stats.avgSpeedMps > 0.0) {
+                        if (isRun) paceFormatter.format_with_units(1.0 / stats.avgSpeedMps)
+                        else speedFormatter.format_with_units(stats.avgSpeedMps)
+                    } else "--"
+                    Text(
+                        text = velocityStr,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+
+        // --- TIER 2: Cumulative Volume Card (Distance, Ascent, Active Time) ---
+        Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Total Distance
+                Column(horizontalAlignment = Alignment.Start) {
+                    Text(
+                        text = "Σ " + stringResource(R.string.cluster_stats_total_distance),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = distanceFormatter.format_with_units(stats.totalDistanceMeters),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                // Total Ascent
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Σ " + stringResource(R.string.cluster_stats_total_elevation),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = altitudeFormatter.format_with_units(stats.totalAscentMeters),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                // Total Moving Time
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "Σ " + stringResource(R.string.cluster_stats_total_time),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = timeFormatter.format_with_units(stats.totalActiveTimeSec),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+
+
+        // --- TIER 3: Activity & Recency Card (Recordings Count Button, Last Activity) ---
+        Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = onHitCountClick,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    modifier = Modifier.height(32.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Faint),
+                        contentColor = MaterialTheme.colorScheme.primary
+                    ),
+                    elevation = null
+                ) {
+                    Text(
+                        text = pluralStringResource(R.plurals.cluster_recordings, cluster.hitCount, cluster.hitCount),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                val lastActivityStr = remember(stats.lastHitTimestampS) {
+                    WorkoutClusterStats.formatRelativeRecency(context, stats.lastHitTimestampS)
+                }
+                if (lastActivityStr.isNotEmpty()) {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = stringResource(R.string.cluster_stats_last_activity),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = lastActivityStr,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 @Composable
 fun EditWorkoutClusterIdentityDialog(
     cluster: WorkoutCluster,
-    onConfirm: (String, Long) -> Unit,
+    onConfirm: (String, Long, Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf(cluster.name) }
+    var hasCounter by remember { mutableStateOf(cluster.hasCounter) }
     
     val context = LocalContext.current
     val sportTypesList = remember { SportTypesRepository.getInstance(context.applicationContext as android.app.Application).sportTypesList }
@@ -566,13 +1049,38 @@ fun EditWorkoutClusterIdentityDialog(
                     modifier = Modifier.fillMaxWidth(),
                     stayOpenOn = emptySet()
                 )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                        Text(
+                            text = stringResource(R.string.cluster_counter_enabled_label),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = stringResource(R.string.cluster_counter_enabled_description),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = hasCounter,
+                        onCheckedChange = { hasCounter = it }
+                    )
+                }
             }
         },
         confirmButton = {
             TextButton(
                 onClick = { 
                     val sportId = sportTypesList.find { it.name == selectedSportName }?.id ?: cluster.probableSportId
-                    onConfirm(name, sportId) 
+                    onConfirm(name, sportId, hasCounter) 
                 },
                 enabled = name.isNotBlank()
             ) {

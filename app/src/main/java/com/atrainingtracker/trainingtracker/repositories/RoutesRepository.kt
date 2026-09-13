@@ -52,9 +52,15 @@ import okhttp3.Request
  * Repository responsible for managing Route data.
  * Bridges the UI and the RoutesDatabaseManager.
  */
-class RoutesRepository private constructor(private val context: Context) {
+class RoutesRepository internal constructor(
+    private val context: Context,
+    private val routesDb: RoutesDatabaseManager
+) {
+    private constructor(context: Context) : this(
+        context.applicationContext,
+        RoutesDatabaseManager.getInstance(context.applicationContext)
+    )
 
-    private val routesDb = RoutesDatabaseManager.getInstance(context)
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // StateFlow for the UI to observe the list of routes
@@ -152,19 +158,35 @@ class RoutesRepository private constructor(private val context: Context) {
     }
 
     /**
-     * Synchronizes starred routes from Strava.
+     * Asynchronously triggers synchronization of routes from Strava.
      */
-    suspend fun syncRoutesFromStrava() = withContext(Dispatchers.IO) {
+    fun syncRoutesFromStravaAsync(onComplete: ((Boolean) -> Unit)? = null) {
+        repositoryScope.launch {
+            val result = syncRoutesFromStrava()
+            onComplete?.invoke(result)
+        }
+    }
+
+    /**
+     * Synchronizes starred routes from Strava.
+     * @return true if synchronization succeeded, false otherwise.
+     */
+    suspend fun syncRoutesFromStrava(): Boolean = withContext(Dispatchers.IO) {
         val accessToken = StravaHelper.getRefreshedAccessToken()
         if (accessToken.isNullOrEmpty()) {
             Log.e(TAG, "Strava Access Token is null or empty")
-            return@withContext
+            return@withContext false
         }
 
-        val athleteId = TrainingApplication.getStravaAthleteId()
+        var athleteId = TrainingApplication.getStravaAthleteId()
         if (athleteId == 0) {
-            Log.e(TAG, "Strava Athlete ID is not set")
-            return@withContext
+            Log.i(TAG, "Strava Athlete ID is not set. Fetching authenticated athlete...")
+            athleteId = fetchAuthenticatedAthleteId(accessToken)
+            if (athleteId == 0) {
+                Log.e(TAG, "Strava Athlete ID could not be resolved")
+                return@withContext false
+            }
+            TrainingApplication.setStravaAthleteId(athleteId)
         }
 
         // 1. Fetch all routes from Strava
@@ -181,20 +203,20 @@ class RoutesRepository private constructor(private val context: Context) {
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     Log.e(TAG, "Failed to fetch Strava routes: ${response.code}")
-                    return@withContext
+                    return@withContext false
                 }
                 response.body?.string() ?: "[]"
             }
         } catch (e: Exception) {
             Log.e(TAG, "Exception fetching Strava routes", e)
-            return@withContext
+            return@withContext false
         }
 
         val stravaRoutes = try {
             json.decodeFromString<List<StravaRoute>>(routesResponse)
         } catch (e: Exception) {
             Log.e(TAG, "Error decoding Strava routes JSON", e)
-            return@withContext
+            return@withContext false
         }
 
         // 2. Identify which routes are already in the DB
@@ -203,7 +225,7 @@ class RoutesRepository private constructor(private val context: Context) {
 
         for (stravaRoute in stravaRoutes) {
             if (existingExtIds.contains(stravaRoute.idStr)) {
-                // TODO: Update existing route if needed? For now we skip.
+                // Already imported
                 continue
             }
 
@@ -263,8 +285,38 @@ class RoutesRepository private constructor(private val context: Context) {
             }
         }
 
-        // 5. Refresh the list
+        // 5. Update timestamp & notify observers
+        val timestamp = java.text.DateFormat.getDateTimeInstance().format(java.util.Date())
+        TrainingApplication.setLastUpdateTimeOfStravaRoutes(timestamp)
+
         refreshRoutes()
+        true
+    }
+
+    @kotlinx.serialization.Serializable
+    private data class StravaAthleteProfile(val id: Int = 0)
+
+    /**
+     * Resolves authenticated athlete ID if not yet cached.
+     */
+    private fun fetchAuthenticatedAthleteId(accessToken: String): Int {
+        val client = OkHttpClient()
+        val request = Request.Builder()
+            .url("https://www.strava.com/api/v3/athlete")
+            .addHeader("Authorization", "Bearer $accessToken")
+            .build()
+
+        return try {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return 0
+                val body = response.body?.string() ?: return 0
+                val athlete = json.decodeFromString<StravaAthleteProfile>(body)
+                athlete.id
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error resolving authenticated athlete ID", e)
+            0
+        }
     }
 
     /**
