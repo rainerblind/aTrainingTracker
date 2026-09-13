@@ -43,7 +43,11 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.StravaActivity
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaActivityParser
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaBestEffort
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaSegmentEffort
+import com.atrainingtracker.trainingtracker.MyUnits
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.ui.aftermath.effectiveDistanceMeters
 import com.atrainingtracker.trainingtracker.ui.aftermath.isHighlight
+import com.atrainingtracker.trainingtracker.ui.aftermath.isMileEffort
 
 @Composable
 fun StravaActivitySection(
@@ -114,8 +118,69 @@ fun StravaActivitySection(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.secondary
             )
-            activity.bestEfforts.forEach { effort ->
+
+            val isMetric = remember {
+                try {
+                    TrainingApplication.getUnit() == MyUnits.METRIC
+                } catch (e: Exception) {
+                    true
+                }
+            }
+
+            val totalBestEfforts = activity.bestEfforts.size
+            val eligibleEfforts = remember(activity.bestEfforts, isMetric) {
+                if (isMetric) {
+                    val nonMiles = activity.bestEfforts.filter { !it.isMileEffort }
+                    if (nonMiles.isNotEmpty()) nonMiles else activity.bestEfforts
+                } else {
+                    activity.bestEfforts
+                }
+            }
+
+            val longestEffort = remember(eligibleEfforts) {
+                eligibleEfforts.maxByOrNull { it.effectiveDistanceMeters } ?: eligibleEfforts.lastOrNull()
+            }
+
+            val reducedBestEfforts = remember(eligibleEfforts, longestEffort) {
+                eligibleEfforts.filter { effort ->
+                    effort.isHighlight || effort == longestEffort
+                }
+            }
+
+            val isCollapsible = totalBestEfforts > reducedBestEfforts.size
+            var isExpanded by rememberSaveable { mutableStateOf(false) }
+
+            val displayedBestEfforts = if (!isCollapsible || isExpanded) {
+                activity.bestEfforts
+            } else {
+                reducedBestEfforts
+            }
+
+            displayedBestEfforts.forEach { effort ->
                 BestEffortRow(effort)
+            }
+
+            if (isCollapsible) {
+                val hiddenCount = totalBestEfforts - displayedBestEfforts.size
+                val buttonText = if (!isExpanded) {
+                    stringResource(R.string.strava_show_all_best_efforts_format, totalBestEfforts, hiddenCount)
+                } else {
+                    stringResource(R.string.strava_show_less_best_efforts_format, reducedBestEfforts.size)
+                }
+
+                TextButton(
+                    onClick = { isExpanded = !isExpanded },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp)
+                ) {
+                    Text(
+                        text = buttonText,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 

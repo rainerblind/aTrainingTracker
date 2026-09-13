@@ -956,6 +956,9 @@
     <string name="strava_show_all_segments_format">▼ Mostrar los %1$d segmentos (+%2$d más)</string>
     <string name="strava_show_less_segments_format">▲ Mostrar solo destacados y mejores marcas (%1$d)</string>
     <string name="strava_no_highlights">Sin segmentos destacados ni mejores marcas</string>
+    <string name="strava_show_all_best_efforts_format">▼ Mostrar los %1$d mejores tiempos (+%2$d más)</string>
+    <string name="strava_show_less_best_efforts_format">▲ Mostrar menos (%1$d)</string>
+    <string name="strava_show_less_best_efforts">▲ Mostrar menos</string>
 
     <string name="strava_connected_status">Estás conectado a Strava</string>
     <string name="strava_disconnected_status">No estás conectado a Strava</string>

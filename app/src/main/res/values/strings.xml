@@ -1168,6 +1168,9 @@
     <string name="strava_show_all_segments_format">▼ Show all %1$d segments (+%2$d more)</string>
     <string name="strava_show_less_segments_format">▲ Show only starred &amp; PRs (%1$d)</string>
     <string name="strava_no_highlights">No starred segments or PRs</string>
+    <string name="strava_show_all_best_efforts_format">▼ Show all %1$d best efforts (+%2$d more)</string>
+    <string name="strava_show_less_best_efforts_format">▲ Show less (%1$d)</string>
+    <string name="strava_show_less_best_efforts">▲ Show less</string>
 
     <string name="strava_connected_status">You are connected to Strava</string>
     <string name="strava_disconnected_status">You are not connected to Strava</string>
