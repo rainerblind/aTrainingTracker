@@ -32,6 +32,8 @@ class PreImportTuningBottomSheetTest {
         "cluster_tuning_title",
         "cluster_tuning_pre_import_desc",
         "cluster_info_title",
+        "import_upload_to_strava_label",
+        "import_upload_to_strava_summary",
         "OK",
         "cancel"
     )

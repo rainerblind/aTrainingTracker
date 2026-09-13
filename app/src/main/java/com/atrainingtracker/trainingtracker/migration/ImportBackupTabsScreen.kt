@@ -448,6 +448,44 @@ fun PreImportTuningBottomSheet(
                     onValueChangeFinished = { viewModel.saveClusteringTolerances() },
                     isDialog = false
                 )
+
+                if (TrainingApplication.uploadToStrava()) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.updateUploadToStravaOnImport(!viewModel.uploadToStravaOnImport)
+                            }
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 16.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.import_upload_to_strava_label),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = stringResource(R.string.import_upload_to_strava_summary),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = viewModel.uploadToStravaOnImport,
+                            onCheckedChange = { viewModel.updateUploadToStravaOnImport(it) }
+                        )
+                    }
+                }
             }
 
             // Action Buttons

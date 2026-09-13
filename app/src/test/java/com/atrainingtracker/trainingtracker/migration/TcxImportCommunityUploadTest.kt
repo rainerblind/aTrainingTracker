@@ -124,4 +124,81 @@ class TcxImportCommunityUploadTest {
             mockExportManager.exportWorkoutTo(workoutId, FileFormat.STRAVA)
         }
     }
+
+    @Test
+    fun testImportSkipsStravaUploadWhenExplicitlyOptedOut() {
+        val workoutId = 45L
+        val baseFileName = "2026-09-03-18-00-00"
+
+        every { TrainingApplication.uploadToCommunity(FileFormat.STRAVA) } returns true
+
+        val mockSummaryDb = mockk<com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager>(relaxed = true)
+        mockkStatic(com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager::class)
+        every { com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.getInstance(mockContext) } returns mockSummaryDb
+
+        val mockCursor = mockk<android.database.Cursor>(relaxed = true)
+        every {
+            mockSummaryDb.database.query(
+                com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                arrayOf(com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries.UPLOAD_TO_STRAVA),
+                "${com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID} = ?",
+                arrayOf(workoutId.toString()),
+                null,
+                null,
+                null
+            )
+        } returns mockCursor
+        every { mockCursor.moveToFirst() } returns true
+        every { mockCursor.getInt(0) } returns 0
+
+        LegacyImportEngine.schedulePostImportCommunityUpload(
+            context = mockContext,
+            workoutId = workoutId,
+            baseFileName = baseFileName,
+            exportManager = mockExportManager
+        )
+
+        // When UPLOAD_TO_STRAVA == 0, Strava export must be bypassed
+        verify(exactly = 0) {
+            mockExportManager.exportWorkoutTo(any(), any())
+        }
+    }
+
+    @Test
+    fun testImportUploadsToStravaWhenExplicitlyOptedIn() {
+        val workoutId = 46L
+        val baseFileName = "2026-09-03-20-00-00"
+
+        every { TrainingApplication.uploadToCommunity(FileFormat.STRAVA) } returns true
+
+        val mockSummaryDb = mockk<com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager>(relaxed = true)
+        mockkStatic(com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager::class)
+        every { com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.getInstance(mockContext) } returns mockSummaryDb
+
+        val mockCursor = mockk<android.database.Cursor>(relaxed = true)
+        every {
+            mockSummaryDb.database.query(
+                com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                arrayOf(com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries.UPLOAD_TO_STRAVA),
+                "${com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID} = ?",
+                arrayOf(workoutId.toString()),
+                null,
+                null,
+                null
+            )
+        } returns mockCursor
+        every { mockCursor.moveToFirst() } returns true
+        every { mockCursor.getInt(0) } returns 1
+
+        LegacyImportEngine.schedulePostImportCommunityUpload(
+            context = mockContext,
+            workoutId = workoutId,
+            baseFileName = baseFileName,
+            exportManager = mockExportManager
+        )
+
+        verify(exactly = 1) {
+            mockExportManager.exportWorkoutTo(workoutId, FileFormat.STRAVA)
+        }
+    }
 }
