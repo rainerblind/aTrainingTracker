@@ -141,10 +141,10 @@ class WorkoutLapsTest {
 
     @Test
     fun testColumnWeightsAndBadgeWidth_constantsIntegrity() {
-        assertEquals("Lap name column weight must be 1.6f for expanded room", 1.6f, WorkoutLapsHelper.WEIGHT_LAP_NAME, 0.001f)
+        assertEquals("Lap name column weight must be 1.7f for expanded room", 1.7f, WorkoutLapsHelper.WEIGHT_LAP_NAME, 0.001f)
         assertEquals("Time column weight must be 0.85f", 0.85f, WorkoutLapsHelper.WEIGHT_TIME, 0.001f)
         assertEquals("Distance column weight must be 0.85f", 0.85f, WorkoutLapsHelper.WEIGHT_DISTANCE, 0.001f)
-        assertEquals("Pace/Speed column weight must be 1.1f", 1.1f, WorkoutLapsHelper.WEIGHT_PACE_SPEED, 0.001f)
+        assertEquals("Pace/Speed column weight must be 0.85f (equally sized with time and distance)", 0.85f, WorkoutLapsHelper.WEIGHT_PACE_SPEED, 0.001f)
         assertEquals("Badge Box width must be 26dp", 26, WorkoutLapsHelper.BADGE_WIDTH_DP)
     }
 

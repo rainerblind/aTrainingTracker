@@ -349,10 +349,10 @@ private fun LapRow(
  * Pure helper functions for lap badge computation and list display logic.
  */
 object WorkoutLapsHelper {
-    const val WEIGHT_LAP_NAME = 1.6f
+    const val WEIGHT_LAP_NAME = 1.7f
     const val WEIGHT_TIME = 0.85f
     const val WEIGHT_DISTANCE = 0.85f
-    const val WEIGHT_PACE_SPEED = 1.1f
+    const val WEIGHT_PACE_SPEED = 0.85f
     const val BADGE_WIDTH_DP = 26
 
     enum class PerformanceBadge { FASTEST_RABBIT, SLOWEST_HEDGEHOG, NONE }

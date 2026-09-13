@@ -28,11 +28,9 @@ Key improvements delivered:
 2. **Pure Numerical Cell Formatting & Zero-Wrap Guarantee**:
    - Pace and speed values in data cells format pure numerical values (`formatters.pace.format` / `formatters.speed.format`) without repeating unit strings.
    - Text composables enforce `maxLines = 1` and `softWrap = false`, preventing multi-line wrapping artifacts.
-3. **Rebalanced Column Proportions**:
-   - Lap Name widened by +25% from `1.3f` to `1.6f` weight, providing generous space for custom names (e.g. `1. Pause am Bach`).
-   - Time tightened from `0.9f` to `0.85f` weight.
-   - Distance tightened from `1.0f` to `0.85f` weight.
-   - Pace / Speed: `1.1f` weight, with concise unit-only header (`min/km` / `km/h`) to prevent excessive width.
+3. **Harmonized & Equally Sized Column Proportions**:
+   - Lap Name widened from `1.3f` to `1.7f` weight, providing generous space that eliminates truncation for custom names (e.g. `1. Pause am Bach`).
+   - Time, Distance, and Pace / Speed columns are perfectly equally sized with identical `0.85f` weights (forming a balanced 2:1:1:1 ratio: 40% name, 20% time, 20% distance, 20% pace/speed).
    - Badge Box: `26.dp` fixed width.
 4. **Vertical Badge Alignment**:
    - Performance highlight badges (🐇 Rabbit and 🦔 Hedgehog) are vertically centered within the single-line row height.
