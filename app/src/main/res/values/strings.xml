@@ -1425,4 +1425,11 @@
     <string name="previous_lap">Previous</string>
     <string name="next_lap">Next</string>
     <string name="no_gps_track_available">No GPS track recorded for this workout</string>
+
+    <!-- ATT-920: Lap Table Headers -->
+    <string name="lap_table_header_lap">Lap</string>
+    <string name="lap_table_header_time">Time</string>
+    <string name="lap_table_header_distance">Distance</string>
+    <string name="lap_table_header_pace">Pace</string>
+    <string name="lap_table_header_speed">Speed</string>
 </resources>

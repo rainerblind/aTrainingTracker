@@ -1216,4 +1216,11 @@ proszę czekać</string>
     <string name="previous_lap">Poprzednie</string>
     <string name="next_lap">Następne</string>
     <string name="no_gps_track_available">Brak zarejestrowanej trasy GPS dla tego treningu</string>
+
+    <!-- ATT-920: Lap Table Headers -->
+    <string name="lap_table_header_lap">Okrążenie</string>
+    <string name="lap_table_header_time">Czas</string>
+    <string name="lap_table_header_distance">Dystans</string>
+    <string name="lap_table_header_pace">Tempo</string>
+    <string name="lap_table_header_speed">Pręd.</string>
 </resources>

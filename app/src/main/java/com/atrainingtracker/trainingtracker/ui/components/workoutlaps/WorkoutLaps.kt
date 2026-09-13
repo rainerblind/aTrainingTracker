@@ -29,13 +29,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.ui.aftermath.LapData
 import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
 
@@ -93,6 +97,12 @@ fun WorkoutLaps(
 
         Spacer(modifier = Modifier.height(4.dp))
 
+        // Table Header
+        LapTableHeader(
+            isRunningSport = isRunningSport,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+        )
+
         // Split Table Rows
         Column(
             modifier = Modifier
@@ -119,15 +129,15 @@ fun WorkoutLaps(
                     else -> null
                 }
 
-                // Speed / Pace formatted string
+                // Speed / Pace formatted string (pure numbers, units are in the table header)
                 val speedPaceFormatted = if (isRunningSport) {
                     if (lap.speedAverageMps > 0.001) {
-                        formatters.pace.format_with_units(1.0 / lap.speedAverageMps)
+                        formatters.pace.format(1.0 / lap.speedAverageMps)
                     } else {
                         "--"
                     }
                 } else {
-                    formatters.speed.format_with_units(lap.speedAverageMps)
+                    formatters.speed.format(lap.speedAverageMps)
                 }
 
                 LapRow(
@@ -176,6 +186,74 @@ fun WorkoutLaps(
 }
 
 @Composable
+private fun LapTableHeader(
+    isRunningSport: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val speedPaceUnit = stringResource(
+        MyHelper.getUnitsId(if (isRunningSport) SensorType.PACE_spm else SensorType.SPEED_mps)
+    )
+    val speedPaceLabel = stringResource(
+        if (isRunningSport) R.string.lap_table_header_pace else R.string.lap_table_header_speed
+    )
+
+    val headerStyle = MaterialTheme.typography.labelSmall.copy(
+        platformStyle = PlatformTextStyle(includeFontPadding = false),
+        lineHeightStyle = LineHeightStyle(
+            alignment = LineHeightStyle.Alignment.Bottom,
+            trim = LineHeightStyle.Trim.Both
+        )
+    )
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        // Col 1: Lap Name (weight 1.6f)
+        Text(
+            text = stringResource(R.string.lap_table_header_lap),
+            style = headerStyle,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(WorkoutLapsHelper.WEIGHT_LAP_NAME),
+            maxLines = 1
+        )
+
+        // Col 2: Duration (weight 0.85f)
+        Text(
+            text = stringResource(R.string.lap_table_header_time),
+            style = headerStyle,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(WorkoutLapsHelper.WEIGHT_TIME),
+            maxLines = 1
+        )
+
+        // Col 3: Distance (weight 0.85f)
+        Text(
+            text = stringResource(R.string.lap_table_header_distance),
+            style = headerStyle,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(WorkoutLapsHelper.WEIGHT_DISTANCE),
+            maxLines = 1
+        )
+
+        // Col 4: Pace / Speed with unit (weight 1.1f)
+        Text(
+            text = "$speedPaceLabel [$speedPaceUnit]",
+            style = headerStyle,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(WorkoutLapsHelper.WEIGHT_PACE_SPEED),
+            maxLines = 1
+        )
+
+        // Col 5: Badge Spacer matching 26.dp Box in data rows
+        Spacer(modifier = Modifier.width(WorkoutLapsHelper.BADGE_WIDTH_DP.dp))
+    }
+}
+
+@Composable
 private fun LapRow(
     displayName: String,
     description: String?,
@@ -193,9 +271,9 @@ private fun LapRow(
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Col 1: Lap Name & optional description
+        // Col 1: Lap Name & optional description (weight 1.6f)
         Column(
-            modifier = Modifier.weight(1.3f)
+            modifier = Modifier.weight(WorkoutLapsHelper.WEIGHT_LAP_NAME)
         ) {
             Text(
                 text = displayName,
@@ -215,37 +293,43 @@ private fun LapRow(
             }
         }
 
-        // Col 2: Duration
+        // Col 2: Duration (weight 0.85f)
         Text(
             text = timeFormatted,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.End,
-            modifier = Modifier.weight(0.9f)
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.weight(WorkoutLapsHelper.WEIGHT_TIME)
         )
 
-        // Col 3: Distance
+        // Col 3: Distance (weight 0.85f)
         Text(
             text = distanceFormatted,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.End,
-            modifier = Modifier.weight(1.0f)
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.weight(WorkoutLapsHelper.WEIGHT_DISTANCE)
         )
 
-        // Col 4: Pace or Speed
+        // Col 4: Pace or Speed (weight 1.1f)
         Text(
             text = speedPaceFormatted,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.End,
-            modifier = Modifier.weight(1.1f)
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.weight(WorkoutLapsHelper.WEIGHT_PACE_SPEED)
         )
 
-        // Col 5: Badge (Rabbit / Hedgehog)
+        // Col 5: Badge (Rabbit / Hedgehog) (fixed 26.dp)
         Box(
             modifier = Modifier
-                .width(26.dp)
+                .width(WorkoutLapsHelper.BADGE_WIDTH_DP.dp)
                 .padding(start = 4.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -268,6 +352,12 @@ private fun LapRow(
  * Pure helper functions for lap badge computation and list display logic.
  */
 object WorkoutLapsHelper {
+    const val WEIGHT_LAP_NAME = 1.6f
+    const val WEIGHT_TIME = 0.85f
+    const val WEIGHT_DISTANCE = 0.85f
+    const val WEIGHT_PACE_SPEED = 1.1f
+    const val BADGE_WIDTH_DP = 26
+
     enum class PerformanceBadge { FASTEST_RABBIT, SLOWEST_HEDGEHOG, NONE }
 
     fun determineBadges(laps: List<LapData>): Map<Long, PerformanceBadge> {

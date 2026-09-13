@@ -1225,4 +1225,11 @@
     <string name="previous_lap">Vorige</string>
     <string name="next_lap">Volgende</string>
     <string name="no_gps_track_available">Geen GPS-track geregistreerd voor deze training</string>
+
+    <!-- ATT-920: Lap Table Headers -->
+    <string name="lap_table_header_lap">Ronde</string>
+    <string name="lap_table_header_time">Tijd</string>
+    <string name="lap_table_header_distance">Afstand</string>
+    <string name="lap_table_header_pace">Tempo</string>
+    <string name="lap_table_header_speed">Snelh.</string>
 </resources>

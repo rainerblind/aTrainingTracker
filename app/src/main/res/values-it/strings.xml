@@ -1225,4 +1225,11 @@
     <string name="previous_lap">Precedente</string>
     <string name="next_lap">Successivo</string>
     <string name="no_gps_track_available">Nessuna traccia GPS registrata per questo allenamento</string>
+
+    <!-- ATT-920: Lap Table Headers -->
+    <string name="lap_table_header_lap">Giro</string>
+    <string name="lap_table_header_time">Tempo</string>
+    <string name="lap_table_header_distance">Distanza</string>
+    <string name="lap_table_header_pace">Passo</string>
+    <string name="lap_table_header_speed">Vel.</string>
 </resources>

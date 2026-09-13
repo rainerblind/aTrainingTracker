@@ -1211,4 +1211,11 @@
     <string name="previous_lap">前へ</string>
     <string name="next_lap">次へ</string>
     <string name="no_gps_track_available">このワークアウトのGPSトラックは記録されていません</string>
+
+    <!-- ATT-920: Lap Table Headers -->
+    <string name="lap_table_header_lap">ラップ</string>
+    <string name="lap_table_header_time">時間</string>
+    <string name="lap_table_header_distance">距離</string>
+    <string name="lap_table_header_pace">ペース</string>
+    <string name="lap_table_header_speed">速度</string>
 </resources>
