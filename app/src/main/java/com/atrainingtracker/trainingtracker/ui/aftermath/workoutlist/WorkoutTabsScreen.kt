@@ -95,7 +95,8 @@ fun WorkoutTabsScreen(
     onApplyFilterCriteria: (WorkoutFilterCriteria) -> Unit = {},
     onClearAllFilters: () -> Unit = {},
     onUpdateFilterCriteria: ((WorkoutFilterCriteria) -> WorkoutFilterCriteria) -> Unit = {},
-    onClusterClick: ((Long) -> Unit)? = null
+    onClusterClick: ((Long) -> Unit)? = null,
+    onMarkFinished: (Long) -> Unit = {}
 ) {
     val tabs = listOf(
         stringResource(R.string.workout_summaries_tab_all),
@@ -217,7 +218,8 @@ fun WorkoutTabsScreen(
                     // Use a Spacer or contentPadding that reacts to the offset
                     appBarOffsetPx = connection.appBarOffset,
                     headerHeightPx = appBarMaxHeightPx.toFloat(),
-                    onClusterClick = onClusterClick
+                    onClusterClick = onClusterClick,
+                    onMarkFinished = onMarkFinished
                 )
             }
 

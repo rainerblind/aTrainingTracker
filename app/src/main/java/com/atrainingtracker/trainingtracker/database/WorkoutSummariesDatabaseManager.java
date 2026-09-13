@@ -806,6 +806,25 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * Marks a specific workout as finished (ATT-987 / REQ-UI-146).
+     *
+     * @param workoutId ID of the workout to mark as finished.
+     */
+    public void setWorkoutFinished(long workoutId) {
+        SQLiteDatabase db = getDatabase();
+        if (db == null || !db.isOpen()) {
+            return;
+        }
+        try {
+            ContentValues values = new ContentValues();
+            values.put(WorkoutSummaries.FINISHED, 1);
+            db.update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + " = ?", new String[]{String.valueOf(workoutId)});
+        } catch (Exception e) {
+            Log.e(TAG, "Error setting workout " + workoutId + " to finished: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Atomically updates or inserts a sensor peak value and its location.
      */
     public void updateExtremaValue(long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType, double value, @Nullable LatLng position) {

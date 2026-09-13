@@ -47,6 +47,7 @@
     <string name="edit_wheel_circumference">edytuj obwód koła</string>
     <string name="edit_calibration_factor">edytuj współczynnik kalibracji</string>
     <string name="delete">usuń</string>
+    <string name="mark_as_finished">Oznacz jako zakończony</string>
     <string name="delete_device">usuń urządzenie</string>
     <string name="delete_pebble_view">usuń widok Pebble</string>
     <string name="delete_tracking_view">usuń widok treningu</string>

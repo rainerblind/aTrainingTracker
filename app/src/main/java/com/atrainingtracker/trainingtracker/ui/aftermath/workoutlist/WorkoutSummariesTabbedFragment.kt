@@ -281,7 +281,8 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                                     onApplyFilterCriteria = { viewModel.setFilterCriteria(it) },
                                     onClearAllFilters = { viewModel.clearFilterCriteria() },
                                     onUpdateFilterCriteria = { viewModel.updateFilterCriteria(it) },
-                                    onClusterClick = { clusterId -> WorkoutNavigationEvents.triggerCluster(clusterId) }
+                                    onClusterClick = { clusterId -> WorkoutNavigationEvents.triggerCluster(clusterId) },
+                                    onMarkFinished = { workoutId -> viewModel.markWorkoutFinished(workoutId) }
                                 )
                             }
                         }

@@ -608,6 +608,25 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     /**
+     * Marks an old unfinished workout as finished in database and memory,
+     * and rolls its metrics into historical period summaries (ATT-987 / REQ-UI-146).
+     */
+    fun markWorkoutFinished(workoutId: Long) {
+        launch {
+            withContext(Dispatchers.IO) {
+                summariesManager.setWorkoutFinished(workoutId)
+            }
+            updateWorkoutInMemory(workoutId) { current ->
+                current.copy(finished = true)
+            }
+            val updatedWorkout = _allWorkouts.value.firstOrNull { it.id == workoutId }
+            if (updatedWorkout != null) {
+                PeriodsRepository.getInstance(application).onWorkoutFinished(updatedWorkout)
+            }
+        }
+    }
+
+    /**
      * Updates a specific sensor peak (Extremum) for a workout in memory.
      *
      * Implementation: Updates both the flat [WorkoutData] fields and the specific

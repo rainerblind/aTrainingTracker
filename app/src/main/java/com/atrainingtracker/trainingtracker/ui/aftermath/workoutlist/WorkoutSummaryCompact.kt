@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -52,7 +53,8 @@ fun WorkoutSummaryCompact(
     onMapClick: () -> Unit,
     onDeleteRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    onEditWorkout: (() -> Unit)? = null
+    onEditWorkout: (() -> Unit)? = null,
+    onMarkFinished: (() -> Unit)? = null
 ) {
     // Maintain the "unfinished" state visual feedback
     val contentAlpha = if (workoutData.headerData.finished) TTAlpha.High else 0.5f
@@ -60,8 +62,10 @@ fun WorkoutSummaryCompact(
     var showContextMenu by remember { mutableStateOf(false) }
 
     val formatters = LocalMetricFormatter.current
-    val canDelete = !TrainingApplication.isActivelyTracked(workoutData.id)
-    val hasContextMenu = canDelete || onEditWorkout != null
+    val isActivelyTracked = TrainingApplication.isActivelyTracked(workoutData.id)
+    val canDelete = !isActivelyTracked
+    val canMarkFinished = !workoutData.headerData.finished && !isActivelyTracked && onMarkFinished != null
+    val hasContextMenu = canDelete || onEditWorkout != null || canMarkFinished
 
     Box {
         MappableListItem(
@@ -192,6 +196,16 @@ fun WorkoutSummaryCompact(
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
+                    )
+                }
+                if (canMarkFinished) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.mark_as_finished)) },
+                        onClick = {
+                            showContextMenu = false
+                            onMarkFinished?.invoke()
+                        },
+                        leadingIcon = { Icon(Icons.Default.Check, contentDescription = null) }
                     )
                 }
                 if (canDelete) {

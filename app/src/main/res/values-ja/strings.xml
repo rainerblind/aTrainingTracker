@@ -47,6 +47,7 @@
     <string name="edit_wheel_circumference">タイヤ周長を編集</string>
     <string name="edit_calibration_factor">補正係数を編集</string>
     <string name="delete">削除</string>
+    <string name="mark_as_finished">完了としてマーク</string>
     <string name="delete_device">デバイス削除</string>
     <string name="delete_pebble_view">Pebble表示を削除</string>
     <string name="delete_tracking_view">トレーニング表示を削除</string>
