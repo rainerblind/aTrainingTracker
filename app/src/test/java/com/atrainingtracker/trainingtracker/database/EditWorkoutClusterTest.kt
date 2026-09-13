@@ -367,4 +367,173 @@ class EditWorkoutClusterTest {
             mockClusterDb.updateCluster(match { it.id == clusterId && it.hitCount == 1 })
         }
     }
+
+    @Test
+    fun testStripHitCount_removesSequentialCounters() {
+        assertEquals("Morning Run", WorkoutClusterEngine.stripHitCount("Morning Run #4"))
+        assertEquals("Morning Run", WorkoutClusterEngine.stripHitCount("Morning Run #12"))
+        assertEquals("Tempo Run", WorkoutClusterEngine.stripHitCount("Tempo Run"))
+        assertEquals("Route", WorkoutClusterEngine.stripHitCount("Route"))
+    }
+
+    @Test
+    fun testCreateNewClusterFromWorkout_formatsClusterWorkoutName_forcesIdentity() {
+        val workoutId = 102L
+        val dummyWorkout = WorkoutData(
+            id = workoutId,
+            finished = true,
+            fileBaseName = "track_102",
+            workoutName = "Old Workout Name",
+            sportId = 2L,
+            sportName = "Running",
+            bSportType = BSportType.RUN,
+            startTimeS = 1000L,
+            formattedDate = "2026-09-06",
+            formattedTime = "18:00",
+            localDateTime = LocalDateTime.now(),
+            equipmentName = null,
+            equipmentId = 0L,
+            commute = false,
+            trainer = false,
+            mapPolyline = "dummy_polyline",
+            encodedAltitudes = "",
+            encodedDistances = "",
+            uploadToStrava = 0,
+            totalDistance = 8500.0,
+            maxDisplacement = 3200.0,
+            activeTimeSec = 2400L,
+            totalTimeSec = 2500L,
+            avgSpeedMps = 3.5,
+            ascentMeters = 50L,
+            descentMeters = 50L,
+            minAltitude = 200.0,
+            maxAltitude = 250.0,
+            startLatLng = LatLng(48.5, 9.2),
+            endLatLng = LatLng(48.51, 9.21),
+            maxDisplacementLatLng = LatLng(48.55, 9.25),
+            description = null,
+            goal = null,
+            method = null,
+            stravaSportName = null,
+            clusterId = -1L,
+            clusterName = null
+        )
+
+        val newClusterId = 88L
+        every { mockClusterDb.getClusterByName(any()) } returns null
+        every { mockClusterDb.insertCluster(any()) } returns newClusterId
+        every { mockSportDb.getBSportType(2L) } returns BSportType.RUN
+        val createdCluster = WorkoutCluster(
+            id = newClusterId,
+            name = "Forest Loop",
+            probableSportId = 2L,
+            startLat = 48.5,
+            startLng = 9.2,
+            endLat = 48.51,
+            endLng = 9.21,
+            maxDispLat = 48.55,
+            maxDispLng = 9.25,
+            refDistance = 8500.0,
+            hitCount = 0,
+            bSportType = BSportType.RUN
+        )
+        every { mockClusterDb.getClusterById(newClusterId) } returns createdCluster
+        every { mockSummariesManager.getLong(workoutId, WorkoutSummaries.CLUSTER_ID) } returns -1L
+        every { mockSummariesManager.getString(workoutId, WorkoutSummaries.MAP_POLYLINE) } returns "dummy_polyline"
+        every { mockSummariesManager.getString(workoutId, WorkoutSummaries.WORKOUT_NAME) } returns "Old Workout Name"
+        every { mockSummariesManager.getString(workoutId, WorkoutSummaries.FILE_BASE_NAME) } returns "track_102"
+        every { mockSummariesDb.update(any(), any(), any(), any()) } returns 1
+
+        val resultId = clusterEngine.createNewClusterFromWorkout(mockContext, dummyWorkout, "Forest Loop")
+        assertEquals(newClusterId, resultId)
+
+        // Verifies that forceIdentity = true updated WORKOUT_NAME to the cluster's formatted name ("Forest Loop" for 1st hit)
+        verify {
+            anyConstructed<ContentValues>().put(WorkoutSummaries.WORKOUT_NAME, "Forest Loop")
+            anyConstructed<ContentValues>().put(WorkoutSummaries.CLUSTER_ID, newClusterId)
+        }
+    }
+
+    @Test
+    fun testCreateNewClusterFromWorkout_withCustomWorkoutName_preservesCustomName() {
+        val workoutId = 103L
+        val dummyWorkout = WorkoutData(
+            id = workoutId,
+            finished = true,
+            fileBaseName = "track_103",
+            workoutName = "My Custom Typed Name",
+            sportId = 2L,
+            sportName = "Running",
+            bSportType = BSportType.RUN,
+            startTimeS = 1000L,
+            formattedDate = "2026-09-06",
+            formattedTime = "18:00",
+            localDateTime = LocalDateTime.now(),
+            equipmentName = null,
+            equipmentId = 0L,
+            commute = false,
+            trainer = false,
+            mapPolyline = "dummy_polyline",
+            encodedAltitudes = "",
+            encodedDistances = "",
+            uploadToStrava = 0,
+            totalDistance = 8500.0,
+            maxDisplacement = 3200.0,
+            activeTimeSec = 2400L,
+            totalTimeSec = 2500L,
+            avgSpeedMps = 3.5,
+            ascentMeters = 50L,
+            descentMeters = 50L,
+            minAltitude = 200.0,
+            maxAltitude = 250.0,
+            startLatLng = LatLng(48.5, 9.2),
+            endLatLng = LatLng(48.51, 9.21),
+            maxDisplacementLatLng = LatLng(48.55, 9.25),
+            description = null,
+            goal = null,
+            method = null,
+            stravaSportName = null,
+            clusterId = -1L,
+            clusterName = null
+        )
+
+        val newClusterId = 89L
+        every { mockClusterDb.getClusterByName(any()) } returns null
+        every { mockClusterDb.insertCluster(any()) } returns newClusterId
+        every { mockSportDb.getBSportType(2L) } returns BSportType.RUN
+        val createdCluster = WorkoutCluster(
+            id = newClusterId,
+            name = "Forest Loop",
+            probableSportId = 2L,
+            startLat = 48.5,
+            startLng = 9.2,
+            endLat = 48.51,
+            endLng = 9.21,
+            maxDispLat = 48.55,
+            maxDispLng = 9.25,
+            refDistance = 8500.0,
+            hitCount = 0,
+            bSportType = BSportType.RUN
+        )
+        every { mockClusterDb.getClusterById(newClusterId) } returns createdCluster
+        every { mockSummariesManager.getLong(workoutId, WorkoutSummaries.CLUSTER_ID) } returns -1L
+        every { mockSummariesManager.getString(workoutId, WorkoutSummaries.MAP_POLYLINE) } returns "dummy_polyline"
+        every { mockSummariesManager.getString(workoutId, WorkoutSummaries.WORKOUT_NAME) } returns "Old Name In DB"
+        every { mockSummariesManager.getString(workoutId, WorkoutSummaries.FILE_BASE_NAME) } returns "track_103"
+        every { mockSummariesDb.update(any(), any(), any(), any()) } returns 1
+
+        val resultId = clusterEngine.createNewClusterFromWorkout(
+            context = mockContext,
+            workout = dummyWorkout,
+            customName = "Forest Loop",
+            customWorkoutName = "My Custom Typed Name"
+        )
+        assertEquals(newClusterId, resultId)
+
+        // Verifies that customWorkoutName is preserved and written to WORKOUT_NAME
+        verify {
+            anyConstructed<ContentValues>().put(WorkoutSummaries.WORKOUT_NAME, "My Custom Typed Name")
+            anyConstructed<ContentValues>().put(WorkoutSummaries.CLUSTER_ID, newClusterId)
+        }
+    }
 }

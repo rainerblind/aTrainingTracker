@@ -1042,12 +1042,17 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     /**
-     * Creates a new cluster from the workout's spatial fingerprint and assigns the workout to it (REQ-SET-059).
+     * Creates a new cluster from the workout's spatial fingerprint and assigns the workout to it (REQ-SET-059, REQ-SET-072).
      */
-    fun createNewClusterFromWorkout(workout: WorkoutData, customName: String? = null, hasCounter: Boolean = true) {
+    fun createNewClusterFromWorkout(
+        workout: WorkoutData,
+        customName: String? = null,
+        hasCounter: Boolean = true,
+        customWorkoutName: String? = null
+    ) {
         launch(Dispatchers.IO) {
             WorkoutClusterEngine.getInstance(application)
-                .createNewClusterFromWorkout(application, workout, customName, hasCounter)
+                .createNewClusterFromWorkout(application, workout, customName, hasCounter, customWorkoutName)
 
             reloadWorkoutData(workout.id)
             loadWorkout(workout.id)
@@ -1055,12 +1060,17 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     /**
-     * Creates a new cluster from raw workout metadata and assigns the workout to it (REQ-SET-059).
+     * Creates a new cluster from raw workout metadata and assigns the workout to it (REQ-SET-059, REQ-SET-072).
      */
-    fun createNewClusterFromWorkout(workoutId: Long, customName: String? = null, hasCounter: Boolean = true) {
+    fun createNewClusterFromWorkout(
+        workoutId: Long,
+        customName: String? = null,
+        hasCounter: Boolean = true,
+        customWorkoutName: String? = null
+    ) {
         launch(Dispatchers.IO) {
             WorkoutClusterEngine.getInstance(application)
-                .createNewClusterFromWorkout(application, workoutId, customName, hasCounter)
+                .createNewClusterFromWorkout(application, workoutId, customName, hasCounter, customWorkoutName)
 
             reloadWorkoutData(workoutId)
             loadWorkout(workoutId)
