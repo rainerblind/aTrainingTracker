@@ -94,26 +94,38 @@ public class LapsDatabaseManager {
     // --- High-level helper methods ---
 
     /**
-     * Creates and saves a new lap entry in the database.
-     * This is the preferred way to create a new lap.
-     * @param workoutId The ID of the workout this lap belongs to.
-     * @param lapNr The number of the lap.
+     * Inserts a new lap record into the database.
+     *
+     * <p>Functional Description: Writes a completed lap's metrics (time, distance, speed, etc.) to the
+     * {@link Laps#TABLE} table for the specified workout.
+     *
+     * <p>Implementation Logic: In accordance with {@code REQ-TRK-002} and defect fix {@code ATT-896},
+     * attempts to persist zero-duration/zero-distance phantom laps (where {@code lapTime <= 0} and
+     * {@code lapDistance <= 0.0}) are strictly rejected and logged as warnings. Additionally, {@code averageSpeed}
+     * is guarded against {@link Double#NaN} or infinite values.
+     *
+     * @param workoutId The ID of the workout.
+     * @param lapNr The 1-based lap sequence number.
+     * @param timeStart The ISO start timestamp of the lap.
      * @param lapTime The total time of the lap in seconds.
      * @param lapDistance The total distance of the lap in meters.
      * @param averageSpeed The average speed of the lap in m/s.
-     */
-    /**
-     * Creates and saves a new lap entry in the database with explicit start time.
-     * @param workoutId The ID of the workout this lap belongs to.
-     * @param lapNr The number of the lap.
-     * @param timeStart The ISO/formatted start timestamp of the lap, or null to use database default.
-     * @param lapTime The total time of the lap in seconds.
-     * @param lapDistance The total distance of the lap in meters.
-     * @param averageSpeed The average speed of the lap in m/s.
+     * @param name Optional lap name/title.
+     * @param description Optional lap description.
      */
     public void saveLap(long workoutId, long lapNr, @Nullable String timeStart, int lapTime, double lapDistance, double averageSpeed, @Nullable String name, @Nullable String description) {
         if (DEBUG)
             Log.i(TAG, "saveLap: workoutId=" + workoutId + ", lapNr=" + lapNr + ", timeStart=" + timeStart + ", lapTime=" + lapTime + ", lapDistance=" + lapDistance + ", name=" + name);
+
+        // ATT-896 / REQ-TRK-002: Strict rejection of zero-duration / zero-distance laps
+        if (lapTime <= 0 && lapDistance <= 0.0) {
+            Log.w(TAG, "Rejecting zero-duration/zero-distance lap for workoutId: " + workoutId + ", lapNr: " + lapNr);
+            return;
+        }
+
+        double safeAverageSpeed = (Double.isNaN(averageSpeed) || Double.isInfinite(averageSpeed))
+                ? ((lapTime > 0) ? (lapDistance / lapTime) : 0.0)
+                : averageSpeed;
 
         // Create and fill content values
         ContentValues values = new ContentValues();
@@ -124,7 +136,7 @@ public class LapsDatabaseManager {
         }
         values.put(Laps.TIME_TOTAL_s, lapTime);
         values.put(Laps.DISTANCE_TOTAL_m, lapDistance);
-        values.put(Laps.SPEED_AVERAGE_mps, averageSpeed);
+        values.put(Laps.SPEED_AVERAGE_mps, safeAverageSpeed);
         if (name != null) {
             values.put(Laps.NAME, name);
         }
@@ -172,7 +184,13 @@ public class LapsDatabaseManager {
     }
 
     /**
-     * Retrieves all recorded laps for a specific workout, ordered by lap number ascending.
+     * Retrieves all recorded valid laps for a specific workout, ordered by lap number ascending.
+     *
+     * <p>Functional Description: Queries {@link Laps#TABLE} for all laps associated with {@code workoutId}.
+     *
+     * <p>Implementation Logic: In accordance with {@code REQ-TRK-002} and {@code ATT-896}, historical corrupted
+     * or empty phantom laps (where {@code TIME_TOTAL_s <= 0 AND DISTANCE_TOTAL_m <= 0}) are filtered out
+     * at the database layer to ensure they never render in UI summaries or export files.
      *
      * @param workoutId The workout ID.
      * @return List of LapData objects, or empty list if no laps found.
@@ -184,7 +202,7 @@ public class LapsDatabaseManager {
         try (Cursor cursor = db.query(
                 Laps.TABLE,
                 null,
-                Laps.WORKOUT_ID + " = ?",
+                Laps.WORKOUT_ID + " = ? AND (" + Laps.TIME_TOTAL_s + " > 0 OR " + Laps.DISTANCE_TOTAL_m + " > 0)",
                 new String[]{String.valueOf(workoutId)},
                 null,
                 null,
@@ -226,6 +244,11 @@ public class LapsDatabaseManager {
     /**
      * Retrieves laps for multiple workouts in chunked vectorized queries, eliminating N+1 operations.
      *
+     * <p>Functional Description: Queries {@link Laps#TABLE} in chunks of up to 500 workouts.
+     *
+     * <p>Implementation Logic: In accordance with {@code REQ-TRK-002} and {@code ATT-896}, phantom laps with
+     * {@code TIME_TOTAL_s <= 0 AND DISTANCE_TOTAL_m <= 0} are strictly excluded.
+     *
      * @param workoutIds The collection of workout IDs.
      * @return Map of workoutId to list of LapData objects.
      */
@@ -251,7 +274,7 @@ public class LapsDatabaseManager {
             try (Cursor cursor = db.query(
                     Laps.TABLE,
                     null,
-                    Laps.WORKOUT_ID + " IN (" + sb.toString() + ")",
+                    Laps.WORKOUT_ID + " IN (" + sb.toString() + ") AND (" + Laps.TIME_TOTAL_s + " > 0 OR " + Laps.DISTANCE_TOTAL_m + " > 0)",
                     args,
                     null,
                     null,

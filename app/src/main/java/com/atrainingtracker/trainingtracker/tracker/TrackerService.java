@@ -178,14 +178,28 @@ public class TrackerService extends Service {
     private boolean mTrackingInterrupted = false;
     private long mWorkoutID;
     private LiveWorkoutSession mLiveSession;
-    private final BroadcastReceiver mLapSummaryReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mLapSummaryReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, @NonNull Intent intent) {
             if (DEBUG) Log.i(TAG, "received lap summary intent");
 
+            int lapTime = intent.getIntExtra(BANALService.PREV_LAP_TIME_S, 0);
+            double lapDistance = intent.getDoubleExtra(BANALService.PREV_LAP_DISTANCE_m, 0);
+
+            // ATT-896 / REQ-TRK-002: Discard empty split summaries
+            if (lapTime <= 0 && lapDistance <= 0.0) {
+                if (DEBUG) Log.i(TAG, "Ignoring zero-duration lap summary broadcast");
+                return;
+            }
+
+            double lapSpeed = intent.getDoubleExtra(BANALService.PREV_LAP_SPEED_mps, 0);
+            if (Double.isNaN(lapSpeed) || Double.isInfinite(lapSpeed)) {
+                lapSpeed = (lapTime > 0) ? (lapDistance / lapTime) : 0.0;
+            }
+
             saveLap(intent.getIntExtra(BANALService.PREV_LAP_NR, 0),
-                    intent.getIntExtra(BANALService.PREV_LAP_TIME_S, 0),
-                    intent.getDoubleExtra(BANALService.PREV_LAP_DISTANCE_m, 0),
-                    intent.getDoubleExtra(BANALService.PREV_LAP_SPEED_mps, 0));
+                    lapTime,
+                    lapDistance,
+                    lapSpeed);
         }
     };
     private String mBaseFileName;
@@ -600,7 +614,18 @@ public class TrackerService extends Service {
         BANALService.setInitialSensorValue(SensorType.DISTANCE_m, mDistanceTotal_m);
     }
 
-    // NullPointerException when mBanalService is null!
+    /**
+     * Finalizes and records the currently active lap at the conclusion of a workout session.
+     *
+     * <p>Functional Description: Queries {@link BANALService} for accumulated lap metrics
+     * (lap number, lap time, and lap distance). If the lap metrics represent non-zero athletic effort,
+     * it calculates the average lap speed and persists the lap record to {@link LapsDatabaseManager}.
+     *
+     * <p>Implementation Logic: In accordance with {@code REQ-TRK-002} and defect fix {@code ATT-896},
+     * zero-duration/zero-distance phantom laps are strictly discarded to avoid persisting empty 0s splits
+     * when a session is ended without active movement or immediately following a split. Additionally,
+     * division by zero when calculating {@code lapSpeed} is safely guarded.
+     */
     protected void createNewLap() {
         if (DEBUG) Log.i(TAG, "createNewLap");
 
@@ -630,7 +655,13 @@ public class TrackerService extends Service {
                 lapDistance = (Double) sensorData.getValue();
             }
 
-            double lapSpeed = lapDistance / lapTime_s;
+            // ATT-896 / REQ-TRK-002: Guard against saving zero-duration / zero-distance phantom laps
+            if (lapTime_s <= 0 && lapDistance <= 0.0) {
+                if (DEBUG) Log.i(TAG, "Discarding zero-duration/zero-distance lap in createNewLap");
+                return;
+            }
+
+            double lapSpeed = (lapTime_s > 0) ? (lapDistance / lapTime_s) : 0.0;
 
             saveLap(prevLapNr, lapTime_s, lapDistance, lapSpeed);
         }
