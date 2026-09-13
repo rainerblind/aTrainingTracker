@@ -331,7 +331,7 @@ def create_subtask(parent_key, summary, description):
     print(f"Sub-task {data['key']} created for parent {parent_key}.")
     return data['key']
 
-def create_issue(summary, description, issuetype_id="10005", parent_key=None):
+def create_issue(summary, description, issuetype_id="10008", parent_key=None):
     config = get_config()
     url = f"{config['JIRA_URL']}/rest/api/2/issue"
     fields = {
@@ -346,10 +346,25 @@ def create_issue(summary, description, issuetype_id="10005", parent_key=None):
     payload = {"fields": fields}
     data = jira_request(url, method="POST", payload=payload)
     print(f"Issue {data['key']} created.")
+    return data['key']
+
+def add_to_active_sprint(issue_key):
+    config = get_config()
+    boards = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/board")["values"]
+    board_id = boards[0]["id"]
+    sprints = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/board/{board_id}/sprint?state=active")["values"]
+    if not sprints:
+        print("No active sprint found.")
+        return
+    sprint_id = sprints[0]["id"]
+    url = f"{config['JIRA_URL']}/rest/agile/1.0/sprint/{sprint_id}/issue"
+    payload = {"issues": [issue_key]}
+    jira_request(url, method="POST", payload=payload)
+    print(f"Added {issue_key} to active sprint '{sprints[0]['name']}' (id {sprint_id}).")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: jira_util.py [list | show KEY | status KEY | check-gate KEY | versions | set-fixversion KEY VERSION | move KEY todo|in_progress|in_review|freigabe | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY]]")
+        print("Usage: jira_util.py [list | show KEY | status KEY | check-gate KEY | versions | set-fixversion KEY VERSION | move KEY todo|in_progress|in_review|freigabe | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY] | add-to-sprint KEY]")
         sys.exit(1)
 
     cmd = sys.argv[1]
@@ -382,8 +397,10 @@ if __name__ == "__main__":
     elif cmd == "create-issue" and len(sys.argv) >= 4:
         summary = sys.argv[2]
         desc = sys.argv[3]
-        type_id = sys.argv[4] if len(sys.argv) >= 5 else "10005"
+        type_id = sys.argv[4] if len(sys.argv) >= 5 else "10008"
         parent = sys.argv[5] if len(sys.argv) == 6 else None
         create_issue(summary, desc, type_id, parent)
+    elif cmd == "add-to-sprint" and len(sys.argv) == 3:
+        add_to_active_sprint(sys.argv[2])
     else:
         print("Invalid command or arguments.")
