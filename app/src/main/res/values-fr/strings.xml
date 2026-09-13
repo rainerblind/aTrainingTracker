@@ -1231,6 +1231,4 @@
     <string name="lap_table_header_lap">Tour</string>
     <string name="lap_table_header_time">Temps</string>
     <string name="lap_table_header_distance">Distance</string>
-    <string name="lap_table_header_pace">Allure</string>
-    <string name="lap_table_header_speed">Vitesse</string>
 </resources>

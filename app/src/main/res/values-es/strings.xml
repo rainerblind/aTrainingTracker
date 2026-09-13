@@ -1232,6 +1232,4 @@
     <string name="lap_table_header_lap">Vuelta</string>
     <string name="lap_table_header_time">Tiempo</string>
     <string name="lap_table_header_distance">Distancia</string>
-    <string name="lap_table_header_pace">Ritmo</string>
-    <string name="lap_table_header_speed">Vel.</string>
 </resources>

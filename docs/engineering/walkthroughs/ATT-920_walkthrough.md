@@ -37,7 +37,7 @@ Key improvements delivered:
 4. **Vertical Badge Alignment**:
    - Performance highlight badges (🐇 Rabbit and 🦔 Hedgehog) are vertically centered within the single-line row height.
 5. **100% Localization Parity Across 9 Locales**:
-   - String keys translated across EN, DE, ES, FR, IT, JA, NL, PL, and PT, verified by automated tests.
+   - 3 string keys (`lap_table_header_lap`, `lap_table_header_time`, `lap_table_header_distance`) translated across EN, DE, ES, FR, IT, JA, NL, PL, and PT, with pace/speed column header using standard unit strings (`min/km`, `km/h`) directly.
 
 ---
 
@@ -46,7 +46,7 @@ Key improvements delivered:
 | Area | Component | Change | Description |
 | :--- | :--- | :--- | :--- |
 | **Laps Table UI** | `WorkoutLaps.kt` | [MODIFY] | Added `LapTableHeader` with concise unit header, switched to pure numeric cell formatting, rebalanced column weights via `WorkoutLapsHelper`, and vertically centered badges. |
-| **Localization** | `res/values*/strings.xml` | [MODIFY] | Added `lap_table_header_lap`, `lap_table_header_time`, `lap_table_header_distance`, `lap_table_header_pace`, and `lap_table_header_speed` across all 9 locales. |
+| **Localization** | `res/values*/strings.xml` | [MODIFY] | Added `lap_table_header_lap`, `lap_table_header_time`, and `lap_table_header_distance` across all 9 locales (removed unneeded pace/speed header strings). |
 | **Unit Tests** | `WorkoutLapsTest.kt` | [MODIFY] | Added unit tests verifying column weights constants integrity and pure numerical formatting without embedded units. |
 | **Requirements** | `docs/requirements.md` | [MODIFY] | Updated `REQ-UI-143` status to `Verified`. |
 | **Test Specs** | `docs/tests.md` | [MODIFY] | Updated `TST-UI-096` status to `Verified`. |

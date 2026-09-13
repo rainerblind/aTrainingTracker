@@ -1230,6 +1230,4 @@
     <string name="lap_table_header_lap">Giro</string>
     <string name="lap_table_header_time">Tempo</string>
     <string name="lap_table_header_distance">Distanza</string>
-    <string name="lap_table_header_pace">Passo</string>
-    <string name="lap_table_header_speed">Vel.</string>
 </resources>

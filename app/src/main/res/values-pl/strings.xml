@@ -1221,6 +1221,4 @@ proszę czekać</string>
     <string name="lap_table_header_lap">Okrążenie</string>
     <string name="lap_table_header_time">Czas</string>
     <string name="lap_table_header_distance">Dystans</string>
-    <string name="lap_table_header_pace">Tempo</string>
-    <string name="lap_table_header_speed">Pręd.</string>
 </resources>

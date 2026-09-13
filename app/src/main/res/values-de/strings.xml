@@ -1317,6 +1317,4 @@
     <string name="lap_table_header_lap">Runde</string>
     <string name="lap_table_header_time">Zeit</string>
     <string name="lap_table_header_distance">Distanz</string>
-    <string name="lap_table_header_pace">Tempo</string>
-    <string name="lap_table_header_speed">Geschw.</string>
 </resources>

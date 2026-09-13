@@ -1230,6 +1230,4 @@
     <string name="lap_table_header_lap">Volta</string>
     <string name="lap_table_header_time">Tempo</string>
     <string name="lap_table_header_distance">Distância</string>
-    <string name="lap_table_header_pace">Ritmo</string>
-    <string name="lap_table_header_speed">Vel.</string>
 </resources>

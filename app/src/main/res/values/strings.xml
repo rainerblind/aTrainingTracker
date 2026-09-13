@@ -1430,6 +1430,4 @@
     <string name="lap_table_header_lap">Lap</string>
     <string name="lap_table_header_time">Time</string>
     <string name="lap_table_header_distance">Distance</string>
-    <string name="lap_table_header_pace">Pace</string>
-    <string name="lap_table_header_speed">Speed</string>
 </resources>
