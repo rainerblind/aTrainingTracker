@@ -31,5 +31,11 @@ Before performing any task, you must:
     `git checkout develop && git merge --no-ff <branch_name> -m "Merge branch '<branch_name>' into develop"`.
 8.  **Mandatory Lösungsversion (Fix Version/s)**: The field `Lösungsversion` is mandatory for all parent tickets. Agent 1 verifies/sets it in Stage 5, and Agent 2 audits its presence during the Gate 5 release review prior to human release approval.
 9.  **Artifact Policy (`RequestFeedback: false`)**: Whenever generating or updating plan/walkthrough artifacts in the IDE, always specify `RequestFeedback: false` in `ArtifactMetadata`. Setting `RequestFeedback: true` is strictly prohibited. Authoritative plans live in `docs/engineering/plans/ATT-XXX_plan.md` and Jira Description.
+10. **Sub-Task Self-Sufficiency & Lifecycle Finalization (ATT-945 Retrospective Rules)**:
+    *   **Sub-Task Self-Sufficiency**: Every sub-task Description MUST contain the complete stage deliverable. Never leave Description empty or use short redirection stubs. Gate comments must contain direct, concrete verification evidence.
+    *   **Strict Sequencing**: Execute `update-desc` and post the review `comment` BEFORE transitioning states to `In Überprüfung` or `Freigabe (Human)`.
+    *   **Discovery-First Sub-Tasks**: Always run `jira_util.py show <Parent>` to discover automated sub-tasks; do not create duplicates manually.
+    *   **Mandatory Git Finalization**: After ticket completion and human sign-off, immediately checkout `develop`, merge with `--no-ff` (`git merge --no-ff <branch_name> -m "Merge branch '<branch_name>' into develop"`), verify `git status`, and post the integration comment with the merge commit hash.
+
 
 
