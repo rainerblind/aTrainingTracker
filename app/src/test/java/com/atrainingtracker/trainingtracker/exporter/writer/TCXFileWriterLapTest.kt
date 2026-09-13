@@ -140,7 +140,8 @@ class TCXFileWriterLapTest {
             WorkoutSummaries.GOAL to "",
             WorkoutSummaries.METHOD to "",
             WorkoutSummaries.DISTANCE_TOTAL_m to "3500",
-            WorkoutSummaries.DESCRIPTION to "Morning progression ride & run"
+            WorkoutSummaries.DESCRIPTION to "Morning progression ride & run",
+            WorkoutSummaries.WORKOUT_NAME to ""
         )
         val columnIndices = summaryColumns.keys.toList()
         columnIndices.forEachIndexed { index, col ->
@@ -277,7 +278,8 @@ class TCXFileWriterLapTest {
             WorkoutSummaries.GOAL to "",
             WorkoutSummaries.METHOD to "",
             WorkoutSummaries.DISTANCE_TOTAL_m to "1000",
-            WorkoutSummaries.DESCRIPTION to ""
+            WorkoutSummaries.DESCRIPTION to "",
+            WorkoutSummaries.WORKOUT_NAME to ""
         )
         val columnIndices = summaryColumns.keys.toList()
         columnIndices.forEachIndexed { index, col ->
