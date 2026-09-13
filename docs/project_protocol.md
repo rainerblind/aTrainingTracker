@@ -72,8 +72,18 @@ Any AI assistant working on this project **must** follow these steps for every t
             *   *Reject / Revise*: User moves the sub-task back to `In Bearbeitung` (via transition *"Nochmals von Vorne"*) with guidance in a comment.
     *   **Automated Parent Stage Transitions**:
         When the human user transitions an active sub-task to `Erledigt`, Jira Automation automatically advances the parent ticket to the next stage and automatically spawns the next stage's sub-task!
-    *   **Jira Description & Comment Separation**:
-        For all lifecycle sub-tasks, the primary deliverable produced by Agent 1 (Analysis in Stage 1, Test Specification in Stage 2, Implementation Plan in Stage 3, Implementation Walkthrough in Stage 4, or Test Evidence in Stage 5) MUST be written directly as the sub-task's **Description**. The independent review/audit produced by Agent 2 MUST be posted as a **Comment** on the ticket (prefixed with `[Automated comment by AI Agent]`). This ensures that deliverables remain prominent in the header, while comments capture review dialogue and gate approvals.
+    *   **Jira Description & Comment Separation & Self-Sufficiency (ATT-945 Retrospective Hardening)**:
+        For all lifecycle sub-tasks, the primary deliverable produced by Agent 1 (Analysis in Stage 1, Test Specification in Stage 2, Implementation Plan in Stage 3, Implementation Walkthrough in Stage 4, or Test Evidence in Stage 5) MUST be written directly as the sub-task's **Description** via `./tools/jira_util.py update-desc`. The independent review/audit produced by Agent 2 MUST be posted as a **Comment** on the ticket (prefixed with `[Automated comment by AI Agent]`).
+        * **Sub-Task Self-Sufficiency**: Every sub-task MUST stand on its own as a complete audit record. Leaving a sub-task Description empty (`None`) or posting brief redirection stubs (e.g. "see parent ticket") is strictly forbidden. Human reviewers approve sub-tasks individually; all necessary technical specifications, code diff summaries, and test evidence must be directly present on the sub-task.
+        * **Strict Documentation-Before-Transition Sequencing**: Agents MUST execute `update-desc` and post the audit `comment` **BEFORE** calling `move` to transition the sub-task to `In Überprüfung` or `Freigabe (Human)`. Moving a ticket before the Description is updated leaves the ticket blank for human reviewers who immediately inspect notifications.
+        * **Automated Sub-Task Discovery (No Duplicate Creation)**: Jira Automation automatically spawns lifecycle sub-tasks upon parent state entry. Agents SHALL ALWAYS inspect the parent ticket (`./tools/jira_util.py show <Parent>`) to discover the generated sub-task. Agents are strictly forbidden from eagerly calling `create-subtask` unless verified that Jira automation did not spawn the sub-task.
+    *   **Mandatory Git Finalization on Ticket Completion (ATT-945 Retrospective Hardening)**:
+        When a feature or bugfix ticket completes and all sub-tasks are approved (`Erledigt`), the agent MUST autonomously finalize the git lifecycle before moving to the next ticket:
+        1. Checkout `develop` (`git checkout develop`).
+        2. Merge the ticket branch with `--no-ff` (`git merge --no-ff -m "Merge branch '<branch>' into develop" <branch>`).
+        3. Verify a clean working tree (`git status`).
+        4. Post an integration comment on the parent ticket in Jira documenting the merge commit hash and verified requirements.
+        Leaving feature/bugfix branches unmerged on the local workstation when completing tickets is strictly forbidden.
     *   **STRICT PROHIBITION ON AI-DRIVEN 'ERLEDIGT' TRANSITIONS & ZERO-AUTHORITY ON SYNTHETIC PROMPTS (HUMAN-ONLY GATE)**:
         Under NO circumstances may any AI agent transition a Jira ticket or sub-task to `Erledigt` (or execute the transition *"Freigabe erteilt"*). Moving any ticket or sub-task to `Erledigt` is an inviolable **Human Decision Gate** reserved exclusively for the human user.
         * The agent's terminal transition for any sub-task is ALWAYS `Freigabe (Human)` (via *"Freigabe anfragen"*).
