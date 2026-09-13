@@ -187,6 +187,18 @@ def print_status(issue_key):
     print(f"{issue_key} status: {status}")
     return status
 
+def check_gate(issue_key):
+    config = get_config()
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=status"
+    issue = jira_request(url)
+    status = issue['fields'].get('status', {}).get('name', 'Unknown')
+    if status == "Erledigt":
+        print(f"GATE_PASSED: {issue_key} is Erledigt")
+        sys.exit(0)
+    else:
+        print(f"GATE_BLOCKED: {issue_key} is in status '{status}' (Expected: Erledigt)")
+        sys.exit(1)
+
 def download_attachment(url, filename):
     print(f"Downloading {filename}...")
     content = jira_request(url, is_binary=True)
@@ -337,7 +349,7 @@ def create_issue(summary, description, issuetype_id="10005", parent_key=None):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: jira_util.py [list | show KEY | status KEY | versions | set-fixversion KEY VERSION | move KEY todo|in_progress|in_review|freigabe | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY]]")
+        print("Usage: jira_util.py [list | show KEY | status KEY | check-gate KEY | versions | set-fixversion KEY VERSION | move KEY todo|in_progress|in_review|freigabe | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY]]")
         sys.exit(1)
 
     cmd = sys.argv[1]
@@ -347,6 +359,8 @@ if __name__ == "__main__":
         show_issue(sys.argv[2])
     elif cmd == "status" and len(sys.argv) == 3:
         print_status(sys.argv[2])
+    elif cmd == "check-gate" and len(sys.argv) == 3:
+        check_gate(sys.argv[2])
     elif cmd == "versions":
         list_versions()
     elif cmd == "set-fixversion" and len(sys.argv) == 4:
