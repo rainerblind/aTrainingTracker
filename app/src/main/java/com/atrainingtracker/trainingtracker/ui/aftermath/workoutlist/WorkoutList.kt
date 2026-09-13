@@ -60,7 +60,8 @@ fun WorkoutList(
     isCompactView: Boolean,
     appBarOffsetPx: Int,
     headerHeightPx: Float,
-    onClusterClick: ((Long) -> Unit)? = null
+    onClusterClick: ((Long) -> Unit)? = null,
+    onMarkFinished: (Long) -> Unit = {}
 ) {
     val density = LocalDensity.current
     val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
@@ -102,7 +103,8 @@ fun WorkoutList(
                             onMapClick = { onMapClick(workoutData) },
                             onDeleteRequest = { onDeleteRequest(workoutData.id) },
                             modifier = Modifier.fillMaxWidth(),
-                            onEditWorkout = { onEditWorkout(workoutData.id) }
+                            onEditWorkout = { onEditWorkout(workoutData.id) },
+                            onMarkFinished = { onMarkFinished(workoutData.id) }
                         )
                     } else {
                         WorkoutSummary(
@@ -113,7 +115,8 @@ fun WorkoutList(
                             onDeleteRequest = { onDeleteRequest(workoutData.id) },
                             onEditWorkout = { onEditWorkout(workoutData.id) },
                             onMapClick = { onMapClick(workoutData) },
-                            onClusterClick = onClusterClick
+                            onClusterClick = onClusterClick,
+                            onMarkFinished = { onMarkFinished(workoutData.id) }
                         )
                     }
                 }

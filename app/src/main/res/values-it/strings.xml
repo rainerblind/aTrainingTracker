@@ -47,6 +47,7 @@
     <string name="edit_wheel_circumference">modifica circonferenza ruota</string>
     <string name="edit_calibration_factor">modifica fattore calibrazione</string>
     <string name="delete">elimina</string>
+    <string name="mark_as_finished">Contrassegna come completato</string>
     <string name="delete_device">elimina dispositivo</string>
     <string name="delete_pebble_view">elimina vista Pebble</string>
     <string name="delete_tracking_view">elimina vista allenamento</string>

@@ -50,6 +50,7 @@
     <string name="edit_wheel_circumference">edit wheel circumference</string>
     <string name="edit_calibration_factor">edit calibration factor</string>
     <string name="delete">delete</string>
+    <string name="mark_as_finished">Mark as finished</string>
     <string name="delete_device">delete device</string>
     <string name="delete_pebble_view">delete Pebble view</string>
     <string name="delete_tracking_view">delete tracking view</string>

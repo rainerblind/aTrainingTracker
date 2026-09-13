@@ -25,6 +25,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -78,6 +79,7 @@ fun WorkoutHeader(
     modifier: Modifier = Modifier,
     menuEnabled: Boolean = true,
     canDelete: Boolean = menuEnabled,
+    onMarkFinished: (() -> Unit)? = null,
     onClusterClick: ((Long) -> Unit)? = null,
     onEditWorkout: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
@@ -86,12 +88,14 @@ fun WorkoutHeader(
     var showMenu by remember { mutableStateOf(false) }
     var showContextMenu by remember { mutableStateOf(false) }
 
+    val hasLongClick = canDelete || (!data.finished && onMarkFinished != null)
+
     Surface(
-        modifier = if (canDelete || onClicked != null) {
+        modifier = if (hasLongClick || onClicked != null) {
             modifier.fillMaxWidth()
                 .combinedClickable(
                     onClick = { onClicked?.invoke() },
-                    onLongClick = if (canDelete) { { showContextMenu = true } } else null
+                    onLongClick = if (hasLongClick) { { showContextMenu = true } } else null
                 )
         } else {
             modifier.fillMaxWidth()
@@ -353,11 +357,20 @@ fun WorkoutHeader(
                     onDismissRequest = { showContextMenu = false },
                     containerColor = MaterialTheme.colorScheme.surface
                 ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.delete)) },
-                        onClick = { showContextMenu = false; onDeleteRequest() },
-                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
-                    )
+                    if (!data.finished && onMarkFinished != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.mark_as_finished)) },
+                            onClick = { showContextMenu = false; onMarkFinished() },
+                            leadingIcon = { Icon(Icons.Default.Check, contentDescription = null) }
+                        )
+                    }
+                    if (canDelete) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.delete)) },
+                            onClick = { showContextMenu = false; onDeleteRequest() },
+                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                        )
+                    }
                 }
             }
         }

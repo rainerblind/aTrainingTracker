@@ -286,7 +286,8 @@ class WorkoutClustersFragment : Fragment() {
                                         isCompactView = isCompactView,
                                         appBarOffsetPx = 0,
                                         headerHeightPx = 0f,
-                                        onClusterClick = { viewingWorkoutsForCluster = null }
+                                        onClusterClick = { viewingWorkoutsForCluster = null },
+                                        onMarkFinished = { workoutId -> summariesViewModel.markWorkoutFinished(workoutId) }
                                     )
                                 }
                             }

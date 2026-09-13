@@ -210,6 +210,13 @@ class WorkoutSummariesViewModel(application: Application) :
         workoutRepo.deleteWorkout(id)
     }
 
+    /**
+     * Marks an old unfinished workout as finished (ATT-987 / REQ-UI-146).
+     */
+    fun markWorkoutFinished(id: Long) {
+        workoutRepo.markWorkoutFinished(id)
+    }
+
 
     // --- Methods for the delection of old workouts ---
     /**

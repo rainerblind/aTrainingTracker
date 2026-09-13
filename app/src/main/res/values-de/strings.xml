@@ -48,6 +48,7 @@
     <string name="edit_wheel_circumference">Radumfang eingeben</string>
     <string name="edit_calibration_factor">Kalibrierungsfaktor eingeben</string>
     <string name="delete">löschen</string>
+    <string name="mark_as_finished">Als abgeschlossen markieren</string>
     <string name="delete_device">Sensor löschen</string>
     <string name="delete_pebble_view">Pebble Ansicht löschen</string>
     <string name="delete_tracking_view">Ansicht löschen</string>

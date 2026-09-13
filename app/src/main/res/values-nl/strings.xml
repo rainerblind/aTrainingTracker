@@ -47,6 +47,7 @@
     <string name="edit_wheel_circumference">wielomtrek bewerken</string>
     <string name="edit_calibration_factor">kalibratiefactor bewerken</string>
     <string name="delete">verwijderen</string>
+    <string name="mark_as_finished">Markeren als voltooid</string>
     <string name="delete_device">apparaat verwijderen</string>
     <string name="delete_pebble_view">Pebble weergave verwijderen</string>
     <string name="delete_tracking_view">trainingsweergave verwijderen</string>

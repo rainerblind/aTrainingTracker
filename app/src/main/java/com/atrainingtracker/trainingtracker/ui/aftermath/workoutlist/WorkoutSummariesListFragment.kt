@@ -279,7 +279,8 @@ class WorkoutSummariesListFragment : Fragment() {
                                         isCompactView = viewModel.isCompactView.collectAsStateWithLifecycle().value,
                                         appBarOffsetPx = connection.appBarOffset,
                                         headerHeightPx = headerHeightPx.toFloat(),
-                                        onClusterClick = { clusterId -> WorkoutNavigationEvents.triggerCluster(clusterId) }
+                                        onClusterClick = { clusterId -> WorkoutNavigationEvents.triggerCluster(clusterId) },
+                                        onMarkFinished = { workoutId -> viewModel.markWorkoutFinished(workoutId) }
                                     )
 
                                     // THE HEADER (Titles)

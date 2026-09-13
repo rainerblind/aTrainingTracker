@@ -77,7 +77,8 @@ fun WorkoutSummary(
     onEditWorkout: () -> Unit,
     onMapClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onClusterClick: ((Long) -> Unit)? = null
+    onClusterClick: ((Long) -> Unit)? = null,
+    onMarkFinished: (() -> Unit)? = null
 ) {
     // When the workout is not yet finished (properly), we show it with an alpha of 0.5
     val contentAlpha = if (workoutData.headerData.finished) TTAlpha.High else 0.5f
@@ -97,7 +98,9 @@ fun WorkoutSummary(
         modifier = modifier
     ) {
         // 1. Header
-        val canDelete = !TrainingApplication.isActivelyTracked(workoutData.id)
+        val isActivelyTracked = TrainingApplication.isActivelyTracked(workoutData.id)
+        val canDelete = !isActivelyTracked
+        val canMarkFinished = !workoutData.headerData.finished && !isActivelyTracked
         WorkoutHeader(
             data = workoutData.headerData,
             onClicked = onMapClick,
@@ -106,6 +109,7 @@ fun WorkoutSummary(
             onDeleteRequest = onDeleteRequest,
             menuEnabled = workoutData.headerData.finished,
             canDelete = canDelete,
+            onMarkFinished = if (canMarkFinished && onMarkFinished != null) onMarkFinished else null,
             onClusterClick = onClusterClick,
             onEditWorkout = onEditWorkout
         )
