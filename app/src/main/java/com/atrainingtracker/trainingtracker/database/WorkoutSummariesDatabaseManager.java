@@ -416,6 +416,20 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * Returns the total count of finished workouts in WorkoutSummaries.
+     * Used for O(1) self-healing integrity verification in PeriodsRepository (REQ-MIG-026 / ATT-909).
+     */
+    public int getFinishedWorkoutCount() {
+        String query = "SELECT COUNT(*) FROM " + WorkoutSummaries.TABLE + " WHERE " + WorkoutSummaries.FINISHED + " = 1";
+        try (Cursor c = getDatabase().rawQuery(query, null)) {
+            return (c != null && c.moveToFirst()) ? c.getInt(0) : 0;
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying finished workout count: " + e.getMessage(), e);
+            return 0;
+        }
+    }
+
+    /**
      * Returns a cursor for all workouts within a specific time range.
      * Used for hierarchical periods (ATT-346) and analytical rollups.
      *

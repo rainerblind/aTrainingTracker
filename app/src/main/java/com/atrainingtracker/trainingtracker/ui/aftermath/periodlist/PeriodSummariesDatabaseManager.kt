@@ -39,6 +39,11 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
                 instance ?: PeriodSummariesDatabaseManager(context.applicationContext).also { instance = it }
             }
         }
+
+        @androidx.annotation.VisibleForTesting
+        fun setInstanceForTesting(manager: PeriodSummariesDatabaseManager?) {
+            instance = manager
+        }
     }
 
     init {
@@ -120,6 +125,24 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
         if (db.update(SyncStatusContract.TABLE_NAME, values, "${BaseColumns._ID} = 1", null) == 0) {
             values.put(BaseColumns._ID, 1)
             db.insert(SyncStatusContract.TABLE_NAME, null, values)
+        }
+    }
+
+    /**
+     * O(1) Fast check for self-healing integrity verification (REQ-MIG-026 / ATT-909).
+     * Computes the sum of total_workouts across all DAY periods in PeriodSummaries.db.
+     */
+    fun getTotalDayWorkoutsCount(): Int {
+        val db = getDatabase()
+        try {
+            db.rawQuery(
+                "SELECT SUM(${PeriodSummariesContract.COLUMN_TOTAL_WORKOUTS}) FROM ${PeriodSummariesContract.TABLE_NAME} WHERE ${PeriodSummariesContract.COLUMN_PERIOD_TYPE} = ?",
+                arrayOf(PeriodType.DAY.name)
+            ).use { cursor ->
+                return if (cursor.moveToFirst()) cursor.getInt(0) else 0
+            }
+        } catch (e: Exception) {
+            return 0
         }
     }
 

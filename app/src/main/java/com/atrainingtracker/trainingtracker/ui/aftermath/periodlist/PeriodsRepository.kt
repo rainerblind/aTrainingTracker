@@ -76,6 +76,16 @@ class PeriodsRepository private constructor(private val application: Application
         }
 
         @androidx.annotation.VisibleForTesting
+        fun resetInstanceForTesting() {
+            instance = null
+        }
+
+        @androidx.annotation.VisibleForTesting
+        fun setInstanceForTesting(repo: PeriodsRepository?) {
+            instance = repo
+        }
+
+        @androidx.annotation.VisibleForTesting
         fun getPeriodSortKey(startTimestampS: Long, type: PeriodType): String {
             val dt = OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(startTimestampS), java.time.ZoneId.systemDefault())
             return when (type) {
@@ -97,11 +107,13 @@ class PeriodsRepository private constructor(private val application: Application
             loadFromDatabase()
         }
 
-        // 2. Initial Migration (Prioritized Hierarchical Scan)
+        // 2. Initial Migration (Prioritized Hierarchical Scan) & Self-Healing Sync (ATT-909)
         scope.launch {
             val isFinished = withContext(Dispatchers.IO) { dbManager.isSyncFinished() }
             if (!isFinished) {
                 performHierarchicalMigration()
+            } else {
+                checkIntegrityAndSync()
             }
         }
 
@@ -300,6 +312,33 @@ class PeriodsRepository private constructor(private val application: Application
      */
     suspend fun resyncAllPeriods() = withContext(Dispatchers.Default) {
         performHierarchicalMigration()
+    }
+
+    /**
+     * O(1) Fast integrity check comparing finished workouts in SQLite against PeriodSummaries.db (REQ-MIG-026 / ATT-909).
+     * If finished workouts in WorkoutSummaries exceed Day periods in PeriodSummaries, automatically launches
+     * performHierarchicalMigration() to incorporate any missing workouts into historical periods.
+     */
+    suspend fun checkIntegrityAndSync(): Boolean = withContext(Dispatchers.IO) {
+        val finishedWorkouts = workoutSummariesManager.getFinishedWorkoutCount()
+        val periodWorkouts = dbManager.getTotalDayWorkoutsCount()
+        if (finishedWorkouts > periodWorkouts) {
+            Log.i(TAG, "Integrity discrepancy detected: $finishedWorkouts workouts in SQLite vs $periodWorkouts in PeriodSummaries.db. Triggering migration.")
+            performHierarchicalMigration()
+            true
+        } else {
+            false
+        }
+    }
+
+    /**
+     * Non-blocking trigger to synchronize periods if a discrepancy exists.
+     * Callable after bulk operations, background imports, or restoration (REQ-MIG-026).
+     */
+    fun syncPeriodsIfDiscrepancy() {
+        scope.launch {
+            checkIntegrityAndSync()
+        }
     }
 
     /**

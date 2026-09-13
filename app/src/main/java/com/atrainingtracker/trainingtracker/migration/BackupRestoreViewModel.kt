@@ -13,6 +13,7 @@ package com.atrainingtracker.trainingtracker.migration
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -27,6 +28,9 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -320,6 +324,15 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             }
             tempFile.delete()
             if (success) {
+                // ATT-909 / REQ-MIG-026: Post-import reactive reconciliation
+                try {
+                    val app = getApplication<Application>()
+                    WorkoutRepository.getInstance(app).loadAllWorkouts()
+                    PeriodsRepository.getInstance(app).syncPeriodsIfDiscrepancy()
+                    WorkoutClusterRepository.getInstance(app).refreshClusters()
+                } catch (e: Exception) {
+                    Log.w("BackupRestoreVM", "Post-import reconciliation failed: ${e.message}")
+                }
                 _uiState.value = UiState.Success("Successfully imported workout from $format file.")
             } else {
                 _uiState.value = UiState.Error("Failed to import workout. It might already exist or the file format is invalid.")
@@ -359,6 +372,16 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
                     result.importedCount,
                     result.totalScanned
                 )
+            }
+            if (result.importedCount > 0) {
+                // ATT-909 / REQ-MIG-026: Post-bulk recovery reactive reconciliation
+                try {
+                    WorkoutRepository.getInstance(app).loadAllWorkouts()
+                    PeriodsRepository.getInstance(app).syncPeriodsIfDiscrepancy()
+                    WorkoutClusterRepository.getInstance(app).refreshClusters()
+                } catch (e: Exception) {
+                    Log.w("BackupRestoreVM", "Post-bulk recovery reconciliation failed: ${e.message}")
+                }
             }
             _uiState.value = UiState.Success(message)
         }
