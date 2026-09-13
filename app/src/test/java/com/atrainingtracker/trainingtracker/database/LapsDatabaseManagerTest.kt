@@ -146,7 +146,7 @@ class LapsDatabaseManagerTest {
             mockDb.query(
                 LapsDatabaseManager.Laps.TABLE,
                 null,
-                "${LapsDatabaseManager.Laps.WORKOUT_ID} = ?",
+                "${LapsDatabaseManager.Laps.WORKOUT_ID} = ? AND (${LapsDatabaseManager.Laps.TIME_TOTAL_s} > 0 OR ${LapsDatabaseManager.Laps.DISTANCE_TOTAL_m} > 0)",
                 arrayOf("42"),
                 null,
                 null,
@@ -256,6 +256,72 @@ class LapsDatabaseManagerTest {
                 "${LapsDatabaseManager.Laps.WORKOUT_ID} = ? AND ${LapsDatabaseManager.Laps.LAP_NR} = ?",
                 arrayOf("50", "3")
             )
+        }
+    }
+
+    @Test
+    fun testSaveLap_rejectsZeroDurationAndZeroDistance_insertsNothing() {
+        resetSingleton()
+        val manager = LapsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+        every { mockDb.isOpen } returns true
+
+        // Attempt to save 0 duration, 0 distance lap
+        manager.saveLap(42L, 1L, null, 0, 0.0, 0.0)
+
+        // Verify that insertOrThrow was NEVER called
+        verify(exactly = 0) {
+            mockDb.insertOrThrow(any(), any(), any())
+        }
+    }
+
+    @Test
+    fun testSaveLap_rejectsNegativeDurationAndZeroDistance_insertsNothing() {
+        resetSingleton()
+        val manager = LapsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+        every { mockDb.isOpen } returns true
+
+        // Attempt to save negative duration, 0 distance lap
+        manager.saveLap(42L, 1L, null, -5, 0.0, 0.0)
+
+        // Verify that insertOrThrow was NEVER called
+        verify(exactly = 0) {
+            mockDb.insertOrThrow(any(), any(), any())
+        }
+    }
+
+    @Test
+    fun testSaveLap_acceptsPositiveDuration_insertsLap() {
+        resetSingleton()
+        val manager = LapsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+        every { mockDb.isOpen } returns true
+
+        every { mockDb.insertOrThrow(LapsDatabaseManager.Laps.TABLE, null, any()) } returns 1L
+
+        manager.saveLap(42L, 1L, "2026-09-13T10:00:00", 300, 1000.0, 3.33, "Lap 1", "Warmup")
+
+        verify(exactly = 1) {
+            mockDb.insertOrThrow(LapsDatabaseManager.Laps.TABLE, null, any())
+        }
+    }
+
+    @Test
+    fun testSaveLap_guardsAgainstNaNSpeed_recalculatesSafely() {
+        resetSingleton()
+        val manager = LapsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+        every { mockDb.isOpen } returns true
+
+        every { mockDb.insertOrThrow(LapsDatabaseManager.Laps.TABLE, null, any()) } returns 1L
+
+        // Passing Double.NaN for averageSpeed with lapTime=200s and lapDistance=1000m -> safe fallback is 5.0 m/s
+        manager.saveLap(42L, 1L, null, 200, 1000.0, Double.NaN)
+
+        verify(exactly = 1) {
+            anyConstructed<ContentValues>().put(LapsDatabaseManager.Laps.SPEED_AVERAGE_mps, 5.0)
+            mockDb.insertOrThrow(LapsDatabaseManager.Laps.TABLE, null, any())
         }
     }
 }

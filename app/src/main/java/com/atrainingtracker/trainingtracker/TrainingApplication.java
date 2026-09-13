@@ -1116,17 +1116,33 @@ public class TrainingApplication extends Application {
         notifyTrackingStateChanged();
     }
 
+    /**
+     * Pauses the active tracking session without splitting or creating laps.
+     *
+     * <p>Functional Description: Transitions the tracking state to {@link TrackingMode#PAUSED}
+     * and notifies registered listeners. Accumulators in {@code BANALService} and {@code ClockDevice}
+     * halt metric accumulation via {@link #isPaused()}.
+     *
+     * <p>Implementation Logic: In accordance with {@code REQ-TRK-002}, pausing is an interruption
+     * of tracking rather than an athletic lap split. No {@link #REQUEST_NEW_LAP} broadcast is sent,
+     * ensuring the active lap remains open across pauses.
+     */
     protected void pauseTracking() {
         if (DEBUG) Log.d(TAG, "pause tracking");
-
-        sendBroadcast(new Intent(REQUEST_NEW_LAP)
-                .putExtra(BANALService.IS_PAUSE, true)
-                .setPackage(getPackageName()));
 
         cTrackingMode = TrackingMode.PAUSED;
         notifyTrackingStateChanged();
     }
 
+    /**
+     * Resumes an active tracking session from a paused state.
+     *
+     * <p>Functional Description: Re-engages active tracking, triggers device discovery if configured,
+     * transitions the state to {@link TrackingMode#TRACKING}, and notifies registered observers.
+     *
+     * <p>Implementation Logic: In accordance with {@code REQ-TRK-002}, resuming continues the
+     * active lap seamlessly without sending {@link #REQUEST_NEW_LAP}.
+     */
     protected void resumeFromPaused() {
         if (DEBUG) Log.d(TAG, "resume tracking");
 
@@ -1134,10 +1150,6 @@ public class TrainingApplication extends Application {
             sendBroadcast(new Intent(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
                     .setPackage(getPackageName()));
         }
-
-        sendBroadcast(new Intent(REQUEST_NEW_LAP)
-                .putExtra(BANALService.IS_PAUSE, true)
-                .setPackage(getPackageName()));
 
         cTrackingMode = TrackingMode.TRACKING;
         notifyTrackingStateChanged();
