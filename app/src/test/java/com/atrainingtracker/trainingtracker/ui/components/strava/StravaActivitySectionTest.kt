@@ -16,8 +16,11 @@
 package com.atrainingtracker.trainingtracker.ui.components.strava
 
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaActivityParser
+import com.atrainingtracker.trainingtracker.ui.aftermath.StravaBestEffort
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaSegmentEffort
+import com.atrainingtracker.trainingtracker.ui.aftermath.effectiveDistanceMeters
 import com.atrainingtracker.trainingtracker.ui.aftermath.isHighlight
+import com.atrainingtracker.trainingtracker.ui.aftermath.isMileEffort
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -268,5 +271,256 @@ class StravaActivitySectionTest {
         assertTrue(effort.isStarred)
         assertEquals(112233L, effort.segmentId)
         assertTrue(effort.isHighlight)
+    }
+
+    // =========================================================================================
+    // Best Efforts (Bestzeiten) Tests - ATT-883 / REQ-UI-144 / TST-UI-097
+    // =========================================================================================
+
+    @Test
+    fun testBestEffortIsHighlight() {
+        val pr1 = StravaBestEffort(name = "400m", elapsedTimeSec = 60, prRank = 1)
+        val pr2 = StravaBestEffort(name = "1k", elapsedTimeSec = 180, prRank = 2)
+        val pr3 = StravaBestEffort(name = "5k", elapsedTimeSec = 1200, prRank = 3)
+        val pr4 = StravaBestEffort(name = "10k", elapsedTimeSec = 2600, prRank = 4)
+        val noPr = StravaBestEffort(name = "Half-Marathon", elapsedTimeSec = 5400, prRank = null)
+
+        assertTrue("PR rank 1 must be highlight", pr1.isHighlight)
+        assertTrue("PR rank 2 must be highlight", pr2.isHighlight)
+        assertTrue("PR rank 3 must be highlight", pr3.isHighlight)
+        assertFalse("PR rank > 3 must NOT be highlight", pr4.isHighlight)
+        assertFalse("null PR rank must NOT be highlight", noPr.isHighlight)
+    }
+
+    @Test
+    fun testBestEffortIsMileEffort() {
+        val halfMile = StravaBestEffort("1/2 mile", 120)
+        val halfMileHyphen = StravaBestEffort("1/2-mile", 120)
+        val oneMile = StravaBestEffort("1 mile", 300)
+        val twoMiles = StravaBestEffort("2 miles", 620)
+        val tenMiles = StravaBestEffort("10 miles", 3600)
+        val tenMileHyphen = StravaBestEffort("10-mile", 3600)
+
+        assertTrue("1/2 mile is mile effort", halfMile.isMileEffort)
+        assertTrue("1/2-mile is mile effort", halfMileHyphen.isMileEffort)
+        assertTrue("1 mile is mile effort", oneMile.isMileEffort)
+        assertTrue("2 miles is mile effort", twoMiles.isMileEffort)
+        assertTrue("10 miles is mile effort", tenMiles.isMileEffort)
+        assertTrue("10-mile is mile effort", tenMileHyphen.isMileEffort)
+
+        val fourHundredMeters = StravaBestEffort("400m", 60)
+        val oneK = StravaBestEffort("1k", 180)
+        val fiveK = StravaBestEffort("5k", 1200)
+        val tenK = StravaBestEffort("10k", 2600)
+        val halfMarathon = StravaBestEffort("Half-Marathon", 5400)
+        val marathon = StravaBestEffort("Marathon", 12000)
+
+        assertFalse("400m is not mile effort", fourHundredMeters.isMileEffort)
+        assertFalse("1k is not mile effort", oneK.isMileEffort)
+        assertFalse("5k is not mile effort", fiveK.isMileEffort)
+        assertFalse("10k is not mile effort", tenK.isMileEffort)
+        assertFalse("Half-Marathon is not mile effort", halfMarathon.isMileEffort)
+        assertFalse("Marathon is not mile effort", marathon.isMileEffort)
+    }
+
+    @Test
+    fun testBestEffortEffectiveDistanceMeters() {
+        val explicitDistance = StravaBestEffort("Custom", 100, distanceMeters = 1500.0)
+        assertEquals(1500.0, explicitDistance.effectiveDistanceMeters, 0.001)
+
+        assertEquals(400.0, StravaBestEffort("400m", 60).effectiveDistanceMeters, 0.001)
+        assertEquals(804.672, StravaBestEffort("1/2 mile", 120).effectiveDistanceMeters, 0.001)
+        assertEquals(1000.0, StravaBestEffort("1k", 180).effectiveDistanceMeters, 0.001)
+        assertEquals(1609.344, StravaBestEffort("1 mile", 300).effectiveDistanceMeters, 0.001)
+        assertEquals(3218.688, StravaBestEffort("2 miles", 620).effectiveDistanceMeters, 0.001)
+        assertEquals(5000.0, StravaBestEffort("5k", 1200).effectiveDistanceMeters, 0.001)
+        assertEquals(10000.0, StravaBestEffort("10k", 2600).effectiveDistanceMeters, 0.001)
+        assertEquals(16093.44, StravaBestEffort("10 miles", 3600).effectiveDistanceMeters, 0.001)
+        assertEquals(21097.5, StravaBestEffort("Half-Marathon", 5400).effectiveDistanceMeters, 0.001)
+        assertEquals(42195.0, StravaBestEffort("Marathon", 12000).effectiveDistanceMeters, 0.001)
+    }
+
+    @Test
+    fun testParserExtractsBestEffortsWithDistanceAndAchievements() {
+        val json = """
+            {
+              "id": 99883,
+              "best_efforts": [
+                {
+                  "name": "1k",
+                  "elapsed_time": 210,
+                  "distance": 1000.0,
+                  "pr_rank": 1
+                },
+                {
+                  "name": "1 mile",
+                  "elapsed_time": 350,
+                  "distance": 1609.34,
+                  "achievements": [
+                    { "type": "pr", "rank": 2 }
+                  ]
+                },
+                {
+                  "name": "5k",
+                  "elapsed_time": 1250,
+                  "distance": 5000.0
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val activity = StravaActivityParser.parse(json)
+        assertNotNull(activity)
+        assertEquals(3, activity!!.bestEfforts.size)
+
+        val effort1 = activity.bestEfforts[0]
+        assertEquals("1k", effort1.name)
+        assertEquals(210, effort1.elapsedTimeSec)
+        assertEquals(1000.0, effort1.distanceMeters, 0.001)
+        assertEquals(1, effort1.prRank)
+        assertTrue(effort1.isHighlight)
+
+        val effort2 = activity.bestEfforts[1]
+        assertEquals("1 mile", effort2.name)
+        assertEquals(350, effort2.elapsedTimeSec)
+        assertEquals(1609.34, effort2.distanceMeters, 0.01)
+        assertEquals(2, effort2.prRank)
+        assertTrue(effort2.isHighlight)
+        assertTrue(effort2.isMileEffort)
+
+        val effort3 = activity.bestEfforts[2]
+        assertEquals("5k", effort3.name)
+        assertEquals(1250, effort3.elapsedTimeSec)
+        assertEquals(5000.0, effort3.distanceMeters, 0.001)
+        assertNull(effort3.prRank)
+        assertFalse(effort3.isHighlight)
+    }
+
+    private fun computeDisplayedBestEfforts(
+        bestEfforts: List<StravaBestEffort>,
+        isMetric: Boolean,
+        isExpanded: Boolean
+    ): Pair<List<StravaBestEffort>, Boolean> {
+        val totalBestEfforts = bestEfforts.size
+        val eligibleEfforts = if (isMetric) {
+            val nonMiles = bestEfforts.filter { !it.isMileEffort }
+            if (nonMiles.isNotEmpty()) nonMiles else bestEfforts
+        } else {
+            bestEfforts
+        }
+        val longestEffort = eligibleEfforts.maxByOrNull { it.effectiveDistanceMeters } ?: eligibleEfforts.lastOrNull()
+        val reducedBestEfforts = eligibleEfforts.filter { effort ->
+            effort.isHighlight || effort == longestEffort
+        }
+        val isCollapsible = totalBestEfforts > reducedBestEfforts.size
+        val displayed = if (!isCollapsible || isExpanded) bestEfforts else reducedBestEfforts
+        return Pair(displayed, isCollapsible)
+    }
+
+    @Test
+    fun testBestEffortsCollapsedViewMetricFiltersMiles() {
+        val efforts = listOf(
+            StravaBestEffort("400m", 60, prRank = null),
+            StravaBestEffort("1/2 mile", 130, prRank = 1), // Mile with PR
+            StravaBestEffort("1k", 180, prRank = null),
+            StravaBestEffort("1 mile", 320, prRank = 2), // Mile with PR
+            StravaBestEffort("2 miles", 680, prRank = null), // Mile no PR
+            StravaBestEffort("5k", 1200, prRank = 3), // Metric with PR
+            StravaBestEffort("10k", 2500, prRank = null) // Longest non-mile effort
+        )
+
+        // In metric mode (collapsed): miles must NOT be shown, even if they have PRs!
+        // Reduced list should contain: "5k" (PR 3) and "10k" (longest eligible metric effort).
+        val (collapsedMetric, isCollapsibleMetric) = computeDisplayedBestEfforts(efforts, isMetric = true, isExpanded = false)
+        assertTrue("Efforts should be collapsible", isCollapsibleMetric)
+        assertEquals(2, collapsedMetric.size)
+        assertEquals(listOf("5k", "10k"), collapsedMetric.map { it.name })
+        assertFalse("No mile efforts in collapsed metric view", collapsedMetric.any { it.isMileEffort })
+
+        // In imperial mode (isMetric = false, collapsed): miles ARE eligible.
+        // Highlights: "1/2 mile" (PR 1), "1 mile" (PR 2), "5k" (PR 3).
+        // Longest effort: "10k" (10000m > 3218m).
+        val (collapsedImperial, isCollapsibleImperial) = computeDisplayedBestEfforts(efforts, isMetric = false, isExpanded = false)
+        assertTrue(isCollapsibleImperial)
+        assertEquals(listOf("1/2 mile", "1 mile", "5k", "10k"), collapsedImperial.map { it.name })
+    }
+
+    @Test
+    fun testBestEffortsLongestEffortAlwaysIncludedWhenReducedZeroPrs() {
+        // Workout with 0 PRs
+        val efforts = listOf(
+            StravaBestEffort("400m", 70, prRank = null),
+            StravaBestEffort("1/2 mile", 150, prRank = null),
+            StravaBestEffort("1k", 200, prRank = null),
+            StravaBestEffort("1 mile", 350, prRank = null),
+            StravaBestEffort("5k", 1300, prRank = null),
+            StravaBestEffort("10k", 2700, prRank = null)
+        )
+
+        val (collapsedMetric, isCollapsible) = computeDisplayedBestEfforts(efforts, isMetric = true, isExpanded = false)
+        assertTrue("Should be collapsible since 6 > 1", isCollapsible)
+        // Exactly 1 effort shown: the longest distance ("10k")
+        assertEquals(1, collapsedMetric.size)
+        assertEquals("10k", collapsedMetric[0].name)
+    }
+
+    @Test
+    fun testBestEffortsLongestEffortIsPrDoesNotDuplicate() {
+        val efforts = listOf(
+            StravaBestEffort("400m", 60, prRank = null),
+            StravaBestEffort("1k", 180, prRank = 1),
+            StravaBestEffort("5k", 1100, prRank = 1) // Longest is also PR 1
+        )
+
+        val (collapsedMetric, isCollapsible) = computeDisplayedBestEfforts(efforts, isMetric = true, isExpanded = false)
+        assertTrue(isCollapsible)
+        // Shows 1k and 5k without duplicate 5k
+        assertEquals(2, collapsedMetric.size)
+        assertEquals(listOf("1k", "5k"), collapsedMetric.map { it.name })
+    }
+
+    @Test
+    fun testBestEffortsExpansionShowsAllEffortsInOriginalOrder() {
+        val efforts = listOf(
+            StravaBestEffort("400m", 60, prRank = null),
+            StravaBestEffort("1/2 mile", 130, prRank = 1),
+            StravaBestEffort("1k", 180, prRank = null),
+            StravaBestEffort("1 mile", 320, prRank = null),
+            StravaBestEffort("5k", 1200, prRank = null)
+        )
+
+        val (displayedExpanded, isCollapsible) = computeDisplayedBestEfforts(efforts, isMetric = true, isExpanded = true)
+        assertTrue(isCollapsible)
+        // When expanded, all 5 efforts (including miles) are displayed
+        assertEquals(5, displayedExpanded.size)
+        assertEquals(listOf("400m", "1/2 mile", "1k", "1 mile", "5k"), displayedExpanded.map { it.name })
+    }
+
+    @Test
+    fun testBestEffortsNotCollapsibleWhenAllEligibleAreHighlights() {
+        // If all efforts are highlights and non-miles, collapsed == all -> no accordion
+        val efforts = listOf(
+            StravaBestEffort("1k", 180, prRank = 1),
+            StravaBestEffort("5k", 1100, prRank = 2)
+        )
+
+        val (displayed, isCollapsible) = computeDisplayedBestEfforts(efforts, isMetric = true, isExpanded = false)
+        assertFalse("Should NOT be collapsible when all efforts are shown in reduced view", isCollapsible)
+        assertEquals(2, displayed.size)
+    }
+
+    @Test
+    fun testBestEffortsAllMilesFallbackInMetricMode() {
+        // If an activity only contains mile efforts (e.g. from an imperial runner), metric mode falls back to all miles
+        val efforts = listOf(
+            StravaBestEffort("1/2 mile", 130, prRank = null),
+            StravaBestEffort("1 mile", 320, prRank = 1)
+        )
+
+        val (displayed, isCollapsible) = computeDisplayedBestEfforts(efforts, isMetric = true, isExpanded = false)
+        // Longest is 1 mile, highlight is 1 mile -> reduced has 1 mile
+        assertTrue(isCollapsible)
+        assertEquals(1, displayed.size)
+        assertEquals("1 mile", displayed[0].name)
     }
 }
