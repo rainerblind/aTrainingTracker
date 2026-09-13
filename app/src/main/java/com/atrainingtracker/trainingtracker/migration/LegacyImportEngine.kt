@@ -104,7 +104,12 @@ object LegacyImportEngine {
     /**
      * Scans Dropbox recursively across all target paths and recovers all legacy workouts.
      */
-    suspend fun bulkRecoverFromDropbox(context: Context, format: String, listener: ProgressListener? = null): RecoveryResult {
+    suspend fun bulkRecoverFromDropbox(
+        context: Context,
+        format: String,
+        listener: ProgressListener? = null,
+        uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
+    ): RecoveryResult {
         val credential = TrainingApplication.readDropboxCredential() ?: return RecoveryResult(0, 0, 0, 0)
         val dbxClient = DbxClientV2(DbxRequestConfig(BuildConfig.DROPBOX_APP_KEY), credential)
         
@@ -182,7 +187,7 @@ object LegacyImportEngine {
                                 }
 
                                 val success = when (format.lowercase()) {
-                                    "tcx" -> importFromTcx(context, tempFile, listener)
+                                    "tcx" -> importFromTcx(context, tempFile, listener, uploadToStrava)
                                     else -> false
                                 }
                                 if (success) {
@@ -243,7 +248,12 @@ object LegacyImportEngine {
     /**
      * Recreates a workout from a TCX file.
      */
-    suspend fun importFromTcx(context: Context, tcxFile: File, listener: ProgressListener? = null): Boolean {
+    suspend fun importFromTcx(
+        context: Context,
+        tcxFile: File,
+        listener: ProgressListener? = null,
+        uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
+    ): Boolean {
         try {
             var baseFileName = tcxFile.nameWithoutExtension.removeSuffix("-TMP").removeSuffix("~")
             val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
@@ -615,8 +625,10 @@ object LegacyImportEngine {
                         put(WorkoutSummaries.SPORT_ID, -1L)
                         put(WorkoutSummaries.EQUIPMENT_ID, -1L)
                         put(WorkoutSummaries.FINISHED, 1)
-                        if (TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
+                        if (uploadToStrava && TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
                             put(WorkoutSummaries.UPLOAD_TO_STRAVA, 1)
+                        } else {
+                            put(WorkoutSummaries.UPLOAD_TO_STRAVA, 0)
                         }
                     }
                     workoutId = summaryDb.database.insert(WorkoutSummaries.TABLE, null, summaryValues)

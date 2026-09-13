@@ -106,6 +106,7 @@ public class TrainingApplication extends Application {
     public static final String SP_UPLOAD_TO_DROPBOX = "uploadToDropbox";
     public static final String PREFERENCE_SCREEN_STRAVA = "psUploadToStrava";
     public static final String SP_UPLOAD_TO_STRAVA = "uploadToStrava";
+    public static final String SP_IMPORT_TCX_UPLOAD_TO_STRAVA = "import_tcx_upload_to_strava";
     public static final String SP_STRAVA_TOKEN = "stravaToken";
     public static final String SP_STRAVA_REFRESH_TOKEN = "stravaRefreshToken";
     public static final String SP_STRAVA_TOKEN_EXPIRES_AT = "stravaTokenExpiresAt";
@@ -530,8 +531,24 @@ public class TrainingApplication extends Application {
         cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_STRAVA, value).apply();
     }
 
+    public static boolean uploadImportedWorkoutsToStrava() {
+        if (cSharedPreferences == null) {
+            return false;
+        }
+        return cSharedPreferences.getBoolean(SP_IMPORT_TCX_UPLOAD_TO_STRAVA, false);
+    }
+
+    public static void setUploadImportedWorkoutsToStrava(boolean value) {
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putBoolean(SP_IMPORT_TCX_UPLOAD_TO_STRAVA, value).apply();
+        }
+    }
+
     @Nullable
     public static String getStravaAccessToken() {
+        if (cSharedPreferences == null) {
+            return null;
+        }
         return cSharedPreferences.getString(SP_STRAVA_TOKEN, null);
     }
 

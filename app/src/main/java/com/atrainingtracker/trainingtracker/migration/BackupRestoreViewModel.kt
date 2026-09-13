@@ -123,6 +123,14 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
     var useSportTypeForClustering by mutableStateOf(TrainingApplication.useSportTypeForClustering())
     var useAltitudePosForClustering by mutableStateOf(TrainingApplication.useAltitudePosForClustering())
 
+    var uploadToStravaOnImport by mutableStateOf(TrainingApplication.uploadImportedWorkoutsToStrava())
+        private set
+
+    fun updateUploadToStravaOnImport(enabled: Boolean) {
+        uploadToStravaOnImport = enabled
+        TrainingApplication.setUploadImportedWorkoutsToStrava(enabled)
+    }
+
     fun updateAutomatedBackupsEnabled(enabled: Boolean) {
         prefs.edit().putBoolean("automated_backups", enabled).apply()
         automatedBackupsEnabled = enabled
@@ -319,7 +327,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
                 tempFile.outputStream().use { output -> input.copyTo(output) }
             }
             val success = when (format.lowercase()) {
-                "tcx" -> LegacyImportEngine.importFromTcx(context, tempFile, createLegacyListener())
+                "tcx" -> LegacyImportEngine.importFromTcx(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
                 else -> false
             }
             tempFile.delete()
@@ -349,7 +357,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
                 return@launch
             }
             _uiState.value = UiState.Loading("Initializing legacy recovery...")
-            val result = LegacyImportEngine.bulkRecoverFromDropbox(context, format, createLegacyListener())
+            val result = LegacyImportEngine.bulkRecoverFromDropbox(context, format, createLegacyListener(), uploadToStravaOnImport)
             val app = getApplication<Application>()
             val message = if (result.failedCount > 0) {
                 app.getString(
