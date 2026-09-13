@@ -529,8 +529,8 @@ fun LapEditBottomSheet(
                             val lapSegment = remember(allPoints, allDistances, startDistM, endDistM) {
                                 LapSegmentUtils.sliceLapSegment(allPoints, allDistances, startDistM, endDistM)
                             }
-                            val lapBounds = remember(lapSegment) {
-                                LapSegmentUtils.calculateLapBounds(lapSegment)
+                            val workoutBounds = remember(allPoints) {
+                                LapSegmentUtils.calculateWorkoutBounds(allPoints)
                             }
 
                             if (allPoints.isNotEmpty()) {
@@ -543,17 +543,17 @@ fun LapEditBottomSheet(
                                     val cameraPositionState = rememberCameraPositionState()
                                     var isMapLoaded by remember { mutableStateOf(false) }
 
-                                    LaunchedEffect(lapBounds, isMapLoaded) {
-                                        if (isMapLoaded && lapBounds != null) {
+                                    LaunchedEffect(workoutBounds, isMapLoaded) {
+                                        if (isMapLoaded && workoutBounds != null) {
                                             try {
                                                 cameraPositionState.animate(
-                                                    CameraUpdateFactory.newLatLngBounds(lapBounds, 70),
+                                                    CameraUpdateFactory.newLatLngBounds(workoutBounds, 70),
                                                     durationMs = 500
                                                 )
                                             } catch (e: Exception) {
                                                 try {
                                                     cameraPositionState.move(
-                                                        CameraUpdateFactory.newLatLngBounds(lapBounds, 70)
+                                                        CameraUpdateFactory.newLatLngBounds(workoutBounds, 70)
                                                     )
                                                 } catch (ignored: Exception) {}
                                             }
@@ -576,11 +576,12 @@ fun LapEditBottomSheet(
                                         properties = MapProperties(mapType = MapType.TERRAIN),
                                         onMapLoaded = { isMapLoaded = true }
                                     ) {
-                                        // Full workout polyline in subtle color
+                                        // Full workout polyline in subtle muted color
                                         Polyline(
                                             points = allPoints,
-                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
-                                            width = 4f
+                                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                            width = 5f,
+                                            zIndex = 1f
                                         )
 
                                         // Highlighted active lap segment in vibrant primary color
@@ -588,20 +589,23 @@ fun LapEditBottomSheet(
                                             Polyline(
                                                 points = lapSegment,
                                                 color = MaterialTheme.colorScheme.primary,
-                                                width = 10f
+                                                width = 10f,
+                                                zIndex = 2f
                                             )
 
                                             lapSegment.firstOrNull()?.let { startPoint ->
                                                 Marker(
                                                     state = remember(startPoint) { MarkerState(position = startPoint) },
-                                                    icon = remember { createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint) }
+                                                    icon = remember { createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint) },
+                                                    zIndex = 3f
                                                 )
                                             }
 
                                             lapSegment.lastOrNull()?.let { stopPoint ->
                                                 Marker(
                                                     state = remember(stopPoint) { MarkerState(position = stopPoint) },
-                                                    icon = remember { createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint) }
+                                                    icon = remember { createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint) },
+                                                    zIndex = 3f
                                                 )
                                             }
                                         }

@@ -111,4 +111,23 @@ class LapSegmentUtilsTest {
     fun `calculateLapBounds returns null for empty list`() {
         assertNull(LapSegmentUtils.calculateLapBounds(emptyList()))
     }
+
+    @Test
+    fun `calculateWorkoutBounds builds valid enclosing bounds for full workout track`() {
+        // Multi-kilometer workout track spanning a course
+        val workoutPoints = listOf(
+            LatLng(48.05, 11.45),
+            LatLng(48.12, 11.52),
+            LatLng(48.20, 11.60),
+            LatLng(48.15, 11.68),
+            LatLng(48.02, 11.50)
+        )
+
+        val bounds = LapSegmentUtils.calculateWorkoutBounds(workoutPoints)
+        assertNotNull(bounds)
+        assertEquals(48.02, bounds!!.southwest.latitude, 0.001)
+        assertEquals(11.45, bounds.southwest.longitude, 0.001)
+        assertEquals(48.20, bounds.northeast.latitude, 0.001)
+        assertEquals(11.68, bounds.northeast.longitude, 0.001)
+    }
 }

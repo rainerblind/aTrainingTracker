@@ -112,10 +112,11 @@ object LapSegmentUtils {
     }
 
     /**
-     * Calculates a [LatLngBounds] bounding box that encloses all points of a lap segment.
+     * Calculates a [LatLngBounds] bounding box that encloses all coordinates of a workout track
+     * or lap segment.
      *
-     * If the segment contains a single point or points with zero spatial variance,
-     * the bounds are slightly expanded to prevent camera animation crashes on zero-area bounds.
+     * If the coordinate list contains a single point or points with zero spatial variance,
+     * the bounds are safely expanded to prevent camera animation crashes on zero-area bounds.
      *
      * @param points The coordinates to enclose.
      * @return A valid [LatLngBounds], or `null` if the point list is empty.
@@ -141,4 +142,15 @@ object LapSegmentUtils {
             bounds
         }
     }
+
+    /**
+     * Calculates a [LatLngBounds] bounding box that encloses the entire workout track.
+     *
+     * Semantic alias for [calculateLapBounds] to provide clear intent when framing the full course.
+     *
+     * @param points The complete list of workout coordinates.
+     * @return A valid [LatLngBounds], or `null` if the point list is empty.
+     */
+    fun calculateWorkoutBounds(points: List<LatLng>): LatLngBounds? = calculateLapBounds(points)
 }
+
