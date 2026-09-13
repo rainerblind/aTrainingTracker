@@ -35,7 +35,7 @@ Before performing any task, you must:
     *   **Sub-Task Self-Sufficiency**: Every sub-task Description MUST contain the complete stage deliverable. Never leave Description empty or use short redirection stubs. Gate comments must contain direct, concrete verification evidence.
     *   **Strict Sequencing**: Execute `update-desc` and post the review `comment` BEFORE transitioning states to `In Überprüfung` or `Freigabe (Human)`.
     *   **Discovery-First Sub-Tasks**: Always run `jira_util.py show <Parent>` to discover automated sub-tasks; do not create duplicates manually.
-    *   **Mandatory Git Finalization**: After ticket completion and human sign-off, immediately checkout `develop`, merge with `--no-ff` (`git merge --no-ff <branch_name> -m "Merge branch '<branch_name>' into develop"`), verify `git status`, and post the integration comment with the merge commit hash.
+    *   **Mandatory Git Finalization**: After ticket completion and human sign-off, immediately checkout `develop`, merge with `--no-ff` (`git merge --no-ff <branch_name> -m "Merge branch '<branch_name>' into develop"`), delete the local branch (`git branch -d <branch_name>`), verify `git status` and `git branch`, and post the integration comment with the merge commit hash.
 
 
 

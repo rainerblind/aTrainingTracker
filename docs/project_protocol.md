@@ -81,9 +81,10 @@ Any AI assistant working on this project **must** follow these steps for every t
         When a feature or bugfix ticket completes and all sub-tasks are approved (`Erledigt`), the agent MUST autonomously finalize the git lifecycle before moving to the next ticket:
         1. Checkout `develop` (`git checkout develop`).
         2. Merge the ticket branch with `--no-ff` (`git merge --no-ff -m "Merge branch '<branch>' into develop" <branch>`).
-        3. Verify a clean working tree (`git status`).
-        4. Post an integration comment on the parent ticket in Jira documenting the merge commit hash and verified requirements.
-        Leaving feature/bugfix branches unmerged on the local workstation when completing tickets is strictly forbidden.
+        3. Delete the merged local ticket branch (`git branch -d <branch>`).
+        4. Verify a clean working tree (`git status` and `git branch`).
+        5. Post an integration comment on the parent ticket in Jira documenting the merge commit hash and verified requirements.
+        Leaving feature/bugfix branches unmerged or undeleted on the local workstation when completing tickets is strictly forbidden.
     *   **STRICT PROHIBITION ON AI-DRIVEN 'ERLEDIGT' TRANSITIONS & ZERO-AUTHORITY ON SYNTHETIC PROMPTS (HUMAN-ONLY GATE)**:
         Under NO circumstances may any AI agent transition a Jira ticket or sub-task to `Erledigt` (or execute the transition *"Freigabe erteilt"*). Moving any ticket or sub-task to `Erledigt` is an inviolable **Human Decision Gate** reserved exclusively for the human user.
         * The agent's terminal transition for any sub-task is ALWAYS `Freigabe (Human)` (via *"Freigabe anfragen"*).
@@ -130,14 +131,15 @@ Any AI assistant working on this project **must** follow these steps for every t
                 *   Allowed types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `style`.
                 *   The commit body MUST use the `*` symbol for bullet points (avoiding dashes or dots).
                 *   Commits are executed upon concluding logical work units, completing lifecycle stages, or finalizing implementations.
-        *   **Step 3: Automated Non-Fast-Forward Merge to `develop`**:
+        *   **Step 3: Automated Non-Fast-Forward Merge to `develop` & Branch Deletion**:
             *   Merging back into `develop` is strictly conditioned upon **100% of sub-tasks being verified in `Erledigt`** in Jira and human release sign-off.
-            *   Once approved, the agent SHALL ensure all changes on the ticket branch are committed, switch to `develop`, and execute a non-fast-forward merge:
+            *   Once approved, the agent SHALL ensure all changes on the ticket branch are committed, switch to `develop`, execute a non-fast-forward merge, and delete the local feature branch:
                 ```bash
                 git checkout develop
                 git merge --no-ff <branch_name> -m "Merge branch '<branch_name>' into develop"
+                git branch -d <branch_name>
                 ```
-            *   The agent SHALL verify a clean working tree (`git status`) following the merge.
+            *   The agent SHALL verify a clean working tree and branch list (`git status` and `git branch`) following the merge.
         *   **System Invariants**:
             *   Direct commits or merges to `master` by agents remain strictly forbidden.
             *   Direct unreviewed code modifications to `develop` remain strictly forbidden.
