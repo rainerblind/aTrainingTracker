@@ -10,6 +10,7 @@
 
 package com.atrainingtracker.trainingtracker.migration
 
+import android.app.Application
 import android.content.ContentValues
 import android.content.Context
 import android.util.Log
@@ -25,9 +26,12 @@ import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManag
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.banalservice.sensor.MySensorManager
+import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
@@ -763,6 +767,9 @@ object LegacyImportEngine {
             values.put(WorkoutSummaries.WORKOUT_NAME, workoutName.trim())
         }
 
+        // ATT-909 / REQ-MIG-027: Persist base sport type in WorkoutSummaries
+        values.put(WorkoutSummaries.B_SPORT, bSportType.name)
+
         // ATT-617: Persist lap count
         val lapCount = parsedLaps.size.coerceAtLeast(1)
         values.put(WorkoutSummaries.LAPS, lapCount)
@@ -923,62 +930,108 @@ object LegacyImportEngine {
             val existingClusterId = summariesDb.getLong(workoutId, WorkoutSummaries.CLUSTER_ID) ?: -1L
             if (existingClusterId != -1L) {
                 if (TrainingApplication.getDebug(true)) Log.d(TAG, "Workout $workoutId already has cluster $existingClusterId assigned. Skipping clustering logic.")
-                return
-            }
-
-            val clusterEngine = WorkoutClusterEngine.getInstance(context)
-            val matchingCluster = clusterEngine.suggestCluster(start, end, apex, totalDistance, null, setOf(bSportType), minAltPos, maxAltPos)
-            
-            if (matchingCluster != null) {
-                var sportId = summariesDb.getLong(workoutId, WorkoutSummaries.SPORT_ID) ?: -1L
-                if (sportId == -1L && bSportType != BSportType.UNKNOWN) {
-                    sportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
-                }
-                
-                // ATT-316 Refinement: Only lock during the actual DB write/learning phase
-                recalculationMutex.withLock {
-                    // Refine existing cluster (ATT-308: ensure sport type is propagated/stored)
-                    clusterEngine.learnFromWorkout(start, end, apex, totalDistance, matchingCluster.name, sportId, matchingCluster.id, minAltPos = minAltPos, maxAltPos = maxAltPos)
-                    clusterEngine.assignClusterToWorkout(context, workoutId, matchingCluster.id, false)
-                }
             } else {
-                val startTime = summariesDb.getString(workoutId, WorkoutSummaries.TIME_START)
-                val (existingId, customName) = listener?.onNewClusterCandidate(
-                    date = startTime ?: baseFileName,
-                    start = start, end = end, apex = apex, 
-                    distance = totalDistance, 
-                    bSportType = bSportType,
-                    polyline = polyline
-                ) ?: Pair(null, null)
+                val clusterEngine = WorkoutClusterEngine.getInstance(context)
+                // ATT-909 / REQ-MIG-027: Candidate sport inference and workout name matching
+                val avgSpeed = if (activeTime > 0) totalDistance / activeTime else 0.0
+                val candidateSports = if (bSportType != BSportType.UNKNOWN) {
+                    setOf(bSportType)
+                } else {
+                    try {
+                        EquipmentAndSportTypeDiscoveryManager.getInstance(context)
+                            .getCandidateBSportTypes(BSportType.UNKNOWN, avgSpeed)
+                    } catch (e: Exception) {
+                        emptySet()
+                    }
+                }
+
+                val matchingCluster = clusterEngine.suggestCluster(
+                    start = start,
+                    end = end,
+                    apex = apex,
+                    distance = totalDistance,
+                    workoutName = workoutName,
+                    candidateSportTypes = candidateSports,
+                    minAltPos = minAltPos,
+                    maxAltPos = maxAltPos
+                )
                 
-                recalculationMutex.withLock {
-                    if (existingId != null) {
-                        val cluster = WorkoutClusterDatabaseManager.getInstance(context).getClusterById(existingId)
-                        var sportId = summariesDb.getLong(workoutId, WorkoutSummaries.SPORT_ID) ?: -1L
-                        if (sportId == -1L && bSportType != BSportType.UNKNOWN) {
-                            sportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
+                if (matchingCluster != null) {
+                    var sportId = summariesDb.getLong(workoutId, WorkoutSummaries.SPORT_ID) ?: -1L
+                    var effectiveBSport = bSportType
+                    if (effectiveBSport == BSportType.UNKNOWN && matchingCluster.bSportType != BSportType.UNKNOWN) {
+                        effectiveBSport = matchingCluster.bSportType
+                    }
+                    if (sportId == -1L && effectiveBSport != BSportType.UNKNOWN) {
+                        sportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(effectiveBSport)
+                        val updateVals = ContentValues().apply {
+                            put(WorkoutSummaries.SPORT_ID, sportId)
+                            put(WorkoutSummaries.B_SPORT, effectiveBSport.name)
                         }
-                        if (cluster != null) {
-                            clusterEngine.learnFromWorkout(start, end, apex, totalDistance, cluster.name, sportId, existingId, minAltPos = minAltPos, maxAltPos = maxAltPos)
+                        summariesDb.database.update(WorkoutSummaries.TABLE, updateVals, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
+                    }
+                    
+                    // ATT-316 Refinement: Only lock during the actual DB write/learning phase
+                    recalculationMutex.withLock {
+                        // Refine existing cluster (ATT-308: ensure sport type is propagated/stored)
+                        clusterEngine.learnFromWorkout(start, end, apex, totalDistance, matchingCluster.name, sportId, matchingCluster.id, minAltPos = minAltPos, maxAltPos = maxAltPos)
+                        clusterEngine.assignClusterToWorkout(context, workoutId, matchingCluster.id, false)
+                    }
+                } else {
+                    val startTime = summariesDb.getString(workoutId, WorkoutSummaries.TIME_START)
+                    val (existingId, customName) = listener?.onNewClusterCandidate(
+                        date = startTime ?: baseFileName,
+                        start = start, end = end, apex = apex, 
+                        distance = totalDistance, 
+                        bSportType = bSportType,
+                        polyline = polyline
+                    ) ?: Pair(null, null)
+                    
+                    recalculationMutex.withLock {
+                        if (existingId != null) {
+                            val cluster = WorkoutClusterDatabaseManager.getInstance(context).getClusterById(existingId)
+                            var sportId = summariesDb.getLong(workoutId, WorkoutSummaries.SPORT_ID) ?: -1L
+                            if (sportId == -1L && bSportType != BSportType.UNKNOWN) {
+                                sportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
+                            }
+                            if (cluster != null) {
+                                clusterEngine.learnFromWorkout(start, end, apex, totalDistance, cluster.name, sportId, existingId, minAltPos = minAltPos, maxAltPos = maxAltPos)
+                            }
+                            clusterEngine.assignClusterToWorkout(context, workoutId, existingId, true)
+                        } else if (!customName.isNullOrBlank()) {
+                            var sportId = summariesDb.getLong(workoutId, WorkoutSummaries.SPORT_ID) ?: -1L
+                            if (sportId == -1L && bSportType != BSportType.UNKNOWN) {
+                                sportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
+                            }
+                            val newId = clusterEngine.learnFromWorkout(start, end, apex, totalDistance, customName, sportId, -1L, minAltPos = minAltPos, maxAltPos = maxAltPos)
+                            clusterEngine.assignClusterToWorkout(context, workoutId, newId, true)
                         }
-                        clusterEngine.assignClusterToWorkout(context, workoutId, existingId, true)
-                    } else if (!customName.isNullOrBlank()) {
-                        var sportId = summariesDb.getLong(workoutId, WorkoutSummaries.SPORT_ID) ?: -1L
-                        if (sportId == -1L && bSportType != BSportType.UNKNOWN) {
-                            sportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
-                        }
-                        val newId = clusterEngine.learnFromWorkout(start, end, apex, totalDistance, customName, sportId, -1L, minAltPos = minAltPos, maxAltPos = maxAltPos)
-                        clusterEngine.assignClusterToWorkout(context, workoutId, newId, true)
                     }
                 }
             }
         }
 
-        // 6. Notify System (ATT-346 Hook)
-        // This triggers WorkoutRepository to reload memory and notify PeriodsRepository
-        val intent = android.content.Intent(com.atrainingtracker.trainingtracker.tracker.TrackerService.WORKOUT_UPDATED_INTENT)
-        intent.putExtra(com.atrainingtracker.trainingtracker.tracker.TrackerService.WORKOUT_ID, workoutId)
-        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
+        // 6. Direct Notification Pipeline & Legacy Broadcast (ATT-909 / REQ-MIG-026)
+        // Direct invocation ensures WorkoutRepository and PeriodsRepository process the workout
+        // even if WorkoutRepository was not previously instantiated in memory (unbuffered broadcast issue).
+        try {
+            val app = (context.applicationContext as? Application) ?: (context as? Application)
+            if (app != null) {
+                val workoutRepo = WorkoutRepository.getInstance(app)
+                workoutRepo.reloadWorkoutData(workoutId)
+                WorkoutClusterRepository.getInstance(app).refreshClusters()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Direct repository notification skipped or failed: ${e.message}")
+        }
+
+        try {
+            val intent = android.content.Intent(com.atrainingtracker.trainingtracker.tracker.TrackerService.WORKOUT_UPDATED_INTENT)
+            intent.putExtra(com.atrainingtracker.trainingtracker.tracker.TrackerService.WORKOUT_ID, workoutId)
+            androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
+        } catch (e: Exception) {
+            Log.w(TAG, "Legacy broadcast delivery skipped or failed: ${e.message}")
+        }
     }
 
     private fun calculateCumulativeDistance(points: List<LatLng>): Double {
