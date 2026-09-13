@@ -116,8 +116,8 @@ class WorkoutDeletionErgonomicsTest {
         assertFalse("Actively tracked workout MUST NOT be deletable via UI", canDelete)
 
         // Compact view context menu evaluation (no edit action)
-        val onEditWorkout: (() -> Unit)? = null
-        val hasContextMenu = canDelete || onEditWorkout != null
+        val canMarkFinished = !workout.finished && !TrainingApplication.isActivelyTracked(workout.id)
+        val hasContextMenu = canDelete || canMarkFinished
         assertFalse("Actively tracked workout must not show delete context menu", hasContextMenu)
     }
 
@@ -142,7 +142,7 @@ class WorkoutDeletionErgonomicsTest {
     }
 
     @Test
-    fun testCompactViewContextMenu_allowsEditEvenIfActivelyTrackedWithoutDelete() {
+    fun testCompactViewContextMenu_whenActivelyTracked_contextMenuIsDisabled() {
         val workout = createWorkoutData(id = 400L, finished = false)
         TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
         TrainingApplication.setActiveWorkoutIdForTesting(400L)
@@ -150,9 +150,11 @@ class WorkoutDeletionErgonomicsTest {
         val canDelete = !TrainingApplication.isActivelyTracked(workout.id)
         assertFalse(canDelete)
 
-        // When onEditWorkout is provided, context menu is available for editing, but delete is omitted
-        val onEditWorkout: (() -> Unit)? = { /* edit */ }
-        val hasContextMenu = canDelete || onEditWorkout != null
-        assertTrue("Context menu should open when edit action is available", hasContextMenu)
+        val canMarkFinished = !workout.finished && !TrainingApplication.isActivelyTracked(workout.id)
+        assertFalse(canMarkFinished)
+
+        // ATT-993: 'Edit workout' removed from compact context menu, so context menu is disabled when actively tracked
+        val hasContextMenu = canDelete || canMarkFinished
+        assertFalse("Compact context menu must be disabled when actively tracked", hasContextMenu)
     }
 }

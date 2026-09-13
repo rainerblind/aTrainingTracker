@@ -53,7 +53,6 @@ fun WorkoutSummaryCompact(
     onMapClick: () -> Unit,
     onDeleteRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    onEditWorkout: (() -> Unit)? = null,
     onMarkFinished: (() -> Unit)? = null
 ) {
     // Maintain the "unfinished" state visual feedback
@@ -65,7 +64,7 @@ fun WorkoutSummaryCompact(
     val isActivelyTracked = TrainingApplication.isActivelyTracked(workoutData.id)
     val canDelete = !isActivelyTracked
     val canMarkFinished = !workoutData.headerData.finished && !isActivelyTracked && onMarkFinished != null
-    val hasContextMenu = canDelete || onEditWorkout != null || canMarkFinished
+    val hasContextMenu = canDelete || canMarkFinished
 
     Box {
         MappableListItem(
@@ -181,29 +180,12 @@ fun WorkoutSummaryCompact(
                 expanded = showContextMenu,
                 onDismissRequest = { showContextMenu = false }
             ) {
-                if (onEditWorkout != null) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.edit_workout)) },
-                        onClick = {
-                            showContextMenu = false
-                            onEditWorkout()
-                        },
-                        leadingIcon = {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_table_edit),
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    )
-                }
                 if (canMarkFinished) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.mark_as_finished)) },
                         onClick = {
                             showContextMenu = false
-                            onMarkFinished?.invoke()
+                            onMarkFinished()
                         },
                         leadingIcon = { Icon(Icons.Default.Check, contentDescription = null) }
                     )

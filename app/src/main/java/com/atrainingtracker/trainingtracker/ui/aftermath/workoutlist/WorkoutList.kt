@@ -103,7 +103,6 @@ fun WorkoutList(
                             onMapClick = { onMapClick(workoutData) },
                             onDeleteRequest = { onDeleteRequest(workoutData.id) },
                             modifier = Modifier.fillMaxWidth(),
-                            onEditWorkout = { onEditWorkout(workoutData.id) },
                             onMarkFinished = { onMarkFinished(workoutData.id) }
                         )
                     } else {
