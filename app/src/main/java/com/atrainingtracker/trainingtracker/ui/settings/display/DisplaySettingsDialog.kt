@@ -10,7 +10,6 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.display
 
-import android.content.SharedPreferences
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DisplaySettings
@@ -19,19 +18,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 
 @Composable
 fun DisplaySettingsDialog(
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onSettingsChanged: (() -> Unit)? = null
 ) {
-    val context = LocalContext.current
-    val sharedPreferences = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+    var currentOptions by remember { 
+        mutableStateOf(HashSet(TrainingApplication.getDisplayOptions()))
+    }
     
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -58,18 +57,39 @@ fun DisplaySettingsDialog(
             ) {
                 DisplayOptionToggle(
                     label = stringResource(R.string.forcePortrait),
-                    prefValue = "forcePortrait",
-                    sharedPreferences = sharedPreferences
+                    isChecked = currentOptions.contains("forcePortrait"),
+                    onCheckedChange = { checked ->
+                        val newSet = currentOptions.toMutableSet().apply {
+                            if (checked) add("forcePortrait") else remove("forcePortrait")
+                        }
+                        TrainingApplication.setDisplayOptions(newSet)
+                        currentOptions = HashSet(newSet)
+                        onSettingsChanged?.invoke()
+                    }
                 )
                 DisplayOptionToggle(
                     label = stringResource(R.string.prefsKeepScreenOnTitle),
-                    prefValue = "keepScreenOn",
-                    sharedPreferences = sharedPreferences
+                    isChecked = currentOptions.contains("keepScreenOn"),
+                    onCheckedChange = { checked ->
+                        val newSet = currentOptions.toMutableSet().apply {
+                            if (checked) add("keepScreenOn") else remove("keepScreenOn")
+                        }
+                        TrainingApplication.setDisplayOptions(newSet)
+                        currentOptions = HashSet(newSet)
+                        onSettingsChanged?.invoke()
+                    }
                 )
                 DisplayOptionToggle(
                     label = stringResource(R.string.prefsNoUnlockingTitle),
-                    prefValue = "noUnlocking",
-                    sharedPreferences = sharedPreferences
+                    isChecked = currentOptions.contains("noUnlocking"),
+                    onCheckedChange = { checked ->
+                        val newSet = currentOptions.toMutableSet().apply {
+                            if (checked) add("noUnlocking") else remove("noUnlocking")
+                        }
+                        TrainingApplication.setDisplayOptions(newSet)
+                        currentOptions = HashSet(newSet)
+                        onSettingsChanged?.invoke()
+                    }
                 )
             }
         },
@@ -84,17 +104,9 @@ fun DisplaySettingsDialog(
 @Composable
 private fun DisplayOptionToggle(
     label: String, 
-    prefValue: String,
-    sharedPreferences: SharedPreferences
+    isChecked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
 ) {
-    val key = TrainingApplication.SP_DISPLAY_OPTIONS
-    
-    var currentOptions by remember { 
-        mutableStateOf(sharedPreferences.getStringSet(key, emptySet()) ?: emptySet())
-    }
-    
-    val isChecked = currentOptions.contains(prefValue)
-
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -103,12 +115,7 @@ private fun DisplayOptionToggle(
         Text(text = label, style = MaterialTheme.typography.bodyLarge)
         Switch(
             checked = isChecked,
-            onCheckedChange = { checked ->
-                val newSet = currentOptions.toMutableSet()
-                if (checked) newSet.add(prefValue) else newSet.remove(prefValue)
-                sharedPreferences.edit().putStringSet(key, newSet).apply()
-                currentOptions = newSet
-            },
+            onCheckedChange = onCheckedChange,
             modifier = Modifier.scale(0.7f)
         )
     }

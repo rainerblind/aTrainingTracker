@@ -89,11 +89,11 @@ public class TrainingApplication extends Application {
     public static final String SPORT_TYPE_ID = "com.atrainingtracker.trainingapplication.SPORT_TYPE_ID";
     // TODO: also move these Strings to string.xml???
     public static final String SP_DISPLAY_OPTIONS = "pref_display_options";
-    private static final Set<String> DEFAULT_DISPLAY_OPTIONS = new HashSet<>(Arrays.asList(
+    public static final Set<String> DEFAULT_DISPLAY_OPTIONS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "forcePortrait",
             "keepScreenOn",
             "noUnlocking"
-    ));
+    )));
     public static final String SP_UNITS = "listUnits";
 
     // configure search behaviour
@@ -428,16 +428,31 @@ public class TrainingApplication extends Application {
     }
 
     // -- Display options
+    @NonNull
+    public static Set<String> getDefaultDisplayOptions() {
+        return DEFAULT_DISPLAY_OPTIONS;
+    }
+
+    @NonNull
+    public static Set<String> getDisplayOptions() {
+        Set<String> options = cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, DEFAULT_DISPLAY_OPTIONS);
+        return options != null ? options : DEFAULT_DISPLAY_OPTIONS;
+    }
+
+    public static void setDisplayOptions(@NonNull Set<String> options) {
+        cSharedPreferences.edit().putStringSet(SP_DISPLAY_OPTIONS, new HashSet<>(options)).apply();
+    }
+
     public static boolean forcePortrait() {
-        return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, DEFAULT_DISPLAY_OPTIONS).contains("forcePortrait");
+        return getDisplayOptions().contains("forcePortrait");
     }
 
     public static boolean keepScreenOn() {
-        return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, DEFAULT_DISPLAY_OPTIONS).contains("keepScreenOn");
+        return getDisplayOptions().contains("keepScreenOn");
     }
 
     public static boolean NoUnlocking() {
-        return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, DEFAULT_DISPLAY_OPTIONS).contains("noUnlocking");
+        return getDisplayOptions().contains("noUnlocking");
     }
 
     @NonNull
