@@ -44,6 +44,11 @@ class ActivityTypeSelectionDialogFragment : DialogFragment() {
         this.cancelListener = cancelListener
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setStyle(STYLE_NORMAL, android.R.style.Theme_Translucent_NoTitleBar)
+    }
+
     override fun onCancel(dialog: android.content.DialogInterface) {
         super.onCancel(dialog)
         cancelListener?.invoke()

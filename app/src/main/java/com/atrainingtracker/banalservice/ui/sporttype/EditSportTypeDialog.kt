@@ -23,7 +23,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -145,172 +148,17 @@ fun EditSportTypeDialog(
         }
     }
 
-    AlertDialog(
+    AppModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = {
-            Text(if (item.id == -1L) stringResource(R.string.text_new) else stringResource(R.string.edit_sport_type))
-        },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Name Field
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text(stringResource(R.string.name)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                // --- Base Sport Type Selection ---
-                if (item.isEditable) {   // not for the basic sport types
-                    val bSportTypes = remember {
-                        listOf(BSportType.UNKNOWN, BSportType.RUN, BSportType.BIKE)
-                    }
-                    var expanded by remember { mutableStateOf(false) }
-
-                    ExposedDropdownMenuBox(
-                        expanded = expanded,
-                        onExpandedChange = { expanded = !expanded }
-                    ) {
-                        OutlinedTextField(
-                            value = stringResource(bSportType.stringResId),
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text(stringResource(R.string.basic_sport_type)) },
-                            leadingIcon = {
-                                Icon(
-                                    painter = painterResource(bSportType.iconResId),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            modifier = Modifier
-                                .menuAnchor()
-                                .fillMaxWidth()
-                        )
-                        ExposedDropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
-                        ) {
-                            bSportTypes.forEach { bSportType ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(stringResource(bSportType.stringResId))
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(bSportType.iconResId),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    },
-                                    onClick = {
-                                        onBaseTypeChanged(bSportType)
-                                        expanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Speeds Row
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = minSpeed,
-                        onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) minSpeed = it },
-                        label = { Text("${stringResource(R.string.min)} ($speedUnit)") },
-                        modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-                    )
-                    OutlinedTextField(
-                        value = maxSpeed,
-                        onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) maxSpeed = it },
-                        label = { Text("${stringResource(R.string.max)} ($speedUnit)") },
-                        modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-                    )
-                }
-
-                // linked equipment
-                if (availableEquipment.isNotEmpty()) {
-                    MultiSelectEquipmentSpinner(
-                        title = when (bSportType) {
-                            BSportType.BIKE -> stringResource(R.string.equipment_type_bike)
-                            BSportType.RUN -> stringResource(R.string.equipment_type_shoe)
-                            else -> stringResource(R.string.sport_type_equipment)
-                        },
-                        allEquipment = availableEquipment,
-                        selectedIds = selectedEquipIds,
-                        onToggleEquipment = { id ->
-                            selectedEquipIds = if (selectedEquipIds.contains(id)) {
-                                selectedEquipIds - id
-                            } else {
-                                selectedEquipIds + id
-                            }
-                        }
-                    )
-                }
-
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                Text(stringResource(R.string.prefs_Export), style = MaterialTheme.typography.labelLarge)
-
-                // Strava Mapping
-                SportTypeDropdown(
-                    label = "Strava Sport Name",
-                    // We display the UI Name corresponding to the stored Database value
-                    // Fallback to "- No upload -" if the value is null
-                    selectedOption = if (stravaName == null) noUploadLabel else (stravaMap[stravaName] ?: stravaName!!),
-                    options = stravaUiNames.toList(),
-                    onOptionSelected = { selectedUiName ->
-                        // If selected name matches the "No upload" label, set it to null
-                        if (selectedUiName == noUploadLabel) {
-                            stravaName = null
-                        } else {
-                            // Find the database value (key) that matches the selected UI name (value)
-                            val dbValue = stravaMap.entries.find { it.value == selectedUiName }?.key
-                            stravaName = dbValue
-                        }
-                    },
-                    leadingIcon = {
-                        Icon(
-                            painterResource(R.drawable.logo_square_strava),
-                            null,
-                            Modifier.size(18.dp),
-                            tint = Color.Unspecified
-                        )
-                    }
-                )
-
-                // TCX Mapping
-                SportTypeDropdown(
-                    label = "TCX Sport Name",
-                    selectedOption = tcxName,
-                    options = tcxNames.toList(),
-                    onOptionSelected = { tcxName = it },
-                    leadingIcon = { Icon(Icons.Default.Save, null) }
-                )
-
-                // GoldenCheetah Mapping
-                SportTypeDropdown(
-                    label = "GoldenCheetah Name",
-                    selectedOption = gcName,
-                    options = gcNames.toList(),
-                    onOptionSelected = { gcName = it },
-                    leadingIcon = { Icon(Icons.Default.Save, null) }
-                )
-
+        title = if (item.id == -1L) stringResource(R.string.text_new) else stringResource(R.string.edit_sport_type),
+        iconPainter = painterResource(bSportType.iconResId),
+        iconTint = Color.Unspecified,
+        actions = {
+            Spacer(modifier = Modifier.weight(1f))
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.Cancel))
             }
-        },
-        confirmButton = {
-            TextButton(
+            Button(
                 onClick = {
                     val finalMin = MyHelper.UserUnit2mps(minSpeed.toDoubleOrNull() ?: 0.0)
                     val finalMax = MyHelper.UserUnit2mps(maxSpeed.toDoubleOrNull() ?: 0.0)
@@ -329,13 +177,164 @@ fun EditSportTypeDialog(
             ) {
                 Text(stringResource(R.string.save))
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.Cancel))
-            }
         }
-    )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Name Field
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text(stringResource(R.string.name)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            // --- Base Sport Type Selection ---
+            if (item.isEditable) {   // not for the basic sport types
+                val bSportTypes = remember {
+                    listOf(BSportType.UNKNOWN, BSportType.RUN, BSportType.BIKE)
+                }
+                var expanded by remember { mutableStateOf(false) }
+
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
+                ) {
+                    OutlinedTextField(
+                        value = stringResource(bSportType.stringResId),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.basic_sport_type)) },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(bSportType.iconResId),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = Color.Unspecified
+                            )
+                        },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        bSportTypes.forEach { bSportType ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(stringResource(bSportType.stringResId))
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        painter = painterResource(bSportType.iconResId),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(24.dp),
+                                        tint = Color.Unspecified
+                                    )
+                                },
+                                onClick = {
+                                    onBaseTypeChanged(bSportType)
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Speeds Row
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = minSpeed,
+                    onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) minSpeed = it },
+                    label = { Text("${stringResource(R.string.min)} ($speedUnit)") },
+                    modifier = Modifier.weight(1f),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                )
+                OutlinedTextField(
+                    value = maxSpeed,
+                    onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) maxSpeed = it },
+                    label = { Text("${stringResource(R.string.max)} ($speedUnit)") },
+                    modifier = Modifier.weight(1f),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                )
+            }
+
+            // linked equipment
+            if (availableEquipment.isNotEmpty()) {
+                MultiSelectEquipmentSpinner(
+                    title = when (bSportType) {
+                        BSportType.BIKE -> stringResource(R.string.equipment_type_bike)
+                        BSportType.RUN -> stringResource(R.string.equipment_type_shoe)
+                        else -> stringResource(R.string.sport_type_equipment)
+                    },
+                    allEquipment = availableEquipment,
+                    selectedIds = selectedEquipIds,
+                    onToggleEquipment = { id ->
+                        selectedEquipIds = if (selectedEquipIds.contains(id)) {
+                            selectedEquipIds - id
+                        } else {
+                            selectedEquipIds + id
+                        }
+                    }
+                )
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            Text(stringResource(R.string.prefs_Export), style = MaterialTheme.typography.labelLarge)
+
+            // Strava Mapping
+            SportTypeDropdown(
+                label = "Strava Sport Name",
+                selectedOption = if (stravaName == null) noUploadLabel else (stravaMap[stravaName] ?: stravaName!!),
+                options = stravaUiNames.toList(),
+                onOptionSelected = { selectedUiName ->
+                    if (selectedUiName == noUploadLabel) {
+                        stravaName = null
+                    } else {
+                        val dbValue = stravaMap.entries.find { it.value == selectedUiName }?.key
+                        stravaName = dbValue
+                    }
+                },
+                leadingIcon = {
+                    Icon(
+                        painterResource(R.drawable.logo_square_strava),
+                        null,
+                        Modifier.size(18.dp),
+                        tint = Color.Unspecified
+                    )
+                }
+            )
+
+            // TCX Mapping
+            SportTypeDropdown(
+                label = "TCX Sport Name",
+                selectedOption = tcxName,
+                options = tcxNames.toList(),
+                onOptionSelected = { tcxName = it },
+                leadingIcon = { Icon(Icons.Default.Save, null) }
+            )
+
+            // GoldenCheetah Mapping
+            SportTypeDropdown(
+                label = "GoldenCheetah Name",
+                selectedOption = gcName,
+                options = gcNames.toList(),
+                onOptionSelected = { gcName = it },
+                leadingIcon = { Icon(Icons.Default.Save, null) }
+            )
+
+            Spacer(Modifier.height(8.dp))
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -47,6 +47,8 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -67,7 +69,9 @@ import com.atrainingtracker.R
  * @param onDismissRequest Callback invoked when the sheet is dismissed.
  * @param modifier Optional modifier applied to the root container.
  * @param sheetState Bottom sheet state controller.
- * @param icon Optional leading icon displayed before the title.
+ * @param icon Optional leading icon (vector) displayed before the title.
+ * @param iconPainter Optional leading icon (painter/drawable) displayed before the title.
+ * @param iconTint Tint applied to the leading icon (defaults to primary; use [Color.Unspecified] for multi-color sport logos).
  * @param showCloseButton Whether to render a close button in the top right.
  * @param scrollable Whether the content body should automatically provide vertical scrolling.
  * @param actions Optional composable slot for bottom action buttons.
@@ -81,6 +85,8 @@ fun AppModalBottomSheet(
     modifier: Modifier = Modifier,
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     icon: ImageVector? = null,
+    iconPainter: Painter? = null,
+    iconTint: Color = MaterialTheme.colorScheme.primary,
     showCloseButton: Boolean = true,
     scrollable: Boolean = true,
     actions: (@Composable RowScope.() -> Unit)? = null,
@@ -115,7 +121,15 @@ fun AppModalBottomSheet(
                             imageVector = icon,
                             contentDescription = null,
                             modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = iconTint
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                    } else if (iconPainter != null) {
+                        Icon(
+                            painter = iconPainter,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = iconTint
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                     }

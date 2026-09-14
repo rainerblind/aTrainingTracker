@@ -32,6 +32,11 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
  */
 class UnitsSettingsDialogFragment : DialogFragment() {
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setStyle(STYLE_NORMAL, android.R.style.Theme_Translucent_NoTitleBar)
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,

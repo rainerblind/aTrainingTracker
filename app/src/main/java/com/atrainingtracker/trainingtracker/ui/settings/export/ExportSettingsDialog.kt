@@ -23,61 +23,52 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 
+import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExportSettingsDialog(
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    AppModalBottomSheet(
+        title = stringResource(R.string.prefs_Export),
+        icon = Icons.Default.Upload,
         onDismissRequest = onDismiss,
-        title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+        actions = {
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(
-                    imageVector = Icons.Default.Upload,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = stringResource(R.string.prefs_Export),
-                    style = MaterialTheme.typography.headlineSmall
-                )
-            }
-        },
-        text = {
-            Column(
-                modifier = Modifier.wrapContentWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                ExportOptionToggle(
-                    label = "TCX",
-                    initialValue = TrainingApplication.exportToTCX(),
-                    onCheckedChange = { TrainingApplication.setExportToTCX(it) }
-                )
-                ExportOptionToggle(
-                    label = "GPX",
-                    initialValue = TrainingApplication.exportToGPX(),
-                    onCheckedChange = { TrainingApplication.setExportToGPX(it) }
-                )
-                ExportOptionToggle(
-                    label = "Golden Cheetah JSON",
-                    initialValue = TrainingApplication.exportToGCJson(),
-                    onCheckedChange = { TrainingApplication.setExportToGCJson(it) }
-                )
-                ExportOptionToggle(
-                    label = "CSV",
-                    initialValue = TrainingApplication.exportToCSV(),
-                    onCheckedChange = { TrainingApplication.setExportToCSV(it) }
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.Done))
             }
         }
-    )
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ExportOptionToggle(
+                label = "TCX",
+                initialValue = TrainingApplication.exportToTCX(),
+                onCheckedChange = { TrainingApplication.setExportToTCX(it) }
+            )
+            ExportOptionToggle(
+                label = "GPX",
+                initialValue = TrainingApplication.exportToGPX(),
+                onCheckedChange = { TrainingApplication.setExportToGPX(it) }
+            )
+            ExportOptionToggle(
+                label = "Golden Cheetah JSON",
+                initialValue = TrainingApplication.exportToGCJson(),
+                onCheckedChange = { TrainingApplication.setExportToGCJson(it) }
+            )
+            ExportOptionToggle(
+                label = "CSV",
+                initialValue = TrainingApplication.exportToCSV(),
+                onCheckedChange = { TrainingApplication.setExportToCSV(it) }
+            )
+        }
+    }
 }
 
 @Composable
