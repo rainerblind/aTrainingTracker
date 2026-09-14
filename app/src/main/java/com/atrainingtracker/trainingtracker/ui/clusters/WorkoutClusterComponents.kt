@@ -25,7 +25,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
+import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -604,6 +606,7 @@ fun WorkoutClusterSelectionItem(
  * Standard dialog for selecting a Workout Cluster from a list of candidates.
  * Harmonized between Edit Workout and Manual Reassignment (SCRUM-214).
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutClusterSelectionDialog(
     title: String,
@@ -613,67 +616,74 @@ fun WorkoutClusterSelectionDialog(
     sportNameResolver: (Long) -> String,
     bSportTypeResolver: (Long) -> BSportType
 ) {
-    AlertDialog(
+    AppModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
-        modifier = Modifier.fillMaxWidth(0.95f),
-        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
-        text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = stringResource(R.string.cluster_suggestions_title),
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.padding(bottom = 8.dp),
-                    color = MaterialTheme.colorScheme.primary
-                )
-                
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 400.dp)
-                ) {
-                    itemsIndexed(candidates) { index, pair ->
-                        val cluster = pair.first
-                        val score = pair.second
-                        
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { 
-                                    onSelect(cluster)
-                                    onDismiss()
-                                }
-                                .padding(vertical = 8.dp)
-                        ) {
-                            WorkoutClusterSelectionItem(
-                                cluster = cluster,
-                                score = score,
-                                sportName = sportNameResolver(cluster.probableSportId),
-                                bSportType = bSportTypeResolver(cluster.probableSportId)
-                            )
-                        }
-                        
-                        if (index < candidates.size - 1) {
-                            HorizontalDivider(
-                                thickness = 0.5.dp,
-                                color = MaterialTheme.colorScheme.outlineVariant
-                            )
-                        }
+        title = title,
+        icon = Icons.Default.LocationOn,
+        actions = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.Cancel))
+            }
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.cluster_suggestions_title),
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(bottom = 8.dp),
+                color = MaterialTheme.colorScheme.primary
+            )
+            
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 400.dp)
+            ) {
+                itemsIndexed(candidates) { index, pair ->
+                    val cluster = pair.first
+                    val score = pair.second
+                    
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { 
+                                onSelect(cluster)
+                                onDismiss()
+                            }
+                            .padding(vertical = 8.dp)
+                    ) {
+                        WorkoutClusterSelectionItem(
+                            cluster = cluster,
+                            score = score,
+                            sportName = sportNameResolver(cluster.probableSportId),
+                            bSportType = bSportTypeResolver(cluster.probableSportId)
+                        )
+                    }
+                    
+                    if (index < candidates.size - 1) {
+                        HorizontalDivider(
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
                     }
                 }
             }
-        },
-        confirmButton = {}
-    )
+        }
+    }
 }
 
 /**
- * Comprehensive dialog for managing a workout's cluster assignment in Edit Workout (REQ-SET-059, ATT-318).
+ * Comprehensive bottom sheet for managing a workout's cluster assignment in Edit Workout (REQ-SET-059, REQ-UI-149, ATT-900).
  * Provides explicit actions for:
  * 1. "Leave Unclustered"
  * 2. "Create New Route..."
  * 3. Selecting from suggested candidate clusters
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditWorkoutClusterDialog(
     currentClusterId: Long,
@@ -692,27 +702,66 @@ fun EditWorkoutClusterDialog(
     }
     var newClusterHasCounter by remember { mutableStateOf(true) }
 
-    AlertDialog(
+    AppModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.cluster_naming__title)) },
-        modifier = Modifier.fillMaxWidth(0.95f),
-        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+        title = stringResource(R.string.cluster_naming__title),
+        icon = Icons.Default.LocationOn,
+        actions = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.Cancel))
+            }
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // 1. Leave Unclustered Action
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        onUnassignCluster()
+                        onDismiss()
+                    },
+                colors = CardDefaults.cardColors(
+                    containerColor = if (currentClusterId <= 0) MaterialTheme.colorScheme.primaryContainer
+                                     else MaterialTheme.colorScheme.surfaceVariant
+                )
             ) {
-                // 1. Leave Unclustered Action
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Clear,
+                        contentDescription = null,
+                        tint = if (currentClusterId <= 0) MaterialTheme.colorScheme.onPrimaryContainer
+                               else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = stringResource(R.string.cluster_naming__leave_unclustered),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (currentClusterId <= 0) FontWeight.Bold else FontWeight.Normal,
+                        color = if (currentClusterId <= 0) MaterialTheme.colorScheme.onPrimaryContainer
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // 2. Create New Cluster Action
+            if (!isCreatingNew) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable {
-                            onUnassignCluster()
-                            onDismiss()
-                        },
+                        .clickable { isCreatingNew = true },
                     colors = CardDefaults.cardColors(
-                        containerColor = if (currentClusterId <= 0) MaterialTheme.colorScheme.primaryContainer
-                                         else MaterialTheme.colorScheme.surfaceVariant
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 ) {
                     Row(
@@ -723,178 +772,139 @@ fun EditWorkoutClusterDialog(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Clear,
+                            imageVector = Icons.Default.Add,
                             contentDescription = null,
-                            tint = if (currentClusterId <= 0) MaterialTheme.colorScheme.onPrimaryContainer
-                                   else MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = stringResource(R.string.cluster_naming__leave_unclustered),
+                            text = stringResource(R.string.cluster_naming__create_new),
                             style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = if (currentClusterId <= 0) FontWeight.Bold else FontWeight.Normal,
-                            color = if (currentClusterId <= 0) MaterialTheme.colorScheme.onPrimaryContainer
-                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
-
-                // 2. Create New Cluster Action
-                if (!isCreatingNew) {
-                    Card(
+            } else {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { isCreatingNew = true },
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        Text(
+                            text = stringResource(R.string.cluster_naming__new_name_prompt),
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        OutlinedTextField(
+                            value = newClusterName,
+                            onValueChange = { newClusterName = it },
+                            label = { Text(stringResource(R.string.cluster_naming__new_route_name_label)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
+                                .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = stringResource(R.string.cluster_naming__create_new),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                } else {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.cluster_naming__new_name_prompt),
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                            OutlinedTextField(
-                                value = newClusterName,
-                                onValueChange = { newClusterName = it },
-                                label = { Text(stringResource(R.string.cluster_naming__new_route_name_label)) },
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = true
-                            )
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                                    Text(
-                                        text = stringResource(R.string.cluster_counter_enabled_label),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.cluster_counter_enabled_description),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                Switch(
-                                    checked = newClusterHasCounter,
-                                    onCheckedChange = { newClusterHasCounter = it }
+                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                                Text(
+                                    text = stringResource(R.string.cluster_counter_enabled_label),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = stringResource(R.string.cluster_counter_enabled_description),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.End,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                TextButton(onClick = { isCreatingNew = false }) {
-                                    Text(stringResource(R.string.Cancel))
-                                }
-                                Button(
-                                    onClick = {
-                                        if (newClusterName.isNotBlank()) {
-                                            onCreateNewCluster(newClusterName.trim(), newClusterHasCounter)
-                                            onDismiss()
-                                        }
-                                    },
-                                    enabled = newClusterName.isNotBlank()
-                                ) {
-                                    Text(stringResource(R.string.OK))
-                                }
-                            }
+                            Switch(
+                                checked = newClusterHasCounter,
+                                onCheckedChange = { newClusterHasCounter = it }
+                            )
                         }
-                    }
-                }
-
-                // 3. Candidate Clusters (Suggestions)
-                if (candidates.isNotEmpty()) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 4.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
-                    Text(
-                        text = stringResource(R.string.cluster_suggestions_title),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 280.dp)
-                    ) {
-                        itemsIndexed(candidates) { index, pair ->
-                            val cluster = pair.first
-                            val score = pair.second
-
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        onSelectCluster(cluster)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextButton(onClick = { isCreatingNew = false }) {
+                                Text(stringResource(R.string.Cancel))
+                            }
+                            Button(
+                                onClick = {
+                                    if (newClusterName.isNotBlank()) {
+                                        onCreateNewCluster(newClusterName.trim(), newClusterHasCounter)
                                         onDismiss()
                                     }
-                                    .padding(vertical = 8.dp)
+                                },
+                                enabled = newClusterName.isNotBlank()
                             ) {
-                                WorkoutClusterSelectionItem(
-                                    cluster = cluster,
-                                    score = score,
-                                    sportName = sportNameResolver(cluster.probableSportId),
-                                    bSportType = bSportTypeResolver(cluster.probableSportId)
-                                )
-                            }
-
-                            if (index < candidates.size - 1) {
-                                HorizontalDivider(
-                                    thickness = 0.5.dp,
-                                    color = MaterialTheme.colorScheme.outlineVariant
-                                )
+                                Text(stringResource(R.string.OK))
                             }
                         }
                     }
                 }
             }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.Cancel))
+
+            // 3. Candidate Clusters (Suggestions)
+            if (candidates.isNotEmpty()) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+                Text(
+                    text = stringResource(R.string.cluster_suggestions_title),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 280.dp)
+                ) {
+                    itemsIndexed(candidates) { index, pair ->
+                        val cluster = pair.first
+                        val score = pair.second
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onSelectCluster(cluster)
+                                    onDismiss()
+                                }
+                                .padding(vertical = 8.dp)
+                        ) {
+                            WorkoutClusterSelectionItem(
+                                cluster = cluster,
+                                score = score,
+                                sportName = sportNameResolver(cluster.probableSportId),
+                                bSportType = bSportTypeResolver(cluster.probableSportId)
+                            )
+                        }
+
+                        if (index < candidates.size - 1) {
+                            HorizontalDivider(
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant
+                            )
+                        }
+                    }
+                }
             }
+            Spacer(Modifier.height(8.dp))
         }
-    )
+    }
 }
 

@@ -46,8 +46,13 @@ import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.DeviceStatusRow
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
+import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
+/**
+ * Modernized bottom sheet dialog for editing device settings, calibration, and equipment links (REQ-UI-149, TST-UI-102).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditDeviceDialog(
     deviceId: Long,
@@ -63,119 +68,99 @@ fun EditDeviceDialog(
     }
 
     snapshot?.let { data ->
-        AlertDialog(
+        AppModalBottomSheet(
             onDismissRequest = onDismiss,
-            title = {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            painter = painterResource(id = data.deviceTypeIconRes),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(48.dp)
-                                .padding(if (data.protocol == Protocol.ANT_PLUS) 2.dp else 0.dp)
-                                .clip(RoundedCornerShape(4.dp)),
-                            tint = if (data.protocol == Protocol.SMARTPHONE) 
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
-                            else 
-                                Color.Unspecified
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                // Technical Status LED
-                                val isConnected = liveData?.isConnected ?: data.isConnected
-                                Box(
-                                    modifier = Modifier.size(18.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Surface(
-                                        modifier = Modifier.size(12.dp),
-                                        shape = CircleShape,
-                                        color = if (isConnected) TTColor.ConnectionStatusGreen else Color.LightGray,
-                                        tonalElevation = 2.dp
-                                    ) {}
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = data.deviceName,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                            DeviceStatusRow(
-                                device = data,
-                                alpha = TTAlpha.Medium,
-                                textStyle = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
-                    Text(
-                        text = data.manufacturer,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
-                        modifier = Modifier.padding(start = 0.dp)
-                    )
+            title = data.deviceName,
+            iconPainter = painterResource(id = data.deviceTypeIconRes),
+            iconTint = if (data.protocol == Protocol.SMARTPHONE)
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+            else
+                Color.Unspecified,
+            actions = {
+                Spacer(modifier = Modifier.weight(1f))
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.cancel))
                 }
-            },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
-
-                    // Device name editor
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = stringResource(R.string.devices_deviceNameText),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        OutlinedTextField(
-                            value = data.deviceName,
-                            onValueChange = { viewModel.onDeviceNameChanged(it) },
-                            modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text(stringResource(R.string.devices_deviceNameText)) }
-                        )
-                    }
-
-                    // 2. Equipment Linking
-                    EquipmentSection(data, viewModel)
-
-                    // 3. Specialized Calibration
-                    CalibrationSection(data, viewModel)
-
-                    // 4. Power Meter Features
-                    if (data.deviceType == DeviceType.BIKE_POWER) {
-                        PowerMeterSection(data, viewModel)
-                    }
-
-                    // 5. Live Data Preview
-                    liveData?.let { live ->
-                        LivePreviewSection(live)
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
+                Button(onClick = {
                     viewModel.saveChanges()
                     onDismiss()
                 }) {
                     Text(stringResource(R.string.OK))
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.cancel))
-                }
             }
-        )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Technical Status LED & Protocol details
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val isConnected = liveData?.isConnected ?: data.isConnected
+                    Box(
+                        modifier = Modifier.size(18.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(
+                            modifier = Modifier.size(12.dp),
+                            shape = CircleShape,
+                            color = if (isConnected) TTColor.ConnectionStatusGreen else Color.LightGray,
+                            tonalElevation = 2.dp
+                        ) {}
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    DeviceStatusRow(
+                        device = data,
+                        alpha = TTAlpha.Medium,
+                        textStyle = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                if (data.manufacturer.isNotBlank()) {
+                    Text(
+                        text = data.manufacturer,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+                    )
+                }
+
+                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+
+                // Device name editor
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = stringResource(R.string.devices_deviceNameText),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = data.deviceName,
+                        onValueChange = { viewModel.onDeviceNameChanged(it) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // 2. Equipment Linking
+                EquipmentSection(data, viewModel)
+
+                // 3. Specialized Calibration
+                CalibrationSection(data, viewModel)
+
+                // 4. Power Meter Features
+                if (data.deviceType == DeviceType.BIKE_POWER) {
+                    PowerMeterSection(data, viewModel)
+                }
+
+                // 5. Live Data Preview
+                liveData?.let { live ->
+                    LivePreviewSection(live)
+                }
+
+                Spacer(Modifier.height(8.dp))
+            }
+        }
     }
 }
 
@@ -196,6 +181,7 @@ private fun ReadOnlyField(label: String, value: String) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EquipmentSection(data: DeviceUiData, viewModel: EditDeviceViewModel) {
     var showDialog by remember { mutableStateOf(false) }
@@ -237,43 +223,52 @@ private fun EquipmentSection(data: DeviceUiData, viewModel: EditDeviceViewModel)
 
     if (showDialog) {
         val selectedItems = remember { data.linkedEquipment.toMutableStateList() }
-        AlertDialog(
+        AppModalBottomSheet(
             onDismissRequest = { showDialog = false },
-            title = { Text(stringResource(data.onEquipmentResId)) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    data.availableEquipment.filter { it.isNotBlank() }.forEach { equipment ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    if (selectedItems.contains(equipment)) selectedItems.remove(equipment)
-                                    else selectedItems.add(equipment)
-                                }
-                        ) {
-                            Checkbox(
-                                checked = selectedItems.contains(equipment),
-                                onCheckedChange = null // Handled by row click
-                            )
-                            Text(
-                                text = equipment,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 8.dp)
-                            )
-                        }
-                    }
+            title = stringResource(data.onEquipmentResId),
+            actions = {
+                Spacer(modifier = Modifier.weight(1f))
+                TextButton(onClick = { showDialog = false }) {
+                    Text(stringResource(R.string.cancel))
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = {
+                Button(onClick = {
                     viewModel.onEquipmentChanged(selectedItems.toList())
                     showDialog = false
                 }) {
                     Text(stringResource(R.string.OK))
                 }
             }
-        )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                data.availableEquipment.filter { it.isNotBlank() }.forEach { equipment ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                if (selectedItems.contains(equipment)) selectedItems.remove(equipment)
+                                else selectedItems.add(equipment)
+                            }
+                    ) {
+                        Checkbox(
+                            checked = selectedItems.contains(equipment),
+                            onCheckedChange = null
+                        )
+                        Text(
+                            text = equipment,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+        }
     }
 }
 
@@ -373,6 +368,7 @@ private fun WheelCircumferenceSelector(data: DeviceUiData, viewModel: EditDevice
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RunCalibrationFactorSelector(data: DeviceUiData, viewModel: EditDeviceViewModel) {
     var showCorrectDialog by remember { mutableStateOf(false) }
@@ -422,6 +418,7 @@ private fun RunCalibrationFactorSelector(data: DeviceUiData, viewModel: EditDevi
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CorrectCalibrationDialog(
     title: String,
@@ -441,51 +438,56 @@ private fun CorrectCalibrationDialog(
         if (m > 0) originalFactor * (c / m) else originalFactor
     }
 
-    AlertDialog(
+    AppModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text(
-                    text = explanation,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                
-                OutlinedTextField(
-                    value = measuredDist,
-                    onValueChange = { measuredDist = it },
-                    label = { Text(stringResource(R.string.devices_measuredDistanceText)) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                
-                OutlinedTextField(
-                    value = correctDist,
-                    onValueChange = { correctDist = it },
-                    label = { Text(stringResource(R.string.devices_correctDistanceText)) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                
-                ReadOnlyField(
-                    label = "New $fieldName",
-                    value = if (roundToInt) newFactor.toInt().toString() else String.format("%.4f", newFactor)
-                )
+        title = title,
+        actions = {
+            Spacer(modifier = Modifier.weight(1f))
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
             }
-        },
-        confirmButton = {
-            TextButton(onClick = {
+            Button(onClick = {
                 onFactorCalculated(newFactor)
                 onDismiss()
             }) {
                 Text(stringResource(R.string.OK))
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
         }
-    )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = explanation,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            OutlinedTextField(
+                value = measuredDist,
+                onValueChange = { measuredDist = it },
+                label = { Text(stringResource(R.string.devices_measuredDistanceText)) },
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            OutlinedTextField(
+                value = correctDist,
+                onValueChange = { correctDist = it },
+                label = { Text(stringResource(R.string.devices_correctDistanceText)) },
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            ReadOnlyField(
+                label = "New $fieldName",
+                value = if (roundToInt) newFactor.toInt().toString() else String.format("%.4f", newFactor)
+            )
+
+            Spacer(Modifier.height(8.dp))
+        }
+    }
 }
 
 @Composable

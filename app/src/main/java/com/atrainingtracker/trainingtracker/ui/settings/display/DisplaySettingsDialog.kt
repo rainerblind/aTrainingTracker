@@ -23,6 +23,9 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 
+import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DisplaySettingsDialog(
     onDismiss: () -> Unit,
@@ -32,73 +35,61 @@ fun DisplaySettingsDialog(
         mutableStateOf(HashSet(TrainingApplication.getDisplayOptions()))
     }
     
-    AlertDialog(
+    AppModalBottomSheet(
+        title = stringResource(R.string.Display),
+        icon = Icons.Default.DisplaySettings,
         onDismissRequest = onDismiss,
-        title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+        actions = {
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(
-                    imageVector = Icons.Default.DisplaySettings,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = stringResource(R.string.Display),
-                    style = MaterialTheme.typography.headlineSmall
-                )
-            }
-        },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                DisplayOptionToggle(
-                    label = stringResource(R.string.forcePortrait),
-                    isChecked = currentOptions.contains("forcePortrait"),
-                    onCheckedChange = { checked ->
-                        val newSet = currentOptions.toMutableSet().apply {
-                            if (checked) add("forcePortrait") else remove("forcePortrait")
-                        }
-                        TrainingApplication.setDisplayOptions(newSet)
-                        currentOptions = HashSet(newSet)
-                        onSettingsChanged?.invoke()
-                    }
-                )
-                DisplayOptionToggle(
-                    label = stringResource(R.string.prefsKeepScreenOnTitle),
-                    isChecked = currentOptions.contains("keepScreenOn"),
-                    onCheckedChange = { checked ->
-                        val newSet = currentOptions.toMutableSet().apply {
-                            if (checked) add("keepScreenOn") else remove("keepScreenOn")
-                        }
-                        TrainingApplication.setDisplayOptions(newSet)
-                        currentOptions = HashSet(newSet)
-                        onSettingsChanged?.invoke()
-                    }
-                )
-                DisplayOptionToggle(
-                    label = stringResource(R.string.prefsNoUnlockingTitle),
-                    isChecked = currentOptions.contains("noUnlocking"),
-                    onCheckedChange = { checked ->
-                        val newSet = currentOptions.toMutableSet().apply {
-                            if (checked) add("noUnlocking") else remove("noUnlocking")
-                        }
-                        TrainingApplication.setDisplayOptions(newSet)
-                        currentOptions = HashSet(newSet)
-                        onSettingsChanged?.invoke()
-                    }
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.Done))
             }
         }
-    )
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            DisplayOptionToggle(
+                label = stringResource(R.string.forcePortrait),
+                isChecked = currentOptions.contains("forcePortrait"),
+                onCheckedChange = { checked ->
+                    val newSet = currentOptions.toMutableSet().apply {
+                        if (checked) add("forcePortrait") else remove("forcePortrait")
+                    }
+                    TrainingApplication.setDisplayOptions(newSet)
+                    currentOptions = HashSet(newSet)
+                    onSettingsChanged?.invoke()
+                }
+            )
+            DisplayOptionToggle(
+                label = stringResource(R.string.prefsKeepScreenOnTitle),
+                isChecked = currentOptions.contains("keepScreenOn"),
+                onCheckedChange = { checked ->
+                    val newSet = currentOptions.toMutableSet().apply {
+                        if (checked) add("keepScreenOn") else remove("keepScreenOn")
+                    }
+                    TrainingApplication.setDisplayOptions(newSet)
+                    currentOptions = HashSet(newSet)
+                    onSettingsChanged?.invoke()
+                }
+            )
+            DisplayOptionToggle(
+                label = stringResource(R.string.prefsNoUnlockingTitle),
+                isChecked = currentOptions.contains("noUnlocking"),
+                onCheckedChange = { checked ->
+                    val newSet = currentOptions.toMutableSet().apply {
+                        if (checked) add("noUnlocking") else remove("noUnlocking")
+                    }
+                    TrainingApplication.setDisplayOptions(newSet)
+                    currentOptions = HashSet(newSet)
+                    onSettingsChanged?.invoke()
+                }
+            )
+        }
+    }
 }
 
 @Composable

@@ -35,7 +35,7 @@ class AppModalBottomSheetTest {
         assertNotNull("AppModalBottomSheetKt class must exist in core package", clazz)
 
         val methods = clazz.declaredMethods
-        val appModalBottomSheetMethod = methods.find { it.name == "AppModalBottomSheet" }
+        val appModalBottomSheetMethod = methods.find { it.name.startsWith("AppModalBottomSheet") && Modifier.isPublic(it.modifiers) }
         assertNotNull("AppModalBottomSheet function must exist", appModalBottomSheetMethod)
         assertTrue("AppModalBottomSheet function must be public", Modifier.isPublic(appModalBottomSheetMethod!!.modifiers))
     }

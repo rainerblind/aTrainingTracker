@@ -30,86 +30,109 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
+/**
+ * Modernized bottom sheet dialog for configuring equipment (bikes, shoes, sensors, sport links) (REQ-UI-149, TST-UI-102).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditEquipmentDialog(
     item: EquipmentItem,
     availableSensors: List<DevicesDatabaseManager.SimpleSensorInfo>,
     availableSportTypes: List<SportTypeDatabaseManager.SimpleSportTypeInfo>,
-    onDismiss: () -> Unit,
-    onConfirm: (EquipmentItem) -> Unit
+    onConfirm: (EquipmentItem) -> Unit,
+    onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf(item.name) }
     var frameType by remember { mutableStateOf(item.frameType) }
     var selectedSensorIds by remember { mutableStateOf(item.linkedDeviceIds.toSet()) }
     var selectedSportTypeIds by remember { mutableStateOf(item.linkedSportTypeIds.toSet()) }
 
-    AlertDialog(
+    val iconRes = if (item.frameType > 0) BSportType.BIKE.iconResId else BSportType.RUN.iconResId
+
+    AppModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(id = R.string.equipment_configure_equipment)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                OutlinedTextField(
-                    value = name,        onValueChange = { name = it },
-                    label = { Text(stringResource(id = R.string.name)) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                // Only show the spinner if the item is a bike (id 1-4)
-                if (item.frameType > 0) {
-                    BikeTypeSelector(
-                        selectedType = frameType,
-                        onTypeSelected = { frameType = it }
-                    )
-                }
-
-                // Multi-select for Sport Types
-                MultiSelectSportTypeSpinner(
-                    allSportTypes = availableSportTypes,
-                    selectedIds = selectedSportTypeIds,
-                    onToggleSportType = { id ->
-                        selectedSportTypeIds = if (selectedSportTypeIds.contains(id)) {
-                            selectedSportTypeIds - id
-                        } else {
-                            selectedSportTypeIds + id
-                        }
-                    }
-                )
-
-                // Multi-select for Sensors
-                if (availableSensors.isNotEmpty()) {
-                    MultiSelectSensorSpinner(
-                        allSensors = availableSensors,
-                        selectedIds = selectedSensorIds,
-                        onToggleSensor = { id ->
-                            selectedSensorIds = if (selectedSensorIds.contains(id)) {
-                                selectedSensorIds - id
-                            } else {
-                                selectedSensorIds + id
-                            }
-                        }
-                    )
-                }
+        title = stringResource(id = R.string.equipment_configure_equipment),
+        iconPainter = painterResource(id = iconRes),
+        iconTint = Color.Unspecified,
+        actions = {
+            Spacer(modifier = Modifier.weight(1f))
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
             }
-        },
-        confirmButton = {
-            TextButton(
+            Button(
                 onClick = {
                     onConfirm(item.copy(
                         name = name,
                         frameType = frameType,
                         linkedDeviceIds = selectedSensorIds.toList(),
                         linkedSportTypeIds = selectedSportTypeIds.toList()
-                    ))                }
-            ) { Text(stringResource(R.string.save)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+                    ))
+                }
+            ) {
+                Text(stringResource(R.string.save))
+            }
         }
-    )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text(stringResource(id = R.string.name)) },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Only show the spinner if the item is a bike (id 1-4)
+            if (item.frameType > 0) {
+                BikeTypeSelector(
+                    selectedType = frameType,
+                    onTypeSelected = { frameType = it }
+                )
+            }
+
+            // Multi-select for Sport Types
+            MultiSelectSportTypeSpinner(
+                allSportTypes = availableSportTypes,
+                selectedIds = selectedSportTypeIds,
+                onToggleSportType = { id ->
+                    selectedSportTypeIds = if (selectedSportTypeIds.contains(id)) {
+                        selectedSportTypeIds - id
+                    } else {
+                        selectedSportTypeIds + id
+                    }
+                }
+            )
+
+            // Multi-select for Sensors
+            if (availableSensors.isNotEmpty()) {
+                MultiSelectSensorSpinner(
+                    allSensors = availableSensors,
+                    selectedIds = selectedSensorIds,
+                    onToggleSensor = { id ->
+                        selectedSensorIds = if (selectedSensorIds.contains(id)) {
+                            selectedSensorIds - id
+                        } else {
+                            selectedSensorIds + id
+                        }
+                    }
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -249,7 +272,7 @@ fun PreviewEditEquipmentDialog() {
                 DevicesDatabaseManager.SimpleSensorInfo(3, "Stages Power"),
                 DevicesDatabaseManager.SimpleSensorInfo(4, "Polar H10")
             ),
-            availableSportTypes = emptyList()
+            availableSportTypes = emptyList<SportTypeDatabaseManager.SimpleSportTypeInfo>()
         )
     }
 }
