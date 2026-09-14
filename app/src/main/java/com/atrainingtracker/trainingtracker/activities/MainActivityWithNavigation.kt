@@ -636,16 +636,7 @@ class MainActivityWithNavigation :
 
         checkPreferences()
 
-        window.decorView.keepScreenOn = TrainingApplication.keepScreenOn()
-
-        if (TrainingApplication.NoUnlocking()) {
-            @Suppress("DEPRECATION")
-            window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
-        }
-
-        if (TrainingApplication.forcePortrait()) {
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        }
+        applyDisplaySettings()
 
         // register receivers
         ContextCompat.registerReceiver(this, mStartTrackingReceiver, mStartTrackingFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
@@ -688,6 +679,24 @@ class MainActivityWithNavigation :
 
         if (TrainingApplication.uploadToTrainingPeaks() && TrainingApplication.getTrainingPeaksRefreshToken() == null) {
             TrainingApplication.setUploadToTrainingPeaks(false)
+        }
+    }
+
+    fun applyDisplaySettings() {
+        window.decorView.keepScreenOn = TrainingApplication.keepScreenOn()
+
+        if (TrainingApplication.NoUnlocking()) {
+            @Suppress("DEPRECATION")
+            window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+        } else {
+            @Suppress("DEPRECATION")
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+        }
+
+        if (TrainingApplication.forcePortrait()) {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        } else {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
 
