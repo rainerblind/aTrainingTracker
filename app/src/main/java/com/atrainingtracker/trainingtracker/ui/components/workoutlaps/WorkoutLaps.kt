@@ -29,9 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -41,6 +39,8 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.ui.aftermath.LapData
+import com.atrainingtracker.trainingtracker.ui.components.core.AppTableHeader
+import com.atrainingtracker.trainingtracker.ui.components.core.AppTableHeaderCell
 import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
 
 @Composable
@@ -194,55 +194,32 @@ private fun LapTableHeader(
         MyHelper.getUnitsId(if (isRunningSport) SensorType.PACE_spm else SensorType.SPEED_mps)
     )
 
-    val headerStyle = MaterialTheme.typography.labelSmall.copy(
-        platformStyle = PlatformTextStyle(includeFontPadding = false),
-        lineHeightStyle = LineHeightStyle(
-            alignment = LineHeightStyle.Alignment.Bottom,
-            trim = LineHeightStyle.Trim.Both
-        )
-    )
-
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Bottom
-    ) {
+    AppTableHeader(modifier = modifier) {
         // Col 1: Lap Name (weight 1.6f)
-        Text(
+        AppTableHeaderCell(
             text = stringResource(R.string.lap_table_header_lap),
-            style = headerStyle,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(WorkoutLapsHelper.WEIGHT_LAP_NAME),
-            maxLines = 1
+            modifier = Modifier.weight(WorkoutLapsHelper.WEIGHT_LAP_NAME)
         )
 
         // Col 2: Duration (weight 0.85f)
-        Text(
+        AppTableHeaderCell(
             text = stringResource(R.string.lap_table_header_time),
-            style = headerStyle,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.End,
-            modifier = Modifier.weight(WorkoutLapsHelper.WEIGHT_TIME),
-            maxLines = 1
+            modifier = Modifier.weight(WorkoutLapsHelper.WEIGHT_TIME)
         )
 
         // Col 3: Distance (weight 0.85f)
-        Text(
+        AppTableHeaderCell(
             text = stringResource(R.string.lap_table_header_distance),
-            style = headerStyle,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.End,
-            modifier = Modifier.weight(WorkoutLapsHelper.WEIGHT_DISTANCE),
-            maxLines = 1
+            modifier = Modifier.weight(WorkoutLapsHelper.WEIGHT_DISTANCE)
         )
 
         // Col 4: Pace / Speed unit (weight 1.1f)
-        Text(
+        AppTableHeaderCell(
             text = speedPaceUnit,
-            style = headerStyle,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.End,
-            modifier = Modifier.weight(WorkoutLapsHelper.WEIGHT_PACE_SPEED),
-            maxLines = 1
+            modifier = Modifier.weight(WorkoutLapsHelper.WEIGHT_PACE_SPEED)
         )
 
         // Col 5: Badge Spacer matching 26.dp Box in data rows
