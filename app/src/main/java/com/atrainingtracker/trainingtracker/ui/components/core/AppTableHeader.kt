@@ -27,34 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.PlatformTextStyle
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
-
-/**
- * Extension function modifying a [TextStyle] to remove platform font padding
- * and align line height to the bottom, allowing pixel-perfect bottom baseline
- * alignment across adjacent table cells, icons, and micro-units.
- */
-fun TextStyle.withBottomBaselineAlignment(): TextStyle {
-    return this.copy(
-        platformStyle = PlatformTextStyle(includeFontPadding = false),
-        lineHeightStyle = LineHeightStyle(
-            alignment = LineHeightStyle.Alignment.Bottom,
-            trim = LineHeightStyle.Trim.Both
-        )
-    )
-}
-
-/**
- * Returns the standardized typography style for table column headers.
- * Uses [MaterialTheme.typography.labelSmall] with bottom baseline alignment.
- */
-@Composable
-fun appTableHeaderStyle(): TextStyle {
-    return MaterialTheme.typography.labelSmall.withBottomBaselineAlignment()
-}
 
 /**
  * Standardized container row for tabular column headers.

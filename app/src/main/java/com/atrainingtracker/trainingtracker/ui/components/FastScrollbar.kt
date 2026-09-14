@@ -10,39 +10,24 @@
 
 package com.atrainingtracker.trainingtracker.ui.components
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
+import com.atrainingtracker.trainingtracker.ui.components.core.FastScrollableBox as CoreFastScrollableBox
+import com.atrainingtracker.trainingtracker.ui.components.core.FastScrollbar as CoreFastScrollbar
+import com.atrainingtracker.trainingtracker.ui.components.core.calculateAccumulatedProgress as coreCalculateAccumulatedProgress
+import com.atrainingtracker.trainingtracker.ui.components.core.calculateScrollProgress as coreCalculateScrollProgress
+import com.atrainingtracker.trainingtracker.ui.components.core.calculateTargetIndex as coreCalculateTargetIndex
+import com.atrainingtracker.trainingtracker.ui.components.core.calculateTargetIndexFromProgress as coreCalculateTargetIndexFromProgress
 
 /**
- * A shared layout container that overlays [FastScrollbar] flush on the right edge of a scrollable composable (ATT-866).
- *
- * @param state The [LazyListState] governing the contained list.
- * @param modifier Modifier applied to the outer Box container.
- * @param topPadding Top inset padding applied to the scrollbar (e.g. for collapsing headers).
- * @param bottomPadding Bottom inset padding applied to the scrollbar (e.g. for system navigation bar or FABs).
- * @param thumbColor Color of the scrollbar thumb pill.
- * @param trackColor Color of the background scrollbar track.
- * @param content Composable lambda containing the [androidx.compose.foundation.lazy.LazyColumn] or other content.
+ * Backward-compatible forwarder for [FastScrollableBox].
+ * The authoritative implementation is housed in [com.atrainingtracker.trainingtracker.ui.components.core.FastScrollableBox] (REQ-UI-148, ATT-939).
  */
 @Composable
 fun FastScrollableBox(
@@ -54,21 +39,20 @@ fun FastScrollableBox(
     trackColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
     content: @Composable BoxScope.() -> Unit
 ) {
-    Box(modifier = modifier.fillMaxSize()) {
-        content()
-        FastScrollbar(
-            state = state,
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(top = topPadding, bottom = bottomPadding),
-            thumbColor = thumbColor,
-            trackColor = trackColor
-        )
-    }
+    CoreFastScrollableBox(
+        state = state,
+        modifier = modifier,
+        topPadding = topPadding,
+        bottomPadding = bottomPadding,
+        thumbColor = thumbColor,
+        trackColor = trackColor,
+        content = content
+    )
 }
 
 /**
- * A draggable fast-scroll bar for LazyColumn (ATT-303).
+ * Backward-compatible forwarder for [FastScrollbar].
+ * The authoritative implementation is housed in [com.atrainingtracker.trainingtracker.ui.components.core.FastScrollbar] (REQ-UI-148, ATT-939).
  */
 @Composable
 fun FastScrollbar(
@@ -77,173 +61,34 @@ fun FastScrollbar(
     thumbColor: Color = MaterialTheme.colorScheme.primary,
     trackColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
 ) {
-    val coroutineScope = rememberCoroutineScope()
-    var trackHeightPx by remember { mutableIntStateOf(0) }
-    
-    // Calculate progress (0.0 to 1.0)
-    val totalItems = state.layoutInfo.totalItemsCount
-    val visibleItems = state.layoutInfo.visibleItemsInfo.size
-    
-    // Hide if everything fits on screen or no items
-    if (totalItems <= visibleItems || totalItems == 0) return
-
-    val scrollProgress by remember(state) {
-        derivedStateOf {
-            val layoutInfo = state.layoutInfo
-            val totalItemsCount = layoutInfo.totalItemsCount
-            if (totalItemsCount == 0) 0f
-            else {
-                val firstVisibleItem = layoutInfo.visibleItemsInfo.firstOrNull()
-                if (firstVisibleItem == null) 0f
-                else {
-                    calculateScrollProgress(
-                        firstVisibleIndex = state.firstVisibleItemIndex,
-                        firstVisibleOffset = state.firstVisibleItemScrollOffset,
-                        itemSize = firstVisibleItem.size,
-                        totalItems = totalItemsCount
-                    )
-                }
-            }
-        }
-    }
-
-    val alpha by animateFloatAsState(
-        targetValue = if (state.isScrollInProgress) 1f else 0.4f,
-        animationSpec = tween(durationMillis = 500),
-        label = "scrollbar_alpha"
+    CoreFastScrollbar(
+        state = state,
+        modifier = modifier,
+        thumbColor = thumbColor,
+        trackColor = trackColor
     )
-
-    val density = LocalDensity.current
-    val thumbHeightDp = 48.dp
-    val thumbHeightPx = with(density) { thumbHeightDp.toPx() }
-
-    // Active drag gesture tracking for continuous displacement accumulation
-    var isDragging by remember { mutableStateOf(false) }
-    var dragProgress by remember { mutableFloatStateOf(0f) }
-
-    LaunchedEffect(scrollProgress, isDragging) {
-        if (!isDragging) {
-            dragProgress = scrollProgress
-        }
-    }
-
-    // Safety: Hide if track is smaller than thumb
-    if (trackHeightPx > 0 && trackHeightPx < thumbHeightPx) return
-
-    val effectiveProgress = if (isDragging) dragProgress else scrollProgress
-
-    Box(
-        modifier = modifier
-            .fillMaxHeight()
-            .width(28.dp)
-            .alpha(alpha)
-            .onGloballyPositioned { trackHeightPx = it.size.height }
-    ) {
-        // Track Background (Right-aligned, flush against viewport edge)
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .width(4.dp)
-                .background(trackColor)
-                .align(Alignment.CenterEnd)
-        )
-
-        // Draggable Thumb (Right-aligned, ergonomic 28dp touch target with scoped drag detection)
-        Box(
-            modifier = Modifier
-                .offset {
-                    val maxOffsetPx = (trackHeightPx - thumbHeightPx).coerceAtLeast(0f)
-                    IntOffset(0, (effectiveProgress * maxOffsetPx).roundToInt().coerceIn(0, maxOffsetPx.roundToInt()))
-                }
-                .height(thumbHeightDp)
-                .width(28.dp)
-                .align(Alignment.TopEnd)
-                .pointerInput(state) {
-                    detectDragGestures(
-                        onDragStart = {
-                            isDragging = true
-                            dragProgress = scrollProgress
-                        },
-                        onDragEnd = {
-                            isDragging = false
-                        },
-                        onDragCancel = {
-                            isDragging = false
-                        },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            val totalItemsCount = state.layoutInfo.totalItemsCount
-                            val travelDistancePx = (trackHeightPx - thumbHeightPx).coerceAtLeast(1f)
-                            if (totalItemsCount > 0) {
-                                dragProgress = calculateAccumulatedProgress(dragProgress, dragAmount.y, travelDistancePx)
-                                val targetIndex = calculateTargetIndexFromProgress(dragProgress, totalItemsCount)
-                                coroutineScope.launch {
-                                    state.scrollToItem(targetIndex)
-                                }
-                            }
-                        }
-                    )
-                }
-        ) {
-            // Visual Thumb Pill (8dp width, aligned flush to right edge)
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .width(8.dp)
-                    .clip(CircleShape)
-                    .background(thumbColor)
-                    .align(Alignment.CenterEnd)
-            )
-        }
-    }
 }
 
-/**
- * Calculates the current scroll progress (0.0 to 1.0) based on the first visible item and total item count.
- */
 fun calculateScrollProgress(
     firstVisibleIndex: Int,
     firstVisibleOffset: Int,
     itemSize: Int,
     totalItems: Int
-): Float {
-    if (totalItems <= 0 || itemSize <= 0) return 0f
-    val progress = (firstVisibleIndex.toFloat() + firstVisibleOffset.toFloat() / itemSize) / totalItems.toFloat()
-    return progress.coerceIn(0f, 1f)
-}
+): Float = coreCalculateScrollProgress(firstVisibleIndex, firstVisibleOffset, itemSize, totalItems)
 
-/**
- * Continuously accumulates fractional drag displacement into a normalized scroll progress (0.0 to 1.0).
- */
 fun calculateAccumulatedProgress(
     currentProgress: Float,
     dragDeltaY: Float,
     trackLengthPx: Float
-): Float {
-    if (trackLengthPx <= 0f) return currentProgress.coerceIn(0f, 1f)
-    return (currentProgress + dragDeltaY / trackLengthPx).coerceIn(0f, 1f)
-}
+): Float = coreCalculateAccumulatedProgress(currentProgress, dragDeltaY, trackLengthPx)
 
-/**
- * Calculates the target item index from continuous scroll progress.
- */
 fun calculateTargetIndexFromProgress(
     progress: Float,
     totalItems: Int
-): Int {
-    if (totalItems <= 0) return 0
-    return (progress.coerceIn(0f, 1f) * (totalItems - 1)).roundToInt().coerceIn(0, totalItems - 1)
-}
+): Int = coreCalculateTargetIndexFromProgress(progress, totalItems)
 
-/**
- * Calculates the target item index when dragging the scrollbar by a given progress delta.
- */
 fun calculateTargetIndex(
     currentProgress: Float,
     deltaProgress: Float,
     totalItems: Int
-): Int {
-    if (totalItems <= 0) return 0
-    val newProgress = (currentProgress + deltaProgress).coerceIn(0f, 1f)
-    return calculateTargetIndexFromProgress(newProgress, totalItems)
-}
+): Int = coreCalculateTargetIndex(currentProgress, deltaProgress, totalItems)

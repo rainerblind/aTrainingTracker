@@ -41,6 +41,8 @@ import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.ui.aftermath.LapData
 import com.atrainingtracker.trainingtracker.ui.components.core.AppTableHeader
 import com.atrainingtracker.trainingtracker.ui.components.core.AppTableHeaderCell
+import com.atrainingtracker.trainingtracker.ui.components.core.BadgeBox
+import com.atrainingtracker.trainingtracker.ui.components.core.BadgeSpacer
 import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
 
 @Composable
@@ -223,7 +225,7 @@ private fun LapTableHeader(
         )
 
         // Col 5: Badge Spacer matching 26.dp Box in data rows
-        Spacer(modifier = Modifier.width(WorkoutLapsHelper.BADGE_WIDTH_DP.dp))
+        BadgeSpacer()
     }
 }
 
@@ -301,10 +303,8 @@ private fun LapRow(
         )
 
         // Col 5: Badge (Rabbit / Hedgehog) (fixed 26.dp)
-        Box(
-            modifier = Modifier
-                .width(WorkoutLapsHelper.BADGE_WIDTH_DP.dp)
-                .padding(start = 4.dp),
+        BadgeBox(
+            modifier = Modifier.padding(start = 4.dp),
             contentAlignment = Alignment.Center
         ) {
             if (badgeEmoji != null) {

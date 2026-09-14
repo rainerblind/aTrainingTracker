@@ -33,6 +33,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.components.core.BadgeBox
 import com.atrainingtracker.trainingtracker.ui.components.core.withBottomBaselineAlignment
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 
@@ -126,10 +127,7 @@ private fun ExtremaRow(
         verticalAlignment = Alignment.Bottom
     ) {
         // Column 0: Icon
-        Box(
-            modifier = Modifier.width(26.dp),
-            contentAlignment = Alignment.BottomStart
-        ) {
+        BadgeBox(contentAlignment = Alignment.BottomStart) {
             if (iconResId != null && !isHeader) {
                 Icon(
                     painter = painterResource(id = iconResId),

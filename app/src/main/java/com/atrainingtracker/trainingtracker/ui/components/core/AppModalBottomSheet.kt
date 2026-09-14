@@ -51,7 +51,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.ui.components.MinimumDragHandle
 
 /**
  * Reusable Material 3 modal bottom sheet container with standardized edge-to-edge system insets.
