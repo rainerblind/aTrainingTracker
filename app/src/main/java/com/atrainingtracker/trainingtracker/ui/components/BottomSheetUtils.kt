@@ -18,36 +18,19 @@
 
 package com.atrainingtracker.trainingtracker.ui.components
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import com.atrainingtracker.trainingtracker.ui.components.core.MinimumDragHandle as CoreMinimumDragHandle
 
 /**
- * A unified, minimal drag handle for all bottom sheets.
- * Replaces technical overrides like statusBarsPadding() which caused excessive height.
+ * Backward-compatible forwarder for [MinimumDragHandle].
+ * The authoritative implementation is housed in [com.atrainingtracker.trainingtracker.ui.components.core.MinimumDragHandle] (REQ-UI-148, ATT-939).
  */
+@Deprecated(
+    message = "Moved to com.atrainingtracker.trainingtracker.ui.components.core.MinimumDragHandle",
+    replaceWith = ReplaceWith("MinimumDragHandle(modifier)", "com.atrainingtracker.trainingtracker.ui.components.core.MinimumDragHandle")
+)
 @Composable
 fun MinimumDragHandle(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(top = 16.dp, bottom = 4.dp), // Increased top padding for better visual spacing
-        contentAlignment = Alignment.Center
-    ) {
-        Surface(
-            modifier = Modifier.size(width = 32.dp, height = 4.dp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-            shape = CircleShape
-        ) {
-            Box(Modifier.matchParentSize())
-        }
-    }
+    CoreMinimumDragHandle(modifier = modifier)
 }

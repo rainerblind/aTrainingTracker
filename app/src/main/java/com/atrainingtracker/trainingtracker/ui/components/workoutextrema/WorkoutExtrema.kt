@@ -26,15 +26,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.components.core.BadgeBox
+import com.atrainingtracker.trainingtracker.ui.components.core.withBottomBaselineAlignment
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 
 @Composable
@@ -120,23 +120,14 @@ private fun ExtremaRow(
     }
 
     // World-class typography: disable font padding to allow true baseline alignment
-    val baseStyle = style.copy(
-        platformStyle = PlatformTextStyle(includeFontPadding = false),
-        lineHeightStyle = LineHeightStyle(
-            alignment = LineHeightStyle.Alignment.Bottom,
-            trim = LineHeightStyle.Trim.Both
-        )
-    )
+    val baseStyle = style.withBottomBaselineAlignment()
 
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Bottom
     ) {
         // Column 0: Icon
-        Box(
-            modifier = Modifier.width(26.dp),
-            contentAlignment = Alignment.BottomStart
-        ) {
+        BadgeBox(contentAlignment = Alignment.BottomStart) {
             if (iconResId != null && !isHeader) {
                 Icon(
                     painter = painterResource(id = iconResId),

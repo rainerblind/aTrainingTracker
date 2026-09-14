@@ -53,7 +53,7 @@ fun RichStatsSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp)
+                .navigationBarsPadding()
         ) {
             // Header: Equipment Name
             Text(
