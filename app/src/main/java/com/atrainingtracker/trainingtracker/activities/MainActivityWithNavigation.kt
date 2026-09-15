@@ -99,6 +99,7 @@ import com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsD
 import com.atrainingtracker.trainingtracker.ui.settings.dropbox.CloudUploadFragment
 import com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialogFragment
 import com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialogFragment
+import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsDialogFragment
 import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsFragment
 import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaSettingsDialogFragment
 import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaUploadFragment
@@ -893,8 +894,9 @@ class MainActivityWithNavigation :
             }
 
             R.id.drawer_search_settings -> {
-                mFragment = SearchSettingsFragment.newInstance()
-                tag = SearchSettingsFragment.TAG
+                mDrawerLayout.closeDrawer(GravityCompat.START)
+                SearchSettingsDialogFragment.newInstance().show(supportFragmentManager, SearchSettingsDialogFragment.TAG)
+                return false
             }
 
             R.id.drawer_backup_restore -> {
@@ -1012,7 +1014,10 @@ class MainActivityWithNavigation :
                 StravaSettingsDialogFragment.newInstance().show(supportFragmentManager, StravaSettingsDialogFragment.TAG)
                 return true
             }
-            "search_settings" -> fragment = SearchSettingsFragment()
+            "search_settings" -> {
+                SearchSettingsDialogFragment.newInstance().show(supportFragmentManager, SearchSettingsDialogFragment.TAG)
+                return true
+            }
             else -> Log.d(TAG, "WTF: unknown key")
         }
 
