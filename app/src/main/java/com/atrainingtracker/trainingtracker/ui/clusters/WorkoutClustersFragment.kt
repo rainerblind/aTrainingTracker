@@ -150,28 +150,6 @@ class WorkoutClustersFragment : Fragment() {
                                 onBack = { isAdding = false }
                             )
                         }
-                        editedWorkoutId != null -> {
-                            val editViewModel: EditWorkoutViewModel = viewModel(
-                                key = "edit_workout_$editedWorkoutId",
-                                factory = EditWorkoutViewModelFactory(
-                                    requireActivity().application,
-                                    editedWorkoutId!!
-                                )
-                            )
-
-                            BackHandler { editedWorkoutId = null }
-
-                            EditWorkoutScreen(
-                                viewModel = editViewModel,
-                                onBack = {
-                                    val id = editedWorkoutId
-                                    editedWorkoutId = null
-                                    if (id != null) {
-                                        viewModel.selectWorkoutForPeek(id)
-                                    }
-                                }
-                            )
-                        }
                         inspectedWorkout != null -> {
                             val workout = inspectedWorkout!!
                             var workoutToCluster by remember { mutableStateOf<WorkoutData?>(null) }
@@ -351,6 +329,27 @@ class WorkoutClustersFragment : Fragment() {
                                 )
                             }
                         }
+                    }
+
+                    if (editedWorkoutId != null) {
+                        val editViewModel: EditWorkoutViewModel = viewModel(
+                            key = "edit_workout_$editedWorkoutId",
+                            factory = EditWorkoutViewModelFactory(
+                                requireActivity().application,
+                                editedWorkoutId!!
+                            )
+                        )
+
+                        EditWorkoutScreen(
+                            viewModel = editViewModel,
+                            onBack = {
+                                val id = editedWorkoutId
+                                editedWorkoutId = null
+                                if (id != null) {
+                                    viewModel.selectWorkoutForPeek(id)
+                                }
+                            }
+                        )
                     }
 
                     if (clusterToDelete != null) {
