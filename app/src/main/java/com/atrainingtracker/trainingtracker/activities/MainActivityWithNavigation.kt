@@ -100,6 +100,7 @@ import com.atrainingtracker.trainingtracker.ui.settings.dropbox.CloudUploadFragm
 import com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialogFragment
 import com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialogFragment
 import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsFragment
+import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaSettingsDialogFragment
 import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaUploadFragment
 import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ActivityTypeSelectionHelper
 import com.atrainingtracker.trainingtracker.ui.settings.units.UnitsSettingsDialogFragment
@@ -846,8 +847,9 @@ class MainActivityWithNavigation :
             }
 
             R.id.drawer_strava -> {
-                mFragment = StravaUploadFragment()
-                tag = StravaUploadFragment::class.java.name
+                mDrawerLayout.closeDrawer(GravityCompat.START)
+                StravaSettingsDialogFragment.newInstance().show(supportFragmentManager, StravaSettingsDialogFragment.TAG)
+                return false
             }
 
             R.id.drawer_dropbox -> {
@@ -1006,7 +1008,10 @@ class MainActivityWithNavigation :
                 DropboxSettingsDialogFragment.newInstance().show(supportFragmentManager, DropboxSettingsDialogFragment.TAG)
                 return true
             }
-            TrainingApplication.PREFERENCE_SCREEN_STRAVA -> fragment = StravaUploadFragment()
+            TrainingApplication.PREFERENCE_SCREEN_STRAVA -> {
+                StravaSettingsDialogFragment.newInstance().show(supportFragmentManager, StravaSettingsDialogFragment.TAG)
+                return true
+            }
             "search_settings" -> fragment = SearchSettingsFragment()
             else -> Log.d(TAG, "WTF: unknown key")
         }

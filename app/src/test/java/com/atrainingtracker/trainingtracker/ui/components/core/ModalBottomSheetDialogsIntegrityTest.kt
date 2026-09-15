@@ -102,6 +102,20 @@ class ModalBottomSheetDialogsIntegrityTest {
     }
 
     @Test
+    fun testStravaSettingsDialog_existsAndExposesComposableAndFragment() {
+        val dialogClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.strava.StravaSettingsDialogKt")
+        val composableMethod = dialogClass.declaredMethods.find { it.name == "StravaSettingsDialog" }
+        assertNotNull("StravaSettingsDialog composable function must exist", composableMethod)
+        assertTrue(Modifier.isPublic(composableMethod!!.modifiers))
+
+        val fragmentClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.strava.StravaSettingsDialogFragment")
+        assertTrue(
+            "StravaSettingsDialogFragment must extend DialogFragment",
+            androidx.fragment.app.DialogFragment::class.java.isAssignableFrom(fragmentClass)
+        )
+    }
+
+    @Test
     fun testActivityTypeSelectionDialog_existsAndExposesComposableAndFragment() {
         val dialogClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ActivityTypeSelectionDialogKt")
         val composableMethod = dialogClass.declaredMethods.find { it.name == "ActivityTypeSelectionDialog" }
