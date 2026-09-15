@@ -97,6 +97,7 @@ import com.atrainingtracker.trainingtracker.ui.routes.RoutesFragment
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegmentsFragment
 import com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsDialogFragment
 import com.atrainingtracker.trainingtracker.ui.settings.dropbox.CloudUploadFragment
+import com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialogFragment
 import com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialogFragment
 import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsFragment
 import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaUploadFragment
@@ -850,8 +851,9 @@ class MainActivityWithNavigation :
             }
 
             R.id.drawer_dropbox -> {
-                mFragment = CloudUploadFragment()
-                tag = CloudUploadFragment::class.java.name
+                mDrawerLayout.closeDrawer(GravityCompat.START)
+                DropboxSettingsDialogFragment.newInstance().show(supportFragmentManager, DropboxSettingsDialogFragment.TAG)
+                return false
             }
 
             R.id.drawer_export -> {
@@ -1000,7 +1002,10 @@ class MainActivityWithNavigation :
         var fragment: Fragment? = null
         when (key) {
             "sportTypes" -> fragment = SportTypeListFragment()
-            "cloudUpload" -> fragment = CloudUploadFragment()
+            "cloudUpload" -> {
+                DropboxSettingsDialogFragment.newInstance().show(supportFragmentManager, DropboxSettingsDialogFragment.TAG)
+                return true
+            }
             TrainingApplication.PREFERENCE_SCREEN_STRAVA -> fragment = StravaUploadFragment()
             "search_settings" -> fragment = SearchSettingsFragment()
             else -> Log.d(TAG, "WTF: unknown key")
