@@ -35,7 +35,7 @@ import com.atrainingtracker.R
  *
  * Enforces uniform button placement, spacing, and semantic labeling per REQ-UI-150:
  * - [SaveCancel]: For data-persisting dialogs. Cancel on left, primary "Save" ("Speichern") on right.
- * - [Confirm]: For informational or immediate-effect sheets. Full-width primary "OK".
+ * - [Confirm]: For informational or acknowledge sheets. Right-aligned primary "OK".
  * - [CancelOnly]: For selection sheets. Full-width text "Cancel" ("Abbrechen").
  */
 object AppDialogActions {
@@ -72,20 +72,33 @@ object AppDialogActions {
     }
 
     /**
-     * Standard action layout for informational or immediate preference sheets:
-     * - Full-width primary filled button (OK / "OK")
+     * Standard action layout for informational or acknowledgement sheets:
+     * - Right-aligned primary filled button (OK / "OK")
      */
     @Composable
     fun Confirm(
         onConfirm: () -> Unit,
         modifier: Modifier = Modifier,
-        confirmText: String = stringResource(android.R.string.ok)
+        confirmText: String = stringResource(android.R.string.ok),
+        fillMaxWidth: Boolean = false
     ) {
-        Button(
-            onClick = onConfirm,
-            modifier = modifier.fillMaxWidth()
-        ) {
-            Text(confirmText)
+        if (fillMaxWidth) {
+            Button(
+                onClick = onConfirm,
+                modifier = modifier.fillMaxWidth()
+            ) {
+                Text(confirmText)
+            }
+        } else {
+            Row(
+                modifier = modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(onClick = onConfirm) {
+                    Text(confirmText)
+                }
+            }
         }
     }
 

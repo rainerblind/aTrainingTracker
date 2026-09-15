@@ -31,13 +31,26 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomShe
 fun ExportSettingsDialog(
     onDismiss: () -> Unit
 ) {
+    var exportTcx by remember { mutableStateOf(TrainingApplication.exportToTCX()) }
+    var exportGpx by remember { mutableStateOf(TrainingApplication.exportToGPX()) }
+    var exportGcJson by remember { mutableStateOf(TrainingApplication.exportToGCJson()) }
+    var exportCsv by remember { mutableStateOf(TrainingApplication.exportToCSV()) }
+
     AppModalBottomSheet(
         title = stringResource(R.string.prefs_Export),
         icon = Icons.Default.Upload,
         onDismissRequest = onDismiss,
         actions = {
-            AppDialogActions.Confirm(
-                onConfirm = onDismiss
+            AppDialogActions.SaveCancel(
+                onSave = {
+                    TrainingApplication.setExportToTCX(exportTcx)
+                    TrainingApplication.setExportToGPX(exportGpx)
+                    TrainingApplication.setExportToGCJson(exportGcJson)
+                    TrainingApplication.setExportToCSV(exportCsv)
+                    onDismiss()
+                },
+                onCancel = onDismiss,
+                saveText = stringResource(R.string.save)
             )
         }
     ) {
@@ -47,23 +60,23 @@ fun ExportSettingsDialog(
         ) {
             ExportOptionToggle(
                 label = "TCX",
-                initialValue = TrainingApplication.exportToTCX(),
-                onCheckedChange = { TrainingApplication.setExportToTCX(it) }
+                isChecked = exportTcx,
+                onCheckedChange = { exportTcx = it }
             )
             ExportOptionToggle(
                 label = "GPX",
-                initialValue = TrainingApplication.exportToGPX(),
-                onCheckedChange = { TrainingApplication.setExportToGPX(it) }
+                isChecked = exportGpx,
+                onCheckedChange = { exportGpx = it }
             )
             ExportOptionToggle(
                 label = "Golden Cheetah JSON",
-                initialValue = TrainingApplication.exportToGCJson(),
-                onCheckedChange = { TrainingApplication.setExportToGCJson(it) }
+                isChecked = exportGcJson,
+                onCheckedChange = { exportGcJson = it }
             )
             ExportOptionToggle(
                 label = "CSV",
-                initialValue = TrainingApplication.exportToCSV(),
-                onCheckedChange = { TrainingApplication.setExportToCSV(it) }
+                isChecked = exportCsv,
+                onCheckedChange = { exportCsv = it }
             )
         }
     }
@@ -72,11 +85,9 @@ fun ExportSettingsDialog(
 @Composable
 private fun ExportOptionToggle(
     label: String,
-    initialValue: Boolean,
+    isChecked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    var isChecked by remember { mutableStateOf(initialValue) }
-
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -85,10 +96,7 @@ private fun ExportOptionToggle(
         Text(text = label, style = MaterialTheme.typography.bodyLarge)
         Switch(
             checked = isChecked,
-            onCheckedChange = {
-                isChecked = it
-                onCheckedChange(it)
-            },
+            onCheckedChange = onCheckedChange,
             modifier = Modifier.scale(0.7f)
         )
     }
