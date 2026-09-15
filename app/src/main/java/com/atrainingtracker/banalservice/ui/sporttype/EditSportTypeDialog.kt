@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -154,12 +155,8 @@ fun EditSportTypeDialog(
         iconPainter = painterResource(bSportType.iconResId),
         iconTint = Color.Unspecified,
         actions = {
-            Spacer(modifier = Modifier.weight(1f))
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.Cancel))
-            }
-            Button(
-                onClick = {
+            AppDialogActions.SaveCancel(
+                onSave = {
                     val finalMin = MyHelper.UserUnit2mps(minSpeed.toDoubleOrNull() ?: 0.0)
                     val finalMax = MyHelper.UserUnit2mps(maxSpeed.toDoubleOrNull() ?: 0.0)
                     onConfirm(item.copy(
@@ -173,10 +170,10 @@ fun EditSportTypeDialog(
                         gcName = gcName
                     ))
                 },
-                enabled = name.isNotBlank()
-            ) {
-                Text(stringResource(R.string.save))
-            }
+                onCancel = onDismiss,
+                saveText = stringResource(R.string.save),
+                saveEnabled = name.isNotBlank()
+            )
         }
     ) {
         Column(

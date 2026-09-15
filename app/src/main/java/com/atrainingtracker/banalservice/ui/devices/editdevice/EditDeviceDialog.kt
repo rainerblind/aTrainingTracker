@@ -46,6 +46,7 @@ import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.DeviceStatusRow
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
@@ -77,16 +78,14 @@ fun EditDeviceDialog(
             else
                 Color.Unspecified,
             actions = {
-                Spacer(modifier = Modifier.weight(1f))
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.cancel))
-                }
-                Button(onClick = {
-                    viewModel.saveChanges()
-                    onDismiss()
-                }) {
-                    Text(stringResource(R.string.OK))
-                }
+                AppDialogActions.SaveCancel(
+                    onSave = {
+                        viewModel.saveChanges()
+                        onDismiss()
+                    },
+                    onCancel = onDismiss,
+                    saveText = stringResource(R.string.save)
+                )
             }
         ) {
             Column(

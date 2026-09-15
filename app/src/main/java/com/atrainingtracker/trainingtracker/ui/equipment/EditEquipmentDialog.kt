@@ -36,6 +36,7 @@ import com.atrainingtracker.R
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
 /**
@@ -63,22 +64,18 @@ fun EditEquipmentDialog(
         iconPainter = painterResource(id = iconRes),
         iconTint = Color.Unspecified,
         actions = {
-            Spacer(modifier = Modifier.weight(1f))
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
-            Button(
-                onClick = {
+            AppDialogActions.SaveCancel(
+                onSave = {
                     onConfirm(item.copy(
                         name = name,
                         frameType = frameType,
                         linkedDeviceIds = selectedSensorIds.toList(),
                         linkedSportTypeIds = selectedSportTypeIds.toList()
                     ))
-                }
-            ) {
-                Text(stringResource(R.string.save))
-            }
+                },
+                onCancel = onDismiss,
+                saveText = stringResource(R.string.save)
+            )
         }
     ) {
         Column(

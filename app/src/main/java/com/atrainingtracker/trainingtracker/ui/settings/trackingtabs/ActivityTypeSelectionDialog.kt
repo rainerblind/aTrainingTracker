@@ -34,6 +34,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
 
 import androidx.compose.material3.ExperimentalMaterial3Api
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,12 +48,7 @@ fun ActivityTypeSelectionDialog(
         iconPainter = painterResource(id = R.drawable.ic_table_edit),
         onDismissRequest = onDismiss,
         actions = {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.Cancel))
-            }
+            AppDialogActions.CancelOnly(onCancel = onDismiss)
         }
     ) {
         Column(

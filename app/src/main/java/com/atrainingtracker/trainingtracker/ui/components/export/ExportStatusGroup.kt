@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -121,10 +122,7 @@ fun ExportDetailsDialog(
         title = data.groupTitle,
         icon = Icons.Default.Upload,
         actions = {
-            Spacer(modifier = Modifier.weight(1f))
-            Button(onClick = onDismiss) {
-                Text(text = stringResource(R.string.OK))
-            }
+            AppDialogActions.Confirm(onConfirm = onDismiss)
         }
     ) {
         Column(

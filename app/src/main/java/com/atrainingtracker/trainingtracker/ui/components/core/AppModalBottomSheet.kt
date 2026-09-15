@@ -89,6 +89,7 @@ fun AppModalBottomSheet(
     iconTint: Color = MaterialTheme.colorScheme.primary,
     showCloseButton: Boolean = true,
     scrollable: Boolean = true,
+    headerActions: (@Composable RowScope.() -> Unit)? = null,
     actions: (@Composable RowScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -140,12 +141,17 @@ fun AppModalBottomSheet(
                     )
                 }
 
-                if (showCloseButton) {
-                    IconButton(onClick = onDismissRequest) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.Cancel)
-                        )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (headerActions != null) {
+                        headerActions()
+                    }
+                    if (showCloseButton) {
+                        IconButton(onClick = onDismissRequest) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = stringResource(R.string.Cancel)
+                            )
+                        }
                     }
                 }
             }

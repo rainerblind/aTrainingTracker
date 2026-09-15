@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -621,9 +622,7 @@ fun WorkoutClusterSelectionDialog(
         title = title,
         icon = Icons.Default.LocationOn,
         actions = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.Cancel))
-            }
+            AppDialogActions.CancelOnly(onCancel = onDismiss)
         }
     ) {
         Column(
@@ -707,9 +706,7 @@ fun EditWorkoutClusterDialog(
         title = stringResource(R.string.cluster_naming__title),
         icon = Icons.Default.LocationOn,
         actions = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.Cancel))
-            }
+            AppDialogActions.CancelOnly(onCancel = onDismiss)
         }
     ) {
         Column(

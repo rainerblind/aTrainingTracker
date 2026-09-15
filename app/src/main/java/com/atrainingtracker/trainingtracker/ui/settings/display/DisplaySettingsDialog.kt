@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,12 +41,9 @@ fun DisplaySettingsDialog(
         icon = Icons.Default.DisplaySettings,
         onDismissRequest = onDismiss,
         actions = {
-            Button(
-                onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.Done))
-            }
+            AppDialogActions.Confirm(
+                onConfirm = onDismiss
+            )
         }
     ) {
         Column(

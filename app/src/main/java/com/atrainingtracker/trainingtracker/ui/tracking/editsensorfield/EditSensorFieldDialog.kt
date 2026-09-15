@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.tracking.getDisplayName
 
@@ -53,16 +54,14 @@ fun EditSensorFieldDialog(
         title = title,
         icon = Icons.Default.Edit,
         actions = {
-            Spacer(modifier = Modifier.weight(1f))
-            TextButton(onClick = onDismissRequest) {
-                Text(stringResource(R.string.Cancel))
-            }
-            Button(onClick = {
-                viewModel.saveChanges()
-                onDismissRequest()
-            }) {
-                Text(stringResource(R.string.OK))
-            }
+            AppDialogActions.SaveCancel(
+                onSave = {
+                    viewModel.saveChanges()
+                    onDismissRequest()
+                },
+                onCancel = onDismissRequest,
+                saveText = stringResource(R.string.save)
+            )
         }
     ) {
         Column(
