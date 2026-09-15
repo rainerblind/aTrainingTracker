@@ -176,27 +176,7 @@ class WorkoutSummariesListFragment : Fragment() {
                         contentWindowInsets = WindowInsets(0.dp)
                     ) { paddingValues ->
                         Box(modifier = Modifier.padding(paddingValues)) {
-                            if (selectedWorkoutIdForEdit != null) {
-                                val editViewModel: EditWorkoutViewModel = viewModel(
-                                    key = "edit_workout_$selectedWorkoutIdForEdit",
-                                    factory = EditWorkoutViewModelFactory(
-                                        requireActivity().application,
-                                        selectedWorkoutIdForEdit!!
-                                    )
-                                )
-
-                                ATrainingTrackerTheme {
-                                    EditWorkoutScreen(
-                                        viewModel = editViewModel,
-                                        onBack = { selectedWorkoutIdForEdit = null }
-                                    )
-                                }
-
-                                // 4. Handle System Back Button
-                                BackHandler {
-                                    selectedWorkoutIdForEdit = null
-                                }
-                            } else if (selectedWorkoutForDetailsData != null) {
+                            if (selectedWorkoutForDetailsData != null) {
                                 // 3. Render the Detail Map Screen
                                 val aftermathUIState by trackOnMapViewModel.uiState.collectAsStateWithLifecycle()
                                 val enabledTrackTypes by trackOnMapViewModel.enabledTrackTypes.collectAsStateWithLifecycle()
@@ -329,6 +309,23 @@ class WorkoutSummariesListFragment : Fragment() {
                                             )
                                         }
                                     }
+                                }
+                            }
+
+                            if (selectedWorkoutIdForEdit != null) {
+                                val editViewModel: EditWorkoutViewModel = viewModel(
+                                    key = "edit_workout_$selectedWorkoutIdForEdit",
+                                    factory = EditWorkoutViewModelFactory(
+                                        requireActivity().application,
+                                        selectedWorkoutIdForEdit!!
+                                    )
+                                )
+
+                                ATrainingTrackerTheme {
+                                    EditWorkoutScreen(
+                                        viewModel = editViewModel,
+                                        onBack = { selectedWorkoutIdForEdit = null }
+                                    )
                                 }
                             }
                         }

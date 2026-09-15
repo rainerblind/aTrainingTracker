@@ -179,6 +179,18 @@ class ModalBottomSheetDialogsIntegrityTest {
     }
 
     @Test
+    fun testEditWorkoutDialog_existsAndExposesComposableContract() {
+        val editWorkoutClass = Class.forName("com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutScreenKt")
+        val editWorkoutScreenMethod = editWorkoutClass.declaredMethods.find { it.name == "EditWorkoutScreen" }
+        assertNotNull("EditWorkoutScreen composable function must exist", editWorkoutScreenMethod)
+        assertTrue(Modifier.isPublic(editWorkoutScreenMethod!!.modifiers))
+
+        val editWorkoutDialogMethod = editWorkoutClass.declaredMethods.find { it.name == "EditWorkoutDialog" }
+        assertNotNull("EditWorkoutDialog composable function must exist", editWorkoutDialogMethod)
+        assertTrue(Modifier.isPublic(editWorkoutDialogMethod!!.modifiers))
+    }
+
+    @Test
     fun testCenteredDialogInvariants_retainedAsExpected() {
         // LapSummaryDialog must remain retained as a centered HUD dialog during active tracking
         val lapSummaryClass = Class.forName("com.atrainingtracker.trainingtracker.ui.tracking.LapSummaryDialogKt")

@@ -84,26 +84,7 @@ class PeriodsFragment : Fragment() {
                         initialPage = 1) // Set the initial page to the weeks.
                     val listStates = List(groups.size) { rememberLazyListState() }
 
-                    if (editedWorkoutId != null) {
-                        val editViewModel: EditWorkoutViewModel = viewModel(
-                            key = "edit_workout_${editedWorkoutId}",
-                            factory = EditWorkoutViewModelFactory(requireActivity().application, editedWorkoutId!!)
-                        )
-
-                        BackHandler { editedWorkoutId = null }
-
-                        EditWorkoutScreen(
-                            viewModel = editViewModel,
-                            onBack = {
-                                val id = editedWorkoutId
-                                editedWorkoutId = null
-                                viewModel.loadPeriods()
-                                if (id != null && selectedPeriod != null) {
-                                    viewModel.selectWorkoutForPeek(id)
-                                }
-                            }
-                        )
-                    } else if (selectedPeriod != null) {
+                    if (selectedPeriod != null) {
                         val mapState by viewModel.mapState.collectAsStateWithLifecycle()
                         PeriodMapScreen(
                             summary = selectedPeriod!!,
@@ -116,8 +97,7 @@ class PeriodsFragment : Fragment() {
                             onBack = { viewModel.dismissPeriodMap() },
                             onEditWorkout = { id -> editedWorkoutId = id }
                         )
-                    }
-                    else {
+                    } else {
                         PeriodsTabsScreen(
                             groupedPeriods = groupedPeriods,
                             pagerState = pagerState,
@@ -131,6 +111,25 @@ class PeriodsFragment : Fragment() {
                             isPlayServiceAvailable = isPlayAvailable,
                             tabs = groups,
                             migrationStatus = migrationStatus
+                        )
+                    }
+
+                    if (editedWorkoutId != null) {
+                        val editViewModel: EditWorkoutViewModel = viewModel(
+                            key = "edit_workout_${editedWorkoutId}",
+                            factory = EditWorkoutViewModelFactory(requireActivity().application, editedWorkoutId!!)
+                        )
+
+                        EditWorkoutScreen(
+                            viewModel = editViewModel,
+                            onBack = {
+                                val id = editedWorkoutId
+                                editedWorkoutId = null
+                                viewModel.loadPeriods()
+                                if (id != null && selectedPeriod != null) {
+                                    viewModel.selectWorkoutForPeek(id)
+                                }
+                            }
                         )
                     }
                 }
