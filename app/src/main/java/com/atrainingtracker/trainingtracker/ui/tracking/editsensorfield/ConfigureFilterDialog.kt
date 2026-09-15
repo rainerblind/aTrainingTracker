@@ -34,6 +34,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.filters.FilterType
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
 /**
@@ -71,13 +72,11 @@ fun ConfigureFilterDialog(
         title = stringResource(R.string.filter_configure_smoothing),
         icon = Icons.Default.FilterAlt,
         actions = {
-            Spacer(modifier = Modifier.weight(1f))
-            TextButton(onClick = onDismissRequest) {
-                Text(stringResource(R.string.Cancel))
-            }
-            Button(onClick = onSave) {
-                Text(stringResource(R.string.OK))
-            }
+            AppDialogActions.SaveCancel(
+                onSave = onSave,
+                onCancel = onDismissRequest,
+                saveText = stringResource(R.string.save)
+            )
         }
     ) {
         Column(

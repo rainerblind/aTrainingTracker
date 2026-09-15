@@ -18,24 +18,34 @@
 
 package com.atrainingtracker.trainingtracker.ui.routes
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteSummary
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,35 +58,30 @@ fun EditRouteScreen(
     var description by remember { mutableStateOf(routeSummary.description) }
     var selectedSport by remember { mutableStateOf(routeSummary.bSportType) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.route_edit)) },
-                navigationIcon = {
-                    IconButton(onClick = onCancel) {
-                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.Cancel))
-                    }
-                },
-                actions = {
-                    IconButton(onClick = {
-                        onSave(routeSummary.copy(
+    AppModalBottomSheet(
+        title = stringResource(R.string.route_edit),
+        icon = Icons.Default.Edit,
+        onDismissRequest = onCancel,
+        actions = {
+            AppDialogActions.SaveCancel(
+                onSave = {
+                    onSave(
+                        routeSummary.copy(
                             name = name,
                             description = description,
                             bSportType = selectedSport
-                        ))
-                    }) {
-                        Icon(Icons.Default.Check, contentDescription = stringResource(R.string.save))
-                    }
-                }
+                        )
+                    )
+                },
+                onCancel = onCancel,
+                saveEnabled = name.isNotBlank()
             )
         }
-    ) { padding ->
+    ) {
         Column(
             modifier = Modifier
-                .padding(padding)
-                .padding(16.dp)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Route Name

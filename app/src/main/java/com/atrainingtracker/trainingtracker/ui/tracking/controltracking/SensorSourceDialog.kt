@@ -46,6 +46,7 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.repositories.DeviceTelemetry
 import com.atrainingtracker.trainingtracker.ui.components.MetricLayout
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
@@ -85,12 +86,9 @@ fun SensorSourceDialog(
         iconTint = MaterialTheme.colorScheme.onSurface,
         onDismissRequest = onDismiss,
         actions = {
-            Button(
-                onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = stringResource(id = android.R.string.ok))
-            }
+            AppDialogActions.Confirm(
+                onConfirm = onDismiss
+            )
         }
     ) {
         Column(

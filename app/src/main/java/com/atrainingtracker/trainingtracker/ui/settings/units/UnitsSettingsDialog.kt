@@ -26,6 +26,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,21 +48,14 @@ fun UnitsSettingsDialog(
         icon = Icons.Default.SquareFoot,
         onDismissRequest = onDismiss,
         actions = {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(stringResource(R.string.Cancel))
-            }
-            Button(
-                onClick = {
+            AppDialogActions.SaveCancel(
+                onSave = {
                     sharedPreferences.edit().putString(key, selectedUnit.name).apply()
                     onDismiss()
                 },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(stringResource(R.string.Done))
-            }
+                onCancel = onDismiss,
+                saveText = stringResource(R.string.save)
+            )
         }
     ) {
         Column(

@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -1035,19 +1036,15 @@ fun EditWorkoutClusterIdentityDialog(
         title = stringResource(R.string.edit_workout_name),
         icon = Icons.Default.Place,
         actions = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            Button(
-                onClick = { 
+            AppDialogActions.SaveCancel(
+                onSave = { 
                     val sportId = sportTypesList.find { it.name == selectedSportName }?.id ?: cluster.probableSportId
                     onConfirm(name, sportId, hasCounter) 
                 },
-                enabled = name.isNotBlank()
-            ) {
-                Text(stringResource(R.string.save))
-            }
+                onCancel = onDismiss,
+                saveText = stringResource(R.string.save),
+                saveEnabled = name.isNotBlank()
+            )
         }
     ) {
         Column(

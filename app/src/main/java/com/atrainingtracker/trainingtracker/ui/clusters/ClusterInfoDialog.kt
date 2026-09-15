@@ -25,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
 /**
@@ -49,13 +50,10 @@ fun ClusterInfoDialog(
         title = stringResource(R.string.cluster_info_title),
         icon = Icons.Default.Info,
         actions = {
-            Spacer(modifier = Modifier.weight(1f))
-            Button(onClick = onDismissRequest) {
-                Text(
-                    text = stringResource(R.string.cluster_info_close),
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
+            AppDialogActions.Confirm(
+                onConfirm = onDismissRequest,
+                confirmText = stringResource(R.string.cluster_info_close)
+            )
         }
     ) {
         Column(

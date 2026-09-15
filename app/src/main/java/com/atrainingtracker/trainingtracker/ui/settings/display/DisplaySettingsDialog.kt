@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,7 +33,7 @@ fun DisplaySettingsDialog(
     onSettingsChanged: (() -> Unit)? = null
 ) {
     var currentOptions by remember { 
-        mutableStateOf(HashSet(TrainingApplication.getDisplayOptions()))
+        mutableStateOf(TrainingApplication.getDisplayOptions().toSet())
     }
     
     AppModalBottomSheet(
@@ -40,12 +41,15 @@ fun DisplaySettingsDialog(
         icon = Icons.Default.DisplaySettings,
         onDismissRequest = onDismiss,
         actions = {
-            Button(
-                onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.Done))
-            }
+            AppDialogActions.SaveCancel(
+                onSave = {
+                    TrainingApplication.setDisplayOptions(currentOptions)
+                    onSettingsChanged?.invoke()
+                    onDismiss()
+                },
+                onCancel = onDismiss,
+                saveText = stringResource(R.string.save)
+            )
         }
     ) {
         Column(
@@ -56,36 +60,21 @@ fun DisplaySettingsDialog(
                 label = stringResource(R.string.forcePortrait),
                 isChecked = currentOptions.contains("forcePortrait"),
                 onCheckedChange = { checked ->
-                    val newSet = currentOptions.toMutableSet().apply {
-                        if (checked) add("forcePortrait") else remove("forcePortrait")
-                    }
-                    TrainingApplication.setDisplayOptions(newSet)
-                    currentOptions = HashSet(newSet)
-                    onSettingsChanged?.invoke()
+                    currentOptions = if (checked) currentOptions + "forcePortrait" else currentOptions - "forcePortrait"
                 }
             )
             DisplayOptionToggle(
                 label = stringResource(R.string.prefsKeepScreenOnTitle),
                 isChecked = currentOptions.contains("keepScreenOn"),
                 onCheckedChange = { checked ->
-                    val newSet = currentOptions.toMutableSet().apply {
-                        if (checked) add("keepScreenOn") else remove("keepScreenOn")
-                    }
-                    TrainingApplication.setDisplayOptions(newSet)
-                    currentOptions = HashSet(newSet)
-                    onSettingsChanged?.invoke()
+                    currentOptions = if (checked) currentOptions + "keepScreenOn" else currentOptions - "keepScreenOn"
                 }
             )
             DisplayOptionToggle(
                 label = stringResource(R.string.prefsNoUnlockingTitle),
                 isChecked = currentOptions.contains("noUnlocking"),
                 onCheckedChange = { checked ->
-                    val newSet = currentOptions.toMutableSet().apply {
-                        if (checked) add("noUnlocking") else remove("noUnlocking")
-                    }
-                    TrainingApplication.setDisplayOptions(newSet)
-                    currentOptions = HashSet(newSet)
-                    onSettingsChanged?.invoke()
+                    currentOptions = if (checked) currentOptions + "noUnlocking" else currentOptions - "noUnlocking"
                 }
             )
         }
