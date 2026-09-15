@@ -96,13 +96,10 @@ import com.atrainingtracker.trainingtracker.ui.navigation.setupComposeNavigation
 import com.atrainingtracker.trainingtracker.ui.routes.RoutesFragment
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegmentsFragment
 import com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsDialogFragment
-import com.atrainingtracker.trainingtracker.ui.settings.dropbox.CloudUploadFragment
 import com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialogFragment
 import com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialogFragment
 import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsDialogFragment
-import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsFragment
 import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaSettingsDialogFragment
-import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaUploadFragment
 import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ActivityTypeSelectionHelper
 import com.atrainingtracker.trainingtracker.ui.settings.units.UnitsSettingsDialogFragment
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment
@@ -1088,11 +1085,6 @@ class MainActivityWithNavigation :
         }
         TrainingApplication.setResumeFromCrash(false)
         WorkoutSummariesDatabaseManager.getInstance(this).discardOrFinishUnfinishedWorkout()
-
-        val tv = findViewById<TextView>(R.id.tvStart)
-        if (tv != null) {
-            tv.setText(R.string.start_new_workout)
-        }
     }
 
     override fun chooseResume() {
@@ -1103,10 +1095,5 @@ class MainActivityWithNavigation :
         }
         TrainingApplication.setResumeFromCrash(true)
         sendBroadcast(Intent(TrainingApplication.REQUEST_START_TRACKING).setPackage(packageName))
-
-        val tv = findViewById<TextView>(R.id.tvStart)
-        if (tv != null) {
-            tv.setText(R.string.resume_workout)
-        }
     }
 }

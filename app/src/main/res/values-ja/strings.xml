@@ -21,14 +21,9 @@
 
     <!-- Standard stuff -->
     <string name="OK">OK</string>
-    <string name="do_not_show_again">再表示しない</string>
     <string name="Cancel">キャンセル</string>
-    <string name="searching_for">検索中:</string>
     <string name="searching_for_device_format">%1$s を検索中</string>
-    <string name="default_device_name">ANT+ デバイス</string>
     <string name="waiting">待機中</string>
-    <string name="pairing_ANT">ANT+ ペアリング</string>
-    <string name="pairing_bluetooth">Bluetooth LE ペアリング</string>
     <string name="searching">検索中</string>
     <string name="research">再検索</string>
     <string name="Start">開始</string>
@@ -55,18 +50,14 @@
     <string name="deleteOldWorkouts">古いトレーニングを削除</string>
     <string name="deleteWorkoutsThatAreOlderThanDays">指定日数より古いトレーニングを削除</string>
     <string name="really_delete_old_workouts_format">%1$d日より古いすべてのトレーニングを本当に削除しますか？</string>
-    <string name="delete_sensor">削除</string>
     <string name="really_delete_workout">このトレーニングを削除しますか？</string>
     <string name="really_delete_pebble_view_format">Pebble表示 "%1$s" を削除しますか？</string>
     <string name="really_delete_view_format">表示 "%1$s" を削除しますか？</string>
     <string name="deleting_please_wait">トレーニングを削除中 …\nお待ちください</string>
     <string name="deleting_workout">削除中: %1$s…</string>
-    <string name="calculating_extrema_values">統計値（最小、平均、最大）を計算中…</string>
     <string name="calculating_extrema_value_for">%2$s の %1$s を計算中</string>
-    <string name="calculating_max_away_point">最遠地点を計算中</string>
     <string name="initializing">初期化中</string>
     <string name="show_HW_details">ハードウェア詳細を表示</string>
-    <string name="show_google_maps_licence">Google Maps 法的事項</string>
     <string name="play_services_not_installed">Google Play 開発者サービスがインストールされていません。</string>
     <string name="Preferences">設定</string>
     <string name="start_tracking">トレーニング開始</string>
@@ -81,8 +72,6 @@
     <string name="SD_card">SDカード</string>
     <string name="File">ファイル</string>
     <string name="Community">コミュニティ</string>
-    <string name="TrainingPeaks_login_title">TrainingPeaks ログイン</string>
-    <string name="TrainingPeaks_login_message">TrainingPeaksへのアップロードには、ユーザー名とパスワードが必要です</string>
     <string name="unknown_manufacturer">不明</string>
     <string name="unknown_last_seen_date">未検出</string>
     <string name="next">次へ</string>
@@ -92,8 +81,6 @@
     <string name="number_of_fields">項目数:</string>
     <string name="Lap_NR">ラップ %1$d</string>
     <string name="build_in">内蔵</string>
-    <string name="no_user_name">ユーザー名なし</string>
-    <string name="no_password">パスワードなし</string>
     <string name="add_sensor">センサー追加</string>
 
     <string name="commute">通勤・通学</string>
@@ -103,9 +90,6 @@
 
     <string name="guess_commute_and_trainer">種類を自動判定</string>
 
-    <string name="install_pebble_watchapp_title">Pebble アプリをインストール</string>
-    <string name="install_pebble_watchapp_text">このオプションを使用するには、Pebble Watchapp をインストールする必要があります。</string>
-    <string name="install_pebble_watchapp_now">OK、今すぐインストール</string>
     <string name="pebble_build_in">標準 Pebble アプリ</string>
     <string name="pebble_a_training_tracker_watchapp">a Training Tracker アプリ</string>
 
@@ -272,19 +256,7 @@
     <string name="bike_power__invert_power_balance_values">左右を反転させる</string>
 
     <!-- Labels -->
-    <string name="PrefsActivityLabel">設定</string>
-    <string name="UpdateWorkoutActivityLabel">更新</string>
-    <string name="TrackOnMapActivityLabel">トレーニング</string>
-    <string name="ExportDetailsActivityLabel">エクスポート詳細</string>
-    <string name="TrackingFragmentConfigListActivityLabel">表示を編集</string>
-    <string name="TrackingFragmentConfigActivityLabel">表示設定を編集</string>
-    <string name="PebbleConfigListActivityLabel">Pebble表示を編集</string>
     <string name="PebbleConfigActivityLabel">Pebble表示設定を編集</string>
-    <string name="AltitudeCorrectionListActivityLabel">高度補正</string>
-    <string name="DeviceChoiceActivityLabel">ペアリング</string>
-    <string name="PairingActivityLabel">ペアリング</string>
-    <string name="EditDeviceActivityLabel">デバイスを編集</string>
-    <string name="LegalInfoLabel">Google Maps 法的事項</string>
 
     <!--  For Preferences Activity -->
     <string name="prefsUserTitle">ユーザー</string>
@@ -365,11 +337,7 @@
     <string name="unpairing">解除中</string>
 
     <!-- altitude_correction_dialog -->
-    <string name="LocationNameHint">地点名</string>
-    <string name="AltitudeHint">高度</string>
 
-    <string name="correct_altitude_title">高度を補正</string>
-    <string name="correct_altitude_message">現在の高度と地点名を入力してください</string>
 
     <!-- update_workout -->
     <string name="ExportName">エクスポート名:</string>
@@ -379,7 +347,6 @@
     <string name="Method">方法:</string>
     <string name="MethodHint">方法を編集</string>
     <string name="Description">説明:</string>
-    <string name="DescriptionHint">説明を編集</string>
     <string name="StartTime">開始時刻:</string>
     <string name="TotalTime">合計時間:</string>
     <string name="ActiveTime">走行時間:</string>
@@ -390,8 +357,6 @@
     <string name="mean">平均</string>
     <string name="max">最大</string>
     <string name="SensorTypes">センサー:</string>
-    <string name="buttonSaveWorkoutText">保存してエクスポート</string>
-    <string name="buttonDeleteWorkoutText">削除</string>
 
     <!-- export_details -->
     <string name="csvWrite">CSV出力</string>
@@ -521,7 +486,6 @@
     <string name="prefsStartSearchWhenAppStartsTitle">アプリ起動時</string>
     <string name="prefsStartSearchWhenTrackingStartsTitle">記録開始時</string>
     <string name="prefsStartSearchWhenResumeFromPausedTitle">一時停止解除時</string>
-    <string name="prefsStartSearchWhenNewLapTitle">新しいラップ時</string>
     <string name="prefsStartSearchWhenUserChangesSportTitle">種目変更時</string>
     <string name="prefs_search_behavior_title">検索動作</string>
     <string name="prefsChangeSportWhenDeviceGetsLostTitle">アクティビティ変更</string>
@@ -530,12 +494,6 @@
     <string name="prefsSearchOnlyForSportSpecificDevicesTitle">種目別検索</string>
     <string name="prefsSearchOnlyForSportSpecificDevicesSummary">現在の種目のセンサーのみ検索</string>
 
-    <string name="startSearchWhenAppStarts_short">アプリ起動</string>
-    <string name="startSearchWhenTrackingStarts_short">記録開始</string>
-    <string name="startSearchWhenResumeFromPaused_short">再開</string>
-    <string name="startSearchWhenNewLap_short">新ラップ</string>
-    <string name="startSearchWhenUserChangesSport_short">種目変更</string>
-    <string name="startSearchOnlyManually">手動のみ</string>
 
 
     <string name="show_all_sport_types">+ すべての種目 +</string>
@@ -580,32 +538,17 @@
     <string name="send_email_format">%2$s へ %1$s ファイルを送信</string>
     <string name="send_email_format_plural">%2$s へ %1$s ファイルを送信</string>
     <string name="ready_to_send_email">メール送信の準備ができました。</string>
-    <string name="title_request_dropbox_token">Dropbox アクセス</string>
-    <string name="message_request_dropbox_token">Dropbox にアップロードしますか？\n(API変更により再認証が必要です。)</string>
 
     <string name="smartphone">スマートフォン</string>
-    <string name="no_sensor_available">センサーなし</string>
     <string name="bestSensor">最適</string>
 
     <string name="units_seconds_long">秒</string>
     <string name="units_minutes_long">分</string>
-    <string name="configSensor">センサー:</string>
-    <string name="configSource">ソース:</string>
-    <string name="configSmoothing">平滑化:</string>
-    <string name="configSize">サイズ:</string>
     <string name="privacy_policy">プライバシーポリシー</string>
     <string name="notification_channel_name__tracking">記録中</string>
     <string name="notification_channel_description__tracking">記録中の通知</string>
     <string name="notification_channel_name__export">出力中</string>
     <string name="notification_channel_description__export">出力中の通知</string>
-    <string name="config_tracking__full_screen">全画面</string>
-    <string name="config_tracking_night_day__system_setting">システム設定</string>
-    <string name="config_tracking_night_day__day">昼（明るい）</string>
-    <string name="conffig_tracking_night_day__night">夜（暗い）</string>
-    <string name="config_tracking__Display">表示</string>
-    <string name="config_tracking__Map">マップ</string>
-    <string name="config_tracking__Lap">ラップ</string>
-    <string name="config_tracking__day_or_night">昼夜モード</string>
     <string name="config_tracking__show_map">マップ表示</string>
     <string name="config_tracking__showLiveSegments">ライブセグメント</string>
     <string name="config_tracking__showLapButton">ラップボタン</string>
@@ -712,7 +655,6 @@
 
     <string name="export_notification__detail__no_results">❓ 結果が見つかりません。</string>
 
-    <string name="export_status__header_title">出力状態</string>
 
     <string name="export_status__waiting">待機中</string>
     <string name="export_status__processing">進行中</string>
@@ -732,13 +674,11 @@
     <string name="edit_workout_name">トレーニング名を編集</string>
 
     <!-- workout summary description-->
-    <string name="workout_summary__description_header">説明</string>
 
     <!-- Edit workout description -->
     <string name="hint_workout_description">説明</string>
     <string name="hint_workout_goal">目標</string>
     <string name="hint_workout_method">方法</string>
-    <string name="title_edit_description">説明を編集</string>
 
     <!-- workout details -->
     <string name="total_time_format">(合計 : %1$s)</string>
@@ -753,18 +693,12 @@
 
     <!-- sport type list / edit sport type -->
     <string name="you_can_not_delete_this_sport_type">この種目は削除できません</string>
-    <string name="add_sport_type">種目を追加</string>
     <string name="edit_sport_type">種目を編集</string>
-    <string name="sport_type_name">種目名</string>
     <string name="basic_sport_type">基本種目</string>
-    <string name="OnlineCommunities">オンラインコミュニティ</string>
     <string name="ExportFiles">ファイル出力</string>
-    <string name="min_avg_speed">最小平均速度:</string>
-    <string name="max_avg_speed">最大平均速度:</string>
     <string name="mapping_format_strava">Strava: %1$s</string>
     <string name="mapping_format_tcx">TCX: %1$s</string>
     <string name="mapping_format_gc">GC: %1$s</string>
-    <string name="item_is_fixed_and_cannot_be_deleted">固定種目のため編集・削除できません。</string>
 
     <!-- drawer -->
     <string name="drawer__training">トレーニング</string>
@@ -1061,8 +995,6 @@
     <string name="no_periods_available_hint">期間の概要を表示するにはワークアウトを記録してください</string>
     <string name="really_delete_format">本当に "%1$s" を削除しますか？</string>
     <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/master/privacy.md</string>
-    <string name="LocationNameText">自宅</string>
-    <string name="LocationAltitudeText">123 m</string>
     <string name="latLongEquals">緯度=%1$f, 経度=%2$f</string>
     <string name="notification_export_unknown">%1$s %2$s ファイルを不明な場所へ出力中...
 %3$s</string>
