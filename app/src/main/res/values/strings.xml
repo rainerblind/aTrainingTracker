@@ -21,16 +21,11 @@
 
     <!-- Standard stuff -->
     <string name="OK">OK</string>
-    <string name="do_not_show_again">don\'t show again</string>
     <string name="Cancel">Cancel</string>
     <string name="no_upload">- No upload -</string>
-    <string name="searching_for">searching for</string>
     <string name="searching_for_device_format">searching for %1$s…</string>
-    <string name="default_device_name">an ANT+ device</string>
     <string name="waiting">waiting</string>
-    <string name="pairing_ANT">ANT+ Pairing</string>
     <!-- <string name="ANTSettings">ANT+ Settings</string> -->
-    <string name="pairing_bluetooth">Bluetooth LE Pairing</string>
     <!-- <string name="settings_bluetooth">Bluetooth LE Settings</string> -->
     <string name="searching">searching</string>
     <string name="research">Search</string>
@@ -59,18 +54,14 @@
     <string name="deleteWorkoutsThatAreOlderThanDays">delete all workouts that are older than … days</string>
     <string name="defaultDaysToKeep" translatable="false">365</string>
     <string name="really_delete_old_workouts_format">Do you really want to delete all workouts older than %1$d days?</string>
-    <string name="delete_sensor">delete</string>
     <string name="really_delete_workout">Do you really want to delete this workout?</string>
     <string name="really_delete_pebble_view_format">Do you really want to delete the Pebble view "%1$s"?</string>
     <string name="really_delete_view_format">Do you really want to delete the tracking view "%1$s"?</string>
     <string name="deleting_please_wait">Deleting workout …\nplease wait</string>
     <string name="deleting_workout">Deleting: %1$s…</string>
-    <string name="calculating_extrema_values">Calculating min, mean, and max values…</string>
     <string name="calculating_extrema_value_for">calculating %1$s of %2$s</string>
-    <string name="calculating_max_away_point">calculating max away point</string>
     <string name="initializing">initializing</string>
     <string name="show_HW_details">show HW details</string>
-    <string name="show_google_maps_licence">Google Maps Legal Info</string>
     <string name="play_services_not_installed">Google Play services is not installed on this device.</string>
     <string name="Preferences">Preferences</string>
     <string name="start_tracking">Start Tracking</string>
@@ -93,8 +84,6 @@
     <string name="GPX" translatable="false">GPX</string>
     <string name="GC" translatable="false">GC</string>
     <string name="TrainingPeaks" translatable="false">TrainingPeaks</string>
-    <string name="TrainingPeaks_login_title">Login to TrainingPeaks</string>
-    <string name="TrainingPeaks_login_message">For uploading to TrainingPeaks, we need your user name and password</string>
     <string name="unknown_manufacturer">Unknown</string>
     <string name="unknown_last_seen_date">never seen</string>
     <string name="next">next</string>
@@ -106,8 +95,6 @@
     <string name="build_in">Built-in</string>
     <string name="TrainingTracker" translatable="false">a Training Tracker</string>
     <string name="application_name" translatable="false">a Training Tracker</string>
-    <string name="no_user_name">no user name</string>
-    <string name="no_password">no password</string>
     <string name="add_sensor">add sensor</string>
 
     <string name="commute">commute</string>
@@ -117,11 +104,7 @@
 
     <string name="guess_commute_and_trainer">guess commute and trainer</string>
 
-    <string name="exampleSensorString" translatable="false">TDSPHCNAG--</string>
 
-    <string name="install_pebble_watchapp_title">Install Pebble Watchapp</string>
-    <string name="install_pebble_watchapp_text">To use this option, you must install the corresponding Pebble Watchapp.</string>
-    <string name="install_pebble_watchapp_now">OK, install Watchapp now</string>
     <string name="pebble_build_in">Standard Pebble Watchapp</string>
     <string name="pebble_a_training_tracker_watchapp">a Training Tracker Watchapp</string>
 
@@ -149,7 +132,6 @@
     <string name="units_speed_unknown" translatable="false">n/a</string>
     <string name="units_speed_short_metric" translatable="false">km/h</string>
     <string name="units_speed_short_imperial" translatable="false">mi/h</string>
-    <string name="units_speed_short_unknown" translatable="false">n/a</string>
     <string name="units_pace_basic" translatable="false">s/m</string>
     <string name="units_pace_metric" translatable="false">min/km</string>
     <string name="units_pace_imperial" translatable="false">min/mile</string>
@@ -167,7 +149,6 @@
     <string name="units_altitude_short_metric" translatable="false">m</string>
     <string name="units_altitude_short_imperial" translatable="false">ft</string>
 
-    <string name="units_distance_mm" translatable="false">mm</string>
     <string name="units_cadence" translatable="false">1/min</string>
     <string name="units_calories" translatable="false">kcal</string>
     <string name="units_heart_rate" translatable="false">bpm</string>
@@ -350,21 +331,8 @@
     <string name="app_name" translatable="false">a Training Tracker</string>
 
     <string name="RunkeeperGetAccessTokenActivityLabel" translatable="false">Runkeeper</string>
-    <string name="StravaGetAccessTokenActivityLabel" translatable="false">Strava</string>
     <string name="TrainingPeaksGetAccessTokenActivityLabel" translatable="false">TrainingPeaks</string>
-    <string name="PrefsActivityLabel">Preferences</string>
-    <string name="UpdateWorkoutActivityLabel">Update Workout</string>
-    <string name="TrackOnMapActivityLabel">Workout</string>
-    <string name="ExportDetailsActivityLabel">Export Details</string>
-    <string name="TrackingFragmentConfigListActivityLabel">Edit Tracking Views</string>
-    <string name="TrackingFragmentConfigActivityLabel">Edit Tracking View</string>
-    <string name="PebbleConfigListActivityLabel">Edit Pebble Views</string>
     <string name="PebbleConfigActivityLabel">Edit Pebble View</string>
-    <string name="AltitudeCorrectionListActivityLabel">Altitude Correction</string>
-    <string name="DeviceChoiceActivityLabel">Pairing</string>
-    <string name="PairingActivityLabel">Pairing</string>
-    <string name="EditDeviceActivityLabel">Edit Device</string>
-    <string name="LegalInfoLabel">Google Maps Legal Info</string>
 
     <!-- 	<string name="titleBaseActivity">MyANT+</string> -->
     <!--     <string name="titlePowerActivity">Power</string> -->
@@ -460,16 +428,10 @@
 
     <!-- TODO: prefixes -->
     <!-- altitude_correction_dialog -->
-    <string name="LocationNameHint">location name</string>
-    <string name="AltitudeHint">altitude</string>
 
-    <string name="correct_altitude_title">Correct Altitude</string>
-    <string name="correct_altitude_message">Please give the correct altitude and the name of the current location</string>
 
     <!-- TODO: prefixes -->
     <!-- altitude_correction_row -->
-    <string name="LocationNameText">Home</string>
-    <string name="LocationAltitudeText">123 m</string>
 
 
 
@@ -481,7 +443,6 @@
     <string name="Method">Method:</string>
     <string name="MethodHint">edit method</string>
     <string name="Description">Description:</string>
-    <string name="DescriptionHint">edit description</string>
     <string name="StartTime">Start Time:</string>
     <string name="NoData" translatable="false">--</string>
     <string name="TotalTime">Total Time:</string>
@@ -493,8 +454,6 @@
     <string name="mean">mean</string>
     <string name="max">max</string>
     <string name="SensorTypes">Sensors:</string>
-    <string name="buttonSaveWorkoutText">Save and export</string>
-    <string name="buttonDeleteWorkoutText">Delete</string>
 
     <!-- export_details -->
 
@@ -622,9 +581,6 @@
     <string name="export_status">Export Status</string>
     <string name="LocationsActivityLabel">Locations</string>
     <string name="getting_start_locations">Looking for start locations.</string>
-    <string name="GPS" translatable="false">GPS</string>
-    <string name="Network" translatable="false">Network</string>
-    <string name="Fused" translatable="false">Fused</string>
     <string name="average">average</string>
     <string name="start">start</string>
     <string name="max_line_distance">furthest away</string>
@@ -669,7 +625,6 @@
     <string name="prefsStartSearchWhenAppStartsTitle">App starts</string>
     <string name="prefsStartSearchWhenTrackingStartsTitle">Tracking starts</string>
     <string name="prefsStartSearchWhenResumeFromPausedTitle">Resume after pause</string>
-    <string name="prefsStartSearchWhenNewLapTitle">New lap</string>
     <string name="prefsStartSearchWhenUserChangesSportTitle">You change the sport</string>
     <string name="prefs_search_behavior_title">Search Behavior</string>
     <string name="prefsChangeSportWhenDeviceGetsLostTitle">Change activity type</string>
@@ -678,12 +633,6 @@
     <string name="prefsSearchOnlyForSportSpecificDevicesTitle">Sport specific search</string>
     <string name="prefsSearchOnlyForSportSpecificDevicesSummary">Search only for sport specific sensor</string>
 
-    <string name="startSearchWhenAppStarts_short">app starts</string>
-    <string name="startSearchWhenTrackingStarts_short">tracking starts</string>
-    <string name="startSearchWhenResumeFromPaused_short">resume from paused</string>
-    <string name="startSearchWhenNewLap_short">new lap</string>
-    <string name="startSearchWhenUserChangesSport_short">sport changes</string>
-    <string name="startSearchOnlyManually">only manually</string>
 
 
     <string name="show_all_sport_types">+ all sports +</string>
@@ -737,12 +686,9 @@
     <string name="send_email_format">Send an email with a %1$s file to %2$s.</string>
     <string name="send_email_format_plural">Send an email with the %1$s files to %2$s.</string>
     <string name="ready_to_send_email">Ready to send an email with the training files.</string>
-    <string name="title_request_dropbox_token">Request Dropbox Access</string>
-    <string name="message_request_dropbox_token">Do you want to upload your workouts to Dropbox?\n(Due to the changed API, we have to ask again.)</string>
 
     <string name="gps" translatable="false">GPS</string>
     <string name="smartphone">Smartphone</string>
-    <string name="no_sensor_available">no sensor available</string>
     <string name="bestSensor">best</string>
     <string name="format_sensorType_and_DeviceName" translatable="false">%1$s (%2$s):</string>
 
@@ -751,23 +697,11 @@
     <string name="units_minutes" translatable="false">min</string>
     <string name="units_minutes_long">minutes</string>
     <string name="units_samples" translatable="false">N</string>
-    <string name="configSensor">Sensor:</string>
-    <string name="configSource">Source:</string>
-    <string name="configSmoothing">Smoothing:</string>
-    <string name="configSize">Size:</string>
     <string name="privacy_policy">Privacy Policy</string>
     <string name="notification_channel_name__tracking">Tracking</string>
     <string name="notification_channel_description__tracking">Notifications while tracking a workout</string>
     <string name="notification_channel_name__export">Export</string>
     <string name="notification_channel_description__export">Notifications while exporting a workout</string>
-    <string name="config_tracking__full_screen">Full screen</string>
-    <string name="config_tracking_night_day__system_setting">System setting</string>
-    <string name="config_tracking_night_day__day">Day (bright)</string>
-    <string name="conffig_tracking_night_day__night">Night (dark)</string>
-    <string name="config_tracking__Display">Display</string>
-    <string name="config_tracking__Map">Map</string>
-    <string name="config_tracking__Lap">Lap</string>
-    <string name="config_tracking__day_or_night">Day or night</string>
     <string name="config_tracking__show_map">Map</string>
     <string name="config_tracking__showLiveSegments">Live Segments</string>
     <string name="config_tracking__showElevationProfile">Elevation Profile</string>
@@ -936,7 +870,6 @@
     <string name="export_notification__detail__no_results">❓ No results found.</string>
 
 
-    <string name="export_status__header_title">Export Status</string>
 
     <string name="export_status__waiting">Waiting</string>
     <string name="export_status__processing">Processing</string>
@@ -956,13 +889,11 @@
     <string name="edit_workout_name">edit workout name</string>
 
     <!-- workout summary description-->
-    <string name="workout_summary__description_header">Description</string>
 
     <!-- Edit workout description -->
     <string name="hint_workout_description">description</string>
     <string name="hint_workout_goal">goal</string>
     <string name="hint_workout_method">method</string>
-    <string name="title_edit_description">Edit description</string>
 
     <!-- workout details -->
     <string name="total_time_format">(total: %1$s)</string>
@@ -979,18 +910,12 @@
 
     <!-- sport type list / edit sport type -->
     <string name="you_can_not_delete_this_sport_type">You can not delete this sport type</string>
-    <string name="add_sport_type">add sport type</string>
     <string name="edit_sport_type">Edit Sport Type</string>
-    <string name="sport_type_name">Sport name</string>
     <string name="basic_sport_type">basic sport type</string>
-    <string name="OnlineCommunities">Online Communities</string>
     <string name="ExportFiles">File Export</string>
-    <string name="min_avg_speed">min avg speed:</string>
-    <string name="max_avg_speed">max avg speed:</string>
     <string name="mapping_format_strava">Strava: %1$s</string>
     <string name="mapping_format_tcx">TCX: %1$s</string>
     <string name="mapping_format_gc">GC: %1$s</string>
-    <string name="item_is_fixed_and_cannot_be_deleted">Sport type can not be deleted or edited.</string>
 
     <!-- drawer -->
     <string name="drawer__training">Training</string>

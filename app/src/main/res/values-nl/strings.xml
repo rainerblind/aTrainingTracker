@@ -21,14 +21,9 @@
 
     <!-- Standard stuff -->
     <string name="OK">OK</string>
-    <string name="do_not_show_again">niet meer tonen</string>
     <string name="Cancel">Annuleren</string>
-    <string name="searching_for">zoeken naar</string>
     <string name="searching_for_device_format">zoeken naar %1$s</string>
-    <string name="default_device_name">een ANT+ apparaat</string>
     <string name="waiting">wachten</string>
-    <string name="pairing_ANT">ANT+ Koppelen</string>
-    <string name="pairing_bluetooth">Bluetooth LE Koppelen</string>
     <string name="searching">zoeken</string>
     <string name="research">Zoeken</string>
     <string name="Start">Start</string>
@@ -55,18 +50,14 @@
     <string name="deleteOldWorkouts">oude trainingen verwijderen</string>
     <string name="deleteWorkoutsThatAreOlderThanDays">trainingen ouder dan … dagen verwijderen</string>
     <string name="really_delete_old_workouts_format">Wil je echt alle trainingen ouder dan %1$d dagen verwijderen?</string>
-    <string name="delete_sensor">verwijderen</string>
     <string name="really_delete_workout">Wilt u deze training echt verwijderen?</string>
     <string name="really_delete_pebble_view_format">Pebble weergave "%1$s" verwijderen?</string>
     <string name="really_delete_view_format">Trainingsweergave "%1$s" verwijderen?</string>
     <string name="deleting_please_wait">Training verwijderen …\neven geduld</string>
     <string name="deleting_workout">Verwijderen: %1$s…</string>
-    <string name="calculating_extrema_values">Extrema berekenen (min, gem, max)…</string>
     <string name="calculating_extrema_value_for">berekenen %1$s van %2$s</string>
-    <string name="calculating_max_away_point">verste punt berekenen</string>
     <string name="initializing">initialiseren</string>
     <string name="show_HW_details">HW details tonen</string>
-    <string name="show_google_maps_licence">Google Maps Juridische Info</string>
     <string name="play_services_not_installed">Google Play services is niet geïnstalleerd.</string>
     <string name="Preferences">Instellingen</string>
     <string name="start_tracking">Training starten</string>
@@ -81,8 +72,6 @@
     <string name="SD_card">SD-kaart</string>
     <string name="File">Bestand</string>
     <string name="Community">Community</string>
-    <string name="TrainingPeaks_login_title">TrainingPeaks inloggen</string>
-    <string name="TrainingPeaks_login_message">Voor TrainingPeaks hebben we uw gebruikersnaam en wachtwoord nodig</string>
     <string name="unknown_manufacturer">Onbekend</string>
     <string name="unknown_last_seen_date">nog niet gezien</string>
     <string name="next">volgende</string>
@@ -92,8 +81,6 @@
     <string name="number_of_fields">Aantal velden:</string>
     <string name="Lap_NR">Ronde %1$d</string>
     <string name="build_in">ingebouwd</string>
-    <string name="no_user_name">geen gebruikersnaam</string>
-    <string name="no_password">geen wachtwoord</string>
     <string name="add_sensor">sensor toevoegen</string>
 
     <string name="commute">woon-werk</string>
@@ -103,9 +90,6 @@
 
     <string name="guess_commute_and_trainer">woon-werk en trainer raden</string>
 
-    <string name="install_pebble_watchapp_title">Pebble App Installeren</string>
-    <string name="install_pebble_watchapp_text">Installeer de bijbehorende Pebble Watchapp om dit te gebruiken.</string>
-    <string name="install_pebble_watchapp_now">OK, nu installeren</string>
     <string name="pebble_build_in">Standaard Pebble App</string>
     <string name="pebble_a_training_tracker_watchapp">a Training Tracker App</string>
 
@@ -272,19 +256,7 @@
     <string name="bike_power__invert_power_balance_values">Meetwaarden omkeren (L/R)</string>
 
     <!-- Labels -->
-    <string name="PrefsActivityLabel">Instellingen</string>
-    <string name="UpdateWorkoutActivityLabel">Training bijwerken</string>
-    <string name="TrackOnMapActivityLabel">Training</string>
-    <string name="ExportDetailsActivityLabel">Export details</string>
-    <string name="TrackingFragmentConfigListActivityLabel">Weergaven bewerken</string>
-    <string name="TrackingFragmentConfigActivityLabel">Weergave bewerken</string>
-    <string name="PebbleConfigListActivityLabel">Pebble weergaven bewerken</string>
     <string name="PebbleConfigActivityLabel">Pebble weergave bewerken</string>
-    <string name="AltitudeCorrectionListActivityLabel">Hoogte-correctie</string>
-    <string name="DeviceChoiceActivityLabel">Koppelen</string>
-    <string name="PairingActivityLabel">Koppelen</string>
-    <string name="EditDeviceActivityLabel">Apparaat bewerken</string>
-    <string name="LegalInfoLabel">Google Maps Juridische Info</string>
 
     <!--  For Preferences Activity -->
     <string name="prefsUserTitle">Gebruiker</string>
@@ -365,11 +337,7 @@
     <string name="unpairing">ontkoppelen</string>
 
     <!-- altitude_correction_dialog -->
-    <string name="LocationNameHint">locatienaam</string>
-    <string name="AltitudeHint">hoogte</string>
 
-    <string name="correct_altitude_title">Hoogte corrigeren</string>
-    <string name="correct_altitude_message">Voer de juiste hoogte en naam van de huidige locatie in</string>
 
     <!-- update_workout -->
     <string name="ExportName">Export naam:</string>
@@ -379,7 +347,6 @@
     <string name="Method">Methode:</string>
     <string name="MethodHint">methode bewerken</string>
     <string name="Description">Beschrijving:</string>
-    <string name="DescriptionHint">beschrijving bewerken</string>
     <string name="StartTime">Starttijd:</string>
     <string name="TotalTime">Totale tijd:</string>
     <string name="ActiveTime">Actieve tijd:</string>
@@ -390,8 +357,6 @@
     <string name="mean">gem</string>
     <string name="max">max</string>
     <string name="SensorTypes">Sensoren:</string>
-    <string name="buttonSaveWorkoutText">Opslaan en exporteren</string>
-    <string name="buttonDeleteWorkoutText">Verwijderen</string>
 
     <!-- export_details -->
     <string name="csvWrite">naar CSV exporteren</string>
@@ -523,7 +488,6 @@
     <string name="prefsStartSearchWhenAppStartsTitle">App start</string>
     <string name="prefsStartSearchWhenTrackingStartsTitle">Training start</string>
     <string name="prefsStartSearchWhenResumeFromPausedTitle">Hervatten na pauze</string>
-    <string name="prefsStartSearchWhenNewLapTitle">Nieuwe ronde</string>
     <string name="prefsStartSearchWhenUserChangesSportTitle">Sport wijzigt</string>
     <string name="prefs_search_behavior_title">Zoekgedrag</string>
     <string name="prefsChangeSportWhenDeviceGetsLostTitle">Activiteit wijzigen</string>
@@ -532,12 +496,6 @@
     <string name="prefsSearchOnlyForSportSpecificDevicesTitle">Sport-specifiek zoeken</string>
     <string name="prefsSearchOnlyForSportSpecificDevicesSummary">Alleen sensoren voor de sport</string>
 
-    <string name="startSearchWhenAppStarts_short">app start</string>
-    <string name="startSearchWhenTrackingStarts_short">training start</string>
-    <string name="startSearchWhenResumeFromPaused_short">hervat</string>
-    <string name="startSearchWhenNewLap_short">nieuwe ronde</string>
-    <string name="startSearchWhenUserChangesSport_short">sport wijzigt</string>
-    <string name="startSearchOnlyManually">alleen handmatig</string>
 
 
     <string name="show_all_sport_types">+ alle sporten +</string>
@@ -582,32 +540,17 @@
     <string name="send_email_format">Mail met %1$s naar %2$s.</string>
     <string name="send_email_format_plural">Mail met %1$s bestanden naar %2$s.</string>
     <string name="ready_to_send_email">Klaar om te mailen.</string>
-    <string name="title_request_dropbox_token">Dropbox toegang</string>
-    <string name="message_request_dropbox_token">Wilt u trainingen naar Dropbox uploaden?\n(Nieuwe API: opnieuw autoriseren nodig.)</string>
 
     <string name="smartphone">Telefoon</string>
-    <string name="no_sensor_available">geen sensoren</string>
     <string name="bestSensor">beste</string>
 
     <string name="units_seconds_long">seconden</string>
     <string name="units_minutes_long">minuten</string>
-    <string name="configSensor">Sensor:</string>
-    <string name="configSource">Bron:</string>
-    <string name="configSmoothing">Smoothing:</string>
-    <string name="configSize">Grootte:</string>
     <string name="privacy_policy">Privacybeleid</string>
     <string name="notification_channel_name__tracking">Training</string>
     <string name="notification_channel_description__tracking">Meldingen tijdens training</string>
     <string name="notification_channel_name__export">Export</string>
     <string name="notification_channel_description__export">Meldingen tijdens export</string>
-    <string name="config_tracking__full_screen">Volledig scherm</string>
-    <string name="config_tracking_night_day__system_setting">Systeeminstelling</string>
-    <string name="config_tracking_night_day__day">Dag (licht)</string>
-    <string name="conffig_tracking_night_day__night">Nacht (donker)</string>
-    <string name="config_tracking__Display">Scherm</string>
-    <string name="config_tracking__Map">Kaart</string>
-    <string name="config_tracking__Lap">Ronde</string>
-    <string name="config_tracking__day_or_night">Dag of nacht</string>
     <string name="config_tracking__show_map">Kaart</string>
     <string name="config_tracking__showLiveSegments">Live Segmenten</string>
     <string name="config_tracking__showLapButton">Ronde-knop</string>
@@ -726,7 +669,6 @@
 
     <string name="export_notification__detail__no_results">❓ Geen resultaten gevonden.</string>
 
-    <string name="export_status__header_title">Export-status</string>
 
     <string name="export_status__waiting">Wachten</string>
     <string name="export_status__processing">Bezig</string>
@@ -746,13 +688,11 @@
     <string name="edit_workout_name">trainingsnaam bewerken</string>
 
     <!-- workout summary description-->
-    <string name="workout_summary__description_header">Beschrijving</string>
 
     <!-- Edit workout description -->
     <string name="hint_workout_description">beschrijving</string>
     <string name="hint_workout_goal">doel</string>
     <string name="hint_workout_method">methode</string>
-    <string name="title_edit_description">Beschrijving bewerken</string>
 
     <!-- workout details -->
     <string name="total_time_format">(totaal: %1$s)</string>
@@ -767,18 +707,12 @@
 
     <!-- sport type list / edit sport type -->
     <string name="you_can_not_delete_this_sport_type">U kunt deze sport niet verwijderen</string>
-    <string name="add_sport_type">sport toevoegen</string>
     <string name="edit_sport_type">Sport Bewerken</string>
-    <string name="sport_type_name">Naam sport</string>
     <string name="basic_sport_type">basis-sport</string>
-    <string name="OnlineCommunities">Online Communities</string>
     <string name="ExportFiles">Bestandsexport</string>
-    <string name="min_avg_speed">min gem snelheid:</string>
-    <string name="max_avg_speed">max gem snelheid:</string>
     <string name="mapping_format_strava">Strava: %1$s</string>
     <string name="mapping_format_tcx">TCX: %1$s</string>
     <string name="mapping_format_gc">GC: %1$s</string>
-    <string name="item_is_fixed_and_cannot_be_deleted">Deze sport kan niet worden bewerkt.</string>
 
     <!-- drawer -->
     <string name="drawer__training">Training</string>
@@ -1079,8 +1013,6 @@
     <string name="no_periods_available_hint">Registreer workouts om periodeoverzichten te zien</string>
     <string name="really_delete_format">Wil je "%1$s" echt verwijderen?</string>
     <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/master/privacy.md</string>
-    <string name="LocationNameText">Thuis</string>
-    <string name="LocationAltitudeText">123 m</string>
     <string name="latLongEquals">lat=%1$f, long=%2$f</string>
     <string name="LocationsActivityLabel">Locaties</string>
     <string name="getting_start_locations">Zoeken naar startlocaties.</string>
