@@ -116,6 +116,20 @@ class ModalBottomSheetDialogsIntegrityTest {
     }
 
     @Test
+    fun testSearchSettingsDialog_existsAndExposesComposableAndFragment() {
+        val dialogClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsDialogKt")
+        val composableMethod = dialogClass.declaredMethods.find { it.name == "SearchSettingsDialog" }
+        assertNotNull("SearchSettingsDialog composable function must exist", composableMethod)
+        assertTrue(Modifier.isPublic(composableMethod!!.modifiers))
+
+        val fragmentClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsDialogFragment")
+        assertTrue(
+            "SearchSettingsDialogFragment must extend DialogFragment",
+            androidx.fragment.app.DialogFragment::class.java.isAssignableFrom(fragmentClass)
+        )
+    }
+
+    @Test
     fun testActivityTypeSelectionDialog_existsAndExposesComposableAndFragment() {
         val dialogClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ActivityTypeSelectionDialogKt")
         val composableMethod = dialogClass.declaredMethods.find { it.name == "ActivityTypeSelectionDialog" }
