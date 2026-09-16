@@ -46,6 +46,16 @@ class ModalBottomSheetDialogsIntegrityTest {
     }
 
     @Test
+    fun testAppBottomSheetDialogFragment_isAbstractAndExtendsDialogFragment() {
+        val baseClass = Class.forName("com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetDialogFragment")
+        assertTrue("AppBottomSheetDialogFragment must be abstract", Modifier.isAbstract(baseClass.modifiers))
+        assertTrue(
+            "AppBottomSheetDialogFragment must extend DialogFragment",
+            androidx.fragment.app.DialogFragment::class.java.isAssignableFrom(baseClass)
+        )
+    }
+
+    @Test
     fun testExportSettingsDialog_existsAndExposesComposableAndFragment() {
         val dialogClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialogKt")
         val composableMethod = dialogClass.declaredMethods.find { it.name == "ExportSettingsDialog" }
@@ -53,9 +63,10 @@ class ModalBottomSheetDialogsIntegrityTest {
         assertTrue(Modifier.isPublic(composableMethod!!.modifiers))
 
         val fragmentClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialogFragment")
+        val baseClass = Class.forName("com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetDialogFragment")
         assertTrue(
-            "ExportSettingsDialogFragment must extend DialogFragment",
-            androidx.fragment.app.DialogFragment::class.java.isAssignableFrom(fragmentClass)
+            "ExportSettingsDialogFragment must extend AppBottomSheetDialogFragment",
+            baseClass.isAssignableFrom(fragmentClass)
         )
     }
 
@@ -67,9 +78,10 @@ class ModalBottomSheetDialogsIntegrityTest {
         assertTrue(Modifier.isPublic(composableMethod!!.modifiers))
 
         val fragmentClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.units.UnitsSettingsDialogFragment")
+        val baseClass = Class.forName("com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetDialogFragment")
         assertTrue(
-            "UnitsSettingsDialogFragment must extend DialogFragment",
-            androidx.fragment.app.DialogFragment::class.java.isAssignableFrom(fragmentClass)
+            "UnitsSettingsDialogFragment must extend AppBottomSheetDialogFragment",
+            baseClass.isAssignableFrom(fragmentClass)
         )
     }
 
@@ -81,9 +93,10 @@ class ModalBottomSheetDialogsIntegrityTest {
         assertTrue(Modifier.isPublic(composableMethod!!.modifiers))
 
         val fragmentClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsDialogFragment")
+        val baseClass = Class.forName("com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetDialogFragment")
         assertTrue(
-            "DisplaySettingsDialogFragment must extend DialogFragment",
-            androidx.fragment.app.DialogFragment::class.java.isAssignableFrom(fragmentClass)
+            "DisplaySettingsDialogFragment must extend AppBottomSheetDialogFragment",
+            baseClass.isAssignableFrom(fragmentClass)
         )
     }
 
@@ -95,9 +108,10 @@ class ModalBottomSheetDialogsIntegrityTest {
         assertTrue(Modifier.isPublic(composableMethod!!.modifiers))
 
         val fragmentClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialogFragment")
+        val baseClass = Class.forName("com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetDialogFragment")
         assertTrue(
-            "DropboxSettingsDialogFragment must extend DialogFragment",
-            androidx.fragment.app.DialogFragment::class.java.isAssignableFrom(fragmentClass)
+            "DropboxSettingsDialogFragment must extend AppBottomSheetDialogFragment",
+            baseClass.isAssignableFrom(fragmentClass)
         )
     }
 
@@ -109,9 +123,10 @@ class ModalBottomSheetDialogsIntegrityTest {
         assertTrue(Modifier.isPublic(composableMethod!!.modifiers))
 
         val fragmentClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.strava.StravaSettingsDialogFragment")
+        val baseClass = Class.forName("com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetDialogFragment")
         assertTrue(
-            "StravaSettingsDialogFragment must extend DialogFragment",
-            androidx.fragment.app.DialogFragment::class.java.isAssignableFrom(fragmentClass)
+            "StravaSettingsDialogFragment must extend AppBottomSheetDialogFragment",
+            baseClass.isAssignableFrom(fragmentClass)
         )
     }
 
@@ -123,9 +138,10 @@ class ModalBottomSheetDialogsIntegrityTest {
         assertTrue(Modifier.isPublic(composableMethod!!.modifiers))
 
         val fragmentClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsDialogFragment")
+        val baseClass = Class.forName("com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetDialogFragment")
         assertTrue(
-            "SearchSettingsDialogFragment must extend DialogFragment",
-            androidx.fragment.app.DialogFragment::class.java.isAssignableFrom(fragmentClass)
+            "SearchSettingsDialogFragment must extend AppBottomSheetDialogFragment",
+            baseClass.isAssignableFrom(fragmentClass)
         )
     }
 
@@ -137,9 +153,10 @@ class ModalBottomSheetDialogsIntegrityTest {
         assertTrue(Modifier.isPublic(composableMethod!!.modifiers))
 
         val fragmentClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ActivityTypeSelectionDialogFragment")
+        val baseClass = Class.forName("com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetDialogFragment")
         assertTrue(
-            "ActivityTypeSelectionDialogFragment must extend DialogFragment",
-            androidx.fragment.app.DialogFragment::class.java.isAssignableFrom(fragmentClass)
+            "ActivityTypeSelectionDialogFragment must extend AppBottomSheetDialogFragment",
+            baseClass.isAssignableFrom(fragmentClass)
         )
     }
 

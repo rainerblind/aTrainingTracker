@@ -23,11 +23,15 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
-import androidx.fragment.app.DialogFragment
 import com.atrainingtracker.banalservice.ActivityType
+import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetDialogFragment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
-class ActivityTypeSelectionDialogFragment : DialogFragment() {
+/**
+ * DialogFragment hosting [ActivityTypeSelectionDialog] modal bottom sheet.
+ * Inherits [AppBottomSheetDialogFragment] to render edge-to-edge transparent system bars without flicker.
+ */
+class ActivityTypeSelectionDialogFragment : AppBottomSheetDialogFragment() {
 
     interface ActivityTypeSelectionListener {
         fun onActivityTypeSelected(activityType: ActivityType)
@@ -42,11 +46,6 @@ class ActivityTypeSelectionDialogFragment : DialogFragment() {
 
     fun setCancelListener(cancelListener: () -> Unit) {
         this.cancelListener = cancelListener
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setStyle(STYLE_NORMAL, android.R.style.Theme_Translucent_NoTitleBar)
     }
 
     override fun onCancel(dialog: android.content.DialogInterface) {

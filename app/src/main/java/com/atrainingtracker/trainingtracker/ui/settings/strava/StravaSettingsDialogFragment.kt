@@ -23,7 +23,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
-import androidx.fragment.app.DialogFragment
+import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetDialogFragment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
@@ -31,14 +31,9 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
  *
  * Architectural Role:
  * - Bridges Android Fragment navigation hierarchy with the Material 3 Compose dialog.
- * - Handles translucent window styling to preserve the underlying activity screen under the modal scrim.
+ * - Inherits [AppBottomSheetDialogFragment] to render edge-to-edge transparent system bars without flicker.
  */
-class StravaSettingsDialogFragment : DialogFragment() {
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setStyle(STYLE_NORMAL, android.R.style.Theme_Translucent_NoTitleBar)
-    }
+class StravaSettingsDialogFragment : AppBottomSheetDialogFragment() {
 
     override fun onCreateView(
         inflater: LayoutInflater,
