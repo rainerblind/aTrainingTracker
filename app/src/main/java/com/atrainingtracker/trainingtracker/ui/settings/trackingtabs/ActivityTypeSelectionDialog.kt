@@ -33,17 +33,15 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
 
-import androidx.compose.material3.ExperimentalMaterial3Api
+import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
-import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActivityTypeSelectionDialog(
     onTypeSelected: (ActivityType) -> Unit,
     onDismiss: () -> Unit
 ) {
-    AppModalBottomSheet(
+    AppBottomSheetContent(
         title = stringResource(R.string.choose_activity_type),
         iconPainter = painterResource(id = R.drawable.ic_table_edit),
         onDismissRequest = onDismiss,

@@ -42,6 +42,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -74,6 +76,7 @@ import com.atrainingtracker.R
  * @param iconTint Tint applied to the leading icon (defaults to primary; use [Color.Unspecified] for multi-color sport logos).
  * @param showCloseButton Whether to render a close button in the top right.
  * @param scrollable Whether the content body should automatically provide vertical scrolling.
+ * @param headerActions Optional composable slot for actions in the header row.
  * @param actions Optional composable slot for bottom action buttons.
  * @param content Composable slot containing the main content.
  */
@@ -99,101 +102,186 @@ fun AppModalBottomSheet(
         dragHandle = { MinimumDragHandle() },
         modifier = modifier
     ) {
-        Column(
+        AppBottomSheetBody(
+            title = title,
+            onDismissRequest = onDismissRequest,
+            icon = icon,
+            iconPainter = iconPainter,
+            iconTint = iconTint,
+            showCloseButton = showCloseButton,
+            scrollable = scrollable,
+            headerActions = headerActions,
+            actions = actions,
+            content = content
+        )
+    }
+}
+
+/**
+ * Standalone bottom sheet content container with Material 3 [Surface], drag handle, header, body, and actions.
+ * Used directly within [AppBottomSheetDialogFragment] to render inside the single BottomSheetDialog window.
+ *
+ * @param title Localized title text for the sheet.
+ * @param onDismissRequest Callback invoked when the sheet is dismissed.
+ * @param modifier Optional modifier applied to the root container.
+ * @param icon Optional leading icon (vector) displayed before the title.
+ * @param iconPainter Optional leading icon (painter/drawable) displayed before the title.
+ * @param iconTint Tint applied to the leading icon (defaults to primary; use [Color.Unspecified] for multi-color sport logos).
+ * @param showCloseButton Whether to render a close button in the top right.
+ * @param scrollable Whether the content body should automatically provide vertical scrolling.
+ * @param headerActions Optional composable slot for actions in the header row.
+ * @param actions Optional composable slot for bottom action buttons.
+ * @param content Composable slot containing the main content.
+ */
+@Composable
+fun AppBottomSheetContent(
+    title: String,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    iconPainter: Painter? = null,
+    iconTint: Color = MaterialTheme.colorScheme.primary,
+    showCloseButton: Boolean = true,
+    scrollable: Boolean = true,
+    headerActions: (@Composable RowScope.() -> Unit)? = null,
+    actions: (@Composable RowScope.() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            MinimumDragHandle(
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(top = 8.dp, bottom = 4.dp)
+            )
+            AppBottomSheetBody(
+                title = title,
+                onDismissRequest = onDismissRequest,
+                icon = icon,
+                iconPainter = iconPainter,
+                iconTint = iconTint,
+                showCloseButton = showCloseButton,
+                scrollable = scrollable,
+                headerActions = headerActions,
+                actions = actions,
+                content = content
+            )
+        }
+    }
+}
+
+@Composable
+private fun AppBottomSheetBody(
+    title: String,
+    onDismissRequest: () -> Unit,
+    icon: ImageVector? = null,
+    iconPainter: Painter? = null,
+    iconTint: Color = MaterialTheme.colorScheme.primary,
+    showCloseButton: Boolean = true,
+    scrollable: Boolean = true,
+    headerActions: (@Composable RowScope.() -> Unit)? = null,
+    actions: (@Composable RowScope.() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .imePadding()
+    ) {
+        // Header Bar: Icon, Title, and Close button
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
-                .imePadding()
+                .padding(start = 20.dp, end = 12.dp, top = 4.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Header Bar: Icon, Title, and Close button
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f, fill = false)
+            ) {
+                if (icon != null) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = iconTint
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                } else if (iconPainter != null) {
+                    Icon(
+                        painter = iconPainter,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = iconTint
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (headerActions != null) {
+                    headerActions()
+                }
+                if (showCloseButton) {
+                    IconButton(onClick = onDismissRequest) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringResource(R.string.Cancel)
+                        )
+                    }
+                }
+            }
+        }
+
+        HorizontalDivider()
+
+        // Content Body
+        if (scrollable) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                content()
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                content()
+            }
+        }
+
+        // Optional Bottom Action Bar
+        if (actions != null) {
+            HorizontalDivider()
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 20.dp, end = 12.dp, top = 4.dp, bottom = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f, fill = false)
-                ) {
-                    if (icon != null) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = iconTint
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                    } else if (iconPainter != null) {
-                        Icon(
-                            painter = iconPainter,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = iconTint
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                    }
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (headerActions != null) {
-                        headerActions()
-                    }
-                    if (showCloseButton) {
-                        IconButton(onClick = onDismissRequest) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = stringResource(R.string.Cancel)
-                            )
-                        }
-                    }
-                }
-            }
-
-            HorizontalDivider()
-
-            // Content Body
-            if (scrollable) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f, fill = false)
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    content()
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    content()
-                }
-            }
-
-            // Optional Bottom Action Bar
-            if (actions != null) {
-                HorizontalDivider()
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    actions()
-                }
+                actions()
             }
         }
     }

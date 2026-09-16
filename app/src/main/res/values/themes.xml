@@ -94,16 +94,15 @@
     </style>
 
     <!-- Bottom Sheet DialogFragment Theme Overlay to ensure edge-to-edge transparent system bars without flicker -->
-    <style name="ThemeOverlay.aTrainingTracker.BottomSheetDialogFragment" parent="android:Theme.Translucent.NoTitleBar">
+    <style name="ThemeOverlay.aTrainingTracker.BottomSheetDialogFragment" parent="ThemeOverlay.MaterialComponents.BottomSheetDialog">
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:enforceNavigationBarContrast" tools:targetApi="29">false</item>
         <item name="android:enforceStatusBarContrast" tools:targetApi="29">false</item>
         <item name="android:windowLightNavigationBar" tools:targetApi="27">true</item>
         <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:windowIsFloating">false</item>
-        <item name="android:windowAnimationStyle">@null</item>
+        <item name="enableEdgeToEdge">true</item>
+        <item name="bottomSheetStyle">@style/Widget.aTrainingTracker.BottomSheet.Modal</item>
     </style>
-
 </resources>

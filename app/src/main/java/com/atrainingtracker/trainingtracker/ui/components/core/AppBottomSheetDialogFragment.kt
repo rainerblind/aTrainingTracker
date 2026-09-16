@@ -18,32 +18,34 @@
 
 package com.atrainingtracker.trainingtracker.ui.components.core
 
-import android.graphics.drawable.ColorDrawable
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
-import android.view.ViewGroup
+import android.view.View
+import android.view.WindowManager
 import androidx.core.view.WindowCompat
-import androidx.fragment.app.DialogFragment
 import com.atrainingtracker.R
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 
 /**
- * Standardized base [DialogFragment] container hosting Jetpack Compose modal bottom sheets ([AppModalBottomSheet]).
+ * Standardized single-window base [BottomSheetDialogFragment] container hosting Jetpack Compose bottom sheets.
  *
  * Architectural Role:
- * - Solves the navigation bar flicker and color flashes when dismissing bottom popups via system back button
- *   or predictive back gesture by guaranteeing edge-to-edge transparent system bar decor across the hosting
- *   [android.app.Dialog] window.
- * - Applies [R.style.ThemeOverlay_aTrainingTracker_BottomSheetDialogFragment] in [onCreate] so the Android
- *   WindowManager creates the dialog surface with transparent system bars and zero window animations from frame zero.
- * - In [onStart], defensively configures the window to [ViewGroup.LayoutParams.MATCH_PARENT], transparent background,
- *   [WindowCompat.setDecorFitsSystemWindows] false, transparent status and navigation bars, disabled contrast
- *   enforcement on Android 10+ (API 29+), and disables window-level transition animations so Compose's
- *   [androidx.compose.material3.ModalBottomSheet] sheet animator remains the sole authoritative transition.
+ * - Eliminates double-dialog window nesting by directly extending [BottomSheetDialogFragment] and hosting
+ *   [AppBottomSheetContent] inside a single [BottomSheetDialog] window.
+ * - Resolves status bar pitch-black rendering by configuring [WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS],
+ *   transparent system bars, and disabled contrast enforcement on Android 10+ (API 29+).
+ * - Resolves navigation bar dismiss transition flicker by providing seamless edge-to-edge window decor
+ *   governed by the single Material bottom sheet window and behavior.
+ * - Applies [R.style.ThemeOverlay_aTrainingTracker_BottomSheetDialogFragment] in [onCreate].
+ * - In [onStart], expands [BottomSheetBehavior], skips collapsed state, and ensures transparent sheet background.
  *
  * Threading & Lifecycle:
  * - Executed strictly on the Android Main (UI) thread within Fragment lifecycle callbacks.
  */
-abstract class AppBottomSheetDialogFragment : DialogFragment() {
+abstract class AppBottomSheetDialogFragment : BottomSheetDialogFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,11 +55,10 @@ abstract class AppBottomSheetDialogFragment : DialogFragment() {
     override fun onStart() {
         super.onStart()
         dialog?.window?.let { window ->
-            window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-            window.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
             WindowCompat.setDecorFitsSystemWindows(window, false)
-            window.statusBarColor = android.graphics.Color.TRANSPARENT
-            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+            window.statusBarColor = Color.TRANSPARENT
+            window.navigationBarColor = Color.TRANSPARENT
+            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 window.isNavigationBarContrastEnforced = false
                 window.isStatusBarContrastEnforced = false
@@ -65,7 +66,16 @@ abstract class AppBottomSheetDialogFragment : DialogFragment() {
             val insetsController = WindowCompat.getInsetsController(window, window.decorView)
             insetsController.isAppearanceLightStatusBars = true
             insetsController.isAppearanceLightNavigationBars = true
-            window.setWindowAnimations(0)
+        }
+
+        (dialog as? BottomSheetDialog)?.let { bottomSheetDialog ->
+            bottomSheetDialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
+                sheet.setBackgroundColor(Color.TRANSPARENT)
+                sheet.setPadding(0, 0, 0, 0)
+                androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(sheet) { _, insets -> insets }
+            }
+            bottomSheetDialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
+            bottomSheetDialog.behavior.skipCollapsed = true
         }
     }
 }

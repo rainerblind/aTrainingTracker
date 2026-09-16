@@ -23,10 +23,9 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 
+import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
-import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExportSettingsDialog(
     onDismiss: () -> Unit
@@ -36,7 +35,7 @@ fun ExportSettingsDialog(
     var exportGcJson by remember { mutableStateOf(TrainingApplication.exportToGCJson()) }
     var exportCsv by remember { mutableStateOf(TrainingApplication.exportToCSV()) }
 
-    AppModalBottomSheet(
+    AppBottomSheetContent(
         title = stringResource(R.string.prefs_Export),
         icon = Icons.Default.Upload,
         onDismissRequest = onDismiss,

@@ -46,13 +46,21 @@ class ModalBottomSheetDialogsIntegrityTest {
     }
 
     @Test
-    fun testAppBottomSheetDialogFragment_isAbstractAndExtendsDialogFragment() {
+    fun testAppBottomSheetDialogFragment_isAbstractAndExtendsBottomSheetDialogFragment() {
         val baseClass = Class.forName("com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetDialogFragment")
         assertTrue("AppBottomSheetDialogFragment must be abstract", Modifier.isAbstract(baseClass.modifiers))
         assertTrue(
-            "AppBottomSheetDialogFragment must extend DialogFragment",
-            androidx.fragment.app.DialogFragment::class.java.isAssignableFrom(baseClass)
+            "AppBottomSheetDialogFragment must extend com.google.android.material.bottomsheet.BottomSheetDialogFragment",
+            com.google.android.material.bottomsheet.BottomSheetDialogFragment::class.java.isAssignableFrom(baseClass)
         )
+    }
+
+    @Test
+    fun testAppBottomSheetContent_existsAndIsPublic() {
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheetKt")
+        val contentMethod = clazz.declaredMethods.find { it.name.startsWith("AppBottomSheetContent") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("AppBottomSheetContent composable method must exist", contentMethod)
+        assertTrue(Modifier.isPublic(contentMethod!!.modifiers))
     }
 
     @Test

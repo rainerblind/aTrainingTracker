@@ -42,14 +42,14 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquip
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
+import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
-import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
 /**
- * Modal bottom sheet composable for configuring Strava integration, synchronizations, and selective upload settings.
+ * Bottom sheet composable for configuring Strava integration, synchronizations, and selective upload settings.
  *
  * Architectural Role:
- * - Replaces the legacy full-screen [StravaUploadFragment] outlier with an [AppModalBottomSheet] dialog.
+ * - Replaces the legacy full-screen [StravaUploadFragment] outlier with an [AppBottomSheetContent] dialog.
  * - Provides connection controls (OAuth initiation, disconnection, and loading indicator) using authentic brand assets.
  * - Provides manual synchronization triggers for Strava equipment and routes with formatted timestamp summaries.
  * - Provides interactive toggles for selective telemetry upload (GPS, Altitude, Heart Rate, Power, Cadence).
@@ -129,7 +129,7 @@ fun StravaSettingsDialog(
         }
     }
 
-    AppModalBottomSheet(
+    AppBottomSheetContent(
         title = stringResource(R.string.Strava),
         iconPainter = painterResource(id = R.drawable.logo_square_strava),
         iconTint = Color.Unspecified,

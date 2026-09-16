@@ -40,16 +40,16 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.migration.BackupWorker
 import com.atrainingtracker.trainingtracker.ui.components.DropdownSelector
+import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
-import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.dropbox.core.DbxRequestConfig
 import com.dropbox.core.android.Auth
 
 /**
- * Modal bottom sheet composable for configuring Dropbox cloud synchronization and automated backup settings.
+ * Bottom sheet composable for configuring Dropbox cloud synchronization and automated backup settings.
  *
  * Architectural Role:
- * - Replaces the full-screen [CloudUploadFragment] outlier with an [AppModalBottomSheet] dialog.
+ * - Replaces the full-screen [CloudUploadFragment] outlier with an [AppBottomSheetContent] dialog.
  * - Provides connection controls (OAuth PKCE launch and credential revocation) using authentic brand assets.
  * - Provides interactive toggles and selectors for automated backups and backup intervals.
  * - Integrates standard [AppDialogActions.SaveCancel] to stage preference changes transactionally.
@@ -91,7 +91,7 @@ fun DropboxSettingsDialog(
         }
     }
 
-    AppModalBottomSheet(
+    AppBottomSheetContent(
         title = stringResource(R.string.Dropbox),
         iconPainter = painterResource(id = R.drawable.dropbox_logo_blue),
         iconTint = Color.Unspecified,
