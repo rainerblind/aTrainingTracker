@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.navigation
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -214,13 +215,31 @@ fun DrawerHeader() {
             .fillMaxWidth()
             .height(92.dp + statusBarHeight)
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.menu_header_background),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.FillWidth,
-            alignment = Alignment.BottomCenter
-        )
+        val context = LocalContext.current
+        val headerDrawable = remember(context) {
+            try {
+                ContextCompat.getDrawable(context, R.drawable.menu_header_background)
+            } catch (e: Throwable) {
+                Log.w("AppNavigationDrawer", "Failed to load menu_header_background, falling back to styled background", e)
+                null
+            }
+        }
+
+        if (headerDrawable != null) {
+            Image(
+                painter = rememberDrawablePainter(drawable = headerDrawable),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.FillWidth,
+                alignment = Alignment.BottomCenter
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            )
+        }
         Row(
             modifier = Modifier
                 .fillMaxSize()
