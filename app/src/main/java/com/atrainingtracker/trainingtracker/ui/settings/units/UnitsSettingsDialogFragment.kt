@@ -23,19 +23,14 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
-import androidx.fragment.app.DialogFragment
+import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetDialogFragment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
  * A DialogFragment that hosts the modern Composable UnitsSettingsDialog.
- * This allows triggering the unit settings directly from the navigation drawer.
+ * Inherits [AppBottomSheetDialogFragment] to render edge-to-edge transparent system bars without flicker.
  */
-class UnitsSettingsDialogFragment : DialogFragment() {
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setStyle(STYLE_NORMAL, android.R.style.Theme_Translucent_NoTitleBar)
-    }
+class UnitsSettingsDialogFragment : AppBottomSheetDialogFragment() {
 
     override fun onCreateView(
         inflater: LayoutInflater,

@@ -23,21 +23,15 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
-import androidx.fragment.app.DialogFragment
+import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetDialogFragment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
  * DialogFragment host for [SearchSettingsDialog] bottom sheet.
  *
- * Configured with [STYLE_NORMAL] and [android.R.style.Theme_Translucent_NoTitleBar] to render
- * edge-to-edge modal bottom sheets cleanly without interfering with window insets.
+ * Inherits [AppBottomSheetDialogFragment] to render edge-to-edge transparent system bars without flicker.
  */
-class SearchSettingsDialogFragment : DialogFragment() {
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setStyle(STYLE_NORMAL, android.R.style.Theme_Translucent_NoTitleBar)
-    }
+class SearchSettingsDialogFragment : AppBottomSheetDialogFragment() {
 
     override fun onCreateView(
         inflater: LayoutInflater,

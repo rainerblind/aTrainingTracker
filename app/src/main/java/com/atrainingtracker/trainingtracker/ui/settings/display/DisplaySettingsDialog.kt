@@ -23,10 +23,9 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 
+import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
-import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DisplaySettingsDialog(
     onDismiss: () -> Unit,
@@ -36,7 +35,7 @@ fun DisplaySettingsDialog(
         mutableStateOf(TrainingApplication.getDisplayOptions().toSet())
     }
     
-    AppModalBottomSheet(
+    AppBottomSheetContent(
         title = stringResource(R.string.Display),
         icon = Icons.Default.DisplaySettings,
         onDismissRequest = onDismiss,

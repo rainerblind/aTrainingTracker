@@ -26,10 +26,9 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 
+import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
-import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UnitsSettingsDialog(
     onDismiss: () -> Unit
@@ -43,7 +42,7 @@ fun UnitsSettingsDialog(
         mutableStateOf(TrainingApplication.getUnit()) 
     }
 
-    AppModalBottomSheet(
+    AppBottomSheetContent(
         title = stringResource(R.string.prefsUnitsTitle),
         icon = Icons.Default.SquareFoot,
         onDismissRequest = onDismiss,

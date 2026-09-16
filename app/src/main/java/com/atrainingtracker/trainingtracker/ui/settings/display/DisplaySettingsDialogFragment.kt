@@ -16,20 +16,15 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
-import androidx.fragment.app.DialogFragment
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
+import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetDialogFragment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
  * A DialogFragment that hosts the modern Composable DisplaySettingsDialog.
- * This allows triggering the display settings directly from the navigation drawer.
+ * Inherits [AppBottomSheetDialogFragment] to render edge-to-edge transparent system bars without flicker.
  */
-class DisplaySettingsDialogFragment : DialogFragment() {
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setStyle(STYLE_NORMAL, android.R.style.Theme_Translucent_NoTitleBar)
-    }
+class DisplaySettingsDialogFragment : AppBottomSheetDialogFragment() {
 
     override fun onCreateView(
         inflater: LayoutInflater,

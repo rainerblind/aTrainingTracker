@@ -32,16 +32,16 @@ import androidx.compose.ui.unit.dp
 import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
-import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import kotlin.math.roundToInt
 
 /**
- * Modal bottom sheet composable for configuring sensor search retry attempts, automatic search triggers,
+ * Bottom sheet composable for configuring sensor search retry attempts, automatic search triggers,
  * and search behaviors.
  *
  * Architectural Role:
- * - Replaces the legacy full-screen [SearchSettingsFragment] outlier with an [AppModalBottomSheet] dialog.
+ * - Replaces the legacy full-screen [SearchSettingsFragment] outlier with an [AppBottomSheetContent] dialog.
  * - Provides search retry slider (1..5) with dynamic value badge.
  * - Configures automatic search triggers (App starts, resume from paused, sport changes, tracking starts).
  * - Configures search behaviors (sport-specific sensor filtering, sport changes on device lost).
@@ -79,7 +79,7 @@ fun SearchSettingsDialog(
         mutableStateOf(TrainingApplication.changeSportWhenDeviceGetsLost())
     }
 
-    AppModalBottomSheet(
+    AppBottomSheetContent(
         title = stringResource(R.string.Search_Settings),
         iconPainter = painterResource(id = R.drawable.ic_search),
         onDismissRequest = onDismiss,
