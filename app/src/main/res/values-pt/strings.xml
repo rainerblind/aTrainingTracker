@@ -1085,7 +1085,19 @@
     <string name="filter_trainer">Interior / Rolo</string>
     <string name="filter_has_gps">Com rota GPS</string>
     <string name="filter_min_distance_format">&gt; %1$s km</string>
+    <string name="filter_max_distance_format">&lt; %1$s km</string>
+    <string name="filter_distance_interval_format">%1$s - %2$s km</string>
     <string name="filter_min_duration_format">&gt; %1$s min</string>
+    <string name="filter_max_duration_format">&lt; %1$s min</string>
+    <string name="filter_duration_interval_format">%1$s - %2$s min</string>
+    <string name="filter_date_from">De</string>
+    <string name="filter_date_to">Até</string>
+    <string name="filter_select_date">Selecionar data</string>
+    <string name="filter_date_range">Intervalo de datas</string>
+    <string name="filter_min_label">Mín.</string>
+    <string name="filter_max_label">Máx.</string>
+    <string name="filter_section_distance">Distância</string>
+    <string name="filter_section_duration">Duração</string>
     <string name="filter_no_matching_workouts">Nenhum treino corresponde aos filtros ativos</string>
     <!-- Route Filtering (ATT-736) -->
     <string name="filter_routes_title">Filtrar percursos</string>

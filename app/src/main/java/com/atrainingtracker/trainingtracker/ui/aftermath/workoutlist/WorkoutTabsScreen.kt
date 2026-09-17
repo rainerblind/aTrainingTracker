@@ -118,13 +118,21 @@ fun WorkoutTabsScreen(
 
     var showFilterBottomSheet by rememberSaveable { mutableStateOf(false) }
 
+    val activeBSportType = when (pagerState.currentPage) {
+        1 -> BSportType.BIKE
+        2 -> BSportType.RUN
+        3 -> BSportType.UNKNOWN
+        else -> null
+    }
+
     if (showFilterBottomSheet) {
         WorkoutFilterBottomSheet(
             criteria = filterCriteria,
             allWorkouts = allWorkouts,
             onApplyCriteria = onApplyFilterCriteria,
             onClearAll = onClearAllFilters,
-            onDismissRequest = { showFilterBottomSheet = false }
+            onDismissRequest = { showFilterBottomSheet = false },
+            activeBSportType = activeBSportType
         )
     }
 
@@ -297,8 +305,10 @@ fun WorkoutTabsScreen(
                                 onRemoveCommute = { onUpdateFilterCriteria { it.copy(isCommute = null) } },
                                 onRemoveTrainer = { onUpdateFilterCriteria { it.copy(isTrainer = null) } },
                                 onRemoveGpsTrack = { onUpdateFilterCriteria { it.copy(hasGpsTrack = null) } },
-                                onRemoveMinDistance = { onUpdateFilterCriteria { it.copy(minDistanceMeters = null) } },
-                                onRemoveMinDuration = { onUpdateFilterCriteria { it.copy(minDurationSec = null) } },
+                                onRemoveMinDistance = { onUpdateFilterCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
+                                onRemoveMinDuration = { onUpdateFilterCriteria { it.copy(minDurationSec = null, maxDurationSec = null) } },
+                                onRemoveDistanceRange = { onUpdateFilterCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
+                                onRemoveDurationRange = { onUpdateFilterCriteria { it.copy(minDurationSec = null, maxDurationSec = null) } },
                                 onClearAll = onClearAllFilters,
                                 sportName = sportName,
                                 equipmentName = equipName

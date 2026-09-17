@@ -199,12 +199,82 @@ class WorkoutFilterCriteriaTest {
     }
 
     @Test
+    fun testDistanceIntervalFiltering() {
+        val workout20k = createWorkout(totalDistance = 20000.0)
+        val workout35k = createWorkout(totalDistance = 35000.0)
+        val workout50k = createWorkout(totalDistance = 50000.0)
+        val workout60k = createWorkout(totalDistance = 60000.0)
+        val workout10k = createWorkout(totalDistance = 10000.0)
+
+        // Bounded interval [20km, 50km]
+        val boundedCriteria = WorkoutFilterCriteria(minDistanceMeters = 20000.0, maxDistanceMeters = 50000.0)
+        assertTrue("20km workout should match [20km, 50km]", boundedCriteria.matches(workout20k))
+        assertTrue("35km workout should match [20km, 50km]", boundedCriteria.matches(workout35k))
+        assertTrue("50km workout should match [20km, 50km]", boundedCriteria.matches(workout50k))
+        assertFalse("10km workout should be rejected by [20km, 50km]", boundedCriteria.matches(workout10k))
+        assertFalse("60km workout should be rejected by [20km, 50km]", boundedCriteria.matches(workout60k))
+
+        // Upper bound only: <= 50km
+        val maxOnlyCriteria = WorkoutFilterCriteria(maxDistanceMeters = 50000.0)
+        assertTrue(maxOnlyCriteria.matches(workout10k))
+        assertTrue(maxOnlyCriteria.matches(workout20k))
+        assertTrue(maxOnlyCriteria.matches(workout50k))
+        assertFalse(maxOnlyCriteria.matches(workout60k))
+
+        // Lower bound only: >= 35km
+        val minOnlyCriteria = WorkoutFilterCriteria(minDistanceMeters = 35000.0)
+        assertFalse(minOnlyCriteria.matches(workout10k))
+        assertFalse(minOnlyCriteria.matches(workout20k))
+        assertTrue(minOnlyCriteria.matches(workout35k))
+        assertTrue(minOnlyCriteria.matches(workout60k))
+    }
+
+    @Test
+    fun testDurationIntervalFiltering() {
+        val workout30m = createWorkout(activeTimeSec = 1800L)
+        val workout45m = createWorkout(activeTimeSec = 2700L)
+        val workout60m = createWorkout(activeTimeSec = 3600L)
+        val workout90m = createWorkout(activeTimeSec = 5400L)
+        val workout15m = createWorkout(activeTimeSec = 900L)
+
+        // Bounded interval [30min, 60min]
+        val boundedCriteria = WorkoutFilterCriteria(minDurationSec = 1800L, maxDurationSec = 3600L)
+        assertTrue("30m workout should match [30m, 60m]", boundedCriteria.matches(workout30m))
+        assertTrue("45m workout should match [30m, 60m]", boundedCriteria.matches(workout45m))
+        assertTrue("60m workout should match [30m, 60m]", boundedCriteria.matches(workout60m))
+        assertFalse("15m workout should be rejected by [30m, 60m]", boundedCriteria.matches(workout15m))
+        assertFalse("90m workout should be rejected by [30m, 60m]", boundedCriteria.matches(workout90m))
+
+        // Upper bound only: <= 60min
+        val maxOnlyCriteria = WorkoutFilterCriteria(maxDurationSec = 3600L)
+        assertTrue(maxOnlyCriteria.matches(workout15m))
+        assertTrue(maxOnlyCriteria.matches(workout30m))
+        assertTrue(maxOnlyCriteria.matches(workout60m))
+        assertFalse(maxOnlyCriteria.matches(workout90m))
+
+        // Lower bound only: >= 45min
+        val minOnlyCriteria = WorkoutFilterCriteria(minDurationSec = 2700L)
+        assertFalse(minOnlyCriteria.matches(workout15m))
+        assertFalse(minOnlyCriteria.matches(workout30m))
+        assertTrue(minOnlyCriteria.matches(workout45m))
+        assertTrue(minOnlyCriteria.matches(workout90m))
+    }
+
+    @Test
     fun testActiveFilterCountCalculation() {
         val c1 = WorkoutFilterCriteria()
         assertEquals(0, c1.activeFilterCount)
 
         val c2 = WorkoutFilterCriteria(query = "Gran Fondo")
         assertEquals(1, c2.activeFilterCount)
+
+        // Distance range with both min and max counts as 1 dimension
+        val cDistanceRange = WorkoutFilterCriteria(minDistanceMeters = 10000.0, maxDistanceMeters = 25000.0)
+        assertEquals(1, cDistanceRange.activeFilterCount)
+
+        // Duration range with both min and max counts as 1 dimension
+        val cDurationRange = WorkoutFilterCriteria(minDurationSec = 1800L, maxDurationSec = 3600L)
+        assertEquals(1, cDurationRange.activeFilterCount)
 
         val c3 = WorkoutFilterCriteria(
             query = "Gran Fondo",
@@ -215,9 +285,11 @@ class WorkoutFilterCriteriaTest {
             isTrainer = false,
             hasGpsTrack = true,
             minDistanceMeters = 50000.0,
-            minDurationSec = 3600L
+            maxDistanceMeters = 100000.0,
+            minDurationSec = 3600L,
+            maxDurationSec = 7200L
         )
-        // Dimensions: query (1), time (1), sport (1), equip (1), commute (1), trainer (1), gps (1), dist (1), dur (1) = 9
+        // Dimensions: query (1), time (1), sport (1), equip (1), commute (1), trainer (1), gps (1), dist interval (1), dur interval (1) = 9
         assertEquals(9, c3.activeFilterCount)
     }
 
@@ -235,7 +307,9 @@ class WorkoutFilterCriteriaTest {
             isTrainer = true,
             hasGpsTrack = true,
             minDistanceMeters = 75000.0,
-            minDurationSec = 7200L
+            maxDistanceMeters = 120000.0,
+            minDurationSec = 7200L,
+            maxDurationSec = 14400L
         )
 
         val json = original.toJson()
@@ -252,7 +326,119 @@ class WorkoutFilterCriteriaTest {
         assertEquals("IsTrainer must match", original.isTrainer, restored.isTrainer)
         assertEquals("HasGpsTrack must match", original.hasGpsTrack, restored.hasGpsTrack)
         assertEquals("MinDistanceMeters must match", original.minDistanceMeters, restored.minDistanceMeters)
+        assertEquals("MaxDistanceMeters must match", original.maxDistanceMeters, restored.maxDistanceMeters)
         assertEquals("MinDurationSec must match", original.minDurationSec, restored.minDurationSec)
+        assertEquals("MaxDurationSec must match", original.maxDurationSec, restored.maxDurationSec)
+    }
+
+    @Test
+    fun testJsonDeserialization_LegacyJsonCompatibility() {
+        // Legacy JSON without maxDistanceMeters or maxDurationSec
+        val legacyJson = """{"query":"Trail Run","minDistanceMeters":5000.0,"minDurationSec":1800}"""
+        val parsed = WorkoutFilterCriteria.fromJson(legacyJson)
+
+        assertEquals("Trail Run", parsed.query)
+        assertEquals(5000.0, parsed.minDistanceMeters)
+        assertEquals(null, parsed.maxDistanceMeters)
+        assertEquals(1800L, parsed.minDurationSec)
+        assertEquals(null, parsed.maxDurationSec)
+        assertEquals(3, parsed.activeFilterCount)
+    }
+
+    @Test
+    fun testTabAwareSportsSelectionLogic() {
+        val workouts = listOf(
+            createWorkout(id = 1L, sportId = 1L, sportName = "Road Bike", bSportType = BSportType.BIKE),
+            createWorkout(id = 2L, sportId = 2L, sportName = "Mountain Bike", bSportType = BSportType.BIKE),
+            createWorkout(id = 3L, sportId = 3L, sportName = "Running", bSportType = BSportType.RUN),
+            createWorkout(id = 4L, sportId = 4L, sportName = "Trail Running", bSportType = BSportType.RUN),
+            createWorkout(id = 5L, sportId = 5L, sportName = "Swimming", bSportType = BSportType.UNKNOWN),
+            createWorkout(id = 6L, sportId = 6L, sportName = "Strength", bSportType = BSportType.UNKNOWN)
+        )
+
+        fun getAvailableSports(activeBSportType: BSportType?) = workouts
+            .filter { activeBSportType == null || it.bSportType == activeBSportType }
+            .map { it.sportId to it.sportName }
+            .distinctBy { it.first }
+            .sortedBy { it.second }
+
+        // Bike Tab
+        val bikeSports = getAvailableSports(BSportType.BIKE).map { it.second }
+        assertEquals(listOf("Mountain Bike", "Road Bike"), bikeSports)
+
+        // Run Tab
+        val runSports = getAvailableSports(BSportType.RUN).map { it.second }
+        assertEquals(listOf("Running", "Trail Running"), runSports)
+
+        // Other Tab
+        val otherSports = getAvailableSports(BSportType.UNKNOWN).map { it.second }
+        assertEquals(listOf("Strength", "Swimming"), otherSports)
+
+        // All Tab
+        val allSports = getAvailableSports(null).map { it.second }
+        assertEquals(listOf("Mountain Bike", "Road Bike", "Running", "Strength", "Swimming", "Trail Running"), allSports)
+    }
+
+    @Test
+    fun testSportAwareEquipmentSelectionLogic() {
+        val workouts = listOf(
+            createWorkout(id = 1L, sportId = 1L, sportName = "Road Bike", bSportType = BSportType.BIKE, equipmentId = 101L, equipmentName = "Canyon Aeroad"),
+            createWorkout(id = 2L, sportId = 2L, sportName = "Mountain Bike", bSportType = BSportType.BIKE, equipmentId = 102L, equipmentName = "Trek Fuel EX"),
+            createWorkout(id = 3L, sportId = 3L, sportName = "Running", bSportType = BSportType.RUN, equipmentId = 103L, equipmentName = "Nike Pegasus"),
+            createWorkout(id = 4L, sportId = 4L, sportName = "Trail Running", bSportType = BSportType.RUN, equipmentId = 104L, equipmentName = "Salomon Speedcross"),
+            createWorkout(id = 5L, sportId = 5L, sportName = "Swimming", bSportType = BSportType.UNKNOWN, equipmentId = 105L, equipmentName = "Speedo Goggles"),
+            createWorkout(id = 6L, sportId = 6L, sportName = "Strength", bSportType = BSportType.UNKNOWN, equipmentId = 0L, equipmentName = null)
+        )
+
+        fun getAvailableEquipment(activeBSportType: BSportType?, localSportId: Long?) = workouts
+            .filter { it.equipmentId > 0 && !it.equipmentName.isNullOrBlank() }
+            .filter { workout ->
+                if (localSportId != null) {
+                    workout.sportId == localSportId
+                } else if (activeBSportType != null) {
+                    workout.bSportType == activeBSportType
+                } else {
+                    true
+                }
+            }
+            .map { it.equipmentId to it.equipmentName!! }
+            .distinctBy { it.first }
+            .sortedBy { it.second }
+
+        // Bike tab without sport selected
+        val bikeEquipment = getAvailableEquipment(BSportType.BIKE, null).map { it.second }
+        assertEquals(listOf("Canyon Aeroad", "Trek Fuel EX"), bikeEquipment)
+
+        // Bike tab with Mountain Bike selected
+        val mtbEquipment = getAvailableEquipment(BSportType.BIKE, 2L).map { it.second }
+        assertEquals(listOf("Trek Fuel EX"), mtbEquipment)
+
+        // Run tab without sport selected
+        val runEquipment = getAvailableEquipment(BSportType.RUN, null).map { it.second }
+        assertEquals(listOf("Nike Pegasus", "Salomon Speedcross"), runEquipment)
+
+        // Run tab with Running selected
+        val runningEquipment = getAvailableEquipment(BSportType.RUN, 3L).map { it.second }
+        assertEquals(listOf("Nike Pegasus"), runningEquipment)
+
+        // Other tab without sport selected
+        val otherEquipment = getAvailableEquipment(BSportType.UNKNOWN, null).map { it.second }
+        assertEquals(listOf("Speedo Goggles"), otherEquipment)
+
+        // All tab with Running selected
+        val runningOnlyEquipment = getAvailableEquipment(null, 3L).map { it.second }
+        assertEquals(listOf("Nike Pegasus"), runningOnlyEquipment)
+
+        // All tab without sport selected
+        val allEquipment = getAvailableEquipment(null, null).map { it.second }
+        assertEquals(listOf("Canyon Aeroad", "Nike Pegasus", "Salomon Speedcross", "Speedo Goggles", "Trek Fuel EX"), allEquipment)
+
+        // Equipment invalidation verification: if localEquipId was 101 (Canyon Aeroad) and sport switches to Running (3L),
+        // availableEquipment will not contain 101.
+        val newAvailable = getAvailableEquipment(null, 3L)
+        val selectedEquipId = 101L
+        val shouldClear = newAvailable.none { it.first == selectedEquipId }
+        assertTrue(shouldClear)
     }
 
     @Test

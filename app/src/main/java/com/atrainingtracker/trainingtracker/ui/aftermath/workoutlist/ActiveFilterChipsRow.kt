@@ -63,8 +63,10 @@ fun ActiveFilterChipsRow(
     onRemoveCommute: () -> Unit,
     onRemoveTrainer: () -> Unit,
     onRemoveGpsTrack: () -> Unit,
-    onRemoveMinDistance: () -> Unit,
-    onRemoveMinDuration: () -> Unit,
+    onRemoveDistanceRange: () -> Unit = {},
+    onRemoveDurationRange: () -> Unit = {},
+    onRemoveMinDistance: () -> Unit = onRemoveDistanceRange,
+    onRemoveMinDuration: () -> Unit = onRemoveDurationRange,
     onClearAll: () -> Unit,
     sportName: String? = null,
     equipmentName: String? = null,
@@ -179,24 +181,36 @@ fun ActiveFilterChipsRow(
             }
         }
 
-        // Min Distance Chip
-        if (criteria.minDistanceMeters != null) {
-            item("minDistance") {
-                val km = (criteria.minDistanceMeters / 1000.0).toInt()
+        // Distance Interval Chip
+        if (criteria.minDistanceMeters != null || criteria.maxDistanceMeters != null) {
+            item("distance") {
+                val minKm = criteria.minDistanceMeters?.let { (it / 1000.0).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else v.toString() } }
+                val maxKm = criteria.maxDistanceMeters?.let { (it / 1000.0).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else v.toString() } }
+                val label = when {
+                    minKm != null && maxKm != null -> stringResource(R.string.filter_distance_interval_format, minKm, maxKm)
+                    minKm != null -> stringResource(R.string.filter_min_distance_format, minKm)
+                    else -> stringResource(R.string.filter_max_distance_format, maxKm!!)
+                }
                 RemovableFilterChip(
-                    label = stringResource(R.string.filter_min_distance_format, km.toString()),
-                    onRemove = onRemoveMinDistance
+                    label = label,
+                    onRemove = onRemoveDistanceRange
                 )
             }
         }
 
-        // Min Duration Chip
-        if (criteria.minDurationSec != null) {
-            item("minDuration") {
-                val min = (criteria.minDurationSec / 60L).toInt()
+        // Duration Interval Chip
+        if (criteria.minDurationSec != null || criteria.maxDurationSec != null) {
+            item("duration") {
+                val minM = criteria.minDurationSec?.let { (it / 60L).toString() }
+                val maxM = criteria.maxDurationSec?.let { (it / 60L).toString() }
+                val label = when {
+                    minM != null && maxM != null -> stringResource(R.string.filter_duration_interval_format, minM, maxM)
+                    minM != null -> stringResource(R.string.filter_min_duration_format, minM)
+                    else -> stringResource(R.string.filter_max_duration_format, maxM!!)
+                }
                 RemovableFilterChip(
-                    label = stringResource(R.string.filter_min_duration_format, min.toString()),
-                    onRemove = onRemoveMinDuration
+                    label = label,
+                    onRemove = onRemoveDurationRange
                 )
             }
         }
