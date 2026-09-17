@@ -37,6 +37,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
@@ -49,6 +50,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
 
         private const val URL_STRAVA_UPLOAD = "https://www.strava.com/api/v3/uploads"
         private const val URL_STRAVA_ACTIVITY = "https://www.strava.com/api/v3/activities/"
+        private const val URL_STRAVA_ATHLETE_ACTIVITIES = "https://www.strava.com/api/v3/athlete/activities"
 
         private const val MAX_REQUESTS = 10
         private const val INITIAL_WAITING_TIME = 1000L // 1 seconds
@@ -121,6 +123,31 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
 
         if (accessToken.isNullOrEmpty()) {
             return ExportResult(false, false, "Could not refresh Strava Access Token. Please log in again.")
+        }
+
+        // ATT-1105 / REQ-EXP-008: Check if activity is already recorded in local Strava DB
+        val existingDbActivityId = StravaUploadDbHelper(mContext).getActivityId(exportInfo.fileBaseName)
+        if (!existingDbActivityId.isNullOrEmpty()) {
+            if (DEBUG) Log.i(TAG, "Activity already tracked locally as Strava ID $existingDbActivityId. Bypassing upload.")
+            return doUpdate(exportInfo, isDuplicate = true)
+        }
+
+        // ATT-1105 / REQ-EXP-008: Pre-upload duplicate discovery
+        // Query Strava to see if an activity already exists around the workout's start time.
+        val existingStravaActivity = findExistingStravaActivityForWorkout(exportInfo.fileBaseName)
+        if (existingStravaActivity != null) {
+            val activityId = existingStravaActivity.optString(ID).ifBlank { existingStravaActivity.optString("id") }
+            if (activityId.isNotBlank()) {
+                if (DEBUG) Log.i(TAG, "Found pre-existing Strava activity $activityId ('${existingStravaActivity.optString(NAME)}') for ${exportInfo.fileBaseName}. Bypassing TCX upload.")
+                StravaUploadDbHelper(mContext).updateAll(
+                    exportInfo.fileBaseName,
+                    activityId,
+                    activityId,
+                    "Pre-existing activity found on Strava",
+                    existingStravaActivity.toString()
+                )
+                return doUpdate(exportInfo, isDuplicate = true)
+            }
         }
 
         if (DEBUG) Log.d(TAG, "starting to upload to strava")
@@ -333,8 +360,8 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         for (attempt in 1..MAX_REQUESTS) {
             // Check both type and sport_type in the response
             if (activityJSON != null && (
-                sportName.equals(activityJSON?.optString(TYPE), ignoreCase = true) ||
-                sportName.equals(activityJSON?.optString(SPORT_TYPE), ignoreCase = true)
+                sportName.equals(activityJSON.optString(TYPE), ignoreCase = true) ||
+                sportName.equals(activityJSON.optString(SPORT_TYPE), ignoreCase = true)
             )) {
                 break
             }
@@ -397,7 +424,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         if (DEBUG) Log.i(TAG, "Update Result: $activityJSON")
 
         // Final feedback check: Is the activity flagged?
-        val isFlagged = activityJSON?.optBoolean("flagged", false) ?: false
+        val isFlagged = activityJSON.optBoolean("flagged", false)
         val message = if (isFlagged) {
             "successfully updated (Note: Activity is FLAGGED on Strava)"
         } else {
@@ -464,6 +491,113 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
             Log.e(TAG, "Error fetching JSON from $url", e)
             null
         }
+    }
+
+    internal open fun getStravaJsonArray(url: String): JSONArray? {
+        val request = Request.Builder()
+            .url(url)
+            .get()
+            .addHeader("Authorization", "Bearer ${StravaHelper.getRefreshedAccessToken()}")
+            .build()
+
+        return try {
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful && response.body != null) {
+                    JSONArray(response.body!!.string())
+                } else {
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching JSONArray from $url", e)
+            null
+        }
+    }
+
+    /**
+     * Searches Strava athlete activities for an existing activity matching the workout's start time.
+     * Searches a +/- 5-minute (300s) temporal window around the start timestamp.
+     */
+    internal open fun findExistingStravaActivityForWorkout(fileBaseName: String): JSONObject? {
+        val startEpochSeconds = getWorkoutStartEpochSeconds(fileBaseName) ?: return null
+        return findExistingStravaActivity(startEpochSeconds)
+    }
+
+    internal open fun getWorkoutStartEpochSeconds(fileBaseName: String): Long? {
+        val dbManager = WorkoutSummariesDatabaseManager.getInstance(mContext)
+        return try {
+            val cursor = dbManager.database.query(
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                arrayOf(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START),
+                "${WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME}=?",
+                arrayOf(fileBaseName),
+                null, null, null
+            )
+            val timeStartStr = cursor.use {
+                if (it.moveToFirst()) {
+                    val idx = it.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START)
+                    if (idx != -1 && !it.isNull(idx)) {
+                        it.getString(idx)
+                    } else if (!it.isNull(0)) {
+                        it.getString(0)
+                    } else null
+                } else null
+            } ?: fileBaseName
+
+            parseTimeToEpochSeconds(timeStartStr)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to query workout start epoch for $fileBaseName", e)
+            parseTimeToEpochSeconds(fileBaseName)
+        }
+    }
+
+    internal open fun parseTimeToEpochSeconds(timeStr: String): Long? {
+        // Try ISO 8601 (e.g. "2024-05-12T10:15:30Z")
+        try {
+            return java.time.Instant.parse(timeStr).epochSecond
+        } catch (_: Exception) { }
+
+        // Try SQLite format (e.g. "2024-05-12 10:15:30")
+        try {
+            val dbFormat = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.ROOT).apply {
+                timeZone = java.util.TimeZone.getTimeZone("UTC")
+            }
+            val parsed = dbFormat.parse(timeStr)?.time?.div(1000)
+            if (parsed != null) return parsed
+        } catch (_: Exception) { }
+
+        // Try fileBaseName format (e.g. "2024-05-12_10-15-30")
+        return try {
+            val fileFormat = java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", java.util.Locale.ROOT).apply {
+                timeZone = java.util.TimeZone.getTimeZone("UTC")
+            }
+            fileFormat.parse(timeStr)?.time?.div(1000)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    internal open fun findExistingStravaActivity(startEpochSeconds: Long): JSONObject? {
+        val after = startEpochSeconds - 300L
+        val before = startEpochSeconds + 300L
+        val url = "$URL_STRAVA_ATHLETE_ACTIVITIES?after=$after&before=$before"
+        val array = getStravaJsonArray(url) ?: return null
+        if (array.length() == 0) return null
+
+        var closestActivity: JSONObject? = null
+        var minDiff = Long.MAX_VALUE
+
+        for (i in 0 until array.length()) {
+            val act = array.optJSONObject(i) ?: continue
+            val startDateStr = act.optString("start_date") // e.g. "2024-05-12T08:15:30Z"
+            val actEpoch = parseTimeToEpochSeconds(startDateStr) ?: 0L
+            val diff = if (actEpoch > 0) Math.abs(actEpoch - startEpochSeconds) else 0L
+            if (diff < minDiff) {
+                minDiff = diff
+                closestActivity = act
+            }
+        }
+        return closestActivity
     }
 
     // Helper to replace "myGetStringFromCursor"
