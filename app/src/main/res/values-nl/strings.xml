@@ -1085,7 +1085,19 @@
     <string name="filter_trainer">Binnen / Fietstrainer</string>
     <string name="filter_has_gps">Met GPS-route</string>
     <string name="filter_min_distance_format">&gt; %1$s km</string>
+    <string name="filter_max_distance_format">&lt; %1$s km</string>
+    <string name="filter_distance_interval_format">%1$s - %2$s km</string>
     <string name="filter_min_duration_format">&gt; %1$s min</string>
+    <string name="filter_max_duration_format">&lt; %1$s min</string>
+    <string name="filter_duration_interval_format">%1$s - %2$s min</string>
+    <string name="filter_date_from">Van</string>
+    <string name="filter_date_to">Tot</string>
+    <string name="filter_select_date">Selecteer datum</string>
+    <string name="filter_date_range">Datumbereik</string>
+    <string name="filter_min_label">Min.</string>
+    <string name="filter_max_label">Max.</string>
+    <string name="filter_section_distance">Afstand</string>
+    <string name="filter_section_duration">Duur</string>
     <string name="filter_no_matching_workouts">Geen workouts komen overeen met de actieve filters</string>
     <!-- Route Filtering (ATT-736) -->
     <string name="filter_routes_title">Routes filteren</string>

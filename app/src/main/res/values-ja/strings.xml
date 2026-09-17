@@ -1071,7 +1071,19 @@
     <string name="filter_trainer">インドア / ローラー台</string>
     <string name="filter_has_gps">GPSログあり</string>
     <string name="filter_min_distance_format">&gt; %1$s km</string>
-    <string name="filter_min_duration_format">&gt; %1$s min</string>
+    <string name="filter_max_distance_format">&lt; %1$s km</string>
+    <string name="filter_distance_interval_format">%1$s - %2$s km</string>
+    <string name="filter_min_duration_format">&gt; %1$s 分</string>
+    <string name="filter_max_duration_format">&lt; %1$s 分</string>
+    <string name="filter_duration_interval_format">%1$s - %2$s 分</string>
+    <string name="filter_date_from">開始</string>
+    <string name="filter_date_to">終了</string>
+    <string name="filter_select_date">日付を選択</string>
+    <string name="filter_date_range">期間</string>
+    <string name="filter_min_label">最小</string>
+    <string name="filter_max_label">最大</string>
+    <string name="filter_section_distance">距離</string>
+    <string name="filter_section_duration">時間</string>
     <string name="filter_no_matching_workouts">有効なフィルターに一致するワークアウトはありません</string>
     <!-- Route Filtering (ATT-736) -->
     <string name="filter_routes_title">ルートをフィルター</string>

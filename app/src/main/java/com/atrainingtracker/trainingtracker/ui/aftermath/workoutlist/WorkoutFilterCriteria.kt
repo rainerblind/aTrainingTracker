@@ -43,7 +43,9 @@ data class WorkoutFilterCriteria(
     val isTrainer: Boolean? = null,
     val hasGpsTrack: Boolean? = null,
     val minDistanceMeters: Double? = null,
-    val minDurationSec: Long? = null
+    val maxDistanceMeters: Double? = null,
+    val minDurationSec: Long? = null,
+    val maxDurationSec: Long? = null
 ) {
     /**
      * Total count of distinct active filter dimensions.
@@ -58,8 +60,8 @@ data class WorkoutFilterCriteria(
             if (isCommute != null) count++
             if (isTrainer != null) count++
             if (hasGpsTrack == true) count++
-            if (minDistanceMeters != null) count++
-            if (minDurationSec != null) count++
+            if (minDistanceMeters != null || maxDistanceMeters != null) count++
+            if (minDurationSec != null || maxDurationSec != null) count++
             return count
         }
 
@@ -142,13 +144,19 @@ data class WorkoutFilterCriteria(
             return false
         }
 
-        // Minimum Distance threshold (meters)
+        // Distance threshold / interval (meters)
         if (minDistanceMeters != null && workout.totalDistance < minDistanceMeters) {
             return false
         }
+        if (maxDistanceMeters != null && workout.totalDistance > maxDistanceMeters) {
+            return false
+        }
 
-        // Minimum Active Duration threshold (seconds)
+        // Active Duration threshold / interval (seconds)
         if (minDurationSec != null && workout.activeTimeSec < minDurationSec) {
+            return false
+        }
+        if (maxDurationSec != null && workout.activeTimeSec > maxDurationSec) {
             return false
         }
 
@@ -173,7 +181,9 @@ data class WorkoutFilterCriteria(
         isTrainer?.let { json.put("isTrainer", it) }
         hasGpsTrack?.let { json.put("hasGpsTrack", it) }
         minDistanceMeters?.let { json.put("minDistanceMeters", it) }
+        maxDistanceMeters?.let { json.put("maxDistanceMeters", it) }
         minDurationSec?.let { json.put("minDurationSec", it) }
+        maxDurationSec?.let { json.put("maxDurationSec", it) }
         return json.toString()
     }
 
@@ -200,7 +210,9 @@ data class WorkoutFilterCriteria(
                     isTrainer = if (json.has("isTrainer")) json.optBoolean("isTrainer") else null,
                     hasGpsTrack = if (json.has("hasGpsTrack")) json.optBoolean("hasGpsTrack") else null,
                     minDistanceMeters = if (json.has("minDistanceMeters")) json.optDouble("minDistanceMeters") else null,
-                    minDurationSec = if (json.has("minDurationSec")) json.optLong("minDurationSec") else null
+                    maxDistanceMeters = if (json.has("maxDistanceMeters")) json.optDouble("maxDistanceMeters") else null,
+                    minDurationSec = if (json.has("minDurationSec")) json.optLong("minDurationSec") else null,
+                    maxDurationSec = if (json.has("maxDurationSec")) json.optLong("maxDurationSec") else null
                 )
             } catch (e: Exception) {
                 WorkoutFilterCriteria()

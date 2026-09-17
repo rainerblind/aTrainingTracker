@@ -1076,7 +1076,19 @@ proszę czekać</string>
     <string name="filter_trainer">Trenażer / Wewnątrz</string>
     <string name="filter_has_gps">Z trasą GPS</string>
     <string name="filter_min_distance_format">&gt; %1$s km</string>
+    <string name="filter_max_distance_format">&lt; %1$s km</string>
+    <string name="filter_distance_interval_format">%1$s - %2$s km</string>
     <string name="filter_min_duration_format">&gt; %1$s min</string>
+    <string name="filter_max_duration_format">&lt; %1$s min</string>
+    <string name="filter_duration_interval_format">%1$s - %2$s min</string>
+    <string name="filter_date_from">Od</string>
+    <string name="filter_date_to">Do</string>
+    <string name="filter_select_date">Wybierz datę</string>
+    <string name="filter_date_range">Zakres dat</string>
+    <string name="filter_min_label">Min.</string>
+    <string name="filter_max_label">Maks.</string>
+    <string name="filter_section_distance">Dystans</string>
+    <string name="filter_section_duration">Czas trwania</string>
     <string name="filter_no_matching_workouts">Brak treningów pasujących do aktywnych filtrów</string>
     <!-- Route Filtering (ATT-736) -->
     <string name="filter_routes_title">Filtruj trasy</string>

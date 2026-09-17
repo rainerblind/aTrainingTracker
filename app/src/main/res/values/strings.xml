@@ -1278,7 +1278,19 @@
     <string name="filter_trainer">Indoor / Trainer</string>
     <string name="filter_has_gps">Has GPS Track</string>
     <string name="filter_min_distance_format">&gt; %1$s km</string>
+    <string name="filter_max_distance_format">&lt; %1$s km</string>
+    <string name="filter_distance_interval_format">%1$s - %2$s km</string>
     <string name="filter_min_duration_format">&gt; %1$s min</string>
+    <string name="filter_max_duration_format">&lt; %1$s min</string>
+    <string name="filter_duration_interval_format">%1$s - %2$s min</string>
+    <string name="filter_date_from">From</string>
+    <string name="filter_date_to">To</string>
+    <string name="filter_select_date">Select date</string>
+    <string name="filter_date_range">Date Range</string>
+    <string name="filter_min_label">Min</string>
+    <string name="filter_max_label">Max</string>
+    <string name="filter_section_distance">Distance</string>
+    <string name="filter_section_duration">Duration</string>
     <string name="filter_no_matching_workouts">No workouts match the active filters</string>
     <!-- Route Filtering (ATT-736) -->
     <string name="filter_routes_title">Filter Routes</string>

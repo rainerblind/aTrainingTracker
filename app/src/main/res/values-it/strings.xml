@@ -1085,7 +1085,19 @@
     <string name="filter_trainer">Indoor / Rulli</string>
     <string name="filter_has_gps">Con traccia GPS</string>
     <string name="filter_min_distance_format">&gt; %1$s km</string>
+    <string name="filter_max_distance_format">&lt; %1$s km</string>
+    <string name="filter_distance_interval_format">%1$s - %2$s km</string>
     <string name="filter_min_duration_format">&gt; %1$s min</string>
+    <string name="filter_max_duration_format">&lt; %1$s min</string>
+    <string name="filter_duration_interval_format">%1$s - %2$s min</string>
+    <string name="filter_date_from">Da</string>
+    <string name="filter_date_to">A</string>
+    <string name="filter_select_date">Seleziona data</string>
+    <string name="filter_date_range">Intervallo date</string>
+    <string name="filter_min_label">Min.</string>
+    <string name="filter_max_label">Max.</string>
+    <string name="filter_section_distance">Distanza</string>
+    <string name="filter_section_duration">Durata</string>
     <string name="filter_no_matching_workouts">Nessun allenamento corrisponde ai filtri attivi</string>
     <!-- Route Filtering (ATT-736) -->
     <string name="filter_routes_title">Filtra percorsi</string>
