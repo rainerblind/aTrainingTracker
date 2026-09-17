@@ -620,7 +620,11 @@ object LegacyImportEngine {
                 var workoutId = getWorkoutId(summaryDb, baseFileName)
                 if (workoutId == -1L) {
                     // ATT-1105: Ensure clean slate in StravaUpload.db for fresh workout imports
-                    StravaUploadDbHelper(context).deleteWorkout(baseFileName)
+                    try {
+                        StravaUploadDbHelper(context).deleteWorkout(baseFileName)
+                    } catch (t: Throwable) {
+                        Log.w(TAG, "Could not clean StravaUploadDb for $baseFileName: ${t.message}")
+                    }
 
                     val summaryValues = ContentValues().apply {
                         put(WorkoutSummaries.FILE_BASE_NAME, baseFileName)
