@@ -36,6 +36,7 @@ import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager
+import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.dropbox.core.DbxRequestConfig
 import com.dropbox.core.v2.DbxClientV2
@@ -618,6 +619,9 @@ object LegacyImportEngine {
             if (firstTime != null) {
                 var workoutId = getWorkoutId(summaryDb, baseFileName)
                 if (workoutId == -1L) {
+                    // ATT-1105: Ensure clean slate in StravaUpload.db for fresh workout imports
+                    StravaUploadDbHelper(context).deleteWorkout(baseFileName)
+
                     val summaryValues = ContentValues().apply {
                         put(WorkoutSummaries.FILE_BASE_NAME, baseFileName)
                         put(WorkoutSummaries.WORKOUT_NAME, if (!workoutName.isNullOrBlank()) workoutName!!.trim() else baseFileName)

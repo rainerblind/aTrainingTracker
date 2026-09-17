@@ -126,10 +126,18 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         }
 
         // ATT-1105 / REQ-EXP-008: Check if activity is already recorded in local Strava DB
-        val existingDbActivityId = StravaUploadDbHelper(mContext).getActivityId(exportInfo.fileBaseName)
+        val stravaUploadDbHelper = StravaUploadDbHelper(mContext)
+        val existingDbActivityId = stravaUploadDbHelper.getActivityId(exportInfo.fileBaseName)
         if (!existingDbActivityId.isNullOrEmpty()) {
-            if (DEBUG) Log.i(TAG, "Activity already tracked locally as Strava ID $existingDbActivityId. Bypassing upload.")
-            return doUpdate(exportInfo, isDuplicate = true)
+            if (DEBUG) Log.i(TAG, "Activity already tracked locally as Strava ID $existingDbActivityId. Testing update.")
+            val updateResult = doUpdate(exportInfo, isDuplicate = true)
+            if (updateResult.success()) {
+                return updateResult
+            }
+            // If updating failed (e.g. deleted activity on Strava returning 404),
+            // the locally cached activityId is stale. Clear stale record and fall through to pre-upload duplicate discovery!
+            Log.w(TAG, "Local Strava activity $existingDbActivityId could not be updated (${updateResult.answer()}). Clearing stale record and searching Strava.")
+            stravaUploadDbHelper.deleteWorkout(exportInfo.fileBaseName)
         }
 
         // ATT-1105 / REQ-EXP-008: Pre-upload duplicate discovery

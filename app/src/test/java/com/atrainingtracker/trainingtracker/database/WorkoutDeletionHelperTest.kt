@@ -44,6 +44,7 @@ class WorkoutDeletionHelperTest {
     private val mockLapsManager = mockk<LapsDatabaseManager>(relaxed = true)
     private val mockSamplesManager = mockk<WorkoutSamplesDatabaseManager>(relaxed = true)
     private val mockExportStatusRepo = mockk<ExportStatusDatabaseManager>(relaxed = true)
+    private val mockStravaUploadDbHelper = mockk<com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper>(relaxed = true)
 
     private lateinit var deletionHelper: WorkoutDeletionHelper
 
@@ -62,7 +63,8 @@ class WorkoutDeletionHelperTest {
             mockSummariesManager,
             mockLapsManager,
             mockSamplesManager,
-            mockExportStatusRepo
+            mockExportStatusRepo,
+            mockStravaUploadDbHelper
         )
     }
 
@@ -73,7 +75,7 @@ class WorkoutDeletionHelperTest {
 
     /**
      * Verifies that getBaseFileName is queried BEFORE deleting the summary record,
-     * ensuring high-frequency sample tables and export statuses are dropped and not orphaned.
+     * ensuring high-frequency sample tables, export statuses, and Strava records are dropped and not orphaned.
      */
     @Test
     fun testDeleteWorkout_queriesBaseFileNameBeforeDroppingSummary_dropsSampleAndExportTables() {
@@ -94,6 +96,7 @@ class WorkoutDeletionHelperTest {
             mockLapsManager.deleteWorkout(workoutId)
             mockSamplesManager.deleteWorkout(baseFileName)
             mockExportStatusRepo.deleteWorkout(baseFileName)
+            mockStravaUploadDbHelper.deleteWorkout(baseFileName)
         }
     }
 
@@ -114,6 +117,7 @@ class WorkoutDeletionHelperTest {
         verify { mockLapsManager.deleteWorkout(workoutId) }
         verify(exactly = 0) { mockSamplesManager.deleteWorkout(any()) }
         verify(exactly = 0) { mockExportStatusRepo.deleteWorkout(any()) }
+        verify(exactly = 0) { mockStravaUploadDbHelper.deleteWorkout(any()) }
     }
 
     /**
@@ -141,13 +145,15 @@ class WorkoutDeletionHelperTest {
         assertTrue(success)
         assertEquals("Both old workout IDs should be reported via progressCallback", listOf(101L, 102L), reportedProgressIds)
 
-        // Verify both workouts were purged across summaries, laps, samples, and export status
+        // Verify both workouts were purged across summaries, laps, samples, export status, and Strava DB
         verify(exactly = 1) { mockSummariesManager.deleteWorkout(101L) }
         verify(exactly = 1) { mockSummariesManager.deleteWorkout(102L) }
         verify(exactly = 1) { mockSamplesManager.deleteWorkout("file_101") }
         verify(exactly = 1) { mockSamplesManager.deleteWorkout("file_102") }
         verify(exactly = 1) { mockExportStatusRepo.deleteWorkout("file_101") }
         verify(exactly = 1) { mockExportStatusRepo.deleteWorkout("file_102") }
+        verify(exactly = 1) { mockStravaUploadDbHelper.deleteWorkout("file_101") }
+        verify(exactly = 1) { mockStravaUploadDbHelper.deleteWorkout("file_102") }
     }
 
     /**

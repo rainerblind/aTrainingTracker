@@ -41,6 +41,7 @@ public class WorkoutDeletionHelper {
     private final LapsDatabaseManager mLapsManager;
     private final WorkoutSamplesDatabaseManager mSamplesManager;
     private final ExportStatusDatabaseManager mExportStatusRepo;
+    private final com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper mStravaUploadDbHelper;
 
     /**
      * Constructor for the deletion helper.
@@ -53,7 +54,8 @@ public class WorkoutDeletionHelper {
                 WorkoutSummariesDatabaseManager.getInstance(context),
                 LapsDatabaseManager.getInstance(context),
                 WorkoutSamplesDatabaseManager.getInstance(context),
-                ExportStatusDatabaseManager.getInstance(context)
+                ExportStatusDatabaseManager.getInstance(context),
+                new com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper(context)
         );
     }
 
@@ -68,11 +70,31 @@ public class WorkoutDeletionHelper {
             @NonNull WorkoutSamplesDatabaseManager samplesManager,
             @NonNull ExportStatusDatabaseManager exportStatusRepo
     ) {
+        this(
+                context,
+                summariesManager,
+                lapsManager,
+                samplesManager,
+                exportStatusRepo,
+                new com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper(context)
+        );
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public WorkoutDeletionHelper(
+            @NonNull Context context,
+            @NonNull WorkoutSummariesDatabaseManager summariesManager,
+            @NonNull LapsDatabaseManager lapsManager,
+            @NonNull WorkoutSamplesDatabaseManager samplesManager,
+            @NonNull ExportStatusDatabaseManager exportStatusRepo,
+            @NonNull com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper stravaUploadDbHelper
+    ) {
         this.mContext = context.getApplicationContext();
         this.mSummariesManager = summariesManager;
         this.mLapsManager = lapsManager;
         this.mSamplesManager = samplesManager;
         this.mExportStatusRepo = exportStatusRepo;
+        this.mStravaUploadDbHelper = stravaUploadDbHelper;
     }
 
     /**
@@ -95,6 +117,9 @@ public class WorkoutDeletionHelper {
         if (fileBaseName != null) {
             mSamplesManager.deleteWorkout(fileBaseName);
             mExportStatusRepo.deleteWorkout(fileBaseName);
+            if (mStravaUploadDbHelper != null) {
+                mStravaUploadDbHelper.deleteWorkout(fileBaseName);
+            }
         }
 
         return true;

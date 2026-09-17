@@ -236,4 +236,10 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
         }
         return results;
     }
+
+    public int deleteWorkout(String fileBaseName) {
+        if (DEBUG) Log.d(TAG, "deleteWorkout: " + fileBaseName);
+        SQLiteDatabase db = getWritableDatabase();
+        return db.delete(TABLE, WorkoutSummaries.FILE_BASE_NAME + "=?", new String[]{fileBaseName});
+    }
 }

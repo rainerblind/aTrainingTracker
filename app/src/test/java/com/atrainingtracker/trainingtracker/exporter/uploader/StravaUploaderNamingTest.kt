@@ -183,6 +183,7 @@ class StravaUploaderNamingTest {
         every { anyConstructed<StravaUploadDbHelper>().getActivityId(any()) } returns "987654321"
         every { anyConstructed<StravaUploadDbHelper>().updateStravaActivityData(any(), any()) } returns Unit
         every { anyConstructed<StravaUploadDbHelper>().updateAll(any(), any(), capture(capturedDuplicateActivityIds), any(), any()) } returns Unit
+        every { anyConstructed<StravaUploadDbHelper>().deleteWorkout(any()) } returns 1
         every { mockSqlDb.update(WorkoutSummaries.TABLE, capture(capturedUpdatedValues), any(), any()) } returns 1
     }
 
@@ -773,5 +774,57 @@ class StravaUploaderNamingTest {
 
         val matched = uploader.findExistingStravaActivity(1715508930L)
         assertNull("HTTP failure must return null", matched)
+    }
+
+    @Test
+    fun testStaleLocalActivityIdFallsThroughToPreUploadDiscovery() {
+        val fileBaseName = "2024-05-12_10-15-30"
+        setupMockCursor(workoutName = fileBaseName, fileBaseName = fileBaseName)
+
+        var trackedActivityId: String? = "stale_deleted_id_999"
+        var deletedFileBaseName: String? = null
+
+        every { anyConstructed<StravaUploadDbHelper>().getActivityId(fileBaseName) } answers { trackedActivityId }
+        every { anyConstructed<StravaUploadDbHelper>().deleteWorkout(fileBaseName) } answers {
+            deletedFileBaseName = firstArg()
+            trackedActivityId = null
+            1
+        }
+        every { anyConstructed<StravaUploadDbHelper>().updateAll(fileBaseName, any(), any(), any(), any()) } answers {
+            trackedActivityId = secondArg()
+        }
+
+        val authenticStravaJson = JSONObject().apply {
+            put("id", 9320041623L)
+            put("name", "#bike2home #2023 #15 ☀️")
+            put("type", "Ride")
+            put("sport_type", "Ride")
+        }
+
+        val uploader = object : TestableStravaUploader(
+            context = mockContext,
+            stravaActivityResponse = authenticStravaJson,
+            mockExistingActivity = authenticStravaJson
+        ) {
+            override fun getStravaActivity(stravaActivityId: String): JSONObject? {
+                // If asked for the stale activity ID, Strava returns 404 (null)
+                if (stravaActivityId == "stale_deleted_id_999") {
+                    return null
+                }
+                return authenticStravaJson
+            }
+        }
+
+        val exportInfo = ExportInfo(fileBaseName, FileFormat.STRAVA, ExportType.COMMUNITY)
+        val result = uploader.doExport(exportInfo)
+
+        assertTrue("Export must succeed by recovering from stale activity ID", result.success())
+        assertEquals("Stale workout entry must be deleted from StravaUpload.db", fileBaseName, deletedFileBaseName)
+        assertEquals("Authentic Strava activity ID must be tracked", "9320041623", trackedActivityId)
+
+        // SQLite WORKOUT_NAME must be updated with authentic Strava title
+        assertTrue("SQLite must be updated with authentic Strava name", capturedUpdatedValues.isNotEmpty())
+        val updatedName = capturedUpdatedValues.first().getAsString(WorkoutSummaries.WORKOUT_NAME)
+        assertEquals("#bike2home #2023 #15 ☀️", updatedName)
     }
 }

@@ -57,6 +57,12 @@
         <package android:name="com.dsi.ant.usbservice" />
         <!-- Google Play Services -->
         <package android:name="com.google.android.gms" />
+        <!-- Strava App -->
+        <package android:name="com.strava" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="strava" />
+        </intent>
     </queries>
 
     <application
