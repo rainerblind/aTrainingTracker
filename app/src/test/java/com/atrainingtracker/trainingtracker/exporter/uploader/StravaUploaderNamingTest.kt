@@ -476,4 +476,116 @@ class StravaUploaderNamingTest {
         assertEquals("true", metadataUpdate["trainer"])
         assertEquals("true", metadataUpdate["commute"])
     }
+
+    @Test
+    fun testIsDefaultStravaNameEvaluation() {
+        // German standard patterns
+        assertTrue(StravaUploader.isDefaultStravaName("Radfahrt am Morgen"))
+        assertTrue(StravaUploader.isDefaultStravaName("Radfahrt am Vormittag"))
+        assertTrue(StravaUploader.isDefaultStravaName("Radfahrt am Mittag"))
+        assertTrue(StravaUploader.isDefaultStravaName("Radfahrt am Nachmittag"))
+        assertTrue(StravaUploader.isDefaultStravaName("Radfahrt am Abend"))
+        assertTrue(StravaUploader.isDefaultStravaName("Radfahrt in der Nacht"))
+        assertTrue(StravaUploader.isDefaultStravaName("Radfahrt nachts"))
+        assertTrue(StravaUploader.isDefaultStravaName("Lauf am Abend"))
+        assertTrue(StravaUploader.isDefaultStravaName("Wanderung am Morgen"))
+        assertTrue(StravaUploader.isDefaultStravaName("Mittags-Radfahrt"))
+        assertTrue(StravaUploader.isDefaultStravaName("Morgen-Lauf"))
+
+        // German patterns with weather emojis
+        assertTrue(StravaUploader.isDefaultStravaName("Lauf am Abend ⛅"))
+        assertTrue(StravaUploader.isDefaultStravaName("Radfahrt am Nachmittag ☀️"))
+        assertTrue(StravaUploader.isDefaultStravaName("Radfahrt am Morgen 🌧️"))
+
+        // English standard patterns
+        assertTrue(StravaUploader.isDefaultStravaName("Morning Ride"))
+        assertTrue(StravaUploader.isDefaultStravaName("Afternoon Run"))
+        assertTrue(StravaUploader.isDefaultStravaName("Evening Walk"))
+        assertTrue(StravaUploader.isDefaultStravaName("Lunch Ride"))
+        assertTrue(StravaUploader.isDefaultStravaName("Night Hike"))
+        assertTrue(StravaUploader.isDefaultStravaName("Morning Swim"))
+        assertTrue(StravaUploader.isDefaultStravaName("Morning Workout"))
+        assertTrue(StravaUploader.isDefaultStravaName("Afternoon Weight Training"))
+        assertTrue(StravaUploader.isDefaultStravaName("Morning Ride ⛅"))
+
+        // French standard patterns
+        assertTrue(StravaUploader.isDefaultStravaName("Sortie vélo le matin"))
+        assertTrue(StravaUploader.isDefaultStravaName("Course à pied le soir"))
+
+        // Custom titles must NOT be recognized as default
+        assertFalse(StravaUploader.isDefaultStravaName("Sunday Club Ride"))
+        assertFalse(StravaUploader.isDefaultStravaName("Schwarzwald Tour"))
+        assertFalse(StravaUploader.isDefaultStravaName("Hausrunde"))
+        assertFalse(StravaUploader.isDefaultStravaName("Hausrunde #3"))
+        assertFalse(StravaUploader.isDefaultStravaName("Berlin Half Marathon"))
+        assertFalse(StravaUploader.isDefaultStravaName("Radfahrt am Morgen mit Peter"))
+        assertFalse(StravaUploader.isDefaultStravaName("Morning Ride with Friends"))
+        assertFalse(StravaUploader.isDefaultStravaName("Cycling"))
+        assertFalse(StravaUploader.isDefaultStravaName(""))
+        assertFalse(StravaUploader.isDefaultStravaName(null))
+    }
+
+    @Test
+    fun testDuplicateWithStravaDefaultNamePreservesLocalAppNameAndProtectsStrava() {
+        val fileBaseName = "2024-05-12_10-15-30"
+        setupMockCursor(workoutName = "Hausrunde #3", fileBaseName = fileBaseName)
+
+        val stravaResponse = JSONObject().apply {
+            put("id", 987654321L)
+            put("name", "Radfahrt am Morgen")
+            put("type", "Ride")
+            put("sport_type", "Ride")
+        }
+
+        val uploader = TestableStravaUploader(mockContext, stravaResponse) { requestMap ->
+            capturedStravaRequests.add(requestMap)
+        }
+
+        val exportInfo = ExportInfo(fileBaseName, FileFormat.STRAVA, ExportType.COMMUNITY)
+        val result = uploader.doUpdate(exportInfo, isDuplicate = true)
+
+        assertTrue("Update must succeed", result.success())
+
+        // 1. Verify Strava update form request does NOT contain "name" (protects Strava)
+        val metadataUpdate = capturedStravaRequests.last()
+        assertFalse("Duplicate update must NOT send name to Strava", metadataUpdate.containsKey("name"))
+
+        // 2. Verify local SQLite WORKOUT_NAME was NOT updated because Strava name is default
+        assertTrue(
+            "SQLite must NOT update workout name when Strava title is default",
+            capturedUpdatedValues.isEmpty() || !capturedUpdatedValues.first().containsKey(WorkoutSummaries.WORKOUT_NAME)
+        )
+    }
+
+    @Test
+    fun testDuplicateWithStravaDefaultNameAndEmojiPreservesLocalAppName() {
+        val fileBaseName = "2024-05-12_10-15-30"
+        setupMockCursor(workoutName = "Feierabendrunde", fileBaseName = fileBaseName)
+
+        val stravaResponse = JSONObject().apply {
+            put("id", 987654321L)
+            put("name", "Lauf am Abend ⛅")
+            put("type", "Ride")
+            put("sport_type", "Ride")
+        }
+
+        val uploader = TestableStravaUploader(mockContext, stravaResponse) { requestMap ->
+            capturedStravaRequests.add(requestMap)
+        }
+
+        val exportInfo = ExportInfo(fileBaseName, FileFormat.STRAVA, ExportType.COMMUNITY)
+        val result = uploader.doUpdate(exportInfo, isDuplicate = true)
+
+        assertTrue("Update must succeed", result.success())
+
+        // 1. Verify Strava update form request does NOT contain "name"
+        val metadataUpdate = capturedStravaRequests.last()
+        assertFalse("Duplicate update must NOT send name to Strava", metadataUpdate.containsKey("name"))
+
+        // 2. Verify local SQLite WORKOUT_NAME was NOT updated because Strava name is default
+        assertTrue(
+            "SQLite must NOT update workout name when Strava title is default with emoji",
+            capturedUpdatedValues.isEmpty() || !capturedUpdatedValues.first().containsKey(WorkoutSummaries.WORKOUT_NAME)
+        )
+    }
 }
