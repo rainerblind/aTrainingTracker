@@ -24,6 +24,7 @@ gen/
 
 # Intellij files (Android Studio)
 *.iml
+.vscode/
 
 # Python cache
 __pycache__/
