@@ -42,6 +42,8 @@ import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -59,6 +61,7 @@ class StravaUploaderNamingTest {
 
     private val capturedUpdatedValues = mutableListOf<ContentValues>()
     private val capturedStravaRequests = mutableListOf<Map<String, String>>()
+    private val capturedDuplicateActivityIds = mutableListOf<String>()
     private val contentValueStores = java.util.Collections.synchronizedMap(java.util.IdentityHashMap<ContentValues, MutableMap<String, Any?>>())
 
     private fun io.mockk.MockKAnswerScope<*, *>.getRealInstance(): ContentValues {
@@ -132,6 +135,7 @@ class StravaUploaderNamingTest {
 
         capturedUpdatedValues.clear()
         capturedStravaRequests.clear()
+        capturedDuplicateActivityIds.clear()
         contentValueStores.clear()
 
         mockkConstructor(ContentValues::class)
@@ -157,6 +161,7 @@ class StravaUploaderNamingTest {
         mockkConstructor(StravaUploadDbHelper::class)
         every { anyConstructed<StravaUploadDbHelper>().getActivityId(any()) } returns "987654321"
         every { anyConstructed<StravaUploadDbHelper>().updateStravaActivityData(any(), any()) } returns Unit
+        every { anyConstructed<StravaUploadDbHelper>().updateAll(any(), any(), capture(capturedDuplicateActivityIds), any(), any()) } returns Unit
         every { mockSqlDb.update(WorkoutSummaries.TABLE, capture(capturedUpdatedValues), any(), any()) } returns 1
     }
 
@@ -263,7 +268,39 @@ class StravaUploaderNamingTest {
     }
 
     @Test
-    fun testDuplicateWithCustomNameProtectsStravaName() {
+    fun testDuplicateWithTcxImportedNameEnrichesLocalAndProtectsStrava() {
+        val fileBaseName = "2024-05-12_10-15-30"
+        // Simulates TCX import where <Name> tag sets workoutName to "Cycling"
+        setupMockCursor(workoutName = "Cycling", fileBaseName = fileBaseName)
+
+        val stravaResponse = JSONObject().apply {
+            put("id", 987654321L)
+            put("name", "Sunday Club Ride")
+            put("type", "Ride")
+            put("sport_type", "Ride")
+        }
+
+        val uploader = TestableStravaUploader(mockContext, stravaResponse) { requestMap ->
+            capturedStravaRequests.add(requestMap)
+        }
+
+        val exportInfo = ExportInfo(fileBaseName, FileFormat.STRAVA, ExportType.COMMUNITY)
+        val result = uploader.doUpdate(exportInfo, isDuplicate = true)
+
+        assertTrue("Update must succeed", result.success())
+
+        // 1. Verify Strava update form request does NOT contain "name" (protects Strava title)
+        val metadataUpdate = capturedStravaRequests.last()
+        assertFalse("Duplicate update must NOT send name to Strava", metadataUpdate.containsKey("name"))
+
+        // 2. Verify SQLite WorkoutSummaries.WORKOUT_NAME was enriched with Strava's title
+        assertTrue("SQLite must be updated with enriched Strava name", capturedUpdatedValues.isNotEmpty())
+        val updatedName = capturedUpdatedValues.first().getAsString(WorkoutSummaries.WORKOUT_NAME)
+        assertEquals("Sunday Club Ride", updatedName)
+    }
+
+    @Test
+    fun testDuplicateWithCustomNameProtectsStravaNameAndEnrichesLocal() {
         val fileBaseName = "2024-05-12_10-15-30"
         setupMockCursor(workoutName = "Local Custom Workout", fileBaseName = fileBaseName)
 
@@ -287,8 +324,90 @@ class StravaUploaderNamingTest {
         val metadataUpdate = capturedStravaRequests.last()
         assertFalse("Duplicate update must NOT send name to Strava", metadataUpdate.containsKey("name"))
 
-        // 2. Local custom name must NOT be overwritten by Strava name
-        assertTrue("SQLite must NOT update local custom name", capturedUpdatedValues.isEmpty())
+        // 2. Strava title is authoritative and enriches local SQLite
+        assertTrue("SQLite must be updated with Strava name on duplicate", capturedUpdatedValues.isNotEmpty())
+        val updatedName = capturedUpdatedValues.first().getAsString(WorkoutSummaries.WORKOUT_NAME)
+        assertEquals("Tuesday Track on Strava", updatedName)
+    }
+
+    @Test
+    fun testDuplicateDetectionInErrorField() {
+        val fileBaseName = "2024-05-12_10-15-30"
+        setupMockCursor(workoutName = fileBaseName, fileBaseName = fileBaseName)
+
+        val uploader = TestableStravaUploader(mockContext, null) { requestMap ->
+            capturedStravaRequests.add(requestMap)
+        }
+
+        val exportInfo = ExportInfo(fileBaseName, FileFormat.STRAVA, ExportType.COMMUNITY)
+        val duplicateJson = JSONObject().apply {
+            put("id", "upload_123")
+            put("error", "activity.tcx duplicate of activity 119487747")
+        }
+
+        val result = uploader.checkAndUpdateDuplicate(exportInfo, duplicateJson)
+        assertNotNull("Must detect duplicate from error field", result)
+        assertTrue("Duplicate handling must succeed", result!!.success())
+        assertEquals("119487747", capturedDuplicateActivityIds.last())
+    }
+
+    @Test
+    fun testDuplicateDetectionInStatusField() {
+        val fileBaseName = "2024-05-12_10-15-30"
+        setupMockCursor(workoutName = fileBaseName, fileBaseName = fileBaseName)
+
+        val uploader = TestableStravaUploader(mockContext, null) { requestMap ->
+            capturedStravaRequests.add(requestMap)
+        }
+
+        val exportInfo = ExportInfo(fileBaseName, FileFormat.STRAVA, ExportType.COMMUNITY)
+        val duplicateJson = JSONObject().apply {
+            put("id", "upload_456")
+            put("status", "activity.tcx duplicate of activity 654321")
+        }
+
+        val result = uploader.checkAndUpdateDuplicate(exportInfo, duplicateJson)
+        assertNotNull("Must detect duplicate from status field", result)
+        assertTrue("Duplicate handling must succeed", result!!.success())
+        assertEquals("654321", capturedDuplicateActivityIds.last())
+    }
+
+    @Test
+    fun testDuplicateDetectionWithDirectIdPhrasing() {
+        val fileBaseName = "2024-05-12_10-15-30"
+        setupMockCursor(workoutName = fileBaseName, fileBaseName = fileBaseName)
+
+        val uploader = TestableStravaUploader(mockContext, null) { requestMap ->
+            capturedStravaRequests.add(requestMap)
+        }
+
+        val exportInfo = ExportInfo(fileBaseName, FileFormat.STRAVA, ExportType.COMMUNITY)
+        val duplicateJson = JSONObject().apply {
+            put("id", "upload_789")
+            put("error", "duplicate of 778899")
+        }
+
+        val result = uploader.checkAndUpdateDuplicate(exportInfo, duplicateJson)
+        assertNotNull("Must detect duplicate with direct ID phrasing", result)
+        assertTrue("Duplicate handling must succeed", result!!.success())
+        assertEquals("778899", capturedDuplicateActivityIds.last())
+    }
+
+    @Test
+    fun testNonDuplicateReturnsNull() {
+        val fileBaseName = "2024-05-12_10-15-30"
+        setupMockCursor(workoutName = fileBaseName, fileBaseName = fileBaseName)
+
+        val uploader = TestableStravaUploader(mockContext, null) { }
+        val exportInfo = ExportInfo(fileBaseName, FileFormat.STRAVA, ExportType.COMMUNITY)
+
+        val errorJson = JSONObject().apply {
+            put("id", "upload_000")
+            put("error", "Rate limit exceeded")
+        }
+
+        val result = uploader.checkAndUpdateDuplicate(exportInfo, errorJson)
+        assertNull("Non-duplicate error must return null", result)
     }
 
     @Test

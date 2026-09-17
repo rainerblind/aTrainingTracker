@@ -135,6 +135,11 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
 
         val uploadResponseJson = JSONObject(responseBody)
 
+        val initialDuplicate = checkAndUpdateDuplicate(exportInfo, uploadResponseJson)
+        if (initialDuplicate != null) {
+            return initialDuplicate
+        }
+
         if (uploadResponseJson.has(ERROR) && !uploadResponseJson.isNull(ERROR) && uploadResponseJson.getString(ERROR) != "null") {
             return ExportResult(false, false, uploadResponseJson.getString(ERROR))  // probably something strange -> do not retry
         } else if (uploadResponseJson.has(ID)) {
@@ -159,11 +164,14 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
                     continue
                 }
 
-                if (uploadStatusJsonAnswer.has(ERROR) && !uploadStatusJsonAnswer.isNull(ERROR) && uploadStatusJsonAnswer.getString(ERROR) != "null") {
-                    // maybe, the error is due to a duplicate.
-                    exportResult = checkAndUpdateDuplicate(exportInfo, uploadStatusJsonAnswer)
-                    if (exportResult != null) break
+                // Check for duplicate response across error or status fields first
+                val duplicateResult = checkAndUpdateDuplicate(exportInfo, uploadStatusJsonAnswer)
+                if (duplicateResult != null) {
+                    exportResult = duplicateResult
+                    break
+                }
 
+                if (uploadStatusJsonAnswer.has(ERROR) && !uploadStatusJsonAnswer.isNull(ERROR) && uploadStatusJsonAnswer.getString(ERROR) != "null") {
                     exportResult = ExportResult(false, false, uploadStatusJsonAnswer.getString(ERROR)) // do not retry
                 } else if (uploadStatusJsonAnswer.has(STATUS)) {
                     val status = uploadStatusJsonAnswer.getString(STATUS)
@@ -176,10 +184,6 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
                         STATUS_PROCESSING -> { /* continue waiting */ }
                         STATUS_DELETED -> exportResult = ExportResult(false, false,STATUS_DELETED) // do not retry
                         STATUS_ERROR -> {
-                            // maybe, the error is due to a duplicate.
-                            exportResult = checkAndUpdateDuplicate(exportInfo, uploadStatusJsonAnswer)
-                            if (exportResult != null) break
-
                             exportResult = ExportResult(false, false, uploadStatusJsonAnswer.optString(ERROR, "Unknown Error")) // do not retry
                         }
                         STATUS_READY -> {
@@ -203,33 +207,36 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
     internal open fun checkAndUpdateDuplicate(exportInfo: ExportInfo, stravaJson: JSONObject): ExportResult? {
         if (DEBUG) Log.d(TAG, "checkAndUpdateDuplicate")
 
-        // Handles both:
+        // Handles variants like:
         // 1. "duplicate of <a href='\/activities\/16877339482"
         // 2. "duplicate of activity 119487747"
+        // 3. "activity.tcx duplicate of 119487747"
+        // Whether returned in 'error' or 'status' fields.
 
-        if (stravaJson.has(ERROR)) {
+        val errorMsg = if (stravaJson.has(ERROR) && !stravaJson.isNull(ERROR)) stravaJson.optString(ERROR) else ""
+        val statusMsg = if (stravaJson.has(STATUS) && !stravaJson.isNull(STATUS)) stravaJson.optString(STATUS) else ""
+        val combinedText = "$errorMsg $statusMsg"
+
+        val regex = "duplicate of.*?(\\d+)".toRegex(RegexOption.IGNORE_CASE)
+        val matchResult = regex.find(combinedText)
+
+        if (matchResult != null) {
+            // groupValues[1] contains the ID from the (\d+) capture group
+            val activityId = matchResult.groupValues[1]
             val id = stravaJson.optString(ID)
-            val error = stravaJson.getString(ERROR)
+            val errorOrStatus = if (errorMsg.isNotBlank() && errorMsg != "null") errorMsg else statusMsg
 
-            val regex = "duplicate of.*?(?:activity|activities)\\D+(\\d+)".toRegex(RegexOption.IGNORE_CASE)
-            val matchResult = regex.find(error)
+            if (DEBUG) Log.i(TAG, "activity_id=$activityId")
 
-            if (matchResult != null) {
-                // groupValues[1] contains the ID from the (\d+) capture group
-                val activityId = matchResult.groupValues[1]
+            StravaUploadDbHelper(mContext).updateAll(
+                exportInfo.fileBaseName,
+                id,
+                activityId,
+                errorOrStatus,
+                stravaJson.toString()
+            )
 
-                if (DEBUG) Log.i(TAG, "activity_id=$activityId")
-
-                StravaUploadDbHelper(mContext).updateAll(
-                    exportInfo.fileBaseName,
-                    id,
-                    activityId,
-                    error,
-                    stravaJson.toString()
-                )
-
-                return doUpdate(exportInfo, isDuplicate = true)
-            }
+            return doUpdate(exportInfo, isDuplicate = true)
         }
 
         return null
@@ -307,10 +314,10 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         // SAVE STRAVA ACTIVITY DATA
         StravaUploadDbHelper(mContext).updateStravaActivityData(exportInfo.fileBaseName, activityJSON.toString())
 
-        // ATT-902 / REQ-EXP-008: If duplicate, enrich local database from Strava if local name is unassigned or raw timestamp
+        // ATT-902 / ATT-1105 / REQ-EXP-008: If duplicate, unconditionally enrich local database from Strava
         if (isDuplicate && activityJSON != null) {
             val stravaName = activityJSON.optString(NAME)
-            if (!stravaName.isNullOrBlank() && (name.isNullOrBlank() || name == exportInfo.fileBaseName)) {
+            if (!stravaName.isNullOrBlank()) {
                 val updateValues = ContentValues().apply {
                     put(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME, stravaName)
                 }
