@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.exporter.uploader
 
+import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.util.Log
@@ -40,7 +41,7 @@ import org.json.JSONObject
 import java.io.File
 import java.io.IOException
 
-class StravaUploader(context: Context) : BaseExporter(context) {
+open class StravaUploader @JvmOverloads constructor(context: Context, internal var client: OkHttpClient = OkHttpClient()) : BaseExporter(context) {
 
     companion object {
         private const val TAG = "StravaUploader"
@@ -77,9 +78,6 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         private const val STATUS_ERROR = "There was an error processing your activity."
         private const val STATUS_READY = "Your activity is ready."
     }
-
-    private val client = OkHttpClient()
-
 
     override fun doExport(exportInfo: ExportInfo): ExportResult {
         if (DEBUG) Log.d(TAG, "doExport: ${exportInfo.fileBaseName}")
@@ -188,7 +186,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
                             val activityId = uploadStatusJsonAnswer.optString(ACTIVITY_ID)
                             if (!activityId.isNullOrEmpty()) {
                                 stravaUploadDbHelper.updateActivityId(exportInfo.fileBaseName, activityId)
-                                exportResult = doUpdate(exportInfo)
+                                exportResult = doUpdate(exportInfo, isDuplicate = false)
                             } else {
                                 if (DEBUG) Log.e(TAG, "Status ready but no activity_id?")
                                 exportResult = ExportResult(true, false, "Status ready but no activity_id?")  // success -> no need for retry
@@ -202,7 +200,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         return ExportResult(false, false, "Unknown response format from Strava")  // do not retry
     }
 
-    private fun checkAndUpdateDuplicate(exportInfo: ExportInfo, stravaJson: JSONObject): ExportResult? {
+    internal open fun checkAndUpdateDuplicate(exportInfo: ExportInfo, stravaJson: JSONObject): ExportResult? {
         if (DEBUG) Log.d(TAG, "checkAndUpdateDuplicate")
 
         // Handles both:
@@ -230,15 +228,15 @@ class StravaUploader(context: Context) : BaseExporter(context) {
                     stravaJson.toString()
                 )
 
-                return doUpdate(exportInfo)
+                return doUpdate(exportInfo, isDuplicate = true)
             }
         }
 
         return null
     }
 
-    protected fun doUpdate(exportInfo: ExportInfo): ExportResult {
-        if (DEBUG) Log.d(TAG, "doUpdate: ${exportInfo.fileBaseName}")
+    internal open fun doUpdate(exportInfo: ExportInfo, isDuplicate: Boolean = false): ExportResult {
+        if (DEBUG) Log.d(TAG, "doUpdate: ${exportInfo.fileBaseName}, isDuplicate: $isDuplicate")
 
         val activityId = StravaUploadDbHelper(mContext).getActivityId(exportInfo.fileBaseName)
         if (activityId.isNullOrEmpty()) {
@@ -275,7 +273,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         val eqIndex = cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.EQUIPMENT_ID)
         val gearId: String? = if (!cursor.isNull(eqIndex)) {
             val eqId = cursor.getLong(eqIndex)
-            if (eqId > 0) EquipmentDbHelper(mContext).getStravaIdFromId(eqId) else null
+            getGearId(eqId)
         } else null
 
         cursor.close()
@@ -309,11 +307,31 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         // SAVE STRAVA ACTIVITY DATA
         StravaUploadDbHelper(mContext).updateStravaActivityData(exportInfo.fileBaseName, activityJSON.toString())
 
+        // ATT-902 / REQ-EXP-008: If duplicate, enrich local database from Strava if local name is unassigned or raw timestamp
+        if (isDuplicate && activityJSON != null) {
+            val stravaName = activityJSON.optString(NAME)
+            if (!stravaName.isNullOrBlank() && (name.isNullOrBlank() || name == exportInfo.fileBaseName)) {
+                val updateValues = ContentValues().apply {
+                    put(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME, stravaName)
+                }
+                db.update(
+                    WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                    updateValues,
+                    "${WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME}=?",
+                    arrayOf(exportInfo.fileBaseName)
+                )
+                if (DEBUG) Log.i(TAG, "Enriched local workout name from Strava: '$stravaName'")
+            }
+        }
+
         // Now, that we are pretty sure that the sport type is correct, we can continue to update all other fields.
         // Prepare Form Body for metadata update
         val formBuilder = FormBody.Builder()
 
-        if (!name.isNullOrEmpty()) {
+        // ATT-902 / REQ-EXP-008: Smart Asymmetric Strategy:
+        // - If duplicate: NEVER send name (preserve Strava title as authoritative).
+        // - If fresh upload: only send name if it is meaningful (not blank and not equal to raw fileBaseName).
+        if (!isDuplicate && !name.isNullOrBlank() && name != exportInfo.fileBaseName) {
             formBuilder.add(NAME, name)
         }
         if (!gearId.isNullOrEmpty()) {
@@ -344,7 +362,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         // TODO: Verify???
     }
 
-    private fun updateStravaActivity(stravaActivityId: String, requestBody: RequestBody): JSONObject? {
+    internal open fun updateStravaActivity(stravaActivityId: String, requestBody: RequestBody): JSONObject? {
         if (DEBUG) Log.i(TAG, "updateStravaActivity $stravaActivityId")
 
         val request = Request.Builder()
@@ -368,8 +386,12 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         }
     }
 
-    private fun getStravaActivity(stravaActivityId: String): JSONObject? {
+    internal open fun getStravaActivity(stravaActivityId: String): JSONObject? {
         return getStravaJson(URL_STRAVA_ACTIVITY + stravaActivityId)
+    }
+
+    internal open fun getGearId(eqId: Long): String? {
+        return if (eqId > 0) EquipmentDbHelper(mContext).getStravaIdFromId(eqId) else null
     }
 
     private fun getStravaUploadStatus(uploadId: String): JSONObject? {
