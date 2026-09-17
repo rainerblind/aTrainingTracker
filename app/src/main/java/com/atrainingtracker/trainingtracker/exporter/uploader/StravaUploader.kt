@@ -37,6 +37,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
@@ -49,6 +50,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
 
         private const val URL_STRAVA_UPLOAD = "https://www.strava.com/api/v3/uploads"
         private const val URL_STRAVA_ACTIVITY = "https://www.strava.com/api/v3/activities/"
+        private const val URL_STRAVA_ATHLETE_ACTIVITIES = "https://www.strava.com/api/v3/athlete/activities"
 
         private const val MAX_REQUESTS = 10
         private const val INITIAL_WAITING_TIME = 1000L // 1 seconds
@@ -77,6 +79,89 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         private const val STATUS_DELETED = "The created activity has been deleted."
         private const val STATUS_ERROR = "There was an error processing your activity."
         private const val STATUS_READY = "Your activity is ready."
+
+        // ATT-1105 / REQ-EXP-008: Strava default name patterns across all supported languages
+        private val EMOJI_CLEANUP_REGEX = """[\p{So}\p{Sk}\u2600-\u27BF\uFE00-\uFE0F]|\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDE4F]|\uD83E[\uDD00-\uDFFF]""".toRegex()
+
+        // German
+        private const val GERMAN_SPORTS = "(?:Radfahrt|Fahrt|Ausfahrt|Rennradfahrt|Mountainbike-Fahrt|Gravel-Fahrt|E-Bike-Fahrt|Lauf|Dauerlauf|Wanderung|Spaziergang|Training|Schwimmen|Workout|Aktivität|Krafttraining|Yoga|Rollerski)"
+        private const val GERMAN_TIME_OF_DAY = "(?:am\\s+(?:Morgen|Vormittag|Mittag|Nachmittag|Abend)|in\\s+der\\s+Nacht|nachts)"
+        private val GERMAN_DEFAULT_PATTERN_1 = "^$GERMAN_SPORTS\\s+$GERMAN_TIME_OF_DAY$".toRegex(RegexOption.IGNORE_CASE)
+
+        private const val GERMAN_TIME_PREFIX = "(?:Morgen|Vormittags?|Mittags?|Nachmittags?|Abend|Nacht)"
+        private val GERMAN_DEFAULT_PATTERN_2 = "^$GERMAN_TIME_PREFIX(?:-|\\s+)$GERMAN_SPORTS$".toRegex(RegexOption.IGNORE_CASE)
+
+        // English
+        private const val ENGLISH_TIME_PREFIX = "(?:Morning|Lunch|Afternoon|Evening|Night)"
+        private const val ENGLISH_SPORTS = "(?:Ride|Run|Walk|Hike|Swim|Workout|Activity|Weight\\s+Training|Weight\\s+Session|Gravel\\s+Ride|Mountain\\s+Bike\\s+Ride|E-Bike\\s+Ride|Virtual\\s+Ride|Virtual\\s+Run|Row|Rowing|Paddle|Yoga)"
+        private val ENGLISH_DEFAULT_PATTERN = "^$ENGLISH_TIME_PREFIX\\s+$ENGLISH_SPORTS$".toRegex(RegexOption.IGNORE_CASE)
+
+        // French
+        private const val FRENCH_SPORTS = "(?:Sortie\\s+vélo|Course\\s+à\\s+pied|Course|Marche|Randonnée|Natation|Entraînement|Activité)"
+        private const val FRENCH_TIME = "(?:le\\s+matin|en\\s+matinée|à\\s+midi|l'après-midi|en\\s+soirée|le\\s+soir|la\\s+nuit)"
+        private val FRENCH_DEFAULT_PATTERN = "^$FRENCH_SPORTS\\s+$FRENCH_TIME$".toRegex(RegexOption.IGNORE_CASE)
+
+        // Spanish
+        private const val SPANISH_SPORTS = "(?:Salida\\s+(?:en\\s+)?(?:bicicleta|bici)|Carrera|Paseo|Caminata|Ruta\\s+a\\s+pie|Ruta\\s+en\\s+(?:bici|bicicleta)|Natación|Entrenamiento|Actividad)"
+        private const val SPANISH_TIME = "(?:por\\s+la\\s+(?:mañana|tarde|noche)|al\\s+mediodía|del\\s+mediodía)"
+        private val SPANISH_DEFAULT_PATTERN_1 = "^$SPANISH_SPORTS\\s+$SPANISH_TIME$".toRegex(RegexOption.IGNORE_CASE)
+        private const val SPANISH_ADJECTIVE = "(?:matutin[ao]|vespertin[ao]|nocturn[ao])"
+        private val SPANISH_DEFAULT_PATTERN_2 = "^(?:Salida|Carrera|Paseo|Caminata|Ruta|Natación|Entrenamiento|Actividad)\\s+$SPANISH_ADJECTIVE$".toRegex(RegexOption.IGNORE_CASE)
+
+        // Italian
+        private const val ITALIAN_SPORTS = "(?:Giro|Corsa|Camminata|Nuotata|Passeggiata|Escursione|Attività|Allenamento)"
+        private const val ITALIAN_ADJECTIVES = "(?:mattutin[oa]|pomeridian[oa]|serale|notturn[oa])"
+        private val ITALIAN_DEFAULT_PATTERN_1 = "^$ITALIAN_SPORTS\\s+$ITALIAN_ADJECTIVES$".toRegex(RegexOption.IGNORE_CASE)
+        private const val ITALIAN_TIME = "(?:del\\s+mattino|del\\s+pomeriggio|della\\s+sera|di\\s+notte|a\\s+pranzo|di\\s+mezzogiorno)"
+        private val ITALIAN_DEFAULT_PATTERN_2 = "^$ITALIAN_SPORTS\\s+$ITALIAN_TIME$".toRegex(RegexOption.IGNORE_CASE)
+
+        // Portuguese
+        private const val PORTUGUESE_SPORTS = "(?:Pedalada|Corrida|Caminhada|Trilha|Natação|Treino|Atividade)"
+        private const val PORTUGUESE_ADJECTIVES = "(?:matinal|vespertin[ao]|noturn[ao])"
+        private val PORTUGUESE_DEFAULT_PATTERN_1 = "^$PORTUGUESE_SPORTS\\s+$PORTUGUESE_ADJECTIVES$".toRegex(RegexOption.IGNORE_CASE)
+        private const val PORTUGUESE_TIME = "(?:de\\s+manhã|à\\s+tarde|ao\\s+meio-dia|à\\s+noite)"
+        private val PORTUGUESE_DEFAULT_PATTERN_2 = "^$PORTUGUESE_SPORTS\\s+$PORTUGUESE_TIME$".toRegex(RegexOption.IGNORE_CASE)
+
+        // Dutch
+        private const val DUTCH_TIME_PREFIX = "(?:Ochtend|Middag|Namiddag|Avond|Nacht|Lunch)"
+        private const val DUTCH_SPORTS = "(?:rit|fietstocht|loop|hardloopsessie|wandeling|zwemsessie|training|workout|activiteit)"
+        private val DUTCH_DEFAULT_PATTERN = "^$DUTCH_TIME_PREFIX(?:-|\\s+)?$DUTCH_SPORTS$".toRegex(RegexOption.IGNORE_CASE)
+
+        // Polish
+        private const val POLISH_ADJECTIVES = "(?:Porann[ay]|Popołudniow[ay]|Wieczorn[ay]|Nocn[ay]|Południow[ay])"
+        private const val POLISH_SPORTS = "(?:jazda(?:\\s+na\\s+rowerze)?|bieg|spacer|wędrówka|trening|pływanie|aktywność)"
+        private val POLISH_DEFAULT_PATTERN = "^$POLISH_ADJECTIVES\\s+$POLISH_SPORTS$".toRegex(RegexOption.IGNORE_CASE)
+
+        // Japanese
+        private const val JAPANESE_TIME_PREFIX = "(?:朝|午前|昼|午後|夕方|夜|ナイト)"
+        private const val JAPANESE_SPORTS = "(?:サイクリング|ライド|ラン|ウォーク|ウォーキング|ハイキング|スイム|ワークアウト|アクティビティ|トレーニング)"
+        private val JAPANESE_DEFAULT_PATTERN = "^$JAPANESE_TIME_PREFIX(?:の)?$JAPANESE_SPORTS$".toRegex(RegexOption.IGNORE_CASE)
+
+        /**
+         * Determines whether a given Strava activity name corresponds to an auto-generated
+         * localized default title across all supported languages (German, English, French,
+         * Spanish, Italian, Portuguese, Dutch, Polish, Japanese).
+         *
+         * @param name The activity name returned from Strava.
+         * @return True if the name matches a known Strava auto-generated default template, false if custom.
+         */
+        fun isDefaultStravaName(name: String?): Boolean {
+            if (name.isNullOrBlank()) return false
+            val cleaned = name.replace(EMOJI_CLEANUP_REGEX, "").trim()
+            return GERMAN_DEFAULT_PATTERN_1.matches(cleaned) ||
+                   GERMAN_DEFAULT_PATTERN_2.matches(cleaned) ||
+                   ENGLISH_DEFAULT_PATTERN.matches(cleaned) ||
+                   FRENCH_DEFAULT_PATTERN.matches(cleaned) ||
+                   SPANISH_DEFAULT_PATTERN_1.matches(cleaned) ||
+                   SPANISH_DEFAULT_PATTERN_2.matches(cleaned) ||
+                   ITALIAN_DEFAULT_PATTERN_1.matches(cleaned) ||
+                   ITALIAN_DEFAULT_PATTERN_2.matches(cleaned) ||
+                   PORTUGUESE_DEFAULT_PATTERN_1.matches(cleaned) ||
+                   PORTUGUESE_DEFAULT_PATTERN_2.matches(cleaned) ||
+                   DUTCH_DEFAULT_PATTERN.matches(cleaned) ||
+                   POLISH_DEFAULT_PATTERN.matches(cleaned) ||
+                   JAPANESE_DEFAULT_PATTERN.matches(cleaned)
+        }
     }
 
     override fun doExport(exportInfo: ExportInfo): ExportResult {
@@ -87,6 +172,39 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
 
         if (accessToken.isNullOrEmpty()) {
             return ExportResult(false, false, "Could not refresh Strava Access Token. Please log in again.")
+        }
+
+        // ATT-1105 / REQ-EXP-008: Check if activity is already recorded in local Strava DB
+        val stravaUploadDbHelper = StravaUploadDbHelper(mContext)
+        val existingDbActivityId = stravaUploadDbHelper.getActivityId(exportInfo.fileBaseName)
+        if (!existingDbActivityId.isNullOrEmpty()) {
+            if (DEBUG) Log.i(TAG, "Activity already tracked locally as Strava ID $existingDbActivityId. Testing update.")
+            val updateResult = doUpdate(exportInfo, isDuplicate = true)
+            if (updateResult.success()) {
+                return updateResult
+            }
+            // If updating failed (e.g. deleted activity on Strava returning 404),
+            // the locally cached activityId is stale. Clear stale record and fall through to pre-upload duplicate discovery!
+            Log.w(TAG, "Local Strava activity $existingDbActivityId could not be updated (${updateResult.answer()}). Clearing stale record and searching Strava.")
+            stravaUploadDbHelper.deleteWorkout(exportInfo.fileBaseName)
+        }
+
+        // ATT-1105 / REQ-EXP-008: Pre-upload duplicate discovery
+        // Query Strava to see if an activity already exists around the workout's start time.
+        val existingStravaActivity = findExistingStravaActivityForWorkout(exportInfo.fileBaseName)
+        if (existingStravaActivity != null) {
+            val activityId = existingStravaActivity.optString(ID).ifBlank { existingStravaActivity.optString("id") }
+            if (activityId.isNotBlank()) {
+                if (DEBUG) Log.i(TAG, "Found pre-existing Strava activity $activityId ('${existingStravaActivity.optString(NAME)}') for ${exportInfo.fileBaseName}. Bypassing TCX upload.")
+                StravaUploadDbHelper(mContext).updateAll(
+                    exportInfo.fileBaseName,
+                    activityId,
+                    activityId,
+                    "Pre-existing activity found on Strava",
+                    existingStravaActivity.toString()
+                )
+                return doUpdate(exportInfo, isDuplicate = true)
+            }
         }
 
         if (DEBUG) Log.d(TAG, "starting to upload to strava")
@@ -135,6 +253,11 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
 
         val uploadResponseJson = JSONObject(responseBody)
 
+        val initialDuplicate = checkAndUpdateDuplicate(exportInfo, uploadResponseJson)
+        if (initialDuplicate != null) {
+            return initialDuplicate
+        }
+
         if (uploadResponseJson.has(ERROR) && !uploadResponseJson.isNull(ERROR) && uploadResponseJson.getString(ERROR) != "null") {
             return ExportResult(false, false, uploadResponseJson.getString(ERROR))  // probably something strange -> do not retry
         } else if (uploadResponseJson.has(ID)) {
@@ -159,11 +282,14 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
                     continue
                 }
 
-                if (uploadStatusJsonAnswer.has(ERROR) && !uploadStatusJsonAnswer.isNull(ERROR) && uploadStatusJsonAnswer.getString(ERROR) != "null") {
-                    // maybe, the error is due to a duplicate.
-                    exportResult = checkAndUpdateDuplicate(exportInfo, uploadStatusJsonAnswer)
-                    if (exportResult != null) break
+                // Check for duplicate response across error or status fields first
+                val duplicateResult = checkAndUpdateDuplicate(exportInfo, uploadStatusJsonAnswer)
+                if (duplicateResult != null) {
+                    exportResult = duplicateResult
+                    break
+                }
 
+                if (uploadStatusJsonAnswer.has(ERROR) && !uploadStatusJsonAnswer.isNull(ERROR) && uploadStatusJsonAnswer.getString(ERROR) != "null") {
                     exportResult = ExportResult(false, false, uploadStatusJsonAnswer.getString(ERROR)) // do not retry
                 } else if (uploadStatusJsonAnswer.has(STATUS)) {
                     val status = uploadStatusJsonAnswer.getString(STATUS)
@@ -176,10 +302,6 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
                         STATUS_PROCESSING -> { /* continue waiting */ }
                         STATUS_DELETED -> exportResult = ExportResult(false, false,STATUS_DELETED) // do not retry
                         STATUS_ERROR -> {
-                            // maybe, the error is due to a duplicate.
-                            exportResult = checkAndUpdateDuplicate(exportInfo, uploadStatusJsonAnswer)
-                            if (exportResult != null) break
-
                             exportResult = ExportResult(false, false, uploadStatusJsonAnswer.optString(ERROR, "Unknown Error")) // do not retry
                         }
                         STATUS_READY -> {
@@ -203,33 +325,36 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
     internal open fun checkAndUpdateDuplicate(exportInfo: ExportInfo, stravaJson: JSONObject): ExportResult? {
         if (DEBUG) Log.d(TAG, "checkAndUpdateDuplicate")
 
-        // Handles both:
+        // Handles variants like:
         // 1. "duplicate of <a href='\/activities\/16877339482"
         // 2. "duplicate of activity 119487747"
+        // 3. "activity.tcx duplicate of 119487747"
+        // Whether returned in 'error' or 'status' fields.
 
-        if (stravaJson.has(ERROR)) {
+        val errorMsg = if (stravaJson.has(ERROR) && !stravaJson.isNull(ERROR)) stravaJson.optString(ERROR) else ""
+        val statusMsg = if (stravaJson.has(STATUS) && !stravaJson.isNull(STATUS)) stravaJson.optString(STATUS) else ""
+        val combinedText = "$errorMsg $statusMsg"
+
+        val regex = "duplicate of.*?(\\d+)".toRegex(RegexOption.IGNORE_CASE)
+        val matchResult = regex.find(combinedText)
+
+        if (matchResult != null) {
+            // groupValues[1] contains the ID from the (\d+) capture group
+            val activityId = matchResult.groupValues[1]
             val id = stravaJson.optString(ID)
-            val error = stravaJson.getString(ERROR)
+            val errorOrStatus = if (errorMsg.isNotBlank() && errorMsg != "null") errorMsg else statusMsg
 
-            val regex = "duplicate of.*?(?:activity|activities)\\D+(\\d+)".toRegex(RegexOption.IGNORE_CASE)
-            val matchResult = regex.find(error)
+            if (DEBUG) Log.i(TAG, "activity_id=$activityId")
 
-            if (matchResult != null) {
-                // groupValues[1] contains the ID from the (\d+) capture group
-                val activityId = matchResult.groupValues[1]
+            StravaUploadDbHelper(mContext).updateAll(
+                exportInfo.fileBaseName,
+                id,
+                activityId,
+                errorOrStatus,
+                stravaJson.toString()
+            )
 
-                if (DEBUG) Log.i(TAG, "activity_id=$activityId")
-
-                StravaUploadDbHelper(mContext).updateAll(
-                    exportInfo.fileBaseName,
-                    id,
-                    activityId,
-                    error,
-                    stravaJson.toString()
-                )
-
-                return doUpdate(exportInfo, isDuplicate = true)
-            }
+            return doUpdate(exportInfo, isDuplicate = true)
         }
 
         return null
@@ -292,8 +417,8 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         for (attempt in 1..MAX_REQUESTS) {
             // Check both type and sport_type in the response
             if (activityJSON != null && (
-                sportName.equals(activityJSON?.optString(TYPE), ignoreCase = true) ||
-                sportName.equals(activityJSON?.optString(SPORT_TYPE), ignoreCase = true)
+                sportName.equals(activityJSON.optString(TYPE), ignoreCase = true) ||
+                sportName.equals(activityJSON.optString(SPORT_TYPE), ignoreCase = true)
             )) {
                 break
             }
@@ -307,10 +432,14 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         // SAVE STRAVA ACTIVITY DATA
         StravaUploadDbHelper(mContext).updateStravaActivityData(exportInfo.fileBaseName, activityJSON.toString())
 
-        // ATT-902 / REQ-EXP-008: If duplicate, enrich local database from Strava if local name is unassigned or raw timestamp
+        // ATT-902 / ATT-1105 / REQ-EXP-008: If duplicate, evaluate Strava title:
+        // - If Strava title is a default auto-generated name (e.g. "Radfahrt am Morgen", "Lauf am Abend ⛅"):
+        //   Keep the local name generated by the app (cluster name or TCX name); do not overwrite.
+        // - If Strava title is a custom name (not a Strava default):
+        //   Enrich local database with the custom Strava title.
         if (isDuplicate && activityJSON != null) {
             val stravaName = activityJSON.optString(NAME)
-            if (!stravaName.isNullOrBlank() && (name.isNullOrBlank() || name == exportInfo.fileBaseName)) {
+            if (!stravaName.isNullOrBlank() && !isDefaultStravaName(stravaName)) {
                 val updateValues = ContentValues().apply {
                     put(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME, stravaName)
                 }
@@ -320,7 +449,9 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
                     "${WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME}=?",
                     arrayOf(exportInfo.fileBaseName)
                 )
-                if (DEBUG) Log.i(TAG, "Enriched local workout name from Strava: '$stravaName'")
+                if (DEBUG) Log.i(TAG, "Enriched local workout name from custom Strava title: '$stravaName'")
+            } else if (isDefaultStravaName(stravaName)) {
+                if (DEBUG) Log.i(TAG, "Preserving local app workout name because Strava title is default: '$stravaName'")
             }
         }
 
@@ -350,7 +481,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         if (DEBUG) Log.i(TAG, "Update Result: $activityJSON")
 
         // Final feedback check: Is the activity flagged?
-        val isFlagged = activityJSON?.optBoolean("flagged", false) ?: false
+        val isFlagged = activityJSON.optBoolean("flagged", false)
         val message = if (isFlagged) {
             "successfully updated (Note: Activity is FLAGGED on Strava)"
         } else {
@@ -417,6 +548,113 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
             Log.e(TAG, "Error fetching JSON from $url", e)
             null
         }
+    }
+
+    internal open fun getStravaJsonArray(url: String): JSONArray? {
+        val request = Request.Builder()
+            .url(url)
+            .get()
+            .addHeader("Authorization", "Bearer ${StravaHelper.getRefreshedAccessToken()}")
+            .build()
+
+        return try {
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful && response.body != null) {
+                    JSONArray(response.body!!.string())
+                } else {
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching JSONArray from $url", e)
+            null
+        }
+    }
+
+    /**
+     * Searches Strava athlete activities for an existing activity matching the workout's start time.
+     * Searches a +/- 5-minute (300s) temporal window around the start timestamp.
+     */
+    internal open fun findExistingStravaActivityForWorkout(fileBaseName: String): JSONObject? {
+        val startEpochSeconds = getWorkoutStartEpochSeconds(fileBaseName) ?: return null
+        return findExistingStravaActivity(startEpochSeconds)
+    }
+
+    internal open fun getWorkoutStartEpochSeconds(fileBaseName: String): Long? {
+        val dbManager = WorkoutSummariesDatabaseManager.getInstance(mContext)
+        return try {
+            val cursor = dbManager.database.query(
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                arrayOf(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START),
+                "${WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME}=?",
+                arrayOf(fileBaseName),
+                null, null, null
+            )
+            val timeStartStr = cursor.use {
+                if (it.moveToFirst()) {
+                    val idx = it.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START)
+                    if (idx != -1 && !it.isNull(idx)) {
+                        it.getString(idx)
+                    } else if (!it.isNull(0)) {
+                        it.getString(0)
+                    } else null
+                } else null
+            } ?: fileBaseName
+
+            parseTimeToEpochSeconds(timeStartStr)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to query workout start epoch for $fileBaseName", e)
+            parseTimeToEpochSeconds(fileBaseName)
+        }
+    }
+
+    internal open fun parseTimeToEpochSeconds(timeStr: String): Long? {
+        // Try ISO 8601 (e.g. "2024-05-12T10:15:30Z")
+        try {
+            return java.time.Instant.parse(timeStr).epochSecond
+        } catch (_: Exception) { }
+
+        // Try SQLite format (e.g. "2024-05-12 10:15:30")
+        try {
+            val dbFormat = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.ROOT).apply {
+                timeZone = java.util.TimeZone.getTimeZone("UTC")
+            }
+            val parsed = dbFormat.parse(timeStr)?.time?.div(1000)
+            if (parsed != null) return parsed
+        } catch (_: Exception) { }
+
+        // Try fileBaseName format (e.g. "2024-05-12_10-15-30")
+        return try {
+            val fileFormat = java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", java.util.Locale.ROOT).apply {
+                timeZone = java.util.TimeZone.getTimeZone("UTC")
+            }
+            fileFormat.parse(timeStr)?.time?.div(1000)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    internal open fun findExistingStravaActivity(startEpochSeconds: Long): JSONObject? {
+        val after = startEpochSeconds - 300L
+        val before = startEpochSeconds + 300L
+        val url = "$URL_STRAVA_ATHLETE_ACTIVITIES?after=$after&before=$before"
+        val array = getStravaJsonArray(url) ?: return null
+        if (array.length() == 0) return null
+
+        var closestActivity: JSONObject? = null
+        var minDiff = Long.MAX_VALUE
+
+        for (i in 0 until array.length()) {
+            val act = array.optJSONObject(i) ?: continue
+            val startDateStr = act.optString("start_date") // e.g. "2024-05-12T08:15:30Z"
+            val actEpoch = parseTimeToEpochSeconds(startDateStr) ?: 0L
+            val diff = if (actEpoch > 0) Math.abs(actEpoch - startEpochSeconds) else 0L
+            if (diff < minDiff) {
+                minDiff = diff
+                closestActivity = act
+            }
+        }
+        return closestActivity
     }
 
     // Helper to replace "myGetStringFromCursor"

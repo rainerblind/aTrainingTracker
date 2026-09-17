@@ -133,13 +133,27 @@ object StravaHelper {
         if (DEBUG) Log.i(TAG, "openActivity: $activityId")
 
         val intentUri = Uri.parse("strava://activities/$activityId")
-        val intent = Intent(Intent.ACTION_VIEW, intentUri)
+        val appIntent = Intent(Intent.ACTION_VIEW, intentUri).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
 
-        if (intent.resolveActivity(context.packageManager) != null) {
-            context.startActivity(intent)
-        } else {
+        try {
+            if (appIntent.resolveActivity(context.packageManager) != null) {
+                context.startActivity(appIntent)
+                return
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not launch strava:// URI", e)
+        }
+
+        try {
             val webUri = Uri.parse("https://www.strava.com/activities/$activityId")
-            context.startActivity(Intent(Intent.ACTION_VIEW, webUri))
+            val webIntent = Intent(Intent.ACTION_VIEW, webUri).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(webIntent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Could not open Strava activity web URL", e)
         }
     }
 
