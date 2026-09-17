@@ -540,6 +540,50 @@ class StravaUploaderNamingTest {
         // French standard patterns
         assertTrue(StravaUploader.isDefaultStravaName("Sortie vélo le matin"))
         assertTrue(StravaUploader.isDefaultStravaName("Course à pied le soir"))
+        assertTrue(StravaUploader.isDefaultStravaName("Sortie vélo le matin ⛅"))
+
+        // Spanish standard patterns
+        assertTrue(StravaUploader.isDefaultStravaName("Salida en bicicleta por la mañana"))
+        assertTrue(StravaUploader.isDefaultStravaName("Salida en bici por la tarde"))
+        assertTrue(StravaUploader.isDefaultStravaName("Carrera por la mañana"))
+        assertTrue(StravaUploader.isDefaultStravaName("Paseo matutino"))
+        assertTrue(StravaUploader.isDefaultStravaName("Salida en bici al mediodía ☀️"))
+        assertTrue(StravaUploader.isDefaultStravaName("Entrenamiento nocturno"))
+
+        // Italian standard patterns
+        assertTrue(StravaUploader.isDefaultStravaName("Giro mattutino"))
+        assertTrue(StravaUploader.isDefaultStravaName("Giro pomeridiano"))
+        assertTrue(StravaUploader.isDefaultStravaName("Corsa serale"))
+        assertTrue(StravaUploader.isDefaultStravaName("Camminata del mattino"))
+        assertTrue(StravaUploader.isDefaultStravaName("Giro mattutino 🚴"))
+        assertTrue(StravaUploader.isDefaultStravaName("Attività di mezzogiorno"))
+
+        // Portuguese standard patterns
+        assertTrue(StravaUploader.isDefaultStravaName("Pedalada matinal"))
+        assertTrue(StravaUploader.isDefaultStravaName("Corrida à tarde"))
+        assertTrue(StravaUploader.isDefaultStravaName("Caminhada de manhã"))
+        assertTrue(StravaUploader.isDefaultStravaName("Pedalada matinal ☀️"))
+        assertTrue(StravaUploader.isDefaultStravaName("Treino noturno"))
+
+        // Dutch standard patterns
+        assertTrue(StravaUploader.isDefaultStravaName("Ochtendrit"))
+        assertTrue(StravaUploader.isDefaultStravaName("Middagloop"))
+        assertTrue(StravaUploader.isDefaultStravaName("Avondwandeling"))
+        assertTrue(StravaUploader.isDefaultStravaName("Lunchrit"))
+        assertTrue(StravaUploader.isDefaultStravaName("Ochtendrit ⛅"))
+
+        // Polish standard patterns
+        assertTrue(StravaUploader.isDefaultStravaName("Poranna jazda"))
+        assertTrue(StravaUploader.isDefaultStravaName("Popołudniowy bieg"))
+        assertTrue(StravaUploader.isDefaultStravaName("Wieczorny spacer"))
+        assertTrue(StravaUploader.isDefaultStravaName("Nocna jazda"))
+        assertTrue(StravaUploader.isDefaultStravaName("Poranna jazda ☀️"))
+
+        // Japanese standard patterns
+        assertTrue(StravaUploader.isDefaultStravaName("朝のサイクリング"))
+        assertTrue(StravaUploader.isDefaultStravaName("午後のラン"))
+        assertTrue(StravaUploader.isDefaultStravaName("夜のウォーク"))
+        assertTrue(StravaUploader.isDefaultStravaName("朝のサイクリング ☀️"))
 
         // Custom titles must NOT be recognized as default
         assertFalse(StravaUploader.isDefaultStravaName("Sunday Club Ride"))

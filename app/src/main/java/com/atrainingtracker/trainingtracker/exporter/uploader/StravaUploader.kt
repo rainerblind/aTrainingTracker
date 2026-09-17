@@ -80,9 +80,10 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         private const val STATUS_ERROR = "There was an error processing your activity."
         private const val STATUS_READY = "Your activity is ready."
 
-        // ATT-1105 / REQ-EXP-008: Strava default name patterns
+        // ATT-1105 / REQ-EXP-008: Strava default name patterns across all supported languages
         private val EMOJI_CLEANUP_REGEX = """[\p{So}\p{Sk}\u2600-\u27BF\uFE00-\uFE0F]|\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDE4F]|\uD83E[\uDD00-\uDFFF]""".toRegex()
 
+        // German
         private const val GERMAN_SPORTS = "(?:Radfahrt|Fahrt|Ausfahrt|Rennradfahrt|Mountainbike-Fahrt|Gravel-Fahrt|E-Bike-Fahrt|Lauf|Dauerlauf|Wanderung|Spaziergang|Training|Schwimmen|Workout|Aktivität|Krafttraining|Yoga|Rollerski)"
         private const val GERMAN_TIME_OF_DAY = "(?:am\\s+(?:Morgen|Vormittag|Mittag|Nachmittag|Abend)|in\\s+der\\s+Nacht|nachts)"
         private val GERMAN_DEFAULT_PATTERN_1 = "^$GERMAN_SPORTS\\s+$GERMAN_TIME_OF_DAY$".toRegex(RegexOption.IGNORE_CASE)
@@ -90,17 +91,56 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         private const val GERMAN_TIME_PREFIX = "(?:Morgen|Vormittags?|Mittags?|Nachmittags?|Abend|Nacht)"
         private val GERMAN_DEFAULT_PATTERN_2 = "^$GERMAN_TIME_PREFIX(?:-|\\s+)$GERMAN_SPORTS$".toRegex(RegexOption.IGNORE_CASE)
 
+        // English
         private const val ENGLISH_TIME_PREFIX = "(?:Morning|Lunch|Afternoon|Evening|Night)"
         private const val ENGLISH_SPORTS = "(?:Ride|Run|Walk|Hike|Swim|Workout|Activity|Weight\\s+Training|Weight\\s+Session|Gravel\\s+Ride|Mountain\\s+Bike\\s+Ride|E-Bike\\s+Ride|Virtual\\s+Ride|Virtual\\s+Run|Row|Rowing|Paddle|Yoga)"
         private val ENGLISH_DEFAULT_PATTERN = "^$ENGLISH_TIME_PREFIX\\s+$ENGLISH_SPORTS$".toRegex(RegexOption.IGNORE_CASE)
 
+        // French
         private const val FRENCH_SPORTS = "(?:Sortie\\s+vélo|Course\\s+à\\s+pied|Course|Marche|Randonnée|Natation|Entraînement|Activité)"
         private const val FRENCH_TIME = "(?:le\\s+matin|en\\s+matinée|à\\s+midi|l'après-midi|en\\s+soirée|le\\s+soir|la\\s+nuit)"
         private val FRENCH_DEFAULT_PATTERN = "^$FRENCH_SPORTS\\s+$FRENCH_TIME$".toRegex(RegexOption.IGNORE_CASE)
 
+        // Spanish
+        private const val SPANISH_SPORTS = "(?:Salida\\s+(?:en\\s+)?(?:bicicleta|bici)|Carrera|Paseo|Caminata|Ruta\\s+a\\s+pie|Ruta\\s+en\\s+(?:bici|bicicleta)|Natación|Entrenamiento|Actividad)"
+        private const val SPANISH_TIME = "(?:por\\s+la\\s+(?:mañana|tarde|noche)|al\\s+mediodía|del\\s+mediodía)"
+        private val SPANISH_DEFAULT_PATTERN_1 = "^$SPANISH_SPORTS\\s+$SPANISH_TIME$".toRegex(RegexOption.IGNORE_CASE)
+        private const val SPANISH_ADJECTIVE = "(?:matutin[ao]|vespertin[ao]|nocturn[ao])"
+        private val SPANISH_DEFAULT_PATTERN_2 = "^(?:Salida|Carrera|Paseo|Caminata|Ruta|Natación|Entrenamiento|Actividad)\\s+$SPANISH_ADJECTIVE$".toRegex(RegexOption.IGNORE_CASE)
+
+        // Italian
+        private const val ITALIAN_SPORTS = "(?:Giro|Corsa|Camminata|Nuotata|Passeggiata|Escursione|Attività|Allenamento)"
+        private const val ITALIAN_ADJECTIVES = "(?:mattutin[oa]|pomeridian[oa]|serale|notturn[oa])"
+        private val ITALIAN_DEFAULT_PATTERN_1 = "^$ITALIAN_SPORTS\\s+$ITALIAN_ADJECTIVES$".toRegex(RegexOption.IGNORE_CASE)
+        private const val ITALIAN_TIME = "(?:del\\s+mattino|del\\s+pomeriggio|della\\s+sera|di\\s+notte|a\\s+pranzo|di\\s+mezzogiorno)"
+        private val ITALIAN_DEFAULT_PATTERN_2 = "^$ITALIAN_SPORTS\\s+$ITALIAN_TIME$".toRegex(RegexOption.IGNORE_CASE)
+
+        // Portuguese
+        private const val PORTUGUESE_SPORTS = "(?:Pedalada|Corrida|Caminhada|Trilha|Natação|Treino|Atividade)"
+        private const val PORTUGUESE_ADJECTIVES = "(?:matinal|vespertin[ao]|noturn[ao])"
+        private val PORTUGUESE_DEFAULT_PATTERN_1 = "^$PORTUGUESE_SPORTS\\s+$PORTUGUESE_ADJECTIVES$".toRegex(RegexOption.IGNORE_CASE)
+        private const val PORTUGUESE_TIME = "(?:de\\s+manhã|à\\s+tarde|ao\\s+meio-dia|à\\s+noite)"
+        private val PORTUGUESE_DEFAULT_PATTERN_2 = "^$PORTUGUESE_SPORTS\\s+$PORTUGUESE_TIME$".toRegex(RegexOption.IGNORE_CASE)
+
+        // Dutch
+        private const val DUTCH_TIME_PREFIX = "(?:Ochtend|Middag|Namiddag|Avond|Nacht|Lunch)"
+        private const val DUTCH_SPORTS = "(?:rit|fietstocht|loop|hardloopsessie|wandeling|zwemsessie|training|workout|activiteit)"
+        private val DUTCH_DEFAULT_PATTERN = "^$DUTCH_TIME_PREFIX(?:-|\\s+)?$DUTCH_SPORTS$".toRegex(RegexOption.IGNORE_CASE)
+
+        // Polish
+        private const val POLISH_ADJECTIVES = "(?:Porann[ay]|Popołudniow[ay]|Wieczorn[ay]|Nocn[ay]|Południow[ay])"
+        private const val POLISH_SPORTS = "(?:jazda(?:\\s+na\\s+rowerze)?|bieg|spacer|wędrówka|trening|pływanie|aktywność)"
+        private val POLISH_DEFAULT_PATTERN = "^$POLISH_ADJECTIVES\\s+$POLISH_SPORTS$".toRegex(RegexOption.IGNORE_CASE)
+
+        // Japanese
+        private const val JAPANESE_TIME_PREFIX = "(?:朝|午前|昼|午後|夕方|夜|ナイト)"
+        private const val JAPANESE_SPORTS = "(?:サイクリング|ライド|ラン|ウォーク|ウォーキング|ハイキング|スイム|ワークアウト|アクティビティ|トレーニング)"
+        private val JAPANESE_DEFAULT_PATTERN = "^$JAPANESE_TIME_PREFIX(?:の)?$JAPANESE_SPORTS$".toRegex(RegexOption.IGNORE_CASE)
+
         /**
          * Determines whether a given Strava activity name corresponds to an auto-generated
-         * localized default title (e.g. "Radfahrt am Morgen", "Lauf am Abend ⛅", "Morning Ride").
+         * localized default title across all supported languages (German, English, French,
+         * Spanish, Italian, Portuguese, Dutch, Polish, Japanese).
          *
          * @param name The activity name returned from Strava.
          * @return True if the name matches a known Strava auto-generated default template, false if custom.
@@ -111,7 +151,16 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
             return GERMAN_DEFAULT_PATTERN_1.matches(cleaned) ||
                    GERMAN_DEFAULT_PATTERN_2.matches(cleaned) ||
                    ENGLISH_DEFAULT_PATTERN.matches(cleaned) ||
-                   FRENCH_DEFAULT_PATTERN.matches(cleaned)
+                   FRENCH_DEFAULT_PATTERN.matches(cleaned) ||
+                   SPANISH_DEFAULT_PATTERN_1.matches(cleaned) ||
+                   SPANISH_DEFAULT_PATTERN_2.matches(cleaned) ||
+                   ITALIAN_DEFAULT_PATTERN_1.matches(cleaned) ||
+                   ITALIAN_DEFAULT_PATTERN_2.matches(cleaned) ||
+                   PORTUGUESE_DEFAULT_PATTERN_1.matches(cleaned) ||
+                   PORTUGUESE_DEFAULT_PATTERN_2.matches(cleaned) ||
+                   DUTCH_DEFAULT_PATTERN.matches(cleaned) ||
+                   POLISH_DEFAULT_PATTERN.matches(cleaned) ||
+                   JAPANESE_DEFAULT_PATTERN.matches(cleaned)
         }
     }
 
