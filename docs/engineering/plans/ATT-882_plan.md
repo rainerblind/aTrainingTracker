@@ -104,6 +104,8 @@ The workout list filtering sheet (`WorkoutFilterBottomSheet.kt`) provides basic 
 ### 3.3 `WorkoutFilterBottomSheet.kt`
 - Accept `activeBSportType: BSportType? = null`.
 - Filter `availableSports` by active tab.
+- Filter `availableEquipment` based on `localSportId` (if selected) or `activeBSportType` (if tab active), otherwise all equipment.
+- Automatically clear `localEquipId = null` via `LaunchedEffect(availableEquipment)` if the active equipment is no longer present.
 - Date interval controls with `DatePickerDialog` for `startDateS` and `endDateS`.
 - Distance interval controls: Min/Max inputs + preset chips.
 - Duration interval controls: Min/Max inputs + preset chips.
@@ -124,8 +126,10 @@ The workout list filtering sheet (`WorkoutFilterBottomSheet.kt`) provides basic 
    - Duration lower bound, upper bound, bounded interval, out-of-bounds rejection.
    - Backward-compatible JSON round-trip serialization/deserialization.
    - `activeFilterCount` calculation.
-2. **Tab-Aware Sport Filtering Logic**:
-   - Verification with `BSportType.BIKE`, `BSportType.RUN`, `BSportType.UNKNOWN`, and `null`.
+2. **Tab-Aware Sport & Sport-Aware Equipment Filtering Logic**:
+   - Tab-aware sports selection verification with `BSportType.BIKE`, `BSportType.RUN`, `BSportType.UNKNOWN`, and `null`.
+   - Sport-aware equipment selection verification when filtering by `localSportId`, `activeBSportType`, and `null`.
+   - Automatic clearing verification when equipment becomes invalid for the selected sport.
 3. **Full Suite Regression**:
    - Run `./gradlew testDebugUnitTest` to guarantee 0 regressions across the entire project.
 

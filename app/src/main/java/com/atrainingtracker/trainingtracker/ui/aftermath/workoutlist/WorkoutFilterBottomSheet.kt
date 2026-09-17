@@ -45,6 +45,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -130,12 +131,28 @@ fun WorkoutFilterBottomSheet(
             .sortedBy { it.second }
     }
 
-    val availableEquipment = remember(allWorkouts) {
+    // Sport-Aware Equipment Selection (REQ-UI-157)
+    val availableEquipment = remember(allWorkouts, activeBSportType, localSportId) {
         allWorkouts
             .filter { it.equipmentId > 0 && !it.equipmentName.isNullOrBlank() }
+            .filter { workout ->
+                if (localSportId != null) {
+                    workout.sportId == localSportId
+                } else if (activeBSportType != null) {
+                    workout.bSportType == activeBSportType
+                } else {
+                    true
+                }
+            }
             .map { it.equipmentId to it.equipmentName!! }
             .distinctBy { it.first }
             .sortedBy { it.second }
+    }
+
+    LaunchedEffect(availableEquipment) {
+        if (localEquipId != null && availableEquipment.none { it.first == localEquipId }) {
+            localEquipId = null
+        }
     }
 
     // Date Picker Dialogs

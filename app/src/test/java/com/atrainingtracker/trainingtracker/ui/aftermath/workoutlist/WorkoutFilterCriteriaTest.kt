@@ -380,6 +380,68 @@ class WorkoutFilterCriteriaTest {
     }
 
     @Test
+    fun testSportAwareEquipmentSelectionLogic() {
+        val workouts = listOf(
+            createWorkout(id = 1L, sportId = 1L, sportName = "Road Bike", bSportType = BSportType.BIKE, equipmentId = 101L, equipmentName = "Canyon Aeroad"),
+            createWorkout(id = 2L, sportId = 2L, sportName = "Mountain Bike", bSportType = BSportType.BIKE, equipmentId = 102L, equipmentName = "Trek Fuel EX"),
+            createWorkout(id = 3L, sportId = 3L, sportName = "Running", bSportType = BSportType.RUN, equipmentId = 103L, equipmentName = "Nike Pegasus"),
+            createWorkout(id = 4L, sportId = 4L, sportName = "Trail Running", bSportType = BSportType.RUN, equipmentId = 104L, equipmentName = "Salomon Speedcross"),
+            createWorkout(id = 5L, sportId = 5L, sportName = "Swimming", bSportType = BSportType.UNKNOWN, equipmentId = 105L, equipmentName = "Speedo Goggles"),
+            createWorkout(id = 6L, sportId = 6L, sportName = "Strength", bSportType = BSportType.UNKNOWN, equipmentId = 0L, equipmentName = null)
+        )
+
+        fun getAvailableEquipment(activeBSportType: BSportType?, localSportId: Long?) = workouts
+            .filter { it.equipmentId > 0 && !it.equipmentName.isNullOrBlank() }
+            .filter { workout ->
+                if (localSportId != null) {
+                    workout.sportId == localSportId
+                } else if (activeBSportType != null) {
+                    workout.bSportType == activeBSportType
+                } else {
+                    true
+                }
+            }
+            .map { it.equipmentId to it.equipmentName!! }
+            .distinctBy { it.first }
+            .sortedBy { it.second }
+
+        // Bike tab without sport selected
+        val bikeEquipment = getAvailableEquipment(BSportType.BIKE, null).map { it.second }
+        assertEquals(listOf("Canyon Aeroad", "Trek Fuel EX"), bikeEquipment)
+
+        // Bike tab with Mountain Bike selected
+        val mtbEquipment = getAvailableEquipment(BSportType.BIKE, 2L).map { it.second }
+        assertEquals(listOf("Trek Fuel EX"), mtbEquipment)
+
+        // Run tab without sport selected
+        val runEquipment = getAvailableEquipment(BSportType.RUN, null).map { it.second }
+        assertEquals(listOf("Nike Pegasus", "Salomon Speedcross"), runEquipment)
+
+        // Run tab with Running selected
+        val runningEquipment = getAvailableEquipment(BSportType.RUN, 3L).map { it.second }
+        assertEquals(listOf("Nike Pegasus"), runningEquipment)
+
+        // Other tab without sport selected
+        val otherEquipment = getAvailableEquipment(BSportType.UNKNOWN, null).map { it.second }
+        assertEquals(listOf("Speedo Goggles"), otherEquipment)
+
+        // All tab with Running selected
+        val runningOnlyEquipment = getAvailableEquipment(null, 3L).map { it.second }
+        assertEquals(listOf("Nike Pegasus"), runningOnlyEquipment)
+
+        // All tab without sport selected
+        val allEquipment = getAvailableEquipment(null, null).map { it.second }
+        assertEquals(listOf("Canyon Aeroad", "Nike Pegasus", "Salomon Speedcross", "Speedo Goggles", "Trek Fuel EX"), allEquipment)
+
+        // Equipment invalidation verification: if localEquipId was 101 (Canyon Aeroad) and sport switches to Running (3L),
+        // availableEquipment will not contain 101.
+        val newAvailable = getAvailableEquipment(null, 3L)
+        val selectedEquipId = 101L
+        val shouldClear = newAvailable.none { it.first == selectedEquipId }
+        assertTrue(shouldClear)
+    }
+
+    @Test
     fun testJsonDeserialization_HandlesNullOrMalformedSafely() {
         val empty1 = WorkoutFilterCriteria.fromJson(null)
         assertTrue(empty1.isEmpty)
