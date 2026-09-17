@@ -244,8 +244,11 @@ class WorkoutRepository private constructor(private val application: Application
             val stravaActivityData = stravaUploadDbHelper.getStravaActivityData(fileName)
 
             val current = allWorkouts.value.find { it.fileBaseName == fileName } ?: return@launch
+            val freshName = summariesManager.getString(current.id, WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME)
+            val updatedName = if (!freshName.isNullOrBlank()) freshName else current.workoutName
             Log.i(TAG, "update from reloadExportStatusesFor")
             updateWorkoutInList(current.id, current.copy(
+                workoutName = updatedName,
                 exportStatuses = exportStatuses,
                 stravaActivityData = stravaActivityData
             ))
