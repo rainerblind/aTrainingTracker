@@ -22,6 +22,7 @@ import android.content.Intent
 import android.net.Uri
 import java.text.DateFormat
 import java.util.Date
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -521,7 +522,17 @@ fun ClusterNamingDialog(
     if (showSelectionDialog) {
         val clusterEngine = remember { WorkoutClusterEngine.getInstance(localContext) }
         val candidatesWithScores = remember(existingClusters, state) {
-            clusterEngine.scoreClusters(existingClusters, state.start, state.end, state.apex, state.distance, workoutSportType = state.bSportType)
+            clusterEngine.scoreClusters(
+                existingClusters,
+                state.start,
+                state.end,
+                state.apex,
+                state.distance,
+                workoutName = state.workoutName,
+                candidateSportTypes = if (state.candidateSportTypes.isNotEmpty()) state.candidateSportTypes else if (state.bSportType != BSportType.UNKNOWN) setOf(state.bSportType) else emptySet(),
+                minAltPos = state.minAltPos,
+                maxAltPos = state.maxAltPos
+            )
         }
 
         WorkoutClusterSelectionDialog(
