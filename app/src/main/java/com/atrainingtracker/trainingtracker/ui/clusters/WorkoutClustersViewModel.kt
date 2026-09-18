@@ -323,24 +323,6 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
                         if (it.mapPolyline.isNotEmpty()) PolyUtil.decode(it.mapPolyline) else null 
                     }
 
-                    // Self-healing apex re-anchoring (REQ-SET-063, ATT-498)
-                    val engine = WorkoutClusterEngine.getInstance(getApplication())
-                    val candidatePoints = route?.path?.map { it.latLng } ?: heatmapPaths.flatten()
-                    if (candidatePoints.isNotEmpty()) {
-                        val start = LatLng(cluster.startLat, cluster.startLng)
-                        val trueApex = engine.findApexFromPoints(start, candidatePoints)
-                        val currentApex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
-                        if (cluster.maxDispLat == 0.0 || engine.distanceBetween(currentApex, trueApex) > 100.0) {
-                            val updatedCluster = cluster.copy(maxDispLat = trueApex.latitude, maxDispLng = trueApex.longitude)
-                            repository.updateCluster(updatedCluster)
-                            withContext(Dispatchers.Main) {
-                                if (_selectedCluster.value?.id == cluster.id) {
-                                    _selectedCluster.value = updatedCluster
-                                }
-                            }
-                        }
-                    }
-                    
                     // Pre-calculate markers to avoid UI jank (SCRUM-199)
                     val markers = workouts.flatMap { w ->
                         ensureActive()
