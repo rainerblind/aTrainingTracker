@@ -69,3 +69,11 @@ Implemented retired equipment isolation across selection pickers, workout auto-i
   - `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.database.EquipmentDbHelperRetiredTest" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelRetiredEquipmentTest" --tests "com.atrainingtracker.trainingtracker.database.EquipmentDiscoveryRetiredTest" --tests "com.atrainingtracker.banalservice.ui.sporttype.SportTypeViewModelRetiredTest" --tests "com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelRetiredTest"`: **BUILD SUCCESSFUL** (18/18 passed).
 - **Full Clean-Room Regression**:
   - `./gradlew testDebugUnitTest`: **BUILD SUCCESSFUL** (0 failures across all modules).
+- **Physical Device Deployment & Verification (Google Pixel 10 / Android 17 / API 37)**:
+  - Fixed runtime `NoSuchMethodException` in `EquipmentViewModel.<init>(Application)` by adding `@JvmOverloads constructor` and adding reflection unit test.
+  - Deployed debug APK via `./gradlew installDebug`.
+  - Verified equipment manager rendering:
+    - Active equipment section displayed under "Aktive Ausrüstung".
+    - Retired equipment section displayed under "Ausgemusterte Ausrüstung".
+    - Retired items (e.g. "2Danger", "Fixie") clearly display the "Ausgemustert" status badge.
+    - Zero crashes upon navigation or scrolling.
