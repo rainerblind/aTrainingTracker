@@ -94,6 +94,7 @@ class StravaUploaderNamingTest {
         private val stravaActivityResponse: JSONObject?,
         private val mockExistingActivity: JSONObject? = null,
         private val mockExistingActivitiesArray: JSONArray? = null,
+        private val mockGearResponse: ((String) -> JSONObject?)? = null,
         private val onRequestCaptured: (Map<String, String>) -> Unit = {}
     ) : StravaUploader(context) {
 
@@ -135,6 +136,10 @@ class StravaUploaderNamingTest {
         override fun getGearId(eqId: Long): String? {
             return if (eqId > 0) "b12345" else null
         }
+
+        override fun getStravaGear(gearId: String): JSONObject? {
+            return mockGearResponse?.invoke(gearId) ?: super.getStravaGear(gearId)
+        }
     }
 
     @Before
@@ -162,10 +167,24 @@ class StravaUploaderNamingTest {
             val map = contentValueStores.computeIfAbsent(cv) { mutableMapOf() }
             map[firstArg<String>()] = secondArg<String>()
         }
+        every { constructedWith<ContentValues>().put(any<String>(), any<Long>()) } answers {
+            val cv = getRealInstance()
+            val map = contentValueStores.computeIfAbsent(cv) { mutableMapOf() }
+            map[firstArg<String>()] = secondArg<Long>()
+        }
         every { constructedWith<ContentValues>().getAsString(any<String>()) } answers {
             val cv = getRealInstance()
             val map = contentValueStores[cv]
             map?.get(firstArg<String>())?.toString()
+        }
+        every { constructedWith<ContentValues>().getAsLong(any<String>()) } answers {
+            val cv = getRealInstance()
+            val map = contentValueStores[cv]
+            (map?.get(firstArg<String>()) as? Number)?.toLong()
+        }
+        every { constructedWith<ContentValues>().size() } answers {
+            val cv = getRealInstance()
+            contentValueStores[cv]?.size ?: 0
         }
 
         mockkStatic(WorkoutSummariesDatabaseManager::class)
@@ -175,6 +194,11 @@ class StravaUploaderNamingTest {
         mockkStatic(SportTypeDatabaseManager::class)
         every { SportTypeDatabaseManager.getInstance(any()) } returns mockSportTypeDb
         every { mockSportTypeDb.getStravaName(any()) } returns "Ride"
+        every { mockSportTypeDb.getSportTypeIdFromStravaName(any()) } returns -1L
+
+        mockkConstructor(EquipmentDbHelper::class)
+        every { anyConstructed<EquipmentDbHelper>().getIdFromStravaId(any()) } returns -1L
+        every { anyConstructed<EquipmentDbHelper>().addOrUpdateStravaGear(any(), any(), any(), any(), any()) } returns -1L
 
         mockkStatic(StravaHelper::class)
         every { StravaHelper.getRefreshedAccessToken() } returns "mock_strava_token"
@@ -500,7 +524,8 @@ class StravaUploaderNamingTest {
         assertTrue("Update must succeed", result.success())
 
         val metadataUpdate = capturedStravaRequests.last()
-        assertEquals("b12345", metadataUpdate["gear_id"])
+        // ATT-1114 / REQ-EXP-009: On duplicate, gear_id is omitted to preserve Strava cloud equipment
+        assertNull("gear_id must NOT be sent on duplicate to protect Strava equipment", metadataUpdate["gear_id"])
         assertEquals("Felt fast", metadataUpdate["description"])
         assertEquals("true", metadataUpdate["trainer"])
         assertEquals("true", metadataUpdate["commute"])
@@ -870,5 +895,135 @@ class StravaUploaderNamingTest {
         assertTrue("SQLite must be updated with authentic Strava name", capturedUpdatedValues.isNotEmpty())
         val updatedName = capturedUpdatedValues.first().getAsString(WorkoutSummaries.WORKOUT_NAME)
         assertEquals("#bike2home #2023 #15 ☀️", updatedName)
+    }
+
+    @Test
+    fun testDuplicateReconciliationEnrichesKnownLocalEquipment() {
+        val fileBaseName = "2024-05-12_10-15-30"
+        setupMockCursor(workoutName = fileBaseName, fileBaseName = fileBaseName)
+
+        val duplicateStravaJson = JSONObject().apply {
+            put("id", 123456789L)
+            put("name", "Sunday Club Ride")
+            put("sport_type", "Ride")
+            put("gear_id", "b888999")
+        }
+
+        every { anyConstructed<EquipmentDbHelper>().getIdFromStravaId("b888999") } returns 42L
+
+        val uploader = TestableStravaUploader(
+            context = mockContext,
+            stravaActivityResponse = duplicateStravaJson,
+            mockExistingActivity = duplicateStravaJson,
+            onRequestCaptured = { capturedStravaRequests.add(it) }
+        )
+
+        val exportInfo = ExportInfo(fileBaseName, FileFormat.STRAVA, ExportType.COMMUNITY)
+        val result = uploader.doExport(exportInfo)
+
+        assertTrue(result.success())
+        assertTrue("SQLite must be updated", capturedUpdatedValues.isNotEmpty())
+        val cv = capturedUpdatedValues.first()
+        assertEquals(42L, cv.getAsLong(WorkoutSummaries.EQUIPMENT_ID))
+
+        // Verify Strava cloud metadata was not overwritten
+        assertTrue(capturedStravaRequests.none { it.containsKey("gear_id") })
+        assertTrue(capturedStravaRequests.none { it.containsKey("sport_type") })
+    }
+
+    @Test
+    fun testDuplicateReconciliationFetchesAndEnrichesMissingRetiredGear() {
+        val fileBaseName = "2024-05-12_10-15-30"
+        setupMockCursor(workoutName = fileBaseName, fileBaseName = fileBaseName)
+
+        val duplicateStravaJson = JSONObject().apply {
+            put("id", 123456789L)
+            put("name", "Old Epic Tour")
+            put("sport_type", "Ride")
+            put("gear_id", "b_retired_123")
+        }
+
+        val detailedRetiredGear = JSONObject().apply {
+            put("id", "b_retired_123")
+            put("name", "My First MTB")
+            put("frame_type", 1)
+            put("retired", true)
+        }
+
+        every { anyConstructed<EquipmentDbHelper>().getIdFromStravaId("b_retired_123") } returns -1L
+        every {
+            anyConstructed<EquipmentDbHelper>().addOrUpdateStravaGear("b_retired_123", "My First MTB", 1, "BIKE", true)
+        } returns 77L
+
+        val uploader = TestableStravaUploader(
+            context = mockContext,
+            stravaActivityResponse = duplicateStravaJson,
+            mockExistingActivity = duplicateStravaJson,
+            mockGearResponse = { gearId -> if (gearId == "b_retired_123") detailedRetiredGear else null }
+        )
+
+        val exportInfo = ExportInfo(fileBaseName, FileFormat.STRAVA, ExportType.COMMUNITY)
+        val result = uploader.doExport(exportInfo)
+
+        assertTrue(result.success())
+        assertTrue("SQLite must be updated", capturedUpdatedValues.isNotEmpty())
+        val cv = capturedUpdatedValues.first()
+        assertEquals(77L, cv.getAsLong(WorkoutSummaries.EQUIPMENT_ID))
+    }
+
+    @Test
+    fun testDuplicateReconciliationEnrichesDetailedSportType() {
+        val fileBaseName = "2024-05-12_10-15-30"
+        setupMockCursor(workoutName = fileBaseName, fileBaseName = fileBaseName)
+
+        val duplicateStravaJson = JSONObject().apply {
+            put("id", 123456789L)
+            put("name", "Mountain Peak Trail")
+            put("sport_type", "MountainBikeRide")
+        }
+
+        every { mockSportTypeDb.getSportTypeIdFromStravaName("MountainBikeRide") } returns 8L
+
+        val uploader = TestableStravaUploader(
+            context = mockContext,
+            stravaActivityResponse = duplicateStravaJson,
+            mockExistingActivity = duplicateStravaJson,
+            onRequestCaptured = { capturedStravaRequests.add(it) }
+        )
+
+        val exportInfo = ExportInfo(fileBaseName, FileFormat.STRAVA, ExportType.COMMUNITY)
+        val result = uploader.doExport(exportInfo)
+
+        assertTrue(result.success())
+        assertTrue("SQLite must be updated", capturedUpdatedValues.isNotEmpty())
+        val cv = capturedUpdatedValues.first()
+        assertEquals(8L, cv.getAsLong(WorkoutSummaries.SPORT_ID))
+
+        // Ensure cloud sport_type was NOT sent to overwrite Strava
+        assertTrue(capturedStravaRequests.none { it.containsKey("sport_type") })
+    }
+
+    @Test
+    fun testFreshUploadSendsSportTypeAndGear() {
+        val fileBaseName = "2024-05-12_10-15-30"
+        setupMockCursor(workoutName = "Morning Fresh Ride", fileBaseName = fileBaseName)
+
+        val freshUploadRequests = mutableListOf<Map<String, String>>()
+
+        val uploader = TestableStravaUploader(
+            context = mockContext,
+            stravaActivityResponse = JSONObject().apply {
+                put("id", 999111L)
+                put("sport_type", "Ride")
+            },
+            onRequestCaptured = { freshUploadRequests.add(it) }
+        )
+
+        val exportInfo = ExportInfo(fileBaseName, FileFormat.STRAVA, ExportType.COMMUNITY)
+        val result = uploader.doUpdate(exportInfo, isDuplicate = false)
+
+        assertTrue(result.success())
+        // Fresh upload sends sport type and gearId to Strava
+        assertTrue(freshUploadRequests.any { it.containsKey("sport_type") || it.containsKey("gear_id") })
     }
 }
