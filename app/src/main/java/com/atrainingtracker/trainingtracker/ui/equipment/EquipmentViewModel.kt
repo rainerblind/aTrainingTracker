@@ -31,6 +31,7 @@ import com.atrainingtracker.trainingtracker.database.SportTypeEquipmentLinkManag
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsPeriodHelper
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,17 +47,21 @@ data class EquipmentItem(
     val frameType: Int,
     val stravaName: String?,
     val stravaId: String?,
+    val isRetired: Boolean = false,
     val firstUsed: String?,
     val lastUsed: String?,
     val statsData: StatsData,
 )
 
-class EquipmentViewModel(application: Application) : AndroidViewModel(application) {
-    private val dbEquipmentHelper = EquipmentDbHelper(application)
-    private val dbLinksHelper = SportTypeEquipmentLinkManager.getInstance(application)
-    private val dbSportHelper = SportTypeDatabaseManager.getInstance(application)
-    private val dbDevicesHelper = DevicesDatabaseManager.getInstance(application)
-    private val dbSummariesManager = WorkoutSummariesDatabaseManager.getInstance(application)
+class EquipmentViewModel @JvmOverloads constructor(
+    application: Application,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val dbEquipmentHelper: EquipmentDbHelper = EquipmentDbHelper(application),
+    private val dbLinksHelper: SportTypeEquipmentLinkManager = SportTypeEquipmentLinkManager.getInstance(application),
+    private val dbSportHelper: SportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(application),
+    private val dbDevicesHelper: DevicesDatabaseManager = DevicesDatabaseManager.getInstance(application),
+    private val dbSummariesManager: WorkoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(application)
+) : AndroidViewModel(application) {
 
 
     private val _bikes = MutableStateFlow<List<EquipmentItem>>(emptyList())
@@ -72,7 +77,7 @@ class EquipmentViewModel(application: Application) : AndroidViewModel(applicatio
     val runSportTypes = dbSportHelper.getSportTypes(BSportType.RUN)
 
     fun loadEquipment() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val fetchItems = { sportType: BSportType ->
                 // Use the new method to get full data objects
                 val equipmentDataList = dbEquipmentHelper.getEquipmentItems(sportType)
@@ -104,6 +109,7 @@ class EquipmentViewModel(application: Application) : AndroidViewModel(applicatio
                         frameType = data.frameType,
                         stravaName = data.stravaName,
                         stravaId = data.stravaId,
+                        isRetired = data.isRetired,
                         firstUsed = stats.firstUsage?.substringBefore(" "),
                         lastUsed = stats.lastUsage?.substringBefore(" "),
                         statsData = StatsData.fromDatabase(
@@ -140,11 +146,11 @@ class EquipmentViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun updateEquipment(item: EquipmentItem) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             // TODO: when the strava frame type is changed, we should also update strava.
 
             dbEquipmentHelper.updateEquipment(
-                item.id, item.name, item.frameType, item.linkedDeviceIds
+                item.id, item.name, item.frameType, item.linkedDeviceIds, item.isRetired
             )
 
             // Update Sport Type links
@@ -154,8 +160,15 @@ class EquipmentViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun toggleRetired(item: EquipmentItem) {
+        viewModelScope.launch(ioDispatcher) {
+            dbEquipmentHelper.setEquipmentRetired(item.id, !item.isRetired)
+            loadEquipment()
+        }
+    }
+
     fun addEquipment(name: String, frameType: Int, linkedDeviceIds: List<Long>, linkedSportTypes: List<Long>) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
 
             // Add the equipment and get the new ID
             val newEquipmentId = dbEquipmentHelper.addEquipment(name, frameType, linkedDeviceIds)

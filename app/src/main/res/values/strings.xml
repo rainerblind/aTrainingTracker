@@ -956,6 +956,9 @@
     <string name="equipment_sport_types">Sport Types:</string>
     <string name="equipment_linked_sport_types">Linked Sport Types</string>
     <string name="equipment_no_sports_linked">None</string>
+    <string name="equipment_retired">Retired</string>
+    <string name="equipment_section_active">Active Equipment</string>
+    <string name="equipment_section_retired">Retired Equipment</string>
 
     <!-- statistics -->
     <string name="stats_total">All Time</string>

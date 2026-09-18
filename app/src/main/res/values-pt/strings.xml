@@ -753,6 +753,9 @@
     <string name="equipment_sport_types">Desportos:</string>
     <string name="equipment_linked_sport_types">Desportos ligados</string>
     <string name="equipment_no_sports_linked">Nenhum</string>
+    <string name="equipment_retired">Desativado</string>
+    <string name="equipment_section_active">Equipamento ativo</string>
+    <string name="equipment_section_retired">Equipamento desativado</string>
 
     <!-- statistics -->
     <string name="stats_total">Total</string>

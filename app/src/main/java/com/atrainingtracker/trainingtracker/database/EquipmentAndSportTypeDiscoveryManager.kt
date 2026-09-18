@@ -70,7 +70,7 @@ class EquipmentAndSportTypeDiscoveryManager @androidx.annotation.VisibleForTesti
 
         return activeDeviceIds.flatMap { deviceId ->
             equipmentDbHelper.getLinkedEquipmentIdsFromDeviceId(deviceId)
-        }.toSet()
+        }.filter { id -> !equipmentDbHelper.isEquipmentRetired(id) }.toSet()
     }
 
     /**
@@ -187,7 +187,7 @@ class EquipmentAndSportTypeDiscoveryManager @androidx.annotation.VisibleForTesti
         if (sportId == -1L) return emptySet()
 
         val equipmentIds = sportTypeEquipmentLinkHelper.getEquipmentIdsForSport(sportId)
-        return equipmentIds.filter { it > 0 }.mapNotNull { id ->
+        return equipmentIds.filter { it > 0 && !equipmentDbHelper.isEquipmentRetired(it) }.mapNotNull { id ->
             equipmentDbHelper.getEquipmentNameFromId(id)
         }.toSet()
     }
@@ -292,6 +292,7 @@ class EquipmentAndSportTypeDiscoveryManager @androidx.annotation.VisibleForTesti
         } else {
             sportId = resolveSportType(deviceIds, bSportType, averageSpeed)
             val gearCandidates = sportTypeEquipmentLinkHelper.getEquipmentIdsForSport(sportId)
+                .filter { !equipmentDbHelper.isEquipmentRetired(it) }
             if (gearCandidates.size == 1) {
                 equipmentId = gearCandidates.first()
             }

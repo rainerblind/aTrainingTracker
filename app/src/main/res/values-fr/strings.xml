@@ -752,6 +752,9 @@
     <string name="equipment_sport_types">Sports :</string>
     <string name="equipment_linked_sport_types">Sports liés</string>
     <string name="equipment_no_sports_linked">Aucun</string>
+    <string name="equipment_retired">Retiré</string>
+    <string name="equipment_section_active">Équipement actif</string>
+    <string name="equipment_section_retired">Équipement retiré</string>
 
     <!-- statistics -->
     <string name="stats_total">Global</string>

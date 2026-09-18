@@ -194,7 +194,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
      * @param frameType       The new frame type (1-4 for bikes, 0 for others).
      * @param linkedDeviceIds The new list of sensor IDs to link to this equipment.
      */
-    public void updateEquipment(long id, String name, int frameType, @NonNull List<Long> linkedDeviceIds) {
+    public void updateEquipment(long id, String name, int frameType, @NonNull List<Long> linkedDeviceIds, boolean isRetired) {
         if (id <= 0) {
             return;
         }
@@ -207,6 +207,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
             ContentValues values = new ContentValues();
             values.put(NAME, name);
             values.put(FRAME_TYPE, frameType);
+            values.put(RETIRED, isRetired ? 1 : 0);
             db.update(EQUIPMENT, values, C_ID + "=?", new String[]{String.valueOf(id)});
 
             // 2. Clear existing links for this equipment
@@ -222,12 +223,42 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
 
             // Mark transaction as successful
             db.setTransactionSuccessful();
-            if (DEBUG) Log.d(TAG, "Successfully updated equipment " + id + " with " + linkedDeviceIds.size() + " sensors.");
+            if (DEBUG) Log.d(TAG, "Successfully updated equipment " + id + " with " + linkedDeviceIds.size() + " sensors, isRetired=" + isRetired);
         } catch (Exception e) {
             Log.e(TAG, "Error updating equipment links: " + e.getMessage());
         } finally {
             db.endTransaction();
         }
+    }
+
+    public void updateEquipment(long id, String name, int frameType, @NonNull List<Long> linkedDeviceIds) {
+        updateEquipment(id, name, frameType, linkedDeviceIds, isEquipmentRetired(id));
+    }
+
+    public void setEquipmentRetired(long id, boolean isRetired) {
+        if (id <= 0) {
+            return;
+        }
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(RETIRED, isRetired ? 1 : 0);
+        db.update(EQUIPMENT, values, C_ID + "=?", new String[]{String.valueOf(id)});
+    }
+
+    public boolean isEquipmentRetired(long id) {
+        if (id <= 0) {
+            return false;
+        }
+        SQLiteDatabase db = this.getReadableDatabase();
+        try (Cursor cursor = db.query(EQUIPMENT, new String[]{RETIRED}, C_ID + "=?", new String[]{String.valueOf(id)}, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int colIdx = cursor.getColumnIndex(RETIRED);
+                return colIdx != -1 && cursor.getInt(colIdx) == 1;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking isEquipmentRetired: " + id, e);
+        }
+        return false;
     }
 
     /**
@@ -259,30 +290,46 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         public final int frameType;
         public final String stravaName;
         public final String stravaId;
+        public final boolean isRetired;
 
-        public EquipmentData(long id, String name, BSportType sportType, int frameType, String stravaName, String stravaId) {
+        public EquipmentData(long id, String name, BSportType sportType, int frameType, String stravaName, String stravaId, boolean isRetired) {
             this.id = id;
             this.name = name;
             this.sportType = sportType;
             this.frameType = frameType;
             this.stravaName = stravaName;
             this.stravaId = stravaId;
+            this.isRetired = isRetired;
+        }
+
+        public EquipmentData(long id, String name, BSportType sportType, int frameType, String stravaName, String stravaId) {
+            this(id, name, sportType, frameType, stravaName, stravaId, false);
         }
     }
+
     /**
      * New method to get all Equipment IDs linked to a specific sport type
      */
     @NonNull
     public List<EquipmentData> getEquipmentItems(@NonNull BSportType sportType) {
-        if (DEBUG) Log.d(TAG, "getEquipmentItems, sportType=" + sportType.name());
+        return getEquipmentItems(sportType, false);
+    }
+
+    @NonNull
+    public List<EquipmentData> getEquipmentItems(@NonNull BSportType sportType, boolean activeOnly) {
+        if (DEBUG) Log.d(TAG, "getEquipmentItems, sportType=" + sportType.name() + ", activeOnly=" + activeOnly);
 
         List<EquipmentData> itemList = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
 
-        // Query all relevant columns
+        String selection = SPORT_TYPE + "=?";
+        if (activeOnly) {
+            selection += " AND (" + RETIRED + " IS NULL OR " + RETIRED + "=0)";
+        }
+
         Cursor cursor = db.query(EQUIPMENT,
-                new String[]{C_ID, NAME, SPORT_TYPE, FRAME_TYPE, STRAVA_NAME, STRAVA_ID},
-                SPORT_TYPE + "=?",
+                new String[]{C_ID, NAME, SPORT_TYPE, FRAME_TYPE, STRAVA_NAME, STRAVA_ID, RETIRED},
+                selection,
                 new String[]{sportType.name()},
                 null, null, null);
 
@@ -293,15 +340,18 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
             int frameIdx = cursor.getColumnIndex(FRAME_TYPE);
             int stravaNameIdx = cursor.getColumnIndex(STRAVA_NAME);
             int stravaIdIdx = cursor.getColumnIndex(STRAVA_ID);
+            int retiredIdx = cursor.getColumnIndex(RETIRED);
 
             do {
+                boolean isRetired = retiredIdx != -1 && cursor.getInt(retiredIdx) == 1;
                 itemList.add(new EquipmentData(
                         cursor.getLong(idIdx),
                         cursor.getString(nameIdx),
                         BSportType.valueOf(cursor.getString(sportIdx)),
                         cursor.getInt(frameIdx),
                         cursor.getString(stravaNameIdx),
-                        cursor.getString(stravaIdIdx)
+                        cursor.getString(stravaIdIdx),
+                        isRetired
                 ));
             } while (cursor.moveToNext());
         }
@@ -312,15 +362,21 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     // Get list of all equipment
     @NonNull
     public List<EquipmentData> getEquipmentItems() {
-        if (DEBUG) Log.d(TAG, "getEquipmentItems");
+        return getEquipmentItems(false);
+    }
+
+    @NonNull
+    public List<EquipmentData> getEquipmentItems(boolean activeOnly) {
+        if (DEBUG) Log.d(TAG, "getEquipmentItems, activeOnly=" + activeOnly);
 
         List<EquipmentData> itemList = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
 
-        // Query all relevant columns
+        String selection = activeOnly ? ("(" + RETIRED + " IS NULL OR " + RETIRED + "=0)") : null;
+
         Cursor cursor = db.query(EQUIPMENT,
-                new String[]{C_ID, NAME, SPORT_TYPE, FRAME_TYPE, STRAVA_NAME, STRAVA_ID},
-                null,
+                new String[]{C_ID, NAME, SPORT_TYPE, FRAME_TYPE, STRAVA_NAME, STRAVA_ID, RETIRED},
+                selection,
                 null,
                 null, null, null);
 
@@ -331,15 +387,18 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
             int frameIdx = cursor.getColumnIndex(FRAME_TYPE);
             int stravaNameIdx = cursor.getColumnIndex(STRAVA_NAME);
             int stravaIdIdx = cursor.getColumnIndex(STRAVA_ID);
+            int retiredIdx = cursor.getColumnIndex(RETIRED);
 
             do {
+                boolean isRetired = retiredIdx != -1 && cursor.getInt(retiredIdx) == 1;
                 itemList.add(new EquipmentData(
                         cursor.getLong(idIdx),
                         cursor.getString(nameIdx),
                         BSportType.valueOf(cursor.getString(sportIdx)),
                         cursor.getInt(frameIdx),
                         cursor.getString(stravaNameIdx),
-                        cursor.getString(stravaIdIdx)
+                        cursor.getString(stravaIdIdx),
+                        isRetired
                 ));
             } while (cursor.moveToNext());
         }

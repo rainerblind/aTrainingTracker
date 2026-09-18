@@ -827,6 +827,9 @@
     <string name="equipment_sport_types">Sportarten:</string>
     <string name="equipment_linked_sport_types">Verknüpfte Sportarten</string>
     <string name="equipment_no_sports_linked">Keine</string>
+    <string name="equipment_retired">Ausgemustert</string>
+    <string name="equipment_section_active">Aktive Ausrüstung</string>
+    <string name="equipment_section_retired">Ausgemusterte Ausrüstung</string>
 
 
     <!-- statistics -->

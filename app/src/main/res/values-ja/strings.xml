@@ -739,6 +739,9 @@
     <string name="equipment_sport_types">種目:</string>
     <string name="equipment_linked_sport_types">リンク済み種目</string>
     <string name="equipment_no_sports_linked">なし</string>
+    <string name="equipment_retired">引退</string>
+    <string name="equipment_section_active">アクティブな機材</string>
+    <string name="equipment_section_retired">引退した機材</string>
 
     <!-- statistics -->
     <string name="stats_total">通算</string>

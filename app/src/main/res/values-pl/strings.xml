@@ -532,6 +532,9 @@
     <string name="equipment_sport_types">Sporty:</string>
     <string name="equipment_linked_sport_types">Powiązane sporty</string>
     <string name="equipment_no_sports_linked">Brak</string>
+    <string name="equipment_retired">Wycofany</string>
+    <string name="equipment_section_active">Aktywny sprzęt</string>
+    <string name="equipment_section_retired">Wycofany sprzęt</string>
 
     <!-- statistics -->
     <string name="stats_total">Łącznie</string>
