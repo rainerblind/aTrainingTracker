@@ -91,7 +91,11 @@ object LegacyImportEngine {
             apex: LatLng, 
             distance: Double,
             bSportType: BSportType,
-            polyline: String
+            polyline: String,
+            workoutName: String? = null,
+            candidateSportTypes: Set<BSportType> = emptySet(),
+            minAltPos: LatLng? = null,
+            maxAltPos: LatLng? = null
         ): Pair<Long?, String?>
     }
 
@@ -1004,7 +1008,11 @@ object LegacyImportEngine {
                         start = start, end = end, apex = apex, 
                         distance = totalDistance, 
                         bSportType = bSportType,
-                        polyline = polyline
+                        polyline = polyline,
+                        workoutName = workoutName,
+                        candidateSportTypes = candidateSports,
+                        minAltPos = minAltPos,
+                        maxAltPos = maxAltPos
                     ) ?: Pair(null, null)
                     
                     recalculationMutex.withLock {

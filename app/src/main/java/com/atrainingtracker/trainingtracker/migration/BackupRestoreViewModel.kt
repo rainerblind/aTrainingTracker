@@ -61,7 +61,11 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         val distance: Double,
         val bSportType: BSportType,
         val polyline: String,
-        val deferred: CompletableDeferred<Pair<Long?, String?>>
+        val deferred: CompletableDeferred<Pair<Long?, String?>>,
+        val workoutName: String? = null,
+        val candidateSportTypes: Set<BSportType> = emptySet(),
+        val minAltPos: LatLng? = null,
+        val maxAltPos: LatLng? = null
     )
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
@@ -411,7 +415,11 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             apex: LatLng,
             distance: Double,
             bSportType: BSportType,
-            polyline: String
+            polyline: String,
+            workoutName: String?,
+            candidateSportTypes: Set<BSportType>,
+            minAltPos: LatLng?,
+            maxAltPos: LatLng?
         ): Pair<Long?, String?> {
             // ATT-349: Throttling. Pause background engine if 10 items are already pending resolution.
             interactionSemaphore.acquire()
@@ -420,7 +428,10 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             
             // ATT-316: Add to queue and wait. 
             // We no longer pre-fetch clusters here to avoid stale data in the queue (ATT-316 Refined)
-            val interaction = ClusterInteraction(date, start, end, apex, distance, bSportType, polyline, deferred)
+            val interaction = ClusterInteraction(
+                date, start, end, apex, distance, bSportType, polyline, deferred,
+                workoutName, candidateSportTypes, minAltPos, maxAltPos
+            )
             _interactionQueue.update { it + interaction }
             
             val decision = deferred.await()

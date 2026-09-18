@@ -120,6 +120,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
     /**
      * Finds the best matching WorkoutCluster candidate evaluating against a set of candidate sport types (ATT-773, REQ-SET-064)
      * and optional 3D altitude extrema coordinates (ATT-502, REQ-SET-065).
+     * Lossless candidate evaluation ensures 100% parity with scoreClusters() and prevents false-negative pruning (ATT-1133, REQ-MIG-029).
      */
     fun suggestCluster(
         start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
@@ -128,18 +129,11 @@ class WorkoutClusterEngine private constructor(context: Context) {
         minAltPos: LatLng? = null,
         maxAltPos: LatLng? = null
     ): WorkoutCluster? {
-        val endpointTol = TrainingApplication.getClusterTolEndpoints().toDouble()
-        val latToleranceDegrees = endpointTol / 111000.0
-        val distToleranceMeters = distance * TrainingApplication.getClusterTolDistance().toDouble() * 4.0
+        val allClusters = dbManager.getAllClusters()
+        if (DEBUG) Log.d(TAG, "Evaluating ${allClusters.size} clusters for shape [start=$start, dist=$distance, name=$workoutName, sports=$candidateSportTypes, minAlt=$minAltPos, maxAlt=$maxAltPos]")
 
-        val candidates = dbManager.findCandidates(start.latitude, start.longitude, distance, latToleranceDegrees, distToleranceMeters)
-        if (DEBUG) Log.d(TAG, "Found ${candidates.size} candidates for shape [start=$start, dist=$distance, name=$workoutName, sports=$candidateSportTypes, minAlt=$minAltPos, maxAlt=$maxAltPos]")
-
-        return candidates.map { cluster ->
-            val score = calculateSimilarity(start, end, apex, distance, cluster, workoutName, candidateSportTypes, minAltPos, maxAltPos)
-            cluster to score
-        }.filter { it.second < 1.0 }
-         .minByOrNull { it.second }?.first
+        return scoreClusters(allClusters, start, end, apex, distance, workoutName, candidateSportTypes, minAltPos, maxAltPos)
+            .firstOrNull { it.second < 1.0 }?.first
     }
 
     /**
