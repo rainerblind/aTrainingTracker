@@ -753,6 +753,9 @@
     <string name="equipment_sport_types">Sporten:</string>
     <string name="equipment_linked_sport_types">Gekoppelde sporten</string>
     <string name="equipment_no_sports_linked">Geen</string>
+    <string name="equipment_retired">Buiten gebruik</string>
+    <string name="equipment_section_active">Actieve uitrusting</string>
+    <string name="equipment_section_retired">Uitrusting buiten gebruik</string>
 
     <!-- statistics -->
     <string name="stats_total">Altijd</string>

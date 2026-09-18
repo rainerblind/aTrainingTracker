@@ -55,6 +55,7 @@ fun EditEquipmentDialog(
     var frameType by remember { mutableStateOf(item.frameType) }
     var selectedSensorIds by remember { mutableStateOf(item.linkedDeviceIds.toSet()) }
     var selectedSportTypeIds by remember { mutableStateOf(item.linkedSportTypeIds.toSet()) }
+    var isRetired by remember { mutableStateOf(item.isRetired) }
 
     val iconRes = if (item.frameType > 0) BSportType.BIKE.iconResId else BSportType.RUN.iconResId
 
@@ -70,7 +71,8 @@ fun EditEquipmentDialog(
                         name = name,
                         frameType = frameType,
                         linkedDeviceIds = selectedSensorIds.toList(),
-                        linkedSportTypeIds = selectedSportTypeIds.toList()
+                        linkedSportTypeIds = selectedSportTypeIds.toList(),
+                        isRetired = isRetired
                     ))
                 },
                 onCancel = onDismiss,
@@ -124,6 +126,22 @@ fun EditEquipmentDialog(
                             selectedSensorIds + id
                         }
                     }
+                )
+            }
+
+            // Retirement toggle
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(id = R.string.equipment_retired),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Switch(
+                    checked = isRetired,
+                    onCheckedChange = { isRetired = it }
                 )
             }
 
