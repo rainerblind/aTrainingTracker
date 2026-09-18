@@ -53,7 +53,7 @@ data class EquipmentItem(
     val statsData: StatsData,
 )
 
-class EquipmentViewModel(
+class EquipmentViewModel @JvmOverloads constructor(
     application: Application,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val dbEquipmentHelper: EquipmentDbHelper = EquipmentDbHelper(application),

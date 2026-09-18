@@ -193,4 +193,10 @@ class EquipmentViewModelRetiredTest {
             mockDbHelper.setEquipmentRetired(10L, true)
         }
     }
+
+    @Test
+    fun testEquipmentViewModel_hasApplicationOnlyConstructorForViewModelProvider() {
+        val constructor = EquipmentViewModel::class.java.getConstructor(Application::class.java)
+        assertNotNull("EquipmentViewModel must have a public constructor accepting only Application for ViewModelProvider.AndroidViewModelFactory", constructor)
+    }
 }
