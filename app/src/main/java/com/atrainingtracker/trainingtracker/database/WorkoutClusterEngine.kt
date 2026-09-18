@@ -337,12 +337,15 @@ class WorkoutClusterEngine private constructor(context: Context) {
         }
 
         val newHitCount = cluster.hitCount - 1
+        val wApex = w.maxDisplacementLatLng ?: w.endLatLng ?: w.startLatLng
         val updated = cluster.copy(
             hitCount = newHitCount,
             startLat = (cluster.startLat * cluster.hitCount - (w.startLatLng?.latitude ?: cluster.startLat)) / newHitCount,
             startLng = (cluster.startLng * cluster.hitCount - (w.startLatLng?.longitude ?: cluster.startLng)) / newHitCount,
             endLat = (cluster.endLat * cluster.hitCount - (w.endLatLng?.latitude ?: cluster.endLat)) / newHitCount,
             endLng = (cluster.endLng * cluster.hitCount - (w.endLatLng?.longitude ?: cluster.endLng)) / newHitCount,
+            maxDispLat = (cluster.maxDispLat * cluster.hitCount - (wApex?.latitude ?: cluster.maxDispLat)) / newHitCount,
+            maxDispLng = (cluster.maxDispLng * cluster.hitCount - (wApex?.longitude ?: cluster.maxDispLng)) / newHitCount,
             refDistance = (cluster.refDistance * cluster.hitCount - w.totalDistance) / newHitCount
         )
 
@@ -456,19 +459,10 @@ class WorkoutClusterEngine private constructor(context: Context) {
         }
         
         val sportId = SportTypeDatabaseManager.getSportTypeId(route.summary.bSportType)
-        val clusterId = learnFromWorkout(
+        return learnFromWorkout(
             start, end, apex, distance, route.summary.name, sportId,
             minLat = minLat, minLng = minLng, maxLat = maxLat, maxLng = maxLng
         )
-
-        // ATT-498: Authoritative route anchors the cluster apex
-        if (clusterId != -1L) {
-            val cluster = dbManager.getClusterById(clusterId)
-            if (cluster != null) {
-                dbManager.updateCluster(cluster.copy(maxDispLat = apex.latitude, maxDispLng = apex.longitude))
-            }
-        }
-        return clusterId
     }
 
     /**
