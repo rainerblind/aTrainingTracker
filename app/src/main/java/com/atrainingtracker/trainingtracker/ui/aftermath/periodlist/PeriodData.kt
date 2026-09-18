@@ -21,6 +21,14 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
 
+/**
+ * Safety threshold for rendering detailed vector tracks and markers in Period Maps.
+ * When a period contains more than this number of workouts, individual vector tracks
+ * and technical markers are suppressed in favor of the aggregate raster Heatmap.
+ * (REQ-PER-012)
+ */
+const val MAX_PERIOD_VECTOR_TRACKS = 30
+
 enum class PeriodType {
     DAY, WEEK, MONTH, YEAR
 }
