@@ -30,6 +30,7 @@ import android.provider.BaseColumns;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.res.ResourcesCompat;
 
 import com.atrainingtracker.R;
@@ -51,7 +52,8 @@ public class SportTypeDatabaseManager {
     private final Context mContext; // Store context for operations like getting drawables
     private SQLiteDatabase mDatabase = null;
 
-    private SportTypeDatabaseManager(@NonNull Context context) {
+    @androidx.annotation.VisibleForTesting
+    protected SportTypeDatabaseManager(@NonNull Context context) {
         this.mContext = context.getApplicationContext();
         this.cDbHelper = new SportTypeDbHelper(this.mContext);
     }
@@ -537,6 +539,44 @@ public class SportTypeDatabaseManager {
 
         // Final fallback if neither DB nor Enum contains the name
         return result != null ? result : BSportType.UNKNOWN;
+    }
+
+    public long getSportTypeIdFromStravaName(@Nullable String stravaName) {
+        if (stravaName == null || stravaName.isEmpty()) {
+            return -1L;
+        }
+
+        SQLiteDatabase db = getDatabase();
+        try (Cursor cursor = db.query(SportType.TABLE,
+                new String[]{SportType.C_ID},
+                SportType.STRAVA_NAME + "=? COLLATE NOCASE",
+                new String[]{stravaName},
+                null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                return cursor.getLong(0);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error looking up sport type ID by Strava name: " + stravaName, e);
+        }
+
+        // Fallback: Check TTSportType enum defaults
+        for (TTSportType ttType : TTSportType.values()) {
+            if (ttType.getStravaName() != null && ttType.getStravaName().equalsIgnoreCase(stravaName)) {
+                try (Cursor cursor = db.query(SportType.TABLE,
+                        new String[]{SportType.C_ID},
+                        SportType.BASE_SPORT_TYPE + "=?",
+                        new String[]{ttType.getBSportType().name()},
+                        null, null, null, "1")) {
+                    if (cursor != null && cursor.moveToFirst()) {
+                        return cursor.getLong(0);
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Error looking up fallback sport type ID for: " + stravaName, e);
+                }
+            }
+        }
+
+        return -1L;
     }
 
 

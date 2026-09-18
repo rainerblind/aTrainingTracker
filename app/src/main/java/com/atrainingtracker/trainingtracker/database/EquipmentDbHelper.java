@@ -58,8 +58,9 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     public static final String STRAVA_ID = "StravaId";
     public static final String FRAME_TYPE = "FrameType";
     public static final String ANT_DEVICE_ID = "ANTDeviceId";
+    public static final String RETIRED = "Retired";
     static final String DB_NAME = "Equipment.db";
-    static final int DB_VERSION = 1;
+    static final int DB_VERSION = 2;
     private static final String TAG = "EquipmentDbHelper";
     private static final boolean DEBUG = true;
     private static final String CREATE_EQUIPMENT_TABLE = "create table " + EQUIPMENT + " ("
@@ -68,7 +69,8 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
             + SPORT_TYPE + " text,"
             + FRAME_TYPE + " int,"
             + STRAVA_NAME + " text,"
-            + STRAVA_ID + " text)";
+            + STRAVA_ID + " text,"
+            + RETIRED + " int default 0)";
     private static final String CREATE_LINKS_TABLE = "create table " + LINKS + " ("
             // + C_ID          + " INTEGER PRIMARY KEY AUTOINCREMENT, "
             + EQUIPMENT_ID + " int,"
@@ -545,6 +547,51 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         return stravaId;
     }
 
+    public long getIdFromStravaId(@Nullable String stravaId) {
+        if (stravaId == null || stravaId.trim().isEmpty()) {
+            return -1;
+        }
+        SQLiteDatabase db = this.getReadableDatabase();
+        try (Cursor cursor = db.query(EQUIPMENT, new String[]{C_ID},
+                STRAVA_ID + "=?", new String[]{stravaId.trim()},
+                null, null, null, "1")) {
+            if (cursor != null && cursor.moveToFirst()) {
+                return cursor.getLong(0);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error looking up equipment by Strava ID: " + stravaId, e);
+        }
+        return -1;
+    }
+
+    public long addOrUpdateStravaGear(@NonNull String stravaId, @NonNull String name, int frameType, @NonNull String sportType, boolean retired) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(NAME, name);
+        values.put(STRAVA_NAME, name);
+        values.put(STRAVA_ID, stravaId);
+        values.put(FRAME_TYPE, frameType);
+        values.put(SPORT_TYPE, sportType);
+        values.put(RETIRED, retired ? 1 : 0);
+
+        int updated = db.update(EQUIPMENT, values, STRAVA_ID + "=?", new String[]{stravaId});
+        if (updated > 0) {
+            return getIdFromStravaId(stravaId);
+        }
+
+        // Try updating existing unlinked equipment with matching name
+        int unlinkedUpdated = db.update(EQUIPMENT, values,
+                NAME + "=? AND (" + STRAVA_ID + " IS NULL OR " + STRAVA_ID + "='')",
+                new String[]{name});
+        if (unlinkedUpdated > 0) {
+            return getIdFromStravaId(stravaId);
+        }
+
+        long newId = db.insert(EQUIPMENT, null, values);
+        if (DEBUG) Log.i(TAG, "addOrUpdateStravaGear inserted id: " + newId + " for stravaId: " + stravaId);
+        return newId;
+    }
+
     /**
      * Inserts new equipment and its linked sensors.
      * @return The ID of the newly created equipment.
@@ -599,14 +646,10 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
-        // TODO: alter table instead of deleting!
-
-        db.execSQL("drop table if exists " + EQUIPMENT);  // drops the old database
-        db.execSQL("drop table if exists " + LINKS);  // drops the old database
-
-        if (DEBUG) Log.d(TAG, "onUpgraded");
-        onCreate(db);  // run onCreate to get new database
-
+        if (oldVersion < 2) {
+            db.execSQL("ALTER TABLE " + EQUIPMENT + " ADD COLUMN " + RETIRED + " INTEGER DEFAULT 0");
+        }
+        if (DEBUG) Log.d(TAG, "onUpgraded from " + oldVersion + " to " + newVersion);
     }
 
 }
