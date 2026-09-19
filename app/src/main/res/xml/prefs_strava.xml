@@ -56,6 +56,26 @@
 
     </PreferenceCategory>
 
+    <PreferenceCategory
+        android:title="@string/automated_strava_routes_sync">
+
+        <SwitchPreferenceCompat
+            android:key="automated_strava_routes_sync"
+            android:title="@string/automated_strava_routes_sync"
+            android:summary="@string/automated_strava_routes_sync_summary"
+            android:defaultValue="true" />
+
+        <ListPreference
+            android:key="strava_routes_sync_interval_days"
+            android:title="@string/strava_routes_sync_interval"
+            android:summary="%s"
+            android:entries="@array/backup_interval_entries"
+            android:entryValues="@array/backup_interval_values"
+            android:defaultValue="1"
+            android:dependency="automated_strava_routes_sync" />
+
+    </PreferenceCategory>
+
     <PreferenceCategory android:key="strava_selective_upload_category" android:title="@string/selectiveUpload">
         <CheckBoxPreference
             android:defaultValue="true"

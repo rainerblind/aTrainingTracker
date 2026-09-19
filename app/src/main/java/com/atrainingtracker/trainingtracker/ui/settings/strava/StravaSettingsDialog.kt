@@ -41,6 +41,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDeaut
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSynchronizeThread
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
+import com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorker
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.segments.StravaSegmentsSyncWorker
 import com.atrainingtracker.trainingtracker.ui.components.DropdownSelector
@@ -85,6 +86,12 @@ fun StravaSettingsDialog(
     }
     var segmentsSyncIntervalDays by remember {
         mutableStateOf(TrainingApplication.getStravaSegmentsSyncIntervalDays())
+    }
+    var automatedRoutesSync by remember {
+        mutableStateOf(TrainingApplication.isAutomatedStravaRoutesSyncEnabled())
+    }
+    var routesSyncIntervalDays by remember {
+        mutableStateOf(TrainingApplication.getStravaRoutesSyncIntervalDays())
     }
 
     var uploadGps by remember {
@@ -140,6 +147,7 @@ fun StravaSettingsDialog(
             routesRepo.syncRoutesFromStravaAsync()
 
             StravaSegmentsSyncWorker.schedule(context)
+            StravaRoutesSyncWorker.schedule(context)
 
             StravaAuthRepository.getInstance().resetState()
             isConnected = true
@@ -162,8 +170,11 @@ fun StravaSettingsDialog(
                         .putBoolean("uploadStravaCadence", uploadCadence)
                         .putBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, automatedSegmentsSync)
                         .putString(TrainingApplication.SP_STRAVA_SEGMENTS_SYNC_INTERVAL_DAYS, segmentsSyncIntervalDays)
+                        .putBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_ROUTES_SYNC, automatedRoutesSync)
+                        .putString(TrainingApplication.SP_STRAVA_ROUTES_SYNC_INTERVAL_DAYS, routesSyncIntervalDays)
                         .apply()
                     StravaSegmentsSyncWorker.schedule(context)
+                    StravaRoutesSyncWorker.schedule(context)
                     onDismiss()
                 },
                 onCancel = onDismiss,
@@ -188,6 +199,7 @@ fun StravaSettingsDialog(
                     TrainingApplication.deleteStravaToken()
                     (context as? Activity)?.let { StravaDeauthorizationThread(it).start() }
                     StravaSegmentsSyncWorker.schedule(context)
+                    StravaRoutesSyncWorker.schedule(context)
                     isConnected = false
                 }
             )
@@ -324,6 +336,65 @@ fun StravaSettingsDialog(
                                 val idx = intervalEntries.indexOf(selected)
                                 if (idx in intervalValues.indices) {
                                     segmentsSyncIntervalDays = intervalValues[idx]
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                HorizontalDivider()
+
+                // Automated Routes Synchronization Configuration
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 16.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.automated_strava_routes_sync),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = stringResource(R.string.automated_strava_routes_sync_summary),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = automatedRoutesSync,
+                            onCheckedChange = { automatedRoutesSync = it },
+                            modifier = Modifier.scale(0.8f)
+                        )
+                    }
+
+                    if (automatedRoutesSync) {
+                        val intervalEntries = stringArrayResource(R.array.backup_interval_entries).toList()
+                        val intervalValues = stringArrayResource(R.array.backup_interval_values).toList()
+                        val currentIndex = intervalValues.indexOf(routesSyncIntervalDays).coerceAtLeast(0)
+                        val currentEntry = if (currentIndex in intervalEntries.indices) {
+                            intervalEntries[currentIndex]
+                        } else {
+                            intervalEntries.firstOrNull() ?: ""
+                        }
+
+                        DropdownSelector(
+                            label = stringResource(R.string.strava_routes_sync_interval),
+                            options = intervalEntries,
+                            selectedOption = currentEntry,
+                            onOptionSelected = { selected ->
+                                val idx = intervalEntries.indexOf(selected)
+                                if (idx in intervalValues.indices) {
+                                    routesSyncIntervalDays = intervalValues[idx]
                                 }
                             },
                             modifier = Modifier.fillMaxWidth()
