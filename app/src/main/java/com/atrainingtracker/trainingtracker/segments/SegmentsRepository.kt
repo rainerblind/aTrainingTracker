@@ -187,6 +187,8 @@ class SegmentsRepository private constructor(context: Context) {
         else {
             syncStarredSegmentsWorker(bSportType)
         }
+        val timestamp = java.text.DateFormat.getDateTimeInstance().format(java.util.Date())
+        TrainingApplication.setLastUpdateTimeOfStravaSegments(timestamp)
     }
 
     private suspend fun syncStarredSegmentsWorker(bSportType: BSportType) = withContext(Dispatchers.IO) {

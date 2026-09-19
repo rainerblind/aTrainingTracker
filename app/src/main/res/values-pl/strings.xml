@@ -886,6 +886,11 @@ proszę czekać</string>
     <string name="updateStravaEquipment">Aktualizuj sprzęt Strava</string>
     <string name="updateStravaRoutes">Aktualizuj trasy Strava</string>
     <string name="lastUpdateOfRoutesNever">nigdy nie aktualizowano</string>
+    <string name="updateStravaSegments">Aktualizuj segmenty Strava</string>
+    <string name="lastUpdateOfSegmentsNever">nigdy nie aktualizowano</string>
+    <string name="automated_strava_segments_sync">Automatyczna synchronizacja segmentów</string>
+    <string name="automated_strava_segments_sync_summary">Regularnie pobieraj oznaczone gwiazdką segmenty ze Strava</string>
+    <string name="strava_segments_sync_interval">Interwał synchronizacji</string>
     <string name="battery_level">Poziom baterii</string>
     <string name="bike_power__accumulated_energy">• Skumulowana energia</string>
     <string name="bike_power__accumulated_torque">• Skumulowany moment obrotowy</string>

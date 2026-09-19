@@ -313,6 +313,11 @@
     <string name="lastUpdateOfEquipmentNever">jamais mis à jour</string>
     <string name="updateStravaRoutes">Mettre à jour les itinéraires Strava</string>
     <string name="lastUpdateOfRoutesNever">jamais mis à jour</string>
+    <string name="updateStravaSegments">Mettre à jour les segments Strava</string>
+    <string name="lastUpdateOfSegmentsNever">jamais mis à jour</string>
+    <string name="automated_strava_segments_sync">Synchronisation automatique des segments</string>
+    <string name="automated_strava_segments_sync_summary">Récupérer régulièrement les segments favoris depuis Strava</string>
+    <string name="strava_segments_sync_interval">Intervalle de synchronisation</string>
 
     <string name="getting_equipment_from_strava">récupération matériel Strava…\npatientez</string>
     <string name="got_shoe">chaussures Strava reçues\nreçu : %1$s</string>

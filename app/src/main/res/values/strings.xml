@@ -401,6 +401,11 @@
     <string name="lastUpdateOfEquipmentNever">never updated</string>
     <string name="updateStravaRoutes">Update Strava Routes</string>
     <string name="lastUpdateOfRoutesNever">never updated</string>
+    <string name="updateStravaSegments">Update Strava Segments</string>
+    <string name="lastUpdateOfSegmentsNever">never updated</string>
+    <string name="automated_strava_segments_sync">Automated Segment Sync</string>
+    <string name="automated_strava_segments_sync_summary">Regularly fetch starred segments from Strava</string>
+    <string name="strava_segments_sync_interval">Sync Interval</string>
 
     <string name="getting_equipment_from_strava">getting equipment from Strava…\nplease wait</string>
     <string name="got_shoe">getting shoes from Strava\ngot shoe: %1$s</string>

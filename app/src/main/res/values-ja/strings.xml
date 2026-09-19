@@ -313,6 +313,11 @@
     <string name="lastUpdateOfEquipmentNever">未更新</string>
     <string name="updateStravaRoutes">Strava ルートを更新</string>
     <string name="lastUpdateOfRoutesNever">未更新</string>
+    <string name="updateStravaSegments">Strava セグメントを更新</string>
+    <string name="lastUpdateOfSegmentsNever">未更新</string>
+    <string name="automated_strava_segments_sync">セグメントの自動同期</string>
+    <string name="automated_strava_segments_sync_summary">Strava から定期的にお気に入りセグメントを取得</string>
+    <string name="strava_segments_sync_interval">同期の間隔</string>
 
     <string name="getting_equipment_from_strava">Strava から装備を取得中…\nお待ちください</string>
     <string name="got_shoe">シューズを取得完了\n取得: %1$s</string>
