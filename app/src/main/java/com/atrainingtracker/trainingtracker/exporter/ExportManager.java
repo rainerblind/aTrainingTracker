@@ -200,15 +200,15 @@ public class ExportManager {
      * @param fileFormat: The specific FileFormat
      */
     public void exportWorkoutTo(long workoutId, @NonNull FileFormat fileFormat) {
-        if (DEBUG) Log.d(TAG, "exportWorkoutTo " + workoutId + ", " + fileFormat.name());
+        Log.i(TAG, "exportWorkoutTo: workoutId=" + workoutId + ", format=" + fileFormat.name());
 
         String fileBaseName = getFileBaseName(workoutId);
 
         if (fileBaseName == null) {
-            if (DEBUG) Log.d(TAG, "could not find the fileBaseName of workout " + workoutId);
+            Log.e(TAG, "could not find the fileBaseName of workout " + workoutId);
             return;
         } else {
-            if (DEBUG) Log.d(TAG, "fileBaseName: " + fileBaseName);
+            Log.i(TAG, "exportWorkoutTo resolved fileBaseName: " + fileBaseName);
         }
 
 
@@ -230,7 +230,7 @@ public class ExportManager {
      **********************************************************************************************/
 
     private void startFullExportProcess(String fileBaseName, FileFormat fileFormat) {
-        if (DEBUG) Log.d(TAG, "startFullExportProcess for " + fileBaseName + ", format: " + fileFormat);
+        Log.i(TAG, "startFullExportProcess: fileBaseName=" + fileBaseName + ", format=" + fileFormat);
 
         try {
             // work request for exporting to file
@@ -248,6 +248,7 @@ public class ExportManager {
                 ExportInfo dropboxExportInfo = new ExportInfo(fileBaseName, fileFormat, ExportType.DROPBOX);
                 uploadWorks.add(createWorkRequest(dropboxExportInfo));
                 updateStatus(dropboxExportInfo, ExportStatus.WAITING, null); // set state ot WAITING
+                Log.i(TAG, "Scheduled Dropbox upload work for " + fileBaseName);
             }
 
             // Community-Upload, (when requested)
@@ -255,6 +256,7 @@ public class ExportManager {
                 ExportInfo communityExportInfo = new ExportInfo(fileBaseName, fileFormat, ExportType.COMMUNITY);
                 uploadWorks.add(createWorkRequest(communityExportInfo));
                 updateStatus(communityExportInfo, ExportStatus.WAITING, null); // set state ot WAITING
+                Log.i(TAG, "Scheduled Community upload work for " + fileBaseName + " (" + fileFormat + ")");
             }
 
             // Check if WorkManager is available on this device
@@ -270,12 +272,12 @@ public class ExportManager {
 
             // create the queue and start.
             if (uploadWorks.isEmpty()) {
-                // OK, no uploads just export to file
+                Log.i(TAG, "Enqueuing file-only export for " + fileBaseName);
                 WorkManager.getInstance(mContext)
                         .beginWith(fileCreationWork)
                         .enqueue();
             } else {
-                // first: export to file, then do the uploads
+                Log.i(TAG, "Enqueuing fileCreationWork followed by " + uploadWorks.size() + " uploadWorks for " + fileBaseName);
                 WorkManager.getInstance(mContext)
                         .beginWith(fileCreationWork)
                         .then(uploadWorks)

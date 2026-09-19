@@ -666,8 +666,13 @@ class WorkoutClusterEngine private constructor(context: Context) {
         val avgSpeed = summariesManager.getDouble(workoutId, WorkoutSummaries.SPEED_AVERAGE_mps) ?: 0.0
         val discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(context)
         val hardwareIdentity = discoveryManager.resolveIdentity(workoutId, currentBSport, avgSpeed)
-        if (!forceIdentity && hardwareIdentity.isHighConfidence) summariesManager.applyInferredIdentity(workoutId, hardwareIdentity)
-        else summariesManager.applyInferredIdentity(workoutId, discoveryManager.inferIdentityFromSport(cluster.probableSportId))
+        if (!forceIdentity && hardwareIdentity.isHighConfidence) {
+            summariesManager.applyInferredIdentity(workoutId, hardwareIdentity)
+        } else if (cluster.probableSportId > 0) {
+            summariesManager.applyInferredIdentity(workoutId, discoveryManager.inferIdentityFromSport(cluster.probableSportId))
+        } else if (hardwareIdentity.sportId > 0) {
+            summariesManager.applyInferredIdentity(workoutId, hardwareIdentity)
+        }
     }
 
     /**

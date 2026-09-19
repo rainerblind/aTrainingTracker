@@ -199,7 +199,11 @@ public class WorkoutSummariesDatabaseManager {
             values.put(WorkoutSummaries.EQUIPMENT_ID, equipmentId);
         }
 
-        values.put(WorkoutSummaries.UPLOAD_TO_STRAVA, identity.getUploadToStrava());
+        // Do not downgrade an already enabled Strava upload (ATT-1116)
+        Integer currentUpload = getInt(workoutId, WorkoutSummaries.UPLOAD_TO_STRAVA);
+        if (currentUpload == null || currentUpload != 1) {
+            values.put(WorkoutSummaries.UPLOAD_TO_STRAVA, identity.getUploadToStrava());
+        }
 
         getDatabase().update(WorkoutSummaries.TABLE,
                 values,

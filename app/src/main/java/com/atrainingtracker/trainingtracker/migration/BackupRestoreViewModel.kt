@@ -326,6 +326,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
                 null
             }
             val fileName = displayName?.takeIf { it.isNotBlank() } ?: "legacy_import_${System.currentTimeMillis()}.$format"
+            Log.i("BackupRestoreVM", "importLegacyFile: uri=$uri, fileName=$fileName, uploadToStravaOnImport=$uploadToStravaOnImport")
             val tempFile = File(context.cacheDir, fileName)
             context.contentResolver.openInputStream(uri)?.use { input ->
                 tempFile.outputStream().use { output -> input.copyTo(output) }
@@ -336,6 +337,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
                 "gpx" -> LegacyImportEngine.importFromGpx(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
                 else -> false
             }
+            Log.i("BackupRestoreVM", "importLegacyFile execution result: fileExt=$fileExt, success=$success")
             tempFile.delete()
             if (success) {
                 // ATT-909 / REQ-MIG-026: Post-import reactive reconciliation

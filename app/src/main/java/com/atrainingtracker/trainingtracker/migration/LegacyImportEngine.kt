@@ -919,7 +919,7 @@ object LegacyImportEngine {
                                         workoutNotes = text.trim()
                                     }
                                 }
-                                "type" -> if (!inTrackpoint) {
+                                "type", "activity", "sport" -> if (!inTrackpoint) {
                                     val text = parser.nextText()
                                     if (!text.isNullOrBlank() && sportName.isNullOrBlank()) {
                                         sportName = text.trim()
@@ -1061,6 +1061,7 @@ object LegacyImportEngine {
                         bSportType = sportTypeManager.getBSportType(sportId)
                         val updateValues = ContentValues().apply {
                             put(WorkoutSummaries.SPORT_ID, sportId)
+                            put(WorkoutSummaries.B_SPORT, bSportType.name)
                         }
                         summaryDb.database.update(WorkoutSummaries.TABLE, updateValues, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
                     } else {
@@ -1074,6 +1075,33 @@ object LegacyImportEngine {
                             val fallbackSportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
                             summaryDb.database.update(WorkoutSummaries.TABLE, ContentValues().apply {
                                 put(WorkoutSummaries.SPORT_ID, fallbackSportId)
+                                put(WorkoutSummaries.B_SPORT, bSportType.name)
+                            }, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
+                        }
+                    }
+                }
+
+                // If sport is still unknown, infer from movement speed (ATT-1116)
+                if (bSportType == BSportType.UNKNOWN && cumDist > 0) {
+                    val activeTimeSec = if (parsedLaps.any { it.totalTimeSeconds > 0 }) {
+                        parsedLaps.sumOf { it.totalTimeSeconds }.roundToInt()
+                    } else {
+                        (points.size.coerceAtLeast(altitudes.size)).coerceAtLeast(distances.size)
+                    }
+                    val avgSpd = if (activeTimeSec > 0) cumDist / activeTimeSec else 0.0
+                    val candidateSports = try {
+                        EquipmentAndSportTypeDiscoveryManager.getInstance(context)
+                            .getCandidateBSportTypes(BSportType.UNKNOWN, avgSpd)
+                    } catch (_: Exception) {
+                        emptySet()
+                    }
+                    if (candidateSports.size == 1) {
+                        bSportType = candidateSports.first()
+                        val inferredSportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
+                        if (inferredSportId != -1L) {
+                            summaryDb.database.update(WorkoutSummaries.TABLE, ContentValues().apply {
+                                put(WorkoutSummaries.SPORT_ID, inferredSportId)
+                                put(WorkoutSummaries.B_SPORT, bSportType.name)
                             }, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
                         }
                     }
@@ -1490,32 +1518,40 @@ object LegacyImportEngine {
         exportManager: ExportManager = ExportManager(context)
     ) {
         try {
+            Log.i(TAG, "schedulePostImportCommunityUpload: workoutId=$workoutId, baseFileName=$baseFileName")
             // ATT-602: Ensure export status entries exist for this workout in ExportStatusDatabaseManager
             try {
                 val exportStatusDb = ExportStatusDatabaseManager.getInstance(context)
-                if (exportStatusDb.getExportRows(baseFileName).isEmpty()) {
+                val existingRows = exportStatusDb.getExportRows(baseFileName)
+                Log.i(TAG, "Existing export status rows for $baseFileName: count=${existingRows.size}")
+                if (existingRows.isEmpty()) {
                     exportManager.newWorkout(baseFileName)
+                    Log.i(TAG, "Initialized new export status rows for $baseFileName")
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Could not initialize export status rows for $baseFileName", e)
             }
 
             for (format in ExportType.COMMUNITY.exportToFileFormats) {
-                if (TrainingApplication.uploadToCommunity(format)) {
+                val uploadEnabled = TrainingApplication.uploadToCommunity(format)
+                Log.i(TAG, "Checking community format ${format.name}: uploadToCommunity=$uploadEnabled")
+                if (uploadEnabled) {
                     if (format == FileFormat.STRAVA) {
-                        val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
+                        val summaryDb = try {
+                            WorkoutSummariesDatabaseManager.getInstance(context)
+                        } catch (_: Exception) {
+                            null
+                        }
                         val uploadToStrava = getUploadToStravaStatus(summaryDb, workoutId)
+                        Log.i(TAG, "Strava uploadToStrava status in DB for workout $workoutId: $uploadToStrava")
                         if (uploadToStrava == 0) {
-                            if (TrainingApplication.getDebug(true)) {
-                                Log.d(TAG, "Skipping Strava upload for workout $workoutId: Explicitly opted out.")
-                            }
+                            Log.i(TAG, "Skipping Strava upload for workout $workoutId: Explicitly opted out.")
                             continue
                         }
                     }
+                    Log.i(TAG, "Calling exportManager.exportWorkoutTo(workoutId=$workoutId, format=${format.name})")
                     exportManager.exportWorkoutTo(workoutId, format)
-                    if (TrainingApplication.getDebug(true)) {
-                        Log.d(TAG, "Scheduled community upload for workout $workoutId ($baseFileName) to ${format.name}")
-                    }
+                    Log.i(TAG, "Scheduled community upload for workout $workoutId ($baseFileName) to ${format.name}")
                 }
             }
         } catch (e: Exception) {
@@ -1523,17 +1559,18 @@ object LegacyImportEngine {
         }
     }
 
-    private fun getUploadToStravaStatus(db: WorkoutSummariesDatabaseManager, workoutId: Long): Int {
+    private fun getUploadToStravaStatus(db: WorkoutSummariesDatabaseManager?, workoutId: Long): Int {
         return try {
-            db.database.query(
+            val database = db?.database ?: return -1
+            database.query(
                 WorkoutSummaries.TABLE,
                 arrayOf(WorkoutSummaries.UPLOAD_TO_STRAVA),
                 "${WorkoutSummaries.C_ID} = ?",
                 arrayOf(workoutId.toString()),
                 null, null, null
-            ).use { cursor ->
+            )?.use { cursor ->
                 if (cursor.moveToFirst()) cursor.getInt(0) else -1
-            }
+            } ?: -1
         } catch (e: Exception) {
             Log.w(TAG, "Could not query uploadToStrava for workout $workoutId", e)
             -1
