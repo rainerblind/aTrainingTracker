@@ -31,6 +31,8 @@ import com.atrainingtracker.trainingtracker.exporter.BaseExporter
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
+import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
+import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import okhttp3.FormBody
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -458,6 +460,9 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         // SAVE STRAVA ACTIVITY DATA
         StravaUploadDbHelper(mContext).updateStravaActivityData(exportInfo.fileBaseName, activityJSON.toString())
 
+        // ATT-912 / REQ-EXP-010: Ingest Strava segment feedback to update local PRs:
+        processSegmentEffortsForPrs(activityJSON)
+
         // ATT-902 / ATT-1105 / ATT-1114: If duplicate, reconcile with Strava metadata:
         if (isDuplicate && activityJSON != null) {
             val updateValues = ContentValues()
@@ -762,5 +767,63 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
     override fun myGetBooleanFromCursor(cursor: Cursor, columnName: String): Boolean {
         val index = cursor.getColumnIndex(columnName)
         return if (index != -1 && !cursor.isNull(index)) cursor.getInt(index) == 1 else false
+    }
+
+    /**
+     * Inspects segment efforts in Strava activity JSON feedback and updates personal best (PR)
+     * times in [SegmentsDatabaseManager] and [SegmentsRepository] for any achieved PR or KOM.
+     *
+     * @param activityJson The detailed activity JSON returned by Strava.
+     */
+    internal open fun processSegmentEffortsForPrs(activityJson: JSONObject?) {
+        if (activityJson == null) return
+        val segmentEffortsArray = activityJson.optJSONArray("segment_efforts") ?: return
+        val segmentsDb = SegmentsDatabaseManager.getInstance(mContext)
+        val segmentsRepo = SegmentsRepository.getInstance(mContext)
+
+        for (i in 0 until segmentEffortsArray.length()) {
+            val effort = segmentEffortsArray.optJSONObject(i) ?: continue
+            val elapsedTime = effort.optInt("elapsed_time", 0)
+            if (elapsedTime <= 0) continue
+
+            val segmentObj = effort.optJSONObject("segment")
+            val segmentId = if (segmentObj != null && segmentObj.has("id") && !segmentObj.isNull("id")) {
+                segmentObj.optLong("id")
+            } else if (effort.has("segment_id") && !effort.isNull("segment_id")) {
+                effort.optLong("segment_id")
+            } else {
+                0L
+            }
+            if (segmentId <= 0L) continue
+
+            var isNewPr = false
+            val prRank = if (effort.has("pr_rank") && !effort.isNull("pr_rank")) effort.optInt("pr_rank") else null
+            val komRank = if (effort.has("kom_rank") && !effort.isNull("kom_rank")) effort.optInt("kom_rank") else null
+
+            if (prRank == 1 || komRank == 1) {
+                isNewPr = true
+            } else {
+                effort.optJSONArray("achievements")?.let { achArray ->
+                    for (a in 0 until achArray.length()) {
+                        val ach = achArray.optJSONObject(a) ?: continue
+                        val type = ach.optString("type")
+                        val typeId = ach.optInt("type_id", -1)
+                        val rank = if (ach.has("rank") && !ach.isNull("rank")) ach.optInt("rank") else 1
+                        if (rank == 1 && (type.equals("pr", ignoreCase = true) || type.equals("kom", ignoreCase = true) || type.equals("overall", ignoreCase = true) || typeId == 2 || typeId == 3)) {
+                            isNewPr = true
+                            break
+                        }
+                    }
+                }
+            }
+
+            if (isNewPr) {
+                val updated = segmentsDb.updateSegmentPrTime(segmentId, elapsedTime)
+                if (updated) {
+                    segmentsRepo.updateSegmentPr(segmentId, elapsedTime)
+                    if (DEBUG) Log.i(TAG, "processSegmentEffortsForPrs: Updated PR for segment $segmentId to ${elapsedTime}s")
+                }
+            }
+        }
     }
 }

@@ -31,6 +31,7 @@ import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.google.android.gms.maps.model.LatLng
+import androidx.lifecycle.viewModelScope
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.every
@@ -41,6 +42,7 @@ import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flowOf
@@ -132,10 +134,18 @@ class RoutesViewModelFilterTest {
         }
     }
 
+    private var activeViewModel: RoutesViewModel? = null
+
+    private fun createViewModel(): RoutesViewModel {
+        return RoutesViewModel(mockApplication).also { activeViewModel = it }
+    }
+
     @After
     fun tearDown() {
-        Dispatchers.resetMain()
+        activeViewModel?.viewModelScope?.cancel()
+        activeViewModel = null
         ArchTaskExecutor.getInstance().setDelegate(null)
+        Dispatchers.resetMain()
         unmockkAll()
     }
 
@@ -145,7 +155,7 @@ class RoutesViewModelFilterTest {
         val r2 = createRoute(2L, "Route Alpha", distance = 30000.0)
         allRoutesFlow.value = listOf(r1, r2)
 
-        val viewModel = RoutesViewModel(mockApplication)
+        val viewModel = createViewModel()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.routes.collect()
         }
@@ -176,7 +186,7 @@ class RoutesViewModelFilterTest {
         val r2 = createRoute(2L, "Feldberg Peak Climb", description = "Steep mountain ascent")
         allRoutesFlow.value = listOf(r1, r2)
 
-        val viewModel = RoutesViewModel(mockApplication)
+        val viewModel = createViewModel()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.routes.collect()
         }
@@ -196,7 +206,7 @@ class RoutesViewModelFilterTest {
         val r2 = createRoute(2L, "Strava Route", source = RouteSource.STRAVA)
         allRoutesFlow.value = listOf(r1, r2)
 
-        val viewModel = RoutesViewModel(mockApplication)
+        val viewModel = createViewModel()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.routes.collect()
         }
@@ -216,7 +226,7 @@ class RoutesViewModelFilterTest {
         val r2 = createRoute(2L, "Unselected Route", isSelected = false)
         allRoutesFlow.value = listOf(r1, r2)
 
-        val viewModel = RoutesViewModel(mockApplication)
+        val viewModel = createViewModel()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.routes.collect()
         }
@@ -237,7 +247,7 @@ class RoutesViewModelFilterTest {
         val r3 = createRoute(3L, "Long Mountain", distance = 70000.0, elevationGain = 1200.0)
         allRoutesFlow.value = listOf(r1, r2, r3)
 
-        val viewModel = RoutesViewModel(mockApplication)
+        val viewModel = createViewModel()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.routes.collect()
         }
@@ -254,7 +264,7 @@ class RoutesViewModelFilterTest {
 
     @Test
     fun testViewModel_FilterCriteriaLifecycleMethods() = runTest(testDispatcher) {
-        val viewModel = RoutesViewModel(mockApplication)
+        val viewModel = createViewModel()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.filterCriteria.collect()
         }

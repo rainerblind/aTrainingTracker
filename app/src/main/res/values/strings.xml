@@ -1100,6 +1100,8 @@
     <string name="strava_show_all_best_efforts_format">▼ Show all %1$d best efforts (+%2$d more)</string>
     <string name="strava_show_less_best_efforts_format">▲ Show less (%1$d)</string>
     <string name="strava_show_less_best_efforts">▲ Show less</string>
+    <string name="strava_new_pr_banner_title_single">New Personal Record!</string>
+    <string name="strava_new_pr_banner_title_multiple">%1$d New Personal Records!</string>
 
     <string name="strava_connected_status">You are connected to Strava</string>
     <string name="strava_disconnected_status">You are not connected to Strava</string>
