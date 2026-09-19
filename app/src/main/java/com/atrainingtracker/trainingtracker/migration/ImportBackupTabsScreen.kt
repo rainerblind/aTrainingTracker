@@ -340,7 +340,7 @@ fun ImportBackupTabsScreen(
             viewModel = viewModel,
             onConfirm = {
                 showTuningDialogForBulk = false
-                viewModel.bulkRecoverLegacyData(context, "tcx")
+                viewModel.bulkRecoverLegacyData(context, "all")
             },
             onDismiss = { showTuningDialogForBulk = false }
         )
@@ -350,7 +350,7 @@ fun ImportBackupTabsScreen(
         PreImportTuningBottomSheet(
             viewModel = viewModel,
             onConfirm = {
-                viewModel.importLegacyFile(context, uri, "tcx")
+                viewModel.importLegacyFile(context, uri, "auto")
                 pendingSingleLegacyUri = null
             },
             onDismiss = { pendingSingleLegacyUri = null }
