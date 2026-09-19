@@ -111,11 +111,14 @@ configurations.all {
         force 'androidx.activity:activity:1.10.1'
         force 'androidx.activity:activity-ktx:1.10.1'
         force 'androidx.activity:activity-compose:1.10.1'
+        // Pin com.google.android.material to 1.13.0 which is fully compatible with core:1.15.0
+        // (material:1.14.0 introduces ProtectionLayout in design_bottom_sheet_dialog.xml requiring core:1.16.0+)
+        force 'com.google.android.material:material:1.13.0'
     }
 }
 
 dependencies {
-    implementation 'com.google.android.material:material:1.14.0'
+    implementation 'com.google.android.material:material:1.13.0'
     implementation "com.google.accompanist:accompanist-drawablepainter:0.37.3"
 
     // --- Legacy & Hardware SDKs ---

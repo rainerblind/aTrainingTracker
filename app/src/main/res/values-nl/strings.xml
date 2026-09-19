@@ -313,6 +313,11 @@
     <string name="lastUpdateOfEquipmentNever">nooit bijgewerkt</string>
     <string name="updateStravaRoutes">Strava routes bijwerken</string>
     <string name="lastUpdateOfRoutesNever">nooit bijgewerkt</string>
+    <string name="updateStravaSegments">Strava-segmenten bijwerken</string>
+    <string name="lastUpdateOfSegmentsNever">nooit bijgewerkt</string>
+    <string name="automated_strava_segments_sync">Automatische segmentsynchronisatie</string>
+    <string name="automated_strava_segments_sync_summary">Regelmatig gemarkeerde segmenten ophalen van Strava</string>
+    <string name="strava_segments_sync_interval">Synchronisatie-interval</string>
 
     <string name="getting_equipment_from_strava">Strava materiaal ophalen…\neven geduld</string>
     <string name="got_shoe">Strava schoenen opgehaald\nontvangen: %1$s</string>

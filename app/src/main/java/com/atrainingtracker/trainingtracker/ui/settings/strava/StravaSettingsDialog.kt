@@ -42,8 +42,11 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquip
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
+import com.atrainingtracker.trainingtracker.segments.StravaSegmentsSyncWorker
+import com.atrainingtracker.trainingtracker.ui.components.DropdownSelector
 import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+import androidx.compose.ui.res.stringArrayResource
 
 /**
  * Bottom sheet composable for configuring Strava integration, synchronizations, and selective upload settings.
@@ -74,6 +77,15 @@ fun StravaSettingsDialog(
     var routesLastUpdate by remember {
         mutableStateOf(TrainingApplication.getLastUpdateTimeOfStravaRoutes())
     }
+    var segmentsLastUpdate by remember {
+        mutableStateOf(TrainingApplication.getLastUpdateTimeOfStravaSegments())
+    }
+    var automatedSegmentsSync by remember {
+        mutableStateOf(TrainingApplication.isAutomatedStravaSegmentsSyncEnabled())
+    }
+    var segmentsSyncIntervalDays by remember {
+        mutableStateOf(TrainingApplication.getStravaSegmentsSyncIntervalDays())
+    }
 
     var uploadGps by remember {
         mutableStateOf(prefs.getBoolean("uploadStravaGPS", true))
@@ -101,6 +113,9 @@ fun StravaSettingsDialog(
                 TrainingApplication.SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES -> {
                     routesLastUpdate = TrainingApplication.getLastUpdateTimeOfStravaRoutes()
                 }
+                TrainingApplication.SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS -> {
+                    segmentsLastUpdate = TrainingApplication.getLastUpdateTimeOfStravaSegments()
+                }
                 TrainingApplication.SP_STRAVA_TOKEN -> {
                     isConnected = TrainingApplication.getStravaAccessToken() != null
                 }
@@ -124,6 +139,8 @@ fun StravaSettingsDialog(
             val routesRepo = RoutesRepository.getInstance(context)
             routesRepo.syncRoutesFromStravaAsync()
 
+            StravaSegmentsSyncWorker.schedule(context)
+
             StravaAuthRepository.getInstance().resetState()
             isConnected = true
         }
@@ -143,7 +160,10 @@ fun StravaSettingsDialog(
                         .putBoolean("uploadStravaHR", uploadHr)
                         .putBoolean("uploadStravaPower", uploadPower)
                         .putBoolean("uploadStravaCadence", uploadCadence)
+                        .putBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, automatedSegmentsSync)
+                        .putString(TrainingApplication.SP_STRAVA_SEGMENTS_SYNC_INTERVAL_DAYS, segmentsSyncIntervalDays)
                         .apply()
+                    StravaSegmentsSyncWorker.schedule(context)
                     onDismiss()
                 },
                 onCancel = onDismiss,
@@ -167,6 +187,7 @@ fun StravaSettingsDialog(
                 onDisconnectClick = {
                     TrainingApplication.deleteStravaToken()
                     (context as? Activity)?.let { StravaDeauthorizationThread(it).start() }
+                    StravaSegmentsSyncWorker.schedule(context)
                     isConnected = false
                 }
             )
@@ -224,6 +245,89 @@ fun StravaSettingsDialog(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                    }
+
+                    OutlinedCard(
+                        onClick = {
+                            val repository = SegmentsRepository.getInstance(context)
+                            repository.syncSegmentsAsync(BSportType.UNKNOWN)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.updateStravaSegments),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = segmentsLastUpdate,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                HorizontalDivider()
+
+                // Automated Synchronization Configuration (matching Dropbox automated backups)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 16.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.automated_strava_segments_sync),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = stringResource(R.string.automated_strava_segments_sync_summary),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = automatedSegmentsSync,
+                            onCheckedChange = { automatedSegmentsSync = it },
+                            modifier = Modifier.scale(0.8f)
+                        )
+                    }
+
+                    if (automatedSegmentsSync) {
+                        val intervalEntries = stringArrayResource(R.array.backup_interval_entries).toList()
+                        val intervalValues = stringArrayResource(R.array.backup_interval_values).toList()
+                        val currentIndex = intervalValues.indexOf(segmentsSyncIntervalDays).coerceAtLeast(0)
+                        val currentEntry = if (currentIndex in intervalEntries.indices) {
+                            intervalEntries[currentIndex]
+                        } else {
+                            intervalEntries.firstOrNull() ?: ""
+                        }
+
+                        DropdownSelector(
+                            label = stringResource(R.string.strava_segments_sync_interval),
+                            options = intervalEntries,
+                            selectedOption = currentEntry,
+                            onOptionSelected = { selected ->
+                                val idx = intervalEntries.indexOf(selected)
+                                if (idx in intervalValues.indices) {
+                                    segmentsSyncIntervalDays = intervalValues[idx]
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
 

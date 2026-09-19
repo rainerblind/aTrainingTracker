@@ -121,6 +121,10 @@ public class TrainingApplication extends Application {
     public static final String SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT = "lastUpdateTimeOfStravaEquipment";
     public static final String UPDATE_STRAVA_ROUTES = "updateStravaRoutes";
     public static final String SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES = "lastUpdateTimeOfStravaRoutes";
+    public static final String UPDATE_STRAVA_SEGMENTS = "updateStravaSegments";
+    public static final String SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS = "lastUpdateTimeOfStravaSegments";
+    public static final String SP_AUTOMATED_STRAVA_SEGMENTS_SYNC = "automated_strava_segments_sync";
+    public static final String SP_STRAVA_SEGMENTS_SYNC_INTERVAL_DAYS = "strava_segments_sync_interval_days";
     public static final String SP_STRAVA_ATHLETE_ID = "stravaAthleteId";
     public static final String PREFERENCE_SCREEN_RUNKEEPER = "psUploadToRunkeeper";
     public static final String SP_UPLOAD_TO_RUNKEEPER = "uploadToRunkeeper";
@@ -643,6 +647,32 @@ public class TrainingApplication extends Application {
         cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES, updateTime).apply();
     }
 
+    @NonNull
+    public static String getLastUpdateTimeOfStravaSegments() {
+        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS, cAppContext.getString(R.string.lastUpdateOfSegmentsNever));
+    }
+
+    public static void setLastUpdateTimeOfStravaSegments(String updateTime) {
+        cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS, updateTime).apply();
+    }
+
+    public static boolean isAutomatedStravaSegmentsSyncEnabled() {
+        return cSharedPreferences.getBoolean(SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, true);
+    }
+
+    public static void setAutomatedStravaSegmentsSyncEnabled(boolean enabled) {
+        cSharedPreferences.edit().putBoolean(SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, enabled).apply();
+    }
+
+    @NonNull
+    public static String getStravaSegmentsSyncIntervalDays() {
+        return cSharedPreferences.getString(SP_STRAVA_SEGMENTS_SYNC_INTERVAL_DAYS, "1");
+    }
+
+    public static void setStravaSegmentsSyncIntervalDays(String intervalDays) {
+        cSharedPreferences.edit().putString(SP_STRAVA_SEGMENTS_SYNC_INTERVAL_DAYS, intervalDays).apply();
+    }
+
     public static int getStravaAthleteId() {
         return cSharedPreferences.getInt(SP_STRAVA_ATHLETE_ID, 0);
     }
@@ -915,6 +945,7 @@ public class TrainingApplication extends Application {
         initWorkManager();
         if (sWorkManagerAvailable) {
             com.atrainingtracker.trainingtracker.migration.BackupWorker.Companion.schedule(this);
+            com.atrainingtracker.trainingtracker.segments.StravaSegmentsSyncWorker.Companion.schedule(this);
         } else {
             Log.w(TAG, "Skipping BackupWorker scheduling because WorkManager is unavailable on this device.");
         }

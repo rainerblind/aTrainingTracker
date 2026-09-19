@@ -25,10 +25,36 @@
         android:layout="@layout/preference_slim"/>
 
     <Preference
+        android:key="updateStravaSegments"
+        android:summary="@string/lastUpdateOfSegmentsNever"
+        android:title="@string/updateStravaSegments"
+        android:layout="@layout/preference_slim"/>
+
+    <Preference
         android:key="updateStravaRoutes"
         android:summary="@string/lastUpdateOfRoutesNever"
         android:title="@string/updateStravaRoutes"
         android:layout="@layout/preference_slim"/>
+
+    <PreferenceCategory
+        android:title="@string/automated_strava_segments_sync">
+
+        <SwitchPreferenceCompat
+            android:key="automated_strava_segments_sync"
+            android:title="@string/automated_strava_segments_sync"
+            android:summary="@string/automated_strava_segments_sync_summary"
+            android:defaultValue="true" />
+
+        <ListPreference
+            android:key="strava_segments_sync_interval_days"
+            android:title="@string/strava_segments_sync_interval"
+            android:summary="%s"
+            android:entries="@array/backup_interval_entries"
+            android:entryValues="@array/backup_interval_values"
+            android:defaultValue="1"
+            android:dependency="automated_strava_segments_sync" />
+
+    </PreferenceCategory>
 
     <PreferenceCategory android:key="strava_selective_upload_category" android:title="@string/selectiveUpload">
         <CheckBoxPreference
