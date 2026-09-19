@@ -318,6 +318,9 @@
     <string name="automated_strava_segments_sync">Sincronización automática de segmentos</string>
     <string name="automated_strava_segments_sync_summary">Obtener periódicamente los segmentos destacados de Strava</string>
     <string name="strava_segments_sync_interval">Intervalo de sincronización</string>
+    <string name="automated_strava_routes_sync">Sincronización automática de rutas</string>
+    <string name="automated_strava_routes_sync_summary">Obtener periódicamente las rutas de Strava</string>
+    <string name="strava_routes_sync_interval">Intervalo de sincronización</string>
 
     <string name="getting_equipment_from_strava">obteniendo equipamiento de Strava…\npor favor espera</string>
     <string name="got_shoe">obteniendo zapatillas de Strava\nobtenido: %1$s</string>

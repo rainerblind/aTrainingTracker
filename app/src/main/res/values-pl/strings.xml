@@ -891,6 +891,9 @@ proszę czekać</string>
     <string name="automated_strava_segments_sync">Automatyczna synchronizacja segmentów</string>
     <string name="automated_strava_segments_sync_summary">Regularnie pobieraj oznaczone gwiazdką segmenty ze Strava</string>
     <string name="strava_segments_sync_interval">Interwał synchronizacji</string>
+    <string name="automated_strava_routes_sync">Automatyczna synchronizacja tras</string>
+    <string name="automated_strava_routes_sync_summary">Regularnie pobieraj trasy ze Strava</string>
+    <string name="strava_routes_sync_interval">Interwał synchronizacji</string>
     <string name="battery_level">Poziom baterii</string>
     <string name="bike_power__accumulated_energy">• Skumulowana energia</string>
     <string name="bike_power__accumulated_torque">• Skumulowany moment obrotowy</string>

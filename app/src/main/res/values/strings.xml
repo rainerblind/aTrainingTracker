@@ -406,6 +406,9 @@
     <string name="automated_strava_segments_sync">Automated Segment Sync</string>
     <string name="automated_strava_segments_sync_summary">Regularly fetch starred segments from Strava</string>
     <string name="strava_segments_sync_interval">Sync Interval</string>
+    <string name="automated_strava_routes_sync">Automated Route Sync</string>
+    <string name="automated_strava_routes_sync_summary">Regularly fetch routes from Strava</string>
+    <string name="strava_routes_sync_interval">Sync Interval</string>
 
     <string name="getting_equipment_from_strava">getting equipment from Strava…\nplease wait</string>
     <string name="got_shoe">getting shoes from Strava\ngot shoe: %1$s</string>

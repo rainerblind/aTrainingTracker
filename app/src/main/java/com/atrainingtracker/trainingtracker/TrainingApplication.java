@@ -125,6 +125,8 @@ public class TrainingApplication extends Application {
     public static final String SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS = "lastUpdateTimeOfStravaSegments";
     public static final String SP_AUTOMATED_STRAVA_SEGMENTS_SYNC = "automated_strava_segments_sync";
     public static final String SP_STRAVA_SEGMENTS_SYNC_INTERVAL_DAYS = "strava_segments_sync_interval_days";
+    public static final String SP_AUTOMATED_STRAVA_ROUTES_SYNC = "automated_strava_routes_sync";
+    public static final String SP_STRAVA_ROUTES_SYNC_INTERVAL_DAYS = "strava_routes_sync_interval_days";
     public static final String SP_STRAVA_ATHLETE_ID = "stravaAthleteId";
     public static final String PREFERENCE_SCREEN_RUNKEEPER = "psUploadToRunkeeper";
     public static final String SP_UPLOAD_TO_RUNKEEPER = "uploadToRunkeeper";
@@ -647,6 +649,23 @@ public class TrainingApplication extends Application {
         cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES, updateTime).apply();
     }
 
+    public static boolean isAutomatedStravaRoutesSyncEnabled() {
+        return cSharedPreferences.getBoolean(SP_AUTOMATED_STRAVA_ROUTES_SYNC, true);
+    }
+
+    public static void setAutomatedStravaRoutesSyncEnabled(boolean enabled) {
+        cSharedPreferences.edit().putBoolean(SP_AUTOMATED_STRAVA_ROUTES_SYNC, enabled).apply();
+    }
+
+    @NonNull
+    public static String getStravaRoutesSyncIntervalDays() {
+        return cSharedPreferences.getString(SP_STRAVA_ROUTES_SYNC_INTERVAL_DAYS, "1");
+    }
+
+    public static void setStravaRoutesSyncIntervalDays(String intervalDays) {
+        cSharedPreferences.edit().putString(SP_STRAVA_ROUTES_SYNC_INTERVAL_DAYS, intervalDays).apply();
+    }
+
     @NonNull
     public static String getLastUpdateTimeOfStravaSegments() {
         return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS, cAppContext.getString(R.string.lastUpdateOfSegmentsNever));
@@ -946,6 +965,7 @@ public class TrainingApplication extends Application {
         if (sWorkManagerAvailable) {
             com.atrainingtracker.trainingtracker.migration.BackupWorker.Companion.schedule(this);
             com.atrainingtracker.trainingtracker.segments.StravaSegmentsSyncWorker.Companion.schedule(this);
+            com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorker.Companion.schedule(this);
         } else {
             Log.w(TAG, "Skipping BackupWorker scheduling because WorkManager is unavailable on this device.");
         }
