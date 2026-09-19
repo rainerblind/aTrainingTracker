@@ -970,6 +970,8 @@
     <string name="strava_show_all_best_efforts_format">▼ Alle %1$d Bestzeiten anzeigen (+%2$d weitere)</string>
     <string name="strava_show_less_best_efforts_format">▲ Weniger anzeigen (%1$d)</string>
     <string name="strava_show_less_best_efforts">▲ Weniger anzeigen</string>
+    <string name="strava_new_pr_banner_title_single">Neues Segment-PB!</string>
+    <string name="strava_new_pr_banner_title_multiple">%1$d neue Segment-PBs!</string>
 
     <string name="strava_connected_status">Du bist mit Strava verbunden</string>
     <string name="strava_disconnected_status">Du bist nicht mit Strava verbunden</string>

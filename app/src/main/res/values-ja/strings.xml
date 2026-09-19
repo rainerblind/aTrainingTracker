@@ -877,6 +877,8 @@
     <string name="strava_show_all_best_efforts_format">▼ すべての%1$d件の自己ベストを表示（他%2$d件）</string>
     <string name="strava_show_less_best_efforts_format">▲ 折りたたむ（%1$d）</string>
     <string name="strava_show_less_best_efforts">▲ 折りたたむ</string>
+    <string name="strava_new_pr_banner_title_single">新しい自己ベスト！</string>
+    <string name="strava_new_pr_banner_title_multiple">%1$d件の新しい自己ベスト！</string>
 
     <string name="strava_connected_status">Strava 接続中</string>
     <string name="strava_disconnected_status">Strava 未接続</string>

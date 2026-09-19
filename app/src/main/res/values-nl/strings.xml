@@ -894,6 +894,8 @@
     <string name="strava_show_all_best_efforts_format">▼ Toon alle %1$d beste prestaties (+%2$d meer)</string>
     <string name="strava_show_less_best_efforts_format">▲ Minder tonen (%1$d)</string>
     <string name="strava_show_less_best_efforts">▲ Minder tonen</string>
+    <string name="strava_new_pr_banner_title_single">Nieuw persoonlijk record!</string>
+    <string name="strava_new_pr_banner_title_multiple">%1$d nieuwe persoonlijke records!</string>
 
     <string name="strava_connected_status">Verbonden met Strava</string>
     <string name="strava_disconnected_status">Niet verbonden met Strava</string>

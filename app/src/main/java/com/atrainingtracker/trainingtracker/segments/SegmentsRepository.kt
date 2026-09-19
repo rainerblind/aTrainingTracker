@@ -315,6 +315,33 @@ class SegmentsRepository private constructor(context: Context) {
         segmentsDb.deleteSegment(segmentId)
     }
 
+    /**
+     * Updates the personal best (PR) time of a segment in memory.
+     *
+     * Atomically updates the matching [SegmentSummary] in [_allSegmentsWithPath] so all
+     * UI observers (e.g. [SegmentListViewModel], [LiveSegmentsRepository]) react immediately.
+     *
+     * @param stravaSegmentId The Strava ID of the segment.
+     * @param newPrTimeSeconds The new PR time in seconds.
+     */
+    fun updateSegmentPr(stravaSegmentId: Long, newPrTimeSeconds: Int) {
+        if (newPrTimeSeconds <= 0) return
+        val tf = TimeFormatter()
+        _allSegmentsWithPath.update { currentList ->
+            currentList.map { item ->
+                if (item.summary.stravaId == stravaSegmentId) {
+                    val updatedSummary = item.summary.copy(
+                        prTime_raw = newPrTimeSeconds,
+                        prTime = tf.format(newPrTimeSeconds)
+                    )
+                    item.copy(summary = updatedSummary)
+                } else {
+                    item
+                }
+            }
+        }
+    }
+
     private suspend fun fetchDetailedSegment(segmentId: Long): StravaSegment? = withContext(Dispatchers.IO) {
         val accessToken = StravaHelper.getRefreshedAccessToken() ?: return@withContext null
         val url = "https://www.strava.com/api/v3/segments/$segmentId"

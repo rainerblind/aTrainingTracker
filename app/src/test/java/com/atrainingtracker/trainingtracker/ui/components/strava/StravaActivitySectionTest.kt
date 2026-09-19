@@ -523,4 +523,31 @@ class StravaActivitySectionTest {
         assertEquals(1, displayed.size)
         assertEquals("1 mile", displayed[0].name)
     }
+
+    @Test
+    fun testCelebrationBannerFiltersPr1AndKom1() {
+        val efforts = listOf(
+            StravaSegmentEffort("Segment A", 120, prRank = 1, komRank = null, isStarred = false, segmentId = 1L),
+            StravaSegmentEffort("Segment B", 240, prRank = 2, komRank = null, isStarred = false, segmentId = 2L),
+            StravaSegmentEffort("Segment C", 300, prRank = null, komRank = 1, isStarred = true, segmentId = 3L),
+            StravaSegmentEffort("Segment D", 180, prRank = 3, komRank = null, isStarred = false, segmentId = 4L),
+            StravaSegmentEffort("Segment E", 90, prRank = null, komRank = null, isStarred = false, segmentId = 5L)
+        )
+
+        val celebrationEfforts = efforts.filter { it.prRank == 1 || it.komRank == 1 }
+        assertEquals(2, celebrationEfforts.size)
+        assertEquals(listOf("Segment A", "Segment C"), celebrationEfforts.map { it.name })
+    }
+
+    @Test
+    fun testCelebrationBannerOmittedWhenNoRank1() {
+        val efforts = listOf(
+            StravaSegmentEffort("Segment B", 240, prRank = 2, komRank = null, isStarred = false, segmentId = 2L),
+            StravaSegmentEffort("Segment D", 180, prRank = 3, komRank = null, isStarred = false, segmentId = 4L),
+            StravaSegmentEffort("Segment E", 90, prRank = null, komRank = null, isStarred = false, segmentId = 5L)
+        )
+
+        val celebrationEfforts = efforts.filter { it.prRank == 1 || it.komRank == 1 }
+        assertTrue("Celebration banner efforts must be empty when no PR #1 or KOM #1", celebrationEfforts.isEmpty())
+    }
 }

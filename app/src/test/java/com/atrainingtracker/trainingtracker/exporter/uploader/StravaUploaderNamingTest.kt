@@ -33,9 +33,12 @@ import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
+import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
+import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
+import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import okhttp3.FormBody
@@ -61,10 +64,13 @@ class StravaUploaderNamingTest {
     private lateinit var mockSummariesDbManager: WorkoutSummariesDatabaseManager
     private lateinit var mockSqlDb: SQLiteDatabase
     private lateinit var mockSportTypeDb: SportTypeDatabaseManager
+    private lateinit var mockSegmentsDbManager: SegmentsDatabaseManager
+    private lateinit var mockSegmentsRepository: SegmentsRepository
 
     private val capturedUpdatedValues = mutableListOf<ContentValues>()
     private val capturedStravaRequests = mutableListOf<Map<String, String>>()
     private val capturedDuplicateActivityIds = mutableListOf<String>()
+    private val capturedSegmentPrUpdates = mutableListOf<Pair<Long, Int>>()
     private val contentValueStores = java.util.Collections.synchronizedMap(java.util.IdentityHashMap<ContentValues, MutableMap<String, Any?>>())
 
     private fun io.mockk.MockKAnswerScope<*, *>.getRealInstance(): ContentValues {
@@ -209,6 +215,20 @@ class StravaUploaderNamingTest {
         every { anyConstructed<StravaUploadDbHelper>().updateAll(any(), any(), capture(capturedDuplicateActivityIds), any(), any()) } returns Unit
         every { anyConstructed<StravaUploadDbHelper>().deleteWorkout(any()) } returns 1
         every { mockSqlDb.update(WorkoutSummaries.TABLE, capture(capturedUpdatedValues), any(), any()) } returns 1
+
+        mockSegmentsDbManager = mockk(relaxed = true)
+        mockSegmentsRepository = mockk(relaxed = true)
+        capturedSegmentPrUpdates.clear()
+
+        mockkStatic(SegmentsDatabaseManager::class)
+        every { SegmentsDatabaseManager.getInstance(any()) } returns mockSegmentsDbManager
+        every { mockSegmentsDbManager.updateSegmentPrTime(any(), any()) } answers {
+            capturedSegmentPrUpdates.add(firstArg<Long>() to secondArg<Int>())
+            true
+        }
+
+        mockkObject(SegmentsRepository.Companion)
+        every { SegmentsRepository.getInstance(any()) } returns mockSegmentsRepository
     }
 
     @After
@@ -1026,4 +1046,87 @@ class StravaUploaderNamingTest {
         // Fresh upload sends sport type and gearId to Strava
         assertTrue(freshUploadRequests.any { it.containsKey("sport_type") || it.containsKey("gear_id") })
     }
+
+    @Test
+    fun testProcessSegmentEfforts_updatesPrWhenRankIs1() {
+        val uploader = TestableStravaUploader(mockContext, null)
+        val activityJson = JSONObject().apply {
+            put("id", 888L)
+            put("segment_efforts", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("segment_id", 1001L)
+                    put("elapsed_time", 95)
+                    put("pr_rank", 1)
+                })
+                put(JSONObject().apply {
+                    put("segment_id", 1002L)
+                    put("elapsed_time", 140)
+                    put("pr_rank", 2) // not a PR
+                })
+                put(JSONObject().apply {
+                    put("segment_id", 1003L)
+                    put("elapsed_time", 60)
+                    put("kom_rank", 1) // KOM is also rank 1
+                })
+            })
+        }
+
+        uploader.processSegmentEffortsForPrs(activityJson)
+
+        assertEquals(2, capturedSegmentPrUpdates.size)
+        assertEquals(1001L to 95, capturedSegmentPrUpdates[0])
+        assertEquals(1003L to 60, capturedSegmentPrUpdates[1])
+        io.mockk.verify(exactly = 1) { mockSegmentsRepository.updateSegmentPr(1001L, 95) }
+        io.mockk.verify(exactly = 1) { mockSegmentsRepository.updateSegmentPr(1003L, 60) }
+        io.mockk.verify(exactly = 0) { mockSegmentsRepository.updateSegmentPr(1002L, any()) }
+    }
+
+    @Test
+    fun testProcessSegmentEfforts_updatesPrWhenAchievementsArrayContainsPrRank1() {
+        val uploader = TestableStravaUploader(mockContext, null)
+        val activityJson = JSONObject().apply {
+            put("id", 888L)
+            put("segment_efforts", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("segment", JSONObject().apply { put("id", 2002L) })
+                    put("elapsed_time", 125)
+                    put("achievements", JSONArray().apply {
+                        put(JSONObject().apply {
+                            put("type", "pr")
+                            put("rank", 1)
+                        })
+                    })
+                })
+            })
+        }
+
+        uploader.processSegmentEffortsForPrs(activityJson)
+
+        assertEquals(1, capturedSegmentPrUpdates.size)
+        assertEquals(2002L to 125, capturedSegmentPrUpdates[0])
+        io.mockk.verify(exactly = 1) { mockSegmentsRepository.updateSegmentPr(2002L, 125) }
+    }
+
+    @Test
+    fun testProcessSegmentEfforts_doesNotUpdateRepoWhenDbReturnsFalse() {
+        every { mockSegmentsDbManager.updateSegmentPrTime(any(), any()) } returns false
+
+        val uploader = TestableStravaUploader(mockContext, null)
+        val activityJson = JSONObject().apply {
+            put("id", 888L)
+            put("segment_efforts", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("segment_id", 3003L)
+                    put("elapsed_time", 200)
+                    put("pr_rank", 1)
+                })
+            })
+        }
+
+        uploader.processSegmentEffortsForPrs(activityJson)
+
+        io.mockk.verify(exactly = 1) { mockSegmentsDbManager.updateSegmentPrTime(3003L, 200) }
+        io.mockk.verify(exactly = 0) { mockSegmentsRepository.updateSegmentPr(any(), any()) }
+    }
 }
+

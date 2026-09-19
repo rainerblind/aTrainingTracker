@@ -369,6 +369,54 @@ public class SegmentsDatabaseManager {
     }
 
     /**
+     * Updates the personal best (PR) time for a starred segment if the new time is faster
+     * than the currently recorded PR time, or if no PR time was previously recorded.
+     *
+     * @param stravaSegmentId The Strava ID of the segment.
+     * @param newPrTimeSeconds The newly achieved elapsed time in seconds.
+     * @return {@code true} if the segment exists and its PR time was updated; {@code false} otherwise.
+     */
+    public boolean updateSegmentPrTime(long stravaSegmentId, int newPrTimeSeconds) {
+        if (newPrTimeSeconds <= 0) {
+            return false;
+        }
+        SQLiteDatabase db = getDatabase();
+        Cursor cursor = db.query(
+                Segments.TABLE_STARRED_SEGMENTS,
+                new String[]{Segments.PR_TIME},
+                Segments.STRAVA_SEGMENT_ID + "=?",
+                new String[]{String.valueOf(stravaSegmentId)},
+                null, null, null
+        );
+        if (cursor == null) {
+            return false;
+        }
+        try {
+            if (!cursor.moveToFirst()) {
+                return false; // Segment not in StarredSegmentsTable
+            }
+            int currentPrTime = cursor.getInt(cursor.getColumnIndexOrThrow(Segments.PR_TIME));
+            if (currentPrTime <= 0 || newPrTimeSeconds < currentPrTime) {
+                ContentValues cv = new ContentValues();
+                cv.put(Segments.PR_TIME, newPrTimeSeconds);
+                int rows = db.update(
+                        Segments.TABLE_STARRED_SEGMENTS,
+                        cv,
+                        Segments.STRAVA_SEGMENT_ID + "=?",
+                        new String[]{String.valueOf(stravaSegmentId)}
+                );
+                if (DEBUG) {
+                    Log.i(TAG, "updateSegmentPrTime: Updated segment " + stravaSegmentId + " PR from " + currentPrTime + "s to " + newPrTimeSeconds + "s");
+                }
+                return rows > 0;
+            }
+            return false;
+        } finally {
+            cursor.close();
+        }
+    }
+
+    /**
      * Deletes a specific segment and its associated streams.
      * Useful for when a user un-stars a segment on Strava.
      */
