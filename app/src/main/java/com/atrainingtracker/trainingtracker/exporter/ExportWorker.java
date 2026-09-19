@@ -76,12 +76,15 @@ public class ExportWorker extends Worker  {
 
         // now we can get the Exporter
         mExporter = ExportManager.getExporter(getApplicationContext(), mExportInfo);
+        Log.i(TAG, "Resolved exporter: " + mExporter.getClass().getSimpleName() + " for " + mExportInfo);
 
         // inform others (to trigger notifications and update the export DB)
         informOthersStarted();
 
         // and start the export
+        Log.i(TAG, "Starting export execution for " + mExportInfo);
         BaseExporter.ExportResult result = mExporter.export(mExportInfo);
+        Log.i(TAG, "Export execution finished for " + mExportInfo + ": success=" + result.success() + ", retry=" + result.shallRetry() + ", answer=" + result.answer());
 
         // done :)
         if (result.success()) {
@@ -96,21 +99,21 @@ public class ExportWorker extends Worker  {
 
     // some helpers to inform the ExportNotificationManager and the ExportStatusRepository
     private void informOthersStarted() {
-        if (DEBUG) Log.i(TAG, "Export started: " + mExportInfo.toString());
+        Log.i(TAG, "Export started: " + mExportInfo.toString());
 
         updateStatus(mExportInfo.getFileBaseName(), ExportStatus.PROCESSING, "Export is being prepared...");  // TODO: Text?
         mExportNotificationManager.updateNotification(mExportInfo, false);
     }
 
     private void informOthersSuccess(String answer) {
-        if (DEBUG) Log.i(TAG, "Export successful: " + mExportInfo.toString() + " Answer: " + answer);
+        Log.i(TAG, "Export successful: " + mExportInfo.toString() + " Answer: " + answer);
 
         updateStatus(mExportInfo.getFileBaseName(), ExportStatus.FINISHED_SUCCESS, answer);
         mExportNotificationManager.updateNotification(mExportInfo, true);
     }
 
     private void informOthersFailed(String answer) {
-        if (DEBUG) Log.i(TAG, "Export failed: " + mExportInfo.toString() + " Answer: " + answer);
+        Log.i(TAG, "Export failed: " + mExportInfo.toString() + " Answer: " + answer);
 
         updateStatus(mExportInfo.getFileBaseName(), ExportStatus.FINISHED_FAILED, answer);
         mExportNotificationManager.updateNotification(mExportInfo, true);

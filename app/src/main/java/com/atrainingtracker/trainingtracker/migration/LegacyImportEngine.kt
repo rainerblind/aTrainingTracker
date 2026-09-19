@@ -13,6 +13,7 @@ package com.atrainingtracker.trainingtracker.migration
 import android.app.Application
 import android.content.ContentValues
 import android.content.Context
+import android.location.Location
 import android.util.Log
 import android.util.Xml
 import com.atrainingtracker.BuildConfig
@@ -120,7 +121,14 @@ object LegacyImportEngine {
         
         val possiblePaths = when (format.lowercase()) {
             "tcx" -> listOf("/TCX", "/apps/Workouts/TCX")
-            else -> return RecoveryResult(0, 0, 0, 0)
+            "gpx" -> listOf("/GPX", "/apps/Workouts/GPX")
+            else -> listOf("/TCX", "/apps/Workouts/TCX", "/GPX", "/apps/Workouts/GPX")
+        }
+
+        val targetExtensions = when (format.lowercase()) {
+            "tcx" -> listOf(".tcx")
+            "gpx" -> listOf(".gpx")
+            else -> listOf(".tcx", ".gpx")
         }
 
         val allEntries = mutableListOf<com.dropbox.core.v2.files.Metadata>()
@@ -131,7 +139,9 @@ object LegacyImportEngine {
                 var result = dbxClient.files().listFolderBuilder(path).withRecursive(true).start()
                 
                 while (true) {
-                    allEntries.addAll(result.entries.filter { it.name.lowercase().endsWith(".$format") })
+                    allEntries.addAll(result.entries.filter { entry ->
+                        targetExtensions.any { entry.name.lowercase().endsWith(it) }
+                    })
                     if (!result.hasMore) break
                     try {
                         result = dbxClient.files().listFolderContinue(result.cursor)
@@ -191,9 +201,15 @@ object LegacyImportEngine {
                                     continue
                                 }
 
-                                val success = when (format.lowercase()) {
+                                val ext = entry.name.substringAfterLast('.').lowercase()
+                                val success = when (ext) {
                                     "tcx" -> importFromTcx(context, tempFile, listener, uploadToStrava)
-                                    else -> false
+                                    "gpx" -> importFromGpx(context, tempFile, listener, uploadToStrava)
+                                    else -> when (format.lowercase()) {
+                                        "tcx" -> importFromTcx(context, tempFile, listener, uploadToStrava)
+                                        "gpx" -> importFromGpx(context, tempFile, listener, uploadToStrava)
+                                        else -> false
+                                    }
                                 }
                                 if (success) {
                                     importedCount.incrementAndGet()
@@ -706,6 +722,420 @@ object LegacyImportEngine {
         return false
     }
 
+    /**
+     * Recreates a workout from a GPX file (GPX 1.0 or 1.1).
+     * (REQ-MIG-030)
+     */
+    suspend fun importFromGpx(
+        context: Context,
+        gpxFile: File,
+        listener: ProgressListener? = null,
+        uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
+    ): Boolean {
+        try {
+            var baseFileName = gpxFile.nameWithoutExtension.removeSuffix("-TMP").removeSuffix("~")
+            val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
+
+            // Early exit if workout already exists to prevent redundant processing
+            if (!baseFileName.startsWith("legacy_import", ignoreCase = true) && isWorkoutExisting(summaryDb, baseFileName)) {
+                if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
+                return false
+            }
+
+            val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
+
+            var firstTime: String? = null
+            var lastTime: String? = null
+            var sportName: String? = null
+            var workoutNotes: String? = null
+            var workoutName: String? = null
+            val points = mutableListOf<LatLng>()
+            val altitudes = mutableListOf<Double>()
+            val distances = mutableListOf<Double>()
+            val parsedLaps = mutableListOf<ParsedLap>()
+            var currentLap: ParsedLap? = null
+            var lapFirstTime: String? = null
+            var lapLastTime: String? = null
+            var lapStartDistance = 0.0
+
+            var minAltVal = Double.MAX_VALUE
+            var minAltPos: LatLng? = null
+            var maxAltVal = -Double.MAX_VALUE
+            var maxAltPos: LatLng? = null
+
+            val foundSensors = mutableSetOf<SensorType>()
+            val bufferedSamples = mutableListOf<ContentValues>()
+
+            var prevLat: Double? = null
+            var prevLng: Double? = null
+            var cumDist = 0.0
+
+            FileInputStream(gpxFile).use { fis ->
+                val parser = Xml.newPullParser()
+                parser.setInput(fis, "UTF-8")
+
+                var eventType = parser.eventType
+                var values = ContentValues()
+                var inMetadata = false
+                var inTrk = false
+                var inTrackpoint = false
+                var currentLat: Double? = null
+                var currentLng: Double? = null
+                var currentAlt: Double? = null
+
+                while (eventType != XmlPullParser.END_DOCUMENT) {
+                    val rawName = parser.name
+                    val name = rawName?.substringAfterLast(':')
+                    when (eventType) {
+                        XmlPullParser.START_TAG -> {
+                            when (name) {
+                                "metadata" -> inMetadata = true
+                                "trk" -> inTrk = true
+                                "trkseg" -> {
+                                    lapStartDistance = cumDist
+                                    lapFirstTime = null
+                                    lapLastTime = null
+                                    val lap = ParsedLap(
+                                        lapNr = parsedLaps.size.toLong()
+                                    )
+                                    parsedLaps.add(lap)
+                                    currentLap = lap
+                                }
+                                "trkpt", "rtept" -> {
+                                    inTrackpoint = true
+                                    currentLat = parser.getAttributeValue(null, "lat")?.toDoubleOrNull()
+                                        ?: parser.getAttributeValue("", "lat")?.toDoubleOrNull()
+                                    currentLng = parser.getAttributeValue(null, "lon")?.toDoubleOrNull()
+                                        ?: parser.getAttributeValue("", "lon")?.toDoubleOrNull()
+                                    if (currentLat == null || currentLng == null) {
+                                        for (i in 0 until parser.attributeCount) {
+                                            if (parser.getAttributeName(i).equals("lat", ignoreCase = true)) {
+                                                currentLat = parser.getAttributeValue(i).toDoubleOrNull()
+                                            } else if (parser.getAttributeName(i).equals("lon", ignoreCase = true)) {
+                                                currentLng = parser.getAttributeValue(i).toDoubleOrNull()
+                                            }
+                                        }
+                                    }
+
+                                    if (currentLap == null && parsedLaps.isEmpty()) {
+                                        val lap = ParsedLap(lapNr = 0L)
+                                        parsedLaps.add(lap)
+                                        currentLap = lap
+                                        lapStartDistance = cumDist
+                                    }
+
+                                    val lapNr = (parsedLaps.size - 1).coerceAtLeast(0).toLong()
+                                    values = ContentValues().apply {
+                                        put(SensorType.LAP_NR.name, lapNr)
+                                    }
+
+                                    if (currentLat != null && currentLng != null) {
+                                        if (prevLat != null && prevLng != null) {
+                                            val results = FloatArray(1)
+                                            Location.distanceBetween(prevLat!!, prevLng!!, currentLat!!, currentLng!!, results)
+                                            cumDist += results[0].toDouble()
+                                        }
+                                        prevLat = currentLat
+                                        prevLng = currentLng
+
+                                        values.put(SensorType.LATITUDE.name, currentLat)
+                                        values.put(SensorType.LONGITUDE.name, currentLng)
+                                        values.put(SensorType.DISTANCE_m.name, cumDist)
+                                        foundSensors.add(SensorType.LATITUDE)
+                                        foundSensors.add(SensorType.LONGITUDE)
+                                        foundSensors.add(SensorType.DISTANCE_m)
+                                    }
+                                    currentAlt = null
+                                }
+                                "ele" -> if (inTrackpoint) {
+                                    currentAlt = parser.nextText().toDoubleOrNull()
+                                    if (currentAlt != null) {
+                                        values.put(SensorType.ALTITUDE.name, currentAlt)
+                                        foundSensors.add(SensorType.ALTITUDE)
+                                    }
+                                }
+                                "time" -> {
+                                    val rawTime = parser.nextText()
+                                    val formatted = try {
+                                        val date = tcxTimeFormat.parse(rawTime.substring(0, 19))
+                                        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(date!!)
+                                    } catch (_: Exception) { rawTime }
+
+                                    if (inTrackpoint) {
+                                        values.put("time", formatted)
+                                        if (firstTime == null) firstTime = formatted
+                                        lastTime = formatted
+                                        if (lapFirstTime == null) lapFirstTime = formatted
+                                        lapLastTime = formatted
+                                        if (currentLap?.startTime == null) currentLap?.startTime = formatted
+                                    } else if (inMetadata && firstTime == null) {
+                                        firstTime = formatted
+                                    }
+                                }
+                                "speed" -> if (inTrackpoint) {
+                                    val spd = parser.nextText().toDoubleOrNull()
+                                    if (spd != null) {
+                                        values.put(SensorType.SPEED_mps.name, spd)
+                                        foundSensors.add(SensorType.SPEED_mps)
+                                    }
+                                }
+                                "hr", "heartrate" -> if (inTrackpoint) {
+                                    val hr = parser.nextText().toIntOrNull()
+                                    if (hr != null) {
+                                        values.put(SensorType.HR.name, hr)
+                                        foundSensors.add(SensorType.HR)
+                                    }
+                                }
+                                "cad", "cadence" -> if (inTrackpoint) {
+                                    val cad = parser.nextText().toIntOrNull()
+                                    if (cad != null) {
+                                        values.put(SensorType.CADENCE.name, cad)
+                                        foundSensors.add(SensorType.CADENCE)
+                                    }
+                                }
+                                "atemp", "temp" -> if (inTrackpoint) {
+                                    val temp = parser.nextText().toDoubleOrNull()
+                                    if (temp != null) {
+                                        values.put(SensorType.TEMPERATURE.name, temp)
+                                        foundSensors.add(SensorType.TEMPERATURE)
+                                    }
+                                }
+                                "power", "watts" -> if (inTrackpoint) {
+                                    val pwr = parser.nextText().toIntOrNull()
+                                    if (pwr != null) {
+                                        values.put(SensorType.POWER.name, pwr)
+                                        foundSensors.add(SensorType.POWER)
+                                    }
+                                }
+                                "name" -> if (!inTrackpoint) {
+                                    val text = parser.nextText()
+                                    if (!text.isNullOrBlank() && workoutName.isNullOrBlank()) {
+                                        workoutName = text.trim()
+                                    }
+                                }
+                                "desc", "description" -> if (!inTrackpoint) {
+                                    val text = parser.nextText()
+                                    if (!text.isNullOrBlank() && workoutNotes.isNullOrBlank()) {
+                                        workoutNotes = text.trim()
+                                    }
+                                }
+                                "type", "activity", "sport" -> if (!inTrackpoint) {
+                                    val text = parser.nextText()
+                                    if (!text.isNullOrBlank() && sportName.isNullOrBlank()) {
+                                        sportName = text.trim()
+                                    }
+                                }
+                            }
+                        }
+                        XmlPullParser.END_TAG -> {
+                            when (name) {
+                                "metadata" -> inMetadata = false
+                                "trk" -> inTrk = false
+                                "trkseg" -> {
+                                    currentLap?.let { lap ->
+                                        lap.distanceMeters = (cumDist - lapStartDistance).coerceAtLeast(0.0)
+                                        if (lapFirstTime != null && lapLastTime != null) {
+                                            try {
+                                                val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+                                                val t1 = format.parse(lapFirstTime!!)?.time ?: 0L
+                                                val t2 = format.parse(lapLastTime!!)?.time ?: 0L
+                                                val duration = ((t2 - t1) / 1000.0).coerceAtLeast(0.0)
+                                                lap.totalTimeSeconds = duration
+                                                if (duration > 0) {
+                                                    lap.maxSpeed = lap.distanceMeters / duration
+                                                }
+                                            } catch (_: Exception) {}
+                                        }
+                                    }
+                                    currentLap = null
+                                }
+                                "trkpt", "rtept" -> {
+                                    if (values.containsKey("time")) {
+                                        bufferedSamples.add(values)
+                                    }
+
+                                    if (currentLat != null && currentLng != null) {
+                                        val pos = LatLng(currentLat!!, currentLng!!)
+                                        points.add(pos)
+                                        if (currentAlt != null) {
+                                            if (currentAlt!! < minAltVal) {
+                                                minAltVal = currentAlt!!
+                                                minAltPos = pos
+                                            }
+                                            if (currentAlt!! > maxAltVal) {
+                                                maxAltVal = currentAlt!!
+                                                maxAltPos = pos
+                                            }
+                                        }
+                                    }
+                                    currentAlt?.let { altitudes.add(it) }
+                                    distances.add(cumDist)
+                                    inTrackpoint = false
+                                }
+                            }
+                        }
+                    }
+                    eventType = parser.next()
+                }
+            }
+
+            // Finalize any unfinished lap
+            currentLap?.let { lap ->
+                if (lap.distanceMeters <= 0.0 && cumDist > lapStartDistance) {
+                    lap.distanceMeters = (cumDist - lapStartDistance).coerceAtLeast(0.0)
+                }
+                if (lapFirstTime != null && lapLastTime != null && lap.totalTimeSeconds <= 0.0) {
+                    try {
+                        val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+                        val t1 = format.parse(lapFirstTime!!)?.time ?: 0L
+                        val t2 = format.parse(lapLastTime!!)?.time ?: 0L
+                        lap.totalTimeSeconds = ((t2 - t1) / 1000.0).coerceAtLeast(0.0)
+                    } catch (_: Exception) {}
+                }
+            }
+
+            if (parsedLaps.isEmpty() && points.isNotEmpty()) {
+                parsedLaps.add(ParsedLap(lapNr = 0L, startTime = firstTime, distanceMeters = cumDist))
+            } else if (parsedLaps.size == 1 && parsedLaps[0].distanceMeters <= 0.0 && cumDist > 0.0) {
+                parsedLaps[0].distanceMeters = cumDist
+            }
+
+            // Post-parsing: Bulk insertion and dynamic table creation
+            if (bufferedSamples.isNotEmpty()) {
+                if (baseFileName.startsWith("legacy_import", ignoreCase = true) && firstTime != null) {
+                    baseFileName = firstTime!!.replace(" ", "_").replace(":", "")
+                    if (isWorkoutExisting(summaryDb, baseFileName)) {
+                        if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
+                        return false
+                    }
+                }
+                samplesDbManager.createNewTable(baseFileName, SensorType.values().toList())
+                val targetDb = samplesDbManager.database
+                val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+                targetDb.beginTransaction()
+                try {
+                    bufferedSamples.forEach { sampleValues ->
+                        targetDb.insert(tableName, null, sampleValues)
+                    }
+                    targetDb.setTransactionSuccessful()
+                } finally {
+                    targetDb.endTransaction()
+                }
+            }
+
+            if (firstTime == null && parsedLaps.isNotEmpty() && parsedLaps.first().startTime != null) {
+                firstTime = parsedLaps.first().startTime
+            }
+
+            if (firstTime != null) {
+                var workoutId = getWorkoutId(summaryDb, baseFileName)
+                if (workoutId == -1L) {
+                    try {
+                        StravaUploadDbHelper(context).deleteWorkout(baseFileName)
+                    } catch (t: Throwable) {
+                        Log.w(TAG, "Could not clean StravaUploadDb for $baseFileName: ${t.message}")
+                    }
+
+                    val summaryValues = ContentValues().apply {
+                        put(WorkoutSummaries.FILE_BASE_NAME, baseFileName)
+                        put(WorkoutSummaries.WORKOUT_NAME, if (!workoutName.isNullOrBlank()) workoutName!!.trim() else baseFileName)
+                        put(WorkoutSummaries.TIME_START, firstTime)
+                        put(WorkoutSummaries.SPORT_ID, -1L)
+                        put(WorkoutSummaries.EQUIPMENT_ID, -1L)
+                        put(WorkoutSummaries.FINISHED, 1)
+                        if (uploadToStrava && TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
+                            put(WorkoutSummaries.UPLOAD_TO_STRAVA, 1)
+                        } else {
+                            put(WorkoutSummaries.UPLOAD_TO_STRAVA, 0)
+                        }
+                    }
+                    workoutId = summaryDb.database.insert(WorkoutSummaries.TABLE, null, summaryValues)
+                }
+
+                val sportTypeManager = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(context)
+                var bSportType = BSportType.UNKNOWN
+
+                if (sportName != null) {
+                    val sportId = sportTypeManager.getSportTypeIdFromTcxName(sportName!!)
+                    if (sportId != -1L) {
+                        bSportType = sportTypeManager.getBSportType(sportId)
+                        val updateValues = ContentValues().apply {
+                            put(WorkoutSummaries.SPORT_ID, sportId)
+                            put(WorkoutSummaries.B_SPORT, bSportType.name)
+                        }
+                        summaryDb.database.update(WorkoutSummaries.TABLE, updateValues, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
+                    } else {
+                        bSportType = when (sportName!!.lowercase()) {
+                            "running", "run", "jogging" -> BSportType.RUN
+                            "biking", "cycling", "bike", "ride", "mountain biking", "road cycling" -> BSportType.BIKE
+                            "walking", "hiking", "hike", "walk" -> BSportType.RUN
+                            else -> BSportType.UNKNOWN
+                        }
+                        if (bSportType != BSportType.UNKNOWN) {
+                            val fallbackSportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
+                            summaryDb.database.update(WorkoutSummaries.TABLE, ContentValues().apply {
+                                put(WorkoutSummaries.SPORT_ID, fallbackSportId)
+                                put(WorkoutSummaries.B_SPORT, bSportType.name)
+                            }, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
+                        }
+                    }
+                }
+
+                // If sport is still unknown, infer from movement speed (ATT-1116)
+                if (bSportType == BSportType.UNKNOWN && cumDist > 0) {
+                    val activeTimeSec = if (parsedLaps.any { it.totalTimeSeconds > 0 }) {
+                        parsedLaps.sumOf { it.totalTimeSeconds }.roundToInt()
+                    } else {
+                        (points.size.coerceAtLeast(altitudes.size)).coerceAtLeast(distances.size)
+                    }
+                    val avgSpd = if (activeTimeSec > 0) cumDist / activeTimeSec else 0.0
+                    val candidateSports = try {
+                        EquipmentAndSportTypeDiscoveryManager.getInstance(context)
+                            .getCandidateBSportTypes(BSportType.UNKNOWN, avgSpd)
+                    } catch (_: Exception) {
+                        emptySet()
+                    }
+                    if (candidateSports.size == 1) {
+                        bSportType = candidateSports.first()
+                        val inferredSportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
+                        if (inferredSportId != -1L) {
+                            summaryDb.database.update(WorkoutSummaries.TABLE, ContentValues().apply {
+                                put(WorkoutSummaries.SPORT_ID, inferredSportId)
+                                put(WorkoutSummaries.B_SPORT, bSportType.name)
+                            }, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
+                        }
+                    }
+                }
+
+                recalculateStats(
+                    context = context,
+                    workoutId = workoutId,
+                    baseFileName = baseFileName,
+                    points = points,
+                    altitudes = altitudes,
+                    distances = distances,
+                    bSportType = bSportType,
+                    foundSensors = foundSensors,
+                    parsedLaps = parsedLaps,
+                    workoutNotes = workoutNotes,
+                    workoutName = workoutName,
+                    firstTime = firstTime,
+                    lastTime = lastTime,
+                    minAltPos = minAltPos,
+                    maxAltPos = maxAltPos,
+                    listener = listener
+                )
+
+                schedulePostImportCommunityUpload(context, workoutId, baseFileName)
+
+                return true
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to import GPX: ${gpxFile.name}", e)
+        }
+        return false
+    }
+
     private fun getWorkoutId(db: WorkoutSummariesDatabaseManager, fileBaseName: String): Long {
         db.database.query(WorkoutSummaries.TABLE, arrayOf(WorkoutSummaries.C_ID), 
             "${WorkoutSummaries.FILE_BASE_NAME} = ?", arrayOf(fileBaseName), null, null, null).use {
@@ -1088,32 +1518,40 @@ object LegacyImportEngine {
         exportManager: ExportManager = ExportManager(context)
     ) {
         try {
+            Log.i(TAG, "schedulePostImportCommunityUpload: workoutId=$workoutId, baseFileName=$baseFileName")
             // ATT-602: Ensure export status entries exist for this workout in ExportStatusDatabaseManager
             try {
                 val exportStatusDb = ExportStatusDatabaseManager.getInstance(context)
-                if (exportStatusDb.getExportRows(baseFileName).isEmpty()) {
+                val existingRows = exportStatusDb.getExportRows(baseFileName)
+                Log.i(TAG, "Existing export status rows for $baseFileName: count=${existingRows.size}")
+                if (existingRows.isEmpty()) {
                     exportManager.newWorkout(baseFileName)
+                    Log.i(TAG, "Initialized new export status rows for $baseFileName")
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Could not initialize export status rows for $baseFileName", e)
             }
 
             for (format in ExportType.COMMUNITY.exportToFileFormats) {
-                if (TrainingApplication.uploadToCommunity(format)) {
+                val uploadEnabled = TrainingApplication.uploadToCommunity(format)
+                Log.i(TAG, "Checking community format ${format.name}: uploadToCommunity=$uploadEnabled")
+                if (uploadEnabled) {
                     if (format == FileFormat.STRAVA) {
-                        val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
+                        val summaryDb = try {
+                            WorkoutSummariesDatabaseManager.getInstance(context)
+                        } catch (_: Exception) {
+                            null
+                        }
                         val uploadToStrava = getUploadToStravaStatus(summaryDb, workoutId)
+                        Log.i(TAG, "Strava uploadToStrava status in DB for workout $workoutId: $uploadToStrava")
                         if (uploadToStrava == 0) {
-                            if (TrainingApplication.getDebug(true)) {
-                                Log.d(TAG, "Skipping Strava upload for workout $workoutId: Explicitly opted out.")
-                            }
+                            Log.i(TAG, "Skipping Strava upload for workout $workoutId: Explicitly opted out.")
                             continue
                         }
                     }
+                    Log.i(TAG, "Calling exportManager.exportWorkoutTo(workoutId=$workoutId, format=${format.name})")
                     exportManager.exportWorkoutTo(workoutId, format)
-                    if (TrainingApplication.getDebug(true)) {
-                        Log.d(TAG, "Scheduled community upload for workout $workoutId ($baseFileName) to ${format.name}")
-                    }
+                    Log.i(TAG, "Scheduled community upload for workout $workoutId ($baseFileName) to ${format.name}")
                 }
             }
         } catch (e: Exception) {
@@ -1121,17 +1559,18 @@ object LegacyImportEngine {
         }
     }
 
-    private fun getUploadToStravaStatus(db: WorkoutSummariesDatabaseManager, workoutId: Long): Int {
+    private fun getUploadToStravaStatus(db: WorkoutSummariesDatabaseManager?, workoutId: Long): Int {
         return try {
-            db.database.query(
+            val database = db?.database ?: return -1
+            database.query(
                 WorkoutSummaries.TABLE,
                 arrayOf(WorkoutSummaries.UPLOAD_TO_STRAVA),
                 "${WorkoutSummaries.C_ID} = ?",
                 arrayOf(workoutId.toString()),
                 null, null, null
-            ).use { cursor ->
+            )?.use { cursor ->
                 if (cursor.moveToFirst()) cursor.getInt(0) else -1
-            }
+            } ?: -1
         } catch (e: Exception) {
             Log.w(TAG, "Could not query uploadToStrava for workout $workoutId", e)
             -1

@@ -326,14 +326,18 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
                 null
             }
             val fileName = displayName?.takeIf { it.isNotBlank() } ?: "legacy_import_${System.currentTimeMillis()}.$format"
+            Log.i("BackupRestoreVM", "importLegacyFile: uri=$uri, fileName=$fileName, uploadToStravaOnImport=$uploadToStravaOnImport")
             val tempFile = File(context.cacheDir, fileName)
             context.contentResolver.openInputStream(uri)?.use { input ->
                 tempFile.outputStream().use { output -> input.copyTo(output) }
             }
-            val success = when (format.lowercase()) {
+            val fileExt = if (fileName.contains('.')) fileName.substringAfterLast('.').lowercase() else format.lowercase()
+            val success = when (fileExt) {
                 "tcx" -> LegacyImportEngine.importFromTcx(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
+                "gpx" -> LegacyImportEngine.importFromGpx(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
                 else -> false
             }
+            Log.i("BackupRestoreVM", "importLegacyFile execution result: fileExt=$fileExt, success=$success")
             tempFile.delete()
             if (success) {
                 // ATT-909 / REQ-MIG-026: Post-import reactive reconciliation
@@ -345,7 +349,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
                 } catch (e: Exception) {
                     Log.w("BackupRestoreVM", "Post-import reconciliation failed: ${e.message}")
                 }
-                _uiState.value = UiState.Success("Successfully imported workout from $format file.")
+                _uiState.value = UiState.Success("Successfully imported workout from ${fileExt.uppercase()} file.")
             } else {
                 _uiState.value = UiState.Error("Failed to import workout. It might already exist or the file format is invalid.")
             }

@@ -1264,9 +1264,9 @@
     <string name="full_restore_description">Wipes all local data and replaces it with the content of the backup. Forces an app restart.</string>
     <string name="incremental_import_description">Merges workouts from a backup into your current history. Workouts already present locally will be skipped.</string>
     <string name="legacy_recovery_title">Workout Import</string>
-    <string name="legacy_recovery_description">Import your training history from TCX files (e.g., from a former device). This will skip existing records.</string>
+    <string name="legacy_recovery_description">Import your training history from TCX or GPX files (e.g., from a former device). This will skip existing records.</string>
     <string name="scan_tcx">Scan Dropbox</string>
-    <string name="import_single_file">Import TCX File</string>
+    <string name="import_single_file">Import File (TCX / GPX)</string>
     <!-- Workout Filtering (ATT-128) -->
     <string name="filter_workouts_title">Filter Workouts</string>
     <string name="filter_action">Filter</string>
