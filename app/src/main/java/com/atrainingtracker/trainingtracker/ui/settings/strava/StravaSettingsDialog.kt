@@ -37,6 +37,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaAuthRepository
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaAuthState
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDataPurgeManager
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDeauthorizationThread
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSynchronizeThread
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
@@ -109,6 +110,9 @@ fun StravaSettingsDialog(
     var uploadCadence by remember {
         mutableStateOf(prefs.getBoolean("uploadStravaCadence", true))
     }
+    var showDisconnectConfirmation by remember {
+        mutableStateOf(false)
+    }
 
     // Observer for SharedPreferences updates (e.g. sync timestamps, token changes)
     DisposableEffect(context) {
@@ -140,8 +144,7 @@ fun StravaSettingsDialog(
             (context as? Activity)?.let { StravaEquipmentSynchronizeThread(it).start() }
 
             val repository = SegmentsRepository.getInstance(context)
-            repository.syncSegmentsAsync(BSportType.BIKE)
-            repository.syncSegmentsAsync(BSportType.RUN)
+            repository.syncSegmentsAsync(BSportType.UNKNOWN)
 
             val routesRepo = RoutesRepository.getInstance(context)
             routesRepo.syncRoutesFromStravaAsync()
@@ -196,13 +199,44 @@ fun StravaSettingsDialog(
                     StravaHelper.requestAccessToken(context)
                 },
                 onDisconnectClick = {
-                    TrainingApplication.deleteStravaToken()
-                    (context as? Activity)?.let { StravaDeauthorizationThread(it).start() }
-                    StravaSegmentsSyncWorker.schedule(context)
-                    StravaRoutesSyncWorker.schedule(context)
-                    isConnected = false
+                    showDisconnectConfirmation = true
                 }
             )
+
+            if (showDisconnectConfirmation) {
+                AlertDialog(
+                    onDismissRequest = { showDisconnectConfirmation = false },
+                    title = {
+                        Text(text = stringResource(R.string.strava_disconnect_dialog_title))
+                    },
+                    text = {
+                        Text(text = stringResource(R.string.strava_disconnect_dialog_message))
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showDisconnectConfirmation = false
+                                StravaDataPurgeManager.purgeAllStravaData(context, alsoRevokeRemote = true) {
+                                    isConnected = false
+                                }
+                                isConnected = false
+                            }
+                        ) {
+                            Text(
+                                text = stringResource(R.string.strava_disconnect_dialog_confirm),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { showDisconnectConfirmation = false }
+                        ) {
+                            Text(text = stringResource(R.string.Cancel))
+                        }
+                    }
+                )
+            }
 
             if (isConnected) {
                 HorizontalDivider()

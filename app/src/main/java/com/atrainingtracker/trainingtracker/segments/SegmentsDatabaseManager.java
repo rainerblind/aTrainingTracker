@@ -44,8 +44,10 @@ import com.google.maps.android.PolyUtil;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public class SegmentsDatabaseManager {
     private static final String TAG = SegmentsDatabaseManager.class.getName();
@@ -72,6 +74,11 @@ public class SegmentsDatabaseManager {
             }
         }
         return cInstance;
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public static void resetForTesting(SegmentsDatabaseManager newInstance) {
+        cInstance = newInstance;
     }
 
     /**
@@ -206,6 +213,7 @@ public class SegmentsDatabaseManager {
 
     public List<SegmentSummary> getAllSegmentSummaries() {
         List<SegmentSummary> summaries = new ArrayList<>();
+        Set<Long> seenIds = new HashSet<>();
         SQLiteDatabase db = getDatabase();
         Cursor cursor = db.query(Segments.TABLE_STARRED_SEGMENTS, null, null, null, null, null, null);
 
@@ -235,6 +243,9 @@ public class SegmentsDatabaseManager {
 
         while (cursor.moveToNext()) {
             long segmentId = cursor.getLong(strava_id_index);
+            if (!seenIds.add(segmentId)) {
+                continue; // Skip duplicate records
+            }
             String activityType = cursor.getString(activity_type_index);
             BSportType sportType = sportTypeMgr.getBSportTypeFromStravaName(activityType);
             double distance = cursor.getDouble(dist_index);
@@ -348,16 +359,35 @@ public class SegmentsDatabaseManager {
         }
 
 
-        // Insert or Replace logic
+        // Insert or Replace logic (ATT-1078)
         db.beginTransaction();
         try {
             // Check if segment already exists to handle updates vs inserts
-            int rowsAffected = db.update(Segments.TABLE_STARRED_SEGMENTS, cv,
+            List<Long> existingRowIds = new ArrayList<>();
+            try (Cursor c = db.query(Segments.TABLE_STARRED_SEGMENTS,
+                    new String[]{Segments.C_ID},
                     Segments.STRAVA_SEGMENT_ID + "=?",
-                    new String[]{String.valueOf(segment.getId())});
+                    new String[]{String.valueOf(segment.getId())},
+                    null, null, Segments.C_ID + " ASC")) {
+                while (c.moveToNext()) {
+                    existingRowIds.add(c.getLong(0));
+                }
+            }
 
-            if (rowsAffected == 0) {
+            if (existingRowIds.isEmpty()) {
                 db.insert(Segments.TABLE_STARRED_SEGMENTS, null, cv);
+            } else {
+                long primaryId = existingRowIds.get(0);
+                db.update(Segments.TABLE_STARRED_SEGMENTS, cv,
+                        Segments.C_ID + "=?",
+                        new String[]{String.valueOf(primaryId)});
+
+                // Prune any legacy duplicate rows
+                for (int i = 1; i < existingRowIds.size(); i++) {
+                    db.delete(Segments.TABLE_STARRED_SEGMENTS,
+                            Segments.C_ID + "=?",
+                            new String[]{String.valueOf(existingRowIds.get(i))});
+                }
             }
 
             db.setTransactionSuccessful();
@@ -454,6 +484,10 @@ public class SegmentsDatabaseManager {
         SQLiteDatabase db = getDatabase();
         db.beginTransaction();
         try {
+            // Clear existing stream points for this segment before inserting new ones (ATT-1078)
+            db.delete(Segments.TABLE_SEGMENT_STREAMS,
+                    Segments.STRAVA_SEGMENT_ID + "=?",
+                    new String[]{String.valueOf(segmentId)});
             if (haveTime) {
                 // Strava time starts at 0, but we need the first prevTime to be -1
                 // to ensure the first point is inserted correctly via the delta logic

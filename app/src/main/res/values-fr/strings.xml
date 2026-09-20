@@ -911,6 +911,9 @@
     <string name="dropbox_disconnect">Se déconnecter de Dropbox</string>
     <string name="dropbox_connect">Se connecter à Dropbox</string>
     <string name="strava_disconnect">Déconnecter de Strava</string>
+    <string name="strava_disconnect_dialog_title">Se déconnecter de Strava ?</string>
+    <string name="strava_disconnect_dialog_message">La déconnexion supprimera toutes les données synchronisées avec Strava de cet appareil :\n\n• Segments favoris et temps de passage\n• Itinéraires Strava\n• Liens d\'équipement avec Strava\n• Suivi des téléversements Strava des entraînements passés\n\nVos entraînements enregistrés (résumés, tracés GPS, données des capteurs) ne seront pas supprimés.</string>
+    <string name="strava_disconnect_dialog_confirm">Déconnecter</string>
     <string name="strava_overall_rank_description">Rang global #%1$d</string>
     <string name="no_upload">- Pas de chargement -</string>
     <string name="source_device">Source</string>

@@ -711,4 +711,16 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         if (DEBUG) Log.d(TAG, "onUpgraded from " + oldVersion + " to " + newVersion);
     }
 
+    /**
+     * Unlinks all equipment from Strava by clearing StravaId and StravaName to NULL.
+     * Preserves local equipment entities, hardware sensor pairings (LINKS), and sport type links (REQ-EXT-009).
+     */
+    public int unlinkAllStravaEquipment() {
+        if (DEBUG) Log.d(TAG, "unlinkAllStravaEquipment");
+        SQLiteDatabase db = getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.putNull(STRAVA_ID);
+        values.putNull(STRAVA_NAME);
+        return db.update(EQUIPMENT, values, null, null);
+    }
 }

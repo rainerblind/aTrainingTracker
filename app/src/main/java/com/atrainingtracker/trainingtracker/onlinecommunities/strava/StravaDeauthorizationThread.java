@@ -27,19 +27,6 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.atrainingtracker.R;
-import com.atrainingtracker.trainingtracker.TrainingApplication;
-
-import org.apache.http.HttpResponse;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.util.EntityUtils;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 
 public class StravaDeauthorizationThread extends Thread {
 
@@ -64,46 +51,12 @@ public class StravaDeauthorizationThread extends Thread {
             }
         });
 
-        HttpClient httpClient = new DefaultHttpClient();
-        HttpPost httpPost = new HttpPost("https://www.strava.com/oauth/deauthorize");
-        httpPost.addHeader("Authorization", "Bearer " + StravaHelper.getRefreshedAccessToken());
-
-        HttpResponse httpResponse;
-        try {
-            httpResponse = httpClient.execute(httpPost);
-
-            String response = EntityUtils.toString(httpResponse.getEntity());
-            if (DEBUG) Log.d(TAG, "response: " + response);
-            // Uri uri = Uri.parse(response);
-            JSONObject responseJson = new JSONObject(response);
-
-            if (responseJson.has("access_token")) {
-                // String tokenType   = responseJson.getString(TOKEN_TYPE);
-                String access_token = responseJson.getString("access_token");
-                if (access_token.equals(StravaHelper.getRefreshedAccessToken())) {
-                    if (DEBUG) Log.d(TAG, "all right!");
+        StravaDataPurgeManager.INSTANCE.purgeAllStravaData(mContext, true, () -> {
+            new Handler(Looper.getMainLooper()).post(() -> {
+                if (progressDialog.isShowing()) {
+                    progressDialog.dismiss();
                 }
-            }
-        } catch (UnsupportedEncodingException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (JSONException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (ClientProtocolException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-
-        TrainingApplication.deleteStravaToken();
-
-        new Handler(Looper.getMainLooper()).post(() -> {
-            if (progressDialog.isShowing()) {
-                progressDialog.dismiss();
-            }
+            });
         });
     }
 }

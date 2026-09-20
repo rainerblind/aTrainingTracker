@@ -1118,6 +1118,9 @@
     <string name="dropbox_disconnect">Disconnect from Dropbox</string>
     <string name="dropbox_connect">Connect to Dropbox</string>
     <string name="strava_disconnect">Disconnect from Strava</string>
+    <string name="strava_disconnect_dialog_title">Disconnect from Strava?</string>
+    <string name="strava_disconnect_dialog_message">Disconnecting will delete all Strava-synced data from this device:\n\n• Starred segments and segment times\n• Strava routes\n• Equipment links to Strava\n• Strava upload tracking for past workouts\n\nYour recorded workouts (summaries, GPS tracks, sensor data) will not be deleted.</string>
+    <string name="strava_disconnect_dialog_confirm">Disconnect</string>
     <string name="strava_overall_rank_description">Overall Rank #%1$d</string>
     <string name="no_workouts_available">No workouts available</string>
     <string name="no_periods_available">No period summaries available</string>

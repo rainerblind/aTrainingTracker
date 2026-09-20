@@ -158,9 +158,55 @@ class RoutesDatabaseManager private constructor(context: Context) {
                 put(RouteContract.COLUMN_BOUND_MAX_LAT, maxLat)
                 put(RouteContract.COLUMN_BOUND_MAX_LNG, maxLng)
             }
-            val routeId = db.insert(RouteContract.TABLE_ROUTES, null, values)
+            // 2. Check for existing route with same externalId and source to prevent duplicates (ATT-1078)
+            var existingId: Long = -1L
+            val duplicateIds = mutableListOf<Long>()
+            if (!summary.externalId.isNullOrBlank()) {
+                db.query(
+                    RouteContract.TABLE_ROUTES,
+                    arrayOf(RouteContract.COLUMN_ID),
+                    "${RouteContract.COLUMN_EXTERNAL_ID} = ? AND ${RouteContract.COLUMN_SOURCE} = ?",
+                    arrayOf(summary.externalId, summary.source.name),
+                    null,
+                    null,
+                    "${RouteContract.COLUMN_ID} ASC"
+                ).use { cursor ->
+                    while (cursor.moveToNext()) {
+                        val id = cursor.getLong(cursor.getColumnIndexOrThrow(RouteContract.COLUMN_ID))
+                        if (existingId == -1L) {
+                            existingId = id
+                        } else {
+                            duplicateIds.add(id)
+                        }
+                    }
+                }
+            }
 
-            // 2. Insert the route points
+            // Prune any legacy duplicate rows if found
+            for (dupId in duplicateIds) {
+                db.delete(RouteContract.TABLE_ROUTE_POINTS, "${RouteContract.COLUMN_ROUTE_ID_FK} = ?", arrayOf(dupId.toString()))
+                db.delete(RouteContract.TABLE_ROUTES, "${RouteContract.COLUMN_ID} = ?", arrayOf(dupId.toString()))
+            }
+
+            val routeId: Long
+            if (existingId != -1L) {
+                db.update(
+                    RouteContract.TABLE_ROUTES,
+                    values,
+                    "${RouteContract.COLUMN_ID} = ?",
+                    arrayOf(existingId.toString())
+                )
+                db.delete(
+                    RouteContract.TABLE_ROUTE_POINTS,
+                    "${RouteContract.COLUMN_ROUTE_ID_FK} = ?",
+                    arrayOf(existingId.toString())
+                )
+                routeId = existingId
+            } else {
+                routeId = db.insert(RouteContract.TABLE_ROUTES, null, values)
+            }
+
+            // 3. Insert the route points
             path.forEach { point ->
                 val pValues = ContentValues().apply {
                     put(RouteContract.COLUMN_ROUTE_ID_FK, routeId)
@@ -373,6 +419,19 @@ class RoutesDatabaseManager private constructor(context: Context) {
         return db.delete(RouteContract.TABLE_ROUTES,
             "${RouteContract.COLUMN_ID} = ?",
             arrayOf(routeId.toString())
+        )
+    }
+
+    /**
+     * Deletes all routes originating from a specific source (e.g. RouteSource.STRAVA).
+     * Due to FOREIGN KEY CASCADE on route_points, all track coordinates are automatically deleted (REQ-EXT-009).
+     */
+    fun deleteRoutesBySource(source: RouteSource): Int {
+        val db = getDatabase()
+        return db.delete(
+            RouteContract.TABLE_ROUTES,
+            "${RouteContract.COLUMN_SOURCE} = ?",
+            arrayOf(source.name)
         )
     }
 

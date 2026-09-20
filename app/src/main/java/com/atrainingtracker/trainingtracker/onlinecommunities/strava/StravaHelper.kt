@@ -201,7 +201,17 @@ object StravaHelper {
                         responseJson.optString(ACCESS_TOKEN, null)
                     }
                 } else {
-                    Log.e(TAG, "Refresh failed: ${response.code} ${response.message}")
+                    val code = response.code
+                    val errorBody = response.body?.string().orEmpty()
+                    Log.e(TAG, "Refresh failed: $code ${response.message} body: $errorBody")
+                    if (code == 400 || code == 401) {
+                        if (errorBody.contains("invalid", ignoreCase = true) || errorBody.contains("revoked", ignoreCase = true)) {
+                            Log.w(TAG, "Strava authorization permanently revoked. Triggering local data purge (REQ-EXT-009).")
+                            TrainingApplication.getAppContext()?.let { ctx ->
+                                StravaDataPurgeManager.purgeAllStravaData(ctx, alsoRevokeRemote = false)
+                            }
+                        }
+                    }
                     null
                 }
             }

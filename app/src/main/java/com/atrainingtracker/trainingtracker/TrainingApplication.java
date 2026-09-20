@@ -595,10 +595,17 @@ public class TrainingApplication extends Application {
 
     public static void deleteStravaToken() {
         if (DEBUG) Log.i(TAG, "deleteStravaToken");
-        cSharedPreferences.edit().remove(TrainingApplication.SP_STRAVA_TOKEN).apply();
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_STRAVA, false).apply();
-        cSharedPreferences.edit().remove(SP_STRAVA_ATHLETE_ID).apply();
-        cSharedPreferences.edit().putBoolean(SP_STRAVA_DEMO_MODE, false).apply();
+        cSharedPreferences.edit()
+                .remove(SP_STRAVA_TOKEN)
+                .remove(SP_STRAVA_REFRESH_TOKEN)
+                .remove(SP_STRAVA_TOKEN_EXPIRES_AT)
+                .remove(SP_STRAVA_ATHLETE_ID)
+                .putBoolean(SP_UPLOAD_TO_STRAVA, false)
+                .putBoolean(SP_STRAVA_DEMO_MODE, false)
+                .remove(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT)
+                .remove(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES)
+                .remove(SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS)
+                .apply();
         if (DEBUG) Log.i(TAG, "end of deleteStravaToken");
     }
 
