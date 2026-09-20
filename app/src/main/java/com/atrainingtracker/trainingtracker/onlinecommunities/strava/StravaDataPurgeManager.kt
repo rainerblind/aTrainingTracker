@@ -26,7 +26,9 @@ import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RoutesDatabaseManager
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
+import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
+import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -105,20 +107,22 @@ object StravaDataPurgeManager {
             Log.e(TAG, "Failed to purge StravaUploadDbHelper", e)
         }
 
-        // 3. Segments.db: Wipe starred segments and streams
+        // 3. Segments.db: Wipe starred segments and streams & clear in-memory cache
         try {
             val segmentsDb = SegmentsDatabaseManager.getInstance(context)
             segmentsDb.deleteAllTables()
-            Log.d(TAG, "Purged SegmentsDatabaseManager")
+            SegmentsRepository.getInstance(context).clearSegmentsCache()
+            Log.d(TAG, "Purged SegmentsDatabaseManager and cleared SegmentsRepository cache")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to purge SegmentsDatabaseManager", e)
         }
 
-        // 4. Routes.db: Delete all Strava-origin routes (points cascade-delete)
+        // 4. Routes.db: Delete all Strava-origin routes (points cascade-delete) & refresh in-memory cache
         try {
             val routesDb = RoutesDatabaseManager.getInstance(context)
             routesDb.deleteRoutesBySource(RouteSource.STRAVA)
-            Log.d(TAG, "Purged Strava routes from RoutesDatabaseManager")
+            RoutesRepository.getInstance(context).refreshRoutes()
+            Log.d(TAG, "Purged Strava routes and refreshed RoutesRepository")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to purge Strava routes", e)
         }

@@ -439,6 +439,13 @@ class SegmentsRepository private constructor(context: Context) {
      * Companion Object
      **********************************************************************************************/
 
+    /**
+     * Clears the in-memory cache of segments. Called during Strava data purge (ATT-1078).
+     */
+    fun clearSegmentsCache() {
+        _allSegmentsWithPath.value = emptyList()
+    }
+
     companion object {
         val DEBUG = true
         val TAG = "SegmentsRepository"
@@ -450,6 +457,11 @@ class SegmentsRepository private constructor(context: Context) {
             return instance ?: synchronized(this) {
                 instance ?: SegmentsRepository(context.applicationContext).also { instance = it }
             }
+        }
+
+        @androidx.annotation.VisibleForTesting
+        fun resetForTesting(newInstance: SegmentsRepository? = null) {
+            instance = newInstance
         }
     }
 

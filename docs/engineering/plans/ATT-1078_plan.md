@@ -148,6 +148,17 @@ The goal of **ATT-1078** is to:
   - Update `StravaDeauthorizationThread.java` to delegate to `StravaDataPurgeManager`.
   - Add localized string resources across all 9 languages (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
 
+### 3.9 Concurrency Mutex, Route Deduplication & Cache Refresh
+* **Files**:
+  - `app/src/main/java/com/atrainingtracker/trainingtracker/repositories/RoutesRepository.kt`
+  - `app/src/main/java/com/atrainingtracker/trainingtracker/database/RoutesDatabaseManager.kt`
+  - `app/src/main/java/com/atrainingtracker/trainingtracker/segments/SegmentsRepository.kt`
+  - `app/src/main/java/com/atrainingtracker/trainingtracker/onlinecommunities/strava/StravaDataPurgeManager.kt`
+* **Changes**:
+  - In `RoutesRepository.kt`: Guard `syncRoutesFromStrava()` with a `Mutex` (`syncMutex.withLock`) to prevent concurrent executions (such as simultaneous `syncRoutesFromStravaAsync()` and `StravaRoutesSyncWorker` triggers).
+  - In `RoutesDatabaseManager.kt`: Inside `insertRoute()`, enforce idempotency by querying for existing routes with identical `externalId` and `source`. When found, update the existing summary, replace route points, and prune any legacy duplicate rows.
+  - In `StravaDataPurgeManager.kt`: Upon data purge, invoke `RoutesRepository.refreshRoutes()` and `SegmentsRepository.clearSegmentsCache()` to immediately clear/reload in-memory caches.
+
 ---
 
 ## 4. Invariant Protection & Impact Analysis
@@ -156,6 +167,7 @@ The goal of **ATT-1078** is to:
 * [x] **Local Routes**: Only routes where `source == RouteSource.STRAVA` are removed. Locally created GPX routes (`LOCAL_GPX`) and workout-derived routes (`WORKOUT`) remain completely untouched.
 * [x] **Sport Type Links**: `SportTypeEquipmentLinkManager` links to equipment by internal `equipmentId`. Since equipment rows are unlinked rather than deleted, sport type links remain valid.
 * [x] **Reauthorization Parity**: When reauthorizing, `StravaEquipmentSynchronizeThread` matches existing equipment by name where `StravaId IS NULL`, re-attaching Strava IDs without creating duplicate gear rows.
+* [x] **Route Deduplication & Cache Invalidation**: Prevent duplicate Strava routes on reconnect via Mutex concurrency lock, database upsert on `externalId`, and in-memory cache refresh.
 * [x] **Thread Safety & UI Fluidity**: All database deletions and remote HTTP requests run strictly on background threads (`Dispatchers.IO`), preventing ANRs or frame drops.
 
 ---
@@ -163,10 +175,15 @@ The goal of **ATT-1078** is to:
 ## 5. Verification Plan
 * **Automated Unit Tests**:
   - `app/src/test/java/com/atrainingtracker/trainingtracker/onlinecommunities/strava/StravaDataPurgeManagerTest.kt`:
-    - Test 1: Full purge removes credentials, clears `StravaUploadDbHelper`, deletes starred segments, deletes Strava routes, and unlinks equipment.
+    - Test 1: Full purge removes credentials, clears `StravaUploadDbHelper`, deletes starred segments, deletes Strava routes, unlinks equipment, and refreshes/clears repository caches.
     - Test 2: Invariant check - native workouts, samples, laps, and hardware sensor links in `EquipmentDbHelper.LINKS` remain intact.
     - Test 3: Remote deauthorization HTTP call dispatched before token wipe.
     - Test 4: Reauthorization re-links existing unlinked equipment by name without duplicates.
     - Test 5: Automated revocation detection triggers purge when token refresh fails with `invalid_grant`.
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/database/RoutesDatabaseManagerDeduplicationTest.kt`:
+    - Test 1: Inserts new route and points when not present.
+    - Test 2: Updates summary and replaces points on duplicate externalId without creating duplicate rows.
+    - Test 3: Purges multiple legacy duplicate rows if present in database.
 * **Clean-Room Regression**:
   - Execute `./gradlew testDebugUnitTest` to guarantee 0 regressions across all existing suites.
+

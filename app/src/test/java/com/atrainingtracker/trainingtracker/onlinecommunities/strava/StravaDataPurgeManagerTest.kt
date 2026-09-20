@@ -26,7 +26,9 @@ import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RoutesDatabaseManager
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
+import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
+import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
@@ -48,6 +50,8 @@ class StravaDataPurgeManagerTest {
     private lateinit var mockWorkManager: WorkManager
     private lateinit var mockSegmentsDb: SegmentsDatabaseManager
     private lateinit var mockRoutesDb: RoutesDatabaseManager
+    private lateinit var mockRoutesRepo: RoutesRepository
+    private lateinit var mockSegmentsRepo: SegmentsRepository
     private lateinit var mockAuthRepo: StravaAuthRepository
 
     @Before
@@ -75,6 +79,12 @@ class StravaDataPurgeManagerTest {
         mockRoutesDb = mockk(relaxed = true)
         RoutesDatabaseManager.resetForTesting(mockRoutesDb)
 
+        mockRoutesRepo = mockk(relaxed = true)
+        RoutesRepository.resetForTesting(mockRoutesRepo)
+
+        mockSegmentsRepo = mockk(relaxed = true)
+        SegmentsRepository.resetForTesting(mockSegmentsRepo)
+
         mockkConstructor(EquipmentDbHelper::class)
         every { anyConstructed<EquipmentDbHelper>().unlinkAllStravaEquipment() } returns 2
 
@@ -91,6 +101,8 @@ class StravaDataPurgeManagerTest {
     @After
     fun tearDown() {
         RoutesDatabaseManager.resetForTesting(null)
+        RoutesRepository.resetForTesting(null)
+        SegmentsRepository.resetForTesting(null)
         unmockkAll()
     }
 
@@ -104,11 +116,13 @@ class StravaDataPurgeManagerTest {
         // 2. StravaUpload.db activity JSON and IDs purged
         verify { anyConstructed<StravaUploadDbHelper>().clearAllStravaData() }
 
-        // 3. Segments.db starred segments wiped
+        // 3. Segments.db starred segments wiped & in-memory cache cleared
         verify { mockSegmentsDb.deleteAllTables() }
+        verify { mockSegmentsRepo.clearSegmentsCache() }
 
-        // 4. Routes.db Strava-origin routes deleted
+        // 4. Routes.db Strava-origin routes deleted & in-memory cache refreshed
         verify { mockRoutesDb.deleteRoutesBySource(RouteSource.STRAVA) }
+        verify { mockRoutesRepo.refreshRoutes() }
 
         // 5. Equipment.db Strava IDs unlinked (NOT deleted)
         verify { anyConstructed<EquipmentDbHelper>().unlinkAllStravaEquipment() }

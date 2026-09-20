@@ -40,6 +40,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.double
@@ -62,6 +64,7 @@ class RoutesRepository internal constructor(
     )
 
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val syncMutex = Mutex()
 
     // StateFlow for the UI to observe the list of routes
     private val _allRoutes = MutableStateFlow<List<RouteWithPath>>(emptyList())
@@ -169,9 +172,11 @@ class RoutesRepository internal constructor(
 
     /**
      * Synchronizes starred routes from Strava.
+     * Protected by [syncMutex] to prevent race conditions during concurrent sync triggers (ATT-1078).
      * @return true if synchronization succeeded, false otherwise.
      */
-    suspend fun syncRoutesFromStrava(): Boolean = withContext(Dispatchers.IO) {
+    suspend fun syncRoutesFromStrava(): Boolean = syncMutex.withLock {
+        withContext(Dispatchers.IO) {
         val accessToken = StravaHelper.getRefreshedAccessToken()
         if (accessToken.isNullOrEmpty()) {
             Log.e(TAG, "Strava Access Token is null or empty")
@@ -291,6 +296,7 @@ class RoutesRepository internal constructor(
 
         refreshRoutes()
         true
+        }
     }
 
     @kotlinx.serialization.Serializable
@@ -387,6 +393,11 @@ class RoutesRepository internal constructor(
             return instance ?: synchronized(this) {
                 instance ?: RoutesRepository(context.applicationContext).also { instance = it }
             }
+        }
+
+        @androidx.annotation.VisibleForTesting
+        fun resetForTesting(newInstance: RoutesRepository? = null) {
+            instance = newInstance
         }
     }
 }
