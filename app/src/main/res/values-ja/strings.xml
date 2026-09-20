@@ -895,6 +895,9 @@
     <string name="dropbox_disconnect">Dropbox から切断</string>
     <string name="dropbox_connect">Dropbox に接続</string>
     <string name="strava_disconnect">Strava 切断</string>
+    <string name="strava_disconnect_dialog_title">Strava との連携を解除しますか？</string>
+    <string name="strava_disconnect_dialog_message">連携を解除すると、このデバイスから Strava と同期されたすべてのデータが削除されます:\n\n• スター付きセグメントとタイム\n• Strava ルート\n• Strava とのギア連携\n• 過去のワークアウトの Strava アップロード情報\n\n記録済みのワークアウト（サマリー、GPSトラック、センサーデータ）は削除されません。</string>
+    <string name="strava_disconnect_dialog_confirm">連携解除</string>
     <string name="strava_overall_rank_description">総合順位 #%1$d</string>
     <string name="no_upload">- アップロードなし -</string>
     <string name="source_device">ソース</string>

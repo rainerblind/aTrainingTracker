@@ -124,18 +124,29 @@ The goal of **ATT-1078** is to:
     StravaDataPurgeManager.purgeAllStravaData(TrainingApplication.getContext(), alsoRevokeRemote = false)
     ```
 
-### 3.8 Modernized Remote Deauthorization & Dialog Integration
+### 3.8 Modernized Remote Deauthorization, Dialog Integration & Confirmation Flow
 * **Files**:
   - `app/src/main/java/com/atrainingtracker/trainingtracker/onlinecommunities/strava/StravaDeauthorizationThread.java`
   - `app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/strava/StravaSettingsDialog.kt`
+  - `app/src/main/res/values*/strings.xml` (9 languages)
 * **Changes**:
-  - In `StravaSettingsDialog.kt`, update `onDisconnectClick`:
+  - In `StravaSettingsDialog.kt`, introduce `showDisconnectConfirmation` state variable.
+  - When the user taps "Disconnect" (`onDisconnectClick`), do not immediately purge data.
+  - Render an interactive `AlertDialog`:
+    - Title: `@string/strava_disconnect_dialog_title` ("Disconnect from Strava?" / "Strava-Verbindung trennen?")
+    - Message: `@string/strava_disconnect_dialog_message`
+      - Details deletion of Strava routes, starred segments and times, unlinking of equipment, and removal of Strava upload status for past workouts.
+      - Reassures the athlete that native workout recordings (summaries, samples, laps) remain safe and intact.
+    - Confirm button: `@string/strava_disconnect_dialog_confirm` ("Disconnect" / "Trennen")
+    - Dismiss button: `@string/Cancel` ("Cancel" / "Abbrechen")
+  - Upon user confirmation, execute:
     ```kotlin
     StravaDataPurgeManager.purgeAllStravaData(context, alsoRevokeRemote = true) {
         isConnected = false
     }
     ```
-  - Update `StravaDeauthorizationThread.java` to delegate to `StravaDataPurgeManager` or modernize its HTTP call.
+  - Update `StravaDeauthorizationThread.java` to delegate to `StravaDataPurgeManager`.
+  - Add localized string resources across all 9 languages (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
 
 ---
 

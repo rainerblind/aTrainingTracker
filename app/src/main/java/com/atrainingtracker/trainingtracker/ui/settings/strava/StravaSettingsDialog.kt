@@ -110,6 +110,9 @@ fun StravaSettingsDialog(
     var uploadCadence by remember {
         mutableStateOf(prefs.getBoolean("uploadStravaCadence", true))
     }
+    var showDisconnectConfirmation by remember {
+        mutableStateOf(false)
+    }
 
     // Observer for SharedPreferences updates (e.g. sync timestamps, token changes)
     DisposableEffect(context) {
@@ -197,12 +200,44 @@ fun StravaSettingsDialog(
                     StravaHelper.requestAccessToken(context)
                 },
                 onDisconnectClick = {
-                    StravaDataPurgeManager.purgeAllStravaData(context, alsoRevokeRemote = true) {
-                        isConnected = false
-                    }
-                    isConnected = false
+                    showDisconnectConfirmation = true
                 }
             )
+
+            if (showDisconnectConfirmation) {
+                AlertDialog(
+                    onDismissRequest = { showDisconnectConfirmation = false },
+                    title = {
+                        Text(text = stringResource(R.string.strava_disconnect_dialog_title))
+                    },
+                    text = {
+                        Text(text = stringResource(R.string.strava_disconnect_dialog_message))
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showDisconnectConfirmation = false
+                                StravaDataPurgeManager.purgeAllStravaData(context, alsoRevokeRemote = true) {
+                                    isConnected = false
+                                }
+                                isConnected = false
+                            }
+                        ) {
+                            Text(
+                                text = stringResource(R.string.strava_disconnect_dialog_confirm),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { showDisconnectConfirmation = false }
+                        ) {
+                            Text(text = stringResource(R.string.Cancel))
+                        }
+                    }
+                )
+            }
 
             if (isConnected) {
                 HorizontalDivider()

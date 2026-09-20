@@ -988,6 +988,9 @@
     <string name="dropbox_disconnect">Von Dropbox trennen</string>
     <string name="dropbox_connect">Mit Dropbox verbinden</string>
     <string name="strava_disconnect">Von Strava trennen</string>
+    <string name="strava_disconnect_dialog_title">Strava-Verbindung trennen?</string>
+    <string name="strava_disconnect_dialog_message">Beim Trennen der Verbindung werden alle mit Strava synchronisierten Daten von diesem Gerät gelöscht:\n\n• Mit Stern markierte Segmente und Segmentzeiten\n• Strava-Routen\n• Ausrüstungsverknüpfungen mit Strava\n• Strava-Upload-Status vergangener Workouts\n\nDeine aufgezeichneten Trainingseinheiten (Zusammenfassungen, GPS-Strecken, Sensordaten) bleiben vollständig erhalten.</string>
+    <string name="strava_disconnect_dialog_confirm">Trennen</string>
     <string name="strava_overall_rank_description">Gesamtrang #%1$d</string>
     <string name="source_device">Quelle</string>
     <string name="source_active_backups">Aktive Backups</string>
