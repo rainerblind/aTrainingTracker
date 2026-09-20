@@ -96,23 +96,7 @@ class StravaRoutesSyncWorkerTest {
     }
 
     @Test
-    fun testScheduleWhenAutomatedSyncDisabledCancelsWork() {
-        every { mockPrefs.getBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_ROUTES_SYNC, true) } returns false
-        every { mockPrefs.getString(TrainingApplication.SP_STRAVA_ROUTES_SYNC_INTERVAL_DAYS, "1") } returns "1"
-
-        StravaRoutesSyncWorker.schedule(mockContext)
-
-        verify(exactly = 1) {
-            mockWorkManager.cancelUniqueWork(StravaRoutesSyncWorker.WORK_NAME)
-        }
-        verify(exactly = 0) {
-            mockWorkManager.enqueueUniquePeriodicWork(any(), any(), any())
-        }
-    }
-
-    @Test
     fun testScheduleWhenStravaDisconnectedCancelsWork() {
-        every { mockPrefs.getBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_ROUTES_SYNC, true) } returns true
         every { TrainingApplication.getStravaAccessToken() } returns null
 
         StravaRoutesSyncWorker.schedule(mockContext)
@@ -126,9 +110,8 @@ class StravaRoutesSyncWorkerTest {
     }
 
     @Test
-    fun testScheduleWhenEnabledEnqueuesPeriodicWorkWithDefaultInterval() {
-        every { mockPrefs.getBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_ROUTES_SYNC, true) } returns true
-        every { mockPrefs.getString(TrainingApplication.SP_STRAVA_ROUTES_SYNC_INTERVAL_DAYS, "1") } returns "1"
+    fun testScheduleWhenConnectedEnqueuesPeriodicWorkWith1DayInterval() {
+        every { TrainingApplication.getStravaAccessToken() } returns "valid_test_token"
 
         val workRequestSlot = slot<PeriodicWorkRequest>()
         every {
@@ -150,80 +133,58 @@ class StravaRoutesSyncWorkerTest {
         }
         val request = workRequestSlot.captured
         assertEquals(true, request.workSpec.constraints.requiresBatteryNotLow())
+        assertEquals(androidx.work.NetworkType.CONNECTED, request.workSpec.constraints.requiredNetworkType)
+        assertEquals(1000L * 60 * 60 * 24, request.workSpec.intervalDuration)
     }
 
     @Test
-    fun testScheduleWhenCustomIntervalConfiguredEnqueuesWorkWithInterval() {
-        every { mockPrefs.getBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_ROUTES_SYNC, true) } returns true
-        every { mockPrefs.getString(TrainingApplication.SP_STRAVA_ROUTES_SYNC_INTERVAL_DAYS, "1") } returns "7"
-
-        StravaRoutesSyncWorker.schedule(mockContext)
-
-        verify(exactly = 1) {
-            mockWorkManager.enqueueUniquePeriodicWork(
-                eq(StravaRoutesSyncWorker.WORK_NAME),
-                eq(ExistingPeriodicWorkPolicy.UPDATE),
-                any()
-            )
-        }
-    }
-
-    @Test
-    fun testDoWorkWhenAutomatedSyncDisabledReturnsSuccessWithoutSync() = runBlocking {
-        every { mockPrefs.getBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_ROUTES_SYNC, true) } returns false
-
-        val worker = StravaRoutesSyncWorker(mockContext, mockk<WorkerParameters>(relaxed = true))
-        val result = worker.doWork()
-
-        assertEquals(Result.success(), result)
-        coVerify(exactly = 0) { mockRoutesRepository.syncRoutesFromStrava() }
-    }
-
-    @Test
-    fun testDoWorkWhenStravaDisconnectedReturnsSuccessWithoutSync() = runBlocking {
-        every { mockPrefs.getBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_ROUTES_SYNC, true) } returns true
+    fun testDoWorkWhenStravaDisconnectedPrunesTTLAndReturnsSuccessWithoutSync() = runBlocking {
         every { TrainingApplication.getStravaAccessToken() } returns null
 
         val worker = StravaRoutesSyncWorker(mockContext, mockk<WorkerParameters>(relaxed = true))
         val result = worker.doWork()
 
         assertEquals(Result.success(), result)
+        verify(exactly = 1) { mockRoutesRepository.pruneExpiredRoutes() }
         coVerify(exactly = 0) { mockRoutesRepository.syncRoutesFromStrava() }
     }
 
     @Test
-    fun testDoWorkWhenConnectedAndEnabledInvokesSyncAndReturnsSuccess() = runBlocking {
-        every { mockPrefs.getBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_ROUTES_SYNC, true) } returns true
+    fun testDoWorkWhenConnectedInvokesSyncAndReturnsSuccess() = runBlocking {
+        every { TrainingApplication.getStravaAccessToken() } returns "valid_test_token"
         coEvery { mockRoutesRepository.syncRoutesFromStrava() } returns true
 
         val worker = StravaRoutesSyncWorker(mockContext, mockk<WorkerParameters>(relaxed = true))
         val result = worker.doWork()
 
         assertEquals(Result.success(), result)
+        verify(exactly = 1) { mockRoutesRepository.pruneExpiredRoutes() }
         coVerify(exactly = 1) { mockRoutesRepository.syncRoutesFromStrava() }
     }
 
     @Test
     fun testDoWorkWhenSyncReturnsFalseReturnsRetry() = runBlocking {
-        every { mockPrefs.getBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_ROUTES_SYNC, true) } returns true
+        every { TrainingApplication.getStravaAccessToken() } returns "valid_test_token"
         coEvery { mockRoutesRepository.syncRoutesFromStrava() } returns false
 
         val worker = StravaRoutesSyncWorker(mockContext, mockk<WorkerParameters>(relaxed = true))
         val result = worker.doWork()
 
         assertEquals(Result.retry(), result)
+        verify(exactly = 1) { mockRoutesRepository.pruneExpiredRoutes() }
         coVerify(exactly = 1) { mockRoutesRepository.syncRoutesFromStrava() }
     }
 
     @Test
     fun testDoWorkWhenExceptionThrownReturnsRetry() = runBlocking {
-        every { mockPrefs.getBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_ROUTES_SYNC, true) } returns true
+        every { TrainingApplication.getStravaAccessToken() } returns "valid_test_token"
         coEvery { mockRoutesRepository.syncRoutesFromStrava() } throws IOException("Strava API unreachable")
 
         val worker = StravaRoutesSyncWorker(mockContext, mockk<WorkerParameters>(relaxed = true))
         val result = worker.doWork()
 
         assertEquals(Result.retry(), result)
+        verify(exactly = 1) { mockRoutesRepository.pruneExpiredRoutes() }
         coVerify(exactly = 1) { mockRoutesRepository.syncRoutesFromStrava() }
     }
 }
