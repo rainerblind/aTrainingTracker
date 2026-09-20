@@ -144,8 +144,7 @@ fun StravaSettingsDialog(
             (context as? Activity)?.let { StravaEquipmentSynchronizeThread(it).start() }
 
             val repository = SegmentsRepository.getInstance(context)
-            repository.syncSegmentsAsync(BSportType.BIKE)
-            repository.syncSegmentsAsync(BSportType.RUN)
+            repository.syncSegmentsAsync(BSportType.UNKNOWN)
 
             val routesRepo = RoutesRepository.getInstance(context)
             routesRepo.syncRoutesFromStravaAsync()

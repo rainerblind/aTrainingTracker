@@ -152,12 +152,21 @@ The goal of **ATT-1078** is to:
 * **Files**:
   - `app/src/main/java/com/atrainingtracker/trainingtracker/repositories/RoutesRepository.kt`
   - `app/src/main/java/com/atrainingtracker/trainingtracker/database/RoutesDatabaseManager.kt`
-  - `app/src/main/java/com/atrainingtracker/trainingtracker/segments/SegmentsRepository.kt`
   - `app/src/main/java/com/atrainingtracker/trainingtracker/onlinecommunities/strava/StravaDataPurgeManager.kt`
 * **Changes**:
   - In `RoutesRepository.kt`: Guard `syncRoutesFromStrava()` with a `Mutex` (`syncMutex.withLock`) to prevent concurrent executions (such as simultaneous `syncRoutesFromStravaAsync()` and `StravaRoutesSyncWorker` triggers).
   - In `RoutesDatabaseManager.kt`: Inside `insertRoute()`, enforce idempotency by querying for existing routes with identical `externalId` and `source`. When found, update the existing summary, replace route points, and prune any legacy duplicate rows.
   - In `StravaDataPurgeManager.kt`: Upon data purge, invoke `RoutesRepository.refreshRoutes()` and `SegmentsRepository.clearSegmentsCache()` to immediately clear/reload in-memory caches.
+
+### 3.10 Segment Concurrency Mutex, Pruning, Stream Cleanse & Deduplication
+* **Files**:
+  - `app/src/main/java/com/atrainingtracker/trainingtracker/segments/SegmentsRepository.kt`
+  - `app/src/main/java/com/atrainingtracker/trainingtracker/segments/SegmentsDatabaseManager.java`
+  - `app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/strava/StravaSettingsDialog.kt`
+* **Changes**:
+  - In `SegmentsRepository.kt`: Guard `syncStarredSegments()` with a `Mutex` (`syncMutex.withLock`) to serialize concurrent execution. Provide `refreshSegments()` to reload the cache cleanly with deduplication. Update `_allSegmentsWithPath` using `.update { }` and in-place replacement by `stravaId` instead of blind append.
+  - In `SegmentsDatabaseManager.java`: In `addOrUpdateSegment()`, query for existing segments matching `STRAVA_SEGMENT_ID` ordered by `C_ID ASC`. Update the primary row and delete any legacy duplicate rows (`C_ID = ?`). In `insertSegmentStreams()`, delete existing stream points before inserting fresh points. In `getAllSegmentSummaries()`, deduplicate records using a `seenIds` set.
+  - In `StravaSettingsDialog.kt`: Sequentialize segment synchronization upon reconnect (`LaunchedEffect(authState)`), invoking a single `repository.syncSegmentsAsync(BSportType.UNKNOWN)` rather than dispatching concurrent `BIKE` and `RUN` sync jobs.
 
 ---
 
@@ -168,6 +177,7 @@ The goal of **ATT-1078** is to:
 * [x] **Sport Type Links**: `SportTypeEquipmentLinkManager` links to equipment by internal `equipmentId`. Since equipment rows are unlinked rather than deleted, sport type links remain valid.
 * [x] **Reauthorization Parity**: When reauthorizing, `StravaEquipmentSynchronizeThread` matches existing equipment by name where `StravaId IS NULL`, re-attaching Strava IDs without creating duplicate gear rows.
 * [x] **Route Deduplication & Cache Invalidation**: Prevent duplicate Strava routes on reconnect via Mutex concurrency lock, database upsert on `externalId`, and in-memory cache refresh.
+* [x] **Segment Deduplication & Stream Replacement**: Prevent duplicate Strava segments on reconnect via Mutex concurrency lock, database upsert and legacy row pruning on `STRAVA_SEGMENT_ID`, stream replacement, and in-memory deduplication.
 * [x] **Thread Safety & UI Fluidity**: All database deletions and remote HTTP requests run strictly on background threads (`Dispatchers.IO`), preventing ANRs or frame drops.
 
 ---
@@ -184,6 +194,11 @@ The goal of **ATT-1078** is to:
     - Test 1: Inserts new route and points when not present.
     - Test 2: Updates summary and replaces points on duplicate externalId without creating duplicate rows.
     - Test 3: Purges multiple legacy duplicate rows if present in database.
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/segments/SegmentsDatabaseManagerDeduplicationTest.kt`:
+    - Test 1: Deduplicates multiple rows in `getAllSegmentSummaries` when identical `strava_segment_id` rows exist.
+    - Test 2: Deletes existing segment streams before inserting new stream coordinates.
+    - Test 3: Prunes secondary duplicate rows during `addOrUpdateSegment`.
 * **Clean-Room Regression**:
   - Execute `./gradlew testDebugUnitTest` to guarantee 0 regressions across all existing suites.
+
 

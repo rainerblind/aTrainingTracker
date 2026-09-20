@@ -41,6 +41,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -133,7 +135,7 @@ class SegmentsRepository private constructor(context: Context) {
 
     // Repository scope for background loading
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
+    private val syncMutex = Mutex()
 
     private val _allSegmentsWithPath = MutableStateFlow(emptyList<SegmentWithPath>())
     val allSegmentsWithPath: StateFlow<List<SegmentWithPath>> = _allSegmentsWithPath
@@ -143,17 +145,20 @@ class SegmentsRepository private constructor(context: Context) {
 
     init {
         if (DEBUG) Log.i(TAG, "init")
+        refreshSegments()
+    }
 
-        // Load segments from DB into memory immediately upon creation
+    /**
+     * Reloads segments from the database into [_allSegmentsWithPath], guaranteeing deduplication.
+     */
+    fun refreshSegments() {
         repositoryScope.launch {
             val segmentSummaries = segmentsDb.getAllSegmentSummaries()
-
-            // Load the path of all segments into memory (one by one)
-            segmentSummaries.forEach { segmentSummary ->
+            val loaded = segmentSummaries.distinctBy { it.stravaId }.map { segmentSummary ->
                 val path = segmentsDb.getSegmentPath(segmentSummary.stravaId)
-                _allSegmentsWithPath.value += SegmentWithPath(segmentSummary, path)
+                SegmentWithPath(segmentSummary, path)
             }
-
+            _allSegmentsWithPath.value = loaded
         }
     }
 
@@ -179,7 +184,11 @@ class SegmentsRepository private constructor(context: Context) {
         }
     }
 
-    suspend fun syncStarredSegments(bSportType: BSportType) {
+    /**
+     * Synchronizes starred segments from Strava.
+     * Protected by [syncMutex] to prevent race conditions during concurrent sync triggers (ATT-1078).
+     */
+    suspend fun syncStarredSegments(bSportType: BSportType) = syncMutex.withLock {
         if (bSportType == BSportType.UNKNOWN) {
             syncStarredSegmentsWorker(BSportType.BIKE)
             syncStarredSegmentsWorker(BSportType.RUN)
@@ -240,10 +249,25 @@ class SegmentsRepository private constructor(context: Context) {
                 addOrUpdateSegmentOnDb(detailedSegment)
                 newIds.add(segment.id)
 
-                if (!oldIds.contains(segment.id)) {
-                    // get the path and add the SegmentWithPath to the list
+                val existing = _allSegmentsWithPath.value.find { it.summary.stravaId == segment.id }
+                if (existing == null) {
                     val path = fetchAndInsertStream(segment.id) ?: emptyList()
-                    _allSegmentsWithPath.value += SegmentWithPath(detailedSegment.toSummary(), path)
+                    _allSegmentsWithPath.update { currentList ->
+                        if (currentList.none { it.summary.stravaId == segment.id }) {
+                            currentList + SegmentWithPath(detailedSegment.toSummary(), path)
+                        } else {
+                            currentList.map { item ->
+                                if (item.summary.stravaId == segment.id) {
+                                    item.copy(
+                                        summary = detailedSegment.toSummary(),
+                                        path = if (path.isNotEmpty()) path else item.path
+                                    )
+                                } else {
+                                    item
+                                }
+                            }
+                        }
+                    }
                 }
                 else {
                     // Update the item in the list if it exists
