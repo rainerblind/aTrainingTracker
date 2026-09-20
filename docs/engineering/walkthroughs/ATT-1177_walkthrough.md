@@ -65,7 +65,7 @@
 - **`app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RoutesFragment.kt`**:
   - Wired `onDuplicateAsLocal` callback to ViewModel and displayed confirmation snackbar (`route_saved_as_local`).
 - **Strings**:
-  - Added localized strings `save_as_local_route` and `route_saved_as_local` in English (`values/strings.xml`) and German (`values-de/strings.xml`).
+  - Added localized strings `save_as_local_route` and `route_saved_as_local` across all 9 supported locales: English (`values/`), German (`values-de/`), Spanish (`values-es/`), French (`values-fr/`), Italian (`values-it/`), Japanese (`values-ja/`), Dutch (`values-nl/`), Polish (`values-pl/`), and Portuguese (`values-pt/`).
 
 ### 5. Automated Tests
 - **`app/src/test/java/com/atrainingtracker/trainingtracker/database/RoutesDatabaseManagerTTLTest.kt`**:
@@ -87,4 +87,6 @@
 - `SegmentsDatabaseManagerTTLTest`: 4 passed, 0 failed.
 - `StravaRoutesSyncWorkerTest`: 10 passed, 0 failed.
 - `StravaSegmentsSyncWorkerTest`: 10 passed, 0 failed.
+- `TranslationParityTest`: 5 passed, 0 failed (100% key and specifier coverage across all 9 locales).
+- Total targeted suite: 45 tests passed, 0 failed.
 - Database invariants fully preserved (recorded workouts, local GPX, equipment bindings untouched).
