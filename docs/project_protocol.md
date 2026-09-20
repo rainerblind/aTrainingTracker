@@ -288,6 +288,12 @@ To guarantee test reliability, prevent state pollution, and avoid subtle cross-s
     *   When mocking Android framework objects (such as `ContentValues` or `Cursor`), ensure each invocation receives distinct, isolated object state (e.g., via real instances or reflection helpers on `originalCall`) to prevent shared-reference collisions in `verify` or capture blocks.
 3.  **Clean-Room Full-Suite Standard**:
     *   Every gate approval requires zero regressions: all project unit tests (`./gradlew testDebugUnitTest`) must pass green before Stage 3 completion.
+4.  **Active Interface Verification Before Mocking (ATT-1126 Retrospective Hardening)**:
+    *   Before writing unit test mocks, stubs, or verification assertions (`every { ... }`, `verify { ... }`), the agent **MUST** actively inspect the target class or repository method signatures in the active codebase using `view_file` or `grep`.
+    *   Relying on memory or guessing method names (e.g., writing `pruneStaleRoutes` instead of `pruneExpiredRoutes`) causes preventable compilation failures and slows down verification.
+5.  **Gradle & Kotlin Daemon Recovery Protocol (ATT-1126 Retrospective Hardening)**:
+    *   Whenever build or test execution logs indicate Kotlin compiler daemon failures, communication drops, or fallback warnings (`"Using fallback strategy: Compile without Kotlin daemon"` or `NoSuchFileException` in `/tmp`), the agent **MUST** proactively execute `./gradlew --stop` before retrying.
+    *   This clears corrupted daemon memory, releases stale lock files, and prevents long-running test hangs.
 
 ## Five-Gate AI Review Protocol (Analysis, Test Spec, Plan, Implementation & Release Gates)
 
