@@ -842,6 +842,8 @@
     <string name="route_saved_failed">保存に失敗しました。</string>
     <string name="strava_sync_success">Strava ルートを同期しました。</string>
     <string name="strava_sync_failed">Strava 同期失敗。</string>
+    <string name="save_as_local_route">ローカルルートとして保存</string>
+    <string name="route_saved_as_local">ローカルGPXルートとして保存されました</string>
     <string name="route_source_workout">トレーニング</string>
     <string name="sort">並び替え</string>
     <string name="routes_source_label">ソース: %1$s</string>

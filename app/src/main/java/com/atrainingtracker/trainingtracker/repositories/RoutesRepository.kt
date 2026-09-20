@@ -71,8 +71,20 @@ class RoutesRepository internal constructor(
     val allRoutes: StateFlow<List<RouteWithPath>> = _allRoutes.asStateFlow()
 
     init {
+        // Prune any expired cached Strava routes on initialization (Section 6.2 compliance)
+        routesDb.pruneExpiredStravaRoutes()
         // Initial load of route summaries from the database
         refreshRoutes()
+
+        // Auto-sync Strava routes if user is connected and cache has no Strava routes
+        if (TrainingApplication.getStravaAccessToken() != null) {
+            repositoryScope.launch {
+                val hasStravaRoutes = routesDb.getAllRoutes().any { it.summary.source == RouteSource.STRAVA }
+                if (!hasStravaRoutes) {
+                    syncRoutesFromStrava()
+                }
+            }
+        }
     }
 
     /**
@@ -98,6 +110,28 @@ class RoutesRepository internal constructor(
      */
     suspend fun getRouteByClusterId(clusterId: Long): RouteWithPath? = withContext(Dispatchers.IO) {
         routesDb.getRouteByClusterId(clusterId)
+    }
+
+    /**
+     * Duplicates a cached Strava route into an athlete-owned local GPX route.
+     */
+    suspend fun duplicateRouteAsLocal(routeId: Long): Long = withContext(Dispatchers.IO) {
+        val newId = routesDb.duplicateRouteAsLocal(routeId)
+        if (newId != -1L) {
+            refreshRoutes()
+        }
+        newId
+    }
+
+    /**
+     * Executes manual or periodic TTL pruning of expired cached Strava routes.
+     */
+    fun pruneExpiredRoutes(maxAgeMs: Long = 7 * 24 * 60 * 60 * 1000L): Int {
+        val pruned = routesDb.pruneExpiredStravaRoutes(maxAgeMs)
+        if (pruned > 0) {
+            refreshRoutes()
+        }
+        return pruned
     }
 
     /**
@@ -225,12 +259,17 @@ class RoutesRepository internal constructor(
         }
 
         // 2. Identify which routes are already in the DB
+        val activeExtIds = stravaRoutes.map { it.idStr }.toSet()
         val existingRoutes = routesDb.getAllRoutes()
-        val existingExtIds = existingRoutes.map { it.summary.externalId }.toSet()
+        val existingRoutesByExtId = existingRoutes
+            .filter { it.summary.source == RouteSource.STRAVA && it.summary.externalId.isNotBlank() }
+            .associateBy { it.summary.externalId }
 
         for (stravaRoute in stravaRoutes) {
-            if (existingExtIds.contains(stravaRoute.idStr)) {
-                // Already imported
+            val existing = existingRoutesByExtId[stravaRoute.idStr]
+            if (existing != null) {
+                // Route already imported: refresh its synced_at timestamp to extend cache validity
+                routesDb.updateRouteSyncedAt(existing.summary.id, System.currentTimeMillis())
                 continue
             }
 
@@ -274,7 +313,8 @@ class RoutesRepository internal constructor(
                 distance = stravaRoute.distance,
                 elevationGain = stravaRoute.elevationGain,
                 bSportType = sportType,
-                source = RouteSource.STRAVA
+                source = RouteSource.STRAVA,
+                syncedAt = System.currentTimeMillis()
             )
 
             // 4. Insert into DB
@@ -289,6 +329,9 @@ class RoutesRepository internal constructor(
                 routesDb.updateRouteSummary(summary.copy(id = newId, clusterId = clusterId))
             }
         }
+
+        // 4b. Prune orphan Strava routes that were deleted or unstarred on Strava
+        routesDb.pruneOrphanStravaRoutes(activeExtIds)
 
         // 5. Update timestamp & notify observers
         val timestamp = java.text.DateFormat.getDateTimeInstance().format(java.util.Date())

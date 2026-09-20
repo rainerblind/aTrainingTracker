@@ -627,6 +627,8 @@
     <string name="route_saved_failed">Błąd zapisu trasy.</string>
     <string name="strava_sync_success">Trasy Strava zsynchronizowane.</string>
     <string name="strava_sync_failed">Błąd synchronizacji Strava.</string>
+    <string name="save_as_local_route">Zapisz jako trasę lokalną</string>
+    <string name="route_saved_as_local">Trasa zapisana jako lokalna trasa GPX</string>
     <string name="route_source_workout">Trening</string>
     <string name="sort">Sortuj</string>
     <string name="routes_source_label">Źródło: %1$s</string>

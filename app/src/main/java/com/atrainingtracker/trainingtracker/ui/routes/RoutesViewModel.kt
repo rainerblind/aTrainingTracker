@@ -26,7 +26,9 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
+import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
@@ -67,6 +69,16 @@ class RoutesViewModel(application: Application) :
 
     fun resetSyncStravaStatus() {
         _syncStravaStatus.value = null
+    }
+
+    init {
+        if (TrainingApplication.getStravaAccessToken() != null) {
+            viewModelScope.launch {
+                if (routesRepository.allRoutes.value.none { it.summary.source == RouteSource.STRAVA }) {
+                    syncStravaRoutes()
+                }
+            }
+        }
     }
 
     override val isLocationAvailable: StateFlow<Boolean> = banalServiceRepository.currentLocation
@@ -187,6 +199,13 @@ class RoutesViewModel(application: Application) :
     fun deleteRoute(routeId: Long) {
         viewModelScope.launch {
             routesRepository.deleteRoute(routeId)
+        }
+    }
+
+    fun duplicateRouteAsLocal(routeId: Long, onComplete: ((Boolean) -> Unit)? = null) {
+        viewModelScope.launch {
+            val newId = routesRepository.duplicateRouteAsLocal(routeId)
+            onComplete?.invoke(newId != -1L)
         }
     }
 

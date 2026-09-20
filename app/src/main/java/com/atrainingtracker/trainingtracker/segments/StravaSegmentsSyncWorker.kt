@@ -24,6 +24,7 @@ import androidx.preference.PreferenceManager
 import androidx.work.*
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import java.text.DateFormat
 import java.util.Date
 import java.util.concurrent.TimeUnit
@@ -42,6 +43,9 @@ class StravaSegmentsSyncWorker(
 
     override suspend fun doWork(): Result {
         Log.i(TAG, "Starting periodic automated Strava segments sync...")
+
+        // Always enforce 7-day TTL cache retention for Strava segments (Section 6.2 compliance)
+        SegmentsRepository.getInstance(applicationContext).pruneExpiredSegments()
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         val automatedEnabled = prefs.getBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, true)

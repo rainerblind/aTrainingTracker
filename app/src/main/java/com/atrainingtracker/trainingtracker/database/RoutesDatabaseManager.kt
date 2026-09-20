@@ -46,7 +46,8 @@ data class RouteSummary(
     val minLat: Double? = null,
     val minLng: Double? = null,
     val maxLat: Double? = null,
-    val maxLng: Double? = null
+    val maxLng: Double? = null,
+    val syncedAt: Long = 0L
 )
 
 enum class RouteSource(
@@ -157,6 +158,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
                 put(RouteContract.COLUMN_BOUND_MIN_LNG, minLng)
                 put(RouteContract.COLUMN_BOUND_MAX_LAT, maxLat)
                 put(RouteContract.COLUMN_BOUND_MAX_LNG, maxLng)
+                put(RouteContract.COLUMN_SYNCED_AT, if (summary.syncedAt > 0L) summary.syncedAt else System.currentTimeMillis())
             }
             // 2. Check for existing route with same externalId and source to prevent duplicates (ATT-1078)
             var existingId: Long = -1L
@@ -276,6 +278,139 @@ class RoutesDatabaseManager private constructor(context: Context) {
     }
 
     /**
+     * Retrieves a route by its database ID.
+     */
+    fun getRouteById(routeId: Long): RouteWithPath? {
+        val db = getDatabase()
+        db.query(
+            RouteContract.TABLE_ROUTES,
+            null,
+            "${RouteContract.COLUMN_ID} = ?",
+            arrayOf(routeId.toString()),
+            null,
+            null,
+            null
+        ).use { cursor ->
+            if (cursor.moveToFirst()) {
+                val routeSummary = mapCursorToRouteSummary(cursor)
+                val pathPoints = getRoutePath(routeSummary.id)
+                return RouteWithPath(routeSummary, pathPoints)
+            }
+        }
+        return null
+    }
+
+    /**
+     * Updates the synced_at timestamp of an existing route.
+     */
+    fun updateRouteSyncedAt(routeId: Long, timestamp: Long): Int {
+        val db = getDatabase()
+        val values = ContentValues().apply {
+            put(RouteContract.COLUMN_SYNCED_AT, timestamp)
+        }
+        return db.update(
+            RouteContract.TABLE_ROUTES,
+            values,
+            "${RouteContract.COLUMN_ID} = ?",
+            arrayOf(routeId.toString())
+        )
+    }
+
+    /**
+     * Prunes cached Strava routes that have not been refreshed within [maxAgeMs] (default 7 days).
+     * Routes with RouteSource.LOCAL_GPX or WORKOUT are never pruned.
+     */
+    fun pruneExpiredStravaRoutes(maxAgeMs: Long = 7 * 24 * 60 * 60 * 1000L): Int {
+        val cutoff = System.currentTimeMillis() - maxAgeMs
+        val db = getDatabase()
+        db.beginTransaction()
+        return try {
+            val expiredIds = mutableListOf<Long>()
+            val selection = "${RouteContract.COLUMN_SOURCE} = ? AND ${RouteContract.COLUMN_SYNCED_AT} > 0 AND ${RouteContract.COLUMN_SYNCED_AT} < ?"
+            val selectionArgs = arrayOf(RouteSource.STRAVA.name, cutoff.toString())
+
+            db.query(
+                RouteContract.TABLE_ROUTES,
+                arrayOf(RouteContract.COLUMN_ID),
+                selection,
+                selectionArgs,
+                null, null, null
+            ).use { cursor ->
+                val idIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_ID)
+                while (cursor.moveToNext()) {
+                    expiredIds.add(cursor.getLong(idIdx))
+                }
+            }
+
+            for (id in expiredIds) {
+                db.delete(RouteContract.TABLE_ROUTE_POINTS, "${RouteContract.COLUMN_ROUTE_ID_FK} = ?", arrayOf(id.toString()))
+                db.delete(RouteContract.TABLE_ROUTES, "${RouteContract.COLUMN_ID} = ?", arrayOf(id.toString()))
+            }
+
+            db.setTransactionSuccessful()
+            expiredIds.size
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /**
+     * Prunes local Strava routes whose externalId is not present in [activeStravaIds]
+     * (e.g. unstarred or deleted on Strava).
+     */
+    fun pruneOrphanStravaRoutes(activeStravaIds: Set<String>): Int {
+        val db = getDatabase()
+        db.beginTransaction()
+        return try {
+            val orphanIds = mutableListOf<Long>()
+            db.query(
+                RouteContract.TABLE_ROUTES,
+                arrayOf(RouteContract.COLUMN_ID, RouteContract.COLUMN_EXTERNAL_ID),
+                "${RouteContract.COLUMN_SOURCE} = ?",
+                arrayOf(RouteSource.STRAVA.name),
+                null, null, null
+            ).use { cursor ->
+                val idIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_ID)
+                val extIdIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_EXTERNAL_ID)
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idIdx)
+                    val extId = cursor.getString(extIdIdx)
+                    if (extId.isNullOrEmpty() || !activeStravaIds.contains(extId)) {
+                        orphanIds.add(id)
+                    }
+                }
+            }
+
+            for (id in orphanIds) {
+                db.delete(RouteContract.TABLE_ROUTE_POINTS, "${RouteContract.COLUMN_ROUTE_ID_FK} = ?", arrayOf(id.toString()))
+                db.delete(RouteContract.TABLE_ROUTES, "${RouteContract.COLUMN_ID} = ?", arrayOf(id.toString()))
+            }
+
+            db.setTransactionSuccessful()
+            orphanIds.size
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /**
+     * Duplicates an existing route into an athlete-owned local GPX route (RouteSource.LOCAL_GPX).
+     * Clears externalId to decouple it from Strava synchronization and TTL eviction.
+     */
+    fun duplicateRouteAsLocal(routeId: Long): Long {
+        val route = getRouteById(routeId) ?: return -1L
+        val path = getRoutePath(routeId)
+        val duplicatedSummary = route.summary.copy(
+            id = 0L,
+            externalId = "",
+            name = "${route.summary.name} (Local)",
+            source = RouteSource.LOCAL_GPX,
+            syncedAt = 0L
+        )
+        return insertRoute(duplicatedSummary, path)
+    }
+
+    /**
      * Retrieves a route linked to a specific cluster ID.
      */
     fun getRouteByClusterId(clusterId: Long): RouteWithPath? {
@@ -369,6 +504,8 @@ class RoutesDatabaseManager private constructor(context: Context) {
         val minLngIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_BOUND_MIN_LNG)
         val maxLatIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_BOUND_MAX_LAT)
         val maxLngIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_BOUND_MAX_LNG)
+        val syncedAtIdx = cursor.getColumnIndex(RouteContract.COLUMN_SYNCED_AT)
+        val syncedAt = if (syncedAtIdx != -1 && !cursor.isNull(syncedAtIdx)) cursor.getLong(syncedAtIdx) else 0L
 
         val sportString = cursor.getString(sportIdx)
         val sportType = try {
@@ -391,7 +528,8 @@ class RoutesDatabaseManager private constructor(context: Context) {
             minLat = if (cursor.isNull(minLatIdx)) null else cursor.getDouble(minLatIdx),
             minLng = if (cursor.isNull(minLngIdx)) null else cursor.getDouble(minLngIdx),
             maxLat = if (cursor.isNull(maxLatIdx)) null else cursor.getDouble(maxLatIdx),
-            maxLng = if (cursor.isNull(maxLngIdx)) null else cursor.getDouble(maxLngIdx)
+            maxLng = if (cursor.isNull(maxLngIdx)) null else cursor.getDouble(maxLngIdx),
+            syncedAt = syncedAt
         )
     }
 
@@ -460,6 +598,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
         const val COLUMN_BOUND_MIN_LNG = "bound_min_lng"
         const val COLUMN_BOUND_MAX_LAT = "bound_max_lat"
         const val COLUMN_BOUND_MAX_LNG = "bound_max_lng"
+        const val COLUMN_SYNCED_AT = "synced_at"
 
         const val TABLE_ROUTE_POINTS = "route_points"
         const val COLUMN_POINT_ID = "id"
@@ -484,7 +623,8 @@ class RoutesDatabaseManager private constructor(context: Context) {
             $COLUMN_BOUND_MIN_LAT REAL,
             $COLUMN_BOUND_MIN_LNG REAL,
             $COLUMN_BOUND_MAX_LAT REAL,
-            $COLUMN_BOUND_MAX_LNG REAL
+            $COLUMN_BOUND_MAX_LNG REAL,
+            $COLUMN_SYNCED_AT INTEGER DEFAULT 0
         );
     """
 
@@ -513,7 +653,9 @@ class RoutesDatabaseManager private constructor(context: Context) {
             // const val DB_VERSION = 2 // Storing BSportType as String.
             // const val DB_VERSION = 3    // No more storing the polyline.
             // const val DB_VERSION = 5    // Added the description
-            const val DB_VERSION = 7    // Added spatial bounds (ATT-352)
+            // const val DB_VERSION = 7    // Added spatial bounds (ATT-352)
+            // const val DB_VERSION = 8    // Added synced_at for 7-day TTL cache retention (ATT-1177)
+            const val DB_VERSION = 9    // Ensure valid synced_at timestamp for existing Strava routes
 
             private const val TAG = "RoutesDbHelper"
             private val DEBUG = TrainingApplication.getDebug(true)
@@ -554,6 +696,25 @@ class RoutesDatabaseManager private constructor(context: Context) {
                     Log.w(TAG, "Bounds columns might already exist: ${e.message}")
                 }
                 migrateRouteBounds(db)
+            }
+
+            if (oldVersion < 8) {
+                Log.i(TAG, "Upgrading Routes DB to Version 8 (Adding synced_at timestamp)")
+                try {
+                    db.execSQL("ALTER TABLE ${RouteContract.TABLE_ROUTES} ADD COLUMN ${RouteContract.COLUMN_SYNCED_AT} INTEGER DEFAULT 0")
+                } catch (e: Exception) {
+                    Log.w(TAG, "synced_at column might already exist: ${e.message}")
+                }
+            }
+
+            if (oldVersion < 9) {
+                Log.i(TAG, "Upgrading Routes DB to Version 9 (Ensuring valid synced_at timestamp for Strava routes)")
+                try {
+                    val now = System.currentTimeMillis()
+                    db.execSQL("UPDATE ${RouteContract.TABLE_ROUTES} SET ${RouteContract.COLUMN_SYNCED_AT} = $now WHERE ${RouteContract.COLUMN_SOURCE} = '${RouteSource.STRAVA.name}' AND (${RouteContract.COLUMN_SYNCED_AT} IS NULL OR ${RouteContract.COLUMN_SYNCED_AT} <= 0)")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error updating synced_at timestamp: ${e.message}")
+                }
             }
         }
 

@@ -855,6 +855,8 @@
     <string name="route_saved_failed">Échec de l\'enregistrement.</string>
     <string name="strava_sync_success">Itinéraires Strava synchronisés.</string>
     <string name="strava_sync_failed">Échec synchro Strava.</string>
+    <string name="save_as_local_route">Enregistrer comme itinéraire local</string>
+    <string name="route_saved_as_local">Itinéraire enregistré comme itinéraire GPX local</string>
     <string name="route_source_workout">Séance</string>
     <string name="sort">Trier</string>
     <string name="routes_source_label">Source : %1$s</string>

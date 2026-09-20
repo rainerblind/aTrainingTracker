@@ -1061,6 +1061,8 @@
     <string name="route_saved_failed">Failed to save route.</string>
     <string name="strava_sync_success">Routes synced from Strava.</string>
     <string name="strava_sync_failed">Failed to sync routes from Strava.</string>
+    <string name="save_as_local_route">Save as Local Route</string>
+    <string name="route_saved_as_local">Route saved as local GPX route</string>
     <string name="route_source_workout">Workout</string>
     <string name="sort">Sort</string>
     <string name="routes_source_label">Source: %1$s</string>

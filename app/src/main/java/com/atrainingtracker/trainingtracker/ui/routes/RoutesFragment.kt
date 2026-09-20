@@ -40,6 +40,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -49,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.activities.GpxImportActivity
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
@@ -96,8 +98,10 @@ class RoutesFragment : Fragment() {
 
                     // --- SNACKBAR FEEDBACK ---
                     val snackbarHostState = remember { SnackbarHostState() }
+                    val scope = rememberCoroutineScope()
                     val successMsg = stringResource(R.string.strava_sync_success)
                     val errorMsg = stringResource(R.string.strava_sync_failed)
+                    val routeSavedAsLocalMsg = stringResource(R.string.route_saved_as_local)
 
                     LaunchedEffect(syncStravaStatus) {
                         syncStravaStatus?.let { success ->
@@ -203,6 +207,15 @@ class RoutesFragment : Fragment() {
                                     },
                                     onDeleteConfirmed = { id ->
                                         viewModel.deleteRoute(id)
+                                    },
+                                    onDuplicateAsLocal = { id ->
+                                        viewModel.duplicateRouteAsLocal(id) { success ->
+                                            if (success) {
+                                                scope.launch {
+                                                    snackbarHostState.showSnackbar(routeSavedAsLocalMsg)
+                                                }
+                                            }
+                                        }
                                     },
                                     onImportClick = { gpxPickerLauncher.launch("*/*") },
                                     onSyncStravaClick = { viewModel.syncStravaRoutes() },
