@@ -859,6 +859,8 @@
     <string name="route_saved_failed">Error al guardar la ruta.</string>
     <string name="strava_sync_success">Rutas sincronizadas de Strava.</string>
     <string name="strava_sync_failed">Error al sincronizar con Strava.</string>
+    <string name="save_as_local_route">Guardar como ruta local</string>
+    <string name="route_saved_as_local">Ruta guardada como ruta GPX local</string>
     <string name="route_source_workout">Entrenamiento</string>
     <string name="sort">Ordenar</string>
     <string name="routes_source_label">Origen: %1$s</string>

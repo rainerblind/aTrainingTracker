@@ -856,6 +856,8 @@
     <string name="route_saved_failed">Fout bij opslaan.</string>
     <string name="strava_sync_success">Strava routes bijgewerkt.</string>
     <string name="strava_sync_failed">Strava synchro mislukt.</string>
+    <string name="save_as_local_route">Opslaan als lokale route</string>
+    <string name="route_saved_as_local">Route opgeslagen als lokale GPX-route</string>
     <string name="route_source_workout">Training</string>
     <string name="sort">Sorteren</string>
     <string name="routes_source_label">Bron: %1$s</string>
