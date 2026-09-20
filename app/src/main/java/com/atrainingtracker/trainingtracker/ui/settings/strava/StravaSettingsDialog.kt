@@ -37,6 +37,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaAuthRepository
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaAuthState
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDataPurgeManager
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDeauthorizationThread
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSynchronizeThread
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
@@ -196,10 +197,9 @@ fun StravaSettingsDialog(
                     StravaHelper.requestAccessToken(context)
                 },
                 onDisconnectClick = {
-                    TrainingApplication.deleteStravaToken()
-                    (context as? Activity)?.let { StravaDeauthorizationThread(it).start() }
-                    StravaSegmentsSyncWorker.schedule(context)
-                    StravaRoutesSyncWorker.schedule(context)
+                    StravaDataPurgeManager.purgeAllStravaData(context, alsoRevokeRemote = true) {
+                        isConnected = false
+                    }
                     isConnected = false
                 }
             )

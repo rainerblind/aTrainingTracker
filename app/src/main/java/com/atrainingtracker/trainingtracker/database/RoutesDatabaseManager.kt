@@ -376,6 +376,19 @@ class RoutesDatabaseManager private constructor(context: Context) {
         )
     }
 
+    /**
+     * Deletes all routes originating from a specific source (e.g. RouteSource.STRAVA).
+     * Due to FOREIGN KEY CASCADE on route_points, all track coordinates are automatically deleted (REQ-EXT-009).
+     */
+    fun deleteRoutesBySource(source: RouteSource): Int {
+        val db = getDatabase()
+        return db.delete(
+            RouteContract.TABLE_ROUTES,
+            "${RouteContract.COLUMN_SOURCE} = ?",
+            arrayOf(source.name)
+        )
+    }
+
 
     object RouteContract {
 
