@@ -51,7 +51,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import kotlin.text.equals
 
-data class SegmentSummary(
+data class SegmentSummary @JvmOverloads constructor(
     val stravaId: Long,
     val name: String,
     val bSportType: BSportType,
@@ -74,7 +74,8 @@ data class SegmentSummary(
     val minLat: Double? = null,
     val minLng: Double? = null,
     val maxLat: Double? = null,
-    val maxLng: Double? = null
+    val maxLng: Double? = null,
+    val syncedAt: Long = 0L
 )
 
 data class SegmentWithPath(
@@ -145,7 +146,20 @@ class SegmentsRepository private constructor(context: Context) {
 
     init {
         if (DEBUG) Log.i(TAG, "init")
+        // Prune expired starred segments on initialization (Section 6.2 compliance)
+        segmentsDb.pruneExpiredSegments(7 * 24 * 60 * 60 * 1000L)
         refreshSegments()
+    }
+
+    /**
+     * Executes manual or periodic TTL pruning of expired cached Strava segments.
+     */
+    fun pruneExpiredSegments(maxAgeMs: Long = 7 * 24 * 60 * 60 * 1000L): Int {
+        val pruned = segmentsDb.pruneExpiredSegments(maxAgeMs)
+        if (pruned > 0) {
+            refreshSegments()
+        }
+        return pruned
     }
 
     /**
@@ -189,6 +203,8 @@ class SegmentsRepository private constructor(context: Context) {
      * Protected by [syncMutex] to prevent race conditions during concurrent sync triggers (ATT-1078).
      */
     suspend fun syncStarredSegments(bSportType: BSportType) = syncMutex.withLock {
+        // Prune expired segments before synchronization (Section 6.2 compliance)
+        segmentsDb.pruneExpiredSegments(7 * 24 * 60 * 60 * 1000L)
         if (bSportType == BSportType.UNKNOWN) {
             syncStarredSegmentsWorker(BSportType.BIKE)
             syncStarredSegmentsWorker(BSportType.RUN)

@@ -41,6 +41,9 @@ class StravaRoutesSyncWorker(
     override suspend fun doWork(): Result {
         Log.i(TAG, "Starting periodic automated Strava routes sync...")
 
+        // Always enforce 7-day TTL cache retention for Strava routes (Section 6.2 compliance)
+        RoutesRepository.getInstance(applicationContext).pruneExpiredRoutes()
+
         val prefs = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         val automatedEnabled = prefs.getBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_ROUTES_SYNC, true)
         val stravaConnected = TrainingApplication.getStravaAccessToken() != null

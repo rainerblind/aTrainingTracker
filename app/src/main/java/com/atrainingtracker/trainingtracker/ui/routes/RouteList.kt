@@ -51,6 +51,7 @@ fun RouteList(
     onMapClick: (Long) -> Unit,
     onHeaderClick: (Long) -> Unit,
     onDeleteConfirmed: (Long) -> Unit,
+    onDuplicateAsLocal: (Long) -> Unit = {},
     appBarOffsetPx: Int,
     headerHeightPx: Float,
     isFilterActive: Boolean = false
@@ -107,6 +108,7 @@ fun RouteList(
                         onMapClick = onMapClick,
                         onHeaderClick = onHeaderClick,
                         onDeleteConfirmed = onDeleteConfirmed,
+                        onDuplicateAsLocal = onDuplicateAsLocal,
                         modifier = Modifier
                     )
                 }

@@ -190,6 +190,13 @@ class RoutesViewModel(application: Application) :
         }
     }
 
+    fun duplicateRouteAsLocal(routeId: Long, onComplete: ((Boolean) -> Unit)? = null) {
+        viewModelScope.launch {
+            val newId = routesRepository.duplicateRouteAsLocal(routeId)
+            onComplete?.invoke(newId != -1L)
+        }
+    }
+
     fun refresh() {
         routesRepository.refreshRoutes()
     }
