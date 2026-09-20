@@ -45,10 +45,8 @@ import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorker
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.segments.StravaSegmentsSyncWorker
-import com.atrainingtracker.trainingtracker.ui.components.DropdownSelector
 import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
-import androidx.compose.ui.res.stringArrayResource
 
 /**
  * Bottom sheet composable for configuring Strava integration, synchronizations, and selective upload settings.
@@ -81,18 +79,6 @@ fun StravaSettingsDialog(
     }
     var segmentsLastUpdate by remember {
         mutableStateOf(TrainingApplication.getLastUpdateTimeOfStravaSegments())
-    }
-    var automatedSegmentsSync by remember {
-        mutableStateOf(TrainingApplication.isAutomatedStravaSegmentsSyncEnabled())
-    }
-    var segmentsSyncIntervalDays by remember {
-        mutableStateOf(TrainingApplication.getStravaSegmentsSyncIntervalDays())
-    }
-    var automatedRoutesSync by remember {
-        mutableStateOf(TrainingApplication.isAutomatedStravaRoutesSyncEnabled())
-    }
-    var routesSyncIntervalDays by remember {
-        mutableStateOf(TrainingApplication.getStravaRoutesSyncIntervalDays())
     }
 
     var uploadGps by remember {
@@ -171,10 +157,6 @@ fun StravaSettingsDialog(
                         .putBoolean("uploadStravaHR", uploadHr)
                         .putBoolean("uploadStravaPower", uploadPower)
                         .putBoolean("uploadStravaCadence", uploadCadence)
-                        .putBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, automatedSegmentsSync)
-                        .putString(TrainingApplication.SP_STRAVA_SEGMENTS_SYNC_INTERVAL_DAYS, segmentsSyncIntervalDays)
-                        .putBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_ROUTES_SYNC, automatedRoutesSync)
-                        .putString(TrainingApplication.SP_STRAVA_ROUTES_SYNC_INTERVAL_DAYS, routesSyncIntervalDays)
                         .apply()
                     StravaSegmentsSyncWorker.schedule(context)
                     StravaRoutesSyncWorker.schedule(context)
@@ -315,124 +297,6 @@ fun StravaSettingsDialog(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                    }
-                }
-
-                HorizontalDivider()
-
-                // Automated Synchronization Configuration (matching Dropbox automated backups)
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(end = 16.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.automated_strava_segments_sync),
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                text = stringResource(R.string.automated_strava_segments_sync_summary),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = automatedSegmentsSync,
-                            onCheckedChange = { automatedSegmentsSync = it },
-                            modifier = Modifier.scale(0.8f)
-                        )
-                    }
-
-                    if (automatedSegmentsSync) {
-                        val intervalEntries = stringArrayResource(R.array.backup_interval_entries).toList()
-                        val intervalValues = stringArrayResource(R.array.backup_interval_values).toList()
-                        val currentIndex = intervalValues.indexOf(segmentsSyncIntervalDays).coerceAtLeast(0)
-                        val currentEntry = if (currentIndex in intervalEntries.indices) {
-                            intervalEntries[currentIndex]
-                        } else {
-                            intervalEntries.firstOrNull() ?: ""
-                        }
-
-                        DropdownSelector(
-                            label = stringResource(R.string.strava_segments_sync_interval),
-                            options = intervalEntries,
-                            selectedOption = currentEntry,
-                            onOptionSelected = { selected ->
-                                val idx = intervalEntries.indexOf(selected)
-                                if (idx in intervalValues.indices) {
-                                    segmentsSyncIntervalDays = intervalValues[idx]
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-
-                HorizontalDivider()
-
-                // Automated Routes Synchronization Configuration
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(end = 16.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.automated_strava_routes_sync),
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                text = stringResource(R.string.automated_strava_routes_sync_summary),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = automatedRoutesSync,
-                            onCheckedChange = { automatedRoutesSync = it },
-                            modifier = Modifier.scale(0.8f)
-                        )
-                    }
-
-                    if (automatedRoutesSync) {
-                        val intervalEntries = stringArrayResource(R.array.backup_interval_entries).toList()
-                        val intervalValues = stringArrayResource(R.array.backup_interval_values).toList()
-                        val currentIndex = intervalValues.indexOf(routesSyncIntervalDays).coerceAtLeast(0)
-                        val currentEntry = if (currentIndex in intervalEntries.indices) {
-                            intervalEntries[currentIndex]
-                        } else {
-                            intervalEntries.firstOrNull() ?: ""
-                        }
-
-                        DropdownSelector(
-                            label = stringResource(R.string.strava_routes_sync_interval),
-                            options = intervalEntries,
-                            selectedOption = currentEntry,
-                            onOptionSelected = { selected ->
-                                val idx = intervalEntries.indexOf(selected)
-                                if (idx in intervalValues.indices) {
-                                    routesSyncIntervalDays = intervalValues[idx]
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
                     }
                 }
 

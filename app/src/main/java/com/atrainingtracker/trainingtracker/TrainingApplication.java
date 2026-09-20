@@ -657,7 +657,7 @@ public class TrainingApplication extends Application {
     }
 
     public static boolean isAutomatedStravaRoutesSyncEnabled() {
-        return cSharedPreferences.getBoolean(SP_AUTOMATED_STRAVA_ROUTES_SYNC, true);
+        return true;
     }
 
     public static void setAutomatedStravaRoutesSyncEnabled(boolean enabled) {
@@ -666,7 +666,7 @@ public class TrainingApplication extends Application {
 
     @NonNull
     public static String getStravaRoutesSyncIntervalDays() {
-        return cSharedPreferences.getString(SP_STRAVA_ROUTES_SYNC_INTERVAL_DAYS, "1");
+        return "1";
     }
 
     public static void setStravaRoutesSyncIntervalDays(String intervalDays) {
@@ -683,7 +683,7 @@ public class TrainingApplication extends Application {
     }
 
     public static boolean isAutomatedStravaSegmentsSyncEnabled() {
-        return cSharedPreferences.getBoolean(SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, true);
+        return true;
     }
 
     public static void setAutomatedStravaSegmentsSyncEnabled(boolean enabled) {
@@ -692,7 +692,7 @@ public class TrainingApplication extends Application {
 
     @NonNull
     public static String getStravaSegmentsSyncIntervalDays() {
-        return cSharedPreferences.getString(SP_STRAVA_SEGMENTS_SYNC_INTERVAL_DAYS, "1");
+        return "1";
     }
 
     public static void setStravaSegmentsSyncIntervalDays(String intervalDays) {

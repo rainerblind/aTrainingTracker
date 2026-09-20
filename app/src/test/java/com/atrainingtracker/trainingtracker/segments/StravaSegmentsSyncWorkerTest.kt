@@ -97,23 +97,7 @@ class StravaSegmentsSyncWorkerTest {
     }
 
     @Test
-    fun testScheduleWhenAutomatedSyncDisabledCancelsWork() {
-        every { mockPrefs.getBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, true) } returns false
-        every { TrainingApplication.getStravaAccessToken() } returns "valid_test_token"
-
-        StravaSegmentsSyncWorker.schedule(mockContext)
-
-        verify(exactly = 1) {
-            mockWorkManager.cancelUniqueWork(StravaSegmentsSyncWorker.WORK_NAME)
-        }
-        verify(exactly = 0) {
-            mockWorkManager.enqueueUniquePeriodicWork(any(), any(), any())
-        }
-    }
-
-    @Test
     fun testScheduleWhenStravaDisconnectedCancelsWork() {
-        every { mockPrefs.getBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, true) } returns true
         every { TrainingApplication.getStravaAccessToken() } returns null
 
         StravaSegmentsSyncWorker.schedule(mockContext)
@@ -127,9 +111,7 @@ class StravaSegmentsSyncWorkerTest {
     }
 
     @Test
-    fun testScheduleWhenEnabledAndConnectedEnqueuesPeriodicWork() {
-        every { mockPrefs.getBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, true) } returns true
-        every { mockPrefs.getString(TrainingApplication.SP_STRAVA_SEGMENTS_SYNC_INTERVAL_DAYS, "1") } returns "1"
+    fun testScheduleWhenConnectedEnqueuesPeriodicWorkWith1DayInterval() {
         every { TrainingApplication.getStravaAccessToken() } returns "valid_token"
 
         StravaSegmentsSyncWorker.schedule(mockContext)
@@ -146,28 +128,11 @@ class StravaSegmentsSyncWorkerTest {
         val capturedWorkSpec = workRequestSlot.captured.workSpec
         assertEquals(true, capturedWorkSpec.constraints.requiresBatteryNotLow())
         assertEquals(androidx.work.NetworkType.CONNECTED, capturedWorkSpec.constraints.requiredNetworkType)
-    }
-
-    @Test
-    fun testScheduleWithCustomIntervalDaysEnqueuesPeriodicWork() {
-        every { mockPrefs.getBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, true) } returns true
-        every { mockPrefs.getString(TrainingApplication.SP_STRAVA_SEGMENTS_SYNC_INTERVAL_DAYS, "1") } returns "7"
-        every { TrainingApplication.getStravaAccessToken() } returns "valid_token"
-
-        StravaSegmentsSyncWorker.schedule(mockContext)
-
-        verify(exactly = 1) {
-            mockWorkManager.enqueueUniquePeriodicWork(
-                eq(StravaSegmentsSyncWorker.WORK_NAME),
-                eq(ExistingPeriodicWorkPolicy.UPDATE),
-                any()
-            )
-        }
+        assertEquals(1000L * 60 * 60 * 24, capturedWorkSpec.intervalDuration)
     }
 
     @Test
     fun testScheduleWhenWorkManagerThrowsLogsErrorGracefully() {
-        every { mockPrefs.getBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, true) } returns true
         every { TrainingApplication.getStravaAccessToken() } returns "valid_token"
         every { WorkManager.getInstance(any()) } throws IllegalStateException("WorkManager not initialized")
 
@@ -179,23 +144,7 @@ class StravaSegmentsSyncWorkerTest {
     }
 
     @Test
-    fun testDoWorkWhenAutomatedSyncDisabledReturnsSuccessWithoutSyncing() = runBlocking {
-        every { mockPrefs.getBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, true) } returns false
-        every { TrainingApplication.getStravaAccessToken() } returns "valid_token"
-
-        val workerParams = mockk<WorkerParameters>(relaxed = true)
-        val worker = StravaSegmentsSyncWorker(mockContext, workerParams)
-
-        val result = worker.doWork()
-
-        assertEquals(Result.success(), result)
-        coVerify(exactly = 0) { mockSegmentsRepository.syncStarredSegments(any()) }
-        verify(exactly = 0) { TrainingApplication.setLastUpdateTimeOfStravaSegments(any()) }
-    }
-
-    @Test
-    fun testDoWorkWhenStravaDisconnectedReturnsSuccessWithoutSyncing() = runBlocking {
-        every { mockPrefs.getBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, true) } returns true
+    fun testDoWorkWhenStravaDisconnectedPrunesTTLAndReturnsSuccessWithoutSyncing() = runBlocking {
         every { TrainingApplication.getStravaAccessToken() } returns null
 
         val workerParams = mockk<WorkerParameters>(relaxed = true)
@@ -204,13 +153,13 @@ class StravaSegmentsSyncWorkerTest {
         val result = worker.doWork()
 
         assertEquals(Result.success(), result)
+        verify(exactly = 1) { mockSegmentsRepository.pruneExpiredSegments() }
         coVerify(exactly = 0) { mockSegmentsRepository.syncStarredSegments(any()) }
         verify(exactly = 0) { TrainingApplication.setLastUpdateTimeOfStravaSegments(any()) }
     }
 
     @Test
-    fun testDoWorkWhenEnabledAndConnectedSyncsSegmentsAndUpdatesTimestamp() = runBlocking {
-        every { mockPrefs.getBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, true) } returns true
+    fun testDoWorkWhenConnectedSyncsSegmentsAndUpdatesTimestamp() = runBlocking {
         every { TrainingApplication.getStravaAccessToken() } returns "valid_token"
         coEvery { mockSegmentsRepository.syncStarredSegments(BSportType.UNKNOWN) } just Runs
 
@@ -220,13 +169,13 @@ class StravaSegmentsSyncWorkerTest {
         val result = worker.doWork()
 
         assertEquals(Result.success(), result)
+        verify(exactly = 1) { mockSegmentsRepository.pruneExpiredSegments() }
         coVerify(exactly = 1) { mockSegmentsRepository.syncStarredSegments(BSportType.UNKNOWN) }
         verify(atLeast = 1) { TrainingApplication.setLastUpdateTimeOfStravaSegments(any()) }
     }
 
     @Test
     fun testDoWorkWhenSyncThrowsReturnsRetry() = runBlocking {
-        every { mockPrefs.getBoolean(TrainingApplication.SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, true) } returns true
         every { TrainingApplication.getStravaAccessToken() } returns "valid_token"
         coEvery { mockSegmentsRepository.syncStarredSegments(BSportType.UNKNOWN) } throws IOException("Network timeout")
 
@@ -236,6 +185,7 @@ class StravaSegmentsSyncWorkerTest {
         val result = worker.doWork()
 
         assertEquals(Result.retry(), result)
+        verify(exactly = 1) { mockSegmentsRepository.pruneExpiredSegments() }
         coVerify(exactly = 1) { mockSegmentsRepository.syncStarredSegments(BSportType.UNKNOWN) }
     }
 }
