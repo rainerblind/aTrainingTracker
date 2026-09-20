@@ -66,6 +66,16 @@ class SegmentListViewModel(
 
     val connectedToStrava = segmentsRepository.connectedToStrava
 
+    init {
+        if (connectedToStrava) {
+            viewModelScope.launch {
+                if (segmentsRepository.allSegmentsWithPath.value.isEmpty()) {
+                    segmentsRepository.syncSegmentsAsync(BSportType.UNKNOWN)
+                }
+            }
+        }
+    }
+
     // Observation of other map context
     val routes: StateFlow<List<MapRoute>> = routesRepository.allRoutes
         .map { list -> list.map { it.toMapRoute() } }

@@ -149,6 +149,16 @@ class SegmentsRepository private constructor(context: Context) {
         // Prune expired starred segments on initialization (Section 6.2 compliance)
         segmentsDb.pruneExpiredSegments(7 * 24 * 60 * 60 * 1000L)
         refreshSegments()
+
+        // Auto-sync Strava segments if user is connected and cache has no segments
+        if (connectedToStrava) {
+            repositoryScope.launch {
+                val summaries = segmentsDb.getAllSegmentSummaries()
+                if (summaries.isEmpty()) {
+                    syncSegmentsAsync(BSportType.UNKNOWN)
+                }
+            }
+        }
     }
 
     /**

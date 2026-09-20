@@ -483,7 +483,7 @@ public class SegmentsDatabaseManager {
         long cutoff = System.currentTimeMillis() - maxAgeMs;
         SQLiteDatabase db = getDatabase();
         List<Long> expiredIds = new ArrayList<>();
-        String where = "(" + Segments.SYNCED_AT + " IS NULL OR " + Segments.SYNCED_AT + " <= 0 OR " + Segments.SYNCED_AT + " < ?)";
+        String where = Segments.SYNCED_AT + " > 0 AND " + Segments.SYNCED_AT + " < ?";
         try (Cursor cursor = db.query(Segments.TABLE_STARRED_SEGMENTS,
                 new String[]{Segments.STRAVA_SEGMENT_ID},
                 where,
@@ -670,7 +670,7 @@ public class SegmentsDatabaseManager {
         // public static final int DB_VERSION = 3; // updated 26.9.2016
         // public static final int DB_VERSION = 5; // updated 11.01.2026: add PR_TIME
         // public static final int DB_VERSION = 7; // updated 25.07.2026: add spatial bounds (ATT-352)
-        public static final int DB_VERSION = 8; // updated for 7-day TTL cache retention (ATT-1177)
+        public static final int DB_VERSION = 9; // updated to ensure valid synced_at timestamp (ATT-1177)
 
         protected static final String CREATE_TABLE_STARRED_SEGMENTS_V8 = "create table " + Segments.TABLE_STARRED_SEGMENTS + " ("
                 + Segments.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -759,6 +759,16 @@ public class SegmentsDatabaseManager {
                     db.execSQL("ALTER TABLE " + Segments.TABLE_STARRED_SEGMENTS + " ADD COLUMN " + Segments.SYNCED_AT + " integer default 0");
                 } catch (Exception e) {
                     Log.w(TAG, "synced_at column might already exist: " + e.getMessage());
+                }
+            }
+
+            if (oldVersion < 9) {
+                Log.i(TAG, "Upgrading Segments DB to Version 9 (Ensuring valid synced_at timestamp for starred segments)");
+                try {
+                    long now = System.currentTimeMillis();
+                    db.execSQL("UPDATE " + Segments.TABLE_STARRED_SEGMENTS + " SET " + Segments.SYNCED_AT + " = " + now + " WHERE (" + Segments.SYNCED_AT + " IS NULL OR " + Segments.SYNCED_AT + " <= 0)");
+                } catch (Exception e) {
+                    Log.w(TAG, "Error updating synced_at timestamp: " + e.getMessage());
                 }
             }
         }

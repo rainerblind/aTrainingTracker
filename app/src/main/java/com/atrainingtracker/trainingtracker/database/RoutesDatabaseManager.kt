@@ -326,7 +326,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
         db.beginTransaction()
         return try {
             val expiredIds = mutableListOf<Long>()
-            val selection = "${RouteContract.COLUMN_SOURCE} = ? AND (${RouteContract.COLUMN_SYNCED_AT} IS NULL OR ${RouteContract.COLUMN_SYNCED_AT} <= 0 OR ${RouteContract.COLUMN_SYNCED_AT} < ?)"
+            val selection = "${RouteContract.COLUMN_SOURCE} = ? AND ${RouteContract.COLUMN_SYNCED_AT} > 0 AND ${RouteContract.COLUMN_SYNCED_AT} < ?"
             val selectionArgs = arrayOf(RouteSource.STRAVA.name, cutoff.toString())
 
             db.query(
@@ -654,7 +654,8 @@ class RoutesDatabaseManager private constructor(context: Context) {
             // const val DB_VERSION = 3    // No more storing the polyline.
             // const val DB_VERSION = 5    // Added the description
             // const val DB_VERSION = 7    // Added spatial bounds (ATT-352)
-            const val DB_VERSION = 8    // Added synced_at for 7-day TTL cache retention (ATT-1177)
+            // const val DB_VERSION = 8    // Added synced_at for 7-day TTL cache retention (ATT-1177)
+            const val DB_VERSION = 9    // Ensure valid synced_at timestamp for existing Strava routes
 
             private const val TAG = "RoutesDbHelper"
             private val DEBUG = TrainingApplication.getDebug(true)
@@ -703,6 +704,16 @@ class RoutesDatabaseManager private constructor(context: Context) {
                     db.execSQL("ALTER TABLE ${RouteContract.TABLE_ROUTES} ADD COLUMN ${RouteContract.COLUMN_SYNCED_AT} INTEGER DEFAULT 0")
                 } catch (e: Exception) {
                     Log.w(TAG, "synced_at column might already exist: ${e.message}")
+                }
+            }
+
+            if (oldVersion < 9) {
+                Log.i(TAG, "Upgrading Routes DB to Version 9 (Ensuring valid synced_at timestamp for Strava routes)")
+                try {
+                    val now = System.currentTimeMillis()
+                    db.execSQL("UPDATE ${RouteContract.TABLE_ROUTES} SET ${RouteContract.COLUMN_SYNCED_AT} = $now WHERE ${RouteContract.COLUMN_SOURCE} = '${RouteSource.STRAVA.name}' AND (${RouteContract.COLUMN_SYNCED_AT} IS NULL OR ${RouteContract.COLUMN_SYNCED_AT} <= 0)")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error updating synced_at timestamp: ${e.message}")
                 }
             }
         }

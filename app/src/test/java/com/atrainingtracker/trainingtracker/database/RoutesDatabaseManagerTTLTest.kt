@@ -83,14 +83,15 @@ class RoutesDatabaseManagerTTLTest {
     }
 
     @Test
-    fun testSchemaV8_dbVersionIsEight_andOnUpgradeExecutesAlterTable() {
-        assertEquals(8, RoutesDbHelper.DB_VERSION)
+    fun testSchemaV9_dbVersionIsNine_andOnUpgradeExecutesAlterTableAndBackfill() {
+        assertEquals(9, RoutesDbHelper.DB_VERSION)
 
         val helper = RoutesDbHelper(mockContext)
-        helper.onUpgrade(mockDb, 7, 8)
+        helper.onUpgrade(mockDb, 7, 9)
 
         verify {
             mockDb.execSQL(match { it.contains("ALTER TABLE") && it.contains("synced_at") })
+            mockDb.execSQL(match { it.contains("UPDATE") && it.contains("synced_at") })
         }
     }
 

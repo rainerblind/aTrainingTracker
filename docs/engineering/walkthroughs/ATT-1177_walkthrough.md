@@ -11,31 +11,32 @@
 
 ## Key Changes Made
 
-### 1. Database Schema Version 8 Upgrades & Migrations
+### 1. Database Schema Version 8 & 9 Upgrades and Migrations
 - **`app/src/main/java/com/atrainingtracker/trainingtracker/database/RoutesDatabaseManager.kt`**:
-  - Upgraded schema version from 7 to 8 (`DB_VERSION = 8`).
-  - Added `synced_at INTEGER DEFAULT 0` column to `TABLE_ROUTES`.
-  - Added SQLite `ALTER TABLE routes ADD COLUMN synced_at INTEGER DEFAULT 0;` migration in `onUpgrade(db, oldVersion, newVersion)` for `oldVersion < 8`.
+  - Upgraded schema version to 8 and subsequently to 9 (`DB_VERSION = 9`).
+  - Added `synced_at INTEGER DEFAULT 0` column to `TABLE_ROUTES` in v8.
+  - Added v9 migration to ensure legacy/migrated records have valid timestamps: `UPDATE routes SET synced_at = now WHERE source = 'STRAVA' AND (synced_at IS NULL OR synced_at <= 0)`.
   - Updated `RouteSummary` model and cursor mapping (`mapCursorToRouteSummary`) to include `syncedAt`.
   - Updated `insertRoute` to accept and persist `syncedAt` (defaulting to `System.currentTimeMillis()`).
   - Implemented `getRouteById(routeId: Long): RouteWithPath?`.
   - Implemented `updateRouteSyncedAt(routeId: Long, timestamp: Long): Int` to refresh retention timestamps on sync without re-inserting path coordinates.
-  - Implemented `pruneExpiredStravaRoutes(maxAgeMs: Long): Int` which queries and deletes routes with `source = 'STRAVA'` where `synced_at > 0 AND synced_at < cutoff` (default 7 days).
+  - Implemented `pruneExpiredStravaRoutes(maxAgeMs: Long): Int` querying `COLUMN_SOURCE = 'STRAVA' AND COLUMN_SYNCED_AT > 0 AND COLUMN_SYNCED_AT < cutoff` (default 7 days). Ensuring `synced_at <= 0` is NOT pruned as expired.
   - Implemented `pruneOrphanStravaRoutes(activeStravaIds: Set<String>): Int` which removes cached Strava routes no longer present in the athlete's remote Strava route list.
   - Implemented `duplicateRouteAsLocal(routeId: Long): Long` which clones a Strava route as `RouteSource.LOCAL_GPX` with `synced_at = 0`, permanently isolating it from Strava TTL cache eviction.
 
 - **`app/src/main/java/com/atrainingtracker/trainingtracker/segments/SegmentsDatabaseManager.java`**:
-  - Upgraded schema version from 7 to 8 (`DATABASE_VERSION = 8`).
-  - Added `SYNCED_AT = "synced_at"` (`INTEGER DEFAULT 0`) to `TABLE_STARRED_SEGMENTS`.
-  - Added SQLite `ALTER TABLE starred_segments ADD COLUMN synced_at INTEGER DEFAULT 0;` migration in `onUpgrade(db, oldVersion, newVersion)` for `oldVersion < 8`.
+  - Upgraded schema version to 8 and subsequently to 9 (`DB_VERSION = 9`).
+  - Added `SYNCED_AT = "synced_at"` (`INTEGER DEFAULT 0`) to `TABLE_STARRED_SEGMENTS` in v8.
+  - Added v9 migration: `UPDATE starred_segments SET synced_at = now WHERE (synced_at IS NULL OR synced_at <= 0)`.
   - Updated `addOrUpdateSegment` to persist `System.currentTimeMillis()` into `synced_at`.
   - Updated `getAllSegmentSummaries` to read `synced_at`.
-  - Implemented `pruneExpiredSegments(long maxAgeMs): int` which deletes starred segments where `synced_at > 0 AND synced_at < cutoff` and cascade-deletes their stream coordinates from `TABLE_SEGMENT_STREAMS`.
+  - Implemented `pruneExpiredSegments(long maxAgeMs): int` querying `synced_at > 0 AND synced_at < cutoff` and cascade-deleting coordinate streams from `TABLE_SEGMENT_STREAMS`.
   - Implemented `pruneOrphanSegments(Set<Long> activeStravaIds): int` which deletes starred segments missing from the remote active set along with their coordinate streams.
 
-### 2. Repository Layer TTL & Orphan Enforcement
+### 2. Repository Layer TTL, Orphan Enforcement & Auto-Sync
 - **`app/src/main/java/com/atrainingtracker/trainingtracker/repositories/RoutesRepository.kt`**:
   - Automatically runs `pruneExpiredRoutes()` on repository initialization (`init { pruneExpiredRoutes() }`).
+  - Added auto-sync check on `init`: if user is connected to Strava (`TrainingApplication.getStravaAccessToken() != null`) and no Strava routes exist in cache, automatically launches background sync `syncRoutesFromStrava()`.
   - On `syncRoutesFromStrava()`:
     - Queries existing routes and updates `synced_at` for existing routes.
     - Inserts newly discovered routes with `syncedAt = System.currentTimeMillis()`.
@@ -46,16 +47,23 @@
 - **`app/src/main/java/com/atrainingtracker/trainingtracker/segments/SegmentsRepository.kt`**:
   - Updated `SegmentSummary` data class with `@JvmOverloads` constructor and `syncedAt: Long = 0L`.
   - Automatically runs `pruneExpiredSegments()` on initialization and on completion of `syncStarredSegments`.
+  - Added auto-sync check on `init`: if connected to Strava and no segments exist in cache, automatically launches `syncSegmentsAsync(BSportType.UNKNOWN)`.
   - Executes `pruneOrphanSegments(activeStravaIds)` on sync to delete unstarred segments and coordinate streams.
   - Exposes `fun pruneExpiredSegments()`.
 
-### 3. Background Sync Workers Section 6.2 Compliance
+### 3. ViewModel Auto-Sync on Launch / Cache Emptiness
+- **`app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RoutesViewModel.kt`**:
+  - Added `init` block: if connected to Strava and `routesRepository.allRoutes.value` contains no Strava routes, triggers background `syncStravaRoutes()`.
+- **`app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/segmentlist/SegmentListViewModel.kt`**:
+  - Added `init` block: if connected to Strava and `segmentsRepository.allSegmentsWithPath.value` is empty, triggers background `syncSegmentsAsync(BSportType.UNKNOWN)`.
+
+### 4. Background Sync Workers Section 6.2 Compliance
 - **`app/src/main/java/com/atrainingtracker/trainingtracker/routes/StravaRoutesSyncWorker.kt`**:
   - In `doWork()`, unconditionally invokes `RoutesRepository.getInstance(applicationContext).pruneExpiredRoutes()` at the beginning of the execution cycle, ensuring 7-day TTL eviction occurs even if network sync is disabled or offline.
 - **`app/src/main/java/com/atrainingtracker/trainingtracker/segments/StravaSegmentsSyncWorker.kt`**:
   - In `doWork()`, unconditionally invokes `SegmentsRepository.getInstance(applicationContext).pruneExpiredSegments()` at the beginning of the execution cycle, ensuring segment TTL eviction occurs even if network sync is disabled or offline.
 
-### 4. Athlete Route Preservation ("Save as Local Route")
+### 5. Athlete Route Preservation ("Save as Local Route")
 - **`app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteItem.kt`**:
   - Added overflow dropdown menu item "Save as Local Route" (`save_as_local_route`) for routes with `source == RouteSource.STRAVA`.
 - **`app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteList.kt` & `RouteTabbedScreen.kt`**:
@@ -67,18 +75,18 @@
 - **Strings**:
   - Added localized strings `save_as_local_route` and `route_saved_as_local` across all 9 supported locales: English (`values/`), German (`values-de/`), Spanish (`values-es/`), French (`values-fr/`), Italian (`values-it/`), Japanese (`values-ja/`), Dutch (`values-nl/`), Polish (`values-pl/`), and Portuguese (`values-pt/`).
 
-### 5. Automated Tests
+### 6. Automated Tests
 - **`app/src/test/java/com/atrainingtracker/trainingtracker/database/RoutesDatabaseManagerTTLTest.kt`**:
-  - `testRoutesDbUpgradeToVersion8AddsSyncedAtColumn()`: Verifies migration ALTER TABLE execution.
-  - `testPruneExpiredStravaRoutesRemovesOlderThanCutoff()`: Verifies 7-day TTL eviction for Strava routes.
-  - `testPruneExpiredStravaRoutesPreservesLocalAndWorkoutRoutes()`: Verifies athlete-recorded workouts and local GPX routes are never touched.
-  - `testPruneOrphanStravaRoutesRemovesMissingIds()`: Verifies orphan deletion when missing from active set.
-  - `testDuplicateRouteAsLocalCreatesIndependentLocalGpxRoute()`: Verifies route duplication creates independent `LOCAL_GPX` route immune to TTL eviction.
+  - `testSchemaV9_dbVersionIsNine_andOnUpgradeExecutesAlterTableAndBackfill()`: Verifies migration ALTER TABLE and UPDATE timestamp execution.
+  - `testPruneExpiredStravaRoutes_deletesExpiredRecords()`: Verifies 7-day TTL eviction for Strava routes with `synced_at > 0`.
+  - `testPruneExpiredStravaRoutes_whenNoExpiredRoutes_returnsZero()`: Verifies zero deletion when no records match.
+  - `testPruneOrphanStravaRoutes_deletesRoutesNotPresentInRemoteSet()`: Verifies orphan deletion when missing from active set.
+  - `testDuplicateRouteAsLocal_createsLocalGpxRouteDecoupledFromStrava()`: Verifies route duplication creates independent `LOCAL_GPX` route immune to TTL eviction.
 - **`app/src/test/java/com/atrainingtracker/trainingtracker/segments/SegmentsDatabaseManagerTTLTest.kt`**:
-  - `testSegmentsDbUpgradeToVersion8AddsSyncedAtColumn()`: Verifies migration ALTER TABLE execution.
-  - `testPruneExpiredSegmentsRemovesOlderThanCutoffAndCascadesStreams()`: Verifies segment deletion and cascade stream removal.
-  - `testPruneOrphanSegmentsRemovesMissingIdsAndStreams()`: Verifies orphan pruning for unstarred segments.
-  - `testAddOrUpdateSegmentPersistsSyncedAtTimestamp()`: Verifies sync timestamp persistence.
+  - `testSchemaV9_dbVersionIsNine_andOnUpgradeExecutesAlterTableAndBackfill()`: Verifies migration ALTER TABLE and UPDATE timestamp execution.
+  - `testPruneExpiredSegments_deletesExpiredSegmentsAndCascadeStreams()`: Verifies segment deletion and cascade stream removal.
+  - `testPruneOrphanSegments_deletesSegmentsNotPresentInRemoteSet()`: Verifies orphan pruning for unstarred segments.
+  - `testAddOrUpdateSegment_persistsSyncedAtTimestamp()`: Verifies sync timestamp persistence.
 
 ---
 
@@ -88,5 +96,5 @@
 - `StravaRoutesSyncWorkerTest`: 10 passed, 0 failed.
 - `StravaSegmentsSyncWorkerTest`: 10 passed, 0 failed.
 - `TranslationParityTest`: 5 passed, 0 failed (100% key and specifier coverage across all 9 locales).
-- Total targeted suite: 45 tests passed, 0 failed.
+- Full regression suite (`./gradlew testDebugUnitTest`): 100% passed, 0 failures.
 - Database invariants fully preserved (recorded workouts, local GPX, equipment bindings untouched).

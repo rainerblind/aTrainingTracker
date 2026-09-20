@@ -75,6 +75,16 @@ class RoutesRepository internal constructor(
         routesDb.pruneExpiredStravaRoutes()
         // Initial load of route summaries from the database
         refreshRoutes()
+
+        // Auto-sync Strava routes if user is connected and cache has no Strava routes
+        if (TrainingApplication.getStravaAccessToken() != null) {
+            repositoryScope.launch {
+                val hasStravaRoutes = routesDb.getAllRoutes().any { it.summary.source == RouteSource.STRAVA }
+                if (!hasStravaRoutes) {
+                    syncRoutesFromStrava()
+                }
+            }
+        }
     }
 
     /**
