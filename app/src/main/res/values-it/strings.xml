@@ -313,6 +313,7 @@
     <string name="lastUpdateOfEquipmentNever">mai aggiornato</string>
     <string name="updateStravaRoutes">Aggiorna percorsi Strava</string>
     <string name="lastUpdateOfRoutesNever">mai aggiornato</string>
+    <string name="lastUpdateOfRoutesNow">adesso</string>
     <string name="updateStravaSegments">Aggiorna segmenti Strava</string>
     <string name="lastUpdateOfSegmentsNever">mai aggiornato</string>
     <string name="lastUpdateOfSegmentsNow">adesso</string>
