@@ -315,6 +315,7 @@
     <string name="lastUpdateOfRoutesNever">mai aggiornato</string>
     <string name="updateStravaSegments">Aggiorna segmenti Strava</string>
     <string name="lastUpdateOfSegmentsNever">mai aggiornato</string>
+    <string name="lastUpdateOfSegmentsNow">adesso</string>
     <string name="automated_strava_segments_sync">Sincronizzazione automatica segmenti</string>
     <string name="automated_strava_segments_sync_summary">Recupera regolarmente i segmenti speciali da Strava</string>
     <string name="strava_segments_sync_interval">Intervallo di sincronizzazione</string>
