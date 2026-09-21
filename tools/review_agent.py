@@ -19,6 +19,9 @@ import urllib.error
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from jira_util import get_config, jira_request, add_comment, transition_issue
 
+# Anti-Spoofing & Role-Locking: Hardwired strictly to role "agent2"
+AUDITOR_ROLE = "agent2"
+
 
 # Supported Gate Definitions
 GATE_DEFINITIONS = {
@@ -114,7 +117,7 @@ def get_repo_root():
         return os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 
-def call_gemini_api(prompt, system_instruction=None):
+def call_gemini_api(prompt, system_instruction=None, explicit_model=None):
     """Invokes Google Gemini REST API using urllib with automated fallback across available models."""
     repo_root = get_repo_root()
     env_gemini = load_env_file(os.path.join(repo_root, ".env.gemini"))
@@ -122,13 +125,18 @@ def call_gemini_api(prompt, system_instruction=None):
     if not api_key:
         raise ValueError("GEMINI_API_KEY not found in .env.gemini")
 
-    candidate_models = [
-        "gemini-2.5-flash",
-        "gemini-flash-latest",
-        "gemini-3-flash-preview",
-        "gemini-3.6-flash",
-        "gemini-3.7-flash"
-    ]
+    if explicit_model:
+        candidate_models = [explicit_model]
+    else:
+        candidate_models = [
+            "gemini-3.8-flash",
+            "gemini-3.7-flash",
+            "gemini-3.6-flash",
+            "gemini-3.5-flash",
+            "gemini-3-flash-preview",
+            "gemini-2.5-flash",
+            "gemini-flash-latest"
+        ]
     last_error = None
 
     for model in candidate_models:
@@ -157,7 +165,7 @@ def call_gemini_api(prompt, system_instruction=None):
         )
 
         try:
-            with urllib.request.urlopen(req, timeout=30) as response:
+            with urllib.request.urlopen(req, timeout=35) as response:
                 res_body = response.read().decode("utf-8")
                 data = json.loads(res_body)
                 candidates = data.get("candidates", [])
@@ -174,7 +182,7 @@ def call_gemini_api(prompt, system_instruction=None):
     raise RuntimeError(f"All Gemini models failed. Last error: {last_error}")
 
 
-def call_claude_api(prompt, system_instruction=None):
+def call_claude_api(prompt, system_instruction=None, explicit_model=None):
     """Invokes Anthropic Claude REST API using urllib."""
     repo_root = get_repo_root()
     env_claude = load_env_file(os.path.join(repo_root, ".env.claude"))
@@ -189,7 +197,7 @@ def call_claude_api(prompt, system_instruction=None):
         "content-type": "application/json"
     }
 
-    model = "claude-3-5-haiku-20241022"
+    model = explicit_model or "claude-3-5-haiku-20241022"
     payload = {
         "model": model,
         "max_tokens": 4096,
@@ -221,7 +229,7 @@ def call_claude_api(prompt, system_instruction=None):
         raise RuntimeError(f"Claude API HTTP Error {e.code}: {err_msg}")
 
 
-def query_llm(prompt, system_instruction=None, preferred_provider="gemini"):
+def query_llm(prompt, system_instruction=None, preferred_provider="gemini", explicit_model=None):
     """Queries preferred LLM provider (default: gemini) with automated fallback to the other provider (claude)."""
     providers = ["gemini", "claude"] if preferred_provider == "gemini" else ["claude", "gemini"]
     errors = []
@@ -229,10 +237,10 @@ def query_llm(prompt, system_instruction=None, preferred_provider="gemini"):
     for provider in providers:
         try:
             if provider == "gemini":
-                text, model_name = call_gemini_api(prompt, system_instruction)
+                text, model_name = call_gemini_api(prompt, system_instruction, explicit_model=explicit_model if preferred_provider == "gemini" else None)
                 return text, model_name
             elif provider == "claude":
-                text, model_name = call_claude_api(prompt, system_instruction)
+                text, model_name = call_claude_api(prompt, system_instruction, explicit_model=explicit_model if preferred_provider == "claude" else None)
                 return text, model_name
         except Exception as e:
             errors.append(f"{provider}: {e}")
@@ -245,7 +253,6 @@ def detect_gate(summary):
     for gate_key, gate_info in GATE_DEFINITIONS.items():
         if summary.startswith(gate_info["prefix"]):
             return gate_key, gate_info
-    # Fallback to keyword matching
     lower_summary = summary.lower()
     if "analysis" in lower_summary:
         return "Gate 1", GATE_DEFINITIONS["Gate 1"]
@@ -257,19 +264,16 @@ def detect_gate(summary):
         return "Gate 4", GATE_DEFINITIONS["Gate 4"]
     elif "test" in lower_summary:
         return "Gate 5", GATE_DEFINITIONS["Gate 5"]
-
     return None, None
 
 
 def get_git_diff():
-    """Gathers recent git diff or working tree changes."""
+    """Returns staged and working tree git diff, or last commit diff if clean."""
     try:
-        # Check uncommitted changes first
         diff = subprocess.check_output(["git", "diff", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8")
         if not diff.strip():
-            # Check last commit diff
             diff = subprocess.check_output(["git", "diff", "HEAD~1", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8")
-        return diff[:20000] # Cap to reasonable token length
+        return diff[:20000]
     except Exception:
         return ""
 
@@ -335,12 +339,12 @@ def build_audit_prompt(gate_key, gate_info, subtask, parent_issue):
     return prompt, system_instruction
 
 
-def audit_subtask(subtask_key, preferred_provider="gemini", dry_run=False):
-    """Conducts autonomous independent review on a Jira sub-task."""
-    print(f"Fetching Jira details for sub-task {subtask_key}...")
+def audit_subtask(subtask_key, preferred_provider="gemini", explicit_model=None, dry_run=False):
+    """Conducts autonomous independent review on a Jira sub-task strictly as Agent 2."""
+    print(f"Fetching Jira details for sub-task {subtask_key} as {AUDITOR_ROLE}...")
     config = get_config()
     subtask_url = f"{config['JIRA_URL']}/rest/api/2/issue/{subtask_key}?fields=summary,description,status,parent,fixVersions"
-    subtask = jira_request(subtask_url)
+    subtask = jira_request(subtask_url, role=AUDITOR_ROLE)
 
     status_name = subtask.get("fields", {}).get("status", {}).get("name", "Unknown")
     summary = subtask.get("fields", {}).get("summary", "")
@@ -348,7 +352,7 @@ def audit_subtask(subtask_key, preferred_provider="gemini", dry_run=False):
 
     gate_key, gate_info = detect_gate(summary)
     if not gate_key:
-        print(f"Error: Unable to identify ASPICE stage/gate from summary: '{summary}'")
+        print(f"Error: Unable to identify ASPICE stage/gate from summary: '{summary}'", file=sys.stderr)
         sys.exit(1)
 
     print(f"Detected Gate: {gate_key} ({gate_info['name']})")
@@ -359,12 +363,12 @@ def audit_subtask(subtask_key, preferred_provider="gemini", dry_run=False):
     if parent_ref:
         parent_key = parent_ref.get("key")
         parent_url = f"{config['JIRA_URL']}/rest/api/2/issue/{parent_key}?fields=summary,description,status,fixVersions"
-        parent_issue = jira_request(parent_url)
+        parent_issue = jira_request(parent_url, role=AUDITOR_ROLE)
 
     # Build prompt and query external LLM
     prompt, system_instruction = build_audit_prompt(gate_key, gate_info, subtask, parent_issue)
-    print(f"Invoking independent auditor model (preferred: {preferred_provider})...")
-    review_body, model_name = query_llm(prompt, system_instruction, preferred_provider)
+    print(f"Invoking independent auditor model (preferred: {preferred_provider}, model: {explicit_model or 'auto'})...")
+    review_body, model_name = query_llm(prompt, system_instruction, preferred_provider, explicit_model=explicit_model)
     print(f"Audit successfully generated via {model_name}.")
 
     if dry_run:
@@ -373,21 +377,23 @@ def audit_subtask(subtask_key, preferred_provider="gemini", dry_run=False):
         print("--- END DRY RUN ---")
         return
 
-    # Post comment to Jira
-    print(f"Posting audit report comment to {subtask_key}...")
-    # Inject model name in header placeholder if present, or add header metadata
+    # Post comment to Jira strictly as agent2
+    print(f"Posting audit report comment to {subtask_key} as {AUDITOR_ROLE}...")
+    # Inject or replace model name in header placeholder
     if "{AUDITOR_MODEL_PLACEHOLDER}" in review_body:
         review_body = review_body.replace("{AUDITOR_MODEL_PLACEHOLDER}", f"*{model_name}*")
-    elif not f"*Auditor Model*:" in review_body:
+    elif re.search(r'\*Auditor Model\*:\s*[^\n]+', review_body):
+        review_body = re.sub(r'\*Auditor Model\*:\s*[^\n]+', f"*Auditor Model*: *{model_name}*", review_body, count=1)
+    else:
         review_body = f"*Auditor Model*: *{model_name}*\n\n{review_body}"
 
     identity_comment = f"{review_body}\n\n_(Review conducted by Independent External Auditor: {model_name})_"
-    add_comment(subtask_key, identity_comment)
+    add_comment(subtask_key, identity_comment, role=AUDITOR_ROLE)
 
     # Transition to Freigabe (Human) if currently in In Überprüfung
     if status_name.lower() in ["in überprüfung", "in review", "review"]:
-        print(f"Transitioning {subtask_key} to 'Freigabe (Human)'...")
-        transition_issue(subtask_key, "freigabe")
+        print(f"Transitioning {subtask_key} to 'Freigabe (Human)' as {AUDITOR_ROLE}...")
+        transition_issue(subtask_key, "freigabe", role=AUDITOR_ROLE)
     else:
         print(f"Note: Current status is '{status_name}'. Subtask was not in 'In Überprüfung'; skipping transition.")
 
@@ -411,7 +417,7 @@ def test_connections():
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: review_agent.py [audit SUBTASK_KEY [--provider gemini|claude] [--dry-run] | test-connection]")
+        print("Usage: review_agent.py [audit SUBTASK_KEY [--provider gemini|claude] [--model MODEL_NAME] [--dry-run] | test-connection]", file=sys.stderr)
         sys.exit(1)
 
     cmd = sys.argv[1]
@@ -419,10 +425,11 @@ def main():
         test_connections()
     elif cmd == "audit":
         if len(sys.argv) < 3:
-            print("Error: Sub-task key required. Usage: review_agent.py audit SUBTASK_KEY [--provider gemini|claude]")
+            print("Error: Sub-task key required. Usage: review_agent.py audit SUBTASK_KEY [--provider gemini|claude] [--model MODEL_NAME]", file=sys.stderr)
             sys.exit(1)
         subtask_key = sys.argv[2]
         provider = "gemini"
+        explicit_model = None
         dry_run = False
 
         args = sys.argv[3:]
@@ -431,15 +438,18 @@ def main():
             if args[i] == "--provider" and i + 1 < len(args):
                 provider = args[i + 1].lower()
                 i += 2
+            elif args[i] == "--model" and i + 1 < len(args):
+                explicit_model = args[i + 1]
+                i += 2
             elif args[i] == "--dry-run":
                 dry_run = True
                 i += 1
             else:
                 i += 1
 
-        audit_subtask(subtask_key, preferred_provider=provider, dry_run=dry_run)
+        audit_subtask(subtask_key, preferred_provider=provider, explicit_model=explicit_model, dry_run=dry_run)
     else:
-        print(f"Unknown command: {cmd}")
+        print(f"Unknown command: {cmd}", file=sys.stderr)
         sys.exit(1)
 
 
