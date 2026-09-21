@@ -175,6 +175,12 @@ def call_gemini_api(prompt, system_instruction=None, explicit_model=None):
                 if not parts:
                     continue
                 return parts[0].get("text", "").strip(), f"Gemini ({model})"
+        except urllib.error.HTTPError as e:
+            last_error = e
+            if e.code in [429, 503]:
+                import time
+                time.sleep(5)
+            continue
         except Exception as e:
             last_error = e
             continue
