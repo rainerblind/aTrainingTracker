@@ -215,18 +215,18 @@ def call_claude_api(prompt, system_instruction=None):
         raise RuntimeError(f"Claude API HTTP Error {e.code}: {err_msg}")
 
 
-def query_llm(prompt, system_instruction=None, preferred_provider="claude"):
-    """Queries preferred LLM provider (default: claude) with automated fallback to the other provider (gemini)."""
-    providers = ["claude", "gemini"] if preferred_provider == "claude" else ["gemini", "claude"]
+def query_llm(prompt, system_instruction=None, preferred_provider="gemini"):
+    """Queries preferred LLM provider (default: gemini) with automated fallback to the other provider (claude)."""
+    providers = ["gemini", "claude"] if preferred_provider == "gemini" else ["claude", "gemini"]
     errors = []
 
     for provider in providers:
         try:
-            if provider == "claude":
-                text, model_name = call_claude_api(prompt, system_instruction)
-                return text, model_name
-            elif provider == "gemini":
+            if provider == "gemini":
                 text, model_name = call_gemini_api(prompt, system_instruction)
+                return text, model_name
+            elif provider == "claude":
+                text, model_name = call_claude_api(prompt, system_instruction)
                 return text, model_name
         except Exception as e:
             errors.append(f"{provider}: {e}")
