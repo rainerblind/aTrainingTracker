@@ -42,30 +42,45 @@ A comprehensive audit across all code modules, database queries, and background 
 
 ---
 
-## 3. Database Schema & Migration Strategy
+## 3. Database Schema, Command-Query Separation & Migration Strategy
 * **Schema Integrity**: The SQLite column in `StravaUpload.db` (`StravaUploads` table) is:
   ```sql
   StravaActivity text
   ```
-* **Column Format Transparency**: The column stores a JSON string. Because the column type is `TEXT`, shrinking the contents of this JSON string does NOT require an SQLite table recreation, column drop, or SQLite version bump (maintaining `DB_VERSION = 5`).
-* **Existing Records Strategy & Lazy Compaction**:
-  - *Read Path Tolerance*: `StravaActivityParser.parse(jsonString)` is inherently tolerant of both legacy full-payload blobs and minimized payloads because `optJSONArray("segment_efforts")` and `optJSONArray("best_efforts")` function identically regardless of whether extraneous keys exist.
-  - *Write & Lazy Compaction Path*:
-    1. All *net-new uploads and duplicate reconciliations* immediately persist minimized JSON.
-    2. *Opportunistic / Lazy Compaction on Read*: In `StravaUploadDbHelper.getStravaActivityData(fileBaseName)`, if the retrieved JSON contains legacy raw keys (e.g. `"athlete"`, `"kudos_count"`, or payload length > 4096 bytes), the helper lazily calls `minimize(rawJson)` and asynchronously or directly writes the compacted JSON back to the row. This progressively eliminates database bloat and legacy payloads during natural app browsing without requiring a massive, blocking database migration transaction.
-  - *Disconnect Wipe*: Disconnection / deauthorization via `StravaDataPurgeManager` executes `clearAllStravaData()` which wipes all records cleanly (`DELETE FROM StravaUploads`), ensuring 100% compliance with Section 7.4.
+* **Strict Command-Query Separation (CQS) — Zero Write-on-Read**:
+  - To prevent `SQLiteDatabaseLockedException`, thread contention, and write-amplification during UI cursor loading or repository batch reads, **all read operations (`getStravaActivityData`, `getStravaActivityDataForWorkouts`) MUST remain strictly read-only queries**. Zero implicit writes occur during reads.
+* **Deterministic Schema Versioning**:
+  - The minimized JSON schema includes a root-level version marker:
+    ```json
+    "v": 2
+    ```
+  - Legacy payloads (Version 1) lack `"v": 2`. Minimized payloads explicitly declare `"v": 2`.
+  - This eliminates heuristic string matching (such as searching for `"athlete"` or checking string length) and guarantees deterministic detection.
+* **Migration & Compaction Execution Architecture**:
+  1. *Immediate Ingestion Minimization*: All newly uploaded workouts and newly reconciled duplicate activities in `StravaUploader.kt` are minimized *before* writing to `StravaUploadDbHelper`, immediately stemming any new storage bloat or privacy leaks.
+  2. *Dedicated Non-Blocking Background Compaction*:
+     - A dedicated asynchronous compaction routine `compactLegacyRecords(Context)` in `StravaUploadDbHelper`:
+       - Scans `StravaUploads` for rows where `StravaActivity IS NOT NULL` and does NOT contain `"v":2`.
+       - Executes in a low-priority background dispatcher inside explicit batched transactions (`beginTransaction() ... setTransactionSuccessful()`).
+       - Catches and logs any `SQLException` without affecting active user sessions.
+       - Can be invoked during app initialization or when Strava settings are opened.
+  3. *Dual-Format Read Tolerance*:
+     - `StravaActivityParser.parse(jsonString)` handles both Version 1 (legacy uncompacted) and Version 2 (minimized) payloads transparently.
+  4. *Complete Deauthorization Wipe*:
+     - `StravaDataPurgeManager.purgeAllStravaData(...)` continues to execute `clearAllStravaData()`, wiping all stored records (`DELETE FROM StravaUploads`) upon user disconnect, satisfying Section 7.4.
 
 ---
 
 ## 4. Parser Robustness, Null-Safety & Serialization Specification
 `StravaActivityParser` will be hardened with explicit validation contracts:
 
-### Exact Minimized JSON Schema & Null-Safety Rules:
-To prevent fragmentation and ambiguous states, optional/nullable fields adhere to explicit serialization rules:
-* `id`: `Long` (required or omitted if absent).
+### Exact Minimized JSON Schema (Version 2) & Null-Safety Rules:
+To eliminate ambiguity, memory bloat, and `JSONObject.NULL` issues, optional/nullable fields adhere to strict omission rules:
+* `v`: `Int` = 2 (Root schema version marker).
+* `id`: `Long` (Strava activity ID; omitted if null).
 * `segment_efforts`: `JSONArray` of objects:
-  - `name`: `String` (required, defaults to empty string if missing).
-  - `elapsed_time`: `Int` (required, defaults to 0).
+  - `name`: `String` (required, non-null).
+  - `elapsed_time`: `Int` (required, seconds > 0).
   - `pr_rank`: `Int` (omitted if null, never serialized as `"pr_rank": null`).
   - `kom_rank`: `Int` (omitted if null, never serialized as `"kom_rank": null`).
   - `starred`: `Boolean` (omitted if false, serialized as `true` only when starred).
@@ -76,20 +91,44 @@ To prevent fragmentation and ambiguous states, optional/nullable fields adhere t
   - `pr_rank`: `Int` (omitted if null).
   - `distance`: `Double` (omitted if <= 0.0).
 
-*Key Design Choice*: Omitting null/false fields achieves maximum JSON compression (typically < 500 bytes per activity) and eliminates `JSONObject.NULL` ambiguity.
+### Sample Minimized JSON (v: 2):
+```json
+{
+  "v": 2,
+  "id": 1234567890,
+  "segment_efforts": [
+    {
+      "name": "Alpe d'Huez",
+      "elapsed_time": 3600,
+      "pr_rank": 1,
+      "kom_rank": 1,
+      "starred": true,
+      "segment_id": 998877
+    }
+  ],
+  "best_efforts": [
+    {
+      "name": "5k",
+      "elapsed_time": 1200,
+      "pr_rank": 1,
+      "distance": 5000.0
+    }
+  ]
+}
+```
 
 ### Defensive Exception Handling & Truncation Resilience:
 1. **Empty / Null Input**: Returns `null` immediately.
 2. **Truncated / Corrupted JSON**:
-   - If an interrupted write or disk full condition yields a truncated JSON string (e.g. `{"id": 1234, "segment_efforts": [`), `JSONObject(jsonString)` throws `JSONException`.
-   - The parser encapsulates this in a `try ... catch (e: Exception)` block, logs a descriptive warning (`Log.w(TAG, "Failed to parse Strava activity JSON, treating as null", e)`), and returns `null`.
-   - The UI gracefully falls back to displaying `@string/strava_uploaded_no_records` rather than crashing.
+   - If an interrupted write or disk full condition yields a truncated JSON string (e.g. `{"v": 2, "segment_efforts": [`), `JSONObject(jsonString)` throws `JSONException`.
+   - The parser encapsulates this in a `try ... catch (e: Exception)` block, logs an informative warning (`Log.w(TAG, "Failed to parse Strava activity JSON, treating as null", e)`), and returns `null`.
+   - Downstream UI (`StravaActivitySection`) gracefully falls back to displaying `@string/strava_uploaded_no_records` rather than crashing.
 3. **Serialization Pipeline (`minimize`)**:
    ```kotlin
    fun minimize(rawActivityJson: String?): String?
    fun minimize(activityJson: JSONObject?): String?
    ```
-   Parses raw JSON, converts to domain `StravaActivity`, and serializes a clean, minimized `JSONObject` according to the exact schema rules above.
+   Parses the input, converts to domain `StravaActivity`, and serializes a clean, minimized `JSONObject` according to the Version 2 schema specification.
 
 ---
 
@@ -97,19 +136,22 @@ To prevent fragmentation and ambiguous states, optional/nullable fields adhere t
 * **Primary Requirement**: `REQ-EXP-013` (Strava Activity Feedback Data Minimization to Athlete Achievements).
   - Categorized under Export & Cloud Synchronization in `docs/requirements.md`.
   - Defines mandatory minimization of persisted Strava activity payloads to athlete-specific achievements (`id`, `segment_efforts`, `best_efforts`), omitting transient social/profile fields and optional null values.
+  - Mandates strict Command-Query Separation with zero write-on-read.
 * **Verification Specification**: `TST-EXP-010` (Minimized Strava Activity Feedback Persistence & Backward-Compatible Rendering Verification).
   - Specified in `docs/tests.md`.
   - Verifies:
-    1. Unit tests for `StravaActivityParser.minimize(...)` confirming removal of kudos, athlete objects, and extraneous fields, with correct omission of null ranks.
+    1. Unit tests for `StravaActivityParser.minimize(...)` confirming removal of kudos, athlete objects, and extraneous fields, with correct omission of null ranks and inclusion of `"v": 2`.
     2. Resilience tests for malformed and truncated JSON payloads.
-    3. Serialization parity ensuring `StravaActivitySection` renders celebration banners, best efforts, and matched segments identically from both legacy and minimized JSON.
+    3. Serialization parity ensuring `StravaActivitySection` renders celebration banners, best efforts, and matched segments identically from both legacy (v1) and minimized (v2) JSON.
     4. Integration verification that `StravaUploader` persists minimized JSON.
-    5. Disconnect compliance via `StravaDataPurgeManager`.
+    5. CQS verification: read methods execute zero SQLite updates or database locks.
+    6. Disconnect compliance via `StravaDataPurgeManager`.
 
 ---
 
 ## 6. System Invariants & Preserved Behavior
 1. **Offline Achievement Rendering**: Offline celebration banners (`SegmentPrCelebrationBanner`), best efforts, and segment lists render with 100% visual and functional parity.
 2. **In-Memory Upload Workflows**: Immediate duplicate name evaluation and local segment PR updates in `StravaUploader.kt` continue to function without alteration during upload processing.
-3. **100% Deauthorization Wipe**: `StravaDataPurgeManager.purgeAllStravaData(...)` continues to execute `clearAllStravaData()`, wiping all stored records on disconnect.
-4. **Zero Production Binary Regressions**: Core GPS recording, TCX export, and sensor pipelines remain completely untouched.
+3. **Strict CQS Invariance**: Reading cached Strava activity data is 100% side-effect free; zero database updates or transaction locks occur during read calls.
+4. **100% Deauthorization Wipe**: `StravaDataPurgeManager.purgeAllStravaData(...)` continues to execute `clearAllStravaData()`, wiping all stored records on disconnect.
+5. **Zero Production Binary Regressions**: Core GPS recording, TCX export, and sensor pipelines remain completely untouched.
