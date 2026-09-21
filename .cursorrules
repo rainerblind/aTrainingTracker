@@ -45,6 +45,18 @@ Before performing any task, you must:
     *   **Coordinator Governance & Human Gate Invariants**: The Coordinator is strictly an administrative and orchestration persona. The Coordinator **cannot override** Agent 2 `CHALLENGED` or `RECOMMEND REVISION` audit verdicts, cannot bypass ASPICE gates, and **MUST NOT transition any ticket or sub-task to Erledigt**. Moving tickets to `Erledigt` remains an inviolable human-only gate.
     *   **Secret Masking**: Tooling strictly masks tokens and Basic Auth credentials across all standard output, error, and exception streams.
 
+12. **Chesterton's Fence Requirement Archaeology Hurdle (ATT-1141 Standards)**:
+    *   **Principle**: Never modify, relax, or replace an existing requirement in `docs/requirements.md` without first researching why it was created (*"Do not remove or modify a fence until you know why it was put there in the first place"*).
+    *   **Mandatory Investigation**: Research git commit history (`git log -S <REQ-ID> docs/requirements.md`), Jira tickets, and architectural rationale.
+    *   **Structured 4-Field Archaeology Audit Section**: Any deliverable proposing changes to existing requirements MUST contain `### Requirement Archaeology & Chesterton's Fence Audit` with:
+        1. `Original Requirement ID & Target`
+        2. `Historical Origin & Commit Trace`
+        3. `Root Reason for Existing Formulation`
+        4. `Preservation of Core Invariants`
+    *   **Gate 2 Enforcement**: Agent 2 Gate 2 audit strictly verifies this section and issues `CHALLENGED` or `RECOMMEND REVISION` if omitted.
+    *   **Validation Tooling**: Validated deterministically via `tools/verify_requirement_governance.py`. Net-new requirements are exempt from this hurdle.
+
+
 
 
 

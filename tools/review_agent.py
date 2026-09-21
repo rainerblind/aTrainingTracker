@@ -51,7 +51,15 @@ GATE_DEFINITIONS = {
 2. Test Case Traceability:
    - Verify concrete test procedure and expected result in docs/tests.md.
    - Ensure complete bidirectional traceability between requirements and test cases.
-3. Recommendation:
+3. Requirement Archaeology (Chesterton's Fence):
+   - If existing requirements are modified, relaxed, or replaced in docs/requirements.md, verify presence and validity of the 4-field archaeology section:
+     * Original Requirement ID & Target
+     * Historical Origin & Commit Trace
+     * Root Reason for Existing Formulation ("Why was this fence built?")
+     * Preservation of Core Invariants ("Why is it safe to modify now?")
+   - If existing requirements are altered without this full 4-field section, issue CHALLENGED or RECOMMEND REVISION.
+   - Net-new requirements (novel IDs absent from base) are exempt from this hurdle.
+4. Recommendation:
    - Issue an explicit recommendation: RECOMMEND PASS or RECOMMEND REVISION with itemized notes."""
     },
     "Gate 3": {
@@ -311,7 +319,7 @@ def build_audit_prompt(gate_key, gate_info, subtask, parent_issue):
     parent_fix_version = ", ".join([v.get("name", "") for v in parent_issue.get("fields", {}).get("fixVersions", [])]) if parent_issue else "None"
 
     diff_context = ""
-    if gate_key in ["Gate 3", "Gate 4", "Gate 5"]:
+    if gate_key in ["Gate 2", "Gate 3", "Gate 4", "Gate 5"]:
         diff = get_git_diff()
         commits = get_recent_commits()
         diff_context = f"\n\n--- Git Context ---\nRecent Commits:\n{commits}\n\nGit Diff:\n{diff}\n"
