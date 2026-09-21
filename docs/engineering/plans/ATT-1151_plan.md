@@ -24,8 +24,8 @@ This plan implements and traces the following requirements from `docs/requiremen
 - **Configuration Constants (`SpatialRegionConfig`)**:
   ```kotlin
   object SpatialRegionConfig {
-      const val REGION_CLUSTER_THRESHOLD_METERS = 600_000.0 // 600 km
-      const val SINGLE_REGION_ENVELOPE_METERS = 500_000.0    // 500 km
+      const val REGION_CLUSTER_THRESHOLD_METERS = 75_000.0  // 75 km
+      const val SINGLE_REGION_ENVELOPE_METERS = 60_000.0    // 60 km
   }
   ```
 - **Data Models**:

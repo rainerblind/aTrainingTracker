@@ -20,11 +20,11 @@ import java.time.LocalDateTime
 /**
  * Unit test suite verifying SpatialRegionEngine algorithms under REQ-PER-013 and TST-PER-019.
  * Covers:
- * 1. Single-region fast-path and coordinate invariance (< 500 km)
+ * 1. Single-region fast-path and coordinate invariance (< 60 km)
  * 2. Multi-continent partitioning (Europe and USA)
  * 3. Dominant region ranking (frequency, distance, recency tie-breaking)
  * 4. Antimeridian crossing normalization (+179° / -179°)
- * 5. Fast-path and cluster boundary sensitivity (450 km vs 700 km)
+ * 5. Fast-path and cluster boundary sensitivity (45 km vs 110 km)
  * 6. Non-GPS, null, and (0.0, 0.0) coordinate resilience
  */
 class SpatialRegionEngineTest {
@@ -200,19 +200,19 @@ class SpatialRegionEngineTest {
     }
 
     @Test
-    fun testFastPathBoundary_450kmReturnsSingleRegion_700kmReturnsTwoRegions() {
+    fun testFastPathBoundary_45kmReturnsSingleRegion_110kmReturnsTwoRegions() {
         // Latitudinal distance: 1 degree of latitude is ~111 km.
-        // 4.0 degrees latitude is ~444 km (< 500 km single-region envelope)
+        // 0.4 degrees latitude is ~44.5 km (< 60 km single-region envelope)
         val wCenter = createWorkout(1L, 48.0, 11.0)
-        val w444km = createWorkout(2L, 52.0, 11.0)
+        val w44km = createWorkout(2L, 48.4, 11.0)
 
-        val singleRegion = SpatialRegionEngine.detectRegions(listOf(wCenter, w444km))
+        val singleRegion = SpatialRegionEngine.detectRegions(listOf(wCenter, w44km))
         assertEquals(1, singleRegion.size)
         assertTrue(singleRegion[0].isPrimary)
 
-        // 7.0 degrees latitude is ~777 km (> 600 km REGION_CLUSTER_THRESHOLD_METERS and > 500 km single-region envelope)
-        val w777km = createWorkout(3L, 55.0, 11.0)
-        val twoRegions = SpatialRegionEngine.detectRegions(listOf(wCenter, w777km))
+        // 1.0 degree latitude is ~111.2 km (> 75 km REGION_CLUSTER_THRESHOLD_METERS and > 60 km single-region envelope)
+        val w111km = createWorkout(3L, 49.0, 11.0)
+        val twoRegions = SpatialRegionEngine.detectRegions(listOf(wCenter, w111km))
         assertEquals(2, twoRegions.size)
     }
 

@@ -29,11 +29,11 @@ import kotlin.math.*
  * (REQ-PER-013)
  */
 object SpatialRegionConfig {
-    /** Geodesic distance threshold in meters to partition workouts into distinct regions (600 km). */
-    const val REGION_CLUSTER_THRESHOLD_METERS = 600_000.0
+    /** Geodesic distance threshold in meters to partition workouts into distinct regions (75 km). */
+    const val REGION_CLUSTER_THRESHOLD_METERS = 75_000.0
 
-    /** Envelope diagonal threshold below which spatial partitioning fast-paths to a single region (500 km). */
-    const val SINGLE_REGION_ENVELOPE_METERS = 500_000.0
+    /** Envelope diagonal threshold below which spatial partitioning fast-paths to a single region (60 km). */
+    const val SINGLE_REGION_ENVELOPE_METERS = 60_000.0
 }
 
 /**
