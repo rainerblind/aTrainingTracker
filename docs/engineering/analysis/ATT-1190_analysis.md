@@ -43,12 +43,27 @@ A comprehensive audit across all code modules, database queries, and background 
 ---
 
 ## 3. Database Schema, Command-Query Separation & Migration Strategy
-* **Schema Integrity**: The SQLite column in `StravaUpload.db` (`StravaUploads` table) is:
-  ```sql
-  StravaActivity text
-  ```
+* **Schema Integrity & Database Versioning (DB_VERSION = 6)**:
+  - To establish formal schema migration boundaries, prevent concurrency race conditions from background jobs, and provide clean upgrade/downgrade semantics, `StravaUploadDbHelper` increments `DB_VERSION` from `5` to `6`.
+  - In `SQLiteOpenHelper.onUpgrade(db, oldVersion, newVersion)`:
+    - When upgrading from `oldVersion < 6`:
+      - All existing rows in `StravaUploads` where `StravaActivity IS NOT NULL` are migrated deterministically in-place within the upgrade transaction:
+        ```java
+        if (oldVersion < 6) {
+            // Deterministic row migration from legacy raw JSON to minimized v:2 JSON
+            migrateToMinimizedStravaActivity(db);
+        }
+        ```
+      - Deterministic Migration Pipeline (`migrateToMinimizedStravaActivity`):
+        - Iterates over legacy rows in small, memory-efficient batches via raw SQLite cursor (without triggering UI models).
+        - Parses each legacy JSON blob with `StravaActivityParser.minimize()`.
+        - If parsing succeeds, updates `StravaActivity` with the compact `"v": 2` JSON payload.
+        - If parsing fails due to truncated/corrupt legacy JSON, it safely writes `null` (or `{ "v": 2, "corrupted": true }`), ensuring unparseable data does not halt the migration.
+        - The entire `onUpgrade` step runs inside SQLite's built-in transaction. If an unrecoverable SQLite disk error occurs, the upgrade aborts cleanly and rolls back.
+  - Downgrade & Rollback Safety:
+    - `StravaActivityParser.parse()` maintains dual-format read tolerance. If an APK downgrade occurs to an older version that expects raw JSON, the parser's defensive try/catch gracefully treats unexpected schema structures as null/empty records without crashing. In addition, `onDowngrade()` in `StravaUploadDbHelper` implements non-destructive rollback handling.
 * **Strict Command-Query Separation (CQS) — Zero Write-on-Read**:
-  - To prevent `SQLiteDatabaseLockedException`, thread contention, and write-amplification during UI cursor loading or repository batch reads, **all read operations (`getStravaActivityData`, `getStravaActivityDataForWorkouts`) MUST remain strictly read-only queries**. Zero implicit writes occur during reads.
+  - All read operations (`getStravaActivityData`, `getStravaActivityDataForWorkouts`) remain strictly read-only queries. Zero implicit writes or compactions occur during reads.
 * **Deterministic Schema Versioning**:
   - The minimized JSON schema includes a root-level version marker:
     ```json
@@ -56,40 +71,10 @@ A comprehensive audit across all code modules, database queries, and background 
     ```
   - Legacy payloads (Version 1) lack `"v": 2`. Minimized payloads explicitly declare `"v": 2`.
   - This eliminates heuristic string matching (such as searching for `"athlete"` or checking string length) and guarantees deterministic detection.
-* **Migration & Compaction Execution Architecture**:
-  1. *Immediate Ingestion Minimization*: All newly uploaded workouts and newly reconciled duplicate activities in `StravaUploader.kt` are minimized *before* writing to `StravaUploadDbHelper`, immediately stemming any new storage bloat or privacy leaks.
-  2. *Dedicated Non-Blocking Background Compaction*:
-     - A dedicated asynchronous compaction routine `compactLegacyRecords(Context)` in `StravaUploadDbHelper`:
-       - Scans `StravaUploads` for rows where `StravaActivity IS NOT NULL` and does NOT contain `"v":2`.
-       - Execution Trigger & ANR Elimination:
-         - Compaction NEVER executes on the main thread, during `onCreate`, or during SQLite `onUpgrade`.
-         - It is scheduled exclusively as an asynchronous, low-priority one-off background task via `WorkManager` (`ExistingWorkPolicy.KEEP`), triggered once post-startup when the application detects uncompacted legacy rows or when Strava settings are opened.
-       - Concurrency & SQLite Locking Safeguards:
-         - A process-wide mutex (`ReentrantLock` or `Mutex` in `StravaUploadDbHelper`) guards batch write loops against concurrent uploads from `StravaUploader`.
-         - Each batch operates within a small window (e.g. batch size of 25-50 rows) yielding execution (`delay`/thread yield) between batches to allow higher-priority read queries or active user uploads to acquire SQLite locks without encountering `SQLITE_BUSY` or write starvation.
-       - Transaction Boundaries & Rollback Semantics: Executes in batches using standard SQLite transaction boundaries:
-         ```java
-         db.beginTransaction();
-         try {
-             for (LegacyRecord record : batch) {
-                 // parse and update record
-             }
-             db.setTransactionSuccessful();
-         } finally {
-             db.endTransaction(); // rolls back uncommitted batch if an unhandled exception occurred
-         }
-         ```
-       - Error Handling Strategy & Infinite Reprocessing Prevention:
-         - If a legacy JSON blob is malformed or truncated (e.g., throws `JSONException` upon parsing):
-           - The error is logged (`Log.w(TAG, "Legacy record malformed, marking or clearing...", e)`).
-           - To prevent infinite reprocessing loops on subsequent app launches, unparseable legacy records are replaced with a minimal empty achievement tombstone `{"v":2,"corrupted":true}` or set to `null`. This ensures the query `StravaActivity NOT LIKE '%"v":2%'` will not match and reprocess the corrupted record repeatedly.
-         - If an unexpected `SQLException` or database error occurs during the transaction, `setTransactionSuccessful()` is NOT reached; `endTransaction()` cleanly rolls back the batch, ensuring zero partial-commit corruption.
-       - Tombstone Lifecycle & Purge Policy:
-         - Corrupted tombstone records (`"corrupted":true`) are retained only temporarily to prevent reprocessing, and are purged/set to `null` during regular workout maintenance cycles or immediately purged upon disconnect via `StravaDataPurgeManager`. They carry zero third-party or personal data.
-  3. *Dual-Format Read Tolerance*:
-     - `StravaActivityParser.parse(jsonString)` handles both Version 1 (legacy uncompacted) and Version 2 (minimized) payloads transparently.
-  4. *Complete Deauthorization Wipe*:
-     - `StravaDataPurgeManager.purgeAllStravaData(...)` continues to execute `clearAllStravaData()`, wiping all stored records (`DELETE FROM StravaUploads`) upon user disconnect, satisfying Section 7.4.
+* **Data Disconnect Compliance & Forensic Cleanliness**:
+  - `StravaDataPurgeManager.purgeAllStravaData(...)` executes `clearAllStravaData()` (`DELETE FROM StravaUploads`), followed by an explicit `VACUUM` / WAL checkpoint (`PRAGMA wal_checkpoint(FULL)`) to ensure all deleted personal and social data is immediately unlinked and removed from database storage pages.
+* **Immediate Ingestion Minimization**:
+  - All newly uploaded workouts and newly reconciled duplicate activities in `StravaUploader.kt` are minimized *before* writing to `StravaUploadDbHelper`, immediately stemming any new storage bloat or privacy leaks.
 
 ---
 
