@@ -53,6 +53,15 @@ data class SpatialRegion(
 )
 
 /**
+ * Bundles a [SpatialRegion] with the concrete polyline paths belonging to that region.
+ * Used for regional thumbnail rendering in period summary cards (ATT-1151).
+ */
+data class SpatialPathRegion(
+    val region: SpatialRegion,
+    val paths: List<List<LatLng>>
+)
+
+/**
  * Core mathematical engine for partitioning period workouts into geographic activity regions.
  *
  * Solves the "Greenland Anomaly" (ATT-1151) where periods spanning multiple continents/regions
@@ -62,6 +71,9 @@ data class SpatialRegion(
  * on Dispatchers.Default inside PeriodsViewModel during background loading.
  */
 object SpatialRegionEngine {
+
+    /** Minimum coordinate buffer (~500m) to prevent degenerate zero-area bounding boxes in Google Maps. */
+    const val MIN_BOUNDS_DELTA_DEGREES = 0.005
 
     /**
      * Computes the Great-Circle Haversine distance between two coordinates in meters.
@@ -87,12 +99,19 @@ object SpatialRegionEngine {
     /**
      * Constructs normalized [LatLngBounds] for a list of coordinates with antimeridian (180°) support
      * and polar Web Mercator clamping ([-85°, 85°]).
+     *
+     * Ensures bounds have non-zero latitude and longitude span so that Google Maps [CameraUpdateFactory.newLatLngBounds]
+     * does not throw [IllegalArgumentException].
      */
     fun buildNormalizedBounds(points: List<LatLng>): LatLngBounds {
         require(points.isNotEmpty()) { "Cannot build bounds from empty points list" }
         if (points.size == 1) {
             val p = clampPoint(points[0])
-            return LatLngBounds(p, p)
+            val minLat = clampLatitude(p.latitude - MIN_BOUNDS_DELTA_DEGREES)
+            val maxLat = clampLatitude(p.latitude + MIN_BOUNDS_DELTA_DEGREES)
+            val minLng = p.longitude - MIN_BOUNDS_DELTA_DEGREES
+            val maxLng = p.longitude + MIN_BOUNDS_DELTA_DEGREES
+            return LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng))
         }
 
         var minLat = 90.0
@@ -116,15 +135,31 @@ object SpatialRegionEngine {
         val wrappedMaxLng = wrappedLngs.maxOrNull() ?: 0.0
         val wrappedSpan = wrappedMaxLng - wrappedMinLng
 
+        // Guard against zero/near-zero latitude span to prevent IllegalArgumentException in Google Maps
+        if (maxLat - minLat < 0.001) {
+            minLat = clampLatitude(minLat - MIN_BOUNDS_DELTA_DEGREES)
+            maxLat = clampLatitude(maxLat + MIN_BOUNDS_DELTA_DEGREES)
+        }
+
         return if (standardSpan > 180.0 && wrappedSpan < standardSpan) {
             // Antimeridian crossing: the cluster is compact across the 180° meridian.
             // Google Maps LatLngBounds supports southwest.longitude > northeast.longitude
             // representing a bounding box that crosses the antimeridian eastward.
-            val westLng = if (wrappedMinLng > 180.0) wrappedMinLng - 360.0 else wrappedMinLng
-            val eastLng = if (wrappedMaxLng > 180.0) wrappedMaxLng - 360.0 else wrappedMaxLng
+            var westLng = if (wrappedMinLng > 180.0) wrappedMinLng - 360.0 else wrappedMinLng
+            var eastLng = if (wrappedMaxLng > 180.0) wrappedMaxLng - 360.0 else wrappedMaxLng
+            if (wrappedSpan < 0.001) {
+                westLng -= MIN_BOUNDS_DELTA_DEGREES
+                eastLng += MIN_BOUNDS_DELTA_DEGREES
+            }
             LatLngBounds(LatLng(minLat, westLng), LatLng(maxLat, eastLng))
         } else {
-            LatLngBounds(LatLng(minLat, standardMinLng), LatLng(maxLat, standardMaxLng))
+            var westLng = standardMinLng
+            var eastLng = standardMaxLng
+            if (standardSpan < 0.001) {
+                westLng -= MIN_BOUNDS_DELTA_DEGREES
+                eastLng += MIN_BOUNDS_DELTA_DEGREES
+            }
+            LatLngBounds(LatLng(minLat, westLng), LatLng(maxLat, eastLng))
         }
     }
 
@@ -298,7 +333,8 @@ object SpatialRegionEngine {
         // Single-Region Fast-Path: 1 workout
         if (validWorkoutsWithPoints.size == 1) {
             val (w, p) = validWorkoutsWithPoints[0]
-            val bounds = buildNormalizedBounds(listOf(p))
+            val workoutPoints = extractWorkoutBoundsPoints(w)
+            val bounds = buildNormalizedBounds(workoutPoints.ifEmpty { listOf(p) })
             return listOf(
                 SpatialRegion(
                     id = "region_0",
@@ -323,7 +359,10 @@ object SpatialRegionEngine {
         val diagonal = distanceBetween(LatLng(minLat, minLng), LatLng(maxLat, maxLng))
 
         if (diagonal < SpatialRegionConfig.SINGLE_REGION_ENVELOPE_METERS) {
-            val bounds = buildNormalizedBounds(allPoints)
+            val allBoundsPoints = validWorkoutsWithPoints.flatMap { (w, p) ->
+                extractWorkoutBoundsPoints(w).ifEmpty { listOf(p) }
+            }
+            val bounds = buildNormalizedBounds(allBoundsPoints)
             val center = LatLng((minLat + maxLat) / 2.0, (minLng + maxLng) / 2.0)
             val totalDistance = validWorkoutsWithPoints.sumOf { it.first.totalDistance }
             val mostRecent = validWorkoutsWithPoints.maxOf { it.first.startTimeS }
@@ -389,7 +428,9 @@ object SpatialRegionEngine {
         )
 
         return sortedClusters.mapIndexed { index, cluster ->
-            val bounds = buildNormalizedBounds(cluster.points)
+            val clusterWorkoutPoints = cluster.workouts.flatMap { extractWorkoutBoundsPoints(it) }
+            val allClusterPoints = if (clusterWorkoutPoints.isNotEmpty()) clusterWorkoutPoints else cluster.points
+            val bounds = buildNormalizedBounds(allClusterPoints)
             val center = cluster.center()
             val totalDistance = cluster.workouts.sumOf { it.totalDistance }
             val mostRecent = cluster.workouts.maxOfOrNull { it.startTimeS } ?: 0L
@@ -404,6 +445,159 @@ object SpatialRegionEngine {
                 isPrimary = (index == 0),
                 workoutIds = cluster.workouts.map { it.id }.toSet()
             )
+        }
+    }
+
+    private fun extractWorkoutBoundsPoints(w: WorkoutData): List<LatLng> {
+        val points = mutableListOf<LatLng>()
+        if (w.minLat != null && w.maxLat != null && w.minLng != null && w.maxLng != null &&
+            w.minLat < 90.0 && w.maxLat > -90.0 && w.minLat <= w.maxLat
+        ) {
+            points.add(LatLng(w.minLat, w.minLng))
+            points.add(LatLng(w.maxLat, w.maxLng))
+        }
+        w.startLatLng?.let { if (isValidCoordinate(it.latitude, it.longitude)) points.add(it) }
+        w.endLatLng?.let { if (isValidCoordinate(it.latitude, it.longitude)) points.add(it) }
+        w.maxDisplacementLatLng?.let { if (isValidCoordinate(it.latitude, it.longitude)) points.add(it) }
+        return points
+    }
+
+    /**
+     * Partitions a list of decoded polyline paths into distinct [SpatialPathRegion]s.
+     * Encloses ALL route coordinates belonging to each cluster within the region bounds.
+     * Used by the period summary card thumbnail to isolate the dominant region's route paths.
+     */
+    fun detectRegionsFromPaths(paths: List<List<LatLng>>): List<SpatialPathRegion> {
+        val validPathsWithRef = paths.mapNotNull { path ->
+            if (path.isEmpty()) return@mapNotNull null
+            val refPoint = path.first()
+            if (!isValidCoordinate(refPoint.latitude, refPoint.longitude)) return@mapNotNull null
+            path to refPoint
+        }
+
+        if (validPathsWithRef.isEmpty()) {
+            return emptyList()
+        }
+
+        if (validPathsWithRef.size == 1) {
+            val (path, ref) = validPathsWithRef[0]
+            val bounds = buildNormalizedBounds(path)
+            val region = SpatialRegion(
+                id = "region_0",
+                label = "Region 1",
+                bounds = bounds,
+                center = ref,
+                workoutCount = 1,
+                totalDistanceMeters = 0.0,
+                mostRecentTimestampS = 0L,
+                isPrimary = true
+            )
+            return listOf(SpatialPathRegion(region, listOf(path)))
+        }
+
+        val allRefPoints = validPathsWithRef.map { it.second }
+        val minLat = allRefPoints.minOf { it.latitude }
+        val maxLat = allRefPoints.maxOf { it.latitude }
+        val minLng = allRefPoints.minOf { it.longitude }
+        val maxLng = allRefPoints.maxOf { it.longitude }
+        val diagonal = distanceBetween(LatLng(minLat, minLng), LatLng(maxLat, maxLng))
+
+        if (diagonal < SpatialRegionConfig.SINGLE_REGION_ENVELOPE_METERS) {
+            val allPoints = validPathsWithRef.flatMap { it.first }
+            val bounds = buildNormalizedBounds(allPoints)
+            val center = LatLng((minLat + maxLat) / 2.0, (minLng + maxLng) / 2.0)
+            val region = SpatialRegion(
+                id = "region_0",
+                label = "Region 1",
+                bounds = bounds,
+                center = center,
+                workoutCount = validPathsWithRef.size,
+                totalDistanceMeters = 0.0,
+                mostRecentTimestampS = 0L,
+                isPrimary = true
+            )
+            return listOf(SpatialPathRegion(region, validPathsWithRef.map { it.first }))
+        }
+
+        // Multi-region clustering for paths
+        data class IntermediatePathCluster(
+            val paths: MutableList<List<LatLng>> = mutableListOf(),
+            val refPoints: MutableList<LatLng> = mutableListOf()
+        ) {
+            fun center(): LatLng {
+                if (refPoints.isEmpty()) return LatLng(0.0, 0.0)
+                val avgLat = refPoints.map { it.latitude }.average()
+                val avgLng = refPoints.map { it.longitude }.average()
+                return LatLng(avgLat, avgLng)
+            }
+
+            fun distanceTo(point: LatLng): Double {
+                var minDist = distanceBetween(center(), point)
+                for (p in refPoints) {
+                    val d = distanceBetween(p, point)
+                    if (d < minDist) minDist = d
+                }
+                return minDist
+            }
+        }
+
+        val clusters = mutableListOf<IntermediatePathCluster>()
+        for ((path, ref) in validPathsWithRef) {
+            val matchingIndices = mutableListOf<Int>()
+            for (i in clusters.indices) {
+                if (clusters[i].distanceTo(ref) <= SpatialRegionConfig.REGION_CLUSTER_THRESHOLD_METERS) {
+                    matchingIndices.add(i)
+                }
+            }
+
+            when {
+                matchingIndices.isEmpty() -> {
+                    val newCluster = IntermediatePathCluster()
+                    newCluster.paths.add(path)
+                    newCluster.refPoints.add(ref)
+                    clusters.add(newCluster)
+                }
+                matchingIndices.size == 1 -> {
+                    val cluster = clusters[matchingIndices[0]]
+                    cluster.paths.add(path)
+                    cluster.refPoints.add(ref)
+                }
+                else -> {
+                    val base = clusters[matchingIndices[0]]
+                    base.paths.add(path)
+                    base.refPoints.add(ref)
+                    for (k in matchingIndices.size - 1 downTo 1) {
+                        val toMerge = clusters.removeAt(matchingIndices[k])
+                        base.paths.addAll(toMerge.paths)
+                        base.refPoints.addAll(toMerge.refPoints)
+                    }
+                }
+            }
+        }
+
+        // Deterministic Ranking:
+        // 1. Path count (descending)
+        // 2. Coordinate count (descending)
+        val sorted = clusters.sortedWith(
+            compareByDescending<IntermediatePathCluster> { it.paths.size }
+                .thenByDescending { it.paths.sumOf { p -> p.size } }
+        )
+
+        return sorted.mapIndexed { index, cluster ->
+            val allClusterPoints = cluster.paths.flatten()
+            val bounds = buildNormalizedBounds(allClusterPoints)
+            val center = cluster.center()
+            val region = SpatialRegion(
+                id = "region_$index",
+                label = "Region ${index + 1}",
+                bounds = bounds,
+                center = center,
+                workoutCount = cluster.paths.size,
+                totalDistanceMeters = 0.0,
+                mostRecentTimestampS = 0L,
+                isPrimary = (index == 0)
+            )
+            SpatialPathRegion(region, cluster.paths)
         }
     }
 }

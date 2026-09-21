@@ -240,4 +240,54 @@ class SpatialRegionEngineTest {
         assertEquals(1, regions[0].workoutCount)
         assertEquals(1L, regions[0].workoutIds.first())
     }
+
+    @Test
+    fun testBuildNormalizedBounds_singlePointHasSafeNonZeroSpan() {
+        val singlePoint = LatLng(48.7758, 9.1829)
+        val bounds = SpatialRegionEngine.buildNormalizedBounds(listOf(singlePoint))
+
+        // Ensure southwest != northeast so Google Maps newLatLngBounds does not throw IllegalArgumentException
+        assertNotEquals(bounds.southwest.latitude, bounds.northeast.latitude, 0.0001)
+        assertNotEquals(bounds.southwest.longitude, bounds.northeast.longitude, 0.0001)
+        assertTrue(bounds.southwest.latitude < bounds.northeast.latitude)
+        assertTrue(bounds.southwest.longitude < bounds.northeast.longitude)
+        assertEquals(48.7758 - SpatialRegionEngine.MIN_BOUNDS_DELTA_DEGREES, bounds.southwest.latitude, 0.0001)
+        assertEquals(48.7758 + SpatialRegionEngine.MIN_BOUNDS_DELTA_DEGREES, bounds.northeast.latitude, 0.0001)
+    }
+
+    @Test
+    fun testDetectRegionsFromPaths_multiContinent_isolatesRoutesAndBounds() {
+        // Germany path: 3 coordinates around Stuttgart (0.1 deg span)
+        val germanyPath = listOf(
+            LatLng(48.77, 9.18),
+            LatLng(48.80, 9.22),
+            LatLng(48.85, 9.26)
+        )
+
+        // California path: 3 coordinates around San Francisco (0.1 deg span)
+        val californiaPath = listOf(
+            LatLng(37.77, -122.41),
+            LatLng(37.80, -122.44),
+            LatLng(37.85, -122.48)
+        )
+
+        val pathRegions = SpatialRegionEngine.detectRegionsFromPaths(listOf(germanyPath, californiaPath))
+
+        assertEquals(2, pathRegions.size)
+        val primary = pathRegions[0]
+        val secondary = pathRegions[1]
+
+        assertTrue(primary.region.isPrimary)
+        assertFalse(secondary.region.isPrimary)
+        assertEquals(1, primary.paths.size)
+        assertEquals(1, secondary.paths.size)
+
+        // Ensure primary region bounds tightly enclose the entire path coordinates, not just the start point
+        val primaryBounds = primary.region.bounds
+        val expectedMinLat = primary.paths[0].minOf { it.latitude }
+        val expectedMaxLat = primary.paths[0].maxOf { it.latitude }
+        assertEquals(expectedMinLat, primaryBounds.southwest.latitude, 0.001)
+        assertEquals(expectedMaxLat, primaryBounds.northeast.latitude, 0.001)
+    }
 }
+
