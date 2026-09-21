@@ -23,7 +23,17 @@ When a workout is synchronized with Strava via `StravaUploader.kt` (either upon 
      - `StravaUploader.kt`:
        - `processSegmentEffortsForPrs` inspects `segment_efforts` to update local starred segment PR times in `Segments.db`.
        - Duplicate reconciliation inspects `name` and `gear_id` / `gear.id`.
-       - Both operations happen *immediately in memory* using `activityJSON` during `doUpdate()`. Only the persisted string in `StravaUploadDbHelper` remains for offline UI display.
+### Chesterton's Fence Archaeology:
+1. **Original Requirement ID & Target**:
+   - `REQ-EXP-001` / `REQ-EXP-007` (Initial Strava integration & activity feedback storage). Target was simply to cache the Strava activity response payload locally so that subsequent offline views could display activity feedback without repeating network calls.
+2. **Historical Origin & Commit Trace**:
+   - Commit history in `StravaUploader.java` / `StravaUploader.kt` (`StravaUploadDbHelper.java` added with column `Feedback`, subsequently renamed to `StravaActivity` in `DB_VERSION = 5`).
+   - Line 461: `StravaUploadDbHelper(mContext).updateStravaActivityData(exportInfo.fileBaseName, activityJSON.toString())`.
+3. **Root Reason for Existing Formulation ("Why was this fence built?")**:
+   - Storing `activityJSON.toString()` was an expedient, zero-parsing shortcut implemented when the Strava API feedback was first introduced. Dumping the raw JSON string avoided writing a dedicated serialization parser or schema transformer at the upload boundary.
+4. **Preservation of Core Invariants ("Why is it safe to modify now?")**:
+   - Comprehensive downstream caller audit reveals that the application strictly consumes `id`, `segment_efforts`, and `best_efforts`. None of the UI components or background workers read athlete profiles, kudos, comments, or external map polylines.
+   - Replacing the raw JSON blob with a minimized achievement schema (`"v": 2`) preserves 100% of the UI rendering state, offline celebration banner functionality, and duplicate handling while drastically reducing storage size and complying with the Strava API Agreement Section 6.2 ("Cache and Retention").
 
 ---
 
