@@ -276,11 +276,16 @@ def detect_gate(summary):
 
 
 def get_git_diff():
-    """Returns staged and working tree git diff, or last commit diff if clean."""
+    """Returns staged and working tree git diff, or diff against develop merge-base if clean."""
     try:
         diff = subprocess.check_output(["git", "diff", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8")
         if not diff.strip():
-            diff = subprocess.check_output(["git", "diff", "HEAD~1", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8")
+            # Diff against develop merge-base to include all ticket changes on the branch
+            try:
+                base = subprocess.check_output(["git", "merge-base", "develop", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
+                diff = subprocess.check_output(["git", "diff", f"{base}..HEAD"], stderr=subprocess.DEVNULL).decode("utf-8")
+            except Exception:
+                diff = subprocess.check_output(["git", "diff", "HEAD~1", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8")
         return diff[:20000]
     except Exception:
         return ""
