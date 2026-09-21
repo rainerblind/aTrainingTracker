@@ -46,8 +46,8 @@ android {
         minSdkVersion 26 // Android 8
         targetSdkVersion 37
         multiDexEnabled = true
-        versionName = "4.9.36"
-        versionCode = 260
+        versionName = "4.9.37"
+        versionCode = 261
     }
 
     signingConfigs {
@@ -100,12 +100,25 @@ android {
     }
 }
 
-configurations {
-    compile.exclude group: "junit", module: "junit"
+configurations.all {
+    resolutionStrategy {
+        // ATT-1037: Pin androidx.core to 1.15.0 to eliminate NoSuchMethodError on Android 14 (API 34)
+        // (Google Issue Tracker: 558456603 / 551348854). Tracked for re-upgrade in ATT-1091.
+        force 'androidx.core:core:1.15.0'
+        force 'androidx.core:core-ktx:1.15.0'
+        // Pin androidx.activity to 1.10.1 which is fully compatible with core:1.15.0
+        // (does not require core:1.16.0+ ProtectionLayout or PictureInPictureProvider)
+        force 'androidx.activity:activity:1.10.1'
+        force 'androidx.activity:activity-ktx:1.10.1'
+        force 'androidx.activity:activity-compose:1.10.1'
+        // Pin com.google.android.material to 1.13.0 which is fully compatible with core:1.15.0
+        // (material:1.14.0 introduces ProtectionLayout in design_bottom_sheet_dialog.xml requiring core:1.16.0+)
+        force 'com.google.android.material:material:1.13.0'
+    }
 }
 
 dependencies {
-    implementation 'com.google.android.material:material:1.14.0'
+    implementation 'com.google.android.material:material:1.13.0'
     implementation "com.google.accompanist:accompanist-drawablepainter:0.37.3"
 
     // --- Legacy & Hardware SDKs ---
@@ -118,12 +131,14 @@ dependencies {
     implementation files('../ANT-Android-SDKs/ANT+_Android_SDK/API/antpluginlib_3-9-0.aar')
 
     // --- AndroidX Core & Lifecycle ---
-    implementation 'androidx.core:core-ktx:1.19.0'
+    // ATT-1037: Pinned to 1.15.0 to prevent NoSuchMethodError on Android 14 (API 34).
+    // Tracked for re-upgrade in ATT-1091 once Google releases upstream fix.
+    implementation 'androidx.core:core-ktx:1.15.0'
     implementation 'androidx.appcompat:appcompat:1.8.0'
     implementation 'androidx.preference:preference-ktx:1.2.1'
     implementation 'androidx.work:work-runtime-ktx:2.11.2'
     implementation 'androidx.browser:browser:1.10.0'
-    implementation 'androidx.activity:activity-compose:1.13.0'
+    implementation 'androidx.activity:activity-compose:1.10.1'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0'
     implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.11.0'
     implementation 'androidx.compose.runtime:runtime-livedata'

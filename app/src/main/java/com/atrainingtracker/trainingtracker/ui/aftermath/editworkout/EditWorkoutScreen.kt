@@ -32,18 +32,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -65,6 +62,8 @@ import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.clusters.EditWorkoutClusterDialog
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialog
 import com.atrainingtracker.trainingtracker.ui.components.DropdownSelector
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,40 +71,41 @@ fun EditWorkoutScreen(
     viewModel: EditWorkoutViewModel,
     onBack: () -> Unit
 ) {
+    EditWorkoutDialog(
+        viewModel = viewModel,
+        onDismiss = onBack
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditWorkoutDialog(
+    viewModel: EditWorkoutViewModel,
+    onDismiss: () -> Unit
+) {
     // Observe LiveData from ViewModel
     val workoutData by viewModel.workoutData.collectAsState()
     val sportTypes by viewModel.sportTypeNames.observeAsState(emptyList())
     val equipmentNames by viewModel.equipmentNames.observeAsState(emptyList())
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.edit_workout)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = null)
-                    }
+    AppModalBottomSheet(
+        title = stringResource(R.string.edit_workout),
+        icon = Icons.Default.Edit,
+        onDismissRequest = onDismiss,
+        actions = {
+            AppDialogActions.SaveCancel(
+                onSave = {
+                    viewModel.saveChanges()
+                    onDismiss()
                 },
-                actions = {
-                    Button(
-                        onClick = {
-                            viewModel.saveChanges()
-                            onBack()
-                        },
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        Text(stringResource(R.string.save))
-                    }
-                }
+                onCancel = onDismiss
             )
         }
-    ) { padding ->
+    ) {
         Column(
             modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // 1. Workout Name

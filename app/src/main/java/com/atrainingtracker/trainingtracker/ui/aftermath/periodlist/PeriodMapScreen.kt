@@ -89,6 +89,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.map.MapTrack
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
+import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import kotlinx.coroutines.Dispatchers
@@ -149,17 +150,45 @@ fun PeriodMapScreen(
             sportMatch && typeMatch
         }
 
-        val memberMarkers = mapState.memberMarkers.filter { marker ->
-            val sportMatch = selectedSports.isEmpty() || selectedSports.contains(summary.workoutIdToSportMap[marker.workoutId])
-            val typeMatch = enabledMarkerTypes.contains(marker.markerType)
-            sportMatch && typeMatch
+        // REQ-PER-012: Adaptive Layering Invariant
+        // When active workouts exceed MAX_PERIOD_VECTOR_TRACKS, suppress member vector tracks
+        // and member markers in favor of the raster Heatmap to prevent OOM / ANR.
+        val isAdaptiveLayering = workouts.size > MAX_PERIOD_VECTOR_TRACKS
+
+        val memberMarkers = if (isAdaptiveLayering) {
+            emptyList()
+        } else {
+            mapState.memberMarkers.filter { marker ->
+                val sportMatch = selectedSports.isEmpty() || selectedSports.contains(summary.workoutIdToSportMap[marker.workoutId])
+                val typeMatch = enabledMarkerTypes.contains(marker.markerType)
+                sportMatch && typeMatch
+            }
         }
 
-        val memberTracks = if (selectedSports.isEmpty()) {
-            mapState.tracks
+        val memberTracks = if (isAdaptiveLayering) {
+            emptyList()
         } else {
-            mapState.tracks.filter { track ->
-                selectedSports.contains(track.bSportType)
+            if (mapState.tracks.isNotEmpty()) {
+                if (selectedSports.isEmpty()) {
+                    mapState.tracks
+                } else {
+                    mapState.tracks.filter { track ->
+                        selectedSports.contains(track.bSportType)
+                    }
+                }
+            } else {
+                // Adaptive on-the-fly generation when filtered count <= MAX_PERIOD_VECTOR_TRACKS
+                workouts.keys.mapNotNull { id ->
+                    val pts = mapState.workoutIdToHeatmapPathMap[id] ?: return@mapNotNull null
+                    val sport = summary.workoutIdToSportMap[id] ?: BSportType.UNKNOWN
+                    MapTrack(
+                        id = id,
+                        type = TrackType.BEST,
+                        bSportType = sport,
+                        path = pts.map { PathPoint(0.0, it, 0.0) },
+                        isVisible = true
+                    )
+                }
             }
         }
 

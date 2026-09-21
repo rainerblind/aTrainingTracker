@@ -46,8 +46,11 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.repositories.DeviceTelemetry
 import com.atrainingtracker.trainingtracker.ui.components.MetricLayout
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SensorSourceDialog(
     sensorType: SensorType,
@@ -77,136 +80,121 @@ fun SensorSourceDialog(
     val unitRes = MyHelper.getUnitsId(sensorType)
     val unit = if (unitRes != 0 && unitRes != R.string.units_none) stringResource(id = unitRes) else ""
 
-    AlertDialog(
+    AppModalBottomSheet(
+        title = sensorType.getFullName(context),
+        iconPainter = painterResource(id = sensorType.getIconResId()),
+        iconTint = MaterialTheme.colorScheme.onSurface,
         onDismissRequest = onDismiss,
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    painter = painterResource(id = sensorType.getIconResId()),
-                    contentDescription = null,
-                    modifier = Modifier.size(28.dp),
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    text = sensorType.getFullName(context),
-                    style = MaterialTheme.typography.headlineSmall
-                )
+        actions = {
+            AppDialogActions.Confirm(
+                onConfirm = onDismiss
+            )
+        }
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // 1. Source Device
+            if (sourceDevice != null) {
+                val telemetry = allActiveTelemetries.find { it.deviceId == sourceDevice.id }
+                val value = telemetry?.allValues?.find { it.sensor == sensorType }?.value ?: "--"
+                
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = stringResource(id = R.string.source_device),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = TTColor.RouteSelected
+                    )
+                    DeviceIdentityBlock(
+                        device = sourceDevice, 
+                        isConnected = true, 
+                        valueWithUnit = if (value != "--") "$value $unit" else value,
+                        modifier = Modifier.clickable { 
+                            onDeviceClick(sourceDevice.id)
+                        }
+                    )
+                }
             }
-        },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // 1. Source Device
-                if (sourceDevice != null) {
-                    val telemetry = allActiveTelemetries.find { it.deviceId == sourceDevice.id }
-                    val value = telemetry?.allValues?.find { it.sensor == sensorType }?.value ?: "--"
-                    
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = stringResource(id = R.string.source_device),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = TTColor.RouteSelected
-                        )
+
+            // 2. Active Backups
+            if (activeBackups.isNotEmpty()) {
+                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = stringResource(id = R.string.source_active_backups),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = TTColor.RouteUnselected
+                    )
+                    activeBackups.forEach { telemetry ->
+                        val device = allDevices.find { it.id == telemetry.deviceId }
+                        if (device != null) {
+                            val value = telemetry.allValues.find { it.sensor == sensorType }?.value ?: "--"
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                DeviceIdentityBlock(
+                                    device = device, 
+                                    isConnected = true,
+                                    valueWithUnit = if (value != "--") "$value $unit" else value,
+                                    modifier = Modifier.clickable {
+                                        onDeviceClick(device.id)
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. Not connected devices
+            if (notConnected.isNotEmpty()) {
+                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = stringResource(id = R.string.source_not_connected),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    notConnected.forEach { device ->
                         DeviceIdentityBlock(
-                            device = sourceDevice, 
-                            isConnected = true, 
-                            valueWithUnit = if (value != "--") "$value $unit" else value,
-                            modifier = Modifier.clickable { 
-                                onDeviceClick(sourceDevice.id)
+                            device = device, 
+                            isConnected = false,
+                            modifier = Modifier.clickable {
+                                onDeviceClick(device.id)
                             }
-                        )
-                    }
-                }
-
-                // 2. Active Backups
-                if (activeBackups.isNotEmpty()) {
-                    HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = stringResource(id = R.string.source_active_backups),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = TTColor.RouteUnselected
-                        )
-                        activeBackups.forEach { telemetry ->
-                            val device = allDevices.find { it.id == telemetry.deviceId }
-                            if (device != null) {
-                                val value = telemetry.allValues.find { it.sensor == sensorType }?.value ?: "--"
-                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    DeviceIdentityBlock(
-                                        device = device, 
-                                        isConnected = true,
-                                        valueWithUnit = if (value != "--") "$value $unit" else value,
-                                        modifier = Modifier.clickable {
-                                            onDeviceClick(device.id)
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 3. Not connected devices
-                if (notConnected.isNotEmpty()) {
-                    HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = stringResource(id = R.string.source_not_connected),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        notConnected.forEach { device ->
-                            DeviceIdentityBlock(
-                                device = device, 
-                                isConnected = false,
-                                modifier = Modifier.clickable {
-                                    onDeviceClick(device.id)
-                                }
-                            )
-                        }
-                    }
-                }
-
-                // Internal Fallback if applicable and no external active source
-                if (sourceDevice == null && activeBackups.isEmpty() && notConnected.isEmpty()) {
-                    val isInternalPossible = remember(sensorType) {
-                        potentialTypes.isNotEmpty() && potentialTypes.all { 
-                            it == DeviceType.CLOCK || 
-                            it == DeviceType.VERTICAL_SPEED_AND_SLOPE || 
-                            it.name.startsWith("SPEED_AND_LOCATION") || 
-                            it == DeviceType.ALTITUDE_FROM_PRESSURE 
-                        }
-                    }
-                    if (isInternalPossible) {
-                        Text(
-                            text = stringResource(id = R.string.source_internal),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                         Text(
-                            text = stringResource(id = R.string.source_none_configured),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = stringResource(id = android.R.string.ok))
+
+            // Internal Fallback if applicable and no external active source
+            if (sourceDevice == null && activeBackups.isEmpty() && notConnected.isEmpty()) {
+                val isInternalPossible = remember(sensorType) {
+                    potentialTypes.isNotEmpty() && potentialTypes.all { 
+                        it == DeviceType.CLOCK || 
+                        it == DeviceType.VERTICAL_SPEED_AND_SLOPE || 
+                        it.name.startsWith("SPEED_AND_LOCATION") || 
+                        it == DeviceType.ALTITUDE_FROM_PRESSURE 
+                    }
+                }
+                if (isInternalPossible) {
+                    Text(
+                        text = stringResource(id = R.string.source_internal),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                     Text(
+                        text = stringResource(id = R.string.source_none_configured),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
-    )
+    }
 }
 
 @Composable

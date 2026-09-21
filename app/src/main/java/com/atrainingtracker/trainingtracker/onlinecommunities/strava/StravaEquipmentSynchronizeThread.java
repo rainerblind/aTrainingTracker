@@ -230,6 +230,7 @@ public class StravaEquipmentSynchronizeThread extends Thread {
                     values.clear();
                     values.put(EquipmentDbHelper.STRAVA_NAME, name);
                     values.put(EquipmentDbHelper.SPORT_TYPE, BSportType.RUN.name());
+                    values.put(EquipmentDbHelper.RETIRED, 0);
 
                     int updates = equipmentDb.update(EquipmentDbHelper.EQUIPMENT,
                             values,
@@ -271,6 +272,7 @@ public class StravaEquipmentSynchronizeThread extends Thread {
                     values.put(EquipmentDbHelper.STRAVA_NAME, name);
                     values.put(EquipmentDbHelper.FRAME_TYPE, frameType);
                     values.put(EquipmentDbHelper.SPORT_TYPE, BSportType.BIKE.name());
+                    values.put(EquipmentDbHelper.RETIRED, 0);
 
                     int updates = equipmentDb.update(EquipmentDbHelper.EQUIPMENT,
                             values,

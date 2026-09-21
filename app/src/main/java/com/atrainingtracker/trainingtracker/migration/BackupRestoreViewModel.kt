@@ -61,7 +61,11 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         val distance: Double,
         val bSportType: BSportType,
         val polyline: String,
-        val deferred: CompletableDeferred<Pair<Long?, String?>>
+        val deferred: CompletableDeferred<Pair<Long?, String?>>,
+        val workoutName: String? = null,
+        val candidateSportTypes: Set<BSportType> = emptySet(),
+        val minAltPos: LatLng? = null,
+        val maxAltPos: LatLng? = null
     )
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
@@ -322,14 +326,18 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
                 null
             }
             val fileName = displayName?.takeIf { it.isNotBlank() } ?: "legacy_import_${System.currentTimeMillis()}.$format"
+            Log.i("BackupRestoreVM", "importLegacyFile: uri=$uri, fileName=$fileName, uploadToStravaOnImport=$uploadToStravaOnImport")
             val tempFile = File(context.cacheDir, fileName)
             context.contentResolver.openInputStream(uri)?.use { input ->
                 tempFile.outputStream().use { output -> input.copyTo(output) }
             }
-            val success = when (format.lowercase()) {
+            val fileExt = if (fileName.contains('.')) fileName.substringAfterLast('.').lowercase() else format.lowercase()
+            val success = when (fileExt) {
                 "tcx" -> LegacyImportEngine.importFromTcx(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
+                "gpx" -> LegacyImportEngine.importFromGpx(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
                 else -> false
             }
+            Log.i("BackupRestoreVM", "importLegacyFile execution result: fileExt=$fileExt, success=$success")
             tempFile.delete()
             if (success) {
                 // ATT-909 / REQ-MIG-026: Post-import reactive reconciliation
@@ -341,7 +349,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
                 } catch (e: Exception) {
                     Log.w("BackupRestoreVM", "Post-import reconciliation failed: ${e.message}")
                 }
-                _uiState.value = UiState.Success("Successfully imported workout from $format file.")
+                _uiState.value = UiState.Success("Successfully imported workout from ${fileExt.uppercase()} file.")
             } else {
                 _uiState.value = UiState.Error("Failed to import workout. It might already exist or the file format is invalid.")
             }
@@ -411,7 +419,11 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             apex: LatLng,
             distance: Double,
             bSportType: BSportType,
-            polyline: String
+            polyline: String,
+            workoutName: String?,
+            candidateSportTypes: Set<BSportType>,
+            minAltPos: LatLng?,
+            maxAltPos: LatLng?
         ): Pair<Long?, String?> {
             // ATT-349: Throttling. Pause background engine if 10 items are already pending resolution.
             interactionSemaphore.acquire()
@@ -420,7 +432,10 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             
             // ATT-316: Add to queue and wait. 
             // We no longer pre-fetch clusters here to avoid stale data in the queue (ATT-316 Refined)
-            val interaction = ClusterInteraction(date, start, end, apex, distance, bSportType, polyline, deferred)
+            val interaction = ClusterInteraction(
+                date, start, end, apex, distance, bSportType, polyline, deferred,
+                workoutName, candidateSportTypes, minAltPos, maxAltPos
+            )
             _interactionQueue.update { it + interaction }
             
             val decision = deferred.await()

@@ -85,8 +85,6 @@ public abstract class ConfigViewsActivityClassic
         // now, create the UI
         setContentView(R.layout.main_activity_without_navigation);
 
-        Toolbar toolbar = findViewById(R.id.apps_toolbar);
-        setSupportActionBar(toolbar);
 
         // final ActionBar supportAB = getSupportActionBar();
         // supportAB.setHomeAsUpIndicator(R.drawable.abc_ic_ab_back_mtrl_am_alpha);

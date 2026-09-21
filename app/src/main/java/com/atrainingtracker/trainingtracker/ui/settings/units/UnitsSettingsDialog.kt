@@ -26,6 +26,9 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 
+import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+
 @Composable
 fun UnitsSettingsDialog(
     onDismiss: () -> Unit
@@ -39,63 +42,44 @@ fun UnitsSettingsDialog(
         mutableStateOf(TrainingApplication.getUnit()) 
     }
 
-    AlertDialog(
+    AppBottomSheetContent(
+        title = stringResource(R.string.prefsUnitsTitle),
+        icon = Icons.Default.SquareFoot,
         onDismissRequest = onDismiss,
-        title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.SquareFoot,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = stringResource(R.string.prefsUnitsTitle),
-                    style = MaterialTheme.typography.headlineSmall
-                )
-            }
-        },
-        text = {
-            // Remove fillMaxWidth() to allow the dialog container to hug the content more tightly.
-            Column(
-                modifier = Modifier.wrapContentWidth(),
-                verticalArrangement = Arrangement.Center
-            ) {
-                MyUnits.values().forEach { unit ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth() 
-                            .clickable { selectedUnit = unit }
-                            .padding(vertical = 8.dp, horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = (unit == selectedUnit),
-                            onClick = { selectedUnit = unit }
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        Text(
-                            text = stringResource(unit.nameId),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
+        actions = {
+            AppDialogActions.SaveCancel(
+                onSave = {
+                    sharedPreferences.edit().putString(key, selectedUnit.name).apply()
+                    onDismiss()
+                },
+                onCancel = onDismiss,
+                saveText = stringResource(R.string.save)
+            )
+        }
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            MyUnits.values().forEach { unit ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth() 
+                        .clickable { selectedUnit = unit }
+                        .padding(vertical = 8.dp, horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = (unit == selectedUnit),
+                        onClick = { selectedUnit = unit }
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        text = stringResource(unit.nameId),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                sharedPreferences.edit().putString(key, selectedUnit.name).apply()
-                onDismiss()
-            }) {
-                Text(stringResource(R.string.Done))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.Cancel))
-            }
         }
-    )
+    }
 }

@@ -115,27 +115,54 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             
             // 2. Background Processing
             withContext(Dispatchers.Default) {
-                val tracks = workouts.map { it.toMapTrack().copy(isVisible = true) }
+                // Decode polyline paths once for both heatmap and lightweight vector tracks
                 val heatmapPathMap = workouts.associate { w ->
                     w.id to if (w.mapPolyline.isNotEmpty()) PolyUtil.decode(w.mapPolyline) else emptyList()
                 }.filterValues { it.isNotEmpty() }
                 
-                // Pre-calculate member markers (SCRUM-199 style)
-                val markers = workouts.flatMap { w ->
-                    val list = mutableListOf<PeriodPeakMarker>()
-                    w.startLatLng?.let { 
-                        list.add(PeriodPeakMarker(w.id, it, R.drawable.control_start, "${w.workoutName}: Start", PeriodMarkerType.START)) 
+                val isLargePeriod = workouts.size > MAX_PERIOD_VECTOR_TRACKS
+
+                // REQ-PER-012: In high-volume periods (> MAX_PERIOD_VECTOR_TRACKS), suppress
+                // instantiating hundreds of vector MapTrack and PeriodPeakMarker objects to prevent OOM.
+                val tracks = if (isLargePeriod) {
+                    emptyList()
+                } else {
+                    workouts.mapNotNull { w ->
+                        val points = heatmapPathMap[w.id] ?: return@mapNotNull null
+                        MapTrack(
+                            id = w.id,
+                            type = TrackType.BEST,
+                            bSportType = w.bSportType,
+                            path = points.map { PathPoint(0.0, it, 0.0) },
+                            isVisible = true,
+                            minLat = w.minLat,
+                            minLng = w.minLng,
+                            maxLat = w.maxLat,
+                            maxLng = w.maxLng
+                        )
                     }
-                    w.endLatLng?.let { 
-                        list.add(PeriodPeakMarker(w.id, it, R.drawable.control_stop, "${w.workoutName}: End", PeriodMarkerType.END)) 
+                }
+                
+                // Pre-calculate member markers (SCRUM-199 style) only for low-volume periods
+                val markers = if (isLargePeriod) {
+                    emptyList()
+                } else {
+                    workouts.flatMap { w ->
+                        val list = mutableListOf<PeriodPeakMarker>()
+                        w.startLatLng?.let { 
+                            list.add(PeriodPeakMarker(w.id, it, R.drawable.control_start, "${w.workoutName}: Start", PeriodMarkerType.START)) 
+                        }
+                        w.endLatLng?.let { 
+                            list.add(PeriodPeakMarker(w.id, it, R.drawable.control_stop, "${w.workoutName}: End", PeriodMarkerType.END)) 
+                        }
+                        w.maxDisplacementLatLng?.let { 
+                            list.add(PeriodPeakMarker(w.id, it, R.drawable.ic_distance, "${w.workoutName}: Apex", PeriodMarkerType.DISTANCE)) 
+                        }
+                        w.maxAltitudeLatLng?.let {
+                            list.add(PeriodPeakMarker(w.id, it, R.drawable.ic_altitude, "${w.workoutName}: Max Altitude", PeriodMarkerType.ALTITUDE))
+                        }
+                        list
                     }
-                    w.maxDisplacementLatLng?.let { 
-                        list.add(PeriodPeakMarker(w.id, it, R.drawable.ic_distance, "${w.workoutName}: Apex", PeriodMarkerType.DISTANCE)) 
-                    }
-                    w.maxAltitudeLatLng?.let {
-                        list.add(PeriodPeakMarker(w.id, it, R.drawable.ic_altitude, "${w.workoutName}: Max Altitude", PeriodMarkerType.ALTITUDE))
-                    }
-                    list
                 }
 
                 _mapState.value = PeriodMapState(

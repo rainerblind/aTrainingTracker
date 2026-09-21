@@ -41,6 +41,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -49,7 +51,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import kotlin.text.equals
 
-data class SegmentSummary(
+data class SegmentSummary @JvmOverloads constructor(
     val stravaId: Long,
     val name: String,
     val bSportType: BSportType,
@@ -72,7 +74,8 @@ data class SegmentSummary(
     val minLat: Double? = null,
     val minLng: Double? = null,
     val maxLat: Double? = null,
-    val maxLng: Double? = null
+    val maxLng: Double? = null,
+    val syncedAt: Long = 0L
 )
 
 data class SegmentWithPath(
@@ -133,7 +136,7 @@ class SegmentsRepository private constructor(context: Context) {
 
     // Repository scope for background loading
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
+    private val syncMutex = Mutex()
 
     private val _allSegmentsWithPath = MutableStateFlow(emptyList<SegmentWithPath>())
     val allSegmentsWithPath: StateFlow<List<SegmentWithPath>> = _allSegmentsWithPath
@@ -143,17 +146,43 @@ class SegmentsRepository private constructor(context: Context) {
 
     init {
         if (DEBUG) Log.i(TAG, "init")
+        // Prune expired starred segments on initialization (Section 6.2 compliance)
+        segmentsDb.pruneExpiredSegments(7 * 24 * 60 * 60 * 1000L)
+        refreshSegments()
 
-        // Load segments from DB into memory immediately upon creation
+        // Auto-sync Strava segments if user is connected and cache has no segments
+        if (connectedToStrava) {
+            repositoryScope.launch {
+                val summaries = segmentsDb.getAllSegmentSummaries()
+                if (summaries.isEmpty()) {
+                    syncSegmentsAsync(BSportType.UNKNOWN)
+                }
+            }
+        }
+    }
+
+    /**
+     * Executes manual or periodic TTL pruning of expired cached Strava segments.
+     */
+    fun pruneExpiredSegments(maxAgeMs: Long = 7 * 24 * 60 * 60 * 1000L): Int {
+        val pruned = segmentsDb.pruneExpiredSegments(maxAgeMs)
+        if (pruned > 0) {
+            refreshSegments()
+        }
+        return pruned
+    }
+
+    /**
+     * Reloads segments from the database into [_allSegmentsWithPath], guaranteeing deduplication.
+     */
+    fun refreshSegments() {
         repositoryScope.launch {
             val segmentSummaries = segmentsDb.getAllSegmentSummaries()
-
-            // Load the path of all segments into memory (one by one)
-            segmentSummaries.forEach { segmentSummary ->
+            val loaded = segmentSummaries.distinctBy { it.stravaId }.map { segmentSummary ->
                 val path = segmentsDb.getSegmentPath(segmentSummary.stravaId)
-                _allSegmentsWithPath.value += SegmentWithPath(segmentSummary, path)
+                SegmentWithPath(segmentSummary, path)
             }
-
+            _allSegmentsWithPath.value = loaded
         }
     }
 
@@ -179,7 +208,13 @@ class SegmentsRepository private constructor(context: Context) {
         }
     }
 
-    suspend fun syncStarredSegments(bSportType: BSportType) {
+    /**
+     * Synchronizes starred segments from Strava.
+     * Protected by [syncMutex] to prevent race conditions during concurrent sync triggers (ATT-1078).
+     */
+    suspend fun syncStarredSegments(bSportType: BSportType) = syncMutex.withLock {
+        // Prune expired segments before synchronization (Section 6.2 compliance)
+        segmentsDb.pruneExpiredSegments(7 * 24 * 60 * 60 * 1000L)
         if (bSportType == BSportType.UNKNOWN) {
             syncStarredSegmentsWorker(BSportType.BIKE)
             syncStarredSegmentsWorker(BSportType.RUN)
@@ -187,6 +222,8 @@ class SegmentsRepository private constructor(context: Context) {
         else {
             syncStarredSegmentsWorker(bSportType)
         }
+        val timestamp = java.text.DateFormat.getDateTimeInstance().format(java.util.Date())
+        TrainingApplication.setLastUpdateTimeOfStravaSegments(timestamp)
     }
 
     private suspend fun syncStarredSegmentsWorker(bSportType: BSportType) = withContext(Dispatchers.IO) {
@@ -238,10 +275,25 @@ class SegmentsRepository private constructor(context: Context) {
                 addOrUpdateSegmentOnDb(detailedSegment)
                 newIds.add(segment.id)
 
-                if (!oldIds.contains(segment.id)) {
-                    // get the path and add the SegmentWithPath to the list
+                val existing = _allSegmentsWithPath.value.find { it.summary.stravaId == segment.id }
+                if (existing == null) {
                     val path = fetchAndInsertStream(segment.id) ?: emptyList()
-                    _allSegmentsWithPath.value += SegmentWithPath(detailedSegment.toSummary(), path)
+                    _allSegmentsWithPath.update { currentList ->
+                        if (currentList.none { it.summary.stravaId == segment.id }) {
+                            currentList + SegmentWithPath(detailedSegment.toSummary(), path)
+                        } else {
+                            currentList.map { item ->
+                                if (item.summary.stravaId == segment.id) {
+                                    item.copy(
+                                        summary = detailedSegment.toSummary(),
+                                        path = if (path.isNotEmpty()) path else item.path
+                                    )
+                                } else {
+                                    item
+                                }
+                            }
+                        }
+                    }
                 }
                 else {
                     // Update the item in the list if it exists
@@ -313,6 +365,33 @@ class SegmentsRepository private constructor(context: Context) {
 
     private fun deleteSegment(segmentId: Long) {
         segmentsDb.deleteSegment(segmentId)
+    }
+
+    /**
+     * Updates the personal best (PR) time of a segment in memory.
+     *
+     * Atomically updates the matching [SegmentSummary] in [_allSegmentsWithPath] so all
+     * UI observers (e.g. [SegmentListViewModel], [LiveSegmentsRepository]) react immediately.
+     *
+     * @param stravaSegmentId The Strava ID of the segment.
+     * @param newPrTimeSeconds The new PR time in seconds.
+     */
+    fun updateSegmentPr(stravaSegmentId: Long, newPrTimeSeconds: Int) {
+        if (newPrTimeSeconds <= 0) return
+        val tf = TimeFormatter()
+        _allSegmentsWithPath.update { currentList ->
+            currentList.map { item ->
+                if (item.summary.stravaId == stravaSegmentId) {
+                    val updatedSummary = item.summary.copy(
+                        prTime_raw = newPrTimeSeconds,
+                        prTime = tf.format(newPrTimeSeconds)
+                    )
+                    item.copy(summary = updatedSummary)
+                } else {
+                    item
+                }
+            }
+        }
     }
 
     private suspend fun fetchDetailedSegment(segmentId: Long): StravaSegment? = withContext(Dispatchers.IO) {
@@ -410,6 +489,13 @@ class SegmentsRepository private constructor(context: Context) {
      * Companion Object
      **********************************************************************************************/
 
+    /**
+     * Clears the in-memory cache of segments. Called during Strava data purge (ATT-1078).
+     */
+    fun clearSegmentsCache() {
+        _allSegmentsWithPath.value = emptyList()
+    }
+
     companion object {
         val DEBUG = true
         val TAG = "SegmentsRepository"
@@ -421,6 +507,11 @@ class SegmentsRepository private constructor(context: Context) {
             return instance ?: synchronized(this) {
                 instance ?: SegmentsRepository(context.applicationContext).also { instance = it }
             }
+        }
+
+        @androidx.annotation.VisibleForTesting
+        fun resetForTesting(newInstance: SegmentsRepository? = null) {
+            instance = newInstance
         }
     }
 

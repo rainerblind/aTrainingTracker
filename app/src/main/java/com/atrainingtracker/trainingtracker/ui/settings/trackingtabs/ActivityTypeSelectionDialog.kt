@@ -33,64 +33,50 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
 
+import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+
 @Composable
 fun ActivityTypeSelectionDialog(
     onTypeSelected: (ActivityType) -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    AppBottomSheetContent(
+        title = stringResource(R.string.choose_activity_type),
+        iconPainter = painterResource(id = R.drawable.ic_table_edit),
         onDismissRequest = onDismiss,
-        title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_table_edit),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
-                )
-                Text(
-                    text = stringResource(R.string.choose_activity_type),
-                    style = MaterialTheme.typography.headlineSmall
-                )
-            }
-        },
-        text = {
-            Column(
-                modifier = Modifier
-                    .wrapContentWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                ActivityType.values().forEach { type ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onTypeSelected(type) }
-                            .padding(vertical = 12.dp, horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            painter = painterResource(id = type.logoId),
-                            contentDescription = null,
-                            modifier = Modifier.size(32.dp),
-                            tint = Color.Unspecified
-                        )
-                        Spacer(Modifier.width(16.dp))
-                        Text(
-                            text = stringResource(id = type.titleId),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
+        actions = {
+            AppDialogActions.CancelOnly(onCancel = onDismiss)
+        }
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            ActivityType.values().forEach { type ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onTypeSelected(type)
+                            onDismiss()
+                        }
+                        .padding(vertical = 12.dp, horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(id = type.logoId),
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp),
+                        tint = Color.Unspecified
+                    )
+                    Spacer(Modifier.width(16.dp))
+                    Text(
+                        text = stringResource(id = type.titleId),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.Cancel))
-            }
         }
-    )
+    }
 }

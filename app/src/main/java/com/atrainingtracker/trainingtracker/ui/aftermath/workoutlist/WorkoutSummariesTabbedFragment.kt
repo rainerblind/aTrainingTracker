@@ -196,30 +196,7 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                         contentWindowInsets = WindowInsets(0.dp)
                     ) { paddingValues ->
                         Box(modifier = Modifier.padding(paddingValues)) {
-                            if (selectedWorkoutIdForEdit != null) {
-                                val editViewModel: EditWorkoutViewModel = viewModel(
-                                    key = "edit_workout_$selectedWorkoutIdForEdit",
-                                    factory = EditWorkoutViewModelFactory(
-                                        requireActivity().application,
-                                        selectedWorkoutIdForEdit!!
-                                    )
-                                )
-
-                                EditWorkoutScreen(
-                                    viewModel = editViewModel,
-                                    onBack = {
-                                        selectedWorkoutIdForEdit = null
-                                        WorkoutNavigationEvents.reset()
-                                    }
-                                )
-
-                                // 4. Handle System Back Button
-                                BackHandler {
-                                    selectedWorkoutIdForEdit = null
-                                    WorkoutNavigationEvents.reset()
-                                }
-
-                            } else if (selectedWorkoutForDetails != null) {
+                            if (selectedWorkoutForDetails != null) {
                                 val aftermathUIState by trackOnMapViewModel.uiState.collectAsStateWithLifecycle()
                                 val enabledTrackTypes by trackOnMapViewModel.enabledTrackTypes.collectAsStateWithLifecycle()
                                 TrackOnMapScreen(
@@ -283,6 +260,24 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                                     onUpdateFilterCriteria = { viewModel.updateFilterCriteria(it) },
                                     onClusterClick = { clusterId -> WorkoutNavigationEvents.triggerCluster(clusterId) },
                                     onMarkFinished = { workoutId -> viewModel.markWorkoutFinished(workoutId) }
+                                )
+                            }
+
+                            if (selectedWorkoutIdForEdit != null) {
+                                val editViewModel: EditWorkoutViewModel = viewModel(
+                                    key = "edit_workout_$selectedWorkoutIdForEdit",
+                                    factory = EditWorkoutViewModelFactory(
+                                        requireActivity().application,
+                                        selectedWorkoutIdForEdit!!
+                                    )
+                                )
+
+                                EditWorkoutScreen(
+                                    viewModel = editViewModel,
+                                    onBack = {
+                                        selectedWorkoutIdForEdit = null
+                                        WorkoutNavigationEvents.reset()
+                                    }
                                 )
                             }
                         }

@@ -120,6 +120,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
     /**
      * Finds the best matching WorkoutCluster candidate evaluating against a set of candidate sport types (ATT-773, REQ-SET-064)
      * and optional 3D altitude extrema coordinates (ATT-502, REQ-SET-065).
+     * Lossless candidate evaluation ensures 100% parity with scoreClusters() and prevents false-negative pruning (ATT-1133, REQ-MIG-029).
      */
     fun suggestCluster(
         start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
@@ -128,18 +129,11 @@ class WorkoutClusterEngine private constructor(context: Context) {
         minAltPos: LatLng? = null,
         maxAltPos: LatLng? = null
     ): WorkoutCluster? {
-        val endpointTol = TrainingApplication.getClusterTolEndpoints().toDouble()
-        val latToleranceDegrees = endpointTol / 111000.0
-        val distToleranceMeters = distance * TrainingApplication.getClusterTolDistance().toDouble() * 4.0
+        val allClusters = dbManager.getAllClusters()
+        if (DEBUG) Log.d(TAG, "Evaluating ${allClusters.size} clusters for shape [start=$start, dist=$distance, name=$workoutName, sports=$candidateSportTypes, minAlt=$minAltPos, maxAlt=$maxAltPos]")
 
-        val candidates = dbManager.findCandidates(start.latitude, start.longitude, distance, latToleranceDegrees, distToleranceMeters)
-        if (DEBUG) Log.d(TAG, "Found ${candidates.size} candidates for shape [start=$start, dist=$distance, name=$workoutName, sports=$candidateSportTypes, minAlt=$minAltPos, maxAlt=$maxAltPos]")
-
-        return candidates.map { cluster ->
-            val score = calculateSimilarity(start, end, apex, distance, cluster, workoutName, candidateSportTypes, minAltPos, maxAltPos)
-            cluster to score
-        }.filter { it.second < 1.0 }
-         .minByOrNull { it.second }?.first
+        return scoreClusters(allClusters, start, end, apex, distance, workoutName, candidateSportTypes, minAltPos, maxAltPos)
+            .firstOrNull { it.second < 1.0 }?.first
     }
 
     /**
@@ -343,12 +337,15 @@ class WorkoutClusterEngine private constructor(context: Context) {
         }
 
         val newHitCount = cluster.hitCount - 1
+        val wApex = w.maxDisplacementLatLng ?: w.endLatLng ?: w.startLatLng
         val updated = cluster.copy(
             hitCount = newHitCount,
             startLat = (cluster.startLat * cluster.hitCount - (w.startLatLng?.latitude ?: cluster.startLat)) / newHitCount,
             startLng = (cluster.startLng * cluster.hitCount - (w.startLatLng?.longitude ?: cluster.startLng)) / newHitCount,
             endLat = (cluster.endLat * cluster.hitCount - (w.endLatLng?.latitude ?: cluster.endLat)) / newHitCount,
             endLng = (cluster.endLng * cluster.hitCount - (w.endLatLng?.longitude ?: cluster.endLng)) / newHitCount,
+            maxDispLat = (cluster.maxDispLat * cluster.hitCount - (wApex?.latitude ?: cluster.maxDispLat)) / newHitCount,
+            maxDispLng = (cluster.maxDispLng * cluster.hitCount - (wApex?.longitude ?: cluster.maxDispLng)) / newHitCount,
             refDistance = (cluster.refDistance * cluster.hitCount - w.totalDistance) / newHitCount
         )
 
@@ -462,19 +459,10 @@ class WorkoutClusterEngine private constructor(context: Context) {
         }
         
         val sportId = SportTypeDatabaseManager.getSportTypeId(route.summary.bSportType)
-        val clusterId = learnFromWorkout(
+        return learnFromWorkout(
             start, end, apex, distance, route.summary.name, sportId,
             minLat = minLat, minLng = minLng, maxLat = maxLat, maxLng = maxLng
         )
-
-        // ATT-498: Authoritative route anchors the cluster apex
-        if (clusterId != -1L) {
-            val cluster = dbManager.getClusterById(clusterId)
-            if (cluster != null) {
-                dbManager.updateCluster(cluster.copy(maxDispLat = apex.latitude, maxDispLng = apex.longitude))
-            }
-        }
-        return clusterId
     }
 
     /**
@@ -678,8 +666,13 @@ class WorkoutClusterEngine private constructor(context: Context) {
         val avgSpeed = summariesManager.getDouble(workoutId, WorkoutSummaries.SPEED_AVERAGE_mps) ?: 0.0
         val discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(context)
         val hardwareIdentity = discoveryManager.resolveIdentity(workoutId, currentBSport, avgSpeed)
-        if (!forceIdentity && hardwareIdentity.isHighConfidence) summariesManager.applyInferredIdentity(workoutId, hardwareIdentity)
-        else summariesManager.applyInferredIdentity(workoutId, discoveryManager.inferIdentityFromSport(cluster.probableSportId))
+        if (!forceIdentity && hardwareIdentity.isHighConfidence) {
+            summariesManager.applyInferredIdentity(workoutId, hardwareIdentity)
+        } else if (cluster.probableSportId > 0) {
+            summariesManager.applyInferredIdentity(workoutId, discoveryManager.inferIdentityFromSport(cluster.probableSportId))
+        } else if (hardwareIdentity.sportId > 0) {
+            summariesManager.applyInferredIdentity(workoutId, hardwareIdentity)
+        }
     }
 
     /**

@@ -96,10 +96,10 @@ import com.atrainingtracker.trainingtracker.ui.navigation.setupComposeNavigation
 import com.atrainingtracker.trainingtracker.ui.routes.RoutesFragment
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegmentsFragment
 import com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsDialogFragment
-import com.atrainingtracker.trainingtracker.ui.settings.dropbox.CloudUploadFragment
+import com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialogFragment
 import com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialogFragment
-import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsFragment
-import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaUploadFragment
+import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsDialogFragment
+import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaSettingsDialogFragment
 import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ActivityTypeSelectionHelper
 import com.atrainingtracker.trainingtracker.ui.settings.units.UnitsSettingsDialogFragment
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment
@@ -636,16 +636,7 @@ class MainActivityWithNavigation :
 
         checkPreferences()
 
-        window.decorView.keepScreenOn = TrainingApplication.keepScreenOn()
-
-        if (TrainingApplication.NoUnlocking()) {
-            @Suppress("DEPRECATION")
-            window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
-        }
-
-        if (TrainingApplication.forcePortrait()) {
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        }
+        applyDisplaySettings()
 
         // register receivers
         ContextCompat.registerReceiver(this, mStartTrackingReceiver, mStartTrackingFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
@@ -688,6 +679,24 @@ class MainActivityWithNavigation :
 
         if (TrainingApplication.uploadToTrainingPeaks() && TrainingApplication.getTrainingPeaksRefreshToken() == null) {
             TrainingApplication.setUploadToTrainingPeaks(false)
+        }
+    }
+
+    fun applyDisplaySettings() {
+        window.decorView.keepScreenOn = TrainingApplication.keepScreenOn()
+
+        if (TrainingApplication.NoUnlocking()) {
+            @Suppress("DEPRECATION")
+            window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+        } else {
+            @Suppress("DEPRECATION")
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+        }
+
+        if (TrainingApplication.forcePortrait()) {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        } else {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
 
@@ -836,13 +845,15 @@ class MainActivityWithNavigation :
             }
 
             R.id.drawer_strava -> {
-                mFragment = StravaUploadFragment()
-                tag = StravaUploadFragment::class.java.name
+                mDrawerLayout.closeDrawer(GravityCompat.START)
+                StravaSettingsDialogFragment.newInstance().show(supportFragmentManager, StravaSettingsDialogFragment.TAG)
+                return false
             }
 
             R.id.drawer_dropbox -> {
-                mFragment = CloudUploadFragment()
-                tag = CloudUploadFragment::class.java.name
+                mDrawerLayout.closeDrawer(GravityCompat.START)
+                DropboxSettingsDialogFragment.newInstance().show(supportFragmentManager, DropboxSettingsDialogFragment.TAG)
+                return false
             }
 
             R.id.drawer_export -> {
@@ -880,8 +891,9 @@ class MainActivityWithNavigation :
             }
 
             R.id.drawer_search_settings -> {
-                mFragment = SearchSettingsFragment.newInstance()
-                tag = SearchSettingsFragment.TAG
+                mDrawerLayout.closeDrawer(GravityCompat.START)
+                SearchSettingsDialogFragment.newInstance().show(supportFragmentManager, SearchSettingsDialogFragment.TAG)
+                return false
             }
 
             R.id.drawer_backup_restore -> {
@@ -991,9 +1003,18 @@ class MainActivityWithNavigation :
         var fragment: Fragment? = null
         when (key) {
             "sportTypes" -> fragment = SportTypeListFragment()
-            "cloudUpload" -> fragment = CloudUploadFragment()
-            TrainingApplication.PREFERENCE_SCREEN_STRAVA -> fragment = StravaUploadFragment()
-            "search_settings" -> fragment = SearchSettingsFragment()
+            "cloudUpload" -> {
+                DropboxSettingsDialogFragment.newInstance().show(supportFragmentManager, DropboxSettingsDialogFragment.TAG)
+                return true
+            }
+            TrainingApplication.PREFERENCE_SCREEN_STRAVA -> {
+                StravaSettingsDialogFragment.newInstance().show(supportFragmentManager, StravaSettingsDialogFragment.TAG)
+                return true
+            }
+            "search_settings" -> {
+                SearchSettingsDialogFragment.newInstance().show(supportFragmentManager, SearchSettingsDialogFragment.TAG)
+                return true
+            }
             else -> Log.d(TAG, "WTF: unknown key")
         }
 
@@ -1064,11 +1085,6 @@ class MainActivityWithNavigation :
         }
         TrainingApplication.setResumeFromCrash(false)
         WorkoutSummariesDatabaseManager.getInstance(this).discardOrFinishUnfinishedWorkout()
-
-        val tv = findViewById<TextView>(R.id.tvStart)
-        if (tv != null) {
-            tv.setText(R.string.start_new_workout)
-        }
     }
 
     override fun chooseResume() {
@@ -1079,10 +1095,5 @@ class MainActivityWithNavigation :
         }
         TrainingApplication.setResumeFromCrash(true)
         sendBroadcast(Intent(TrainingApplication.REQUEST_START_TRACKING).setPackage(packageName))
-
-        val tv = findViewById<TextView>(R.id.tvStart)
-        if (tv != null) {
-            tv.setText(R.string.resume_workout)
-        }
     }
 }

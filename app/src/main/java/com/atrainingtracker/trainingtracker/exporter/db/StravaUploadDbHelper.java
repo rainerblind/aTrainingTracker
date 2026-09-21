@@ -236,4 +236,20 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
         }
         return results;
     }
+
+    public int deleteWorkout(String fileBaseName) {
+        if (DEBUG) Log.d(TAG, "deleteWorkout: " + fileBaseName);
+        SQLiteDatabase db = getWritableDatabase();
+        return db.delete(TABLE, WorkoutSummaries.FILE_BASE_NAME + "=?", new String[]{fileBaseName});
+    }
+
+    /**
+     * Purges all Strava upload records, activity JSON, and Strava activity IDs.
+     * Invoked during deauthorization or token revocation (REQ-EXT-009).
+     */
+    public int clearAllStravaData() {
+        if (DEBUG) Log.d(TAG, "clearAllStravaData");
+        SQLiteDatabase db = getWritableDatabase();
+        return db.delete(TABLE, null, null);
+    }
 }

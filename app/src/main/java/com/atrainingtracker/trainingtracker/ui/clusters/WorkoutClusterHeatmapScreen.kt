@@ -33,6 +33,8 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -1011,6 +1013,7 @@ fun WorkoutClusterDetailDashboard(
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditWorkoutClusterIdentityDialog(
     cluster: WorkoutCluster,
@@ -1028,69 +1031,71 @@ fun EditWorkoutClusterIdentityDialog(
         mutableStateOf(sportTypesList.find { it.id == cluster.probableSportId }?.name ?: sportNames.firstOrNull() ?: "") 
     }
 
-    AlertDialog(
+    AppModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.edit_workout_name)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text(stringResource(R.string.name)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                
-                DropdownSelector(
-                    label = stringResource(R.string.Sport),
-                    options = sportNames,
-                    selectedOption = selectedSportName,
-                    onOptionSelected = { selectedSportName = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    stayOpenOn = emptySet()
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
-                        Text(
-                            text = stringResource(R.string.cluster_counter_enabled_label),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = stringResource(R.string.cluster_counter_enabled_description),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = hasCounter,
-                        onCheckedChange = { hasCounter = it }
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { 
+        title = stringResource(R.string.edit_workout_name),
+        icon = Icons.Default.Place,
+        actions = {
+            AppDialogActions.SaveCancel(
+                onSave = { 
                     val sportId = sportTypesList.find { it.name == selectedSportName }?.id ?: cluster.probableSportId
                     onConfirm(name, sportId, hasCounter) 
                 },
-                enabled = name.isNotBlank()
-            ) {
-                Text(stringResource(R.string.save))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
+                onCancel = onDismiss,
+                saveText = stringResource(R.string.save),
+                saveEnabled = name.isNotBlank()
+            )
         }
-    )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text(stringResource(R.string.name)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            DropdownSelector(
+                label = stringResource(R.string.Sport),
+                options = sportNames,
+                selectedOption = selectedSportName,
+                onOptionSelected = { selectedSportName = it },
+                modifier = Modifier.fillMaxWidth(),
+                stayOpenOn = emptySet()
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                    Text(
+                        text = stringResource(R.string.cluster_counter_enabled_label),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = stringResource(R.string.cluster_counter_enabled_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = hasCounter,
+                    onCheckedChange = { hasCounter = it }
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+        }
+    }
 }

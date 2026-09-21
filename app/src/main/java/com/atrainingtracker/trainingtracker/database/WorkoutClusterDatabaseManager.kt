@@ -132,10 +132,14 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         latToleranceDegrees: Double,
         distToleranceMeters: Double
     ): List<WorkoutCluster> {
+        val cosLat = Math.cos(Math.toRadians(startLat)).coerceAtLeast(0.01)
+        val lngToleranceDegrees = latToleranceDegrees / cosLat
         val selection = "${WorkoutClusterContract.COLUMN_START_LAT} BETWEEN ? AND ? AND " +
+                "${WorkoutClusterContract.COLUMN_START_LNG} BETWEEN ? AND ? AND " +
                 "${WorkoutClusterContract.COLUMN_REF_DISTANCE} BETWEEN ? AND ?"
         val args = arrayOf(
             (startLat - latToleranceDegrees).toString(), (startLat + latToleranceDegrees).toString(),
+            (startLng - lngToleranceDegrees).toString(), (startLng + lngToleranceDegrees).toString(),
             (distance - distToleranceMeters).toString(), (distance + distToleranceMeters).toString()
         )
 

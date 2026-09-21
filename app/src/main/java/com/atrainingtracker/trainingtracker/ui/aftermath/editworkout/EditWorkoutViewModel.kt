@@ -288,11 +288,18 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         _sportTypeNames.value = suggestedSports
     }
 
+    private fun isEligibleEquipment(eq: EquipmentData): Boolean {
+        val currentEquipId = workoutData.value?.equipmentId
+        val currentEquipName = workoutData.value?.equipmentName
+        return !eq.isRetired || (currentEquipId != null && currentEquipId > 0 && eq.id == currentEquipId) ||
+                (currentEquipName != null && currentEquipName.isNotBlank() && eq.name == currentEquipName)
+    }
+
     private fun getFilteredLinkedEquipment(sportName: String, bSportType: BSportType): List<String> {
         return discoveryManager.getEquipmentNamesForSport(sportName)
             .filter { name ->
                 val eq = equipmentList.find { it.name == name }
-                eq != null && (bSportType == BSportType.UNKNOWN || eq.sportType == bSportType)
+                eq != null && (bSportType == BSportType.UNKNOWN || eq.sportType == bSportType) && isEligibleEquipment(eq)
             }
     }
 
@@ -302,8 +309,8 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         options.add(noEquipment)
 
         val sportEquipment = when (currentBSportType) {
-            BSportType.BIKE -> equipmentList.filter { it.sportType == BSportType.BIKE }.map { it.name }
-            BSportType.RUN -> equipmentList.filter { it.sportType == BSportType.RUN }.map { it.name }
+            BSportType.BIKE -> equipmentList.filter { it.sportType == BSportType.BIKE && isEligibleEquipment(it) }.map { it.name }
+            BSportType.RUN -> equipmentList.filter { it.sportType == BSportType.RUN && isEligibleEquipment(it) }.map { it.name }
             else -> emptyList()
         }
 
@@ -330,14 +337,14 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     private fun showAllShoes() {
         val options = mutableListOf<String>()
         options.add(noEquipment)
-        options.addAll(equipmentList.filter { it.sportType == BSportType.RUN }.map { it.name })
+        options.addAll(equipmentList.filter { it.sportType == BSportType.RUN && isEligibleEquipment(it) }.map { it.name })
         _equipmentNames.value = options.distinct()
     }
 
     private fun showAllBikes() {
         val options = mutableListOf<String>()
         options.add(noEquipment)
-        options.addAll(equipmentList.filter { it.sportType == BSportType.BIKE }.map { it.name })
+        options.addAll(equipmentList.filter { it.sportType == BSportType.BIKE && isEligibleEquipment(it) }.map { it.name })
         _equipmentNames.value = options.distinct()
     }
 

@@ -10,19 +10,21 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.display
 
+import android.content.DialogInterface
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
-import androidx.fragment.app.DialogFragment
+import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
+import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetDialogFragment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
  * A DialogFragment that hosts the modern Composable DisplaySettingsDialog.
- * This allows triggering the display settings directly from the navigation drawer.
+ * Inherits [AppBottomSheetDialogFragment] to render edge-to-edge transparent system bars without flicker.
  */
-class DisplaySettingsDialogFragment : DialogFragment() {
+class DisplaySettingsDialogFragment : AppBottomSheetDialogFragment() {
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -33,11 +35,19 @@ class DisplaySettingsDialogFragment : DialogFragment() {
             setContent {
                 ATrainingTrackerTheme {
                     DisplaySettingsDialog(
-                        onDismiss = { dismiss() }
+                        onDismiss = { dismiss() },
+                        onSettingsChanged = {
+                            (activity as? MainActivityWithNavigation)?.applyDisplaySettings()
+                        }
                     )
                 }
             }
         }
+    }
+
+    override fun onDismiss(dialog: DialogInterface) {
+        super.onDismiss(dialog)
+        (activity as? MainActivityWithNavigation)?.applyDisplaySettings()
     }
 
     companion object {

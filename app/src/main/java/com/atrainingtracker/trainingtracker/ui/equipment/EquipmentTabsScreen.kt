@@ -292,6 +292,8 @@ fun EquipmentList(
     } else {
         val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
+        val (activeItems, retiredItems) = remember(items) { items.partition { !it.isRetired } }
+
         FastScrollableBox(
             state = scrollState,
             modifier = Modifier.fillMaxSize(),
@@ -311,13 +313,44 @@ fun EquipmentList(
                 ),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(items) { item ->
+                if (activeItems.isNotEmpty() && retiredItems.isNotEmpty()) {
+                    item(key = "header_active") {
+                        Text(
+                            text = stringResource(R.string.equipment_section_active),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp)
+                        )
+                    }
+                }
+
+                items(activeItems, key = { it.id }) { item ->
                     EquipmentItem(
                         item = item,
                         onConfigClick = onConfigClick,
                         onStatsClick = onStatsClick,
                         onDelete = { onDelete(item) }
                     )
+                }
+
+                if (retiredItems.isNotEmpty()) {
+                    item(key = "header_retired") {
+                        Text(
+                            text = stringResource(R.string.equipment_section_retired),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(start = 8.dp, top = 16.dp, bottom = 4.dp)
+                        )
+                    }
+
+                    items(retiredItems, key = { it.id }) { item ->
+                        EquipmentItem(
+                            item = item,
+                            onConfigClick = onConfigClick,
+                            onStatsClick = onStatsClick,
+                            onDelete = { onDelete(item) }
+                        )
+                    }
                 }
             }
         }
@@ -360,11 +393,30 @@ fun EquipmentItem(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = item.name,
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.weight(1f)
-                    )
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = item.name,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+
+                        if (item.isRetired) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.equipment_retired),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
 
                     if (frameDesc.isNotEmpty()) {
                         Text(

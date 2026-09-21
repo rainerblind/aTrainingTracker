@@ -89,11 +89,11 @@ public class TrainingApplication extends Application {
     public static final String SPORT_TYPE_ID = "com.atrainingtracker.trainingapplication.SPORT_TYPE_ID";
     // TODO: also move these Strings to string.xml???
     public static final String SP_DISPLAY_OPTIONS = "pref_display_options";
-    private static final Set<String> DEFAULT_DISPLAY_OPTIONS = new HashSet<>(Arrays.asList(
+    public static final Set<String> DEFAULT_DISPLAY_OPTIONS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "forcePortrait",
             "keepScreenOn",
             "noUnlocking"
-    ));
+    )));
     public static final String SP_UNITS = "listUnits";
 
     // configure search behaviour
@@ -121,6 +121,12 @@ public class TrainingApplication extends Application {
     public static final String SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT = "lastUpdateTimeOfStravaEquipment";
     public static final String UPDATE_STRAVA_ROUTES = "updateStravaRoutes";
     public static final String SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES = "lastUpdateTimeOfStravaRoutes";
+    public static final String UPDATE_STRAVA_SEGMENTS = "updateStravaSegments";
+    public static final String SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS = "lastUpdateTimeOfStravaSegments";
+    public static final String SP_AUTOMATED_STRAVA_SEGMENTS_SYNC = "automated_strava_segments_sync";
+    public static final String SP_STRAVA_SEGMENTS_SYNC_INTERVAL_DAYS = "strava_segments_sync_interval_days";
+    public static final String SP_AUTOMATED_STRAVA_ROUTES_SYNC = "automated_strava_routes_sync";
+    public static final String SP_STRAVA_ROUTES_SYNC_INTERVAL_DAYS = "strava_routes_sync_interval_days";
     public static final String SP_STRAVA_ATHLETE_ID = "stravaAthleteId";
     public static final String PREFERENCE_SCREEN_RUNKEEPER = "psUploadToRunkeeper";
     public static final String SP_UPLOAD_TO_RUNKEEPER = "uploadToRunkeeper";
@@ -428,16 +434,31 @@ public class TrainingApplication extends Application {
     }
 
     // -- Display options
+    @NonNull
+    public static Set<String> getDefaultDisplayOptions() {
+        return DEFAULT_DISPLAY_OPTIONS;
+    }
+
+    @NonNull
+    public static Set<String> getDisplayOptions() {
+        Set<String> options = cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, DEFAULT_DISPLAY_OPTIONS);
+        return options != null ? options : DEFAULT_DISPLAY_OPTIONS;
+    }
+
+    public static void setDisplayOptions(@NonNull Set<String> options) {
+        cSharedPreferences.edit().putStringSet(SP_DISPLAY_OPTIONS, new HashSet<>(options)).apply();
+    }
+
     public static boolean forcePortrait() {
-        return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, DEFAULT_DISPLAY_OPTIONS).contains("forcePortrait");
+        return getDisplayOptions().contains("forcePortrait");
     }
 
     public static boolean keepScreenOn() {
-        return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, DEFAULT_DISPLAY_OPTIONS).contains("keepScreenOn");
+        return getDisplayOptions().contains("keepScreenOn");
     }
 
     public static boolean NoUnlocking() {
-        return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, DEFAULT_DISPLAY_OPTIONS).contains("noUnlocking");
+        return getDisplayOptions().contains("noUnlocking");
     }
 
     @NonNull
@@ -574,10 +595,17 @@ public class TrainingApplication extends Application {
 
     public static void deleteStravaToken() {
         if (DEBUG) Log.i(TAG, "deleteStravaToken");
-        cSharedPreferences.edit().remove(TrainingApplication.SP_STRAVA_TOKEN).apply();
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_STRAVA, false).apply();
-        cSharedPreferences.edit().remove(SP_STRAVA_ATHLETE_ID).apply();
-        cSharedPreferences.edit().putBoolean(SP_STRAVA_DEMO_MODE, false).apply();
+        cSharedPreferences.edit()
+                .remove(SP_STRAVA_TOKEN)
+                .remove(SP_STRAVA_REFRESH_TOKEN)
+                .remove(SP_STRAVA_TOKEN_EXPIRES_AT)
+                .remove(SP_STRAVA_ATHLETE_ID)
+                .putBoolean(SP_UPLOAD_TO_STRAVA, false)
+                .putBoolean(SP_STRAVA_DEMO_MODE, false)
+                .remove(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT)
+                .remove(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES)
+                .remove(SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS)
+                .apply();
         if (DEBUG) Log.i(TAG, "end of deleteStravaToken");
     }
 
@@ -626,6 +654,49 @@ public class TrainingApplication extends Application {
 
     public static void setLastUpdateTimeOfStravaRoutes(String updateTime) {
         cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES, updateTime).apply();
+    }
+
+    public static boolean isAutomatedStravaRoutesSyncEnabled() {
+        return true;
+    }
+
+    public static void setAutomatedStravaRoutesSyncEnabled(boolean enabled) {
+        cSharedPreferences.edit().putBoolean(SP_AUTOMATED_STRAVA_ROUTES_SYNC, enabled).apply();
+    }
+
+    @NonNull
+    public static String getStravaRoutesSyncIntervalDays() {
+        return "1";
+    }
+
+    public static void setStravaRoutesSyncIntervalDays(String intervalDays) {
+        cSharedPreferences.edit().putString(SP_STRAVA_ROUTES_SYNC_INTERVAL_DAYS, intervalDays).apply();
+    }
+
+    @NonNull
+    public static String getLastUpdateTimeOfStravaSegments() {
+        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS, cAppContext.getString(R.string.lastUpdateOfSegmentsNever));
+    }
+
+    public static void setLastUpdateTimeOfStravaSegments(String updateTime) {
+        cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS, updateTime).apply();
+    }
+
+    public static boolean isAutomatedStravaSegmentsSyncEnabled() {
+        return true;
+    }
+
+    public static void setAutomatedStravaSegmentsSyncEnabled(boolean enabled) {
+        cSharedPreferences.edit().putBoolean(SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, enabled).apply();
+    }
+
+    @NonNull
+    public static String getStravaSegmentsSyncIntervalDays() {
+        return "1";
+    }
+
+    public static void setStravaSegmentsSyncIntervalDays(String intervalDays) {
+        cSharedPreferences.edit().putString(SP_STRAVA_SEGMENTS_SYNC_INTERVAL_DAYS, intervalDays).apply();
     }
 
     public static int getStravaAthleteId() {
@@ -900,6 +971,8 @@ public class TrainingApplication extends Application {
         initWorkManager();
         if (sWorkManagerAvailable) {
             com.atrainingtracker.trainingtracker.migration.BackupWorker.Companion.schedule(this);
+            com.atrainingtracker.trainingtracker.segments.StravaSegmentsSyncWorker.Companion.schedule(this);
+            com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorker.Companion.schedule(this);
         } else {
             Log.w(TAG, "Skipping BackupWorker scheduling because WorkManager is unavailable on this device.");
         }

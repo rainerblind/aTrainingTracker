@@ -23,6 +23,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -55,6 +56,7 @@ fun RouteItem(
     onHeaderClick: (Long) -> Unit,
     onToggleSelection: (Long, Boolean) -> Unit,
     onDeleteConfirmed: (Long) -> Unit,
+    onDuplicateAsLocal: (Long) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
@@ -123,6 +125,16 @@ fun RouteItem(
                 expanded = showContextMenu,
                 onDismissRequest = { showContextMenu = false }
             ) {
+                if (summary.source == RouteSource.STRAVA) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.save_as_local_route)) },
+                        onClick = {
+                            showContextMenu = false
+                            onDuplicateAsLocal(summary.id)
+                        },
+                        leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) }
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.delete)) },
                     onClick = {

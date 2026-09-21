@@ -19,6 +19,8 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -28,11 +30,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.tracking.getDisplayName
 
-
+/**
+ * Modernized bottom sheet dialog for configuring a tracking grid sensor field (REQ-UI-149, TST-UI-102).
+ * Allows selecting the sensor type, source device, display text size, and smoothing filter.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditSensorFieldDialog(
     title: String,
@@ -42,91 +49,77 @@ fun EditSensorFieldDialog(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    Dialog(onDismissRequest = onDismissRequest) {
-        Surface(
-            shape = MaterialTheme.shapes.large
+    AppModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        title = title,
+        icon = Icons.Default.Edit,
+        actions = {
+            AppDialogActions.SaveCancel(
+                onSave = {
+                    viewModel.saveChanges()
+                    onDismissRequest()
+                },
+                onCancel = onDismissRequest,
+                saveText = stringResource(R.string.save)
+            )
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
+            // --- Sensor Type Spinner ---
+            Spinner(
+                label = stringResource(R.string.sensor),
+                items = uiState.availableSensorTypesForCurrentActivityType.map { it.getFullName(context) },
+                selectedItem = uiState.selectedSensorType?.getFullName(context) ?: "",
+                onItemSelected = { index ->
+                    viewModel.onSensorTypeChanged(uiState.availableSensorTypesForCurrentActivityType[index])
+                }
+            )
 
-                // --- Sensor Type Spinner ---
+            Spacer(Modifier.height(12.dp))
+
+            // --- Source Device Spinner ---
+            val deviceList = uiState.availableDevices
+            if (deviceList.size == 1 && deviceList[0].first == -1L) {
+                // when there is only the 'best' sensor available, there is no choice.
+            } else {
                 Spinner(
-                    label = stringResource(R.string.sensor),
-                    items = uiState.availableSensorTypesForCurrentActivityType.map { it.getFullName(context) },  //note that this depend on the activity type
-                    selectedItem = uiState.selectedSensorType?.getFullName(context) ?: "",
+                    label = stringResource(R.string.source),
+                    items = deviceList.map { it.second },
+                    selectedItem = deviceList.find { it.first == uiState.selectedDeviceId }?.second ?: stringResource(R.string.bestSensor),
                     onItemSelected = { index ->
-                        viewModel.onSensorTypeChanged(uiState.availableSensorTypesForCurrentActivityType[index])
+                        viewModel.onDeviceChanged(deviceList[index].first, deviceList[index].second)
                     }
                 )
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
+            }
 
-                // --- Source Device Spinner ---
-                val deviceList = uiState.availableDevices
-                if (deviceList.size == 1 && deviceList[0].first == -1L) {  // when there is only the 'best' sensor available, there is no choice.
-                    // Thus, we do not show the source device spinner.
+            // --- View Size Spinner ---
+            Spinner(
+                label = stringResource(R.string.text_size),
+                items = uiState.availableViewSizes.map { it.getDisplayName(context) },
+                selectedItem = uiState.selectedViewSize.getDisplayName(context),
+                onItemSelected = { index ->
+                    viewModel.onViewSizeChanged(uiState.availableViewSizes[index])
                 }
-                else {
-                    Spinner(
-                        label = stringResource(R.string.source),
-                        items = deviceList.map { it.second }, // Names
-                        selectedItem = deviceList.find { it.first == uiState.selectedDeviceId }?.second ?: stringResource(R.string.bestSensor),
-                        onItemSelected = { index ->
-                            viewModel.onDeviceChanged(deviceList[index].first, deviceList[index].second)
-                        }
-                    )
+            )
 
-                    Spacer(Modifier.height(8.dp))
-                }
+            Spacer(Modifier.height(16.dp))
 
-
-                // --- View Size Spinner ---
-                Spinner(
-                    label = stringResource(R.string.text_size),
-                    items = uiState.availableViewSizes.map { it.getDisplayName(context) },
-                    selectedItem = uiState.selectedViewSize.getDisplayName(context),
-                    onItemSelected = { index ->
-                        viewModel.onViewSizeChanged(uiState.availableViewSizes[index])
-                    }
-                )
-
-                Spacer(Modifier.height(16.dp))
-
-                // --- Optionally: Configure Filter Button ---
-                 if (uiState.selectedSensorType?.filteringPossible == true) {
-                    OutlinedButton(
-                        onClick = { viewModel.onConfigureFilterClicked() },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("${stringResource(R.string.filter)}: ${uiState.filterSummary}")
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                // --- Action Buttons (OK/Cancel) ---
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+            // --- Optionally: Configure Filter Button ---
+            if (uiState.selectedSensorType?.filteringPossible == true) {
+                OutlinedButton(
+                    onClick = { viewModel.onConfigureFilterClicked() },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    TextButton(onClick = onDismissRequest) {
-                        Text(stringResource(R.string.Cancel))
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Button(onClick = {
-                        viewModel.saveChanges()
-                        onDismissRequest() // Close dialog after saving
-                    }) {
-                        Text(stringResource(R.string.OK))
-                    }
+                    Text("${stringResource(R.string.filter)}: ${uiState.filterSummary}")
                 }
+                Spacer(Modifier.height(8.dp))
             }
         }
     }

@@ -20,6 +20,8 @@ package com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -29,12 +31,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.filters.FilterType
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
+/**
+ * Modernized bottom sheet dialog for configuring sensor filter smoothing (REQ-UI-149, TST-UI-102).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConfigureFilterDialog(
     viewModel: EditSensorFieldViewModel,
@@ -61,98 +67,90 @@ fun ConfigureFilterDialog(
         uiState.selectedFilterType
     }
 
-    Dialog(onDismissRequest = onDismissRequest) {
-        Surface(shape = MaterialTheme.shapes.large) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = stringResource(R.string.filter_configure_smoothing),
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                    textAlign = TextAlign.Center
-                )
+    AppModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        title = stringResource(R.string.filter_configure_smoothing),
+        icon = Icons.Default.FilterAlt,
+        actions = {
+            AppDialogActions.SaveCancel(
+                onSave = onSave,
+                onCancel = onDismissRequest,
+                saveText = stringResource(R.string.save)
+            )
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp)
+        ) {
+            // Filter Type Spinner
+            FilterTypeSpinner(
+                items = filterTypes.map { it.getDisplayName(context) },
+                selectedItem = uiState.selectedFilterType.getDisplayName(context),
+                onItemSelected = { index ->
+                    viewModel.onFilterTypeChanged(filterTypes[index])
+                }
+            )
 
-                // Filter Type Spinner
-                FilterTypeSpinner(
-                    items = filterTypes.map { it.getDisplayName(context) },
-                    selectedItem = uiState.selectedFilterType.getDisplayName(context),
-                    onItemSelected = { index ->
-                        viewModel.onFilterTypeChanged(filterTypes[index])
-                    }
-                )
+            Spacer(Modifier.height(12.dp))
 
-                Spacer(Modifier.height(8.dp))
-
-                // Constant and Unit inputs (conditionally visible)
-                when (finalFilterType) {
-                    FilterType.MOVING_AVERAGE_TIME, FilterType.MOVING_AVERAGE_NUMBER -> {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            OutlinedTextField(
-                                value = uiState.filterConstant.toInt().toString(),
-                                onValueChange = { textValue ->
-                                    // Parse the text to an Int, then convert to Double for the ViewModel
-                                    val intValue = textValue.filter { it.isDigit() }.toIntOrNull() ?: 1
-                                    viewModel.onFilterConstantChanged(intValue.toDouble())},
-                                label = { Text(stringResource(R.string.filter_value)) },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                modifier = Modifier.weight(1f)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            UnitSpinner(
-                                selectedUnit = uiState.movingAverageUnit,
-                                onUnitSelected = { viewModel.onUnitChanged(it) },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-                    FilterType.EXPONENTIAL_SMOOTHING -> {
+            // Constant and Unit inputs (conditionally visible)
+            when (finalFilterType) {
+                FilterType.MOVING_AVERAGE_TIME, FilterType.MOVING_AVERAGE_NUMBER -> {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
-                            value = uiState.filterConstant.toString(),
+                            value = uiState.filterConstant.toInt().toString(),
                             onValueChange = { textValue ->
-                                // ensure that the filter constant is between 0 and 1.
-                                val parsedValue = textValue.toDoubleOrNull() ?: 0.0
-                                val clampedValue = parsedValue.coerceIn(0.0, 1.0)
-                                viewModel.onFilterConstantChanged(clampedValue)
+                                val intValue = textValue.filter { it.isDigit() }.toIntOrNull() ?: 1
+                                viewModel.onFilterConstantChanged(intValue.toDouble())
                             },
                             label = { Text(stringResource(R.string.filter_value)) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            modifier = Modifier.fillMaxWidth()
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        UnitSpinner(
+                            selectedUnit = uiState.movingAverageUnit,
+                            onUnitSelected = { viewModel.onUnitChanged(it) },
+                            modifier = Modifier.weight(1f)
                         )
                     }
-                    // For INSTANTANEOUS, AVERAGE, MAX_VALUE, nothing is shown
-                    else -> {}
                 }
-
-                Spacer(Modifier.height(16.dp))
-
-                // A text to explain the filter configuration in some detail.
-                val finalConstant = if (uiState.selectedFilterType == FilterType.MOVING_AVERAGE_TIME && uiState.movingAverageUnit == "min") {
-                    uiState.filterConstant * 60
-                } else {
-                    uiState.filterConstant
+                FilterType.EXPONENTIAL_SMOOTHING -> {
+                    OutlinedTextField(
+                        value = uiState.filterConstant.toString(),
+                        onValueChange = { textValue ->
+                            val parsedValue = textValue.toDoubleOrNull() ?: 0.0
+                            val clampedValue = parsedValue.coerceIn(0.0, 1.0)
+                            viewModel.onFilterConstantChanged(clampedValue)
+                        },
+                        label = { Text(stringResource(R.string.filter_value)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
-                Text(
-                    text = finalFilterType.getDetails(context, finalConstant),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(Modifier.height(24.dp))
-
-                // Action Buttons
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismissRequest) { // Simply call the onDismissRequest lambda passed from the Fragment.
-                        Text(stringResource(R.string.Cancel))
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Button(onClick = onSave) {  // Simply call the passed onSave lambda
-                        Text(stringResource(R.string.OK))
-                    }
-                }
+                else -> {}
             }
+
+            Spacer(Modifier.height(16.dp))
+
+            // A text to explain the filter configuration in some detail.
+            val finalConstant = if (uiState.selectedFilterType == FilterType.MOVING_AVERAGE_TIME && uiState.movingAverageUnit == "min") {
+                uiState.filterConstant * 60
+            } else {
+                uiState.filterConstant
+            }
+            Text(
+                text = finalFilterType.getDetails(context, finalConstant),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

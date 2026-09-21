@@ -15,8 +15,10 @@
 
 package com.atrainingtracker.trainingtracker.ui.components.strava
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.WorkspacePremium
@@ -31,6 +33,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
@@ -94,6 +97,14 @@ fun StravaActivitySection(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
+        }
+
+        // --- ATT-912 / REQ-EXP-010: Celebration Banner for new Personal Bests (PR #1 / KOM) ---
+        val newPrEfforts = remember(activity.segmentEfforts) {
+            activity.segmentEfforts.filter { it.prRank == 1 || it.komRank == 1 }
+        }
+        if (newPrEfforts.isNotEmpty()) {
+            SegmentPrCelebrationBanner(newPrEfforts)
         }
 
         // --- Status message if no efforts/segments are available ---
@@ -259,6 +270,82 @@ fun StravaActivitySection(
             height = 16.dp,
             modifier = Modifier.align(Alignment.End).padding(top = 4.dp)
         )
+    }
+}
+
+/**
+ * Renders a prominent celebratory highlight card at the top of the Strava results section
+ * when one or more personal records (PR #1) or course records (KOM) were achieved.
+ */
+@Composable
+internal fun SegmentPrCelebrationBanner(
+    efforts: List<StravaSegmentEffort>,
+    modifier: Modifier = Modifier
+) {
+    val tf = TimeFormatter()
+    val title = if (efforts.size == 1) {
+        stringResource(R.string.strava_new_pr_banner_title_single)
+    } else {
+        stringResource(R.string.strava_new_pr_banner_title_multiple, efforts.size)
+    }
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
+        color = TTColor.Gold.copy(alpha = 0.12f),
+        border = BorderStroke(1.dp, TTColor.Gold.copy(alpha = 0.45f))
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            efforts.forEach { effort ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (effort.komRank == 1) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_crown),
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = TTColor.Gold
+                            )
+                        } else {
+                            Text(text = "🥇", style = MaterialTheme.typography.bodySmall)
+                        }
+                        Text(
+                            text = effort.name,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Text(
+                        text = tf.format(effort.elapsedTimeSec.toLong()),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
     }
 }
 

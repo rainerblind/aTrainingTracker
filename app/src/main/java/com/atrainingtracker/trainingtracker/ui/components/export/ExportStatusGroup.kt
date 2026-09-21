@@ -20,8 +20,12 @@ package com.atrainingtracker.trainingtracker.ui.components.export
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -104,42 +108,48 @@ fun ExportStatusGroup(
     }
 }
 
+/**
+ * Modernized bottom sheet dialog for inspecting export format upload statuses and logs (REQ-UI-149, TST-UI-102).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExportDetailsDialog(
     data: ExportStatusGroupData,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    AppModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = {
-            Text(text = data.groupTitle)
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                data.details.forEach { detail ->
-                    Column {
+        title = data.groupTitle,
+        icon = Icons.Default.Upload,
+        actions = {
+            AppDialogActions.Confirm(onConfirm = onDismiss)
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            data.details.forEach { detail ->
+                Column {
+                    Text(
+                        text = "${detail.formatName}: ${detail.status}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (!detail.answer.isNullOrBlank()) {
                         Text(
-                            text = "${detail.formatName}: ${detail.status}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold
+                            text = detail.answer,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        if (!detail.answer.isNullOrBlank()) {
-                            Text(
-                                text = detail.answer,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = stringResource(R.string.OK))
-            }
+            Spacer(Modifier.height(8.dp))
         }
-    )
+    }
 }
 
 @Composable

@@ -22,6 +22,7 @@ import android.content.Intent
 import android.net.Uri
 import java.text.DateFormat
 import java.util.Date
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -58,6 +59,8 @@ import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialog
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterTuningContent
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterInfoDialog
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import androidx.compose.material.icons.outlined.Info
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
@@ -337,7 +340,7 @@ fun ImportBackupTabsScreen(
             viewModel = viewModel,
             onConfirm = {
                 showTuningDialogForBulk = false
-                viewModel.bulkRecoverLegacyData(context, "tcx")
+                viewModel.bulkRecoverLegacyData(context, "all")
             },
             onDismiss = { showTuningDialogForBulk = false }
         )
@@ -347,7 +350,7 @@ fun ImportBackupTabsScreen(
         PreImportTuningBottomSheet(
             viewModel = viewModel,
             onConfirm = {
-                viewModel.importLegacyFile(context, uri, "tcx")
+                viewModel.importLegacyFile(context, uri, "auto")
                 pendingSingleLegacyUri = null
             },
             onDismiss = { pendingSingleLegacyUri = null }
@@ -369,148 +372,93 @@ fun PreImportTuningBottomSheet(
         ClusterInfoDialog(onDismissRequest = { showInfoDialog = false })
     }
 
-    ModalBottomSheet(
+    AppModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        dragHandle = { BottomSheetDefaults.DragHandle() }
+        title = stringResource(R.string.cluster_tuning_title),
+        headerActions = {
+            IconButton(onClick = { showInfoDialog = true }) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = stringResource(R.string.cluster_info_title),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        actions = {
+            AppDialogActions.SaveCancel(
+                onSave = {
+                    viewModel.saveClusteringTolerances()
+                    onConfirm()
+                },
+                onCancel = onDismiss,
+                saveText = stringResource(R.string.save)
+            )
+        }
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-        ) {
-            // Header Bar: Title, Info button, and Close button
+        Text(
+            text = stringResource(R.string.cluster_tuning_pre_import_desc),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        ClusterTuningContent(
+            endpointTolerance = viewModel.endpointTolerance,
+            onEndpointToleranceChange = { viewModel.endpointTolerance = it },
+            apexTolerance = viewModel.apexTolerance,
+            onApexToleranceChange = { viewModel.apexTolerance = it },
+            distanceTolerance = viewModel.distanceTolerance,
+            onDistanceToleranceChange = { viewModel.distanceTolerance = it },
+            altitudePositionTolerance = viewModel.altitudePositionTolerance,
+            onAltitudePositionToleranceChange = { viewModel.altitudePositionTolerance = it },
+            useSportTypeForClustering = viewModel.useSportTypeForClustering,
+            onUseSportTypeChange = { 
+                viewModel.useSportTypeForClustering = it
+                viewModel.saveClusteringTolerances()
+            },
+            useAltitudePosForClustering = viewModel.useAltitudePosForClustering,
+            onUseAltitudePosChange = { 
+                viewModel.useAltitudePosForClustering = it
+                viewModel.saveClusteringTolerances()
+            },
+            onValueChangeFinished = { viewModel.saveClusteringTolerances() },
+            isDialog = false
+        )
+
+        if (TrainingApplication.uploadToStrava()) {
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 4.dp),
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 24.dp, end = 12.dp, top = 4.dp, bottom = 8.dp),
+                    .clickable {
+                        viewModel.updateUploadToStravaOnImport(!viewModel.uploadToStravaOnImport)
+                    }
+                    .padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = stringResource(R.string.cluster_tuning_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f)
-                )
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { showInfoDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Outlined.Info,
-                            contentDescription = stringResource(R.string.cluster_info_title),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.cancel),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            // Scrollable Content
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f, fill = false)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.cluster_tuning_pre_import_desc),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                ClusterTuningContent(
-                    endpointTolerance = viewModel.endpointTolerance,
-                    onEndpointToleranceChange = { viewModel.endpointTolerance = it },
-                    apexTolerance = viewModel.apexTolerance,
-                    onApexToleranceChange = { viewModel.apexTolerance = it },
-                    distanceTolerance = viewModel.distanceTolerance,
-                    onDistanceToleranceChange = { viewModel.distanceTolerance = it },
-                    altitudePositionTolerance = viewModel.altitudePositionTolerance,
-                    onAltitudePositionToleranceChange = { viewModel.altitudePositionTolerance = it },
-                    useSportTypeForClustering = viewModel.useSportTypeForClustering,
-                    onUseSportTypeChange = { 
-                        viewModel.useSportTypeForClustering = it
-                        viewModel.saveClusteringTolerances()
-                    },
-                    useAltitudePosForClustering = viewModel.useAltitudePosForClustering,
-                    onUseAltitudePosChange = { 
-                        viewModel.useAltitudePosForClustering = it
-                        viewModel.saveClusteringTolerances()
-                    },
-                    onValueChangeFinished = { viewModel.saveClusteringTolerances() },
-                    isDialog = false
-                )
-
-                if (TrainingApplication.uploadToStrava()) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 4.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 16.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.import_upload_to_strava_label),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                viewModel.updateUploadToStravaOnImport(!viewModel.uploadToStravaOnImport)
-                            }
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(end = 16.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.import_upload_to_strava_label),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = stringResource(R.string.import_upload_to_strava_summary),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = viewModel.uploadToStravaOnImport,
-                            onCheckedChange = { viewModel.updateUploadToStravaOnImport(it) }
-                        )
-                    }
+                    Text(
+                        text = stringResource(R.string.import_upload_to_strava_summary),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-            }
-
-            // Action Buttons
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.cancel))
-                }
-                Button(
-                    onClick = {
-                        viewModel.saveClusteringTolerances()
-                        onConfirm()
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.OK))
-                }
+                Switch(
+                    checked = viewModel.uploadToStravaOnImport,
+                    onCheckedChange = { viewModel.updateUploadToStravaOnImport(it) }
+                )
             }
         }
     }
@@ -574,7 +522,17 @@ fun ClusterNamingDialog(
     if (showSelectionDialog) {
         val clusterEngine = remember { WorkoutClusterEngine.getInstance(localContext) }
         val candidatesWithScores = remember(existingClusters, state) {
-            clusterEngine.scoreClusters(existingClusters, state.start, state.end, state.apex, state.distance, workoutSportType = state.bSportType)
+            clusterEngine.scoreClusters(
+                existingClusters,
+                state.start,
+                state.end,
+                state.apex,
+                state.distance,
+                workoutName = state.workoutName,
+                candidateSportTypes = if (state.candidateSportTypes.isNotEmpty()) state.candidateSportTypes else if (state.bSportType != BSportType.UNKNOWN) setOf(state.bSportType) else emptySet(),
+                minAltPos = state.minAltPos,
+                maxAltPos = state.maxAltPos
+            )
         }
 
         WorkoutClusterSelectionDialog(

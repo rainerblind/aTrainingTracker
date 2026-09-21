@@ -21,14 +21,9 @@
 
     <!-- Standard stuff -->
     <string name="OK">OK</string>
-    <string name="do_not_show_again">não mostrar novamente</string>
     <string name="Cancel">Cancelar</string>
-    <string name="searching_for">procurando por</string>
     <string name="searching_for_device_format">procurando por %1$s</string>
-    <string name="default_device_name">algum dispositivo ANT+</string>
     <string name="waiting">aguardando</string>
-    <string name="pairing_ANT">Emparelhamento ANT+</string>
-    <string name="pairing_bluetooth">Emparelhamento Bluetooth LE</string>
     <string name="searching">procurando</string>
     <string name="research">Pesquisar</string>
     <string name="Start">Iniciar</string>
@@ -55,18 +50,14 @@
     <string name="deleteOldWorkouts">excluir treinos antigos</string>
     <string name="deleteWorkoutsThatAreOlderThanDays">excluir treinos com mais de … dias</string>
     <string name="really_delete_old_workouts_format">Deseja realmente excluir todos os treinos com mais de %1$d dias?</string>
-    <string name="delete_sensor">excluir</string>
     <string name="really_delete_workout">Deseja realmente excluir este treino?</string>
     <string name="really_delete_pebble_view_format">Deseja realmente excluir a visualização Pebble "%1$s"?</string>
     <string name="really_delete_view_format">Deseja realmente excluir a visualização de treino "%1$s"?</string>
     <string name="deleting_please_wait">Excluindo treino …\npor favor aguarde</string>
     <string name="deleting_workout">Excluindo: %1$s…</string>
-    <string name="calculating_extrema_values">Calculando valores mín, méd e máx…</string>
     <string name="calculating_extrema_value_for">calculando %1$s de %2$s</string>
-    <string name="calculating_max_away_point">calculando ponto mais distante</string>
     <string name="initializing">initializing</string>
     <string name="show_HW_details">mostrar detalhes do HW</string>
-    <string name="show_google_maps_licence">Info legal do Google Maps</string>
     <string name="play_services_not_installed">Google Play services não instalado.</string>
     <string name="Preferences">Preferências</string>
     <string name="start_tracking">Iniciar treino</string>
@@ -81,8 +72,6 @@
     <string name="SD_card">Cartão SD</string>
     <string name="File">Arquivo</string>
     <string name="Community">Comunidade</string>
-    <string name="TrainingPeaks_login_title">Login no TrainingPeaks</string>
-    <string name="TrainingPeaks_login_message">Para o TrainingPeaks, precisamos do seu usuário e senha</string>
     <string name="unknown_manufacturer">Desconhecido</string>
     <string name="unknown_last_seen_date">ainda não visto</string>
     <string name="next">próximo</string>
@@ -92,8 +81,6 @@
     <string name="number_of_fields">Número de campos:</string>
     <string name="Lap_NR">Volta %1$d</string>
     <string name="build_in">embutido</string>
-    <string name="no_user_name">sem usuário</string>
-    <string name="no_password">sem senha</string>
     <string name="add_sensor">adicionar sensor</string>
 
     <string name="commute">trajeto trabalho</string>
@@ -103,9 +90,6 @@
 
     <string name="guess_commute_and_trainer">adivinhar trajeto e rolo</string>
 
-    <string name="install_pebble_watchapp_title">Instalar App Pebble</string>
-    <string name="install_pebble_watchapp_text">Para usar esta opção, você deve instalar o correspondente App Pebble.</string>
-    <string name="install_pebble_watchapp_now">OK, instalar agora</string>
     <string name="pebble_build_in">App Pebble padrão</string>
     <string name="pebble_a_training_tracker_watchapp">App a Training Tracker</string>
 
@@ -272,19 +256,7 @@
     <string name="bike_power__invert_power_balance_values">Inverter (esq/dir)</string>
 
     <!-- Labels -->
-    <string name="PrefsActivityLabel">Preferências</string>
-    <string name="UpdateWorkoutActivityLabel">Atualizar treino</string>
-    <string name="TrackOnMapActivityLabel">Treino</string>
-    <string name="ExportDetailsActivityLabel">Detalhes da exportação</string>
-    <string name="TrackingFragmentConfigListActivityLabel">Editar visualizações</string>
-    <string name="TrackingFragmentConfigActivityLabel">Editar visualização</string>
-    <string name="PebbleConfigListActivityLabel">Editar vistas Pebble</string>
     <string name="PebbleConfigActivityLabel">Editar vista Pebble</string>
-    <string name="AltitudeCorrectionListActivityLabel">Correção de altitude</string>
-    <string name="DeviceChoiceActivityLabel">Emparelhamento</string>
-    <string name="PairingActivityLabel">Emparelhamento</string>
-    <string name="EditDeviceActivityLabel">Editar dispositivo</string>
-    <string name="LegalInfoLabel">Info legal do Google Maps</string>
 
     <!--  For Preferences Activity -->
     <string name="prefsUserTitle">Usuário</string>
@@ -341,6 +313,14 @@
     <string name="lastUpdateOfEquipmentNever">nunca atualizado</string>
     <string name="updateStravaRoutes">Atualizar rotas Strava</string>
     <string name="lastUpdateOfRoutesNever">nunca atualizado</string>
+    <string name="updateStravaSegments">Atualizar segmentos Strava</string>
+    <string name="lastUpdateOfSegmentsNever">nunca atualizado</string>
+    <string name="automated_strava_segments_sync">Sincronização automática de segmentos</string>
+    <string name="automated_strava_segments_sync_summary">Obter regularmente segmentos com estrela do Strava</string>
+    <string name="strava_segments_sync_interval">Intervalo de sincronização</string>
+    <string name="automated_strava_routes_sync">Sincronização automática de rotas</string>
+    <string name="automated_strava_routes_sync_summary">Obter regularmente rotas do Strava</string>
+    <string name="strava_routes_sync_interval">Intervalo de sincronização</string>
 
     <string name="getting_equipment_from_strava">buscando material Strava…\naguarde</string>
     <string name="got_shoe">sapatilhas Strava recebidas\nrecebido: %1$s</string>
@@ -365,11 +345,7 @@
     <string name="unpairing">desemparelhando</string>
 
     <!-- altitude_correction_dialog -->
-    <string name="LocationNameHint">nome do local</string>
-    <string name="AltitudeHint">altitude</string>
 
-    <string name="correct_altitude_title">Corrigir altitude</string>
-    <string name="correct_altitude_message">Indique a altitude e o nome do local atual</string>
 
     <!-- update_workout -->
     <string name="ExportName">Nome exportação:</string>
@@ -379,7 +355,6 @@
     <string name="Method">Método:</string>
     <string name="MethodHint">editar método</string>
     <string name="Description">Descrição:</string>
-    <string name="DescriptionHint">editar descrição</string>
     <string name="StartTime">Hora de início:</string>
     <string name="TotalTime">Tempo total:</string>
     <string name="ActiveTime">Tempo ativo:</string>
@@ -390,8 +365,6 @@
     <string name="mean">méd</string>
     <string name="max">máx</string>
     <string name="SensorTypes">Sensores:</string>
-    <string name="buttonSaveWorkoutText">Guardar e exportar</string>
-    <string name="buttonDeleteWorkoutText">Excluir</string>
 
     <!-- export_details -->
     <string name="csvWrite">exportar para CSV</string>
@@ -523,7 +496,6 @@
     <string name="prefsStartSearchWhenAppStartsTitle">App inicia</string>
     <string name="prefsStartSearchWhenTrackingStartsTitle">Treino inicia</string>
     <string name="prefsStartSearchWhenResumeFromPausedTitle">Retoma após pausa</string>
-    <string name="prefsStartSearchWhenNewLapTitle">Nova volta</string>
     <string name="prefsStartSearchWhenUserChangesSportTitle">Mudar desporto</string>
     <string name="prefs_search_behavior_title">Comportamento de busca</string>
     <string name="prefsChangeSportWhenDeviceGetsLostTitle">Mudar tipo atividade</string>
@@ -532,12 +504,6 @@
     <string name="prefsSearchOnlyForSportSpecificDevicesTitle">Busca específica desporto</string>
     <string name="prefsSearchOnlyForSportSpecificDevicesSummary">Apenas sensores do desporto</string>
 
-    <string name="startSearchWhenAppStarts_short">app inicia</string>
-    <string name="startSearchWhenTrackingStarts_short">treino inicia</string>
-    <string name="startSearchWhenResumeFromPaused_short">retoma</string>
-    <string name="startSearchWhenNewLap_short">nova volta</string>
-    <string name="startSearchWhenUserChangesSport_short">desporto muda</string>
-    <string name="startSearchOnlyManually">apenas manual</string>
 
 
     <string name="show_all_sport_types">+ todos desportos +</string>
@@ -582,32 +548,17 @@
     <string name="send_email_format">Enviar e-mail com arquivo %1$s para %2$s.</string>
     <string name="send_email_format_plural">Enviar e-mail com arquivos %1$s para %2$s.</string>
     <string name="ready_to_send_email">Pronto para envio por e-mail.</string>
-    <string name="title_request_dropbox_token">Acesso Dropbox</string>
-    <string name="message_request_dropbox_token">Deseja carregar treinos para Dropbox?\n(Nova API: autorização necessária.)</string>
 
     <string name="smartphone">Telemóvel</string>
-    <string name="no_sensor_available">sem sensores</string>
     <string name="bestSensor">melhor</string>
 
     <string name="units_seconds_long">segundos</string>
     <string name="units_minutes_long">minutos</string>
-    <string name="configSensor">Sensor:</string>
-    <string name="configSource">Origem:</string>
-    <string name="configSmoothing">Suavização:</string>
-    <string name="configSize">Tamanho:</string>
     <string name="privacy_policy">Política de Privacidade</string>
     <string name="notification_channel_name__tracking">Treino</string>
     <string name="notification_channel_description__tracking">Notificações durante o treino</string>
     <string name="notification_channel_name__export">Exportação</string>
     <string name="notification_channel_description__export">Notificações durante export</string>
-    <string name="config_tracking__full_screen">Ecrã inteiro</string>
-    <string name="config_tracking_night_day__system_setting">Ajuste sistema</string>
-    <string name="config_tracking_night_day__day">Dia (claro)</string>
-    <string name="conffig_tracking_night_day__night">Noite (escuro)</string>
-    <string name="config_tracking__Display">Ecrã</string>
-    <string name="config_tracking__Map">Mapa</string>
-    <string name="config_tracking__Lap">Volta</string>
-    <string name="config_tracking__day_or_night">Dia ou noite</string>
     <string name="config_tracking__show_map">Mapa</string>
     <string name="config_tracking__showLiveSegments">Live Segments</string>
     <string name="config_tracking__showLapButton">Botão Volta</string>
@@ -726,7 +677,6 @@
 
     <string name="export_notification__detail__no_results">❓ Nenhum resultado.</string>
 
-    <string name="export_status__header_title">Estado da exportação</string>
 
     <string name="export_status__waiting">Aguardando</string>
     <string name="export_status__processing">Em curso</string>
@@ -746,13 +696,11 @@
     <string name="edit_workout_name">editar nome treino</string>
 
     <!-- workout summary description-->
-    <string name="workout_summary__description_header">Descrição</string>
 
     <!-- Edit workout description -->
     <string name="hint_workout_description">descrição</string>
     <string name="hint_workout_goal">objetivo</string>
     <string name="hint_workout_method">método</string>
-    <string name="title_edit_description">Editar descrição</string>
 
     <!-- workout details -->
     <string name="total_time_format">(total: %1$s)</string>
@@ -767,18 +715,12 @@
 
     <!-- sport type list / edit sport type -->
     <string name="you_can_not_delete_this_sport_type">Não pode excluir este desporto</string>
-    <string name="add_sport_type">adicionar desporto</string>
     <string name="edit_sport_type">Editar Desporto</string>
-    <string name="sport_type_name">Nome desporto</string>
     <string name="basic_sport_type">desporto base</string>
-    <string name="OnlineCommunities">Comunidades online</string>
     <string name="ExportFiles">Exportação arquivos</string>
-    <string name="min_avg_speed">vel méd mín:</string>
-    <string name="max_avg_speed">vel méd máx:</string>
     <string name="mapping_format_strava">Strava: %1$s</string>
     <string name="mapping_format_tcx">TCX: %1$s</string>
     <string name="mapping_format_gc">GC: %1$s</string>
-    <string name="item_is_fixed_and_cannot_be_deleted">Desporto fixo, não editável.</string>
 
     <!-- drawer -->
     <string name="drawer__training">Treino</string>
@@ -819,6 +761,9 @@
     <string name="equipment_sport_types">Desportos:</string>
     <string name="equipment_linked_sport_types">Desportos ligados</string>
     <string name="equipment_no_sports_linked">Nenhum</string>
+    <string name="equipment_retired">Desativado</string>
+    <string name="equipment_section_active">Equipamento ativo</string>
+    <string name="equipment_section_retired">Equipamento desativado</string>
 
     <!-- statistics -->
     <string name="stats_total">Total</string>
@@ -911,6 +856,8 @@
     <string name="route_saved_failed">Erro salvamento.</string>
     <string name="strava_sync_success">Rotas Strava sincronizadas.</string>
     <string name="strava_sync_failed">Erro sincronização Strava.</string>
+    <string name="save_as_local_route">Salvar como rota local</string>
+    <string name="route_saved_as_local">Rota salva como rota GPX local</string>
     <string name="route_source_workout">Treino</string>
     <string name="sort">Ordenar</string>
     <string name="routes_source_label">Origem: %1$s</string>
@@ -957,6 +904,8 @@
     <string name="strava_show_all_best_efforts_format">▼ Mostrar todos os %1$d melhores tempos (+%2$d mais)</string>
     <string name="strava_show_less_best_efforts_format">▲ Mostrar menos (%1$d)</string>
     <string name="strava_show_less_best_efforts">▲ Mostrar menos</string>
+    <string name="strava_new_pr_banner_title_single">Novo recorde pessoal!</string>
+    <string name="strava_new_pr_banner_title_multiple">%1$d novos recordes pessoais!</string>
 
     <string name="strava_connected_status">Conectado ao Strava</string>
     <string name="strava_disconnected_status">Não conectado ao Strava</string>
@@ -965,6 +914,9 @@
     <string name="dropbox_disconnect">Desconectar do Dropbox</string>
     <string name="dropbox_connect">Conectar ao Dropbox</string>
     <string name="strava_disconnect">Desconectar do Strava</string>
+    <string name="strava_disconnect_dialog_title">Desconectar do Strava?</string>
+    <string name="strava_disconnect_dialog_message">A desconexão excluirá todos os dados sincronizados do Strava deste dispositivo:\n\n• Segmentos com estrela e tempos\n• Rotas do Strava\n• Vínculos de equipamentos com o Strava\n• Histórico de envio ao Strava de treinos anteriores\n\nOs seus treinos gravados (resumos, rotas de GPS, dados de sensores) não serão excluídos.</string>
+    <string name="strava_disconnect_dialog_confirm">Desconectar</string>
     <string name="strava_overall_rank_description">Rank global #%1$d</string>
     <string name="no_upload">- Sem carregamento -</string>
     <string name="source_device">Fonte</string>
@@ -1079,8 +1031,6 @@
     <string name="no_periods_available_hint">Registe treinos para ver resumos de períodos</string>
     <string name="really_delete_format">Deseja realmente excluir "%1$s"?</string>
     <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/master/privacy.md</string>
-    <string name="LocationNameText">Casa</string>
-    <string name="LocationAltitudeText">123 m</string>
     <string name="latLongEquals">lat=%1$f, long=%2$f</string>
     <string name="LocationsActivityLabel">Localizações</string>
     <string name="getting_start_locations">Procurando locais de partida.</string>
@@ -1153,7 +1103,19 @@
     <string name="filter_trainer">Interior / Rolo</string>
     <string name="filter_has_gps">Com rota GPS</string>
     <string name="filter_min_distance_format">&gt; %1$s km</string>
+    <string name="filter_max_distance_format">&lt; %1$s km</string>
+    <string name="filter_distance_interval_format">%1$s - %2$s km</string>
     <string name="filter_min_duration_format">&gt; %1$s min</string>
+    <string name="filter_max_duration_format">&lt; %1$s min</string>
+    <string name="filter_duration_interval_format">%1$s - %2$s min</string>
+    <string name="filter_date_from">De</string>
+    <string name="filter_date_to">Até</string>
+    <string name="filter_select_date">Selecionar data</string>
+    <string name="filter_date_range">Intervalo de datas</string>
+    <string name="filter_min_label">Mín.</string>
+    <string name="filter_max_label">Máx.</string>
+    <string name="filter_section_distance">Distância</string>
+    <string name="filter_section_duration">Duração</string>
     <string name="filter_no_matching_workouts">Nenhum treino corresponde aos filtros ativos</string>
     <!-- Route Filtering (ATT-736) -->
     <string name="filter_routes_title">Filtrar percursos</string>

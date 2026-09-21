@@ -29,8 +29,11 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="bottomSheetStyle">@style/Widget.aTrainingTracker.BottomSheet.Modal</item>
     </style>
+
     <style name="Widget.aTrainingTracker.BottomSheet.Modal" parent="Widget.MaterialComponents.BottomSheet.Modal">
-        <item name="shapeAppearanceOverlay">?shapeAppearanceLargeComponent</item>
+        <item name="paddingBottomSystemWindowInsets">false</item>
+        <item name="android:background">@android:color/transparent</item>
+        <item name="backgroundTint">@android:color/transparent</item>
     </style>
 
     <style name="Widget.aTrainingTracker.Toolbar.ToolBarStyle" parent="Widget.AppCompat.Toolbar">

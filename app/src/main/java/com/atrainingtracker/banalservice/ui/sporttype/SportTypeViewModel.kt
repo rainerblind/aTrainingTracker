@@ -64,7 +64,7 @@ class SportTypeViewModel(application: Application) : AndroidViewModel(applicatio
     val sportTypes: StateFlow<List<SportTypeItem>> = _sportTypes.asStateFlow()
 
     fun availableEquipment(bSportType: BSportType): List<EquipmentDbHelper.EquipmentData> {
-        return dbEquipmentHelper.getEquipmentItems(bSportType)
+        return dbEquipmentHelper.getEquipmentItems(bSportType, true)
     }
 
     init {

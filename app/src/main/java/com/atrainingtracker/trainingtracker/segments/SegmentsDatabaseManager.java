@@ -44,8 +44,10 @@ import com.google.maps.android.PolyUtil;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public class SegmentsDatabaseManager {
     private static final String TAG = SegmentsDatabaseManager.class.getName();
@@ -72,6 +74,11 @@ public class SegmentsDatabaseManager {
             }
         }
         return cInstance;
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public static void resetForTesting(SegmentsDatabaseManager newInstance) {
+        cInstance = newInstance;
     }
 
     /**
@@ -206,6 +213,7 @@ public class SegmentsDatabaseManager {
 
     public List<SegmentSummary> getAllSegmentSummaries() {
         List<SegmentSummary> summaries = new ArrayList<>();
+        Set<Long> seenIds = new HashSet<>();
         SQLiteDatabase db = getDatabase();
         Cursor cursor = db.query(Segments.TABLE_STARRED_SEGMENTS, null, null, null, null, null, null);
 
@@ -231,10 +239,14 @@ public class SegmentsDatabaseManager {
         int min_lng_index = cursor.getColumnIndexOrThrow(Segments.BOUND_MIN_LNG);
         int max_lat_index = cursor.getColumnIndexOrThrow(Segments.BOUND_MAX_LAT);
         int max_lng_index = cursor.getColumnIndexOrThrow(Segments.BOUND_MAX_LNG);
+        int synced_at_index = cursor.getColumnIndex(Segments.SYNCED_AT);
 
 
         while (cursor.moveToNext()) {
             long segmentId = cursor.getLong(strava_id_index);
+            if (!seenIds.add(segmentId)) {
+                continue; // Skip duplicate records
+            }
             String activityType = cursor.getString(activity_type_index);
             BSportType sportType = sportTypeMgr.getBSportTypeFromStravaName(activityType);
             double distance = cursor.getDouble(dist_index);
@@ -256,6 +268,7 @@ public class SegmentsDatabaseManager {
             Double minLng = cursor.isNull(min_lng_index) ? null : cursor.getDouble(min_lng_index);
             Double maxLat = cursor.isNull(max_lat_index) ? null : cursor.getDouble(max_lat_index);
             Double maxLng = cursor.isNull(max_lng_index) ? null : cursor.getDouble(max_lng_index);
+            long syncedAt = (synced_at_index != -1 && !cursor.isNull(synced_at_index)) ? cursor.getLong(synced_at_index) : 0L;
 
             summaries.add(new SegmentSummary(
                             segmentId,
@@ -279,7 +292,8 @@ public class SegmentsDatabaseManager {
                             minLat,
                             minLng,
                             maxLat,
-                            maxLng
+                            maxLng,
+                            syncedAt
                     )
             );
         }
@@ -313,6 +327,7 @@ public class SegmentsDatabaseManager {
         cv.put(Segments.STATE, segment.getState());
         cv.put(Segments.COUNTRY, segment.getCountry());
         cv.put(Segments.PR_TIME, segment.getPrTime());
+        cv.put(Segments.SYNCED_AT, System.currentTimeMillis());
 
         // Extract the polyline from the nested Map object
         if (segment.getMap() != null) {
@@ -348,16 +363,35 @@ public class SegmentsDatabaseManager {
         }
 
 
-        // Insert or Replace logic
+        // Insert or Replace logic (ATT-1078)
         db.beginTransaction();
         try {
             // Check if segment already exists to handle updates vs inserts
-            int rowsAffected = db.update(Segments.TABLE_STARRED_SEGMENTS, cv,
+            List<Long> existingRowIds = new ArrayList<>();
+            try (Cursor c = db.query(Segments.TABLE_STARRED_SEGMENTS,
+                    new String[]{Segments.C_ID},
                     Segments.STRAVA_SEGMENT_ID + "=?",
-                    new String[]{String.valueOf(segment.getId())});
+                    new String[]{String.valueOf(segment.getId())},
+                    null, null, Segments.C_ID + " ASC")) {
+                while (c.moveToNext()) {
+                    existingRowIds.add(c.getLong(0));
+                }
+            }
 
-            if (rowsAffected == 0) {
+            if (existingRowIds.isEmpty()) {
                 db.insert(Segments.TABLE_STARRED_SEGMENTS, null, cv);
+            } else {
+                long primaryId = existingRowIds.get(0);
+                db.update(Segments.TABLE_STARRED_SEGMENTS, cv,
+                        Segments.C_ID + "=?",
+                        new String[]{String.valueOf(primaryId)});
+
+                // Prune any legacy duplicate rows
+                for (int i = 1; i < existingRowIds.size(); i++) {
+                    db.delete(Segments.TABLE_STARRED_SEGMENTS,
+                            Segments.C_ID + "=?",
+                            new String[]{String.valueOf(existingRowIds.get(i))});
+                }
             }
 
             db.setTransactionSuccessful();
@@ -365,6 +399,54 @@ public class SegmentsDatabaseManager {
             Log.e(TAG, "Error inserting/updating segment: " + segment.getId(), e);
         } finally {
             db.endTransaction();
+        }
+    }
+
+    /**
+     * Updates the personal best (PR) time for a starred segment if the new time is faster
+     * than the currently recorded PR time, or if no PR time was previously recorded.
+     *
+     * @param stravaSegmentId The Strava ID of the segment.
+     * @param newPrTimeSeconds The newly achieved elapsed time in seconds.
+     * @return {@code true} if the segment exists and its PR time was updated; {@code false} otherwise.
+     */
+    public boolean updateSegmentPrTime(long stravaSegmentId, int newPrTimeSeconds) {
+        if (newPrTimeSeconds <= 0) {
+            return false;
+        }
+        SQLiteDatabase db = getDatabase();
+        Cursor cursor = db.query(
+                Segments.TABLE_STARRED_SEGMENTS,
+                new String[]{Segments.PR_TIME},
+                Segments.STRAVA_SEGMENT_ID + "=?",
+                new String[]{String.valueOf(stravaSegmentId)},
+                null, null, null
+        );
+        if (cursor == null) {
+            return false;
+        }
+        try {
+            if (!cursor.moveToFirst()) {
+                return false; // Segment not in StarredSegmentsTable
+            }
+            int currentPrTime = cursor.getInt(cursor.getColumnIndexOrThrow(Segments.PR_TIME));
+            if (currentPrTime <= 0 || newPrTimeSeconds < currentPrTime) {
+                ContentValues cv = new ContentValues();
+                cv.put(Segments.PR_TIME, newPrTimeSeconds);
+                int rows = db.update(
+                        Segments.TABLE_STARRED_SEGMENTS,
+                        cv,
+                        Segments.STRAVA_SEGMENT_ID + "=?",
+                        new String[]{String.valueOf(stravaSegmentId)}
+                );
+                if (DEBUG) {
+                    Log.i(TAG, "updateSegmentPrTime: Updated segment " + stravaSegmentId + " PR from " + currentPrTime + "s to " + newPrTimeSeconds + "s");
+                }
+                return rows > 0;
+            }
+            return false;
+        } finally {
+            cursor.close();
         }
     }
 
@@ -391,6 +473,65 @@ public class SegmentsDatabaseManager {
     }
 
     /**
+     * Prunes cached Strava segments and their coordinate streams that have not been refreshed
+     * within [maxAgeMs] (default 7 days).
+     *
+     * @param maxAgeMs Maximum age in milliseconds (e.g. 7 * 24 * 60 * 60 * 1000L).
+     * @return Number of pruned segments.
+     */
+    public int pruneExpiredSegments(long maxAgeMs) {
+        long cutoff = System.currentTimeMillis() - maxAgeMs;
+        SQLiteDatabase db = getDatabase();
+        List<Long> expiredIds = new ArrayList<>();
+        String where = Segments.SYNCED_AT + " > 0 AND " + Segments.SYNCED_AT + " < ?";
+        try (Cursor cursor = db.query(Segments.TABLE_STARRED_SEGMENTS,
+                new String[]{Segments.STRAVA_SEGMENT_ID},
+                where,
+                new String[]{String.valueOf(cutoff)},
+                null, null, null)) {
+            int idIdx = cursor.getColumnIndexOrThrow(Segments.STRAVA_SEGMENT_ID);
+            while (cursor.moveToNext()) {
+                expiredIds.add(cursor.getLong(idIdx));
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying expired segments", e);
+        }
+        for (Long id : expiredIds) {
+            deleteSegment(id);
+        }
+        return expiredIds.size();
+    }
+
+    /**
+     * Prunes local Strava segments whose Strava ID is not in [activeStravaIds]
+     * (e.g. unstarred or deleted on Strava).
+     *
+     * @param activeStravaIds Set of active Strava segment IDs from remote sync.
+     * @return Number of pruned segments.
+     */
+    public int pruneOrphanSegments(Set<Long> activeStravaIds) {
+        SQLiteDatabase db = getDatabase();
+        List<Long> orphanIds = new ArrayList<>();
+        try (Cursor cursor = db.query(Segments.TABLE_STARRED_SEGMENTS,
+                new String[]{Segments.STRAVA_SEGMENT_ID},
+                null, null, null, null, null)) {
+            int idIdx = cursor.getColumnIndexOrThrow(Segments.STRAVA_SEGMENT_ID);
+            while (cursor.moveToNext()) {
+                long id = cursor.getLong(idIdx);
+                if (!activeStravaIds.contains(id)) {
+                    orphanIds.add(id);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying orphan segments", e);
+        }
+        for (Long id : orphanIds) {
+            deleteSegment(id);
+        }
+        return orphanIds.size();
+    }
+
+    /**
      * Inserts the segment stream data into the database.
      * Handles the 1-second interpolation logic if time data is present.
      *
@@ -406,6 +547,10 @@ public class SegmentsDatabaseManager {
         SQLiteDatabase db = getDatabase();
         db.beginTransaction();
         try {
+            // Clear existing stream points for this segment before inserting new ones (ATT-1078)
+            db.delete(Segments.TABLE_SEGMENT_STREAMS,
+                    Segments.STRAVA_SEGMENT_ID + "=?",
+                    new String[]{String.valueOf(segmentId)});
             if (haveTime) {
                 // Strava time starts at 0, but we need the first prevTime to be -1
                 // to ensure the first point is inserted correctly via the delta logic
@@ -504,6 +649,7 @@ public class SegmentsDatabaseManager {
         public static final String BOUND_MIN_LNG = "BoundMinLng"; // added in Version 7
         public static final String BOUND_MAX_LAT = "BoundMaxLat"; // added in Version 7
         public static final String BOUND_MAX_LNG = "BoundMaxLng"; // added in Version 7
+        public static final String SYNCED_AT = "synced_at"; // added in Version 8 (ATT-1177)
 
 
         // for TABLE_SEGMENT_STREAMS
@@ -523,9 +669,10 @@ public class SegmentsDatabaseManager {
         // public static final int DB_VERSION = 2; // updated 19.8.2016
         // public static final int DB_VERSION = 3; // updated 26.9.2016
         // public static final int DB_VERSION = 5; // updated 11.01.2026: add PR_TIME
-        public static final int DB_VERSION = 7; // updated 25.07.2026: add spatial bounds (ATT-352)
+        // public static final int DB_VERSION = 7; // updated 25.07.2026: add spatial bounds (ATT-352)
+        public static final int DB_VERSION = 9; // updated to ensure valid synced_at timestamp (ATT-1177)
 
-        protected static final String CREATE_TABLE_STARRED_SEGMENTS_V7 = "create table " + Segments.TABLE_STARRED_SEGMENTS + " ("
+        protected static final String CREATE_TABLE_STARRED_SEGMENTS_V8 = "create table " + Segments.TABLE_STARRED_SEGMENTS + " ("
                 + Segments.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + Segments.STRAVA_SEGMENT_ID + " int, "
                 + Segments.RESOURCE_STATE + " int, "
@@ -553,7 +700,8 @@ public class SegmentsDatabaseManager {
                 + Segments.BOUND_MIN_LAT + " real, "    // introduced in Version 7
                 + Segments.BOUND_MIN_LNG + " real, "    // introduced in Version 7
                 + Segments.BOUND_MAX_LAT + " real, "    // introduced in Version 7
-                + Segments.BOUND_MAX_LNG + " real)";   // introduced in Version 7
+                + Segments.BOUND_MAX_LNG + " real, "    // introduced in Version 7
+                + Segments.SYNCED_AT + " integer default 0)"; // introduced in Version 8 (ATT-1177)
 
 
         protected static final String CREATE_TABLE_SEGMENT_STREAMS_V1 = "create table " + Segments.TABLE_SEGMENT_STREAMS + " ("
@@ -577,8 +725,8 @@ public class SegmentsDatabaseManager {
         @Override
         public void onCreate(@NonNull SQLiteDatabase db) {
 
-            db.execSQL(CREATE_TABLE_STARRED_SEGMENTS_V7);
-            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_STARRED_SEGMENTS_V7);
+            db.execSQL(CREATE_TABLE_STARRED_SEGMENTS_V8);
+            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_STARRED_SEGMENTS_V8);
 
             db.execSQL(CREATE_TABLE_SEGMENT_STREAMS_V1);
             if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_SEGMENT_STREAMS_V1);
@@ -603,6 +751,25 @@ public class SegmentsDatabaseManager {
                 db.execSQL("ALTER TABLE " + Segments.TABLE_STARRED_SEGMENTS + " ADD COLUMN " + Segments.BOUND_MAX_LNG + " real");
 
                 migrateSegmentBounds(db);
+            }
+
+            if (oldVersion < 8) {
+                Log.i(TAG, "Upgrading Segments DB to Version 8 (Adding synced_at timestamp)");
+                try {
+                    db.execSQL("ALTER TABLE " + Segments.TABLE_STARRED_SEGMENTS + " ADD COLUMN " + Segments.SYNCED_AT + " integer default 0");
+                } catch (Exception e) {
+                    Log.w(TAG, "synced_at column might already exist: " + e.getMessage());
+                }
+            }
+
+            if (oldVersion < 9) {
+                Log.i(TAG, "Upgrading Segments DB to Version 9 (Ensuring valid synced_at timestamp for starred segments)");
+                try {
+                    long now = System.currentTimeMillis();
+                    db.execSQL("UPDATE " + Segments.TABLE_STARRED_SEGMENTS + " SET " + Segments.SYNCED_AT + " = " + now + " WHERE (" + Segments.SYNCED_AT + " IS NULL OR " + Segments.SYNCED_AT + " <= 0)");
+                } catch (Exception e) {
+                    Log.w(TAG, "Error updating synced_at timestamp: " + e.getMessage());
+                }
             }
         }
 
