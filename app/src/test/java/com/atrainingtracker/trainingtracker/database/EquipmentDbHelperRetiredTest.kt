@@ -6,6 +6,7 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.testutil.MockCursorFactory
 import io.mockk.*
 import org.junit.After
 import org.junit.Assert.*
@@ -15,6 +16,7 @@ import org.junit.Test
 /**
  * Unit tests verifying EquipmentDbHelper retirement handling, SQLite queries,
  * updateEquipment, setEquipmentRetired, and isEquipmentRetired (REQ-UI-158, TST-UI-111, ATT-1118).
+ * Demonstrates MockCursorFactory integration (REQ-PRO-023, TST-PRO-016).
  */
 class EquipmentDbHelperRetiredTest {
 
@@ -155,11 +157,10 @@ class EquipmentDbHelperRetiredTest {
 
     @Test
     fun testIsEquipmentRetired_returnsTrueWhenColumnIsOne() {
-        val mockCursor = mockk<Cursor>(relaxed = true)
-        every { mockCursor.moveToFirst() } returns true
-        every { mockCursor.getColumnIndex(EquipmentDbHelper.RETIRED) } returns 0
-        every { mockCursor.getInt(0) } returns 1
-        every { mockCursor.close() } returns Unit
+        val mockCursor = MockCursorFactory.create(
+            columns = listOf(EquipmentDbHelper.RETIRED),
+            rows = listOf(listOf(1))
+        )
 
         val testHelper = object : EquipmentDbHelper(mockContext) {
             override fun getReadableDatabase(): SQLiteDatabase = mockDb
@@ -176,15 +177,15 @@ class EquipmentDbHelperRetiredTest {
         } returns mockCursor
 
         assertTrue(testHelper.isEquipmentRetired(15L))
+        assertTrue(mockCursor.isClosed)
     }
 
     @Test
     fun testIsEquipmentRetired_returnsFalseWhenColumnIsZero() {
-        val mockCursor = mockk<Cursor>(relaxed = true)
-        every { mockCursor.moveToFirst() } returns true
-        every { mockCursor.getColumnIndex(EquipmentDbHelper.RETIRED) } returns 0
-        every { mockCursor.getInt(0) } returns 0
-        every { mockCursor.close() } returns Unit
+        val mockCursor = MockCursorFactory.create(
+            columns = listOf(EquipmentDbHelper.RETIRED),
+            rows = listOf(listOf(0))
+        )
 
         val testHelper = object : EquipmentDbHelper(mockContext) {
             override fun getReadableDatabase(): SQLiteDatabase = mockDb
@@ -201,13 +202,15 @@ class EquipmentDbHelperRetiredTest {
         } returns mockCursor
 
         assertFalse(testHelper.isEquipmentRetired(16L))
+        assertTrue(mockCursor.isClosed)
     }
 
     @Test
     fun testGetEquipmentItems_activeOnly_appendsRetiredClause() {
-        val mockCursor = mockk<Cursor>(relaxed = true)
-        every { mockCursor.moveToFirst() } returns false
-        every { mockCursor.close() } returns Unit
+        val mockCursor = MockCursorFactory.create(
+            columns = listOf("any_col"),
+            rows = emptyList()
+        )
 
         val testHelper = object : EquipmentDbHelper(mockContext) {
             override fun getReadableDatabase(): SQLiteDatabase = mockDb
@@ -227,5 +230,6 @@ class EquipmentDbHelperRetiredTest {
         testHelper.getEquipmentItems(BSportType.BIKE, true)
 
         assertTrue(capturedSelection.captured.contains("Retired IS NULL OR Retired=0"))
+        assertTrue(mockCursor.isClosed)
     }
 }

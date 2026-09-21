@@ -250,5 +250,63 @@ class TestLivingDocumentationAndGovernance(unittest.TestCase):
         self.assertIn("JIRA_COORDINATOR_USER", content)
 
 
+class TestJiraCliTooling(unittest.TestCase):
+    """Verifies REQ-PRO-023 / TST-PRO-016: Sprint auto-attachment and fixVersion propagation."""
+
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config")
+    @patch("jira_util.add_to_active_sprint")
+    def test_create_subtask_with_sprint_and_fixversion(self, mock_add_sprint, mock_config, mock_request):
+        mock_config.return_value = {"JIRA_URL": "https://jira.test"}
+        mock_request.return_value = {"key": "ATT-9999"}
+
+        key = jira_util.create_subtask(
+            "ATT-1000",
+            "Subtask Summary",
+            "Subtask Description",
+            role="coordinator",
+            add_to_sprint=True,
+            fix_version="V4.9.38"
+        )
+
+        self.assertEqual(key, "ATT-9999")
+        # Verify payload sent to Jira REST API
+        mock_request.assert_called_once()
+        args, kwargs = mock_request.call_args
+        payload = kwargs.get("payload", {})
+        fields = payload.get("fields", {})
+        self.assertEqual(fields.get("parent"), {"key": "ATT-1000"})
+        self.assertEqual(fields.get("fixVersions"), [{"name": "V4.9.38"}])
+        # Verify add_to_active_sprint was invoked
+        mock_add_sprint.assert_called_once_with("ATT-9999", role="coordinator")
+
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config")
+    @patch("jira_util.add_to_active_sprint")
+    def test_create_issue_with_sprint_and_fixversion(self, mock_add_sprint, mock_config, mock_request):
+        mock_config.return_value = {"JIRA_URL": "https://jira.test"}
+        mock_request.return_value = {"key": "ATT-8888"}
+
+        key = jira_util.create_issue(
+            "Issue Summary",
+            "Issue Description",
+            parent_key="ATT-500",
+            role="agent1",
+            add_to_sprint=True,
+            fix_version="V4.9.38"
+        )
+
+        self.assertEqual(key, "ATT-8888")
+        # Verify payload sent to Jira REST API
+        mock_request.assert_called_once()
+        args, kwargs = mock_request.call_args
+        payload = kwargs.get("payload", {})
+        fields = payload.get("fields", {})
+        self.assertEqual(fields.get("parent"), {"key": "ATT-500"})
+        self.assertEqual(fields.get("fixVersions"), [{"name": "V4.9.38"}])
+        # Verify add_to_active_sprint was invoked
+        mock_add_sprint.assert_called_once_with("ATT-8888", role="agent1")
+
+
 if __name__ == "__main__":
     unittest.main()
