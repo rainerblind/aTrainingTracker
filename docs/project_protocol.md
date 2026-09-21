@@ -299,6 +299,13 @@ To guarantee test reliability, prevent state pollution, and avoid subtle cross-s
 
 To prevent side-effect regressions, "destroyed features", and architectural drift, all development workflows MUST pass through five explicit, AI-driven quality gates embedded in the `Zu erledigen -> In Bearbeitung -> In Überprüfung -> Freigabe (Human) -> Erledigt` sub-task lifecycle across all ticket types (Bug, Improvement, Feature):
 
+*   **Cognitive & Architectural Separation (The Independent Reviewer Tool)**:
+    To eliminate self-review confirmation bias when pairing with single-session AI models, independent audits for Gates 1 through 5 can be conducted out-of-process using the multi-model review runner:
+    ```bash
+    python3 tools/review_agent.py audit <Subtask-Key> [--provider gemini|claude]
+    ```
+    The runner reads credentials from `.env.gemini` / `.env.claude`, automatically detects the active gate from the sub-task summary, gathers repository and git diff context, evaluates the deliverable against the gate checklist using a decoupled LLM provider, posts the formatted audit comment to Jira prefixed with `[Automated comment by AI Agent (External Auditor)]`, and transitions the sub-task to `Freigabe (Human)`. It runs strictly on the Python 3 standard library with zero pip dependencies.
+
 ### Gate 1: Analysis & Problem Domain Review (Auditor Review on `[Analysis]` Sub-task)
 *   **Applicability**: All ticket types.
 *   **Timing**: Executed immediately after Stage 1 Analysis is completed by Agent 1, **BEFORE** defining tests, requirements, plans, or modifying any source files.
