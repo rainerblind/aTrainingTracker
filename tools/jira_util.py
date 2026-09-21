@@ -421,23 +421,30 @@ def update_issue_description(issue_key, description, role="agent1"):
     jira_request(url, method="PUT", payload=payload, role=role)
     print(f"Description updated for {issue_key}.")
 
-def create_subtask(parent_key, summary, description, role="coordinator"):
+def create_subtask(parent_key, summary, description, role="coordinator", add_to_sprint=False, fix_version=None):
     config = get_config()
     url = f"{config['JIRA_URL']}/rest/api/2/issue"
-    payload = {
-        "fields": {
-            "project": {"key": "ATT"},
-            "parent": {"key": parent_key},
-            "summary": summary,
-            "description": description,
-            "issuetype": {"id": "10002"}  # Subtask ID
-        }
+    fields = {
+        "project": {"key": "ATT"},
+        "parent": {"key": parent_key},
+        "summary": summary,
+        "description": description,
+        "issuetype": {"id": "10002"}  # Subtask ID
     }
-    data = jira_request(url, method="POST", payload=payload, role=role)
-    print(f"Sub-task {data['key']} created for parent {parent_key}.")
-    return data['key']
+    if fix_version:
+        fields["fixVersions"] = [{"name": fix_version}]
 
-def create_issue(summary, description, issuetype_id="10008", parent_key=None, role="agent1"):
+    payload = {"fields": fields}
+    data = jira_request(url, method="POST", payload=payload, role=role)
+    new_key = data['key']
+    print(f"Sub-task {new_key} created for parent {parent_key}.")
+
+    if add_to_sprint:
+        add_to_active_sprint(new_key, role=role)
+
+    return new_key
+
+def create_issue(summary, description, issuetype_id="10008", parent_key=None, role="agent1", add_to_sprint=False, fix_version=None):
     config = get_config()
     url = f"{config['JIRA_URL']}/rest/api/2/issue"
     fields = {
@@ -448,11 +455,18 @@ def create_issue(summary, description, issuetype_id="10008", parent_key=None, ro
     }
     if parent_key:
         fields["parent"] = {"key": parent_key}
+    if fix_version:
+        fields["fixVersions"] = [{"name": fix_version}]
 
     payload = {"fields": fields}
     data = jira_request(url, method="POST", payload=payload, role=role)
-    print(f"Issue {data['key']} created.")
-    return data['key']
+    new_key = data['key']
+    print(f"Issue {new_key} created.")
+
+    if add_to_sprint:
+        add_to_active_sprint(new_key, role=role)
+
+    return new_key
 
 def add_to_active_sprint(issue_key, role="agent1"):
     config = get_config()
@@ -472,7 +486,7 @@ if __name__ == "__main__":
     active_role, remaining_argv = parse_role_from_args(sys.argv[1:])
 
     if len(remaining_argv) < 1:
-        print("Usage: jira_util.py [--as agent1|agent2|coordinator] [list | show KEY | status KEY | check-gate KEY | versions | set-fixversion KEY VERSION | move KEY todo|in_progress|in_review|freigabe | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY] | add-to-sprint KEY]", file=sys.stderr)
+        print("Usage: jira_util.py [--as agent1|agent2|coordinator] [list | show KEY | status KEY | check-gate KEY | versions | set-fixversion KEY VERSION | move KEY todo|in_progress|in_review|freigabe | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC [--add-to-sprint] [--fixversion=VERSION] | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY] [--add-to-sprint] [--fixversion=VERSION] | add-to-sprint KEY]", file=sys.stderr)
         sys.exit(1)
 
     cmd = remaining_argv[0]
@@ -500,16 +514,54 @@ if __name__ == "__main__":
         search_issues(remaining_argv[1], role=active_role)
     elif cmd == "update-desc" and len(remaining_argv) == 3:
         update_issue_description(remaining_argv[1], remaining_argv[2], role=active_role)
-    elif cmd == "create-subtask" and len(remaining_argv) == 4:
+    elif cmd == "create-subtask" and len(remaining_argv) >= 4:
+        # Parse optional flags
+        add_sprint = False
+        fix_ver = None
+        filtered_args = []
+        for arg in remaining_argv[1:]:
+            if arg == "--add-to-sprint":
+                add_sprint = True
+            elif arg.startswith("--fixversion="):
+                fix_ver = arg.split("=", 1)[1]
+            elif arg == "--fixversion" or arg.startswith("--fix-version"):
+                # Handle next arg if separated
+                pass
+            else:
+                filtered_args.append(arg)
+
+        if len(filtered_args) < 3:
+            print("Usage: create-subtask PARENT_KEY SUMMARY DESC [--add-to-sprint] [--fixversion=VERSION]", file=sys.stderr)
+            sys.exit(1)
+
+        parent_k = filtered_args[0]
+        summ = filtered_args[1]
+        desc = filtered_args[2]
+
         # Default subtask creation role to coordinator unless explicitly overridden
         subtask_role = active_role if active_role != "agent1" or "--as" in sys.argv or any(a.startswith("--as=") for a in sys.argv) or os.environ.get("JIRA_ACTOR") else "coordinator"
-        create_subtask(remaining_argv[1], remaining_argv[2], remaining_argv[3], role=subtask_role)
+        create_subtask(parent_k, summ, desc, role=subtask_role, add_to_sprint=add_sprint, fix_version=fix_ver)
     elif cmd == "create-issue" and len(remaining_argv) >= 3:
-        summary = remaining_argv[1]
-        desc = remaining_argv[2]
-        type_id = remaining_argv[3] if len(remaining_argv) >= 4 else "10008"
-        parent = remaining_argv[4] if len(remaining_argv) == 5 else None
-        create_issue(summary, desc, type_id, parent, role=active_role)
+        add_sprint = False
+        fix_ver = None
+        filtered_args = []
+        for arg in remaining_argv[1:]:
+            if arg == "--add-to-sprint":
+                add_sprint = True
+            elif arg.startswith("--fixversion="):
+                fix_ver = arg.split("=", 1)[1]
+            else:
+                filtered_args.append(arg)
+
+        if len(filtered_args) < 2:
+            print("Usage: create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY] [--add-to-sprint] [--fixversion=VERSION]", file=sys.stderr)
+            sys.exit(1)
+
+        summary = filtered_args[0]
+        desc = filtered_args[1]
+        type_id = filtered_args[2] if len(filtered_args) >= 3 else "10008"
+        parent = filtered_args[3] if len(filtered_args) >= 4 else None
+        create_issue(summary, desc, type_id, parent, role=active_role, add_to_sprint=add_sprint, fix_version=fix_ver)
     elif cmd == "add-to-sprint" and len(remaining_argv) == 2:
         add_to_active_sprint(remaining_argv[1], role=active_role)
     else:

@@ -270,14 +270,14 @@ def detect_gate(summary):
         if summary.startswith(gate_info["prefix"]):
             return gate_key, gate_info
     lower_summary = summary.lower()
-    if "analysis" in lower_summary:
+    if "[impl]" in lower_summary or "implementation" in lower_summary or lower_summary.startswith("impl"):
+        return "Gate 4", GATE_DEFINITIONS["Gate 4"]
+    elif "analysis" in lower_summary:
         return "Gate 1", GATE_DEFINITIONS["Gate 1"]
     elif "test-spec" in lower_summary or "test spec" in lower_summary:
         return "Gate 2", GATE_DEFINITIONS["Gate 2"]
     elif "impl-plan" in lower_summary or "plan" in lower_summary:
         return "Gate 3", GATE_DEFINITIONS["Gate 3"]
-    elif "implementation" in lower_summary:
-        return "Gate 4", GATE_DEFINITIONS["Gate 4"]
     elif "test" in lower_summary:
         return "Gate 5", GATE_DEFINITIONS["Gate 5"]
     return None, None
