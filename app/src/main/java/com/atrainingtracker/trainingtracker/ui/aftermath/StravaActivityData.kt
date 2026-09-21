@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath
 
+import android.util.Log
+import org.json.JSONArray
 import org.json.JSONObject
 
 data class StravaActivity(
@@ -72,12 +74,68 @@ val StravaBestEffort.effectiveDistanceMeters: Double
         }
     }
 
+/**
+ * Serializes the domain [StravaActivity] to a minimized JSON payload adhering to schema version 2 (REQ-EXP-013).
+ * Transient social and third-party fields are completely omitted. Optional fields that are null,
+ * non-positive, or false are omitted rather than serialized as explicit nulls.
+ */
+fun StravaActivity.toJson(version: Int = 2): String {
+    val root = JSONObject()
+    root.put("v", version)
+    if (id != null && id > 0) {
+        root.put("id", id)
+    }
+
+    if (segmentEfforts.isNotEmpty()) {
+        val segArray = JSONArray()
+        for (effort in segmentEfforts) {
+            val effortObj = JSONObject()
+            effortObj.put("name", effort.name)
+            effortObj.put("elapsed_time", effort.elapsedTimeSec)
+            effort.prRank?.let { effortObj.put("pr_rank", it) }
+            effort.komRank?.let { effortObj.put("kom_rank", it) }
+            if (effort.isStarred) {
+                effortObj.put("starred", true)
+            }
+            effort.segmentId?.let { if (it > 0) effortObj.put("segment_id", it) }
+            segArray.put(effortObj)
+        }
+        root.put("segment_efforts", segArray)
+    }
+
+    if (bestEfforts.isNotEmpty()) {
+        val bestArray = JSONArray()
+        for (effort in bestEfforts) {
+            val effortObj = JSONObject()
+            effortObj.put("name", effort.name)
+            effortObj.put("elapsed_time", effort.elapsedTimeSec)
+            effort.prRank?.let { effortObj.put("pr_rank", it) }
+            if (effort.distanceMeters > 0.0) {
+                effortObj.put("distance", effort.distanceMeters)
+            }
+            bestArray.put(effortObj)
+        }
+        root.put("best_efforts", bestArray)
+    }
+
+    return root.toString()
+}
+
 object StravaActivityParser {
+    private const val TAG = "StravaActivityParser"
+
+    /**
+     * Parses either a legacy full Strava API response or a minimized version 2 payload
+     * into a domain [StravaActivity] (REQ-EXP-013).
+     *
+     * Returns null safely on empty, blank, malformed, or truncated JSON without throwing exceptions.
+     */
+    @JvmStatic
     fun parse(jsonString: String?): StravaActivity? {
         if (jsonString.isNullOrBlank()) return null
         return try {
             val json = JSONObject(jsonString)
-            val id = if (json.has("id")) json.getLong("id") else null
+            val id = if (json.has("id") && !json.isNull("id")) json.getLong("id") else null
             
             val segmentEfforts = mutableListOf<StravaSegmentEffort>()
             json.optJSONArray("segment_efforts")?.let { array ->
@@ -103,7 +161,7 @@ object StravaActivityParser {
                     var prRank = if (item.has("pr_rank") && !item.isNull("pr_rank")) item.optInt("pr_rank") else null
                     var komRank = if (item.has("kom_rank") && !item.isNull("kom_rank")) item.optInt("kom_rank") else null
 
-                    // Check achievements array if pr_rank or kom_rank is omitted
+                    // Check achievements array if pr_rank or kom_rank is omitted (legacy v1 payloads)
                     item.optJSONArray("achievements")?.let { achievementsArray ->
                         for (a in 0 until achievementsArray.length()) {
                             val ach = achievementsArray.optJSONObject(a) ?: continue
@@ -165,7 +223,28 @@ object StravaActivityParser {
 
             StravaActivity(id, segmentEfforts, bestEfforts)
         } catch (e: Exception) {
+            Log.w(TAG, "Failed to parse Strava activity JSON, treating as null", e)
             null
         }
+    }
+
+    /**
+     * Minimizes a raw or parsed Strava activity JSON string to the athlete-achievement schema (REQ-EXP-013).
+     * Discards all transient third-party social data, photos, maps, kudos, comments, and profile information.
+     */
+    @JvmStatic
+    fun minimize(rawActivityJson: String?): String? {
+        if (rawActivityJson.isNullOrBlank()) return null
+        val activity = parse(rawActivityJson) ?: return null
+        return activity.toJson(version = 2)
+    }
+
+    /**
+     * Minimizes a [JSONObject] representation of a Strava activity response to the schema v2 string.
+     */
+    @JvmStatic
+    fun minimize(activityJson: JSONObject?): String? {
+        if (activityJson == null) return null
+        return minimize(activityJson.toString())
     }
 }

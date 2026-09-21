@@ -15,13 +15,22 @@
 
 package com.atrainingtracker.trainingtracker.ui.components.strava
 
+import com.atrainingtracker.trainingtracker.ui.aftermath.StravaActivity
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaActivityParser
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaBestEffort
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaSegmentEffort
 import com.atrainingtracker.trainingtracker.ui.aftermath.effectiveDistanceMeters
 import com.atrainingtracker.trainingtracker.ui.aftermath.isHighlight
 import com.atrainingtracker.trainingtracker.ui.aftermath.isMileEffort
+import com.atrainingtracker.trainingtracker.ui.aftermath.toJson
+import org.json.JSONObject
+import android.util.Log
+import io.mockk.every
+import io.mockk.mockkStatic
+import io.mockk.unmockkAll
+import org.junit.After
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 
 /**
@@ -29,6 +38,18 @@ import org.junit.Test
  * highlight classification, and accordion collapse eligibility (REQ-UI-131, TST-UI-084).
  */
 class StravaActivitySectionTest {
+
+    @Before
+    fun setUp() {
+        mockkStatic(Log::class)
+        every { Log.w(any<String>(), any<String>()) } returns 0
+        every { Log.w(any<String>(), any<String>(), any<Throwable>()) } returns 0
+    }
+
+    @After
+    fun tearDown() {
+        unmockkAll()
+    }
 
     @Test
     fun testParserExtractsStarredAndSegmentIdFromNestedSegment() {
@@ -549,5 +570,243 @@ class StravaActivitySectionTest {
 
         val celebrationEfforts = efforts.filter { it.prRank == 1 || it.komRank == 1 }
         assertTrue("Celebration banner efforts must be empty when no PR #1 or KOM #1", celebrationEfforts.isEmpty())
+    }
+
+    // =========================================================================================
+    // REQ-EXP-013 / TST-EXP-010: Minimized Strava Activity Feedback Persistence Tests
+    // =========================================================================================
+
+    @Test
+    fun testMinimizeStripsSocialAndProfileFieldsPreservingAchievements() {
+        val rawJson = """
+            {
+              "id": 987654321,
+              "resource_state": 3,
+              "name": "Morning Ride with Friends",
+              "distance": 45000.0,
+              "moving_time": 5400,
+              "elapsed_time": 5600,
+              "total_elevation_gain": 600.0,
+              "type": "Ride",
+              "sport_type": "Ride",
+              "workout_type": 10,
+              "athlete": {
+                "id": 123456,
+                "resource_state": 1,
+                "firstname": "John",
+                "lastname": "Doe",
+                "profile_medium": "https://strava.com/avatar/medium.jpg",
+                "profile": "https://strava.com/avatar/large.jpg",
+                "city": "San Francisco",
+                "state": "CA",
+                "country": "US"
+              },
+              "kudos_count": 42,
+              "comment_count": 7,
+              "athlete_count": 1,
+              "photo_count": 3,
+              "photos": {
+                "primary": { "id": null, "unique_id": "xyz", "urls": { "100": "https://img.jpg" } },
+                "count": 1
+              },
+              "map": {
+                "id": "a987654321",
+                "polyline": "k_e_F...encoded_points...",
+                "resource_state": 3,
+                "summary_polyline": "k_e_F..."
+              },
+              "gear_id": "b12345",
+              "gear": { "id": "b12345", "name": "Tarmac SL7", "distance": 1200000 },
+              "segment_efforts": [
+                {
+                  "id": 11111,
+                  "name": "Stelvio Pass",
+                  "elapsed_time": 4200,
+                  "pr_rank": 1,
+                  "kom_rank": 1,
+                  "starred": true,
+                  "segment_id": 88888,
+                  "segment": {
+                    "id": 88888,
+                    "name": "Stelvio Pass",
+                    "climb_category": 5,
+                    "city": "Bormio"
+                  }
+                },
+                {
+                  "id": 22222,
+                  "name": "Valley Flat",
+                  "elapsed_time": 600,
+                  "pr_rank": null,
+                  "kom_rank": null,
+                  "starred": false,
+                  "segment_id": 99999
+                }
+              ],
+              "best_efforts": [
+                {
+                  "id": 33333,
+                  "name": "10k",
+                  "elapsed_time": 2400,
+                  "pr_rank": 2,
+                  "distance": 10000.0
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val minimized = StravaActivityParser.minimize(rawJson)
+        assertNotNull(minimized)
+
+        val json = org.json.JSONObject(minimized!!)
+        assertEquals(2, json.getInt("v"))
+        assertEquals(987654321L, json.getLong("id"))
+
+        // Assert social, profile, photo, map, and gear fields are 100% stripped
+        assertFalse(json.has("athlete"))
+        assertFalse(json.has("kudos_count"))
+        assertFalse(json.has("comment_count"))
+        assertFalse(json.has("athlete_count"))
+        assertFalse(json.has("photo_count"))
+        assertFalse(json.has("photos"))
+        assertFalse(json.has("map"))
+        assertFalse(json.has("gear_id"))
+        assertFalse(json.has("gear"))
+        assertFalse(json.has("moving_time"))
+
+        // Assert segment efforts preserved with minimized fields
+        val segArray = json.getJSONArray("segment_efforts")
+        assertEquals(2, segArray.length())
+
+        val seg1 = segArray.getJSONObject(0)
+        assertEquals("Stelvio Pass", seg1.getString("name"))
+        assertEquals(4200, seg1.getInt("elapsed_time"))
+        assertEquals(1, seg1.getInt("pr_rank"))
+        assertEquals(1, seg1.getInt("kom_rank"))
+        assertTrue(seg1.getBoolean("starred"))
+        assertEquals(88888L, seg1.getLong("segment_id"))
+        assertFalse(seg1.has("segment")) // nested segment object discarded
+
+        val seg2 = segArray.getJSONObject(1)
+        assertEquals("Valley Flat", seg2.getString("name"))
+        assertEquals(600, seg2.getInt("elapsed_time"))
+        assertFalse("pr_rank must be omitted when null", seg2.has("pr_rank"))
+        assertFalse("kom_rank must be omitted when null", seg2.has("kom_rank"))
+        assertFalse("starred must be omitted when false", seg2.has("starred"))
+
+        // Assert best efforts preserved
+        val bestArray = json.getJSONArray("best_efforts")
+        assertEquals(1, bestArray.length())
+        val best1 = bestArray.getJSONObject(0)
+        assertEquals("10k", best1.getString("name"))
+        assertEquals(2400, best1.getInt("elapsed_time"))
+        assertEquals(2, best1.getInt("pr_rank"))
+        assertEquals(10000.0, best1.getDouble("distance"), 0.001)
+    }
+
+    @Test
+    fun testMinimizeOmitsNullAndDefaultValues() {
+        val effortNoPr = StravaSegmentEffort(
+            name = "Test Segment",
+            elapsedTimeSec = 100,
+            prRank = null,
+            komRank = null,
+            isStarred = false,
+            segmentId = null
+        )
+        val bestNoDistance = StravaBestEffort(
+            name = "Sprint",
+            elapsedTimeSec = 30,
+            prRank = null,
+            distanceMeters = 0.0
+        )
+        val activity = com.atrainingtracker.trainingtracker.ui.aftermath.StravaActivity(
+            id = 555L,
+            segmentEfforts = listOf(effortNoPr),
+            bestEfforts = listOf(bestNoDistance)
+        )
+
+        val jsonStr = activity.toJson(version = 2)
+        val json = org.json.JSONObject(jsonStr)
+
+        val segObj = json.getJSONArray("segment_efforts").getJSONObject(0)
+        assertFalse(segObj.has("pr_rank"))
+        assertFalse(segObj.has("kom_rank"))
+        assertFalse(segObj.has("starred"))
+        assertFalse(segObj.has("segment_id"))
+
+        val bestObj = json.getJSONArray("best_efforts").getJSONObject(0)
+        assertFalse(bestObj.has("pr_rank"))
+        assertFalse(bestObj.has("distance"))
+    }
+
+    @Test
+    fun testBackwardCompatibilityLegacyAndV2Parity() {
+        val legacyJson = """
+            {
+              "id": 777,
+              "segment_efforts": [
+                {
+                  "name": "Hill Climb",
+                  "elapsed_time": 500,
+                  "pr_rank": 1,
+                  "starred": true,
+                  "segment": { "id": 1234 }
+                }
+              ],
+              "best_efforts": [
+                {
+                  "name": "5k",
+                  "elapsed_time": 1200,
+                  "pr_rank": 1,
+                  "distance": 5000.0
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val parsedLegacy = StravaActivityParser.parse(legacyJson)
+        assertNotNull(parsedLegacy)
+
+        val minimizedJson = StravaActivityParser.minimize(legacyJson)
+        assertNotNull(minimizedJson)
+
+        val parsedV2 = StravaActivityParser.parse(minimizedJson)
+        assertNotNull(parsedV2)
+
+        // Verify 100% equivalence in parsed data models
+        assertEquals(parsedLegacy!!.id, parsedV2!!.id)
+        assertEquals(parsedLegacy.segmentEfforts.size, parsedV2.segmentEfforts.size)
+        assertEquals(parsedLegacy.segmentEfforts[0].name, parsedV2.segmentEfforts[0].name)
+        assertEquals(parsedLegacy.segmentEfforts[0].elapsedTimeSec, parsedV2.segmentEfforts[0].elapsedTimeSec)
+        assertEquals(parsedLegacy.segmentEfforts[0].prRank, parsedV2.segmentEfforts[0].prRank)
+        assertEquals(parsedLegacy.segmentEfforts[0].isStarred, parsedV2.segmentEfforts[0].isStarred)
+        assertEquals(parsedLegacy.segmentEfforts[0].segmentId, parsedV2.segmentEfforts[0].segmentId)
+
+        assertEquals(parsedLegacy.bestEfforts.size, parsedV2.bestEfforts.size)
+        assertEquals(parsedLegacy.bestEfforts[0].name, parsedV2.bestEfforts[0].name)
+        assertEquals(parsedLegacy.bestEfforts[0].elapsedTimeSec, parsedV2.bestEfforts[0].elapsedTimeSec)
+        assertEquals(parsedLegacy.bestEfforts[0].prRank, parsedV2.bestEfforts[0].prRank)
+        assertEquals(parsedLegacy.bestEfforts[0].distanceMeters, parsedV2.bestEfforts[0].distanceMeters, 0.001)
+    }
+
+    @Test
+    fun testMalformedAndTruncatedJsonResilience() {
+        // Null and blank strings
+        assertNull(StravaActivityParser.parse(null))
+        assertNull(StravaActivityParser.parse(""))
+        assertNull(StravaActivityParser.parse("   "))
+        assertNull(StravaActivityParser.minimize(null as String?))
+        assertNull(StravaActivityParser.minimize(null as JSONObject?))
+        assertNull(StravaActivityParser.minimize(""))
+
+        // Truncated JSON strings (e.g. power-loss or disk-full during write)
+        assertNull(StravaActivityParser.parse("{\"v\": 2, \"segment_efforts\": ["))
+        assertNull(StravaActivityParser.parse("{\"id\": 1234, \"name\": \"Mor"))
+        assertNull(StravaActivityParser.parse("{"))
+
+        // Malformed non-JSON
+        assertNull(StravaActivityParser.parse("this is not json at all"))
+        assertNull(StravaActivityParser.minimize("invalid json string"))
     }
 }

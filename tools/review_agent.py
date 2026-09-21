@@ -294,7 +294,7 @@ def get_git_diff():
                 diff = subprocess.check_output(["git", "diff", f"{base}..HEAD"], stderr=subprocess.DEVNULL).decode("utf-8")
             except Exception:
                 diff = subprocess.check_output(["git", "diff", "HEAD~1", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8")
-        return diff[:20000]
+        return diff[:100000]
     except Exception:
         return ""
 
