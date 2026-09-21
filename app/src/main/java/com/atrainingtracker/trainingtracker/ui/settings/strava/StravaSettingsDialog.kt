@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.settings.strava
 
 import android.app.Activity
+import android.app.Application
 import android.content.SharedPreferences
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -41,6 +42,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDataP
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDeauthorizationThread
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSynchronizeThread
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
+import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorker
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
@@ -80,6 +82,7 @@ fun StravaSettingsDialog(
     var segmentsLastUpdate by remember {
         mutableStateOf(TrainingApplication.getLastUpdateTimeOfStravaSegments())
     }
+    val isEquipmentSyncing by EquipmentRepository.isSyncing.collectAsState()
     val segmentsRepo = remember { SegmentsRepository.getInstance(context) }
     val isSegmentsSyncing by segmentsRepo.isSyncing.collectAsState()
     val routesRepo = remember { RoutesRepository.getInstance(context) }
@@ -131,7 +134,9 @@ fun StravaSettingsDialog(
     // React to OAuth authentication completion
     LaunchedEffect(authState) {
         if (authState is StravaAuthState.Success) {
-            (context as? Activity)?.let { StravaEquipmentSynchronizeThread(it).start() }
+            if (!isEquipmentSyncing) {
+                (context as? Activity)?.let { StravaEquipmentSynchronizeThread(it).start() }
+            }
 
             val repository = SegmentsRepository.getInstance(context)
             repository.syncSegmentsAsync(BSportType.UNKNOWN)
@@ -234,7 +239,9 @@ fun StravaSettingsDialog(
                 ) {
                     OutlinedCard(
                         onClick = {
-                            (context as? Activity)?.let { StravaEquipmentSynchronizeThread(it).start() }
+                            if (!isEquipmentSyncing) {
+                                (context as? Activity)?.let { StravaEquipmentSynchronizeThread(it).start() }
+                            }
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -248,7 +255,11 @@ fun StravaSettingsDialog(
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Text(
-                                text = equipmentLastUpdate,
+                                text = if (isEquipmentSyncing) {
+                                    stringResource(R.string.lastUpdateOfEquipmentNow)
+                                } else {
+                                    equipmentLastUpdate
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

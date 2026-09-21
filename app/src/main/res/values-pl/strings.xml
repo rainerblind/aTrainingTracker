@@ -883,6 +883,7 @@ proszę czekać</string>
     <string name="got_bike">pobrano rowery ze Strava\npobrano rower: %1$s</string>
     <string name="got_shoe">pobrano buty ze Strava\npobrano but: %1$s</string>
     <string name="lastUpdateOfEquipmentNever">nigdy nie aktualizowano</string>
+    <string name="lastUpdateOfEquipmentNow">teraz</string>
     <string name="latLongEquals">szer=%1$f, dł=%2$f</string>
     <string name="location_permission_text_pre_Android10">Uprawnienie do lokalizacji wymagane w ustawieniach systemu</string>
     <string name="max">max</string>
