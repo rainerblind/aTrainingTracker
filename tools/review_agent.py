@@ -307,6 +307,7 @@ def build_audit_prompt(gate_key, gate_info, subtask, parent_issue):
         "Output your review strictly formatted in Jira Wiki markup (e.g. h2., h3., *bold*, {code}). "
         "Always structure your output as follows:\n"
         f"h2. {gate_info['name']} (Automated Independent Auditor)\n\n"
+        "*Auditor Model*: {AUDITOR_MODEL_PLACEHOLDER}\n"
         "*Audit Decision*: *RECOMMEND PASS* or *CHALLENGED* or *RECOMMEND REVISION*\n"
         "*Risk Level*: *LOW* or *MEDIUM* or *HIGH* (with concise technical justification)\n\n"
         "h3. 1. Scrutiny & Compliance Analysis\n"
@@ -374,6 +375,12 @@ def audit_subtask(subtask_key, preferred_provider="gemini", dry_run=False):
 
     # Post comment to Jira
     print(f"Posting audit report comment to {subtask_key}...")
+    # Inject model name in header placeholder if present, or add header metadata
+    if "{AUDITOR_MODEL_PLACEHOLDER}" in review_body:
+        review_body = review_body.replace("{AUDITOR_MODEL_PLACEHOLDER}", f"*{model_name}*")
+    elif not f"*Auditor Model*:" in review_body:
+        review_body = f"*Auditor Model*: *{model_name}*\n\n{review_body}"
+
     identity_comment = f"{review_body}\n\n_(Review conducted by Independent External Auditor: {model_name})_"
     add_comment(subtask_key, identity_comment)
 
