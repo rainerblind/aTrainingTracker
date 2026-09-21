@@ -80,6 +80,8 @@ fun StravaSettingsDialog(
     var segmentsLastUpdate by remember {
         mutableStateOf(TrainingApplication.getLastUpdateTimeOfStravaSegments())
     }
+    val segmentsRepo = remember { SegmentsRepository.getInstance(context) }
+    val isSegmentsSyncing by segmentsRepo.isSyncing.collectAsState()
 
     var uploadGps by remember {
         mutableStateOf(prefs.getBoolean("uploadStravaGPS", true))
@@ -277,8 +279,9 @@ fun StravaSettingsDialog(
 
                     OutlinedCard(
                         onClick = {
-                            val repository = SegmentsRepository.getInstance(context)
-                            repository.syncSegmentsAsync(BSportType.UNKNOWN)
+                            if (!isSegmentsSyncing) {
+                                segmentsRepo.syncSegmentsAsync(BSportType.UNKNOWN)
+                            }
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -292,7 +295,11 @@ fun StravaSettingsDialog(
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Text(
-                                text = segmentsLastUpdate,
+                                text = if (isSegmentsSyncing) {
+                                    stringResource(R.string.lastUpdateOfSegmentsNow)
+                                } else {
+                                    segmentsLastUpdate
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

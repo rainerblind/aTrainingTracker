@@ -319,6 +319,7 @@
     <string name="lastUpdateOfRoutesNever">noch nie aktualisiert</string>
     <string name="updateStravaSegments">Strava Segmente aktualisieren</string>
     <string name="lastUpdateOfSegmentsNever">noch nie aktualisiert</string>
+    <string name="lastUpdateOfSegmentsNow">jetzt</string>
     <string name="automated_strava_segments_sync">Automatischer Segment-Abruf</string>
     <string name="automated_strava_segments_sync_summary">Regelmäßig markierte Segmente von Strava abrufen</string>
     <string name="strava_segments_sync_interval">Abrufintervall</string>

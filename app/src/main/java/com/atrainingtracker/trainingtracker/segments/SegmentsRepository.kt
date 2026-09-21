@@ -193,6 +193,10 @@ class SegmentsRepository private constructor(context: Context) {
     private val _refreshingSports = MutableStateFlow<Set<BSportType>>(emptySet())
     val refreshingSports: StateFlow<Set<BSportType>> = _refreshingSports.asStateFlow()
 
+    // Unified in-progress sync state for UI progress presentation (REQ-EXP-014 / ATT-1219)
+    private val _isSyncing = MutableStateFlow(false)
+    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+
     /**
      * Java-friendly method to trigger a sync without dealing with Coroutines in Java code.
      */
@@ -213,21 +217,30 @@ class SegmentsRepository private constructor(context: Context) {
      * Protected by [syncMutex] to prevent race conditions during concurrent sync triggers (ATT-1078).
      */
     suspend fun syncStarredSegments(bSportType: BSportType) = syncMutex.withLock {
-        // Prune expired segments before synchronization (Section 6.2 compliance)
-        segmentsDb.pruneExpiredSegments(7 * 24 * 60 * 60 * 1000L)
-        if (bSportType == BSportType.UNKNOWN) {
-            syncStarredSegmentsWorker(BSportType.BIKE)
-            syncStarredSegmentsWorker(BSportType.RUN)
+        _isSyncing.value = true
+        try {
+            // Prune expired segments before synchronization (Section 6.2 compliance)
+            segmentsDb.pruneExpiredSegments(7 * 24 * 60 * 60 * 1000L)
+            if (bSportType == BSportType.UNKNOWN) {
+                syncStarredSegmentsWorker(BSportType.BIKE)
+                syncStarredSegmentsWorker(BSportType.RUN)
+            }
+            else {
+                syncStarredSegmentsWorker(bSportType)
+            }
+            val timestamp = java.text.DateFormat.getDateTimeInstance().format(java.util.Date())
+            TrainingApplication.setLastUpdateTimeOfStravaSegments(timestamp)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error syncing starred segments", e)
+            throw e
+        } finally {
+            _isSyncing.value = false
         }
-        else {
-            syncStarredSegmentsWorker(bSportType)
-        }
-        val timestamp = java.text.DateFormat.getDateTimeInstance().format(java.util.Date())
-        TrainingApplication.setLastUpdateTimeOfStravaSegments(timestamp)
     }
 
     private suspend fun syncStarredSegmentsWorker(bSportType: BSportType) = withContext(Dispatchers.IO) {
-            _refreshingSports.update { it + bSportType } // Add sport to refreshing set
+        _refreshingSports.update { it + bSportType } // Add sport to refreshing set
+        try {
 
         // sport to ignore:  For Run we ignore Ride and for Run we ignore Bike.  For Unknown we should not ignore.
         val ignoreSport = when (bSportType) {
@@ -324,7 +337,9 @@ class SegmentsRepository private constructor(context: Context) {
             }
         }
 
-        _refreshingSports.update { it - bSportType } // Remove sport when done
+        } finally {
+            _refreshingSports.update { it - bSportType } // Remove sport when done
+        }
     }
 
     private suspend fun fetchStarredSegmentsFromStrava(page: Int): String = withContext(Dispatchers.IO) {
