@@ -112,16 +112,49 @@ This ticket minimizes the persisted JSON payload to a compact athlete-centric ac
     }
     ```
   - Implement `migrateToMinimizedStravaActivity(SQLiteDatabase db)`:
-    - Iterate over rows with `StravaActivity IS NOT NULL` where `StravaActivity NOT LIKE '%"v":2%'`.
-    - Minimize each record using `StravaActivityParser.minimize()`.
-    - If parsed successfully, update row with minimized JSON.
-    - If legacy row is corrupt/malformed, set to `null` (or tombstone `{"v":2,"corrupted":true}`).
-  - Add safe `onDowngrade(SQLiteDatabase db, int oldVersion, int newVersion)` to prevent crash on APK rollback.
-  - Implement WAL checkpoint helper if needed:
+    ```java
+    private void migrateToMinimizedStravaActivity(@NonNull SQLiteDatabase db) {
+        String query = "SELECT " + C_ID + ", " + STRAVA_ACTIVITY_DATA + " FROM " + TABLE + 
+                       " WHERE " + STRAVA_ACTIVITY_DATA + " IS NOT NULL" +
+                       " AND " + STRAVA_ACTIVITY_DATA + " NOT LIKE '%\"v\":2%'";
+        try (Cursor cursor = db.rawQuery(query, null)) {
+            int idCol = cursor.getColumnIndexOrThrow(C_ID);
+            int dataCol = cursor.getColumnIndexOrThrow(STRAVA_ACTIVITY_DATA);
+            ContentValues values = new ContentValues();
+            while (cursor.moveToNext()) {
+                long rowId = cursor.getLong(idCol);
+                String rawJson = cursor.getString(dataCol);
+                String minimized = null;
+                try {
+                    minimized = StravaActivityParser.minimize(rawJson);
+                } catch (Exception e) {
+                    Log.w(TAG, "Corrupt legacy JSON on row " + rowId + ", clearing to null", e);
+                }
+                values.clear();
+                values.put(STRAVA_ACTIVITY_DATA, minimized);
+                db.update(TABLE, values, C_ID + "=?", new String[]{String.valueOf(rowId)});
+            }
+        } catch (SQLException e) {
+            Log.e(TAG, "Failed to migrate StravaActivity to v2", e);
+            throw e; // Aborts onUpgrade and triggers SQLite rollback
+        }
+    }
+    ```
+  - Add safe `onDowngrade(SQLiteDatabase db, int oldVersion, int newVersion)` to prevent crash on APK rollback:
+    ```java
+    @Override
+    public void onDowngrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
+        Log.w(TAG, "Downgrading database from version " + oldVersion + " to " + newVersion);
+        // Dual-format parser handles both v1 and v2 safely without DDL modifications
+    }
+    ```
+  - Implement WAL checkpoint helper:
     ```java
     public void checkpointWal() {
-        try {
-            getWritableDatabase().rawQuery("PRAGMA wal_checkpoint(FULL)", null).close();
+        try (Cursor c = getWritableDatabase().rawQuery("PRAGMA wal_checkpoint(FULL)", null)) {
+            if (c.moveToFirst()) {
+                if (DEBUG) Log.d(TAG, "WAL checkpoint completed: busy=" + c.getInt(0) + " log=" + c.getInt(1) + " checkpointed=" + c.getInt(2));
+            }
         } catch (Exception e) {
             Log.w(TAG, "WAL checkpoint failed", e);
         }
