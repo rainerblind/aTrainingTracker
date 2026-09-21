@@ -61,9 +61,25 @@ A comprehensive audit across all code modules, database queries, and background 
   2. *Dedicated Non-Blocking Background Compaction*:
      - A dedicated asynchronous compaction routine `compactLegacyRecords(Context)` in `StravaUploadDbHelper`:
        - Scans `StravaUploads` for rows where `StravaActivity IS NOT NULL` and does NOT contain `"v":2`.
-       - Executes in a low-priority background dispatcher inside explicit batched transactions (`beginTransaction() ... setTransactionSuccessful()`).
-       - Catches and logs any `SQLException` without affecting active user sessions.
-       - Can be invoked during app initialization or when Strava settings are opened.
+       - Concurrency & Synchronization: Executes on an IO background thread without holding prolonged table locks; reads and updates use standard SQLite single-writer semantics.
+       - Transaction Boundaries & Rollback Semantics: Executes in batches (e.g. 50 records) using standard SQLite transaction boundaries:
+         ```java
+         db.beginTransaction();
+         try {
+             for (LegacyRecord record : batch) {
+                 // parse and update record
+             }
+             db.setTransactionSuccessful();
+         } finally {
+             db.endTransaction(); // rolls back uncommitted batch if an unhandled exception occurred
+         }
+         ```
+       - Error Handling Strategy & Infinite Reprocessing Prevention:
+         - If a legacy JSON blob is malformed or truncated (e.g., throws `JSONException` upon parsing):
+           - The error is logged (`Log.w(TAG, "Legacy record malformed, marking or clearing...", e)`).
+           - To prevent infinite reprocessing loops on subsequent app launches, unparseable legacy records are replaced with a minimal empty achievement tombstone `{"v":2,"corrupted":true}` or cleared to `null`. This ensures the query `StravaActivity NOT LIKE '%"v":2%'` will not match and reprocess the corrupted record repeatedly.
+         - If an unexpected `SQLException` or database error occurs during the transaction, `setTransactionSuccessful()` is NOT reached; `endTransaction()` cleanly rolls back the batch, ensuring zero partial-commit corruption.
+       - Trigger: Can be scheduled via a one-off `WorkManager` worker on app upgrade or executed during app initialization.
   3. *Dual-Format Read Tolerance*:
      - `StravaActivityParser.parse(jsonString)` handles both Version 1 (legacy uncompacted) and Version 2 (minimized) payloads transparently.
   4. *Complete Deauthorization Wipe*:
