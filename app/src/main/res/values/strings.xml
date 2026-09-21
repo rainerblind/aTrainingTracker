@@ -399,6 +399,7 @@
     <string name="prefsStartLocationsSummary">Configure altitude of start locations</string>
     <string name="updateStravaEquipment">Update Strava Equipment</string>
     <string name="lastUpdateOfEquipmentNever">never updated</string>
+    <string name="lastUpdateOfEquipmentNow">now</string>
     <string name="updateStravaRoutes">Update Strava Routes</string>
     <string name="lastUpdateOfRoutesNever">never updated</string>
     <string name="lastUpdateOfRoutesNow">now</string>

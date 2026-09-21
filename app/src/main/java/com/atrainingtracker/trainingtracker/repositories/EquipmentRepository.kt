@@ -24,6 +24,9 @@ import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class EquipmentRepository private constructor(private val application: Application) :
     CoroutineScope {
@@ -41,11 +44,25 @@ class EquipmentRepository private constructor(private val application: Applicati
         equipmentList = equipmentDbHelper.getEquipmentItems() as List<EquipmentDbHelper.EquipmentData>
     }
 
-
-
     companion object {
         private val TAG = "EquipmentRepository"
         private val DEBUG = TrainingApplication.getDebug(true)
+
+        private val _isSyncing = MutableStateFlow(false)
+
+        @JvmStatic
+        val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+
+        @JvmStatic
+        @Synchronized
+        fun setSyncing(syncing: Boolean) {
+            _isSyncing.value = syncing
+        }
+
+        @androidx.annotation.VisibleForTesting
+        fun resetSyncingForTesting() {
+            _isSyncing.value = false
+        }
 
         // The single, volatile instance of the repository.
         // @Volatile guarantees that writes to this field are immediately visible to other threads.
@@ -77,5 +94,10 @@ class EquipmentRepository private constructor(private val application: Applicati
             INSTANCE = newInstance
         }
     }
-
 }
+
+/**
+ * Extension property providing seamless instance access to [EquipmentRepository.isSyncing].
+ */
+val EquipmentRepository.isSyncing: StateFlow<Boolean>
+    get() = EquipmentRepository.isSyncing

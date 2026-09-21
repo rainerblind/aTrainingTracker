@@ -311,6 +311,7 @@
     <string name="prefsStartLocationsSummary">地点の高度を設定</string>
     <string name="updateStravaEquipment">Strava 装備を更新</string>
     <string name="lastUpdateOfEquipmentNever">未更新</string>
+    <string name="lastUpdateOfEquipmentNow">今</string>
     <string name="updateStravaRoutes">Strava ルートを更新</string>
     <string name="lastUpdateOfRoutesNever">未更新</string>
     <string name="lastUpdateOfRoutesNow">今</string>

@@ -34,6 +34,7 @@ import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper;
+import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -114,46 +115,58 @@ public class StravaEquipmentSynchronizeThread extends Thread {
 
     @Override
     public void run() {
-        if (mMainHandler != null) {
-            mMainHandler.post(() -> {
-                try {
-                    if (mProgressDialog != null) {
-                        mProgressDialog.setMessage(mContext.getString(R.string.getting_equipment_from_strava));
-                        mProgressDialog.show();
-                    }
-                } catch (Exception e) {
-                    // Window might not be attached
-                }
-            });
+        if (EquipmentRepository.isSyncing().getValue()) {
+            if (DEBUG) Log.w(TAG, "Equipment synchronization already in progress. Ignoring duplicate execution.");
+            return;
         }
 
-        final String result = getStravaEquipment();
-
-        if (mMainHandler != null) {
-            mMainHandler.post(() -> {
-                if (DEBUG) Log.d(TAG, "updated Strava equipment");
-
-                if (mProgressDialog != null && mProgressDialog.isShowing()) {
+        EquipmentRepository.setSyncing(true);
+        try {
+            if (mMainHandler != null) {
+                mMainHandler.post(() -> {
                     try {
-                        mProgressDialog.dismiss();
-                    } catch (IllegalArgumentException e) {
-                        // View not attached to window manager
+                        if (mProgressDialog != null) {
+                            mProgressDialog.setMessage(mContext.getString(R.string.getting_equipment_from_strava));
+                            mProgressDialog.show();
+                        }
+                    } catch (Exception e) {
+                        // Window might not be attached
                     }
-                }
-
-                TrainingApplication.setLastUpdateTimeOfStravaEquipment(result);
-
-                mContext.sendBroadcast(new Intent(SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED)
-                        .setPackage(mContext.getPackageName()));
-            });
-        } else {
-            TrainingApplication.setLastUpdateTimeOfStravaEquipment(result);
-            try {
-                mContext.sendBroadcast(new Intent(SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED)
-                        .setPackage(mContext.getPackageName()));
-            } catch (Exception e) {
-                // Mock context in unit test
+                });
             }
+
+            final String result = getStravaEquipment();
+
+            if (mMainHandler != null) {
+                mMainHandler.post(() -> {
+                    if (DEBUG) Log.d(TAG, "updated Strava equipment");
+
+                    if (mProgressDialog != null && mProgressDialog.isShowing()) {
+                        try {
+                            mProgressDialog.dismiss();
+                        } catch (IllegalArgumentException e) {
+                            // View not attached to window manager
+                        }
+                    }
+
+                    TrainingApplication.setLastUpdateTimeOfStravaEquipment(result);
+
+                    mContext.sendBroadcast(new Intent(SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED)
+                            .setPackage(mContext.getPackageName()));
+                });
+            } else {
+                TrainingApplication.setLastUpdateTimeOfStravaEquipment(result);
+                try {
+                    mContext.sendBroadcast(new Intent(SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED)
+                            .setPackage(mContext.getPackageName()));
+                } catch (Exception e) {
+                    // Mock context in unit test
+                }
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "Unexpected error in equipment synchronization thread", t);
+        } finally {
+            EquipmentRepository.setSyncing(false);
         }
     }
 

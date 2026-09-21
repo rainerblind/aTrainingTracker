@@ -311,6 +311,7 @@
     <string name="prefsStartLocationsSummary">Hoogte van bekende locaties configureren</string>
     <string name="updateStravaEquipment">Strava materiaal bijwerken</string>
     <string name="lastUpdateOfEquipmentNever">nooit bijgewerkt</string>
+    <string name="lastUpdateOfEquipmentNow">nu</string>
     <string name="updateStravaRoutes">Strava routes bijwerken</string>
     <string name="lastUpdateOfRoutesNever">nooit bijgewerkt</string>
     <string name="lastUpdateOfRoutesNow">nu</string>

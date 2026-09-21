@@ -311,6 +311,7 @@
     <string name="prefsStartLocationsSummary">Configurar altitud de ubicaciones conocidas</string>
     <string name="updateStravaEquipment">Actualizar equipamiento de Strava</string>
     <string name="lastUpdateOfEquipmentNever">aún no actualizado</string>
+    <string name="lastUpdateOfEquipmentNow">ahora</string>
     <string name="updateStravaRoutes">Actualizar rutas de Strava</string>
     <string name="lastUpdateOfRoutesNever">aún no actualizado</string>
     <string name="lastUpdateOfRoutesNow">ahora</string>
