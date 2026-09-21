@@ -42,6 +42,7 @@ data class PeriodMapState(
     val regions: List<SpatialRegion> = emptyList(),
     val selectedRegionId: String? = null,
     val isLoading: Boolean = false,
+    val focusEpochMs: Long = 0L
 )
 
 /**
@@ -97,7 +98,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
      * Selects a specific activity region by ID or null for all regions (ATT-1151).
      */
     fun selectRegion(regionId: String?) {
-        _mapState.update { it.copy(selectedRegionId = regionId) }
+        _mapState.update { it.copy(selectedRegionId = regionId, focusEpochMs = System.currentTimeMillis()) }
     }
 
     /**
