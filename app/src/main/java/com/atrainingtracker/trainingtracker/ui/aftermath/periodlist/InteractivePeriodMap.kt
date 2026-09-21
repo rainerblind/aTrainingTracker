@@ -67,13 +67,19 @@ fun InteractivePeriodMap(
     val context = LocalContext.current
     val noLocation = remember { MutableStateFlow<LatLng?>(null) }
     
-    // --- 1. INSTANT MAP SETUP (ATT-346 Relational) ---
-    // Immediately fit the map to pre-calculated bounds from the database
-    // ATT-440 Refinement: Added safety check to ignore invalid (0.0) coordinates (Ocean Trap).
-    // ATT-440 Refinement: Key the remember block by stable period IDs to prevent zoom reset 
-    // when background paths arrive.
-    val periodBounds = remember(summary.periodType, summary.startTimestampS) {
-        if (summary.minLat < 90.0 && summary.minLat != 0.0) {
+    // --- 1. INSTANT MAP SETUP (ATT-346 Relational, ATT-1151 Multi-Region Support) ---
+    // If regions are detected, prioritize the selected region's bounds or the primary region's bounds
+    // to avoid centering over empty oceans (Greenland Anomaly). Fallback to overall summary bounds.
+    val activeRegion = remember(mapState.regions, mapState.selectedRegionId) {
+        if (mapState.selectedRegionId != null) {
+            mapState.regions.find { it.id == mapState.selectedRegionId }
+        } else if (mapState.regions.isNotEmpty()) {
+            mapState.regions.firstOrNull { it.isPrimary } ?: mapState.regions.firstOrNull()
+        } else null
+    }
+
+    val periodBounds = remember(summary.periodType, summary.startTimestampS, activeRegion?.bounds) {
+        activeRegion?.bounds ?: if (summary.minLat < 90.0 && summary.minLat != 0.0) {
             LatLngBounds(LatLng(summary.minLat, summary.minLng), LatLng(summary.maxLat, summary.maxLng))
         } else null
     }

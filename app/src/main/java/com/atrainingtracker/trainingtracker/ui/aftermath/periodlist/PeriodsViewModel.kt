@@ -32,13 +32,15 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Encapsulates the UI state for the period detail map (ATT-440).
+ * Encapsulates the UI state for the period detail map (ATT-440, ATT-1151).
  * Matches the robust loading pattern used in Workout Clusters.
  */
 data class PeriodMapState(
     val tracks: List<MapTrack> = emptyList(),
     val workoutIdToHeatmapPathMap: Map<Long, List<LatLng>> = emptyMap(),
     val memberMarkers: List<PeriodPeakMarker> = emptyList(),
+    val regions: List<SpatialRegion> = emptyList(),
+    val selectedRegionId: String? = null,
     val isLoading: Boolean = false,
 )
 
@@ -92,6 +94,13 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     }
 
     /**
+     * Selects a specific activity region by ID or null for all regions (ATT-1151).
+     */
+    fun selectRegion(regionId: String?) {
+        _mapState.update { it.copy(selectedRegionId = regionId) }
+    }
+
+    /**
      * Triggers the transition to the Period Map view and launches the exhaustive loading job.
      *
      * Implementation: Uses a selection-driven algorithm (standardized with Clusters) that
@@ -113,8 +122,12 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
                 periodsRepo.getWorkoutsForRange(summary.startTimestampS, summary.endTimestampS)
             }
             
-            // 2. Background Processing
+            // 2. Background Processing on Dispatchers.Default (REQ-PER-013)
             withContext(Dispatchers.Default) {
+                // Partition workouts into geographic activity regions
+                val detectedRegions = SpatialRegionEngine.detectRegions(workouts)
+                val primaryRegion = detectedRegions.firstOrNull { it.isPrimary } ?: detectedRegions.firstOrNull()
+
                 // Decode polyline paths once for both heatmap and lightweight vector tracks
                 val heatmapPathMap = workouts.associate { w ->
                     w.id to if (w.mapPolyline.isNotEmpty()) PolyUtil.decode(w.mapPolyline) else emptyList()
@@ -169,6 +182,8 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
                     tracks = tracks,
                     workoutIdToHeatmapPathMap = heatmapPathMap,
                     memberMarkers = markers,
+                    regions = detectedRegions,
+                    selectedRegionId = primaryRegion?.id,
                     isLoading = false
                 )
             }

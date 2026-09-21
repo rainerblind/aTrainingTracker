@@ -872,6 +872,9 @@
         <item quantity="other">%1$d Séances</item>
     </plurals>
     <string name="workout_periods__longest_workout">Plus longue séance</string>
+    <string name="workout_periods__region_format">Région %1$d (%2$d)</string>
+    <string name="workout_periods__primary_region_format">Région principale : Région %1$d (%2$d)</string>
+    <string name="workout_periods__all_regions_format">Toutes les régions (%1$d)</string>
     <string name="workout_periods__migration_querying">Chargement de l\'historique d\'entraînement…</string>
     <string name="workout_periods__migration_reading">Lecture de l\'entraînement %1$d sur %2$d…</string>
     <string name="workout_periods__migration_syncing">Synchronisation de %1$s…</string>

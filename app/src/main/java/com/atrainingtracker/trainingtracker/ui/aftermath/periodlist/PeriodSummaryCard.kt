@@ -196,9 +196,25 @@ fun PeriodSummaryCard(
                         .fillMaxWidth()
                         .height(250.dp)
                 ) {
-                    val bounds = remember(summary.minLat, summary.maxLat, summary.minLng, summary.maxLng) {
-                        if (summary.minLat < 90.0) {
-                            LatLngBounds(LatLng(summary.minLat, summary.minLng), LatLng(summary.maxLat, summary.maxLng))
+                    val bounds = remember(summary.minLat, summary.maxLat, summary.minLng, summary.maxLng, summary.polylines) {
+                        if (summary.minLat < 90.0 && summary.minLat != 0.0) {
+                            // Check diagonal envelope. If > 500 km, detect regions from polylines to focus on dominant region
+                            val diagonal = SpatialRegionEngine.distanceBetween(
+                                LatLng(summary.minLat, summary.minLng),
+                                LatLng(summary.maxLat, summary.maxLng)
+                            )
+                            if (diagonal >= SpatialRegionConfig.SINGLE_REGION_ENVELOPE_METERS && summary.polylines.isNotEmpty()) {
+                                val startPoints = summary.polylines.mapNotNull { poly ->
+                                    if (poly.isEmpty()) return@mapNotNull null
+                                    val decoded = PolyUtil.decode(poly)
+                                    decoded.firstOrNull()
+                                }
+                                val regions = SpatialRegionEngine.detectRegionsFromPoints(startPoints)
+                                val primary = regions.firstOrNull { it.isPrimary } ?: regions.firstOrNull()
+                                primary?.bounds ?: LatLngBounds(LatLng(summary.minLat, summary.minLng), LatLng(summary.maxLat, summary.maxLng))
+                            } else {
+                                LatLngBounds(LatLng(summary.minLat, summary.minLng), LatLng(summary.maxLat, summary.maxLng))
+                            }
                         } else null
                     }
 

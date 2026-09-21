@@ -95,7 +95,8 @@ class PeriodsFragment : Fragment() {
                             peekedWorkoutDataWithTrack = peekedWorkoutDataWithTrack,
                             clearPeekSelection = { viewModel.clearPeekSelection() },
                             onBack = { viewModel.dismissPeriodMap() },
-                            onEditWorkout = { id -> editedWorkoutId = id }
+                            onEditWorkout = { id -> editedWorkoutId = id },
+                            onSelectRegion = { regionId -> viewModel.selectRegion(regionId) }
                         )
                     } else {
                         PeriodsTabsScreen(
