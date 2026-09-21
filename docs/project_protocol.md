@@ -52,9 +52,9 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   **Credentials & Multi-Account Roles**: Authentication details are stored in `.env.jira` (not tracked in Git). The project supports three distinct agent personas with dedicated accounts and role attribution:
         *   **Agent 1 (Implementer)**: `JIRA_AGENT1_USER`, `JIRA_AGENT1_TOKEN` (Default role for `jira_util.py`). Executes technical analysis, test specifications, implementation plans, code construction, and clean-room testing. Comments prefixed with `[Automated comment by AI Agent 1 (Implementer)]`.
         *   **Agent 2 (Auditor)**: `JIRA_AGENT2_USER`, `JIRA_AGENT2_TOKEN` (Hardwired role for `review_agent.py`). Conducts independent ASPICE quality gate reviews (Gates 1–5). Comments prefixed with `[Automated comment by AI Agent 2 (Auditor)]`.
-        *   **Coordinator (Orchestrator)**: `JIRA_COORDINATOR_USER`, `JIRA_COORDINATOR_TOKEN` (Invoked via `--as coordinator` or `JIRA_ACTOR=coordinator`). Performs administrative orchestration, sprint tracking, status synchronization, and sub-task creation (`create-subtask`). Comments prefixed with `[Automated comment by AI Coordinator]`.
+        *   **Coordinator (Orchestrator)**: `JIRA_COORDINATOR_USER`, `JIRA_COORDINATOR_TOKEN` (Invoked via `--as coordinator` or `JIRA_ACTOR=coordinator`). Performs administrative orchestration, sprint tracking, status synchronization, sub-task creation (`create-subtask`), and review loop triage (transitioning sub-tasks from `In Überprüfung` back to `In Bearbeitung` when Agent 2 reports findings). Comments prefixed with `[Automated comment by AI Coordinator]`.
         *   **Atomic Pair Fallback & Backward Compatibility**: If a role has either username or token missing, the system atomically falls back to default `(JIRA_USER, JIRA_TOKEN)` and logs an advisory notice to `sys.stderr`. If no credentials exist, the tool halts immediately with exit code 1.
-        *   **Coordinator Governance & Human Gate Invariants**: The Coordinator is strictly an administrative and orchestration persona. The Coordinator **cannot override** Agent 2 `CHALLENGED` or `RECOMMEND REVISION` audit verdicts, cannot bypass ASPICE gates, and **MUST NOT transition any ticket or sub-task to Erledigt**. Moving tickets to `Erledigt` remains an inviolable human-only gate.
+        *   **Coordinator Governance & Human Gate Invariants**: The Coordinator is strictly an administrative and orchestration persona. The Coordinator **cannot override** Agent 2 `CHALLENGED` or `RECOMMEND REVISION` audit verdicts, cannot bypass ASPICE gates, and **MUST NOT transition any ticket or sub-task to Erledigt**. Moving tickets to `Erledigt` remains an inviolable human-only gate. However, when Agent 2 issues a `CHALLENGED` or `RECOMMEND REVISION` audit report, the Coordinator is explicitly authorized to execute the transition from `In Überprüfung` to `In Bearbeitung` to return the sub-task to Agent 1 for remediation.
         *   **Secret Masking**: Tooling strictly masks tokens and Basic Auth credentials across all standard output, error, and exception streams.
     *   **Native ASPICE States for Main Tickets**:
         Main tickets across all types (Bug, Improvement, Feature) progress through native ASPICE lifecycle states:
@@ -67,13 +67,17 @@ Any AI assistant working on this project **must** follow these steps for every t
         *   Entering `Implementation` -> Spawns `[Implementation] <Summary>`
         *   Entering `Test` -> Spawns `[Test] <Summary>`
         *(AI agents do NOT manually create lifecycle sub-tasks unless recovering from an untriggered or pre-existing state.)*
-    *   **Sub-Task Workflow (`Zu erledigen` -> `In Bearbeitung` -> `In Überprüfung` -> `Freigabe (Human)` -> `Erledigt`)**:
+    *   **Sub-Task Workflow (`Zu erledigen` -> `In Bearbeitung` -> `In Überprüfung` -> `Freigabe (Human)` -> `Erledigt`) & Review Loop**:
         All lifecycle sub-tasks follow this strict state machine:
-        1.  `Zu erledigen`: Sub-task is created automatically by Jira Automation.
+        1.  `Zu erledigen`: Sub-task is created automatically by Jira Automation (or by the Coordinator if recovering).
         2.  `In Bearbeitung`: **Agent 1** moves the sub-task here to perform the primary technical work of the stage.
         3.  `In Überprüfung`: When Agent 1 finishes, Agent 1 updates the sub-task **Description** with the complete stage deliverable and moves the sub-task here.
-        4.  `Freigabe (Human)`: **Agent 2** independently audits the work, posts the audit report as a Jira comment (prefixed with `[Automated comment by AI Agent]`), and transitions the sub-task here.
-        5.  **Human Decision Gate**: In the `Freigabe (Human)` state, the user inspects the work (reviewing the ticket Description and Agent 2's audit comment) and decides how to proceed:
+        4.  **Review Evaluation & Reviewer Findings Loop (`In Überprüfung` -> `In Bearbeitung`)**:
+            *   **Agent 2** independently audits the work and posts the audit report comment.
+            *   *Review Findings (CHALLENGED / RECOMMEND REVISION)*: When Agent 2 identifies defects, missing criteria, or gaps, the **Coordinator** (or Agent 2) transitions the sub-task directly from `In Überprüfung` back to `In Bearbeitung` (`./tools/jira_util.py --as coordinator move <SubTaskKey> in_progress`). This signals Agent 1 to remediate the reviewer's findings without prematurely escalating an incomplete deliverable to the human.
+            *   *Clean Review (RECOMMEND PASS)*: If the audit passes, the sub-task transitions from `In Überprüfung` to `Freigabe (Human)`.
+        5.  `Freigabe (Human)`: When the sub-task reaches this state with a `RECOMMEND PASS` verdict, it enters the **Human Decision Gate**.
+        6.  **Human Decision Gate**: In the `Freigabe (Human)` state, the user inspects the work (reviewing the ticket Description and Agent 2's audit comment) and decides how to proceed:
             *   *Approve*: User moves the sub-task to `Erledigt` (via transition *"Freigabe erteilt"*).
             *   *Reject / Revise*: User moves the sub-task back to `In Bearbeitung` (via transition *"Nochmals von Vorne"*) with guidance in a comment.
     *   **Automated Parent Stage Transitions**:
@@ -120,7 +124,9 @@ Any AI assistant working on this project **must** follow these steps for every t
         * **Automated Dual-Agent Workflow (Agent 1 Execution -> Automated Agent 2 Review -> Human Gate)**:
           Within every lifecycle stage, development proceeds via a strictly segregated dual-agent workflow with human decision gates:
           1. **Phase 1 (Creation / Execution - Agent 1)**: Agent 1 transitions the active sub-task to `In Bearbeitung`, performs the technical work, sets the full documentation/artifact as the sub-task **Description**, and transitions the sub-task to `In Überprüfung`.
-          2. **Phase 2 (Automated Independent Audit - Agent 2)**: Whenever Agent 1 completes its job and moves the sub-task to `In Überprüfung`, **Agent 2 (Independent Senior Auditor) ALWAYS automatically conducts the formal Gate Review**, verifies call sites and system invariants, posts the detailed audit report comment in Jira, and transitions the sub-task to `Freigabe (Human)`. Explicit user prompting to invoke Agent 2 is NOT required.
+          2. **Phase 2 (Automated Independent Audit - Agent 2 & Coordinator Triage)**: Whenever Agent 1 completes its job and moves the sub-task to `In Überprüfung`, **Agent 2 (Independent Senior Auditor) ALWAYS automatically conducts the formal Gate Review**, verifies call sites and system invariants, and posts the detailed audit report comment in Jira.
+             * *Audit Passed (`RECOMMEND PASS`)*: Agent 2 transitions the sub-task to `Freigabe (Human)`.
+             * *Audit Challenged / Findings (`CHALLENGED` / `RECOMMEND REVISION`)*: The **Coordinator** transitions the sub-task from `In Überprüfung` back to `In Bearbeitung` (`./tools/jira_util.py --as coordinator move <Key> in_progress`). Agent 1 resumes work, addresses the auditor's itemized findings, updates the sub-task Description, and transitions back to `In Überprüfung` for re-audit.
           3. **Phase 3 (Mandatory Human Decision Gate - Human User)**: In `Freigabe (Human)`, the agent MUST STOP and await human approval. The agent is strictly FORBIDDEN from starting the next lifecycle stage until the user has verified and transitioned the sub-task to `Erledigt` in Jira.
     *   **Agent-Driven Git Branching, Conventional Commits, and Develop Merging Lifecycle**:
         The AI agent is mandated and authorized to autonomously manage the complete git lifecycle for all assigned tickets:
