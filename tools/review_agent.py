@@ -122,7 +122,13 @@ def call_gemini_api(prompt, system_instruction=None):
     if not api_key:
         raise ValueError("GEMINI_API_KEY not found in .env.gemini")
 
-    candidate_models = ["gemini-3-flash-preview", "gemini-3.6-flash", "gemini-3.7-flash"]
+    candidate_models = [
+        "gemini-2.5-flash",
+        "gemini-flash-latest",
+        "gemini-3-flash-preview",
+        "gemini-3.6-flash",
+        "gemini-3.7-flash"
+    ]
     last_error = None
 
     for model in candidate_models:
@@ -409,7 +415,7 @@ def main():
             print("Error: Sub-task key required. Usage: review_agent.py audit SUBTASK_KEY [--provider gemini|claude]")
             sys.exit(1)
         subtask_key = sys.argv[2]
-        provider = "claude"
+        provider = "gemini"
         dry_run = False
 
         args = sys.argv[3:]
