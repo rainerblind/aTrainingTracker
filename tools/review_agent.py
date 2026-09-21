@@ -183,8 +183,9 @@ def call_claude_api(prompt, system_instruction=None):
         "content-type": "application/json"
     }
 
+    model = "claude-3-5-haiku-20241022"
     payload = {
-        "model": "claude-3-5-haiku-20241022",
+        "model": model,
         "max_tokens": 4096,
         "temperature": 0.2,
         "messages": [
@@ -208,25 +209,25 @@ def call_claude_api(prompt, system_instruction=None):
             content_list = data.get("content", [])
             if not content_list:
                 raise RuntimeError(f"Claude returned no content: {res_body}")
-            return content_list[0].get("text", "").strip()
+            return content_list[0].get("text", "").strip(), f"Claude ({model})"
     except urllib.error.HTTPError as e:
         err_msg = e.read().decode("utf-8") if hasattr(e, "read") else str(e)
         raise RuntimeError(f"Claude API HTTP Error {e.code}: {err_msg}")
 
 
-def query_llm(prompt, system_instruction=None, preferred_provider="gemini"):
-    """Queries preferred LLM provider with automated fallback to the other provider."""
-    providers = ["gemini", "claude"] if preferred_provider == "gemini" else ["claude", "gemini"]
+def query_llm(prompt, system_instruction=None, preferred_provider="claude"):
+    """Queries preferred LLM provider (default: claude) with automated fallback to the other provider (gemini)."""
+    providers = ["claude", "gemini"] if preferred_provider == "claude" else ["gemini", "claude"]
     errors = []
 
     for provider in providers:
         try:
-            if provider == "gemini":
+            if provider == "claude":
+                text, model_name = call_claude_api(prompt, system_instruction)
+                return text, model_name
+            elif provider == "gemini":
                 text, model_name = call_gemini_api(prompt, system_instruction)
                 return text, model_name
-            elif provider == "claude":
-                text = call_claude_api(prompt, system_instruction)
-                return text, "Claude (claude-3-5-haiku)"
         except Exception as e:
             errors.append(f"{provider}: {e}")
 
@@ -408,7 +409,7 @@ def main():
             print("Error: Sub-task key required. Usage: review_agent.py audit SUBTASK_KEY [--provider gemini|claude]")
             sys.exit(1)
         subtask_key = sys.argv[2]
-        provider = "gemini"
+        provider = "claude"
         dry_run = False
 
         args = sys.argv[3:]
