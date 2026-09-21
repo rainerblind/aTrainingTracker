@@ -411,7 +411,7 @@ fun PeriodMapScreen(
                     },
                 )
 
-                // REGION SWITCHER CHIPS (Top Start) - ATT-1151
+                // REGION SWITCHER CHIPS (Top Row) - ATT-1151
                 if (mapState.regions.size > 1) {
                     val totalPeriodWorkouts = remember(mapState.regions) {
                         mapState.regions.sumOf { it.workoutCount }
@@ -419,7 +419,8 @@ fun PeriodMapScreen(
                     Row(
                         modifier = Modifier
                             .align(Alignment.TopStart)
-                            .padding(start = 12.dp, top = 12.dp, end = 72.dp) // Avoid overlapping with TopEnd action buttons
+                            .fillMaxWidth()
+                            .padding(start = 12.dp, top = 12.dp, end = 12.dp)
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -477,10 +478,12 @@ fun PeriodMapScreen(
                 }
 
                 // OVERLAY BUTTONS (Top End)
+                // When regions are present, buttons move downwards below the complete upper region chips row
+                val buttonsTopPadding = if (mapState.regions.size > 1) 64.dp else 16.dp
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(16.dp),
+                        .padding(end = 16.dp, top = buttonsTopPadding, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     // FLOATING SHARE BUTTON
