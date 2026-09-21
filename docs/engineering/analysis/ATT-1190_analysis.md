@@ -61,8 +61,13 @@ A comprehensive audit across all code modules, database queries, and background 
   2. *Dedicated Non-Blocking Background Compaction*:
      - A dedicated asynchronous compaction routine `compactLegacyRecords(Context)` in `StravaUploadDbHelper`:
        - Scans `StravaUploads` for rows where `StravaActivity IS NOT NULL` and does NOT contain `"v":2`.
-       - Concurrency & Synchronization: Executes on an IO background thread without holding prolonged table locks; reads and updates use standard SQLite single-writer semantics.
-       - Transaction Boundaries & Rollback Semantics: Executes in batches (e.g. 50 records) using standard SQLite transaction boundaries:
+       - Execution Trigger & ANR Elimination:
+         - Compaction NEVER executes on the main thread, during `onCreate`, or during SQLite `onUpgrade`.
+         - It is scheduled exclusively as an asynchronous, low-priority one-off background task via `WorkManager` (`ExistingWorkPolicy.KEEP`), triggered once post-startup when the application detects uncompacted legacy rows or when Strava settings are opened.
+       - Concurrency & SQLite Locking Safeguards:
+         - A process-wide mutex (`ReentrantLock` or `Mutex` in `StravaUploadDbHelper`) guards batch write loops against concurrent uploads from `StravaUploader`.
+         - Each batch operates within a small window (e.g. batch size of 25-50 rows) yielding execution (`delay`/thread yield) between batches to allow higher-priority read queries or active user uploads to acquire SQLite locks without encountering `SQLITE_BUSY` or write starvation.
+       - Transaction Boundaries & Rollback Semantics: Executes in batches using standard SQLite transaction boundaries:
          ```java
          db.beginTransaction();
          try {
@@ -77,9 +82,10 @@ A comprehensive audit across all code modules, database queries, and background 
        - Error Handling Strategy & Infinite Reprocessing Prevention:
          - If a legacy JSON blob is malformed or truncated (e.g., throws `JSONException` upon parsing):
            - The error is logged (`Log.w(TAG, "Legacy record malformed, marking or clearing...", e)`).
-           - To prevent infinite reprocessing loops on subsequent app launches, unparseable legacy records are replaced with a minimal empty achievement tombstone `{"v":2,"corrupted":true}` or cleared to `null`. This ensures the query `StravaActivity NOT LIKE '%"v":2%'` will not match and reprocess the corrupted record repeatedly.
+           - To prevent infinite reprocessing loops on subsequent app launches, unparseable legacy records are replaced with a minimal empty achievement tombstone `{"v":2,"corrupted":true}` or set to `null`. This ensures the query `StravaActivity NOT LIKE '%"v":2%'` will not match and reprocess the corrupted record repeatedly.
          - If an unexpected `SQLException` or database error occurs during the transaction, `setTransactionSuccessful()` is NOT reached; `endTransaction()` cleanly rolls back the batch, ensuring zero partial-commit corruption.
-       - Trigger: Can be scheduled via a one-off `WorkManager` worker on app upgrade or executed during app initialization.
+       - Tombstone Lifecycle & Purge Policy:
+         - Corrupted tombstone records (`"corrupted":true`) are retained only temporarily to prevent reprocessing, and are purged/set to `null` during regular workout maintenance cycles or immediately purged upon disconnect via `StravaDataPurgeManager`. They carry zero third-party or personal data.
   3. *Dual-Format Read Tolerance*:
      - `StravaActivityParser.parse(jsonString)` handles both Version 1 (legacy uncompacted) and Version 2 (minimized) payloads transparently.
   4. *Complete Deauthorization Wipe*:
