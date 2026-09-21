@@ -164,8 +164,19 @@ Any AI assistant working on this project **must** follow these steps for every t
 
         ### 2. Stage 2: Test Specification (`[Test-Spec]`)
         1.  Parent ticket enters `Test Spec` status. Jira Automation automatically spawns `[Test-Spec] <Summary>` sub-task.
-        2.  **Phase 1 (Agent 1 Execution)**: Transitions sub-task to `In Bearbeitung`. Synchronizes `docs/requirements.md` (SHALL/MUST, atomic, invariants, Given-When-Then) and specifies verification test cases in `docs/tests.md`. Sets complete test specification as sub-task **Description** and transitions to `In Überprüfung`.
-        3.  **Phase 2 (Agent 2 Automated Gate 2 Audit)**: Agent 2 automatically audits requirements and test coverage, posts the review comment, and transitions sub-task to `Freigabe (Human)`.
+        2.  **Phase 1 (Agent 1 Execution)**: Transitions sub-task to `In Bearbeitung`. Synchronizes `docs/requirements.md` (SHALL/MUST, atomic, invariants, Given-When-Then) and specifies verification test cases in `docs/tests.md`.
+            *   **Chesterton's Fence Requirement Archaeology Hurdle (Mandatory for Requirement Modifications)**:
+                Prior to proposing or applying changes, relaxations, or replacements to any *existing* requirement in `docs/requirements.md`, the agent/engineer SHALL research why the requirement was originally formulated in its current form (*"Do not remove or modify a fence until you know why it was put there in the first place"*).
+                The deliverable MUST include a machine-checkable section titled:
+                `### Requirement Archaeology & Chesterton's Fence Audit` (or Jira `h3. Requirement Archaeology & Chesterton's Fence Audit`) containing 4 mandatory structured fields:
+                1. `Original Requirement ID & Target`: Exact ID being modified (e.g. `REQ-TRK-002`).
+                2. `Historical Origin & Commit Trace`: Commit hashes, Jira ticket keys, and original defect/motivation found via `git log -S <REQ-ID> docs/requirements.md`.
+                3. `Root Reason for Existing Formulation`: Explicit answer to *"Why was this fence built?"* (e.g., specific OS quirk, race condition, schema constraint, or crash).
+                4. `Preservation of Core Invariants`: Explicit answer to *"Why is it safe to modify now?"*, demonstrating that original invariants remain intact.
+                *   *Net-New Requirements*: Introducing novel requirement IDs absent from the base comparison is exempt from this hurdle.
+                *   *Legacy Requirements*: Historical unmodified requirements are grandfathered in without retroactive archaeology backfill.
+            Sets complete test specification as sub-task **Description** and transitions to `In Überprüfung`.
+        3.  **Phase 2 (Agent 2 Automated Gate 2 Audit)**: Agent 2 automatically audits requirements, test coverage, and git diffs of `docs/requirements.md`. If an existing requirement was modified without the complete 4-field archaeology section, Agent 2 issues `CHALLENGED` or `RECOMMEND REVISION`. Posts the review comment and transitions sub-task to `Freigabe (Human)`.
         4.  **MANDATORY HARD STOP 2 (Human Test Spec Gate)**: In `Freigabe (Human)`, user approves sub-task to `Erledigt`. Jira Automation advances parent to `Implementation Plan` and spawns `[Impl-Plan]`.
 
         ### 3. Stage 3: Implementation Planning (`[Impl-Plan]`)
