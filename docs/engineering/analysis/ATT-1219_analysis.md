@@ -2,10 +2,13 @@
 
 ## 1. Ticket Metadata & Context
 - **Ticket ID**: `ATT-1219`
+- **Sub-Task ID**: `ATT-1225` (`[Analysis] Within Strava popup display 'now' while Segments are updating`)
 - **Type**: `[Verbesserung]` (Improvement)
 - **Summary**: Within the Strava popup, there is a field that shows when the Segments have been updated the last time. This must state 'now' while the Segments are updating.
 - **Fix Version / Lösungsversion**: `V4.9.38`
 - **Component Area**: Strava Integration (`ui/settings/strava`, `segments/SegmentsRepository.kt`)
+- **Requirement Mapping**: `REQ-EXP-014` (*Reactive Strava Segment Synchronization Progress Indicator & Transient State Decoupling*)
+- **Test Specification Mapping**: `TST-EXP-011`
 
 ---
 
@@ -17,7 +20,7 @@ When the athlete taps this card, `SegmentsRepository.getInstance(context).syncSe
 Because Strava API pagination, detailed segment streams, and database transactions take several seconds, the user is left with no visual feedback in the dialog: the card continues to show the stale date-time (or "never updated") while the synchronization is actively running.
 
 **Objective**:
-While the Segments are updating, the last update field within the Strava popup must display **'now'** (localized: e.g. `"now"` in English, `"jetzt"` in German), giving the athlete immediate, intuitive visual confirmation that synchronization is actively occurring. Once the synchronization completes, the field updates to the newly formatted timestamp.
+While the Segments are updating, the last update field within the Strava popup must display **'now'** (localized: e.g. `"now"` in English, `"jetzt"` in German), giving the athlete immediate, intuitive visual confirmation that synchronization is actively occurring. Once the synchronization completes, the field updates to the newly formatted completion timestamp.
 
 ---
 
@@ -41,16 +44,22 @@ While the Segments are updating, the last update field within the Strava popup m
    - It only updates `TrainingApplication.setLastUpdateTimeOfStravaSegments(timestamp)` at the very end of the method (line 226), after all network calls, JSON deserialization, and DB writes have finished.
    - During the entire multi-second sync process, `TrainingApplication.getLastUpdateTimeOfStravaSegments()` returns the old timestamp from the previous sync.
    - `SegmentsRepository` maintains a private `_refreshingSports = MutableStateFlow<Set<BSportType>>(emptySet())` used for pull-to-refresh indicators in `SegmentsTabsScreen.kt`, but:
-     - It does not expose a unified `isSyncing: StateFlow<Boolean>` flow.
+     - It does not expose a unified, public `isSyncing: StateFlow<Boolean>` flow.
      - When syncing `BSportType.UNKNOWN`, it runs `syncStarredSegmentsWorker(BSportType.BIKE)` and then `syncStarredSegmentsWorker(BSportType.RUN)`. Between the two workers, `_refreshingSports` briefly becomes empty.
-     - Neither worker nor sync method sets the SharedPreferences timestamp to indicate an in-progress update.
+     - Neither worker nor sync method provides a mechanism for UI consumers to observe overall sync activity.
 
-### 3.2 Key Deficiencies
-1. **Missing In-Progress State in Persistent Timestamp & Repository**:
-   - Neither SharedPreferences nor the repository signals to `StravaSettingsDialog` that an update is currently underway.
-2. **Missing Localized String Resource**:
-   - The application defines `lastUpdateOfSegmentsNever` ("never updated"), but lacks `lastUpdateOfSegmentsNow` ("now").
-3. **No Debounce/Guard Against Duplicate Sync Triggers**:
+### 3.2 Key Deficiencies & Architectural Boundaries
+1. **Missing Unified Reactive Sync State**:
+   - `SegmentsRepository` lacks an overarching, public `isSyncing: StateFlow<Boolean>` property that remains `true` continuously across all sport type sub-syncs (Bike and Run) until the entire operation concludes.
+2. **Persistence vs. Transient UI Decoupling (Critical Invariant)**:
+   - Treating `"now"` as a persistent timestamp string to be written into `SharedPreferences` via `TrainingApplication.setLastUpdateTimeOfStravaSegments(...)` is a severe architectural anti-pattern:
+     - If the app process is terminated, crashes, or encounters an unhandled runtime error while syncing, `"now"` would be permanently committed to storage, corrupting historical timestamp integrity.
+     - A persisted string hardcodes the locale active at the moment of sync; changing device language subsequently results in stale localization.
+     - Downstream components and potential timestamp parsers expect a formatted date string or a "never" sentinel, not transient temporal adjectives.
+   - **Resolution**: SharedPreferences MUST remain strictly decoupled from transient UI state. SharedPreferences shall ONLY store the persistent completion timestamp (or never). The transient `"now"` state MUST be computed purely in the reactive UI layer based on the repository's in-memory `isSyncing` StateFlow.
+3. **Missing Localized String Resource**:
+   - The application defines `lastUpdateOfSegmentsNever` ("never updated"), but lacks `lastUpdateOfSegmentsNow` ("now") across the 9 supported locales.
+4. **No Debounce/Guard Against Duplicate Sync Triggers**:
    - Repeatedly tapping the "Update Strava Segments" card while syncing queues redundant background coroutines.
 
 ---
@@ -75,12 +84,10 @@ Introduce a new string resource `lastUpdateOfSegmentsNow` across all 9 supported
    private val _isSyncing = MutableStateFlow(false)
    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
    ```
-2. **Synchronize In-Progress State in `syncStarredSegments`**:
+2. **Manage In-Progress State in `syncStarredSegments` (Strictly In-Memory)**:
    ```kotlin
    suspend fun syncStarredSegments(bSportType: BSportType) = syncMutex.withLock {
        _isSyncing.value = true
-       val previousTimestamp = TrainingApplication.getLastUpdateTimeOfStravaSegments()
-       TrainingApplication.setLastUpdateTimeOfStravaSegments(context.getString(R.string.lastUpdateOfSegmentsNow))
        try {
            segmentsDb.pruneExpiredSegments(7 * 24 * 60 * 60 * 1000L)
            if (bSportType == BSportType.UNKNOWN) {
@@ -93,23 +100,35 @@ Introduce a new string resource `lastUpdateOfSegmentsNow` across all 9 supported
            TrainingApplication.setLastUpdateTimeOfStravaSegments(timestamp)
        } catch (e: Exception) {
            Log.e(TAG, "Error syncing starred segments", e)
-           TrainingApplication.setLastUpdateTimeOfStravaSegments(previousTimestamp)
            throw e
        } finally {
            _isSyncing.value = false
        }
    }
    ```
-3. **Defensive Worker Cleanup**:
-   In `syncStarredSegmentsWorker`, wrap worker execution in `try ... finally` to ensure `_refreshingSports.update { it - bSportType }` is guaranteed even if network or decoding fails.
+   *Note*: SharedPreferences is **never** touched during in-progress syncing. If an exception occurs, the previously stored timestamp in SharedPreferences remains completely intact and uncorrupted, and `_isSyncing` cleanly resets to `false` in `finally`.
 
-### 4.3 StravaSettingsDialog Reactive Binding
+3. **Defensive Worker Cleanup**:
+   In `syncStarredSegmentsWorker(bSportType: BSportType)`, wrap the worker body in a `try ... finally` block:
+   ```kotlin
+   private suspend fun syncStarredSegmentsWorker(bSportType: BSportType) {
+       _refreshingSports.update { it + bSportType }
+       try {
+           // ... network fetch, JSON parsing, database inserts ...
+       } finally {
+           _refreshingSports.update { it - bSportType }
+       }
+   }
+   ```
+   This guarantees that sport-specific pull-to-refresh indicators are cleared even if an individual worker throws a network or parsing exception.
+
+### 4.3 StravaSettingsDialog Reactive Composable Binding
 1. **Observe `isSyncing`**:
    ```kotlin
    val segmentsRepo = remember { SegmentsRepository.getInstance(context) }
    val isSegmentsSyncing by segmentsRepo.isSyncing.collectAsState()
    ```
-2. **Dynamic Display Text**:
+2. **Dynamic Display Text in Composable**:
    ```kotlin
    val segmentsDisplayText = if (isSegmentsSyncing) {
        stringResource(R.string.lastUpdateOfSegmentsNow)
@@ -117,13 +136,41 @@ Introduce a new string resource `lastUpdateOfSegmentsNow` across all 9 supported
        segmentsLastUpdate
    }
    ```
-3. **Click Guard**:
-   Ignore click events if `isSegmentsSyncing` is true, avoiding redundant sync requests.
+   - When `isSegmentsSyncing` is `true`, the UI renders `stringResource(R.string.lastUpdateOfSegmentsNow)`.
+   - When `isSegmentsSyncing` is `false`, the UI renders `segmentsLastUpdate` (from SharedPreferences via `OnSharedPreferenceChangeListener`).
+   - Dynamically adapts to system language changes at runtime via Compose `stringResource()`.
+3. **Click Guard & Debounce**:
+   In `StravaSettingsDialog.kt`, guard the `onClick` handler of the "Update Strava Segments" card:
+   ```kotlin
+   onClick = {
+       if (!isSegmentsSyncing) {
+           segmentsRepo.syncSegmentsAsync(BSportType.UNKNOWN)
+       }
+   }
+   ```
+   This prevents queuing redundant background sync coroutines if the user taps repeatedly while a sync is in progress.
 
 ---
 
-## 5. Impact Analysis & Preserved Invariants
+## 5. Requirement & Test Traceability
+- **Requirement**: `REQ-EXP-014` (*Reactive Strava Segment Synchronization Progress Indicator & Transient State Decoupling*)
+  - The system SHALL provide reactive in-memory synchronization progress tracking for starred Strava segments via `SegmentsRepository.isSyncing`.
+  - While segment synchronization is actively executing, the Strava configuration dialog (`StravaSettingsDialog`) SHALL render localized text indicating `"now"` (`R.string.lastUpdateOfSegmentsNow`) in place of the last synchronization timestamp, across all 9 supported application locales.
+  - The system SHALL NOT persist transient progress states or localized temporal words to persistent storage (`SharedPreferences`), preserving historical timestamp integrity and crash resilience.
+  - The system SHALL debounce manual update triggers by ignoring repeated taps while `isSyncing` is true.
+  - Upon sync completion, `SharedPreferences` SHALL record the formatted date-time, and `StravaSettingsDialog` SHALL reactively display the new completion timestamp.
+  - If synchronization fails or is cancelled, `isSyncing` SHALL reset to `false` via defensive `finally` blocks, and the dialog SHALL revert to displaying the uncorrupted prior timestamp.
+- **Test Specification**: `TST-EXP-011`
+  - Verifies reactive StateFlow emission (`isSyncing` true during sync, false after completion and on failure).
+  - Verifies SharedPreferences is not mutated with `"now"`.
+  - Verifies Composable rendering of `lastUpdateOfSegmentsNow` during sync.
+  - Verifies click debounce during active sync.
+  - Verifies 9-language string resource parity.
+
+---
+
+## 6. Impact Analysis & Preserved Invariants
 - **Database Schema**: Zero modifications to `Segments.db`, `Routes.db`, or SharedPreferences schemas.
-- **Worker Compatibility (`REQ-EXP-011` / `TST-EXP-008`)**: `StravaSegmentsSyncWorker` continues to invoke `syncStarredSegments(BSportType.UNKNOWN)`. During background execution, the timestamp is set to `"now"` and then immediately to the completion timestamp.
-- **Offline / Failure Resilience**: If sync fails (e.g. no network), the repository catches the error, restores the previous timestamp, and resets `_isSyncing` to `false`, preventing the UI from remaining stuck at `"now"`.
-- **Localization Invariant**: Complete 9-language coverage matching existing project standards.
+- **Worker Compatibility (`REQ-EXP-011` / `TST-EXP-008`)**: `StravaSegmentsSyncWorker` continues to invoke `syncStarredSegments(BSportType.UNKNOWN)`. Background workers update `isSyncing` in-memory and write the completion timestamp to SharedPreferences at completion.
+- **Offline / Failure Resilience**: If sync fails (e.g. no network), `_isSyncing` resets to `false` in `finally`, and the UI automatically reverts to displaying the unchanged prior timestamp. No rollback logic is required because SharedPreferences was never mutated with transient state.
+- **Localization Invariant**: Complete 9-language coverage matching existing project standards (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
