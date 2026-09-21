@@ -313,6 +313,7 @@
     <string name="lastUpdateOfEquipmentNever">nooit bijgewerkt</string>
     <string name="updateStravaRoutes">Strava routes bijwerken</string>
     <string name="lastUpdateOfRoutesNever">nooit bijgewerkt</string>
+    <string name="lastUpdateOfRoutesNow">nu</string>
     <string name="updateStravaSegments">Strava-segmenten bijwerken</string>
     <string name="lastUpdateOfSegmentsNever">nooit bijgewerkt</string>
     <string name="lastUpdateOfSegmentsNow">nu</string>

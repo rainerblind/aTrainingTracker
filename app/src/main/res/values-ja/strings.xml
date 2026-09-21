@@ -313,6 +313,7 @@
     <string name="lastUpdateOfEquipmentNever">未更新</string>
     <string name="updateStravaRoutes">Strava ルートを更新</string>
     <string name="lastUpdateOfRoutesNever">未更新</string>
+    <string name="lastUpdateOfRoutesNow">今</string>
     <string name="updateStravaSegments">Strava セグメントを更新</string>
     <string name="lastUpdateOfSegmentsNever">未更新</string>
     <string name="lastUpdateOfSegmentsNow">今</string>

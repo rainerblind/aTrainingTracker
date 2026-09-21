@@ -82,6 +82,8 @@ fun StravaSettingsDialog(
     }
     val segmentsRepo = remember { SegmentsRepository.getInstance(context) }
     val isSegmentsSyncing by segmentsRepo.isSyncing.collectAsState()
+    val routesRepo = remember { RoutesRepository.getInstance(context) }
+    val isRoutesSyncing by routesRepo.isSyncing.collectAsState()
 
     var uploadGps by remember {
         mutableStateOf(prefs.getBoolean("uploadStravaGPS", true))
@@ -255,8 +257,9 @@ fun StravaSettingsDialog(
 
                     OutlinedCard(
                         onClick = {
-                            val routesRepo = RoutesRepository.getInstance(context)
-                            routesRepo.syncRoutesFromStravaAsync()
+                            if (!isRoutesSyncing) {
+                                routesRepo.syncRoutesFromStravaAsync()
+                            }
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -270,7 +273,11 @@ fun StravaSettingsDialog(
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Text(
-                                text = routesLastUpdate,
+                                text = if (isRoutesSyncing) {
+                                    stringResource(R.string.lastUpdateOfRoutesNow)
+                                } else {
+                                    routesLastUpdate
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

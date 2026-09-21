@@ -401,6 +401,7 @@
     <string name="lastUpdateOfEquipmentNever">never updated</string>
     <string name="updateStravaRoutes">Update Strava Routes</string>
     <string name="lastUpdateOfRoutesNever">never updated</string>
+    <string name="lastUpdateOfRoutesNow">now</string>
     <string name="updateStravaSegments">Update Strava Segments</string>
     <string name="lastUpdateOfSegmentsNever">never updated</string>
     <string name="lastUpdateOfSegmentsNow">now</string>

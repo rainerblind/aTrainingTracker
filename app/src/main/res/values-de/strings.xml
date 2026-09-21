@@ -317,6 +317,7 @@
     <string name="lastUpdateOfEquipmentNever">noch nie aktualisiert</string>
     <string name="updateStravaRoutes">Strava Routen aktualisieren</string>
     <string name="lastUpdateOfRoutesNever">noch nie aktualisiert</string>
+    <string name="lastUpdateOfRoutesNow">jetzt</string>
     <string name="updateStravaSegments">Strava Segmente aktualisieren</string>
     <string name="lastUpdateOfSegmentsNever">noch nie aktualisiert</string>
     <string name="lastUpdateOfSegmentsNow">jetzt</string>
