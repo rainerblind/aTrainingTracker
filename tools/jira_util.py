@@ -421,7 +421,7 @@ def update_issue_description(issue_key, description, role="agent1"):
     jira_request(url, method="PUT", payload=payload, role=role)
     print(f"Description updated for {issue_key}.")
 
-def create_subtask(parent_key, summary, description, role="agent1"):
+def create_subtask(parent_key, summary, description, role="coordinator"):
     config = get_config()
     url = f"{config['JIRA_URL']}/rest/api/2/issue"
     payload = {
@@ -501,7 +501,9 @@ if __name__ == "__main__":
     elif cmd == "update-desc" and len(remaining_argv) == 3:
         update_issue_description(remaining_argv[1], remaining_argv[2], role=active_role)
     elif cmd == "create-subtask" and len(remaining_argv) == 4:
-        create_subtask(remaining_argv[1], remaining_argv[2], remaining_argv[3], role=active_role)
+        # Default subtask creation role to coordinator unless explicitly overridden
+        subtask_role = active_role if active_role != "agent1" or "--as" in sys.argv or any(a.startswith("--as=") for a in sys.argv) or os.environ.get("JIRA_ACTOR") else "coordinator"
+        create_subtask(remaining_argv[1], remaining_argv[2], remaining_argv[3], role=subtask_role)
     elif cmd == "create-issue" and len(remaining_argv) >= 3:
         summary = remaining_argv[1]
         desc = remaining_argv[2]

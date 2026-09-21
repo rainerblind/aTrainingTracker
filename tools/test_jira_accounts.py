@@ -167,6 +167,18 @@ class TestRolePrecedenceAndAttribution(unittest.TestCase):
         with patch.dict(os.environ, {"JIRA_ACTOR": "agent1"}):
             self.assertEqual(review_agent.AUDITOR_ROLE, "agent2")
 
+    def test_create_subtask_defaults_to_coordinator(self):
+        """create_subtask defaults to the coordinator role unless explicitly overridden."""
+        with patch("jira_util.jira_request") as mock_request, patch("jira_util.get_config") as mock_config:
+            mock_config.return_value = {"JIRA_URL": "https://example.atlassian.net"}
+            mock_request.return_value = {"key": "ATT-9999"}
+            
+            # Default invocation (no role passed)
+            jira_util.create_subtask("ATT-1000", "Test Subtask", "Test Desc")
+            mock_request.assert_called_once()
+            _, kwargs = mock_request.call_args
+            self.assertEqual(kwargs.get("role"), "coordinator")
+
     def test_human_gate_transition_blocked_across_all_roles(self):
         """Attempting to transition to Erledigt is blocked across all roles."""
         prohibited_targets = ["erledigt", "Erledigt", "DONE", "freigabe erteilt", "Freigabe erteilt"]
