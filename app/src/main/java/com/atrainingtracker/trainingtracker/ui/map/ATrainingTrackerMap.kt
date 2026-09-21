@@ -76,6 +76,7 @@ fun ATrainingTrackerMap(
     userSpeed: Float = 0f,
     bSportType: BSportType = BSportType.UNKNOWN,
     currentLocationFlow: StateFlow<LatLng?>,
+    boundsFocusTrigger: Long = 0L,
     
     // Scrutiny
     selectedDistance: Double? = null,
@@ -134,7 +135,19 @@ fun ATrainingTrackerMap(
     scope.collect(content)
 
     val currentZoom = cameraPositionState.position.zoom
-    MapBoundsController(scope.tracks, scope.markers, scope.segments, scope.routes, zoomFocus, initialBounds, currentLocation, cameraPositionState, isMapLoaded, context)
+    MapBoundsController(
+        tracks = scope.tracks,
+        markers = scope.markers,
+        segments = scope.segments,
+        routes = scope.routes,
+        zoomFocus = zoomFocus,
+        initialBounds = initialBounds,
+        currentLocation = currentLocation,
+        cameraPositionState = cameraPositionState,
+        isMapLoaded = isMapLoaded,
+        context = context,
+        boundsFocusTrigger = boundsFocusTrigger
+    )
     
     // Render Preview Check
     if (LocalInspectionMode.current) {

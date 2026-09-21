@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -36,6 +37,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Place
@@ -44,6 +46,8 @@ import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -107,7 +111,8 @@ fun PeriodMapScreen(
     peekedWorkoutDataWithTrack: WorkoutDataWithTrack?,
     clearPeekSelection: () -> Unit,
     onBack: () -> Unit,
-    onEditWorkout: ((Long) -> Unit)? = null
+    onEditWorkout: ((Long) -> Unit)? = null,
+    onSelectRegion: ((String?) -> Unit)? = null
 ) {
     val df = DistanceFormatter()
     val tf = TimeFormatter()
@@ -406,11 +411,79 @@ fun PeriodMapScreen(
                     },
                 )
 
+                // REGION SWITCHER CHIPS (Top Row) - ATT-1151
+                if (mapState.regions.size > 1) {
+                    val totalPeriodWorkouts = remember(mapState.regions) {
+                        mapState.regions.sumOf { it.workoutCount }
+                    }
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .fillMaxWidth()
+                            .padding(start = 12.dp, top = 12.dp, end = 12.dp)
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        mapState.regions.forEachIndexed { index, region ->
+                            val isSelected = mapState.selectedRegionId == region.id
+                            val label = if (region.isPrimary) {
+                                stringResource(
+                                    R.string.workout_periods__primary_region_format,
+                                    index + 1,
+                                    region.workoutCount
+                                )
+                            } else {
+                                stringResource(
+                                    R.string.workout_periods__region_format,
+                                    index + 1,
+                                    region.workoutCount
+                                )
+                            }
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { onSelectRegion?.invoke(region.id) },
+                                label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = TTAlpha.Overlay),
+                                    labelColor = MaterialTheme.colorScheme.onSurface,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            )
+                        }
+
+                        // "All Regions" Option
+                        val isAllSelected = mapState.selectedRegionId == null
+                        FilterChip(
+                            selected = isAllSelected,
+                            onClick = { onSelectRegion?.invoke(null) },
+                            label = {
+                                Text(
+                                    stringResource(
+                                        R.string.workout_periods__all_regions_format,
+                                        totalPeriodWorkouts
+                                    ),
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
+                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = TTAlpha.Overlay),
+                                labelColor = MaterialTheme.colorScheme.onSurface,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        )
+                    }
+                }
+
                 // OVERLAY BUTTONS (Top End)
+                // When regions are present, buttons move downwards below the complete upper region chips row
+                val buttonsTopPadding = if (mapState.regions.size > 1) 64.dp else 16.dp
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(16.dp),
+                        .padding(end = 16.dp, top = buttonsTopPadding, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     // FLOATING SHARE BUTTON

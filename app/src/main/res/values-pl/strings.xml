@@ -646,6 +646,9 @@
         <item quantity="other">%1$d Treningów</item>
     </plurals>
     <string name="workout_periods__longest_workout">Najdłuższy trening</string>
+    <string name="workout_periods__region_format">Region %1$d (%2$d)</string>
+    <string name="workout_periods__primary_region_format">Główny region: Region %1$d (%2$d)</string>
+    <string name="workout_periods__all_regions_format">Wszystkie regiony (%1$d)</string>
     <string name="workout_periods__migration_querying">Ładowanie historii treningów…</string>
     <string name="workout_periods__migration_reading">Odczytywanie treningu %1$d z %2$d…</string>
     <string name="workout_periods__migration_syncing">Synchronizowanie %1$s…</string>

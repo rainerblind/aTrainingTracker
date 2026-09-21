@@ -810,10 +810,27 @@ class PeriodsRepository private constructor(private val application: Application
     }
 
     private fun enrich(summary: PeriodSummary, groupWorkouts: List<WorkoutData>): PeriodSummary {
-        // 1. Identify spatial anchors for instant framing
+        // 1. Identify spatial anchors for instant framing (guarantees regional extrema & distant continents)
         val trueLongestId = if (groupWorkouts.isNotEmpty()) groupWorkouts.maxByOrNull { it.activeTimeSec }?.id else summary.longestId
         val anchorIds = setOf(trueLongestId ?: summary.longestId, summary.northId, summary.southId, summary.eastId, summary.westId).filter { it != -1L }
         val anchorWorkouts = if (groupWorkouts.isNotEmpty()) groupWorkouts.filter { it.id in anchorIds } else emptyList()
+
+        // Curate preview polylines for the card thumbnail up to MAX_SUMMARY_THUMBNAIL_TRACKS (ATT-1151 / REQ-PER-012)
+        val previewWorkouts = if (groupWorkouts.isNotEmpty()) {
+            val selectedWorkouts = anchorWorkouts.filter { it.mapPolyline.isNotEmpty() }.toMutableList()
+            val selectedIds = selectedWorkouts.map { it.id }.toMutableSet()
+            if (selectedWorkouts.size < MAX_SUMMARY_THUMBNAIL_TRACKS) {
+                val remainingWorkouts = groupWorkouts
+                    .filter { it.id !in selectedIds && it.mapPolyline.isNotEmpty() }
+                    .sortedByDescending { it.startTimeS }
+                for (w in remainingWorkouts) {
+                    if (selectedWorkouts.size >= MAX_SUMMARY_THUMBNAIL_TRACKS) break
+                    selectedWorkouts.add(w)
+                    selectedIds.add(w.id)
+                }
+            }
+            selectedWorkouts
+        } else anchorWorkouts
         
         // 2. Map ALL available workout polylines for the full heatmap (ATT-440 Refinement)
         val allPolylineMap = if (groupWorkouts.isNotEmpty()) {
@@ -871,7 +888,9 @@ class PeriodsRepository private constructor(private val application: Application
 
         return summary.copy(
             sportStats = enrichedSportStats,
-            polylines = anchorWorkouts.map { it.mapPolyline }.filter { it.isNotEmpty() },
+            polylines = if (previewWorkouts.isNotEmpty()) {
+                previewWorkouts.map { it.mapPolyline }.filter { it.isNotEmpty() }
+            } else summary.polylines,
             workoutIdToPolylineMap = allPolylineMap,
             workoutIdToSportMap = if (groupWorkouts.isNotEmpty()) groupWorkouts.associate { it.id to it.bSportType } else summary.workoutIdToSportMap,
             extremaMarkers = anchorWorkouts.flatMap { workout ->

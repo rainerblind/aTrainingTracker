@@ -873,6 +873,9 @@
         <item quantity="other">%1$d Trainingen</item>
     </plurals>
     <string name="workout_periods__longest_workout">Langste training</string>
+    <string name="workout_periods__region_format">Regio %1$d (%2$d)</string>
+    <string name="workout_periods__primary_region_format">Hoofdregio: Regio %1$d (%2$d)</string>
+    <string name="workout_periods__all_regions_format">Alle regio\'s (%1$d)</string>
     <string name="workout_periods__migration_querying">Trainingsgeschiedenis laden…</string>
     <string name="workout_periods__migration_reading">Training %1$d van %2$d lezen…</string>
     <string name="workout_periods__migration_syncing">Synchroniseren %1$s…</string>

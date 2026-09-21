@@ -49,23 +49,41 @@ fun MapBoundsController(
     currentLocation: LatLng?,
     cameraPositionState: CameraPositionState,
     isMapLoaded: Boolean,
-    context: Context
+    context: Context,
+    boundsFocusTrigger: Long = 0L
 ) {
     // Flag to ensure we only fit the bounds once per session/focus change.
-    // ATT-440 Refinement: We key this by initialBounds so that if they arrive late 
-    // (via enrichment), the camera will try to fit them even if it previously gave up.
+    // ATT-440 & ATT-1151: Track explicit bounds and trigger to allow dynamic region switching and refitting.
+    var lastFittedExplicitBounds by remember(zoomFocus) { mutableStateOf<LatLngBounds?>(null) }
+    var lastTrigger by remember(zoomFocus) { mutableStateOf(0L) }
     var hasFittedInitialBounds by remember(zoomFocus, initialBounds != null) { mutableStateOf(false) }
 
-    LaunchedEffect(tracks, markers, segments, routes, isMapLoaded, hasFittedInitialBounds, initialBounds) {
-        if (hasFittedInitialBounds) return@LaunchedEffect
-
-        // --- ATT-352 Refinement: Use persisted bounds if available ---
+    LaunchedEffect(tracks, markers, segments, routes, isMapLoaded, hasFittedInitialBounds, initialBounds, boundsFocusTrigger) {
+        // --- ATT-352 & ATT-1151: Explicit bounds camera fitting & dynamic region switching ---
         if (zoomFocus == MapZoomFocus.EXPLICIT_BOUNDS && initialBounds != null) {
-            // Accelerated fitting: Don't wait for isMapLoaded if we have explicit bounds
-            cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(initialBounds, (40 * context.resources.displayMetrics.density).toInt()))
-            hasFittedInitialBounds = true
-            return@LaunchedEffect
+            val needsRefit = initialBounds != lastFittedExplicitBounds || (boundsFocusTrigger > 0L && boundsFocusTrigger != lastTrigger)
+            if (needsRefit) {
+                val padding = (40 * context.resources.displayMetrics.density).toInt()
+                try {
+                    val update = CameraUpdateFactory.newLatLngBounds(initialBounds, padding)
+                    if (lastFittedExplicitBounds == null) {
+                        cameraPositionState.move(update)
+                    } else {
+                        cameraPositionState.animate(update, 600)
+                    }
+                    lastFittedExplicitBounds = initialBounds
+                    lastTrigger = boundsFocusTrigger
+                    hasFittedInitialBounds = true
+                    return@LaunchedEffect
+                } catch (e: Exception) {
+                    // Map layout may not have occurred yet; retry when isMapLoaded becomes true
+                }
+            } else {
+                return@LaunchedEffect
+            }
         }
+
+        if (hasFittedInitialBounds) return@LaunchedEffect
         
         if (!isMapLoaded) return@LaunchedEffect
 

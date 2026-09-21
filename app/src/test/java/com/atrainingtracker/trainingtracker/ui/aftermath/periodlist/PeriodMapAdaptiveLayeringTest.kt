@@ -222,4 +222,67 @@ class PeriodMapAdaptiveLayeringTest {
         val thirtyOneWorkouts = (1L..31L).map { createDummyWorkout(it) }
         assertTrue("31 workouts MUST exceed threshold", thirtyOneWorkouts.size > MAX_PERIOD_VECTOR_TRACKS)
     }
+
+    @Test
+    fun testThumbnailTracksConstant_isEight() {
+        assertEquals("Thumbnail preview track budget must be 8", 8, MAX_SUMMARY_THUMBNAIL_TRACKS)
+    }
+
+    @Test
+    fun testThumbnailTracks_curationRespectsBudgetAndPreservesAnchors() {
+        val workouts = (1L..15L).map { id ->
+            val w = createDummyWorkout(id)
+            w.copy(startTimeS = 1000L + id * 100L) // id 15 is most recent
+        }
+        val anchorIds = setOf(1L, 2L, 3L, 4L, 5L)
+        val anchorWorkouts = workouts.filter { it.id in anchorIds }
+
+        // Simulate PeriodsRepository enrichment logic
+        val selectedWorkouts = anchorWorkouts.filter { it.mapPolyline.isNotEmpty() }.toMutableList()
+        val selectedIds = selectedWorkouts.map { it.id }.toMutableSet()
+        if (selectedWorkouts.size < MAX_SUMMARY_THUMBNAIL_TRACKS) {
+            val remainingWorkouts = workouts
+                .filter { it.id !in selectedIds && it.mapPolyline.isNotEmpty() }
+                .sortedByDescending { it.startTimeS }
+            for (w in remainingWorkouts) {
+                if (selectedWorkouts.size >= MAX_SUMMARY_THUMBNAIL_TRACKS) break
+                selectedWorkouts.add(w)
+                selectedIds.add(w.id)
+            }
+        }
+
+        assertEquals("Curated preview must contain exactly MAX_SUMMARY_THUMBNAIL_TRACKS (8)", MAX_SUMMARY_THUMBNAIL_TRACKS, selectedWorkouts.size)
+        // Verify all 5 anchors are preserved
+        assertTrue("Anchor 1 must be present", selectedWorkouts.any { it.id == 1L })
+        assertTrue("Anchor 2 must be present", selectedWorkouts.any { it.id == 2L })
+        assertTrue("Anchor 3 must be present", selectedWorkouts.any { it.id == 3L })
+        assertTrue("Anchor 4 must be present", selectedWorkouts.any { it.id == 4L })
+        assertTrue("Anchor 5 must be present", selectedWorkouts.any { it.id == 5L })
+        // Remaining 3 slots must be the most recent (15, 14, 13)
+        assertTrue("Recent workout 15 must be present", selectedWorkouts.any { it.id == 15L })
+        assertTrue("Recent workout 14 must be present", selectedWorkouts.any { it.id == 14L })
+        assertTrue("Recent workout 13 must be present", selectedWorkouts.any { it.id == 13L })
+    }
+
+    @Test
+    fun testThumbnailTracks_smallPeriodIncludesAllWorkouts() {
+        val workouts = (1L..5L).map { createDummyWorkout(it) }
+        val anchorIds = setOf(1L, 2L)
+        val anchorWorkouts = workouts.filter { it.id in anchorIds }
+
+        val selectedWorkouts = anchorWorkouts.filter { it.mapPolyline.isNotEmpty() }.toMutableList()
+        val selectedIds = selectedWorkouts.map { it.id }.toMutableSet()
+        if (selectedWorkouts.size < MAX_SUMMARY_THUMBNAIL_TRACKS) {
+            val remainingWorkouts = workouts
+                .filter { it.id !in selectedIds && it.mapPolyline.isNotEmpty() }
+                .sortedByDescending { it.startTimeS }
+            for (w in remainingWorkouts) {
+                if (selectedWorkouts.size >= MAX_SUMMARY_THUMBNAIL_TRACKS) break
+                selectedWorkouts.add(w)
+                selectedIds.add(w.id)
+            }
+        }
+
+        assertEquals("When period has <= 8 workouts, all 5 workouts must be included", 5, selectedWorkouts.size)
+    }
 }

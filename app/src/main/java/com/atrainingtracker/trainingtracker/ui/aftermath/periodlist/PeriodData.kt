@@ -29,6 +29,13 @@ import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
  */
 const val MAX_PERIOD_VECTOR_TRACKS = 30
 
+/**
+ * Maximum number of workout vector tracks hydrated for summary card thumbnail previews.
+ * Balances rich route visualization against memory consumption in LazyColumn.
+ * (ATT-1151 / REQ-PER-012)
+ */
+const val MAX_SUMMARY_THUMBNAIL_TRACKS = 8
+
 enum class PeriodType {
     DAY, WEEK, MONTH, YEAR
 }

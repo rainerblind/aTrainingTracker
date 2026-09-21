@@ -948,6 +948,9 @@
         <item quantity="other">%1$d Einheiten</item>
     </plurals>
     <string name="workout_periods__longest_workout">Längste Einheit</string>
+    <string name="workout_periods__region_format">Region %1$d (%2$d)</string>
+    <string name="workout_periods__primary_region_format">Hauptregion: Region %1$d (%2$d)</string>
+    <string name="workout_periods__all_regions_format">Alle Regionen (%1$d)</string>
     <string name="workout_periods__migration_title">Optimiere Verlaufs-Datenbank…</string>
     <string name="workout_periods__migration_querying">Lade Trainingsverlauf…</string>
     <string name="workout_periods__migration_reading">Lese Training %1$d von %2$d…</string>

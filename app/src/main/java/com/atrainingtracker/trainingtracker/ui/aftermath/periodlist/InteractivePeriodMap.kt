@@ -67,13 +67,23 @@ fun InteractivePeriodMap(
     val context = LocalContext.current
     val noLocation = remember { MutableStateFlow<LatLng?>(null) }
     
-    // --- 1. INSTANT MAP SETUP (ATT-346 Relational) ---
-    // Immediately fit the map to pre-calculated bounds from the database
-    // ATT-440 Refinement: Added safety check to ignore invalid (0.0) coordinates (Ocean Trap).
-    // ATT-440 Refinement: Key the remember block by stable period IDs to prevent zoom reset 
-    // when background paths arrive.
-    val periodBounds = remember(summary.periodType, summary.startTimestampS) {
-        if (summary.minLat < 90.0 && summary.minLat != 0.0) {
+    // --- 1. INSTANT MAP SETUP (ATT-346 Relational, ATT-1151 Multi-Region Support) ---
+    // If a specific region is selected, prioritize that region's bounds.
+    // If "All Regions" is selected (selectedRegionId == null), construct bounds covering all detected regions.
+    // Fallback to overall summary bounds.
+    val activeRegion = remember(mapState.regions, mapState.selectedRegionId) {
+        if (mapState.selectedRegionId != null) {
+            mapState.regions.find { it.id == mapState.selectedRegionId }
+        } else null
+    }
+
+    val periodBounds = remember(summary.periodType, summary.startTimestampS, activeRegion?.bounds, mapState.selectedRegionId, mapState.regions) {
+        if (activeRegion != null) {
+            activeRegion.bounds
+        } else if (mapState.regions.isNotEmpty() && mapState.selectedRegionId == null) {
+            val allRegionPoints = mapState.regions.flatMap { listOf(it.bounds.southwest, it.bounds.northeast) }
+            SpatialRegionEngine.buildNormalizedBounds(allRegionPoints)
+        } else if (summary.minLat < 90.0 && summary.minLat != 0.0 && summary.minLat <= summary.maxLat) {
             LatLngBounds(LatLng(summary.minLat, summary.minLng), LatLng(summary.maxLat, summary.maxLng))
         } else null
     }
@@ -94,6 +104,7 @@ fun InteractivePeriodMap(
     ATrainingTrackerMap(
         zoomFocus = if (periodBounds != null) MapZoomFocus.EXPLICIT_BOUNDS else MapZoomFocus.FIT_PRIMARY,
         initialBounds = periodBounds,
+        boundsFocusTrigger = mapState.focusEpochMs,
         currentLocationFlow = noLocation,
         modifier = modifier,
         shouldTakeSnapshot = shouldTakeSnapshot,
