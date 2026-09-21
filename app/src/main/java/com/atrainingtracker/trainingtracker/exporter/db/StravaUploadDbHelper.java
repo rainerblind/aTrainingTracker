@@ -42,7 +42,7 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
     public static final String STATUS = "Status";
     public static final String STRAVA_ACTIVITY_DATA = "StravaActivity";
     static final String DB_NAME = "StravaUpload.db";
-    static final int DB_VERSION = 5;
+    static final int DB_VERSION = 6;
     private static final String TAG = "StravaUploadDbHelper";
     private static final boolean DEBUG = false;
     private static final String CREATE_TABLE = "create table " + TABLE + " ("
@@ -71,7 +71,7 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
     public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
         if (oldVersion < 4) {
             // Migrating from 3 to 4 added the original 'Feedback' column (now renamed)
-            // But since we are at 5 now, we skip directly to the latest schema logic.
+            // But since we are at 6 now, we skip directly to the latest schema logic.
             db.execSQL("drop table if exists " + TABLE);
             onCreate(db);
         } else if (oldVersion == 4) {
@@ -90,6 +90,49 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+        }
+
+        if (oldVersion < 6) {
+            // REQ-EXP-013: Deterministic row migration from legacy raw Strava JSON to minimized v:2 JSON
+            migrateToMinimizedStravaActivity(db);
+        }
+    }
+
+    @Override
+    public void onDowngrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
+        Log.w(TAG, "Downgrading database from version " + oldVersion + " to " + newVersion);
+        // Dual-format parser handles both v1 and v2 safely without DDL modifications
+    }
+
+    /**
+     * Iterates through legacy Strava activity records and minimizes them in-place (REQ-EXP-013).
+     * Corrupt or unparseable JSON blobs safely become null, preventing migration failure.
+     */
+    public void migrateToMinimizedStravaActivity(@NonNull SQLiteDatabase db) {
+        String query = "SELECT " + C_ID + ", " + STRAVA_ACTIVITY_DATA + " FROM " + TABLE
+                + " WHERE " + STRAVA_ACTIVITY_DATA + " IS NOT NULL"
+                + " AND " + STRAVA_ACTIVITY_DATA + " NOT LIKE '%\"v\":2%'";
+
+        try (Cursor cursor = db.rawQuery(query, null)) {
+            int idCol = cursor.getColumnIndexOrThrow(C_ID);
+            int dataCol = cursor.getColumnIndexOrThrow(STRAVA_ACTIVITY_DATA);
+            while (cursor.moveToNext()) {
+                long rowId = cursor.getLong(idCol);
+                String rawJson = cursor.getString(dataCol);
+                String minimized = null;
+                try {
+                    minimized = com.atrainingtracker.trainingtracker.ui.aftermath.StravaActivityParser.minimize(rawJson);
+                } catch (Exception e) {
+                    Log.w(TAG, "Corrupt legacy JSON on row " + rowId + ", clearing to null", e);
+                }
+
+                ContentValues values = new ContentValues();
+                values.put(STRAVA_ACTIVITY_DATA, minimized);
+                db.update(TABLE, values, C_ID + "=?", new String[]{String.valueOf(rowId)});
+            }
+        } catch (SQLException e) {
+            Log.e(TAG, "Failed to migrate StravaActivity to v2", e);
+            throw e;
         }
     }
 
@@ -251,5 +294,18 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
         if (DEBUG) Log.d(TAG, "clearAllStravaData");
         SQLiteDatabase db = getWritableDatabase();
         return db.delete(TABLE, null, null);
+    }
+
+    /**
+     * Executes a full WAL checkpoint to ensure all unlinked and deleted data pages are cleared (REQ-EXP-013).
+     */
+    public void checkpointWal() {
+        try (Cursor c = getWritableDatabase().rawQuery("PRAGMA wal_checkpoint(FULL)", null)) {
+            if (c.moveToFirst()) {
+                if (DEBUG) Log.d(TAG, "WAL checkpoint completed: busy=" + c.getInt(0) + " log=" + c.getInt(1) + " checkpointed=" + c.getInt(2));
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "WAL checkpoint failed", e);
+        }
     }
 }

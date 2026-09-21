@@ -33,6 +33,7 @@ import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.StravaActivityParser
 import okhttp3.FormBody
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -457,8 +458,9 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         }
         if (DEBUG) Log.i(TAG, "doUpdate: activityJSON=$activityJSON")
 
-        // SAVE STRAVA ACTIVITY DATA
-        StravaUploadDbHelper(mContext).updateStravaActivityData(exportInfo.fileBaseName, activityJSON.toString())
+        // SAVE STRAVA ACTIVITY DATA (REQ-EXP-013: minimize to athlete achievements)
+        val minimizedData = StravaActivityParser.minimize(activityJSON)
+        StravaUploadDbHelper(mContext).updateStravaActivityData(exportInfo.fileBaseName, minimizedData)
 
         // ATT-912 / REQ-EXP-010: Ingest Strava segment feedback to update local PRs:
         processSegmentEffortsForPrs(activityJSON)
