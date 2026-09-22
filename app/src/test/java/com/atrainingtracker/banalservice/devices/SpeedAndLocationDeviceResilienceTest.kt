@@ -227,6 +227,96 @@ class SpeedAndLocationDeviceResilienceTest {
     }
 
     @Test
+    fun testGpsDevice_getProviderThrowsSecurityException_handledCleanly() {
+        // Arrange: LocationManager.getProvider throws SecurityException (e.g. missing fine location permission)
+        every { mockLocationManager.getProvider(LocationManager.GPS_PROVIDER) } throws SecurityException("Missing ACCESS_FINE_LOCATION permission")
+
+        // Act
+        val device = SpeedAndLocationDevice_GPS(mockContext, mockSensorManager)
+
+        // Assert: device created safely without crashing; requests 0 updates
+        assertNotNull(device)
+        verify(exactly = 0) {
+            mockLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, any<Long>(), any<Float>(), any<SpeedAndLocationDevice_GPS>())
+        }
+    }
+
+    @Test
+    fun testGpsDevice_getProviderThrowsIllegalArgumentException_handledCleanly() {
+        // Arrange: LocationManager.getProvider throws IllegalArgumentException
+        every { mockLocationManager.getProvider(LocationManager.GPS_PROVIDER) } throws IllegalArgumentException("Invalid provider gps")
+
+        // Act
+        val device = SpeedAndLocationDevice_GPS(mockContext, mockSensorManager)
+
+        // Assert: device created safely without crashing; requests 0 updates
+        assertNotNull(device)
+        verify(exactly = 0) {
+            mockLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, any<Long>(), any<Float>(), any<SpeedAndLocationDevice_GPS>())
+        }
+    }
+
+    @Test
+    fun testNetworkDevice_getProviderThrowsSecurityException_handledCleanly() {
+        // Arrange: LocationManager.getProvider throws SecurityException
+        every { mockLocationManager.getProvider(LocationManager.NETWORK_PROVIDER) } throws SecurityException("Missing ACCESS_COARSE_LOCATION permission")
+
+        // Act
+        val device = SpeedAndLocationDevice_Network(mockContext, mockSensorManager)
+
+        // Assert: device created safely without crashing; requests 0 updates
+        assertNotNull(device)
+        verify(exactly = 0) {
+            mockLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, any<Long>(), any<Float>(), any<SpeedAndLocationDevice_Network>())
+        }
+    }
+
+    @Test
+    fun testNetworkDevice_getProviderThrowsIllegalArgumentException_handledCleanly() {
+        // Arrange: LocationManager.getProvider throws IllegalArgumentException
+        every { mockLocationManager.getProvider(LocationManager.NETWORK_PROVIDER) } throws IllegalArgumentException("Invalid provider network")
+
+        // Act
+        val device = SpeedAndLocationDevice_Network(mockContext, mockSensorManager)
+
+        // Assert: device created safely without crashing; requests 0 updates
+        assertNotNull(device)
+        verify(exactly = 0) {
+            mockLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, any<Long>(), any<Float>(), any<SpeedAndLocationDevice_Network>())
+        }
+    }
+
+    @Test
+    fun testGpsDevice_onProviderEnabled_getProviderThrowsSecurityException_handledCleanly() {
+        val mockProvider = mockk<LocationProvider>()
+        every { mockLocationManager.getProvider(LocationManager.GPS_PROVIDER) } returns mockProvider
+
+        val device = SpeedAndLocationDevice_GPS(mockContext, mockSensorManager)
+
+        // When provider re-enables, getProvider throws SecurityException
+        every { mockLocationManager.getProvider(LocationManager.GPS_PROVIDER) } throws SecurityException("Permission revoked")
+
+        device.onProviderEnabled(LocationManager.GPS_PROVIDER)
+
+        assertNotNull(device)
+    }
+
+    @Test
+    fun testNetworkDevice_onProviderEnabled_getProviderThrowsSecurityException_handledCleanly() {
+        val mockProvider = mockk<LocationProvider>()
+        every { mockLocationManager.getProvider(LocationManager.NETWORK_PROVIDER) } returns mockProvider
+
+        val device = SpeedAndLocationDevice_Network(mockContext, mockSensorManager)
+
+        // When provider re-enables, getProvider throws SecurityException
+        every { mockLocationManager.getProvider(LocationManager.NETWORK_PROVIDER) } throws SecurityException("Permission revoked")
+
+        device.onProviderEnabled(LocationManager.NETWORK_PROVIDER)
+
+        assertNotNull(device)
+    }
+
+    @Test
     fun testShutDown_handlesRemoveUpdatesExceptionGracefully() {
         // Arrange
         val mockProvider = mockk<LocationProvider>()

@@ -49,9 +49,14 @@ public class SpeedAndLocationDevice_GPS extends SpeedAndLocationDevice
         mDeviceId = devicesDatabaseManager.getSpeedAndLocationGPSDeviceId();
 
         mLocationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
-        if (mLocationManager != null && mLocationManager.getProvider(LocationManager.GPS_PROVIDER) != null) {
+        if (mLocationManager != null) {
             try {
-                mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
+                if (mLocationManager.getProvider(LocationManager.GPS_PROVIDER) != null) {
+                    mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
+                } else {
+                    Log.w(TAG, "GPS location provider is not available on this device");
+                    LocationUnavailable();
+                }
             } catch (IllegalArgumentException | SecurityException e) {
                 Log.w(TAG, "Failed to register GPS location updates: " + e.getMessage());
                 LocationUnavailable();
@@ -85,11 +90,13 @@ public class SpeedAndLocationDevice_GPS extends SpeedAndLocationDevice
         if (DEBUG) Log.d(TAG, "onProviderEnabled: " + provider);
         if (LocationManager.GPS_PROVIDER.equals(provider)) {
             if (DEBUG) Log.d(TAG, "GPS location provider enabled");
-            if (mLocationManager != null && mLocationManager.getProvider(LocationManager.GPS_PROVIDER) != null) {
+            if (mLocationManager != null) {
                 try {
-                    mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
-                    // set last active
-                    setLastActive();
+                    if (mLocationManager.getProvider(LocationManager.GPS_PROVIDER) != null) {
+                        mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
+                        // set last active
+                        setLastActive();
+                    }
                 } catch (IllegalArgumentException | SecurityException e) {
                     Log.w(TAG, "Failed to register GPS location updates on provider enabled: " + e.getMessage());
                 }

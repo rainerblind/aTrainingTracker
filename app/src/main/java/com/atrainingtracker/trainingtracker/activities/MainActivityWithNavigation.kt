@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.activities
 
 import android.Manifest
 import android.annotation.SuppressLint
+import androidx.annotation.VisibleForTesting
 import android.app.Dialog
 import android.content.BroadcastReceiver
 import android.content.ComponentName
@@ -380,18 +381,7 @@ class MainActivityWithNavigation :
 
         handleIntent(intent)
 
-        if (TrainingApplication.trackLocation()) {
-            val locationManager = getSystemService(LOCATION_SERVICE) as? LocationManager
-            if (locationManager != null && locationManager.getProvider(LocationManager.GPS_PROVIDER) != null) {
-                try {
-                    if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                        showGPSDisabledAlertToUser()
-                    }
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed to check if GPS provider is enabled: " + e.message)
-                }
-            }
-        }
+        checkGpsEnabledIfPermitted()
 
         val dialog = GooglePlayServicesUtil.getErrorDialog(
             GooglePlayServicesUtil.isGooglePlayServicesAvailable(this),
@@ -542,9 +532,12 @@ class MainActivityWithNavigation :
                 }
             }
 
-            if (foregroundLocationGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    showBackgroundLocationDialog()
+            if (foregroundLocationGranted) {
+                checkGpsEnabledIfPermitted()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        showBackgroundLocationDialog()
+                    }
                 }
             }
         }
@@ -1062,7 +1055,31 @@ class MainActivityWithNavigation :
         }
     }
 
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal fun checkGpsEnabledIfPermitted() {
+        if (!TrainingApplication.trackLocation()) {
+            return
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return
+        }
+        val locationManager = getSystemService(LOCATION_SERVICE) as? LocationManager ?: return
+        try {
+            val provider = locationManager.getProvider(LocationManager.GPS_PROVIDER)
+            if (provider != null && !locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                showGPSDisabledAlertToUser()
+            }
+        } catch (e: SecurityException) {
+            Log.w(TAG, "SecurityException while checking GPS provider: ${e.message}")
+        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "IllegalArgumentException while checking GPS provider: ${e.message}")
+        }
+    }
+
     private fun showGPSDisabledAlertToUser() {
+        if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved) {
+            return
+        }
         val gpsDisabledDialog = GPSDisabledDialog()
         gpsDisabledDialog.show(supportFragmentManager, GPSDisabledDialog.TAG)
     }
