@@ -433,6 +433,10 @@ def transition_issue(issue_key, status_name, role="agent1"):
         assign_issue(issue_key, "agent1", role=role)
 
 def add_comment(issue_key, text, role="agent1"):
+    if text.startswith("@") and os.path.exists(text[1:]):
+        with open(text[1:], "r", encoding="utf-8") as f:
+            text = f.read()
+
     config = get_config()
     url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}/comment"
 
@@ -458,6 +462,10 @@ def search_issues(jql, role="agent1"):
         print(f"{i['key']}: [{itype}] {i['fields']['summary']} [{i['fields']['status']['name']}]")
 
 def update_issue_description(issue_key, description, role="agent1"):
+    if description.startswith("@") and os.path.exists(description[1:]):
+        with open(description[1:], "r", encoding="utf-8") as f:
+            description = f.read()
+
     config = get_config()
     url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}"
     payload = {
