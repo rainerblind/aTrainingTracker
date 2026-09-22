@@ -37,7 +37,7 @@ import java.util.Set;
  * It tracks running statistics (Min, Max, Avg) and samples points for map and elevation streams.
  */
 public class LiveWorkoutSession {
-    private final long workoutId;
+    private volatile long workoutId;
     private final Map<SensorType, RunningStats> sensorStats = new HashMap<>();
     private final Set<SensorType> sensorsForAverage;
     
@@ -57,6 +57,10 @@ public class LiveWorkoutSession {
     public LiveWorkoutSession(long workoutId, Set<SensorType> sensorsForAverage) {
         this.workoutId = workoutId;
         this.sensorsForAverage = sensorsForAverage;
+    }
+
+    public void setWorkoutId(long workoutId) {
+        this.workoutId = workoutId;
     }
 
     public int addSample(SensorType type, double value, LatLng position) {
