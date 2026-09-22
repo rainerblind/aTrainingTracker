@@ -878,10 +878,6 @@
     <string name="equipment_none">- brak -</string>
     <string name="equipment_type_bike">Rowery</string>
     <string name="equipment_type_shoe">Buty</string>
-    <string name="getting_equipment_from_strava">pobieranie sprzętu ze Strava…
-proszę czekać</string>
-    <string name="got_bike">pobrano rowery ze Strava\npobrano rower: %1$s</string>
-    <string name="got_shoe">pobrano buty ze Strava\npobrano but: %1$s</string>
     <string name="lastUpdateOfEquipmentNever">nigdy nie aktualizowano</string>
     <string name="lastUpdateOfEquipmentNow">teraz</string>
     <string name="latLongEquals">szer=%1$f, dł=%2$f</string>

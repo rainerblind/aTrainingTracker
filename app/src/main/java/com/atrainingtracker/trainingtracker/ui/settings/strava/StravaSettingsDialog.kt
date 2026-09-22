@@ -18,7 +18,6 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.strava
 
-import android.app.Activity
 import android.app.Application
 import android.content.SharedPreferences
 import androidx.compose.foundation.layout.*
@@ -135,7 +134,7 @@ fun StravaSettingsDialog(
     LaunchedEffect(authState) {
         if (authState is StravaAuthState.Success) {
             if (!isEquipmentSyncing) {
-                (context as? Activity)?.let { StravaEquipmentSynchronizeThread(it).start() }
+                StravaEquipmentSynchronizeThread(context).start()
             }
 
             val repository = SegmentsRepository.getInstance(context)
@@ -240,7 +239,7 @@ fun StravaSettingsDialog(
                     OutlinedCard(
                         onClick = {
                             if (!isEquipmentSyncing) {
-                                (context as? Activity)?.let { StravaEquipmentSynchronizeThread(it).start() }
+                                StravaEquipmentSynchronizeThread(context).start()
                             }
                         },
                         modifier = Modifier.fillMaxWidth()

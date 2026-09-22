@@ -325,9 +325,6 @@
     <string name="automated_strava_routes_sync_summary">Obtener periódicamente las rutas de Strava</string>
     <string name="strava_routes_sync_interval">Intervalo de sincronización</string>
 
-    <string name="getting_equipment_from_strava">obteniendo equipamiento de Strava…\npor favor espera</string>
-    <string name="got_shoe">obteniendo zapatillas de Strava\nobtenido: %1$s</string>
-    <string name="got_bike">obteniendo bicis de Strava\nobtenido: %1$s</string>
     <string name="strava_success_but_must_check">subido a Strava, comprobando resultado …</string>
     <string name="strava_success_waiting_for_result">subido a Strava, esperando resultado …</string>
 

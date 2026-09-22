@@ -413,9 +413,6 @@
     <string name="automated_strava_routes_sync_summary">Regularly fetch routes from Strava</string>
     <string name="strava_routes_sync_interval">Sync Interval</string>
 
-    <string name="getting_equipment_from_strava">getting equipment from Strava…\nplease wait</string>
-    <string name="got_shoe">getting shoes from Strava\ngot shoe: %1$s</string>
-    <string name="got_bike">getting bikes from Strava\ngot bike: %1$s</string>
     <string name="strava_success_but_must_check">uploaded to Strava, checking result …</string>
     <string name="strava_success_waiting_for_result">uploaded to Strava, waiting for result …</string>
     <!-- <string name="checking_bike">getting bikes from Strava\nchecking bike: %1$s</string> -->

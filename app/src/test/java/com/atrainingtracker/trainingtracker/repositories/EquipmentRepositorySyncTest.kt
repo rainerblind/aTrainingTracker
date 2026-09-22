@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.repositories
 
 import android.app.Application
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSynchronizeThread
@@ -36,8 +37,8 @@ import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Unit tests verifying reactive Strava equipment sync progress, in-memory StateFlow lifecycle,
- * persistent storage decoupling (no "now" written to SharedPreferences), defensive cleanup,
- * two-tier debounce guard, and 9-language resource parity (REQ-EXP-016, TST-EXP-013, ATT-1231).
+ * persistent storage decoupling, two-tier debounce guard, 9-language resource parity, and
+ * non-blocking dialog-free background execution (REQ-EXP-016, REQ-EXP-017, TST-EXP-013, TST-EXP-014, ATT-1231, ATT-1242).
  */
 class EquipmentRepositorySyncTest {
 
@@ -58,6 +59,9 @@ class EquipmentRepositorySyncTest {
         mockContext = mockk(relaxed = true)
         every { mockContext.applicationContext } returns mockApplication
         every { mockContext.packageName } returns "com.atrainingtracker"
+
+        mockkConstructor(Intent::class)
+        every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
 
         mockkStatic(TrainingApplication::class)
         every { TrainingApplication.getDebug(any()) } returns false
@@ -194,6 +198,40 @@ class EquipmentRepositorySyncTest {
             val actual = strings["lastUpdateOfEquipmentNow"]
             assertNotNull("Key 'lastUpdateOfEquipmentNow' must exist in $valuesDir/strings.xml", actual)
             assertEquals("Translation mismatch for locale '$locale' ($valuesDir)", expectedText, actual)
+        }
+    }
+
+    @Test
+    fun testNonBlockingDialogFreeExecutionAndBroadcast() {
+        var broadcastCalled = false
+        every { mockContext.sendBroadcast(any()) } answers {
+            broadcastCalled = true
+        }
+
+        val thread = StravaEquipmentSynchronizeThread(mockContext)
+        thread.run()
+
+        assertTrue("Broadcast must be sent upon synchronization completion", broadcastCalled)
+    }
+
+    @Test
+    fun testPrunedProgressStringsRemovedAcrossAllLocales() {
+        val resDir = findResDirectory()
+        val locales = listOf("", "de", "es", "fr", "it", "ja", "nl", "pl", "pt")
+        val removedKeys = listOf("getting_equipment_from_strava", "got_shoe", "got_bike")
+
+        for (locale in locales) {
+            val valuesDir = if (locale.isEmpty()) "values" else "values-$locale"
+            val file = File(resDir, "$valuesDir/strings.xml")
+            assertTrue("Resource file must exist: $file", file.exists())
+
+            val strings = parseStringsFile(file)
+            for (key in removedKeys) {
+                assertNull(
+                    "Obsolete string key '$key' must NOT be present in $valuesDir/strings.xml (ATT-1242)",
+                    strings[key]
+                )
+            }
         }
     }
 

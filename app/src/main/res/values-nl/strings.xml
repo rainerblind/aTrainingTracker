@@ -325,9 +325,6 @@
     <string name="automated_strava_routes_sync_summary">Regelmatig routes ophalen van Strava</string>
     <string name="strava_routes_sync_interval">Synchronisatie-interval</string>
 
-    <string name="getting_equipment_from_strava">Strava materiaal ophalen…\neven geduld</string>
-    <string name="got_shoe">Strava schoenen opgehaald\nontvangen: %1$s</string>
-    <string name="got_bike">Strava fietsen opgehaald\nontvangen: %1$s</string>
     <string name="strava_success_but_must_check">geüpload naar Strava, resultaat controleren …</string>
     <string name="strava_success_waiting_for_result">geüpload naar Strava, even wachten …</string>
 
