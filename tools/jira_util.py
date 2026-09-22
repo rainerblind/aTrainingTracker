@@ -17,6 +17,39 @@ TRANSITIONS = {
 
 VALID_ROLES = ["agent1", "agent2", "coordinator"]
 
+ROLE_ACCOUNT_IDS = {
+    "agent1": "712020:63ce5f53-e2ba-43f5-9879-edf4a22ff748",
+    "agent2": "712020:1b6bc33f-f738-43f1-a4cf-373952d25316",
+    "coordinator": "712020:3d1e82c8-2875-4952-a22d-90f428dd604b",
+}
+
+def get_account_id_for_role(role_or_account_id, config=None):
+    if not role_or_account_id:
+        return None
+    if config is None:
+        config = get_config()
+    role_key = str(role_or_account_id).lower().strip()
+    env_key = f"JIRA_{role_key.upper()}_ACCOUNT_ID"
+    if env_key in config:
+        return config[env_key]
+    if role_key in ROLE_ACCOUNT_IDS:
+        return ROLE_ACCOUNT_IDS[role_key]
+    return role_or_account_id
+
+def assign_issue(issue_key, target_role_or_account_id, role="agent1"):
+    account_id = get_account_id_for_role(target_role_or_account_id)
+    if not account_id:
+        print(f"Error: Could not resolve account ID for '{target_role_or_account_id}'.", file=sys.stderr)
+        return
+    config = get_config()
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}/assignee"
+    payload = {"accountId": account_id}
+    try:
+        jira_request(url, method="PUT", payload=payload, role=role)
+        print(f"Assigned {issue_key} to {target_role_or_account_id} ({account_id}).")
+    except Exception as e:
+        print(f"Warning: Failed to assign {issue_key} to {target_role_or_account_id}: {e}", file=sys.stderr)
+
 def get_config():
     env_file = os.path.join(os.path.dirname(__file__), "..", ".env.jira")
     config = {}
@@ -198,6 +231,10 @@ def show_issue(issue_key, role="agent1"):
     print(f"h1. {issue['key']}: [{itype}] {issue['fields']['summary']}")
     print(f"\n*Status*: {status}")
 
+    assignee = issue['fields'].get('assignee')
+    assignee_name = assignee.get('displayName', 'Unassigned') if assignee else 'Unassigned'
+    print(f"\n*Assignee*: {assignee_name}")
+
     # Fix Version / Lösungsversion
     fix_versions = issue['fields'].get('fixVersions', [])
     if fix_versions:
@@ -353,7 +390,10 @@ def transition_issue(issue_key, status_name, role="agent1"):
         "in_review": "in überprüfung",
         "review": "in überprüfung",
         "freigabe": "freigabe (human)",
-        "human": "freigabe (human)"
+        "human": "freigabe (human)",
+        "revision": "in bearbeitung",
+        "rework": "in bearbeitung",
+        "nochmals von vorne": "in bearbeitung"
     }
     normalized_target = aliases.get(normalized_input, normalized_input)
 
@@ -384,6 +424,13 @@ def transition_issue(issue_key, status_name, role="agent1"):
     jira_request(url, method="POST", payload={"transition": {"id": trans_id}}, role=role)
     target_status = chosen_trans.get("to", {}).get("name", status_name)
     print(f"Successfully moved {issue_key} to '{target_status}' via transition '{chosen_trans['name']}'.")
+
+    # Auto-assign based on target workflow stage
+    norm_target_lower = target_name.lower()
+    if "überprüfung" in norm_target_lower or "review" in norm_target_lower:
+        assign_issue(issue_key, "agent2", role=role)
+    elif "bearbeitung" in norm_target_lower or "progress" in norm_target_lower:
+        assign_issue(issue_key, "agent1", role=role)
 
 def add_comment(issue_key, text, role="agent1"):
     config = get_config()
@@ -422,6 +469,10 @@ def update_issue_description(issue_key, description, role="agent1"):
     print(f"Description updated for {issue_key}.")
 
 def create_subtask(parent_key, summary, description, role="coordinator", add_to_sprint=False, fix_version=None):
+    if summary.startswith("[Impl] "):
+        summary = "[Implementation] " + summary[7:]
+        print("Normalized subtask prefix '[Impl]' -> '[Implementation]' to ensure Jira automation compatibility.")
+
     config = get_config()
     url = f"{config['JIRA_URL']}/rest/api/2/issue"
     fields = {
@@ -441,6 +492,9 @@ def create_subtask(parent_key, summary, description, role="coordinator", add_to_
 
     if add_to_sprint:
         add_to_active_sprint(new_key, role=role)
+
+    # Initial assignment: default subtasks to agent1
+    assign_issue(new_key, "agent1", role=role)
 
     return new_key
 
@@ -514,6 +568,8 @@ if __name__ == "__main__":
         search_issues(remaining_argv[1], role=active_role)
     elif cmd == "update-desc" and len(remaining_argv) == 3:
         update_issue_description(remaining_argv[1], remaining_argv[2], role=active_role)
+    elif cmd == "assign" and len(remaining_argv) == 3:
+        assign_issue(remaining_argv[1], remaining_argv[2], role=active_role)
     elif cmd == "create-subtask" and len(remaining_argv) >= 4:
         # Parse optional flags
         add_sprint = False
