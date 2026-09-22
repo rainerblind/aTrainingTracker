@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMapOptions
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.PolyUtil
@@ -58,6 +59,9 @@ fun PathPreviewMap(
     GoogleMap(
         modifier = modifier,
         cameraPositionState = cameraPositionState,
+        googleMapOptionsFactory = {
+            GoogleMapOptions().liteMode(true)
+        },
         uiSettings = MapUiSettings(
             zoomControlsEnabled = false,
             compassEnabled = false,

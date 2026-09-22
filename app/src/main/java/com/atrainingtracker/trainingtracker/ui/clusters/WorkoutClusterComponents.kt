@@ -54,6 +54,7 @@ import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMapOptions
 import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
@@ -273,6 +274,9 @@ fun ClusterItem(
                                 GoogleMap(
                                     modifier = Modifier.fillMaxSize(),
                                     cameraPositionState = cameraPositionState,
+                                    googleMapOptionsFactory = {
+                                        GoogleMapOptions().liteMode(true)
+                                    },
                                     properties = MapProperties(mapType = MapType.TERRAIN),
                                     onMapLoaded = { isMapLoaded = true },
                                     uiSettings = MapUiSettings(
@@ -485,6 +489,9 @@ fun UnclusteredWorkoutItem(
                                 GoogleMap(
                                     modifier = Modifier.fillMaxSize(),
                                     cameraPositionState = cameraPositionState,
+                                    googleMapOptionsFactory = {
+                                        GoogleMapOptions().liteMode(true)
+                                    },
                                     properties = MapProperties(mapType = MapType.TERRAIN),
                                     onMapLoaded = { isMapLoaded = true },
                                     uiSettings = MapUiSettings(
