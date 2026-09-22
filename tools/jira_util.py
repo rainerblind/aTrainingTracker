@@ -15,12 +15,15 @@ TRANSITIONS = {
     "done": "41"
 }
 
-VALID_ROLES = ["agent1", "agent2", "coordinator"]
+VALID_ROLES = ["agent1", "agent2", "coordinator", "human"]
 
 ROLE_ACCOUNT_IDS = {
     "agent1": "712020:63ce5f53-e2ba-43f5-9879-edf4a22ff748",
     "agent2": "712020:1b6bc33f-f738-43f1-a4cf-373952d25316",
     "coordinator": "712020:3d1e82c8-2875-4952-a22d-90f428dd604b",
+    "human": "712020:9d9c7abd-b9d3-4b45-b2e0-91c432c3ab78",
+    "user": "712020:9d9c7abd-b9d3-4b45-b2e0-91c432c3ab78",
+    "rainer": "712020:9d9c7abd-b9d3-4b45-b2e0-91c432c3ab78",
 }
 
 def get_account_id_for_role(role_or_account_id, config=None):

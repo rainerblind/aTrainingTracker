@@ -282,7 +282,7 @@ public class DeviceManager {
         long gpsDeviceId = devicesDatabaseManager.getSpeedAndLocationGPSDeviceId();
         if (devicesDatabaseManager.isPaired(gpsDeviceId)
                 && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
-            if (locationManager != null && locationManager.getProvider(LocationManager.GPS_PROVIDER) != null) {
+            if (isProviderAvailableSafely(locationManager, LocationManager.GPS_PROVIDER)) {
                 if (DEBUG) Log.i(TAG, "creating GPS location device");
                 try {
                     mSpeedAndLocationDevice_GPS = new SpeedAndLocationDevice_GPS(mContext, mSensorManager);
@@ -309,7 +309,7 @@ public class DeviceManager {
         long networkDeviceId = devicesDatabaseManager.getSpeedAndLocationNetworkDeviceId();
         if (devicesDatabaseManager.isPaired(networkDeviceId)
                 && TrainingApplication.havePermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
-            if (locationManager != null && locationManager.getProvider(LocationManager.NETWORK_PROVIDER) != null) {
+            if (isProviderAvailableSafely(locationManager, LocationManager.NETWORK_PROVIDER)) {
                 if (DEBUG) Log.i(TAG, "creating network location device");
                 try {
                     mSpeedAndLocationDevice_Network = new SpeedAndLocationDevice_Network(mContext, mSensorManager);
@@ -382,7 +382,7 @@ public class DeviceManager {
         if (deviceId == gpsDeviceId) {
             if (paired && mSpeedAndLocationDevice_GPS == null // paired and not yet there -> create (if we have the permission)
                     && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
-                if (locationManager != null && locationManager.getProvider(LocationManager.GPS_PROVIDER) != null) {
+                if (isProviderAvailableSafely(locationManager, LocationManager.GPS_PROVIDER)) {
                     try {
                         mSpeedAndLocationDevice_GPS = new SpeedAndLocationDevice_GPS(mContext, mSensorManager);
                     } catch (Exception e) {
@@ -421,7 +421,7 @@ public class DeviceManager {
         if (deviceId == networkDeviceId) {
             if (paired && mSpeedAndLocationDevice_Network == null  // if it does not exist
                     && TrainingApplication.havePermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {  // and we have the permission to do so
-                if (locationManager != null && locationManager.getProvider(LocationManager.NETWORK_PROVIDER) != null) {
+                if (isProviderAvailableSafely(locationManager, LocationManager.NETWORK_PROVIDER)) {
                     try {
                         mSpeedAndLocationDevice_Network = new SpeedAndLocationDevice_Network(mContext, mSensorManager);
                     } catch (Exception e) {
@@ -966,6 +966,18 @@ public class DeviceManager {
                 .putExtra(BANALService.DEVICE_ID, deviceId)
                 .setPackage(mContext.getPackageName());
         mContext.sendBroadcast(intent);
+    }
+
+    private static boolean isProviderAvailableSafely(LocationManager locationManager, String provider) {
+        if (locationManager == null || provider == null) {
+            return false;
+        }
+        try {
+            return locationManager.getProvider(provider) != null;
+        } catch (IllegalArgumentException | SecurityException e) {
+            Log.w(TAG, "Failed to query location provider " + provider + ": " + e.getMessage());
+            return false;
+        }
     }
 
 }

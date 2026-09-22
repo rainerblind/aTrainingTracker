@@ -443,6 +443,7 @@ def audit_subtask(subtask_key, preferred_provider="gemini", explicit_model=None,
         else:
             print(f"Audit decision passed. Transitioning {subtask_key} to 'Freigabe (Human)' as {AUDITOR_ROLE}...")
             transition_issue(subtask_key, "freigabe", role=AUDITOR_ROLE)
+            assign_issue(subtask_key, "human", role=AUDITOR_ROLE)
     else:
         print(f"Note: Current status is '{status_name}'. Subtask was not in 'In Überprüfung'; skipping transition.")
 
