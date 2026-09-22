@@ -223,7 +223,7 @@ def list_sprint_issues(role="agent1"):
 
 def show_issue(issue_key, role="agent1"):
     config = get_config()
-    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=summary,description,comment,attachment,parent,issuetype,status,subtasks,fixVersions"
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=summary,description,comment,attachment,parent,issuetype,status,subtasks,fixVersions,assignee"
     issue = jira_request(url, role=role)
 
     itype = issue['fields']['issuetype']['name']
