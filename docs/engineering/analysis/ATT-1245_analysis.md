@@ -77,6 +77,9 @@ When the user taps "Start Tracking", the Android main UI thread freezes complete
 * `mDbExecutor`: `private final ExecutorService mDbExecutor = Executors.newSingleThreadExecutor();`. This is an unbounded single-thread FIFO execution queue.
 * `mTrackerHandle`: `mScheduler.scheduleAtFixedRate(tracker, 0, 1, TimeUnit.SECONDS)`.
 * `tracker.run()` calls `sampleAndWriteToDb()`, which submits writing samples to `mDbExecutor`.
+* **Downstream Consumers & Observers**:
+  - `WorkoutRepository` & UI screens listen for `TRACKING_STARTED_INTENT` broadcast (sent via `notifyTrackingStarted(workoutId)`).
+  - Delaying `notifyTrackingStarted` until the database table is confirmed created ensures observers never query an uninitialized table.
 
 ---
 
@@ -90,21 +93,33 @@ When the user taps "Start Tracking", the Android main UI thread freezes complete
      2. `mWorkoutID = workoutId;`
      3. `liveSession.setWorkoutId(workoutId);`
      4. `WorkoutSamplesDatabaseManager.getInstance(TrackerService.this).createNewTable(baseFileName, Arrays.asList(SensorType.values()));`
-     5. `mIsTableInitialized = true;` (commit readiness state)
-     6. `notifyTrackingStarted(workoutId);`
+     5. `mTableInitializationFuture.complete(null);` (release synchronization barrier)
+     6. `notifyTrackingStarted(workoutId);` (notify observers only when table exists)
    - Immediately return `Service.START_STICKY` from `onStartCommand()`. The main thread execution duration drops from hundreds of milliseconds (or seconds) to `< 1ms`, completely eliminating ANRs.
 
-2. **Explicit Readiness State Gate (Race Window Elimination)**:
-   - Introduce `private volatile boolean mIsTableInitialized = false;` in `TrackerService`.
-   - In `START_NORMAL`, initialize `mIsTableInitialized = false`. (For resume modes `RESUME_BY_USER` / `RESUME_SERVICE_RECREATION` where the table already exists, set `mIsTableInitialized = true`).
-   - At the beginning of `tracker.run()` and `sampleAndWriteToDb()`:
+2. **CompletableFuture Synchronization Barrier & Sample Buffering**:
+   - Introduce `private final CompletableFuture<Void> mTableInitializationFuture = new CompletableFuture<>();` in `TrackerService`.
+   - For `START_NORMAL`, `mTableInitializationFuture` is completed once `createNewTable()` commits on `mDbExecutor`. (For resume modes `RESUME_BY_USER` / `RESUME_SERVICE_RECREATION`, it is completed immediately upon startup).
+   - In `sampleAndWriteToDb()` on the background executor thread:
      ```java
-     if (!mIsTableInitialized) {
-         if (DEBUG) Log.d(TAG, "Table not yet initialized on mDbExecutor, skipping/buffering tick.");
-         return;
-     }
+     mDbExecutor.submit(() -> {
+         try {
+             // Await table initialization on the worker thread (never blocks main thread)
+             if (!mTableInitializationFuture.isDone()) {
+                 mTableInitializationFuture.get(5, TimeUnit.SECONDS);
+             }
+             if (mTableInitializationFuture.isCompletedExceptionally()) {
+                 Log.w(TAG, "Skipping sample write: Table initialization failed.");
+                 return;
+             }
+             // Write sample to SQLite
+             ...
+         } catch (Exception e) {
+             Log.e(TAG, "Error during sample write: " + e.getMessage(), e);
+         }
+     });
      ```
-   - This provides an explicit hardware-independent synchronization gate: incoming sensor ticks arriving during the asynchronous table initialization window will NEVER attempt to write to SQLite before the table creation transaction is committed. Zero `SQLiteException: no such table` errors can occur.
+   - This provides an explicit hardware-independent synchronization barrier: any sensor samples arriving during initial table creation are buffered in `mDbExecutor`'s FIFO task queue and await the future before writing. Zero samples are lost, zero race conditions exist, and no `SQLiteException: no such table` errors can occur.
 
 3. **Defensive Downstream Error Handling Strategy**:
    - In `WorkoutSamplesDatabaseManager.createNewTable()`:
@@ -114,9 +129,11 @@ When the user taps "Start Tracking", the Android main UI thread freezes complete
        ```java
        try {
            // workout and table creation
-           mIsTableInitialized = true;
-       } catch (Exception e) {
-           Log.e(TAG, "Fatal database initialization error: " + e.getMessage(), e);
+           mTableInitializationFuture.complete(null);
+           notifyTrackingStarted(mWorkoutID);
+       } catch (Throwable t) {
+           Log.e(TAG, "Fatal database initialization error: " + t.getMessage(), t);
+           mTableInitializationFuture.completeExceptionally(t);
            mTrackingInterrupted = true;
            if (mTrackerHandle != null) {
                mTrackerHandle.cancel(true);
@@ -126,10 +143,11 @@ When the user taps "Start Tracking", the Android main UI thread freezes complete
            performStopSelf();
        }
        ```
-     - Rather than swallowing the error and allowing broken telemetry collection, the service aborts session initialization, notifies the user cleanly via `showTrackingInterruptedNotification()`, and gracefully terminates via `performStopSelf()`.
+     - Rather than swallowing the error and allowing broken telemetry collection, the service completes the future exceptionally, cancels the timer handle, notifies the user cleanly via `showTrackingInterruptedNotification()`, and gracefully terminates via `performStopSelf()`.
 
-4. **Immediate Foreground Promotion Compliance**:
+4. **Wakelock & Android 14+ FGS Lifecycle Compliance**:
    - `performStartForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)` executes immediately on the main thread during `onStartCommand()`, satisfying Android 14+ 5-second FGS startup constraints (`REQ-STB-002`) without awaiting database disk I/O.
+   - CPU WakeLock is acquired during service start to ensure the OS does not suspend the process before the database initialization task completes.
 
 5. **Live Workout Session Decoupling**:
    - In `LiveWorkoutSession.java`, change `private final long workoutId;` to `private volatile long workoutId;` and introduce `public void setWorkoutId(long workoutId) { this.workoutId = workoutId; }`.
@@ -144,25 +162,27 @@ When the user taps "Start Tracking", the Android main UI thread freezes complete
 * **Target Specification**:
   1. *Main-Thread Database Decoupling*: `TrackerService.onStartCommand` SHALL NOT execute synchronous database DDL statements (`CREATE TABLE`, `DROP TABLE`), database opening, or multi-row SQLite inserts on the Android main UI thread.
   2. *Asynchronous Executor Dispatch*: During `START_NORMAL` initialization, `createNewWorkout()`, `WorkoutSamplesDatabaseManager.createNewTable()`, and initial `notifyTrackingStarted()` SHALL be dispatched to `TrackerService`'s dedicated single-thread FIFO database executor (`mDbExecutor`).
-  3. *Explicit Readiness Gate & Race Condition Prevention*: `TrackerService` SHALL maintain an explicit synchronization state gate (`volatile boolean mIsTableInitialized`). Periodic sampling in `tracker.run()` and incoming sensor writes SHALL gate on `mIsTableInitialized` and SHALL NOT commence persistence until `createNewTable()` has successfully committed. No sensor samples shall be written against an uninitialized table.
-  4. *Defensive Downstream Error Handling*: If database or table initialization throws `SQLException` or `IllegalStateException`, `TrackerService` SHALL abort session initialization, log a critical diagnostic error, post an interrupted notification, and gracefully invoke `performStopSelf()` rather than swallowing errors or allowing telemetry corruption.
-  5. *Foreground Service Startup SLA*: `performStartForeground()` in `TrackerService.onStartCommand` SHALL execute immediately on the main thread without awaiting database I/O, guaranteeing strict compliance with Android 14+ 5-second foreground service startup requirements.
+  3. *CompletableFuture Synchronization & Sample Buffering*: `TrackerService` SHALL maintain a synchronization primitive (`CompletableFuture<Void> mTableInitializationFuture`). Any early sensor samples or write tasks submitted prior to table creation completion SHALL await the future on the background executor (up to 5s timeout) rather than being dropped or failing with `SQLiteException: no such table`. Sensor sampling SHALL NEVER commence persistence before table creation commits to disk.
+  4. *Broadcast Delay until Schema Commitment*: `notifyTrackingStarted(workoutId)` SHALL be dispatched only AFTER `mTableInitializationFuture` completes successfully, ensuring downstream UI observers and broadcast receivers never query an uninitialized table.
+  5. *Defensive Downstream Error Handling*: If database or table initialization throws `SQLException` or `IllegalStateException`, `mTableInitializationFuture` SHALL complete exceptionally, cancel `mTrackerHandle`, post `showTrackingInterruptedNotification()`, and gracefully invoke `performStopSelf()` rather than swallowing errors or allowing telemetry corruption.
+  6. *Foreground Service Startup SLA & WakeLock Safety*: `performStartForeground()` in `TrackerService.onStartCommand` SHALL execute immediately on the main thread without awaiting database I/O, satisfying Android 14+ 5-second FGS startup constraints, with CPU WakeLock acquired to ensure uninterrupted background commit.
 
 ---
 
 ## 6. System Invariants
 
 1. **Table Creation Precedence**: No sensor sample collection or persistence shall commence until the underlying workout table creation transaction is fully committed to disk.
-2. **Sampling Invariant**: The 1-second sampling rate and live metric calculations (speed, heart rate, distance, cadence, elevation, power) MUST NOT be altered.
-3. **Schema Invariant**: The columns created by `makeColumns(sensorTypes)` in `WorkoutSamples.db` MUST remain identical to preserve compatibility with all export formats (GPX, TCX, CSV, GC) and UI charts.
-4. **Lifecycle Invariant**: `START_STICKY`, foreground notification management, and Android 14+ background launch guards (from `REQ-STB-002`) MUST remain fully intact.
-5. **Shutdown Integrity**: In `onDestroy()`, `mDbExecutor.shutdown()` and `awaitTermination` MUST ensure all queued database tasks are committed before releasing database resources.
+2. **Zero Sample Drop**: Early sensor ticks arriving during the table creation window SHALL be queued and persisted once the table future completes.
+3. **Sampling Invariant**: The 1-second sampling rate and live metric calculations (speed, heart rate, distance, cadence, elevation, power) MUST NOT be altered.
+4. **Schema Invariant**: The columns created by `makeColumns(sensorTypes)` in `WorkoutSamples.db` MUST remain identical to preserve compatibility with all export formats (GPX, TCX, CSV, GC) and UI charts.
+5. **Lifecycle Invariant**: `START_STICKY`, foreground notification management, and Android 14+ background launch guards (from `REQ-STB-002`) MUST remain fully intact.
+6. **Shutdown Integrity**: In `onDestroy()`, `mDbExecutor.shutdown()` and `awaitTermination` MUST ensure all queued database tasks are committed before releasing database resources.
 
 ---
 
 ## 7. Risk Rating & Recommendation
 
 * **Risk Level**: **`LOW`**
-  - The combination of `mDbExecutor` and the volatile `mIsTableInitialized` gate guarantees deterministic sequencing without thread deadlocks or race conditions.
+  - The combination of `mDbExecutor` and the `CompletableFuture` barrier guarantees deterministic sequencing without thread deadlocks, sample drops, or race conditions.
   - Offloading from the main thread directly adheres to standard Android architectural best practices and completely eliminates the root cause of ANRs.
 * **Recommendation**: **`RECOMMEND PASS`**
