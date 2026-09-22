@@ -17,7 +17,7 @@ import urllib.error
 
 # Import Jira helpers from existing tools module
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from jira_util import get_config, jira_request, add_comment, transition_issue
+from jira_util import get_config, jira_request, add_comment, transition_issue, assign_issue
 
 # Anti-Spoofing & Role-Locking: Hardwired strictly to role "agent2"
 AUDITOR_ROLE = "agent2"
@@ -133,20 +133,21 @@ def call_gemini_api(prompt, system_instruction=None, explicit_model=None):
     if not api_key:
         raise ValueError("GEMINI_API_KEY not found in .env.gemini")
 
+    default_candidates = [
+        "gemini-3.5-flash-lite",
+        "gemini-3.1-flash-lite",
+        "gemini-flash-lite-latest",
+        "gemini-3.8-flash",
+        "gemini-3.7-flash",
+        "gemini-3.6-flash",
+        "gemini-3.5-flash",
+        "gemini-3-flash-preview",
+        "gemini-flash-latest"
+    ]
     if explicit_model:
-        candidate_models = [explicit_model]
+        candidate_models = [explicit_model] + [m for m in default_candidates if m != explicit_model]
     else:
-        candidate_models = [
-            "gemini-3.5-flash-lite",
-            "gemini-3.1-flash-lite",
-            "gemini-flash-lite-latest",
-            "gemini-3.8-flash",
-            "gemini-3.7-flash",
-            "gemini-3.6-flash",
-            "gemini-3.5-flash",
-            "gemini-3-flash-preview",
-            "gemini-flash-latest"
-        ]
+        candidate_models = default_candidates
     last_error = None
 
     for model in candidate_models:
@@ -174,8 +175,9 @@ def call_gemini_api(prompt, system_instruction=None, explicit_model=None):
             method="POST"
         )
 
+        timeout_val = int(os.environ.get("GEMINI_TIMEOUT", 90))
         try:
-            with urllib.request.urlopen(req, timeout=35) as response:
+            with urllib.request.urlopen(req, timeout=timeout_val) as response:
                 res_body = response.read().decode("utf-8")
                 data = json.loads(res_body)
                 candidates = data.get("candidates", [])
@@ -232,8 +234,9 @@ def call_claude_api(prompt, system_instruction=None, explicit_model=None):
         method="POST"
     )
 
+    timeout_val = int(os.environ.get("CLAUDE_TIMEOUT", 90))
     try:
-        with urllib.request.urlopen(req, timeout=60) as response:
+        with urllib.request.urlopen(req, timeout=timeout_val) as response:
             res_body = response.read().decode("utf-8")
             data = json.loads(res_body)
             content_list = data.get("content", [])
@@ -284,16 +287,18 @@ def detect_gate(summary):
 
 
 def get_git_diff():
-    """Returns staged and working tree git diff, or diff against develop merge-base if clean."""
+    """Returns complete ticket diff against develop merge-base, including uncommitted changes."""
+    try:
+        base = subprocess.check_output(["git", "merge-base", "develop", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
+        diff = subprocess.check_output(["git", "diff", base], stderr=subprocess.DEVNULL).decode("utf-8")
+        if diff.strip():
+            return diff[:100000]
+    except Exception:
+        pass
     try:
         diff = subprocess.check_output(["git", "diff", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8")
         if not diff.strip():
-            # Diff against develop merge-base to include all ticket changes on the branch
-            try:
-                base = subprocess.check_output(["git", "merge-base", "develop", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
-                diff = subprocess.check_output(["git", "diff", f"{base}..HEAD"], stderr=subprocess.DEVNULL).decode("utf-8")
-            except Exception:
-                diff = subprocess.check_output(["git", "diff", "HEAD~1", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8")
+            diff = subprocess.check_output(["git", "diff", "HEAD~1", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8")
         return diff[:100000]
     except Exception:
         return ""
@@ -378,6 +383,13 @@ def audit_subtask(subtask_key, preferred_provider="gemini", explicit_model=None,
 
     print(f"Detected Gate: {gate_key} ({gate_info['name']})")
 
+    if not dry_run:
+        # Reassign subtask to Auditor (Agent 2) upon audit initiation
+        try:
+            assign_issue(subtask_key, AUDITOR_ROLE, role=AUDITOR_ROLE)
+        except Exception as e:
+            print(f"Note: Could not assign {subtask_key} to {AUDITOR_ROLE}: {e}", file=sys.stderr)
+
     # Fetch parent issue details
     parent_issue = None
     parent_ref = subtask.get("fields", {}).get("parent")
@@ -411,10 +423,26 @@ def audit_subtask(subtask_key, preferred_provider="gemini", explicit_model=None,
     identity_comment = f"{review_body}\n\n_(Review conducted by Independent External Auditor: {model_name})_"
     add_comment(subtask_key, identity_comment, role=AUDITOR_ROLE)
 
-    # Transition to Freigabe (Human) if currently in In Überprüfung
+    # Determine audit decision from review body
+    is_revision_needed = False
+    decision_match = re.search(r'\*Audit Decision\*:\s*([^\n]+)', review_body, re.IGNORECASE)
+    if decision_match:
+        decision_text = decision_match.group(1).upper()
+        if any(term in decision_text for term in ["REVISION", "CHALLENGED", "FAIL", "REJECT"]):
+            is_revision_needed = True
+    else:
+        if re.search(r'RECOMMEND(ED)?\s+REVISION|CHALLENGED', review_body, re.IGNORECASE):
+            is_revision_needed = True
+
+    # Transition based on current status and audit decision
     if status_name.lower() in ["in überprüfung", "in review", "review"]:
-        print(f"Transitioning {subtask_key} to 'Freigabe (Human)' as {AUDITOR_ROLE}...")
-        transition_issue(subtask_key, "freigabe", role=AUDITOR_ROLE)
+        if is_revision_needed:
+            print(f"Audit decision requires revision. Transitioning {subtask_key} back to 'In Bearbeitung' as {AUDITOR_ROLE}...")
+            transition_issue(subtask_key, "in_progress", role=AUDITOR_ROLE)
+            assign_issue(subtask_key, "agent1", role=AUDITOR_ROLE)
+        else:
+            print(f"Audit decision passed. Transitioning {subtask_key} to 'Freigabe (Human)' as {AUDITOR_ROLE}...")
+            transition_issue(subtask_key, "freigabe", role=AUDITOR_ROLE)
     else:
         print(f"Note: Current status is '{status_name}'. Subtask was not in 'In Überprüfung'; skipping transition.")
 
