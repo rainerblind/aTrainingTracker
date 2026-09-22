@@ -18,19 +18,14 @@
 
 package com.atrainingtracker.trainingtracker.onlinecommunities.strava;
 
-import android.app.ProgressDialog;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
-import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper;
@@ -52,6 +47,18 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Headless background worker thread for fetching and synchronizing Strava equipment (bikes and shoes).
+ *
+ * Operates purely as a headless background task without displaying modal progress dialogs,
+ * toasts, or window-blocking UI notifications (REQ-EXP-017, ATT-1242).
+ *
+ * Concurrency & Invariants:
+ * - Emits in-memory sync state via {@link EquipmentRepository#setSyncing(boolean)} (REQ-EXP-016).
+ * - Enforces two-tier concurrency debounce guard to suppress redundant runs.
+ * - Broadcasts {@link #SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED} upon completion for UI receivers.
+ * - Decoupled from Activity window contexts; accepts generic {@link Context}.
+ */
 public class StravaEquipmentSynchronizeThread extends Thread {
 
     public static final String SYNCHRONIZE_EQUIPMENT_STRAVA_START = "de.rainerblind.trainingtracker.equipment.StravaEquipmentHelper.SYNCHRONIZE_EQUIPMENT_STRAVA_START";
@@ -72,45 +79,9 @@ public class StravaEquipmentSynchronizeThread extends Thread {
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     private final Context mContext;
-    @Nullable
-    private final ProgressDialog mProgressDialog;
-    @Nullable
-    private final Handler mMainHandler;
 
-    public StravaEquipmentSynchronizeThread(Context context) {
-        this(context, createSafeProgressDialog(context), createSafeHandler());
-    }
-
-    StravaEquipmentSynchronizeThread(Context context, @Nullable ProgressDialog progressDialog, @Nullable Handler handler) {
+    public StravaEquipmentSynchronizeThread(@NonNull Context context) {
         mContext = context;
-        mProgressDialog = progressDialog;
-        mMainHandler = handler;
-    }
-
-    private static ProgressDialog createSafeProgressDialog(Context context) {
-        try {
-            return new ProgressDialog(context);
-        } catch (Throwable t) {
-            return null;
-        }
-    }
-
-    private static Handler createSafeHandler() {
-        try {
-            return new Handler(Looper.getMainLooper());
-        } catch (Throwable t) {
-            return null;
-        }
-    }
-
-    private void publishProgress(String progress) {
-        if (mMainHandler != null) {
-            mMainHandler.post(() -> {
-                if (mProgressDialog != null && mProgressDialog.isShowing()) {
-                    mProgressDialog.setMessage(progress);
-                }
-            });
-        }
     }
 
     @Override
@@ -122,46 +93,15 @@ public class StravaEquipmentSynchronizeThread extends Thread {
 
         EquipmentRepository.setSyncing(true);
         try {
-            if (mMainHandler != null) {
-                mMainHandler.post(() -> {
-                    try {
-                        if (mProgressDialog != null) {
-                            mProgressDialog.setMessage(mContext.getString(R.string.getting_equipment_from_strava));
-                            mProgressDialog.show();
-                        }
-                    } catch (Exception e) {
-                        // Window might not be attached
-                    }
-                });
-            }
-
             final String result = getStravaEquipment();
+            if (DEBUG) Log.d(TAG, "updated Strava equipment: " + result);
 
-            if (mMainHandler != null) {
-                mMainHandler.post(() -> {
-                    if (DEBUG) Log.d(TAG, "updated Strava equipment");
-
-                    if (mProgressDialog != null && mProgressDialog.isShowing()) {
-                        try {
-                            mProgressDialog.dismiss();
-                        } catch (IllegalArgumentException e) {
-                            // View not attached to window manager
-                        }
-                    }
-
-                    TrainingApplication.setLastUpdateTimeOfStravaEquipment(result);
-
-                    mContext.sendBroadcast(new Intent(SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED)
-                            .setPackage(mContext.getPackageName()));
-                });
-            } else {
-                TrainingApplication.setLastUpdateTimeOfStravaEquipment(result);
-                try {
-                    mContext.sendBroadcast(new Intent(SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED)
-                            .setPackage(mContext.getPackageName()));
-                } catch (Exception e) {
-                    // Mock context in unit test
-                }
+            TrainingApplication.setLastUpdateTimeOfStravaEquipment(result);
+            try {
+                mContext.sendBroadcast(new Intent(SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED)
+                        .setPackage(mContext.getPackageName()));
+            } catch (Exception e) {
+                if (DEBUG) Log.e(TAG, "Failed to send equipment sync finished broadcast", e);
             }
         } catch (Throwable t) {
             Log.e(TAG, "Unexpected error in equipment synchronization thread", t);
@@ -228,7 +168,6 @@ public class StravaEquipmentSynchronizeThread extends Thread {
             ContentValues values = new ContentValues();
 
             if (DEBUG) Log.d(TAG, "checking strava shoes");
-            publishProgress("checking Strava shoes"); // Ideally use string resource
 
             if (jsonObject.has(SHOES)) {
                 JSONArray shoes = jsonObject.getJSONArray(SHOES);
@@ -238,7 +177,6 @@ public class StravaEquipmentSynchronizeThread extends Thread {
                     String name = shoe.getString(NAME);
 
                     if (DEBUG) Log.d(TAG, "got shoe: " + name + " id: " + id);
-                    publishProgress(mContext.getString(R.string.got_shoe, name));
 
                     values.clear();
                     values.put(EquipmentDbHelper.STRAVA_NAME, name);
@@ -275,8 +213,6 @@ public class StravaEquipmentSynchronizeThread extends Thread {
                     JSONObject bike = bikes.getJSONObject(i);
                     String id = bike.getString(ID);
                     String name = bike.getString(NAME);
-
-                    publishProgress(mContext.getString(R.string.got_bike, name));
 
                     int frameType = getStravaFrameType(id);
                     if (DEBUG) Log.d(TAG, "got frameType for bike " + name + ": " + frameType);

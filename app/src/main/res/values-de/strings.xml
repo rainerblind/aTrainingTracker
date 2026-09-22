@@ -329,9 +329,6 @@
     <string name="automated_strava_routes_sync_summary">Regelmäßig Routen von Strava abrufen</string>
     <string name="strava_routes_sync_interval">Abrufintervall</string>
 
-    <string name="getting_equipment_from_strava">Aktualisiere Strava Ausrüstung…\nbitte warten</string>
-    <string name="got_shoe">Aktualisiere Schuhe\nSchuh: %1$s</string>
-    <string name="got_bike">Aktualisiere Fahrräder\nRad: %1$s</string>
     <string name="strava_success_but_must_check">zu Strava hochgeladen, überprüfe die Rückmeldung …</string>
     <string name="strava_success_waiting_for_result">zu Strava hochgeladen, warte auf Rückmeldung …</string>
 

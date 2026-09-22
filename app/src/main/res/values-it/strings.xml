@@ -325,9 +325,6 @@
     <string name="automated_strava_routes_sync_summary">Recupera regolarmente i percorsi da Strava</string>
     <string name="strava_routes_sync_interval">Intervallo di sincronizzazione</string>
 
-    <string name="getting_equipment_from_strava">caricamento attrezzatura Strava…\nattendere</string>
-    <string name="got_shoe">scarpe Strava ricevute\nricevuto: %1$s</string>
-    <string name="got_bike">bici Strava ricevute\nricevuto: %1$s</string>
     <string name="strava_success_but_must_check">caricato su Strava, verifica…</string>
     <string name="strava_success_waiting_for_result">caricato su Strava, attesa…</string>
 
