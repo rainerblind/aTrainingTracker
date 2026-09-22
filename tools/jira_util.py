@@ -570,7 +570,7 @@ if __name__ == "__main__":
         download_all_attachments(remaining_argv[1], role=active_role)
     elif cmd == "move" and len(remaining_argv) == 3:
         transition_issue(remaining_argv[1], remaining_argv[2], role=active_role)
-    elif cmd == "comment" and len(remaining_argv) == 3:
+    elif (cmd == "comment" or cmd == "add-comment") and len(remaining_argv) == 3:
         add_comment(remaining_argv[1], remaining_argv[2], role=active_role)
     elif cmd == "search" and len(remaining_argv) == 2:
         search_issues(remaining_argv[1], role=active_role)
