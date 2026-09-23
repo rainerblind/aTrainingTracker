@@ -19,6 +19,9 @@
 package com.atrainingtracker.trainingtracker.ui.navigation
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.ime
@@ -27,6 +30,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -42,8 +46,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import kotlin.math.abs
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -166,6 +172,7 @@ fun ATrainingTrackerApp(
 
     ModalNavigationDrawer(
         drawerState = drawerState,
+        gesturesEnabled = true,
         drawerContent = {
             ModalDrawerSheet(
                 modifier = Modifier.width(300.dp),
@@ -184,10 +191,39 @@ fun ATrainingTrackerApp(
         },
         modifier = modifier
     ) {
-        Scaffold(
-            contentWindowInsets = WindowInsets(0.dp)
-        ) { paddingValues ->
-            NavHost(
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(drawerState) {
+                    val edgeThresholdPx = 40.dp.toPx()
+                    awaitEachGesture {
+                        val down = awaitFirstDown(pass = PointerEventPass.Initial, requireUnconsumed = false)
+                        if (down.position.x <= edgeThresholdPx && !drawerState.isOpen) {
+                            var isEdgeSwipe = false
+                            do {
+                                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                val totalDx = change.position.x - down.position.x
+                                val totalDy = abs(change.position.y - down.position.y)
+
+                                if (!isEdgeSwipe && totalDx > viewConfiguration.touchSlop && totalDx > totalDy) {
+                                    isEdgeSwipe = true
+                                    change.consume()
+                                    scope.launch {
+                                        drawerState.open()
+                                    }
+                                } else if (isEdgeSwipe) {
+                                    change.consume()
+                                }
+                            } while (change.pressed)
+                        }
+                    }
+                }
+        ) {
+            Scaffold(
+                contentWindowInsets = WindowInsets(0.dp)
+            ) { paddingValues ->
+                NavHost(
                 navController = navController,
                 startDestination = NavRoutes.START_TRACKING,
                 modifier = Modifier
@@ -311,6 +347,7 @@ fun ATrainingTrackerApp(
                 }
             }
         }
+    }
     }
 
     // Native Compose ModalBottomSheet hosting for Settings Dialogs
