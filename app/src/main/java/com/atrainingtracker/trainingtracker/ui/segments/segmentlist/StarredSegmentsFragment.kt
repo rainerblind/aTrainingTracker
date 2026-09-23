@@ -61,76 +61,10 @@ class StarredSegmentsFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setContent {
                 ATrainingTrackerTheme {
-                    val segments by viewModel.segmentsWithPath.collectAsStateWithLifecycle()
-                    val sortOrder by viewModel.sortOrder.collectAsState()
-                    val refreshingSports by viewModel.refreshingSports.collectAsStateWithLifecycle()
-                    val isLocationAvailable by viewModel.isLocationAvailable.collectAsStateWithLifecycle()
-                    val filterCriteria by viewModel.filterCriteria.collectAsStateWithLifecycle()
-
-                    val pagerState = rememberPagerState(pageCount = { 2 })
-                    val bikeListState = rememberLazyListState()
-                    val runListState = rememberLazyListState()
-
-                    // 1. Manage local navigation state
-                    var selectedSegmentId by rememberSaveable { mutableStateOf<Long?>(null) }
-
-                    // 2. Logic to switch between List and Detail
-                    if (selectedSegmentId == null) {
-                        // SHOW LIST
-                        SegmentsTabsScreen(
-                            segmentsWithPath = segments,
-                            pagerState = pagerState,
-                            bikeListState = bikeListState,
-                            runListState = runListState,
-                            isStravaConnected = viewModel.connectedToStrava,
-                            onConnectToStrava = {
-                                startStravaSettingsDialog()
-                            },
-                            isRefreshing = { sport -> refreshingSports.contains(sport) },
-                            onRefresh = { sport -> viewModel.onRefresh(sport) },
-                            onSegmentClick = { id ->
-                                selectedSegmentId = id
-                            },
-                            sortOrder = sortOrder,
-                            scrollToTop = viewModel.shouldScrollToTop(sortOrder),
-                            onSortOrderChange = { viewModel.setSortOrder(it) },
-                            isLocationAvailable = isLocationAvailable,
-                            filterCriteria = filterCriteria,
-                            onFilterApply = { viewModel.setFilterCriteria(it) },
-                            onFilterClear = { viewModel.clearFilterCriteria() },
-                            onFilterUpdate = { transform -> viewModel.updateFilterCriteria(transform) }
-                        )
-                    } else {
-                        // SHOW DETAIL
-                        // Deriving the specific segment from the list we already have
-                        val selectedSegment = segments.find { it.summary.stravaId == selectedSegmentId }
-
-                        if (selectedSegment != null) {
-
-                            // Background Context
-                            val backgroundPaths = remember(selectedSegment, segments, viewModel.routes) {
-                                val otherSegments = segments
-                                    .filter { it.summary.stravaId != selectedSegment.summary.stravaId }
-                                    .map { it.toMapSegment(showStartAndFinishText = false) }
-                                
-                                val routes = viewModel.routes.value
-                                
-                                otherSegments + routes
-                            }
-
-                            SegmentOnMapScreen(
-                                segmentSummary = selectedSegment.summary,
-                                segment = selectedSegment.toMapSegment(showStartAndFinishText = false),
-                                backgroundPaths = backgroundPaths,
-                                modifier = Modifier
-                            )
-
-                            // Handle Back Press to return to list
-                            BackHandler {
-                                selectedSegmentId = null
-                            }
-                        }
-                    }
+                    StarredSegmentsScreen(
+                        viewModel = viewModel,
+                        onConnectToStrava = { startStravaSettingsDialog() }
+                    )
                 }
             }
         }

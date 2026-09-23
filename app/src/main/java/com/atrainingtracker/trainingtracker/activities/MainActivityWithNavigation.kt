@@ -47,6 +47,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.ui.platform.ComposeView
@@ -62,11 +63,14 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceScreen
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
@@ -87,12 +91,19 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelpe
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
+import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummary
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsFragment
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModel
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersFragment
+import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment
 import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack
+import com.atrainingtracker.trainingtracker.ui.navigation.ATrainingTrackerApp
+import com.atrainingtracker.trainingtracker.ui.navigation.NavRoutes
 import com.atrainingtracker.trainingtracker.ui.navigation.NavigationDrawerController
+import com.atrainingtracker.trainingtracker.ui.navigation.SettingsBottomSheetType
 import com.atrainingtracker.trainingtracker.ui.navigation.setupComposeNavigationDrawer
 import com.atrainingtracker.trainingtracker.ui.routes.RoutesFragment
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegmentsFragment
@@ -103,6 +114,7 @@ import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsDia
 import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaSettingsDialogFragment
 import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ActivityTypeSelectionHelper
 import com.atrainingtracker.trainingtracker.ui.settings.units.UnitsSettingsDialogFragment
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment
 import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc
 import com.google.android.gms.common.ConnectionResult
@@ -153,10 +165,12 @@ class MainActivityWithNavigation :
 
     protected lateinit var mTrainingApplication: TrainingApplication
     protected var mSelectedFragmentId: Int = DEFAULT_SELECTED_FRAGMENT_ID
-    protected lateinit var mDrawerLayout: DrawerLayout
+    protected var mDrawerLayout: DrawerLayout? = null
     protected val mDrawerController: NavigationDrawerController =
         NavigationDrawerController(DEFAULT_SELECTED_FRAGMENT_ID, R.string.tab_start)
     protected var mFragment: Fragment? = null
+    var navController: NavHostController? = null
+    var pendingActivityType: ActivityType? = null
     protected val mHandler: Handler = Handler(Looper.getMainLooper())
     protected var mStartAndNotResume: Boolean = true
     private var mResumingFromInterruptedNotification: Boolean = false
@@ -347,19 +361,19 @@ class MainActivityWithNavigation :
             addAction(TrainingApplication.REQUEST_RESUME_FROM_PAUSED)
         }
 
-        // create UI
-        setContentView(R.layout.main_activity_with_navigation)
+        if (savedInstanceState != null) {
+            mSelectedFragmentId = savedInstanceState.getInt(SELECTED_FRAGMENT_ID, DEFAULT_SELECTED_FRAGMENT_ID)
+            mDrawerController.selectedItemId = mSelectedFragmentId
+        }
 
-        mDrawerLayout = findViewById(R.id.drawer_layout)
-
-        val composeNavView: ComposeView = findViewById(R.id.compose_nav_view)
-        setupComposeNavigationDrawer(
-            composeView = composeNavView,
-            controller = mDrawerController,
-            onItemSelected = { itemId: Int ->
-                navigateToDrawerItem(itemId)
+        setContent {
+            ATrainingTrackerTheme {
+                ATrainingTrackerApp(
+                    activity = this,
+                    drawerController = mDrawerController
+                )
             }
-        )
+        }
 
         // getPermissions
         getPermissions(true)
@@ -370,14 +384,6 @@ class MainActivityWithNavigation :
         }
 
         checkBatteryOptimizations()
-
-        if (savedInstanceState != null) {
-            mSelectedFragmentId = savedInstanceState.getInt(SELECTED_FRAGMENT_ID, DEFAULT_SELECTED_FRAGMENT_ID)
-            mDrawerController.selectedItemId = mSelectedFragmentId
-            mFragment = supportFragmentManager.getFragment(savedInstanceState, "mFragment")
-        } else {
-            navigateToDrawerItem(mSelectedFragmentId)
-        }
 
         handleIntent(intent)
 
@@ -393,51 +399,6 @@ class MainActivityWithNavigation :
                 dialog.show()
             }
         }
-
-        ViewCompat.setOnApplyWindowInsetsListener(mDrawerLayout) { v, windowInsets ->
-            val systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, 0, systemBars.right, 0)
-
-            val controller = WindowCompat.getInsetsController(window, window.decorView)
-            controller.isAppearanceLightStatusBars = true
-
-            val composeNav = findViewById<View>(R.id.compose_nav_view)
-            if (composeNav != null) {
-                ViewCompat.dispatchApplyWindowInsets(composeNav, windowInsets)
-            }
-
-            windowInsets
-        }
-
-        onBackPressedDispatcher.addCallback(
-            this,
-            object : OnBackPressedCallback(true) {
-                override fun handleOnBackPressed() {
-                    if (DEBUG) Log.i(TAG, "onBackPressed, entryCount=" + supportFragmentManager.backStackEntryCount)
-
-                    if (mDrawerLayout.isDrawerOpen(GravityCompat.START) || mDrawerLayout.isDrawerVisible(GravityCompat.START)) {
-                        mDrawerLayout.closeDrawer(GravityCompat.START)
-                        return
-                    }
-                    if (supportFragmentManager.backStackEntryCount > 0) {
-                        supportFragmentManager.popBackStack()
-                    } else if (supportFragmentManager.backStackEntryCount == 0 && mSelectedFragmentId != R.id.drawer_start_tracking) {
-                        if (mSelectedFragmentId == R.id.drawer_workouts) {
-                            MyPreferenceManager(applicationContext).clearWorkoutFilterCriteria()
-                        }
-                        if (mSelectedFragmentId == R.id.drawer_routes) {
-                            MyPreferenceManager(applicationContext).clearRouteFilterCriteria()
-                        }
-                        if (mSelectedFragmentId == R.id.drawer_my_locations) {
-                            MyPreferenceManager(applicationContext).clearClusterFilterCriteria()
-                        }
-                        navigateToDrawerItem(R.id.drawer_start_tracking)
-                    } else {
-                        finish()
-                    }
-                }
-            }
-        )
 
         observeNavigationEvents()
     }
@@ -468,15 +429,7 @@ class MainActivityWithNavigation :
 
             mSelectedFragmentId = R.id.drawer_workouts
             mDrawerController.selectedItemId = mSelectedFragmentId
-            val fragment = WorkoutSummariesTabbedFragment()
-            mFragment = fragment
-
-            val tag = WorkoutSummariesTabbedFragment.TAG
-
-            supportFragmentManager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.content, fragment, tag)
-                .commit()
+            navigateToDrawerItem(R.id.drawer_workouts)
         }
 
         WorkoutNavigationEvents.navigateToClusterLiveData.observe(this) { clusterId: Long? ->
@@ -484,14 +437,7 @@ class MainActivityWithNavigation :
 
             mSelectedFragmentId = R.id.drawer_my_locations
             mDrawerController.selectedItemId = mSelectedFragmentId
-            val fragment = WorkoutClustersFragment.newInstance(clusterId)
-            mFragment = fragment
-            val tag = WorkoutClustersFragment.TAG
-
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.content, fragment, tag)
-                .addToBackStack(null)
-                .commit()
+            navigateToDrawerItem(R.id.drawer_my_locations)
 
             WorkoutNavigationEvents.resetCluster()
         }
@@ -751,14 +697,18 @@ class MainActivityWithNavigation :
         } catch (ignored: IllegalArgumentException) {
         }
 
-        mHandler.postDelayed(mDisconnectFromBANALServiceRunnable, WAITING_TIME_BEFORE_DISCONNECTING)
+        if (!isChangingConfigurations) {
+            mHandler.postDelayed(mDisconnectFromBANALServiceRunnable, WAITING_TIME_BEFORE_DISCONNECTING)
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         if (DEBUG) Log.d(TAG, "onDestroy")
 
-        disconnectFromBANALService()
+        if (!isChangingConfigurations) {
+            disconnectFromBANALService()
+        }
     }
 
     @Deprecated("Deprecated in Java")
@@ -772,142 +722,10 @@ class MainActivityWithNavigation :
     fun navigateToDrawerItem(itemId: Int): Boolean {
         if (DEBUG) Log.i(TAG, "navigateToDrawerItem: $itemId")
 
-        mDrawerLayout.closeDrawers()
-        mFragment = null
-        var tag: String? = null
+        mDrawerController.closeDrawer()
 
-        when (itemId) {
-            R.id.drawer_start_tracking -> {
-                mFragment = TrackingTabsFragment.newInstance()
-                tag = TrackingTabsFragment.TAG
-            }
-
-            R.id.drawer_map -> {
-                mFragment = MapFragmentWithTrack.newInstance()
-                tag = MapFragmentWithTrack.TAG
-            }
-
-            R.id.drawer_segments -> {
-                mFragment = StarredSegmentsFragment.newInstance()
-                tag = StarredSegmentsFragment.TAG
-            }
-
-            R.id.drawer_routes -> {
-                mFragment = RoutesFragment.newInstance()
-                tag = RoutesFragment.TAG
-            }
-
-            R.id.drawer_workouts -> {
-                mFragment = WorkoutSummariesTabbedFragment()
-                tag = WorkoutSummariesTabbedFragment.TAG
-            }
-
-            R.id.drawer_periods -> {
-                mFragment = PeriodsFragment.newInstance()
-                tag = PeriodsFragment.TAG
-            }
-
-            R.id.drawer_my_sensors -> {
-                mFragment = DevicesTabbedContainerFragment.newInstance(Protocol.ALL, DeviceType.ALL, 2)
-                tag = DevicesTabbedContainerFragment.TAG
-            }
-
-            R.id.drawer_bikes -> {
-                mFragment = EquipmentFragment.newInstance(0)
-                tag = EquipmentFragment.TAG
-            }
-
-            R.id.drawer_shoes -> {
-                mFragment = EquipmentFragment.newInstance(1)
-                tag = EquipmentFragment.TAG
-            }
-
-            R.id.drawer_my_locations -> {
-                mFragment = WorkoutClustersFragment.newInstance()
-                tag = WorkoutClustersFragment.TAG
-            }
-
-            R.id.drawer_sport_types -> {
-                mFragment = SportTypeListFragment.newInstance()
-                tag = SportTypeListFragment.TAG
-            }
-
-            R.id.drawer_training_zones -> {
-                mFragment = ZoneSettingsFragment.newInstance()
-                tag = ZoneSettingsFragment.TAG
-            }
-
-            R.id.drawer_strava -> {
-                mDrawerLayout.closeDrawer(GravityCompat.START)
-                StravaSettingsDialogFragment.newInstance().show(supportFragmentManager, StravaSettingsDialogFragment.TAG)
-                return false
-            }
-
-            R.id.drawer_dropbox -> {
-                mDrawerLayout.closeDrawer(GravityCompat.START)
-                DropboxSettingsDialogFragment.newInstance().show(supportFragmentManager, DropboxSettingsDialogFragment.TAG)
-                return false
-            }
-
-            R.id.drawer_export -> {
-                mDrawerLayout.closeDrawer(GravityCompat.START)
-                ExportSettingsDialogFragment.newInstance().show(supportFragmentManager, ExportSettingsDialogFragment.TAG)
-                return false
-            }
-
-            R.id.drawer_tracking_layouts -> {
-                mDrawerLayout.closeDrawer(GravityCompat.START)
-                ActivityTypeSelectionHelper.showSelectionDialog(
-                    supportFragmentManager,
-                    onTypeSelected = { activityType ->
-                        val fragment = TrackingTabsFragment.newInstance(activityType)
-                        mFragment = fragment
-                        supportFragmentManager.beginTransaction()
-                            .replace(R.id.content, fragment, TrackingTabsFragment.TAG)
-                            .addToBackStack(null)
-                            .commit()
-                    }
-                )
-                return false
-            }
-
-            R.id.drawer_units -> {
-                mDrawerLayout.closeDrawer(GravityCompat.START)
-                UnitsSettingsDialogFragment.newInstance().show(supportFragmentManager, UnitsSettingsDialogFragment.TAG)
-                return false
-            }
-
-            R.id.drawer_display_settings -> {
-                mDrawerLayout.closeDrawer(GravityCompat.START)
-                DisplaySettingsDialogFragment.newInstance().show(supportFragmentManager, DisplaySettingsDialogFragment.TAG)
-                return false
-            }
-
-            R.id.drawer_search_settings -> {
-                mDrawerLayout.closeDrawer(GravityCompat.START)
-                SearchSettingsDialogFragment.newInstance().show(supportFragmentManager, SearchSettingsDialogFragment.TAG)
-                return false
-            }
-
-            R.id.drawer_backup_restore -> {
-                mFragment = BackupRestoreFragment.newInstance()
-                tag = "BackupRestoreFragment"
-            }
-
-            R.id.drawer_privacy_policy -> {
-                val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.url_privacy)))
-                startActivity(browserIntent)
-                return true
-            }
-
-            else -> {
-                Log.d(TAG, "setting a new content fragment not yet implemented: $itemId")
-                Toast.makeText(this, "setting a new content fragment not yet implemented", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        val fragment = mFragment
-        if (fragment != null) {
+        val route = NavRoutes.fromDrawerItemId(itemId)
+        if (route != null) {
             if (itemId == R.id.drawer_start_tracking || (mSelectedFragmentId == R.id.drawer_workouts && itemId != R.id.drawer_workouts)) {
                 MyPreferenceManager(applicationContext).clearWorkoutFilterCriteria()
             }
@@ -920,21 +738,79 @@ class MainActivityWithNavigation :
             mSelectedFragmentId = itemId
             mDrawerController.selectedItemId = itemId
 
-            supportFragmentManager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
-            val fragmentTransaction = supportFragmentManager.beginTransaction()
-            fragmentTransaction.replace(R.id.content, fragment, tag)
-            fragmentTransaction.commit()
+            navController?.let { controller ->
+                controller.navigate(route) {
+                    popUpTo(controller.graph.findStartDestination().id) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
+            return true
         }
 
-        mDrawerLayout.closeDrawer(GravityCompat.START)
-        return true
+        val sheetType = NavRoutes.toSettingsBottomSheetType(itemId)
+        if (sheetType != null) {
+            mDrawerController.activeBottomSheet = sheetType
+            return false
+        }
+
+        if (itemId == R.id.drawer_privacy_policy) {
+            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.url_privacy)))
+            startActivity(browserIntent)
+            return true
+        }
+
+        Log.d(TAG, "setting a new content destination not yet implemented: $itemId")
+        Toast.makeText(this, "setting a new content destination not yet implemented", Toast.LENGTH_SHORT).show()
+        return false
+    }
+
+    fun openDrawer() {
+        mDrawerController.openDrawer()
+    }
+
+    fun closeDrawer() {
+        mDrawerController.closeDrawer()
+    }
+
+    fun onActivityTypeSelected(activityType: ActivityType) {
+        pendingActivityType = activityType
+        navigateToDrawerItem(R.id.drawer_start_tracking)
+    }
+
+    fun navigateToFilteredWorkouts(stats: StatsData) {
+        val criteria = WorkoutFilterCriteria(
+            startDateS = stats.startTimeS?.takeIf { it > 0 },
+            endDateS = stats.endTimeS?.takeIf { it > 0 },
+            sportTypeId = stats.filterSportTypeId?.takeIf { it != -1L },
+            equipmentId = stats.filterEquipmentId?.takeIf { it != -1L }
+        )
+        val summariesViewModel = androidx.lifecycle.ViewModelProvider(this)[WorkoutSummariesViewModel::class.java]
+        summariesViewModel.setFilterCriteria(criteria)
+        navigateToDrawerItem(R.id.drawer_workouts)
+    }
+
+    fun startWorkoutSummaryListFromPeriod(
+        periodSummary: PeriodSummary,
+        bSportType: BSportType?,
+        scrollToWorkoutId: Long?
+    ) {
+        val criteria = WorkoutFilterCriteria(
+            startDateS = periodSummary.startTimestampS.takeIf { it > 0 },
+            endDateS = periodSummary.endTimestampS.takeIf { it > 0 }
+        )
+        val summariesViewModel = androidx.lifecycle.ViewModelProvider(this)[WorkoutSummariesViewModel::class.java]
+        summariesViewModel.setFilterCriteria(criteria)
+        navigateToDrawerItem(R.id.drawer_workouts)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (DEBUG) Log.i(TAG, "onOptionsItemSelected")
         return when (item.itemId) {
             android.R.id.home -> {
-                mDrawerLayout.openDrawer(GravityCompat.START)
+                openDrawer()
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -951,16 +827,8 @@ class MainActivityWithNavigation :
     }
 
     fun startPairing(protocol: Protocol, deviceType: DeviceType?) {
-        if (DEBUG) Log.d(TAG, "startPairingActivity: $protocol, deviceType: $deviceType")
-
-        val fragment = DevicesTabbedContainerFragment.newInstance(protocol, deviceType, 0)
-        mFragment = fragment
-        val tag = DevicesTabbedContainerFragment.TAG
-
-        val fragmentTransaction = supportFragmentManager.beginTransaction()
-        fragmentTransaction.replace(R.id.content, fragment, tag)
-        fragmentTransaction.addToBackStack(null)
-        fragmentTransaction.commit()
+        if (DEBUG) Log.d(TAG, "startPairing: $protocol, deviceType: $deviceType")
+        navigateToDrawerItem(R.id.drawer_my_sensors)
     }
 
     protected fun checkBatteryStatus() {
@@ -993,36 +861,27 @@ class MainActivityWithNavigation :
     override fun onPreferenceStartScreen(preferenceFragmentCompat: PreferenceFragmentCompat, preferenceScreen: PreferenceScreen): Boolean {
         if (DEBUG) Log.i(TAG, "onPreferenceStartScreen: " + preferenceScreen.key)
         val key = preferenceScreen.key
-        var fragment: Fragment? = null
         when (key) {
-            "sportTypes" -> fragment = SportTypeListFragment()
+            "sportTypes" -> {
+                navigateToDrawerItem(R.id.drawer_sport_types)
+                return true
+            }
             "cloudUpload" -> {
-                DropboxSettingsDialogFragment.newInstance().show(supportFragmentManager, DropboxSettingsDialogFragment.TAG)
+                mDrawerController.activeBottomSheet = SettingsBottomSheetType.DROPBOX
                 return true
             }
             TrainingApplication.PREFERENCE_SCREEN_STRAVA -> {
-                StravaSettingsDialogFragment.newInstance().show(supportFragmentManager, StravaSettingsDialogFragment.TAG)
+                mDrawerController.activeBottomSheet = SettingsBottomSheetType.STRAVA
                 return true
             }
             "search_settings" -> {
-                SearchSettingsDialogFragment.newInstance().show(supportFragmentManager, SearchSettingsDialogFragment.TAG)
+                mDrawerController.activeBottomSheet = SettingsBottomSheetType.SEARCH
                 return true
             }
-            else -> Log.d(TAG, "WTF: unknown key")
-        }
-
-        if (fragment != null) {
-            val args = Bundle().apply {
-                putString(PreferenceFragmentCompat.ARG_PREFERENCE_ROOT, preferenceScreen.key)
+            else -> {
+                Log.d(TAG, "unknown key: $key")
+                return false
             }
-            fragment.arguments = args
-            val ft = supportFragmentManager.beginTransaction()
-            ft.replace(R.id.content, fragment, preferenceScreen.key)
-            ft.addToBackStack(preferenceScreen.key)
-            ft.commit()
-            return true
-        } else {
-            return false
         }
     }
 

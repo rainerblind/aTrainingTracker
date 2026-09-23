@@ -1,0 +1,357 @@
+/*
+ * aTrainingTracker (ANT+ BTLE)
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+ */
+
+package com.atrainingtracker.trainingtracker.ui.clusters
+
+import android.app.Application
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutScreen
+import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModel
+import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelFactory
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutList
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutListActions
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModel
+import com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModel
+import com.atrainingtracker.trainingtracker.ui.map.toMapTrack
+import kotlinx.coroutines.flow.collectLatest
+
+/**
+ * Top-level Composable for Workout Clusters tabbed list, detail heatmap, and management (REQ-UI-159).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WorkoutClustersScreen(
+    viewModel: WorkoutClustersViewModel = viewModel(),
+    summariesViewModel: WorkoutSummariesViewModel = viewModel(),
+    trackOnMapViewModel: TrackOnMapAftermathViewModel = viewModel(),
+    initialClusterId: Long? = null,
+    onBackToNav: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        summariesViewModel.loadWorkoutsIfNeeded()
+    }
+
+    val selectedCluster by viewModel.selectedCluster.collectAsState()
+    var viewingWorkoutsForCluster by remember { mutableStateOf<WorkoutCluster?>(null) }
+    var inspectedWorkout by remember { mutableStateOf<WorkoutData?>(null) }
+    var editedWorkoutId by rememberSaveable { mutableStateOf<Long?>(null) }
+
+    var isTuning by remember { mutableStateOf(false) }
+    var isAdding by remember { mutableStateOf(false) }
+
+    val pagerState = rememberPagerState { 5 }
+    val allListState = rememberLazyListState()
+    val bikeListState = rememberLazyListState()
+    val runListState = rememberLazyListState()
+    val otherListState = rememberLazyListState()
+    val unclusteredListState = rememberLazyListState()
+
+    var clusterToDelete by remember { mutableStateOf<WorkoutCluster?>(null) }
+
+    val targetClusterId = remember { initialClusterId?.takeIf { it > 0 } }
+    LaunchedEffect(targetClusterId) {
+        if (targetClusterId != null) {
+            viewModel.selectClusterById(targetClusterId)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.recalculationFinished.collectLatest {
+            isTuning = false
+        }
+    }
+
+    when {
+        isTuning -> {
+            BackHandler {
+                viewModel.saveTuningParameters()
+                isTuning = false
+            }
+            ClusterTuningScreen(
+                viewModel = viewModel,
+                onBack = {
+                    viewModel.saveTuningParameters()
+                    isTuning = false
+                }
+            )
+        }
+        isAdding -> {
+            BackHandler { isAdding = false }
+            ManualClusterScreen(
+                viewModel = viewModel,
+                onBack = { isAdding = false }
+            )
+        }
+        inspectedWorkout != null -> {
+            val workout = inspectedWorkout!!
+            var workoutToCluster by remember { mutableStateOf<WorkoutData?>(null) }
+
+            val aftermathUIState by trackOnMapViewModel.uiState.collectAsStateWithLifecycle()
+            val enabledTrackTypes by trackOnMapViewModel.enabledTrackTypes.collectAsStateWithLifecycle()
+
+            LaunchedEffect(workout.id) {
+                viewModel.selectWorkoutForPeek(workout.id)
+                trackOnMapViewModel.loadAftermathData(workout)
+            }
+
+            BackHandler {
+                viewModel.clearPeekSelection()
+                inspectedWorkout = null
+            }
+
+            val initialTrack = remember(workout) { workout.toMapTrack() }
+
+            TrackOnMapScreen(
+                workoutData = workout,
+                tracks = aftermathUIState.tracks.ifEmpty { listOf(initialTrack) },
+                availableTrackTypes = aftermathUIState.availableTrackTypes,
+                segments = aftermathUIState.segments,
+                routes = aftermathUIState.routes,
+                markers = aftermathUIState.markers,
+                enabledTrackTypes = enabledTrackTypes,
+                onToggleTrackType = { trackOnMapViewModel.toggleTrackTypeEnabled(it) },
+                showTechnicalTracks = true,
+                onClusterClick = { clusterId ->
+                    viewModel.selectClusterById(clusterId)
+                    inspectedWorkout = null
+                },
+                headerActions = {
+                    IconButton(onClick = { workoutToCluster = workout }) {
+                        Icon(
+                            imageVector = Icons.Default.SwapHoriz,
+                            contentDescription = stringResource(R.string.cluster_move_workout_title)
+                        )
+                    }
+                },
+                onEditWorkout = { id -> editedWorkoutId = id }
+            )
+
+            if (workoutToCluster != null) {
+                val candidates = remember(workoutToCluster) { viewModel.getCandidateClustersForWorkout(workoutToCluster!!) }
+                WorkoutClusterSelectionDialog(
+                    title = stringResource(R.string.cluster_move_workout_title),
+                    candidates = candidates,
+                    onSelect = { target ->
+                        viewModel.moveWorkout(workoutToCluster!!, target.id)
+                        workoutToCluster = null
+                        inspectedWorkout = null
+                        viewModel.clearPeekSelection()
+                    },
+                    onDismiss = { workoutToCluster = null },
+                    sportNameResolver = { viewModel.getSportName(it) },
+                    bSportTypeResolver = { viewModel.getBSportType(it) }
+                )
+            }
+        }
+        viewingWorkoutsForCluster != null -> {
+            val cluster = viewingWorkoutsForCluster!!
+            val isCompactView by summariesViewModel.isCompactView.collectAsStateWithLifecycle()
+            val sortOrder by summariesViewModel.sortOrder.collectAsStateWithLifecycle()
+
+            BackHandler { viewingWorkoutsForCluster = null }
+
+            Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = { Text(cluster.name) },
+                        navigationIcon = {
+                            IconButton(onClick = { viewingWorkoutsForCluster = null }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                            }
+                        },
+                        actions = {
+                            WorkoutListActions(
+                                isCompactView = isCompactView,
+                                onToggleCompactView = { summariesViewModel.toggleCompactView() },
+                                sortOrder = sortOrder,
+                                onSortOrderChange = { summariesViewModel.setSortOrder(it) }
+                            )
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    )
+                }
+            ) { padding ->
+                val clusterWorkoutsFlow = remember(cluster.id) {
+                    summariesViewModel.getFilteredWorkouts(clusterId = cluster.id)
+                }
+                val clusterWorkouts by clusterWorkoutsFlow.collectAsStateWithLifecycle(initialValue = emptyList<WorkoutData>())
+                val isPlayAvailable = remember { true }
+
+                Box(modifier = Modifier.padding(padding)) {
+                    WorkoutList(
+                        scrollState = rememberLazyListState(),
+                        workouts = clusterWorkouts,
+                        isPlayServiceAvailable = isPlayAvailable,
+                        onExportWorkout = { id, format -> summariesViewModel.onExportWorkoutTo(id, format) },
+                        onSaveAsRoute = { data -> summariesViewModel.saveAsRoute(data) },
+                        onDeleteRequest = { id -> summariesViewModel.deleteWorkout(id) },
+                        onEditWorkout = { id -> editedWorkoutId = id },
+                        onMapClick = { data ->
+                            inspectedWorkout = data
+                        },
+                        isCompactView = isCompactView,
+                        appBarOffsetPx = 0,
+                        headerHeightPx = 0f,
+                        onClusterClick = { viewingWorkoutsForCluster = null },
+                        onMarkFinished = { workoutId -> summariesViewModel.markWorkoutFinished(workoutId) }
+                    )
+                }
+            }
+        }
+        selectedCluster != null -> {
+            val isDirectNavigation = targetClusterId != null
+            BackHandler {
+                if (isDirectNavigation) {
+                    onBackToNav?.invoke() ?: viewModel.selectCluster(null)
+                } else {
+                    viewModel.selectCluster(null)
+                }
+            }
+            WorkoutClusterHeatmapScreen(
+                cluster = selectedCluster!!,
+                viewModel = viewModel,
+                onBack = {
+                    if (isDirectNavigation) {
+                        onBackToNav?.invoke() ?: viewModel.selectCluster(null)
+                    } else {
+                        viewModel.selectCluster(null)
+                    }
+                },
+                onHitCountClick = { viewingWorkoutsForCluster = it },
+                onEditWorkout = { id -> editedWorkoutId = id }
+            )
+        }
+        else -> {
+            var workoutToCluster by remember { mutableStateOf<WorkoutData?>(null) }
+            val migrationStatus by viewModel.migrationStatus.collectAsStateWithLifecycle()
+
+            WorkoutClustersTabsScreen(
+                viewModel = viewModel,
+                pagerState = pagerState,
+                allListState = allListState,
+                bikeListState = bikeListState,
+                runListState = runListState,
+                otherListState = otherListState,
+                unclusteredListState = unclusteredListState,
+                onClusterClick = { viewModel.selectCluster(it) },
+                onWorkoutClick = { inspectedWorkout = it },
+                onHitCountClick = { viewingWorkoutsForCluster = it },
+                onTuneClick = { isTuning = true },
+                onAddClick = { isAdding = true },
+                onDeleteRequest = { clusterToDelete = it },
+                migrationStatus = migrationStatus
+            )
+
+            if (workoutToCluster != null) {
+                val candidates = remember(workoutToCluster) { viewModel.getCandidateClustersForWorkout(workoutToCluster!!) }
+                WorkoutClusterSelectionDialog(
+                    title = stringResource(R.string.cluster_move_workout_title),
+                    candidates = candidates,
+                    onSelect = { target ->
+                        viewModel.moveWorkout(workoutToCluster!!, target.id)
+                        workoutToCluster = null
+                    },
+                    onDismiss = { workoutToCluster = null },
+                    sportNameResolver = { viewModel.getSportName(it) },
+                    bSportTypeResolver = { viewModel.getBSportType(it) }
+                )
+            }
+        }
+    }
+
+    if (editedWorkoutId != null) {
+        val app = context.applicationContext as Application
+        val editViewModel: EditWorkoutViewModel = viewModel(
+            key = "edit_workout_$editedWorkoutId",
+            factory = EditWorkoutViewModelFactory(app, editedWorkoutId!!)
+        )
+
+        EditWorkoutScreen(
+            viewModel = editViewModel,
+            onBack = {
+                val id = editedWorkoutId
+                editedWorkoutId = null
+                if (id != null) {
+                    viewModel.selectWorkoutForPeek(id)
+                }
+            }
+        )
+    }
+
+    if (clusterToDelete != null) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { clusterToDelete = null },
+            title = { Text(stringResource(R.string.cluster_delete_title)) },
+            text = { Text(stringResource(R.string.cluster_delete_message)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        viewModel.deleteCluster(clusterToDelete!!)
+                        clusterToDelete = null
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { clusterToDelete = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+}
