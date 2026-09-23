@@ -172,7 +172,10 @@ fun ATrainingTrackerApp(
 
     ModalNavigationDrawer(
         drawerState = drawerState,
-        gesturesEnabled = true,
+        // REQ-UI-161: Restrict swipe-to-open gesture detection strictly to the leftmost 40dp edge
+        // interceptor when closed, preventing unintended drawer opening during map panning and child
+        // scrolling. When open, full-screen gestures are enabled for swipe-to-close and scrim tap dismissal.
+        gesturesEnabled = drawerState.isOpen,
         drawerContent = {
             ModalDrawerSheet(
                 modifier = Modifier.width(300.dp),
