@@ -8,7 +8,7 @@
 **Target Release**: `V4.9.38`  
 **Requirement Mapping**: `REQ-UI-158` (Proposed), `REQ-UI-124`, `REQ-UI-123`, `REQ-SET-050`, `REQ-SET-052`, `REQ-STB-003`, `REQ-STB-007`  
 **Test Specification**: `TST-NAV-009` (Proposed), `TST-NAV-008`, `TST-NAV-007`, `TST-NAV-004`  
-**Stage**: `Stage 1: Analysis (SWE.1 / SYS.2) - Revision 2`
+**Stage**: `Stage 1: Analysis (SWE.1 / SYS.2) - Revision 3`
 
 ---
 
@@ -24,7 +24,7 @@
 ### 1.2 Objectives
 1. Modernize `MainActivityWithNavigation` into a **pure Jetpack Compose single-activity architecture** via `setContent { ATrainingTrackerApp(...) }`.
 2. Replace legacy Android View `DrawerLayout` with Material 3 `ModalNavigationDrawer`.
-3. Replace `supportFragmentManager` transactions with a state-driven, reactive navigation architecture (`NavDestination` / `currentDestination`) with robust `BackHandler` integration.
+3. Replace `supportFragmentManager` transactions with official **Jetpack Compose Navigation (`NavHost` / `rememberNavController`)**, harmonizing with parent issue objectives.
 4. Extract Composable screen content from legacy Fragment wrappers so they can be composed directly in the root Compose tree while preserving backwards compatibility.
 5. Provide native Compose `ModalBottomSheet` hosting for drawer settings dialogs (Export, Units, Display, Search, Strava, Dropbox, ActivityTypeSelection), eliminating `DialogFragment` / `WindowManager` window bridging.
 6. Guarantee 100% preservation of background service bindings (`BANALService.GetBanalServiceInterface`), crash recovery (`StartOrResumeInterface`, `REQ-STB-003`), intent routing, and Java/bytecode interop contracts (`MainActivityWithNavigationInteropTest`).
@@ -77,6 +77,12 @@ An audit of all 21 navigation items handled in `navigateToDrawerItem(itemId)` de
 
 **Key Finding**: The underlying fragments are merely legacy shells that instantiate a `ComposeView`. By hoisting screen composition into a root Compose navigation tree, the application sheds 12 fragment wrapper classes and 7 DialogFragment window bridges.
 
+### 2.3 Fragment Lifecycle & Result Listener Audit
+A forensic audit across the entire codebase (`app/src/`) for fragment result communication:
+- `setFragmentResultListener` / `setFragmentResult`: **0 occurrences**. Zero components depend on fragment result channels.
+- `supportFragmentManager`: Found exclusively inside `MainActivityWithNavigation.kt` and two calls in `TrackingTabsScreen.kt` invoking `EditDeviceFragmentFactory.create(...).show(context.supportFragmentManager, "EditDeviceDialog")`.
+- `MainActivityWithNavigation` will continue extending `AppCompatActivity` (which is a `FragmentActivity`), ensuring 100% backward compatibility for legacy dialogs until they are phased out.
+
 ---
 
 ## 3. Target Architecture & Design Specification
@@ -89,10 +95,11 @@ override fun onCreate(savedInstanceState: Bundle?) {
     WindowCompat.setDecorFitsSystemWindows(window, false)
     setContent {
         ATrainingTrackerTheme {
+            val navController = rememberNavController()
             ATrainingTrackerApp(
                 activity = this,
-                drawerController = mDrawerController,
-                ...
+                navController = navController,
+                drawerController = mDrawerController
             )
         }
     }
@@ -128,29 +135,56 @@ ModalNavigationDrawer(
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
         MainContentHost(
-            currentDestination = currentDestination,
+            navController = navController,
             modifier = Modifier.padding(paddingValues)
         )
     }
 }
 ```
 
-### 3.3 Zero-Dependency, State-Driven Navigation Router
-Rather than pulling in external `navigation-compose` libraries that risk classpath collisions with strictly pinned AndroidX Core `1.15.0` (`REQ-STB-007`), the navigation architecture utilizes a **state-driven reactive destination router**:
-- Encapsulated in sealed class `NavDestination` (holding destination ID, route title, and optional arguments such as `clusterId` or `activityType`).
-- Backstack maintained via `rememberSaveable(saver = NavDestinationListSaver) { mutableStateListOf<NavDestination>() }`.
-- Deterministic `BackHandler` lifecycle:
-  1. *Drawer Open*: Closes drawer smoothly.
-  2. *Active Bottom Sheet*: Closes modal sheet.
-  3. *Sub-Screen / Detail*: Pops backstack to originating list view.
-  4. *Top-Level Destination != StartTracking*: Clears filter criteria (`MyPreferenceManager.clearWorkoutFilterCriteria()`, etc.) and returns to `drawer_start_tracking`.
-  5. *At StartTracking*: Finishes activity.
+### 3.3 Official Jetpack Compose Navigation (`NavHost` / `NavController`) Alignment
+In strict alignment with the parent issue objectives (**ATT-1083: "Replace FragmentManager transactions with Jetpack Compose Navigation (NavHost / NavController)"**), the application adopts official **Jetpack Compose Navigation**:
+- **Framework**: `androidx.navigation:navigation-compose:2.8.8` (or active BOM-compatible release).
+- **Classpath Alignment with REQ-STB-007**: Adding `navigation-compose` is strictly governed by `app/build.gradle`'s global `resolutionStrategy.force 'androidx.core:core:1.15.0'`, which guarantees that `androidx.core` cannot be transitively bumped to defective versions (API 34 crash immunity is preserved).
+- **Navigation State Machine**:
+  ```kotlin
+  NavHost(
+      navController = navController,
+      startDestination = NavRoutes.START_TRACKING
+  ) {
+      composable(NavRoutes.START_TRACKING) { TrackingTabsScreen(...) }
+      composable(NavRoutes.WORKOUTS) { WorkoutSummariesTabbedScreen(...) }
+      composable(NavRoutes.MAP) { MapScreenWithTrack(...) }
+      composable(NavRoutes.SEGMENTS) { StarredSegmentsScreen(...) }
+      composable(NavRoutes.ROUTES) { RoutesScreen(...) }
+      composable(NavRoutes.PERIODS) { PeriodsScreen(...) }
+      composable(NavRoutes.SENSORS) { DevicesTabbedContainerContent(...) }
+      composable(NavRoutes.BIKES) { EquipmentScreen(equipmentType = 0) }
+      composable(NavRoutes.SHOES) { EquipmentScreen(equipmentType = 1) }
+      composable(NavRoutes.LOCATIONS) { WorkoutClustersScreen(...) }
+      composable(NavRoutes.SPORT_TYPES) { SportTypesTabsScreen(...) }
+      composable(NavRoutes.TRAINING_ZONES) { ZoneSettingsScreen(...) }
+      composable(NavRoutes.BACKUP_RESTORE) { BackupRestoreScreen(...) }
+  }
+  ```
+- **Top-Level Navigation Pattern**:
+  When selecting top-level drawer items:
+  ```kotlin
+  navController.navigate(route) {
+      popUpTo(navController.graph.findStartDestination().id) {
+          saveState = true
+      }
+      launchSingleTop = true
+      restoreState = true
+  }
+  ```
+  This matches official Google Android architecture guidelines: single top-level destination backstack, automatic state saving and restoring, and seamless deep-link support.
 
 ---
 
 ## 4. API Compatibility Matrix & Public Method Surface
 
-To guarantee zero regressions for external callers, Java callers, and instrumentation tests (`MainActivityWithNavigationInteropTest`), `MainActivityWithNavigation` preserves 100% binary and functional parity:
+To guarantee zero regressions for external callers, Java callers, and instrumentation tests (`MainActivityWithNavigationInteropTest`), `MainActivityWithNavigation` preserves 100% binary, bytecode, and functional parity:
 
 | Member / API | Return / Type | Existing Contract | Target Compose Architecture | Interop & Verification Guarantee |
 | :--- | :--- | :--- | :--- | :--- |
@@ -158,8 +192,8 @@ To guarantee zero regressions for external callers, Java callers, and instrument
 | `SELECTED_FRAGMENT` | `String` (`@JvmField`) | Constant `"SELECTED_FRAGMENT"` | Retained identically in `companion object` | Verified by `MainActivityWithNavigationInteropTest` and `TrackerService` |
 | `EXTRA_RESUME_INTERRUPTED_WORKOUT` | `String` (`@JvmField`) | `"com.atrainingtracker.EXTRA_RESUME_INTERRUPTED_WORKOUT"` | Retained identically in `companion object` | Verified by `WorkoutResumptionTest` and `TrackerService` |
 | `SelectedFragment` | `Enum` | `START_OR_TRACKING`, `WORKOUT_LIST` | Retained identically in `companion object` | Verified by `MainActivityWithNavigationInteropTest` enum audit |
-| `navigateToDrawerItem(itemId)` | `Boolean` | Replaces Fragment in `R.id.content` | Updates reactive `currentDestination` state and `mDrawerController.selectedItemId` | 100% functional parity; callable from Activity, Drawer, and tests |
-| `startPairing(protocol, deviceType)` | `Unit` | Opens `DevicesTabbedContainerFragment` | Navigates `currentDestination` to `NavDestination.Sensors(protocol, deviceType)` | 100% functional parity; called by `TrackingTabsScreen.kt:346` |
+| `navigateToDrawerItem(itemId)` | `Boolean` | Replaces Fragment in `R.id.content` | Routes `navController` to target route and updates `mDrawerController.selectedItemId` | 100% functional parity; callable from Activity, Drawer, and tests |
+| `startPairing(protocol, deviceType)` | `Unit` | Opens `DevicesTabbedContainerFragment` | Navigates `navController` to `NavRoutes.SENSORS` with arguments | 100% functional parity; called by `TrackingTabsScreen.kt:346` |
 | `openDrawer()` | `Unit` | New helper | Triggers `drawerState.open()` via reactive flow / controller | Eliminates `findViewById<DrawerLayout>(R.id.drawer_layout)` in `TrackingTabsScreen.kt:261` |
 | `applyDisplaySettings()` | `Unit` | Applies `keepScreenOn`, orientation lock | Retained directly on `MainActivityWithNavigation` | Verified by `DisplaySettingsDialogFragment` and `REQ-SET-052` |
 | `showStartOrResumeDialog()` | `Unit` | Shows `StartOrResumeDialog` | Retained directly on `MainActivityWithNavigation` | Verified by `StartOrResumeInterface` and `REQ-STB-003` |
@@ -170,53 +204,81 @@ To guarantee zero regressions for external callers, Java callers, and instrument
 
 ---
 
-## 5. BANALService Lifecycle Anchoring & Service Binding Architecture
+## 5. BANALService Lifecycle Anchoring & Configuration Change Concurrency Guard
 
 ### 5.1 Activity-Anchored Lifecycle Invariant
 `BANALService` is a long-running Android bound service that interfaces with ANT+ and BLE sensor hardware.
-- **Strict Architecture Rule**: `BANALService` binding MUST be anchored **exclusively to the Android Activity lifecycle** (`MainActivityWithNavigation`), NOT within Compose `DisposableEffect` or coroutine scopes.
+- **Strict Architecture Rule**: `BANALService` binding MUST be anchored **exclusively to the Android Activity lifecycle** (`MainActivityWithNavigation`), NOT within Compose composable scopes or `DisposableEffect`.
 - Binding or unbinding within Compose composables would cause catastrophic reconnection loops during rapid UI recompositions, orientation changes, or tab paging.
 
-### 5.2 Service Binding Sequence
+### 5.2 Concurrency & Configuration Change Protection
+When the user rotates their phone, Android destroys and recreates `MainActivityWithNavigation`. Without an explicit lifecycle guard, `onPause()` posts a 5-minute delayed disconnect runnable while `onDestroy()` abruptly unbinds, creating an unbind/rebind race with the incoming Activity's `onCreate()` / `onResume()`.
+
+**Architectural Remediation**:
+1. **In `onPause()`**:
+   ```kotlin
+   override fun onPause() {
+       super.onPause()
+       if (!isChangingConfigurations) {
+           mHandler.postDelayed(mDisconnectFromBANALServiceRunnable, WAITING_TIME_BEFORE_DISCONNECTING)
+       }
+   }
+   ```
+2. **In `onDestroy()`**:
+   ```kotlin
+   override fun onDestroy() {
+       super.onDestroy()
+       if (!isChangingConfigurations) {
+           disconnectFromBANALService()
+       }
+   }
+   ```
+3. **In `onResume()`**:
+   ```kotlin
+   override fun onResume() {
+       super.onResume()
+       mHandler.removeCallbacks(mDisconnectFromBANALServiceRunnable)
+       if (mBanalServiceComm == null) {
+           bindService(banalServiceIntent, mBanalConnection, Context.BIND_AUTO_CREATE)
+       }
+       ...
+   }
+   ```
+
+### 5.3 Configuration Change Sequence Flow
 ```
-[Activity.onCreate / onResume]
-      |
-      +---> If unbind runnable pending -> cancel runnable (mHandler.removeCallbacks)
-      |
-      +---> If not connected -> bindService(BANALService, BIND_AUTO_CREATE)
-      |
-      +---> onServiceConnected -> cache mBanalServiceComm, create device filters, notify listeners
-      
-[Activity.onPause]
-      |
-      +---> Post delayed disconnect: mHandler.postDelayed(mDisconnectFromBANALServiceRunnable, 5 min)
-      
-[Activity.onDestroy]
-      |
-      +---> Immediate disconnectFromBANALService() -> unbindService()
+Activity 1 (Old)                           Android OS / Service                   Activity 2 (New)
+      |                                              |                                   |
+      |--- onPause() [isChangingConfig=true] ------->|                                   |
+      |    (Skip posting delayed disconnect)         |                                   |
+      |                                              |                                   |
+      |--- onDestroy() [isChangingConfig=true] ----->|                                   |
+      |    (Skip unbindService & stopService)        |                                   |
+      |                                              |                                   |
+      |                                              |--- onCreate() ------------------->|
+      |                                              |    (Attaches to existing process) |
+      |                                              |                                   |
+      |                                              |--- onResume() ------------------->|
+      |                                              |    (Cancel any pending runnable;  |
+      |                                              |     Service remains bound cleanly)|
 ```
-Compose screens simply read the active `mBanalServiceComm` reference or observe repository StateFlows (`BANALServiceRepository`). Zero recomposition churn touches the underlying service connection.
+Zero reconnection storms occur; sensor streams remain uninterrupted across device rotation.
 
 ---
 
 ## 6. Process-Death, Configuration Change & Intent Delivery State Machine
 
 ### 6.1 State Restoration Strategy Across Process Death
-To guarantee that the user never loses their active screen upon Android OS process termination or configuration changes (e.g., orientation flipping):
-1. **Activity `onSaveInstanceState(outState)`**:
-   ```kotlin
-   override fun onSaveInstanceState(outState: Bundle) {
-       super.onSaveInstanceState(outState)
-       outState.putInt(SELECTED_FRAGMENT_ID, mSelectedFragmentId)
-       // Save backstack route IDs if nested navigation is active
-       outState.putIntegerArrayList(KEY_NAV_BACKSTACK, ArrayList(mNavBackstackIds))
-   }
-   ```
-2. **Activity `onCreate(savedInstanceState)`**:
-   - Reads `savedInstanceState?.getInt(SELECTED_FRAGMENT_ID, DEFAULT_SELECTED_FRAGMENT_ID)`.
-   - Restores the active destination into the reactive Compose router state before the first frame renders.
-3. **Compose `rememberSaveable`**:
-   - Screen-level UI states (pager indices, list scroll offsets) utilize standard Compose `rememberSaveable` with `rememberLazyListState` and `rememberPagerState`.
+To guarantee that the user never loses their active screen or form data upon Android OS process termination:
+1. **`NavHost` / `NavBackStackEntry` SavedState Integration**:
+   - Official `NavController` automatically serializes backstack entries into the Activity's saved instance state bundle via `NavBackStackEntry.savedStateRegistry`.
+   - Each composable destination in `NavHost` has its own `SavedStateRegistryOwner` and `ViewModelStoreOwner`.
+   - Child composables using `rememberSaveable` (e.g. `LazyListState.firstVisibleItemIndex` in workout lists, `PagerState.currentPage` in tracking tabs, text fields in equipment forms) are automatically restored upon recreation.
+2. **Activity `onSaveInstanceState(outState)`**:
+   - Delegates to `super.onSaveInstanceState(outState)` (which persists the `NavController` state).
+   - Persists `mSelectedFragmentId` (`outState.putInt(SELECTED_FRAGMENT_ID, mSelectedFragmentId)`) for legacy interop.
+3. **Persistent Filters**:
+   - Workout and segment filter criteria are stored in `MyPreferenceManager` (backed by `SharedPreferences`), guaranteeing persistence across process death by definition.
 
 ### 6.2 Cold-Start vs. Warm-Start Intent Delivery
 ```
@@ -234,15 +296,15 @@ To guarantee that the user never loses their active screen upon Android OS proce
          |                                                 |
          v                                                 v
 - Cancel notification                           - Parse SelectedFragment enum
-- mSelectedFragmentId = drawer_start_tracking   - Map to drawer destination ID
-- Navigate router to StartTracking              - Navigate router to destination
+- mSelectedFragmentId = drawer_start_tracking   - Map to NavRoutes (e.g. WORKOUTS)
+- NavController navigates to START_TRACKING     - NavController navigates to target
 - Trigger chooseResume()                        - Pop backstack to root
 ```
 By routing both `onCreate` and `onNewIntent` through `handleIntent()`, the Compose navigation router reacts immediately to notifications whether the application was alive in the background or killed.
 
 ---
 
-## 7. Window Insets & Zero-Flicker Edge-to-Edge Architecture
+## 7. Window Insets, IME (Keyboard) & Zero-Flicker Edge-to-Edge Architecture
 
 ### 7.1 Single-Window Edge-to-Edge Enforcement
 Legacy bottom popup sheets (`BottomSheetDialogFragment`) suffered from double-window nesting, requiring complex translucent theme hacks (`REQ-UI-156`) to suppress dark status bar flashes.
@@ -256,17 +318,26 @@ In the single-activity Compose architecture:
 3. **Consistent Inset Dispatch**:
    - System bar insets (`WindowInsets.statusBars`, `WindowInsets.navigationBars`) are consumed deterministically using Compose layout modifiers (`statusBarsPadding()`, `navigationBarsPadding()`, `safeDrawingPadding()`).
 
+### 7.2 Soft Input Mode & IME (Keyboard) Handling in Modal Bottom Sheets
+When settings dialogs (such as Strava token input, search filter entry, or equipment labeling) open inside `ModalBottomSheet`, soft keyboard appearance can cause layout occlusion or clipping:
+1. **Manifest Configuration**:
+   - `MainActivityWithNavigation` declares `android:windowSoftInputMode="adjustResize"`.
+2. **Compose Inset Union**:
+   - `ModalBottomSheet` is configured with `windowInsets = WindowInsets.ime.union(WindowInsets.navigationBars)`.
+3. **Scrollable Content Scaffolding**:
+   - The sheet content column applies `Modifier.verticalScroll(rememberScrollState()).imePadding()`, ensuring the active input field smoothly scrolls above the soft keyboard without obscuring action buttons.
+
 ---
 
 ## 8. Call-Site Audit & Blast Radius
 
 | Component / File | Interaction Type | Impact Analysis & Remediation |
 | :--- | :--- | :--- |
-| `AndroidManifest.xml` | Activity Declaration | Preserved: `MainActivityWithNavigation` remains `<activity>` launcher with `singleTask` launch mode. |
+| `AndroidManifest.xml` | Activity Declaration | Preserved: `MainActivityWithNavigation` remains `<activity>` launcher with `singleTask` launch mode and `adjustResize`. |
 | `TrackerService.java` | Notification Intent Target | Preserved: Uses `MainActivityWithNavigation.class`, `SELECTED_FRAGMENT`, `EXTRA_RESUME_INTERRUPTED_WORKOUT`. |
 | `TrainingApplication.java` | Notification & App Startup | Preserved: Intent targeting `MainActivityWithNavigation.class`. |
 | `ExportNotificationManager.kt` | Export Click Intent | Preserved: Sets `SELECTED_FRAGMENT = WORKOUT_LIST`. |
-| `TrackingTabsScreen.kt` | Drawer & Pairing Trigger | Remediated: Line 261 calls `openDrawer()` method directly on `MainActivityWithNavigation` instead of `findViewById(R.id.drawer_layout)`. Line 346 calls `startPairing(protocol, deviceType)`. |
+| `TrackingTabsScreen.kt` | Drawer & Pairing Trigger | Remediated: Line 261 calls `openDrawer()` method directly on `MainActivityWithNavigation` instead of `findViewById(R.id.drawer_layout)`. Line 346 calls `startPairing(protocol, deviceType)`. Lines 188 & 359 use `context.supportFragmentManager` which remains valid. |
 | `DisplaySettingsDialogFragment.kt` | Display Settings Sync | Preserved: `applyDisplaySettings()` callable on activity. |
 | `MainActivityWithNavigationInteropTest.kt` | Unit Verification Suite | Preserved: Class hierarchy, interfaces, constants, and public methods verified by test suite. |
 
@@ -278,27 +349,27 @@ In the single-activity Compose architecture:
 - **Title**: *Single-Activity Architecture & Pure Jetpack Compose Navigation.*
 - **Scope**: `MainActivityWithNavigation.kt`, `AppNavigationDrawer.kt`.
 - **Formulation**:
-  > The system SHALL implement a single-activity architecture for `MainActivityWithNavigation` utilizing native Jetpack Compose (`setContent`) and Material 3 `ModalNavigationDrawer`:\
+  > The system SHALL implement a single-activity architecture for `MainActivityWithNavigation` utilizing native Jetpack Compose (`setContent`), Material 3 `ModalNavigationDrawer`, and Jetpack Compose Navigation (`NavHost` / `NavController`):\
   > 1. *Layout Modernization*: The legacy View layout `main_activity_with_navigation.xml` SHALL be retired from the primary runtime flow in favor of declarative Compose composition (`ATrainingTrackerApp`).\
-  > 2. *Navigation Architecture*: Top-level navigation, sub-destination routing, and back-press handling SHALL be managed natively within Jetpack Compose, retiring legacy `supportFragmentManager` transaction replacements.\
-  > 3. *Modal Bottom Sheet Unification*: Settings and selection bottom sheets SHALL compose natively within the single activity window, eliminating separate child `Dialog` window allocations and navigation bar flickering.\
-  > 4. *Invariants*: Service binding to `BANALService`, crash recovery (`REQ-STB-003`), display options dynamic application (`REQ-SET-052`), intent routing extras, and Java interop contracts (`TST-NAV-008`) MUST remain 100% functional.
+  > 2. *Navigation Architecture*: Top-level navigation, sub-destination routing, and back-press handling SHALL be managed natively within Jetpack Compose Navigation (`NavHost`), retiring legacy `supportFragmentManager` transaction replacements.\
+  > 3. *Modal Bottom Sheet & IME Unification*: Settings and selection bottom sheets SHALL compose natively within the single activity window with IME keyboard insets (`adjustResize` / `imePadding`), eliminating separate child `Dialog` window allocations and navigation bar flickering.\
+  > 4. *Invariants*: Service binding to `BANALService` (with configuration change concurrency guards), crash recovery (`REQ-STB-003`), display options dynamic application (`REQ-SET-052`), intent routing extras, and Java interop contracts (`TST-NAV-008`) MUST remain 100% functional.
 
 ### 9.2 Proposed Test Specification: `TST-NAV-009`
 - **Title**: *Single-Activity Compose Navigation & Architectural Interop Verification.*
-- **Scope**: Automated unit tests in `app/src/test/` asserting Compose navigation state transitions, backstack behavior, and interop contracts.
+- **Scope**: Automated unit tests in `app/src/test/` asserting Compose navigation state transitions, backstack behavior, IME insets, and interop contracts.
 
 ---
 
 ## 10. Risk Rating & Mitigation
 
-- **Risk Level**: **`MEDIUM`** (Upgraded from high risk via explicit API compatibility matrix, activity-anchored service lifecycle, and process-death state machine).
-- **Justification**: While `MainActivityWithNavigation` is the root container, the risk is strictly controlled because all 21 child screens are already pure Compose implementations, and service bindings remain anchored at the Activity level.
+- **Risk Level**: **`LOW-MEDIUM`** (Fully mitigated via official `NavHost` adoption, activity-anchored service lifecycle with `isChangingConfigurations` guards, and complete IME insets engineering).
+- **Justification**: While `MainActivityWithNavigation` is the root container, the risk is strictly controlled because all 21 child screens are already pure Compose implementations, service bindings remain anchored at the Activity level with configuration change guards, and all reflection/interop contracts are validated by unit tests.
 - **Mitigation Strategy**:
   1. Retain `MainActivityWithNavigation` class identity and interface implementations, ensuring zero disruption to Android framework manifest launching or service binding.
-  2. Implement an in-activity Compose navigation router that leverages existing, battle-tested screen composables.
+  2. Implement official `NavHost` with type-safe route mapping and `popUpTo(saveState=true)` / `restoreState=true`.
   3. Validate all 32 test tasks with `./gradlew testDebugUnitTest` to guarantee zero regressions.
-  4. Perform live physical hardware verification on device `66020DLCR002FL` (Pixel 10) across drawer navigation, tracking start, settings dialogs, and crash resumption.
+  4. Perform live physical hardware verification on device `66020DLCR002FL` (Pixel 10) across drawer navigation, tracking start, settings dialogs, soft keyboard input, and crash resumption.
 
 ---
 
