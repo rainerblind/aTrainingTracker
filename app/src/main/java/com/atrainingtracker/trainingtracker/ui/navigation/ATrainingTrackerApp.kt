@@ -94,7 +94,9 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsScreen
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModel
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelFactory
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Root Composable hosting the pure Jetpack Compose single-activity architecture (REQ-UI-159).
@@ -121,17 +123,16 @@ fun ATrainingTrackerApp(
         }
     }
 
-    // Synchronize drawerController.isDrawerOpen with Compose DrawerState
-    LaunchedEffect(drawerController.isDrawerOpen) {
-        if (drawerController.isDrawerOpen) {
-            if (!drawerState.isOpen) drawerState.open()
-        } else {
-            if (drawerState.isOpen) drawerState.close()
+    // Bind drawerController to Compose DrawerState as Single Source of Truth (REQ-UI-162)
+    DisposableEffect(drawerState, scope) {
+        drawerController.bindDrawer(
+            open = { scope.launch { drawerState.open() } },
+            close = { scope.launch { drawerState.close() } },
+            isOpen = { drawerState.currentValue != DrawerValue.Closed || drawerState.targetValue != DrawerValue.Closed }
+        )
+        onDispose {
+            drawerController.unbindDrawer()
         }
-    }
-
-    LaunchedEffect(drawerState.isOpen) {
-        drawerController.isDrawerOpen = drawerState.isOpen
     }
 
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
@@ -150,23 +151,43 @@ fun ATrainingTrackerApp(
         }
     }
 
-    // Single-Activity Back Navigation State Machine
-    BackHandler {
-        when {
-            drawerState.isOpen -> scope.launch { drawerState.close() }
-            drawerController.activeBottomSheet != null -> drawerController.activeBottomSheet = null
-            navController.previousBackStackEntry != null -> navController.popBackStack()
-            currentRoute != NavRoutes.START_TRACKING -> {
-                if (currentRoute == NavRoutes.WORKOUTS) {
-                    MyPreferenceManager(activity).clearWorkoutFilterCriteria()
-                } else if (currentRoute == NavRoutes.ROUTES) {
-                    MyPreferenceManager(activity).clearRouteFilterCriteria()
-                } else if (currentRoute == NavRoutes.LOCATIONS) {
-                    MyPreferenceManager(activity).clearClusterFilterCriteria()
-                }
-                activity.navigateToDrawerItem(R.id.drawer_start_tracking)
+    // Authoritative drawer visibility predicate across all animation phases (REQ-UI-162)
+    val isDrawerVisible = drawerState.currentValue != DrawerValue.Closed || drawerState.targetValue != DrawerValue.Closed
+
+    // --- Back Handling Hierarchy (LIFO composition ordering) ---
+    // Layer 3: Root Screen Navigation (composed first -> evaluated last)
+    BackHandler(enabled = !isDrawerVisible && drawerController.activeBottomSheet == null) {
+        if (navController.previousBackStackEntry != null) {
+            navController.popBackStack()
+        } else if (currentRoute != NavRoutes.START_TRACKING) {
+            if (currentRoute == NavRoutes.WORKOUTS) {
+                MyPreferenceManager(activity).clearWorkoutFilterCriteria()
+            } else if (currentRoute == NavRoutes.ROUTES) {
+                MyPreferenceManager(activity).clearRouteFilterCriteria()
+            } else if (currentRoute == NavRoutes.LOCATIONS) {
+                MyPreferenceManager(activity).clearClusterFilterCriteria()
             }
-            else -> activity.finish()
+            activity.navigateToDrawerItem(R.id.drawer_start_tracking)
+        } else {
+            activity.finish()
+        }
+    }
+
+    // Layer 2: Settings Bottom Sheet Overlay (composed second)
+    BackHandler(enabled = drawerController.activeBottomSheet != null) {
+        drawerController.activeBottomSheet = null
+    }
+
+    // Layer 1: Navigation Drawer Overlay (composed last -> evaluated first)
+    BackHandler(enabled = isDrawerVisible) {
+        scope.launch {
+            try {
+                withTimeoutOrNull(400L) {
+                    drawerState.close()
+                } ?: drawerState.snapTo(DrawerValue.Closed)
+            } catch (_: CancellationException) {
+                // Cooperative cancellation on rapid consecutive back taps
+            }
         }
     }
 

@@ -107,15 +107,36 @@ class NavigationDrawerController(
 ) {
     var selectedItemId: Int by mutableIntStateOf(initialSelectedItemId)
     var startTrackingTitleRes: Int by mutableIntStateOf(initialStartTrackingTitleRes)
-    var isDrawerOpen: Boolean by mutableStateOf(false)
     var activeBottomSheet: SettingsBottomSheetType? by mutableStateOf(null)
 
+    private var _unboundIsDrawerOpen by mutableStateOf(false)
+    private var openDrawerAction: (() -> Unit)? = null
+    private var closeDrawerAction: (() -> Unit)? = null
+    private var isDrawerOpenProvider: (() -> Boolean)? = null
+
+    val isDrawerOpen: Boolean
+        get() = isDrawerOpenProvider?.invoke() ?: _unboundIsDrawerOpen
+
     fun openDrawer() {
-        isDrawerOpen = true
+        val action = openDrawerAction
+        if (action != null) action.invoke() else _unboundIsDrawerOpen = true
     }
 
     fun closeDrawer() {
-        isDrawerOpen = false
+        val action = closeDrawerAction
+        if (action != null) action.invoke() else _unboundIsDrawerOpen = false
+    }
+
+    fun bindDrawer(open: () -> Unit, close: () -> Unit, isOpen: () -> Boolean) {
+        openDrawerAction = open
+        closeDrawerAction = close
+        isDrawerOpenProvider = isOpen
+    }
+
+    fun unbindDrawer() {
+        openDrawerAction = null
+        closeDrawerAction = null
+        isDrawerOpenProvider = null
     }
 }
 

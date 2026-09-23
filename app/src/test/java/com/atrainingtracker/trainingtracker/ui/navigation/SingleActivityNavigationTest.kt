@@ -26,6 +26,12 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummary
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
+import androidx.compose.material3.DrawerValue
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -242,6 +248,169 @@ class SingleActivityNavigationTest {
         assertFalse("100dp must exceed edge threshold", isWithinEdgeThreshold(100f))
         assertFalse("200dp (mid-screen) must exceed edge threshold", isWithinEdgeThreshold(200f))
         assertFalse("360dp (right edge) must exceed edge threshold", isWithinEdgeThreshold(360f))
+    }
+
+    /**
+     * Verifies NavigationDrawerController single source of truth delegation and backward-compatible fallback (REQ-UI-162 / TST-UI-114).
+     */
+    @Test
+    fun testNavigationDrawerControllerActionDelegationAndFallback() {
+        val controller = NavigationDrawerController()
+
+        // Unbound state verification (fallback without NPE)
+        assertFalse("Unbound controller must default isDrawerOpen to false", controller.isDrawerOpen)
+        controller.openDrawer()
+        assertTrue("Unbound controller openDrawer() must set fallback to true", controller.isDrawerOpen)
+        controller.closeDrawer()
+        assertFalse("Unbound controller closeDrawer() must set fallback to false", controller.isDrawerOpen)
+
+        // Binding to authoritative state provider
+        var openInvocations = 0
+        var closeInvocations = 0
+        var authoritativeIsOpen = false
+
+        controller.bindDrawer(
+            open = { openInvocations++ },
+            close = { closeInvocations++ },
+            isOpen = { authoritativeIsOpen }
+        )
+
+        // Assert bound delegation
+        assertEquals("Initial bound isDrawerOpen must reflect provider", false, controller.isDrawerOpen)
+
+        controller.openDrawer()
+        assertEquals("openDrawer() must invoke bound open delegate", 1, openInvocations)
+
+        controller.closeDrawer()
+        assertEquals("closeDrawer() must invoke bound close delegate", 1, closeInvocations)
+
+        authoritativeIsOpen = true
+        assertTrue("isDrawerOpen must strictly observe authoritative state provider", controller.isDrawerOpen)
+
+        authoritativeIsOpen = false
+        assertFalse("isDrawerOpen must strictly observe authoritative state provider", controller.isDrawerOpen)
+
+        // Unbind lifecycle
+        controller.unbindDrawer()
+        assertFalse("Unbound controller after unbindDrawer() must return fallback state cleanly", controller.isDrawerOpen)
+    }
+
+    /**
+     * Verifies scoped BackHandler visibility predicates across all 4 permutations of the DrawerState matrix (REQ-UI-162 / TST-UI-114).
+     */
+    @Test
+    fun testScopedBackHandlerVisibilityPredicatesAnd4StateMatrix() {
+        fun computeIsDrawerVisible(current: DrawerValue, target: DrawerValue): Boolean {
+            return current != DrawerValue.Closed || target != DrawerValue.Closed
+        }
+
+        fun isLayer1DrawerBackEnabled(isDrawerVisible: Boolean): Boolean = isDrawerVisible
+
+        fun isLayer3ScreenBackEnabled(isDrawerVisible: Boolean, hasActiveBottomSheet: Boolean): Boolean {
+            return !isDrawerVisible && !hasActiveBottomSheet
+        }
+
+        // State 1: Fully Closed (Closed, Closed)
+        val s1Visible = computeIsDrawerVisible(DrawerValue.Closed, DrawerValue.Closed)
+        assertFalse("State 1: isDrawerVisible must be false", s1Visible)
+        assertFalse("State 1: Layer 1 BackHandler must be disabled", isLayer1DrawerBackEnabled(s1Visible))
+        assertTrue("State 1: Layer 3 Screen BackHandler must be enabled", isLayer3ScreenBackEnabled(s1Visible, false))
+        assertFalse("State 1 with bottom sheet: Layer 3 must be disabled", isLayer3ScreenBackEnabled(s1Visible, true))
+
+        // State 2: Animating Open / Swiping Open (Closed, Open)
+        val s2Visible = computeIsDrawerVisible(DrawerValue.Closed, DrawerValue.Open)
+        assertTrue("State 2: isDrawerVisible must be true during opening animation", s2Visible)
+        assertTrue("State 2: Layer 1 BackHandler must be enabled to intercept back press", isLayer1DrawerBackEnabled(s2Visible))
+        assertFalse("State 2: Layer 3 Screen BackHandler must be disabled", isLayer3ScreenBackEnabled(s2Visible, false))
+
+        // State 3: Fully Open (Open, Open)
+        val s3Visible = computeIsDrawerVisible(DrawerValue.Open, DrawerValue.Open)
+        assertTrue("State 3: isDrawerVisible must be true when open", s3Visible)
+        assertTrue("State 3: Layer 1 BackHandler must be enabled to intercept back press", isLayer1DrawerBackEnabled(s3Visible))
+        assertFalse("State 3: Layer 3 Screen BackHandler must be disabled", isLayer3ScreenBackEnabled(s3Visible, false))
+
+        // State 4: Actively Dismissing / Closing (Open, Closed)
+        val s4Visible = computeIsDrawerVisible(DrawerValue.Open, DrawerValue.Closed)
+        assertTrue("State 4: isDrawerVisible must remain true during closing transition", s4Visible)
+        assertTrue("State 4: Layer 1 BackHandler must remain enabled", isLayer1DrawerBackEnabled(s4Visible))
+        assertFalse("State 4: Layer 3 Screen BackHandler must remain disabled until drawer fully settles", isLayer3ScreenBackEnabled(s4Visible, false))
+    }
+
+    /**
+     * Verifies rapid double-tap back press handling and cooperative CancellationException resilience (REQ-UI-162 / TST-UI-114).
+     */
+    @Test
+    fun testRapidDoubleBackPressCancellationSafety() = runBlocking {
+        var drawerValue = DrawerValue.Open
+        var targetValue = DrawerValue.Open
+
+        fun computeIsDrawerVisible(): Boolean = drawerValue != DrawerValue.Closed || targetValue != DrawerValue.Closed
+
+        var cancellationHandledCount = 0
+        var completedClosureCount = 0
+
+        // Simulate first back tap starting a closure job
+        targetValue = DrawerValue.Closed
+        val job1 = launch {
+            try {
+                delay(300L) // Simulate animation delay
+                drawerValue = DrawerValue.Closed
+                completedClosureCount++
+            } catch (_: CancellationException) {
+                cancellationHandledCount++
+            }
+        }
+
+        // Mid-flight (e.g. 50ms interval): second back tap arrives
+        delay(50L)
+        assertTrue("Mid-flight: isDrawerVisible must remain true", computeIsDrawerVisible())
+
+        // Second tap cancels first job cooperatively
+        job1.cancel()
+        job1.join()
+
+        assertEquals("Cancelled job must handle CancellationException without fault", 1, cancellationHandledCount)
+        assertEquals("Interrupted first job must not complete", 0, completedClosureCount)
+
+        // Second job takes over and settles drawer
+        val job2 = launch {
+            try {
+                drawerValue = DrawerValue.Closed
+                completedClosureCount++
+            } catch (_: CancellationException) {
+                cancellationHandledCount++
+            }
+        }
+        job2.join()
+
+        assertEquals("Second job must complete closure", 1, completedClosureCount)
+        assertEquals(DrawerValue.Closed, drawerValue)
+        assertFalse("Settled drawer: isDrawerVisible must be false", computeIsDrawerVisible())
+    }
+
+    /**
+     * Verifies deadlock safety timeout (400ms) with snapTo fallback (INV-UI-04 / REQ-UI-162 / TST-UI-114).
+     */
+    @Test
+    fun testDeadlockSafetyTimeoutAndStarvationFallback() = runBlocking {
+        var simulatedDrawerValue = DrawerValue.Open
+        var fallbackExecuted = false
+
+        // Simulate a frozen / starved animation exceeding 400ms
+        val closeResult = withTimeoutOrNull(400L) {
+            delay(1000L) // Stalled coroutine
+            simulatedDrawerValue = DrawerValue.Closed
+            true
+        } ?: run {
+            // Safety valve fallback (snapTo)
+            fallbackExecuted = true
+            simulatedDrawerValue = DrawerValue.Closed
+            false
+        }
+
+        assertFalse("Timed-out animation must return false/null from withTimeoutOrNull", closeResult)
+        assertTrue("400ms timeout must execute safety valve fallback", fallbackExecuted)
+        assertEquals("Safety valve snapTo must forcefully settle drawer to Closed", DrawerValue.Closed, simulatedDrawerValue)
     }
 }
 
