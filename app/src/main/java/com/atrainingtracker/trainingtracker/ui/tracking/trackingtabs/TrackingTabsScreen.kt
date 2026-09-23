@@ -258,7 +258,7 @@ fun TrackingTabsScreen(
                                         allDevices = allDevices,
                                         onDeviceClick = { trackingTabsViewModel.onEditDevice(it) },
                                         onMenuClick = {
-                                            (context as? MainActivityWithNavigation)?.findViewById<androidx.drawerlayout.widget.DrawerLayout>(R.id.drawer_layout)?.openDrawer(androidx.core.view.GravityCompat.START)
+                                            (context as? MainActivityWithNavigation)?.openDrawer()
                                         }
                                     )
                                 }

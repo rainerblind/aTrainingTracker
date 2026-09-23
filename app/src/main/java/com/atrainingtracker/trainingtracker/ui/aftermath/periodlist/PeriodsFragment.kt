@@ -66,73 +66,12 @@ class PeriodsFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setContent {
                 ATrainingTrackerTheme {
-                    // 1. Observe the periods list and migration status from ViewModel
-                    val groupedPeriods by viewModel.groupedPeriods.collectAsStateWithLifecycle()
-                    val migrationStatus by viewModel.migrationStatus.collectAsStateWithLifecycle()
-                    val selectedPeriod by viewModel.selectedPeriod.collectAsStateWithLifecycle()
-                    val enabledMarkerTypes by viewModel.enabledMarkerTypes.collectAsStateWithLifecycle()
-                    val groups = viewModel.groups
-
-                    val peekedWorkoutDataWithTrack by viewModel.peekedWorkoutDataWithTrack.collectAsStateWithLifecycle()
-
-                    var editedWorkoutId by rememberSaveable { mutableStateOf<Long?>(null) }
-
-                    // 1. HOIST SCROLL STATES
-                    // These will live as long as the Fragment's View is alive
-                    val pagerState = rememberPagerState(
-                        pageCount = { groups.size },
-                        initialPage = 1) // Set the initial page to the weeks.
-                    val listStates = List(groups.size) { rememberLazyListState() }
-
-                    if (selectedPeriod != null) {
-                        val mapState by viewModel.mapState.collectAsStateWithLifecycle()
-                        PeriodMapScreen(
-                            summary = selectedPeriod!!,
-                            mapState = mapState,
-                            enabledMarkerTypes = enabledMarkerTypes,
-                            onToggleMarkerType = { viewModel.toggleMarkerTypeEnabled(it) },
-                            onWorkoutClick = { id -> viewModel.selectWorkoutForPeek(id) },
-                            peekedWorkoutDataWithTrack = peekedWorkoutDataWithTrack,
-                            clearPeekSelection = { viewModel.clearPeekSelection() },
-                            onBack = { viewModel.dismissPeriodMap() },
-                            onEditWorkout = { id -> editedWorkoutId = id },
-                            onSelectRegion = { regionId -> viewModel.selectRegion(regionId) }
-                        )
-                    } else {
-                        PeriodsTabsScreen(
-                            groupedPeriods = groupedPeriods,
-                            pagerState = pagerState,
-                            listStates = listStates,
-                            onHeaderClick = { summary -> startWorkoutSummaryList(summary) },
-                            onMapClick = { summary -> viewModel.showPeriodMap(summary) },
-                            onSportClick = { summary, bSportType -> startWorkoutSummaryList(summary, bSportType) },
-                            onLongestWorkoutClick = { summary, bSportType, workoutId -> 
-                                startWorkoutSummaryList(summary, bSportType, workoutId) 
-                            },
-                            isPlayServiceAvailable = isPlayAvailable,
-                            tabs = groups,
-                            migrationStatus = migrationStatus
-                        )
-                    }
-
-                    if (editedWorkoutId != null) {
-                        val editViewModel: EditWorkoutViewModel = viewModel(
-                            key = "edit_workout_${editedWorkoutId}",
-                            factory = EditWorkoutViewModelFactory(requireActivity().application, editedWorkoutId!!)
-                        )
-
-                        EditWorkoutScreen(
-                            viewModel = editViewModel,
-                            onBack = {
-                                val id = editedWorkoutId
-                                editedWorkoutId = null
-                                viewModel.loadPeriods()
-                                if (id != null && selectedPeriod != null) {
-                                    viewModel.selectWorkoutForPeek(id)
-                                }
-                            }
-                        )
-                    }
+                    PeriodsScreen(
+                        viewModel = viewModel,
+                        onStartWorkoutList = { periodSummary, bSportType, scrollToWorkoutId ->
+                            startWorkoutSummaryList(periodSummary, bSportType, scrollToWorkoutId)
+                        }
+                    )
                 }
             }
         }
