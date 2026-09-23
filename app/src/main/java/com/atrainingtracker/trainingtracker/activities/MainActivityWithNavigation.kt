@@ -77,7 +77,9 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.dialogs.InstallANTShitDialog
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment
+import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModel
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory
+import androidx.lifecycle.ViewModelProvider
 import com.atrainingtracker.banalservice.ui.sporttype.SportTypeListFragment
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -828,6 +830,12 @@ class MainActivityWithNavigation :
 
     fun startPairing(protocol: Protocol, deviceType: DeviceType?) {
         if (DEBUG) Log.d(TAG, "startPairing: $protocol, deviceType: $deviceType")
+        try {
+            val tabViewModel: DevicesTabbedViewModel = ViewModelProvider(this)[DevicesTabbedViewModel::class.java]
+            tabViewModel.updateFilters(protocol, deviceType)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to pre-configure DevicesTabbedViewModel filters for pairing", e)
+        }
         navigateToDrawerItem(R.id.drawer_my_sensors)
     }
 
