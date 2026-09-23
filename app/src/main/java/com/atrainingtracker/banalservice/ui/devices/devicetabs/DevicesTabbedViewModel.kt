@@ -70,8 +70,11 @@ class DevicesTabbedViewModel(
     private val _uiState = MutableLiveData<UiState>()
     val uiState: LiveData<UiState> = _uiState
 
-    // Protocol is retrieved once from SavedStateHandle, which gets it from the fragment's arguments.
-    val protocol: Protocol = Protocol.valueOf(savedStateHandle[BANALService.PROTOCOL]!!)
+    // Protocol is retrieved once from SavedStateHandle with defensive fallback (REQ-STB-011)
+    var protocol: Protocol = savedStateHandle.get<String>(BANALService.PROTOCOL)?.let { raw ->
+        runCatching { Protocol.valueOf(raw) }.getOrNull()
+    } ?: Protocol.ALL.also { savedStateHandle[BANALService.PROTOCOL] = it.name }
+        private set
 
     private var isSearching = false
 
@@ -86,20 +89,25 @@ class DevicesTabbedViewModel(
             application.registerReceiver(deviceDiscoveryReceiver, filter)
         }
 
-        // Check if deviceType was already saved (e.g., after process death)
-        val savedDeviceType: DeviceType? = savedStateHandle.get<String>(BANALService.DEVICE_TYPE)?.let {
-            DeviceType.valueOf(it)
-        }
+        // Check if deviceType was already saved or provide safe fallback to ALL (REQ-STB-011)
+        val savedDeviceType: DeviceType = savedStateHandle.get<String>(BANALService.DEVICE_TYPE)?.let { raw ->
+            runCatching { DeviceType.valueOf(raw) }.getOrNull()
+        } ?: DeviceType.ALL.also { savedStateHandle[BANALService.DEVICE_TYPE] = it.name }
 
-        if (savedDeviceType != null) {
-            // If we have a device type, go directly to the tabs state
-            _uiState.value = UiState.DisplayingTabs(savedDeviceType)
-        } else {
-            // Otherwise, we need to ask the user
-            _uiState.value = UiState.AwaitingDeviceTypeSelection
-        }
+        _uiState.value = UiState.DisplayingTabs(savedDeviceType)
 
         banalServiceRepository.bindToBANALService()
+    }
+
+    /**
+     * Dynamically reconfigures protocol and device type filters for pairing sessions (REQ-STB-011).
+     */
+    fun updateFilters(newProtocol: Protocol, newDeviceType: DeviceType?) {
+        protocol = newProtocol
+        savedStateHandle[BANALService.PROTOCOL] = newProtocol.name
+        val targetType = newDeviceType ?: DeviceType.ALL
+        savedStateHandle[BANALService.DEVICE_TYPE] = targetType.name
+        _uiState.value = UiState.DisplayingTabs(targetType)
     }
 
     /**
