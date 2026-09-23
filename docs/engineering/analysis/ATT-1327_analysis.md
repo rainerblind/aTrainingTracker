@@ -22,25 +22,37 @@ The app switches Composable destinations back to the main tracking control (`Nav
 
 ---
 
-## 2. Requirement Traceability & ASPICE Mapping
+## 2. Requirement Traceability & Exact Git Baseline Diffs
 
-* **Parent Requirement (`REQ-UI-159`)**: Mandated the modernization of `MainActivityWithNavigation` into a single-activity architecture hosting `ModalNavigationDrawer`, `NavHost`, and centralized back handling.
-* **Defect Identified**: 
-  1. *Historical State Duplication Anti-Pattern*: During `ATT-1083`, `NavigationDrawerController.isDrawerOpen` was introduced as an imperative bridge between legacy Java/Kotlin Activity methods (`openDrawer()`, `closeDrawer()`) and Compose. Synchronizing this decoupled boolean with Compose Material 3's internal `DrawerState` via asynchronous `LaunchedEffect` coroutines introduced a split-brain latency gap.
-  2. *Monolithic BackHandler Fall-Through*: In `ATrainingTrackerApp.kt`, an unconditionally enabled `BackHandler` evaluated drawer dismissal strictly on `drawerState.isOpen` (`currentValue == DrawerValue.Open`). During opening transitions, gesture drags, or state desynchronization, this check evaluated to `false`, causing the state machine to fall through to `currentRoute != NavRoutes.START_TRACKING` and execute navigation to `NavRoutes.START_TRACKING`.
-* **Committed Target Requirement (`REQ-UI-162`)**:
-  Formally integrated into `docs/requirements.md`:
-  > The system SHALL establish Material 3's `DrawerState` as the single authoritative source of truth for navigation drawer visibility and navigation control, eliminating decoupled boolean state flags, and SHALL isolate overlay back navigation (Navigation Drawer and Settings Bottom Sheets) from screen-level destination back navigation using scoped, conditionally enabled `BackHandler`s.
-* **Committed Verification Specification (`TST-UI-114`)**:
-  Formally integrated into `docs/tests.md`:
-  Automated unit test coverage in `SingleActivityNavigationTest.kt` verifying drawer back-handling predicate states, single-source-of-truth delegation, deadlock safety timeout fallback, `CancellationException` resilience, and clean-room full suite regression (626+ tests).
+### 2.1 Traceability Mapping
+* **Parent Requirement**: `REQ-UI-159` (Single-Activity Architecture & Jetpack Compose Navigation Modernization)
+* **Committed Target Requirement**: `REQ-UI-162` (Single Source of Truth & Scoped Overlay Back Navigation)
+* **Committed Verification Specification**: `TST-UI-114` (ModalNavigationDrawer Back Navigation Isolation & State Synchronization Test)
+
+### 2.2 Exact Git Diff: `docs/requirements.md` (`REQ-UI-162`)
+```diff
+--- a/docs/requirements.md
++++ b/docs/requirements.md
+@@ -309,6 +309,7 @@
+ | **REQ-UI-161** | **ModalNavigationDrawer Edge-Swipe Restriction & Touch Conflict Resolution.** | The system SHALL restrict swipe-to-open gesture detection on `ModalNavigationDrawer` exclusively to the leftmost screen edge when the drawer is in the closed state, preventing unintended drawer opening during map panning and child content interactions... | `ATrainingTrackerApp.kt` | `TST-UI-113` | Verified |
++| **REQ-UI-162** | **Single Source of Truth & Scoped Overlay Back Navigation.** | The system SHALL establish Material 3's `DrawerState` as the single authoritative source of truth for navigation drawer visibility and navigation control, eliminating decoupled boolean state flags, and SHALL isolate overlay back navigation (Navigation Drawer and Settings Bottom Sheets) from screen-level destination back navigation using scoped, conditionally enabled `BackHandler`s:<br>1. *Single Source of Truth*: `NavigationDrawerController` SHALL delegate drawer open and close actions directly to Material 3's `DrawerState` via functional action delegates, removing the decoupled mutable boolean state flag (`isDrawerOpen`) entirely and eliminating split-brain asynchronous synchronization.<br>2. *Scoped Overlay Back Navigation*: When the navigation drawer is open, opening, or closing (`drawerState.currentValue != DrawerValue.Closed || drawerState.targetValue != DrawerValue.Closed`), system back navigation (`BackHandler`) SHALL exclusively dismiss/close the navigation drawer (`scope.launch { drawerState.close() }`), without modifying the active Composable destination or backstack.<br>3. *Settings Bottom Sheet Isolation*: When an active bottom sheet is displayed (`drawerController.activeBottomSheet != null`), system back navigation SHALL exclusively dismiss the active sheet (`drawerController.activeBottomSheet = null`).<br>4. *Screen-Level Back Navigation Guard*: Screen-level destination back navigation (popping `NavHost` backstack, clearing active filter criteria, or routing to `NavRoutes.START_TRACKING`) SHALL be guarded by `enabled = !isDrawerVisible && drawerController.activeBottomSheet == null`, ensuring screen destinations NEVER change while the drawer or bottom sheets are visible or settling.<br>5. *Deterministic Interruption & Deadlock Prevention (INV-UI-04)*: If back navigation is invoked mid-animation during a drawer opening or closing transition, the system SHALL catch `CancellationException` without fault. To prevent UI deadlocks if an animation hangs due to main-thread starvation, drawer closure SHALL be bounded by a 400ms timeout (`withTimeoutOrNull(400L)`) with a deterministic `snapTo(DrawerValue.Closed)` fallback executed within the Compose coroutine scope, guaranteeing Layer 3 screen navigation is restored.<br><br>**Acceptance Criteria (Given-When-Then)**:<br>• *Given* the athlete is on any destination (e.g. Workouts, Routes, Periods, Map, Sensors) with the navigation drawer open or opening,<br>• *When* the athlete invokes system back navigation (hardware button or back gesture),<br>• *Then* the navigation drawer SHALL close smoothly and the active screen destination SHALL remain completely unchanged.<br>• *Given* the athlete is on any non-tracking destination with the navigation drawer closed and no overlays active,<br>• *When* the athlete invokes system back navigation,<br>• *Then* the app SHALL navigate to the main tracking control (`NavRoutes.START_TRACKING`) and clear active filter criteria.<br>• *Given* the athlete is on `START_TRACKING` with no overlays and no backstack,<br>• *When* back is pressed,<br>• *Then* the activity SHALL finish.<br>• *Given* an animation delay exceeding 400ms during drawer dismissal,<br>• *When* the timeout expires,<br>• *Then* `snapTo(DrawerValue.Closed)` SHALL immediately settle the drawer to closed and unblock screen back navigation.<br><br>**Invariants**: All 21 navigation drawer destinations and routes in `NavRoutes` preserved; `drawerController.selectedItemId` synchronization preserved; edge-swipe gesture bounds (REQ-UI-161) preserved; no screen-level touch interception regressions. | Eliminate the defect where pressing back with the navigation drawer open switches to the main tracking screen while leaving the drawer stuck open, by establishing DrawerState as single source of truth and isolating overlay back handling from screen navigation. | `ATrainingTrackerApp.kt`, `AppNavigationDrawer.kt` | `TST-UI-114` | Draft |
+```
+
+### 2.3 Exact Git Diff: `docs/tests.md` (`TST-UI-114`)
+```diff
+--- a/docs/tests.md
++++ b/docs/tests.md
+@@ -362,6 +362,7 @@
+ | **TST-UI-113** | `ATT-1310` | **ModalNavigationDrawer Edge-Swipe Restriction & Map Panning Test** | `REQ-UI-161` | 1. *Unit Test Navigation Drawer Gesture State Mapping (`SingleActivityNavigationTest.kt`)*... | Verified |
++| **TST-UI-114** | `ATT-1327` | **ModalNavigationDrawer Back Navigation Isolation & State Synchronization Test** | `REQ-UI-162` | 1. *Unit Test Navigation Drawer Controller Single Source of Truth (`SingleActivityNavigationTest.kt`)*:<br>• Verify that `NavigationDrawerController` properly delegates `openDrawer()`, `closeDrawer()`, and `isDrawerOpen` when bound to an authoritative state provider.<br>• Verify backward-compatible fallback for `isDrawerOpen` before binding (clean default without NPE).<br>2. *Unit Test Scoped BackHandler Visibility Predicates (`SingleActivityNavigationTest.kt`)*:<br>• Verify that when `drawerState` is open or opening (`isOpen == true` or `targetValue == Open`), `isDrawerVisible` evaluates to `true`, activating Layer 1 and disabling Layer 3.<br>• Verify that when `drawerState` is closed (`isOpen == false` and `targetValue == Closed`), `isDrawerVisible` evaluates to `false`, deactivating Layer 1 and enabling Layer 3.<br>3. *Rapid Double-Back Press & CancellationException Resilience Test (`SingleActivityNavigationTest.kt`)*:<br>• Verify that while the drawer is transitioning (`targetValue == Open` or animation in flight), `isDrawerVisible` remains `true`, keeping Layer 3 disabled and preventing double-press fall-through to screen navigation.<br>• Verify that calling `close()` during an active opening animation handles `CancellationException` gracefully without crashing or dropping frames.<br>4. *Deadlock Safety Timeout & Starvation Simulation Test (`SingleActivityNavigationTest.kt`)*:<br>• Simulate animation delay exceeding the 400ms safety threshold; verify timeout fallback executes `snapTo(DrawerValue.Closed)`, immediately unblocking Layer 3 screen navigation and preventing UI deadlocks (INV-UI-04).<br>5. *Clean-Room Full Suite Regression*:<br>• Execute `./gradlew testDebugUnitTest` and verify 0 failures across all 626+ unit tests.<br>6. *Physical Device Verification*:<br>• On `Workouts` (or any non-tracking screen), open navigation drawer (via edge-swipe or hamburger).<br>• Press Android Back button/gesture: verify drawer dismisses smoothly and the screen remains on `Workouts` (does NOT navigate to tracking).<br>• Press Back again with drawer closed: verify app navigates to main tracking control screen.<br>• While drawer is opening, perform rapid double-back press: verify drawer closes cleanly without unexpected screen route changes. | Pressing Back with drawer open exclusively dismisses the drawer without altering the current screen; pressing Back with drawer closed navigates to main tracking control; rapid double-back presses and cancellation exceptions are handled without route jumps; 400ms timeout prevents UI deadlocks; 0 unit test regressions. | Draft |
+```
 
 ---
 
 ## 3. Forensic Root Cause Analysis (RCA)
 
-### 3.1 Why Custom Boolean Wrapping Was Introduced and Why It Failed
-In the legacy Android View architecture, `DrawerLayout` was operated imperatively via `openDrawer()` and `closeDrawer()`. When `MainActivityWithNavigation` was migrated to Compose under `ATT-1083`, `NavigationDrawerController` was created as an interim observable holder:
+### 3.1 Historical Context: Why Boolean Wrapping Was Introduced and Why It Failed
+During `ATT-1083` (migrating from Android View `DrawerLayout` to Compose `ModalNavigationDrawer`), `NavigationDrawerController` was introduced as an observable holder to let imperative Activity methods (`openDrawer()`, `closeDrawer()`) communicate with declarative Compose.
 ```kotlin
 class NavigationDrawerController(...) {
     var isDrawerOpen: Boolean by mutableStateOf(false)
@@ -90,26 +102,37 @@ Because `drawerState.isOpen` is strictly `currentValue == DrawerValue.Open`:
 
 ---
 
-## 4. Comprehensive Call-Site & Child-Composable BackHandler Audit
+## 4. Comprehensive Call-Site Inventory Audit
 
-An exhaustive audit of all 12 `BackHandler` call-sites across the codebase was conducted:
-1. `ATrainingTrackerApp.kt:154`: Monolithic root navigation back-handler.
-2. `MapScreenWithTrack.kt:151`: `BackHandler(enabled = selectedSegmentId != null || selectedRouteId != null)` - conditionally enabled only when a map feature is selected.
-3. `WorkoutSummariesTabbedScreen.kt:207`: `BackHandler { selectedWorkoutIdForDetails = null }` - inside `if (selectedWorkoutIdForDetails != null)`.
-4. `TrackingTabsScreen.kt:142`: `BackHandler(enabled = screenMode == ScreenMode.CONFIGURATION)` - conditionally enabled only in layout config mode.
-5. `PeriodMapScreen.kt:571`: `BackHandler { if (peeked != null) clearPeek() else onBack() }` - active on period detail view.
-6. `RoutesScreen.kt:144, 162`: Conditionally enabled when route details or route edit is active.
-7. `StarredSegmentsScreen.kt:106`: Conditionally enabled when segment details are active.
-8. `WorkoutClustersScreen.kt:116, 129, 147, 201, 256`: Conditionally enabled during cluster adding, filtering, and detail inspection.
+### 4.1 Exhaustive Inventory of `NavigationDrawerController.isDrawerOpen` Call Sites
+A complete ripgrep search across all Kotlin and Java files in the repository yields exactly three locations:
+1. `AppNavigationDrawer.kt:110, 114, 118`: Declaration and assignment inside `NavigationDrawerController`.
+2. `ATrainingTrackerApp.kt:125, 126, 134`: Deleted in this refactoring.
+3. `SingleActivityNavigationTest.kt:132, 137, 141`: Legacy unit tests verifying controller open/close mutations.
+**Zero references exist in any Activity, Fragment, ViewModel, Service, or XML layout.**
+To guarantee zero regressions in standalone unit tests (`SingleActivityNavigationTest`), `NavigationDrawerController` maintains backward-compatible delegation:
+```kotlin
+val isDrawerOpen: Boolean
+    get() = isDrawerOpenProvider?.invoke() ?: _unboundIsDrawerOpen
+```
+
+### 4.2 Comprehensive Audit of all 12 `BackHandler` Call Sites
+1. `ATrainingTrackerApp.kt:154`: Root navigation handler (refactored into 3 scoped layers).
+2. `MapScreenWithTrack.kt:151`: `BackHandler(enabled = selectedSegmentId != null || selectedRouteId != null)`.
+3. `WorkoutSummariesTabbedScreen.kt:207`: `BackHandler` enabled only when workout details are open.
+4. `TrackingTabsScreen.kt:142`: `BackHandler(enabled = screenMode == ScreenMode.CONFIGURATION)`.
+5. `PeriodMapScreen.kt:571`: `BackHandler` for period map peek selection.
+6. `RoutesScreen.kt:144, 162`: `BackHandler` for route details/edit.
+7. `StarredSegmentsScreen.kt:106`: `BackHandler` for segment details.
+8. `WorkoutClustersScreen.kt:116, 129, 147, 201, 256`: `BackHandler`s for cluster editing/viewing.
 9. `ClusterTuningScreen.kt:52`: `BackHandler(enabled = !isRecalculating)`.
-10. `WorkoutClusterHeatmapScreen.kt:582`: Heatmap filter back handling.
-11. `LapEditBottomSheet.kt:193`: Sheet dismissal back handler.
+10. `WorkoutClusterHeatmapScreen.kt:582`: Heatmap back handling.
+11. `LapEditBottomSheet.kt:193`: Lap edit dismissal.
 
 ---
 
 ## 5. Composition Tree Ordering & LIFO Execution Safety
 
-### 5.1 Android `OnBackPressedDispatcher` LIFO Priority
 Android's `OnBackPressedDispatcher` maintains an `ArrayDeque` of registered callbacks. When back is pressed, the dispatcher iterates through the deque in reverse order (LIFO: newest to oldest) and invokes the **first callback whose `isEnabled` flag is `true`**.
 
 To guarantee mathematical LIFO execution safety between the overlay layers and root navigation in `ATrainingTrackerApp.kt`:
@@ -131,21 +154,34 @@ Because Layer 1 is composed after Layer 3:
 
 ---
 
-## 6. Edge-Case Analysis: Mathematically Consistent 4-State Truth Table
+## 6. Edge-Case Analysis: 4-State Matrix & Rapid Double-Tap Back Handling
 
-To permanently eliminate split-brain contradictions, the drawer visibility predicate is derived **exclusively from native `DrawerState` properties**:
+The visibility predicate is derived **exclusively from native `DrawerState` properties**:
 ```kotlin
 val isDrawerVisible = drawerState.currentValue != DrawerValue.Closed || drawerState.targetValue != DrawerValue.Closed
 ```
 
-Truth table evaluation across all 4 permutations of `DrawerState` (`currentValue` vs `targetValue`):
-
-| Permutation | `currentValue` | `targetValue` | Physical Drawer State | `isDrawerVisible` | Layer 1 Enabled? | Layer 3 Enabled? | Behavior on Back Press |
+### 6.1 State Matrix Evaluation
+| Permutation | `currentValue` | `targetValue` | Physical State | `isDrawerVisible` | Layer 1 Enabled? | Layer 3 Enabled? | Behavior on Back Press |
 |:---|:---|:---|:---|:---|:---|:---|:---|
 | **State 1** | `Closed` | `Closed` | Fully Closed | `false` | Disabled | **Enabled** | Screen navigation operates normally (pops backstack, navigates to `NavRoutes.START_TRACKING`, or finishes activity). |
 | **State 2** | `Closed` | `Open` | Animating Open / Swiping Open | `true` | **Enabled** | Disabled | Layer 1 intercepts back, calls safe closure, cancels opening animation and reverses drawer to `Closed`. Zero screen navigation occurs. |
 | **State 3** | `Open` | `Open` | Fully Open | `true` | **Enabled** | Disabled | Layer 1 intercepts back, calls safe closure. Drawer smoothly closes. Zero screen navigation occurs. |
-| **State 4** | `Open` | `Closed` | Actively Dismissing / Closing | `true` | **Enabled** | Disabled | Layer 1 intercepts back, safely re-asserts closure. Layer 3 remains strictly disabled until drawer completely settles into State 1, preventing premature screen route jumps. |
+| **State 4** | `Open` | `Closed` | Actively Dismissing / Closing | `true` | **Enabled** | Disabled | Layer 1 intercepts back, re-asserts safe closure idempotently in Compose M3 without gesture fault. Layer 3 remains strictly disabled until drawer completely settles into State 1. |
+
+### 6.2 Rapid Double-Tap Back Press Handling
+When an athlete double-taps Back in rapid succession during a drawer transition (e.g. 50ms-150ms interval):
+1. **First Tap**:
+   - `isDrawerVisible` is `true`. Layer 1 intercepts the tap and executes `scope.launch { withTimeoutOrNull(400L) { drawerState.close() } ?: drawerState.snapTo(DrawerValue.Closed) }`.
+   - The drawer starts animating towards `Closed` (State 4: `currentValue == Open, targetValue == Closed`).
+2. **Second Tap (mid-flight during the 250ms/400ms closing transition)**:
+   - In State 4, `isDrawerVisible` evaluates to `true` because `drawerState.currentValue != DrawerValue.Closed`.
+   - Layer 1 remains enabled; Layer 3 remains strictly disabled (`!isDrawerVisible == false`).
+   - The second tap is consumed by Layer 1. `scope.launch` cancels the previous job; `CancellationException` is caught defensively.
+   - The second tap does NOT pop backstack, does NOT switch destinations, and does NOT throw exceptions.
+3. **Subsequent Taps (after drawer settles into State 1: `Closed, Closed`)**:
+   - `isDrawerVisible` evaluates to `false`. Layer 1 disables itself; Layer 3 enables itself.
+   - The next back tap executes standard screen navigation.
 
 ---
 
@@ -160,7 +196,7 @@ To prevent unhandled exceptions or frame drops, the closure routine catches `Can
 
 ### 7.2 Proof of `snapTo()` Concurrency Safety
 In AndroidX Jetpack Compose Material 3:
-- `DrawerState.snapTo(targetValue: DrawerValue)` is a `suspend` function:
+- `DrawerState.snapTo(targetValue: DrawerValue)` is an official `suspend` function:
   ```kotlin
   suspend fun snapTo(targetValue: DrawerValue) = anchoredDraggableState.snapTo(targetValue)
   ```
@@ -179,9 +215,6 @@ If an animation were to freeze or fail to settle due to main-thread starvation o
 ## 8. Architectural Design & Implementation Specifics
 
 ### 8.1 Elimination of State Duplication in `NavigationDrawerController`
-Refactor `NavigationDrawerController` to eliminate the mutable boolean `isDrawerOpen`.
-`NavigationDrawerController` acts as a pure functional delegate for imperative actions (`openDrawer()`, `closeDrawer()`) bound to Compose's `DrawerState`:
-
 ```kotlin
 class NavigationDrawerController(
     initialSelectedItemId: Int = R.id.drawer_start_tracking,
@@ -191,20 +224,34 @@ class NavigationDrawerController(
     var startTrackingTitleRes: Int by mutableIntStateOf(initialStartTrackingTitleRes)
     var activeBottomSheet: SettingsBottomSheetType? by mutableStateOf(null)
 
+    private var _unboundIsDrawerOpen by mutableStateOf(false)
     private var openDrawerAction: (() -> Unit)? = null
     private var closeDrawerAction: (() -> Unit)? = null
+    private var isDrawerOpenProvider: (() -> Boolean)? = null
 
-    fun openDrawer() { openDrawerAction?.invoke() }
-    fun closeDrawer() { closeDrawerAction?.invoke() }
+    val isDrawerOpen: Boolean
+        get() = isDrawerOpenProvider?.invoke() ?: _unboundIsDrawerOpen
 
-    fun bindDrawer(open: () -> Unit, close: () -> Unit) {
+    fun openDrawer() {
+        val action = openDrawerAction
+        if (action != null) action.invoke() else _unboundIsDrawerOpen = true
+    }
+
+    fun closeDrawer() {
+        val action = closeDrawerAction
+        if (action != null) action.invoke() else _unboundIsDrawerOpen = false
+    }
+
+    fun bindDrawer(open: () -> Unit, close: () -> Unit, isOpen: () -> Boolean) {
         openDrawerAction = open
         closeDrawerAction = close
+        isDrawerOpenProvider = isOpen
     }
 
     fun unbindDrawer() {
         openDrawerAction = null
         closeDrawerAction = null
+        isDrawerOpenProvider = null
     }
 }
 ```
@@ -213,7 +260,7 @@ class NavigationDrawerController(
 ```diff
 --- a/app/src/main/java/com/atrainingtracker/trainingtracker/ui/navigation/ATrainingTrackerApp.kt
 +++ b/app/src/main/java/com/atrainingtracker/trainingtracker/ui/navigation/ATrainingTrackerApp.kt
-@@ -124,17 +124,13 @@ fun ATrainingTrackerApp(
+@@ -124,17 +124,14 @@ fun ATrainingTrackerApp(
 -    // Synchronize drawerController.isDrawerOpen with Compose DrawerState
 -    LaunchedEffect(drawerController.isDrawerOpen) {
 -        if (drawerController.isDrawerOpen) {
@@ -229,7 +276,8 @@ class NavigationDrawerController(
 +    DisposableEffect(drawerState, scope) {
 +        drawerController.bindDrawer(
 +            open = { scope.launch { drawerState.open() } },
-+            close = { scope.launch { drawerState.close() } }
++            close = { scope.launch { drawerState.close() } },
++            isOpen = { drawerState.currentValue != DrawerValue.Closed || drawerState.targetValue != DrawerValue.Closed }
 +        )
 +        onDispose {
 +            drawerController.unbindDrawer()
@@ -279,12 +327,3 @@ class NavigationDrawerController(
 +        }
 +    }
 ```
-
-### 8.3 Configuration Change & Process Recreation Resilience
-In Jetpack Compose Material 3:
-- `val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)` is backed internally by `rememberSaveable(saver = DrawerState.Saver(...))`.
-- When an Android configuration change occurs (e.g. device rotation while the drawer is open or animating):
-  1. The Activity recreates and `setContent` recomposes `ATrainingTrackerApp`.
-  2. `rememberDrawerState` automatically restores `DrawerState.currentValue` from the saved bundle.
-  3. `DisposableEffect(drawerState, scope)` executes immediately upon entry, binding the newly instantiated coroutine `scope` and restored `drawerState` to `drawerController`.
-  4. There are zero decoupled boolean flags to desynchronize across Activity recreation cycles.

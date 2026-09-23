@@ -510,6 +510,10 @@ def create_subtask(parent_key, summary, description, role="coordinator", add_to_
     return new_key
 
 def create_issue(summary, description, issuetype_id="10008", parent_key=None, role="agent1", add_to_sprint=False, fix_version=None):
+    if description.startswith("@") and os.path.exists(description[1:]):
+        with open(description[1:], "r", encoding="utf-8") as f:
+            description = f.read()
+
     config = get_config()
     url = f"{config['JIRA_URL']}/rest/api/2/issue"
     fields = {
