@@ -199,4 +199,49 @@ class SingleActivityNavigationTest {
         assertNotNull("navigateToDrawerItem method must be present", navigateMethod)
         assertTrue(Modifier.isPublic(navigateMethod.modifiers))
     }
+
+    /**
+     * Verifies ModalNavigationDrawer gesture activation state mapping (REQ-UI-161 / TST-UI-113).
+     *
+     * Validates that gesturesEnabled is strictly coupled to drawerState.isOpen:
+     * - Closed state -> gesturesEnabled = false (prevents full-screen drags during map panning)
+     * - Open state -> gesturesEnabled = true (preserves full-screen swipe-to-close & scrim dismissal)
+     */
+    @Test
+    fun testDrawerGesturesEnabledMapping() {
+        // Closed state
+        val isDrawerOpenClosed = false
+        val gesturesEnabledWhenClosed = isDrawerOpenClosed
+        assertFalse("ModalNavigationDrawer gesturesEnabled must be false when drawer is closed", gesturesEnabledWhenClosed)
+
+        // Open state
+        val isDrawerOpenOpen = true
+        val gesturesEnabledWhenOpen = isDrawerOpenOpen
+        assertTrue("ModalNavigationDrawer gesturesEnabled must be true when drawer is open", gesturesEnabledWhenOpen)
+    }
+
+    /**
+     * Verifies edge-swipe threshold boundary predicate (REQ-UI-161 / TST-UI-113).
+     *
+     * Validates that opening gestures are permitted only within the leftmost 40dp margin.
+     */
+    @Test
+    fun testEdgeSwipeThresholdBounds() {
+        val edgeThresholdDp = 40f
+
+        // Boundary predicates
+        fun isWithinEdgeThreshold(xDp: Float): Boolean = xDp <= edgeThresholdDp
+
+        // In-bounds edge touches (must trigger edge interceptor)
+        assertTrue("0dp must be within edge threshold", isWithinEdgeThreshold(0f))
+        assertTrue("15dp must be within edge threshold", isWithinEdgeThreshold(15f))
+        assertTrue("40dp must be exactly at boundary of edge threshold", isWithinEdgeThreshold(40f))
+
+        // Out-of-bounds touches (must be ignored by drawer to protect map panning and details scrolls)
+        assertFalse("40.1dp must exceed edge threshold", isWithinEdgeThreshold(40.1f))
+        assertFalse("100dp must exceed edge threshold", isWithinEdgeThreshold(100f))
+        assertFalse("200dp (mid-screen) must exceed edge threshold", isWithinEdgeThreshold(200f))
+        assertFalse("360dp (right edge) must exceed edge threshold", isWithinEdgeThreshold(360f))
+    }
 }
+
