@@ -6,7 +6,7 @@
 **Component**: Core UI / Navigation Host Architecture (`MainActivityWithNavigation.kt`, `AppNavigationDrawer.kt`, `main_activity_with_navigation.xml`)  
 **Sprint**: `2026-39.2`  
 **Target Release**: `V4.9.38`  
-**Requirement Mapping**: `REQ-UI-158` (Proposed), `REQ-UI-124`, `REQ-UI-123`, `REQ-SET-050`, `REQ-SET-052`, `REQ-STB-003`, `REQ-STB-007`  
+**Requirement Mapping**: `REQ-UI-159` (Proposed), `REQ-UI-124`, `REQ-UI-123`, `REQ-SET-050`, `REQ-SET-052`, `REQ-STB-003`, `REQ-STB-007`  
 **Test Specification**: `TST-NAV-009` (Proposed), `TST-NAV-008`, `TST-NAV-007`, `TST-NAV-004`  
 **Stage**: `Stage 1: Analysis (SWE.1 / SYS.2) - Revision 3`
 
@@ -345,7 +345,7 @@ When settings dialogs (such as Strava token input, search filter entry, or equip
 
 ## 9. Requirement & Test Specification Mapping
 
-### 9.1 Proposed Requirement: `REQ-UI-158`
+### 9.1 Proposed Requirement: `REQ-UI-159`
 - **Title**: *Single-Activity Architecture & Pure Jetpack Compose Navigation.*
 - **Scope**: `MainActivityWithNavigation.kt`, `AppNavigationDrawer.kt`.
 - **Formulation**:
