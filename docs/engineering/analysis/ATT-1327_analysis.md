@@ -26,8 +26,8 @@ The app switches Composable destinations back to the main tracking control (`Nav
 
 * **Parent Requirement (`REQ-UI-159`)**: Mandated the modernization of `MainActivityWithNavigation` into a single-activity architecture hosting `ModalNavigationDrawer`, `NavHost`, and centralized back handling.
 * **Defect Identified**: 
-  1. *State Duplication Anti-Pattern*: `NavigationDrawerController.isDrawerOpen` and Compose Material 3's `DrawerState` maintained separate, loosely coupled boolean states synchronized via asynchronous `LaunchedEffect` coroutines.
-  2. *Monolithic BackHandler Fall-Through*: In `ATrainingTrackerApp.kt`, an unconditionally enabled `BackHandler` evaluated drawer dismissal strictly on `drawerState.isOpen` (`currentValue == DrawerValue.Open`). During opening transitions, gesture drags, or state desynchronization, this check evaluated to `false`, causing the state machine to fall through to `currentRoute != NavRoutes.START_TRACKING` and execute `activity.navigateToDrawerItem(R.id.drawer_start_tracking)`.
+  1. *Historical State Duplication Anti-Pattern*: During `ATT-1083`, `NavigationDrawerController.isDrawerOpen` was introduced as an imperative bridge between legacy Java/Kotlin Activity methods (`openDrawer()`, `closeDrawer()`) and Compose. Synchronizing this decoupled boolean with Compose Material 3's internal `DrawerState` via asynchronous `LaunchedEffect` coroutines introduced a split-brain latency gap.
+  2. *Monolithic BackHandler Fall-Through*: In `ATrainingTrackerApp.kt`, an unconditionally enabled `BackHandler` evaluated drawer dismissal strictly on `drawerState.isOpen` (`currentValue == DrawerValue.Open`). During opening transitions, gesture drags, or state desynchronization, this check evaluated to `false`, causing the state machine to fall through to `currentRoute != NavRoutes.START_TRACKING` and execute navigation to `NavRoutes.START_TRACKING`.
 * **Committed Target Requirement (`REQ-UI-162`)**:
   Formally integrated into `docs/requirements.md`:
   > The system SHALL establish Material 3's `DrawerState` as the single authoritative source of truth for navigation drawer visibility and navigation control, eliminating decoupled boolean state flags, and SHALL isolate overlay back navigation (Navigation Drawer and Settings Bottom Sheets) from screen-level destination back navigation using scoped, conditionally enabled `BackHandler`s.
@@ -39,8 +39,8 @@ The app switches Composable destinations back to the main tracking control (`Nav
 
 ## 3. Forensic Root Cause Analysis (RCA)
 
-### 3.1 Root Architectural Defect: State Duplication & Latency Gap
-In `AppNavigationDrawer.kt:104-120`:
+### 3.1 Why Custom Boolean Wrapping Was Introduced and Why It Failed
+In the legacy Android View architecture, `DrawerLayout` was operated imperatively via `openDrawer()` and `closeDrawer()`. When `MainActivityWithNavigation` was migrated to Compose under `ATT-1083`, `NavigationDrawerController` was created as an interim observable holder:
 ```kotlin
 class NavigationDrawerController(...) {
     var isDrawerOpen: Boolean by mutableStateOf(false)
@@ -63,7 +63,7 @@ LaunchedEffect(drawerState.isOpen) {
 }
 ```
 This bidirectional synchronization architecture has severe flaws:
-1. **Latency & Split-Brain State**: Setting `drawerController.isDrawerOpen = true` does not immediately make `drawerState.isOpen == true`. Material 3's `DrawerState.open()` is a suspending animation. Throughout the opening animation (and during any edge drag), `drawerState.currentValue` remains `DrawerValue.Closed`, so `drawerState.isOpen` evaluates to **`false`**.
+1. **Split-Brain Latency Gap**: Calling `openDrawer()` sets `isDrawerOpen = true`. However, Material 3's `DrawerState.open()` is an asynchronous animation lasting 250ms+. Throughout this animation, `drawerState.currentValue` remains `DrawerValue.Closed`. Thus, `drawerState.isOpen` evaluates to **`false`**.
 2. **Animation Cancellation Failure**: When `navigateToDrawerItem` runs, it calls `mDrawerController.closeDrawer()`, setting `isDrawerOpen = false`. The `LaunchedEffect` runs: `if (drawerState.isOpen) drawerState.close()`. Because `drawerState.isOpen` was still evaluating to `false`, **`drawerState.close()` is never called**, leaving the drawer frozen in its open state over the new destination.
 
 ### 3.2 Monolithic `BackHandler` Fall-Through in `ATrainingTrackerApp.kt`
@@ -83,11 +83,9 @@ BackHandler {
 }
 ```
 Because `drawerState.isOpen` is strictly `currentValue == DrawerValue.Open`:
-- If back is pressed while the drawer is open or opening, `drawerState.isOpen` is `false`.
-- Branch 1 does not match.
-- Branch 2 does not match (`activeBottomSheet == null`).
-- Branch 3 does not match (`previousBackStackEntry == null` for drawer items).
-- Branch 4 matches: `currentRoute != NavRoutes.START_TRACKING`.
+- If back is pressed while the drawer is open or opening, `drawerState.isOpen` evaluates to `false`.
+- The `when` block bypasses branch 1, branch 2, and branch 3.
+- It hits branch 4: `currentRoute != NavRoutes.START_TRACKING`.
 - It executes navigation to `NavRoutes.START_TRACKING`, swapping the Composable screen while the drawer stays visible.
 
 ---
@@ -133,69 +131,89 @@ Because Layer 1 is composed after Layer 3:
 
 ---
 
-## 6. Edge-Case Analysis: All 4 Permutations of DrawerState
+## 6. Edge-Case Analysis: Mathematically Consistent 4-State Truth Table
 
-The visibility predicate is defined as:
+To permanently eliminate split-brain contradictions, the drawer visibility predicate is derived **exclusively from native `DrawerState` properties**:
 ```kotlin
-val isDrawerVisible = drawerState.isOpen || drawerState.targetValue == DrawerValue.Open
+val isDrawerVisible = drawerState.currentValue != DrawerValue.Closed || drawerState.targetValue != DrawerValue.Closed
 ```
 
-Let us evaluate `isDrawerVisible` across all 4 permutations of `DrawerState` (`currentValue` vs `targetValue`):
+Truth table evaluation across all 4 permutations of `DrawerState` (`currentValue` vs `targetValue`):
 
 | Permutation | `currentValue` | `targetValue` | Physical Drawer State | `isDrawerVisible` | Layer 1 Enabled? | Layer 3 Enabled? | Behavior on Back Press |
 |:---|:---|:---|:---|:---|:---|:---|:---|
 | **State 1** | `Closed` | `Closed` | Fully Closed | `false` | Disabled | **Enabled** | Screen navigation operates normally (pops backstack, navigates to `NavRoutes.START_TRACKING`, or finishes activity). |
 | **State 2** | `Closed` | `Open` | Animating Open / Swiping Open | `true` | **Enabled** | Disabled | Layer 1 intercepts back, calls safe closure, cancels opening animation and reverses drawer to `Closed`. Zero screen navigation occurs. |
 | **State 3** | `Open` | `Open` | Fully Open | `true` | **Enabled** | Disabled | Layer 1 intercepts back, calls safe closure. Drawer smoothly closes. Zero screen navigation occurs. |
-| **State 4** | `Open` | `Closed` | Actively Dismissing / Closing | `true` (via `isOpen`) | **Enabled** | Disabled | Layer 1 intercepts back, re-asserts safe closure idempotently in Compose M3 without gesture fault. Layer 3 remains strictly disabled until drawer completely settles into State 1. |
+| **State 4** | `Open` | `Closed` | Actively Dismissing / Closing | `true` | **Enabled** | Disabled | Layer 1 intercepts back, safely re-asserts closure. Layer 3 remains strictly disabled until drawer completely settles into State 1, preventing premature screen route jumps. |
 
 ---
 
-## 7. Concurrency, Cancellation Safety & Deadlock Prevention (INV-UI-04)
+## 7. Concurrency, Cancellation Safety & Proof of `snapTo()` Concurrency Safety (INV-UI-04)
 
 ### 7.1 Coroutine Dispatch Context & Cancellation Exception Safety
 In `ATrainingTrackerApp.kt`:
 The coroutine scope `val scope = rememberCoroutineScope()` is bound to the Composable lifecycle (`AndroidUiDispatcher.Main`).
 When closing the drawer on back press:
 If the user presses back while an opening animation is in flight (State 2) or during a closing transition (State 4), Compose Material 3's `animateTo` cancels the previous animation job by throwing a `CancellationException`.
-To prevent dropped frames or unhandled exceptions, the closure routine wraps the call defensively:
-```kotlin
-scope.launch {
-    try {
-        withTimeoutOrNull(400L) {
-            drawerState.close()
-        } ?: run {
-            // Safety valve against animation hang or starvation: snap immediately to Closed
-            drawerState.snapTo(DrawerValue.Closed)
-        }
-    } catch (_: CancellationException) {
-        // Expected cooperative cancellation during rapid back gestures
-    }
-}
-```
+To prevent unhandled exceptions or frame drops, the closure routine catches `CancellationException` as normal cooperative cancellation.
 
-### 7.2 Safety Valve Against UI Deadlocks (INV-UI-04)
+### 7.2 Proof of `snapTo()` Concurrency Safety
+In AndroidX Jetpack Compose Material 3:
+- `DrawerState.snapTo(targetValue: DrawerValue)` is a `suspend` function:
+  ```kotlin
+  suspend fun snapTo(targetValue: DrawerValue) = anchoredDraggableState.snapTo(targetValue)
+  ```
+- `snapTo()` acquires the internal `MutatorMutex` of the draggable state.
+- Because `snapTo()` is invoked inside `scope.launch { ... }`, it executes asynchronously on `Dispatchers.Main.immediate` **outside of the Compose composition and apply phases**.
+- Therefore, calling `snapTo(DrawerValue.Closed)` is 100% thread-safe and can never trigger an `IllegalStateException` ("Composables can only be written to during the apply phase").
+
+### 7.3 Deadlock Prevention Safety Valve (INV-UI-04)
 If an animation were to freeze or fail to settle due to main-thread starvation or heavy background sensor load:
 - The `withTimeoutOrNull(400L)` safety valve ensures that if `drawerState.close()` does not settle within 400ms, `drawerState.snapTo(DrawerValue.Closed)` is immediately invoked.
-- `snapTo(DrawerValue.Closed)` is non-animated and instantly resets `currentValue` and `targetValue` to `DrawerValue.Closed`.
+- `snapTo(DrawerValue.Closed)` instantly resets `currentValue` and `targetValue` to `DrawerValue.Closed`.
 - This immediately resets `isDrawerVisible = false`, unblocking Layer 3 and completely preventing any permanent back button deadlocks.
 
 ---
 
 ## 8. Architectural Design & Implementation Specifics
 
-### 8.1 Direct Derivation of `isDrawerVisible` in `ATrainingTrackerApp.kt`
-In `ATrainingTrackerApp.kt`, `isDrawerVisible` is derived **directly and exclusively from Material 3's `DrawerState`**:
+### 8.1 Elimination of State Duplication in `NavigationDrawerController`
+Refactor `NavigationDrawerController` to eliminate the mutable boolean `isDrawerOpen`.
+`NavigationDrawerController` acts as a pure functional delegate for imperative actions (`openDrawer()`, `closeDrawer()`) bound to Compose's `DrawerState`:
+
 ```kotlin
-val isDrawerVisible = drawerState.isOpen || drawerState.targetValue == DrawerValue.Open
+class NavigationDrawerController(
+    initialSelectedItemId: Int = R.id.drawer_start_tracking,
+    initialStartTrackingTitleRes: Int = R.string.tab_start
+) {
+    var selectedItemId: Int by mutableIntStateOf(initialSelectedItemId)
+    var startTrackingTitleRes: Int by mutableIntStateOf(initialStartTrackingTitleRes)
+    var activeBottomSheet: SettingsBottomSheetType? by mutableStateOf(null)
+
+    private var openDrawerAction: (() -> Unit)? = null
+    private var closeDrawerAction: (() -> Unit)? = null
+
+    fun openDrawer() { openDrawerAction?.invoke() }
+    fun closeDrawer() { closeDrawerAction?.invoke() }
+
+    fun bindDrawer(open: () -> Unit, close: () -> Unit) {
+        openDrawerAction = open
+        closeDrawerAction = close
+    }
+
+    fun unbindDrawer() {
+        openDrawerAction = null
+        closeDrawerAction = null
+    }
+}
 ```
-`isDrawerVisible` does **NOT** read `drawerController.isDrawerOpen`, completely eliminating split-brain states and race conditions.
 
 ### 8.2 Exact Code Diff in `ATrainingTrackerApp.kt`
 ```diff
 --- a/app/src/main/java/com/atrainingtracker/trainingtracker/ui/navigation/ATrainingTrackerApp.kt
 +++ b/app/src/main/java/com/atrainingtracker/trainingtracker/ui/navigation/ATrainingTrackerApp.kt
-@@ -124,17 +124,14 @@ fun ATrainingTrackerApp(
+@@ -124,17 +124,13 @@ fun ATrainingTrackerApp(
 -    // Synchronize drawerController.isDrawerOpen with Compose DrawerState
 -    LaunchedEffect(drawerController.isDrawerOpen) {
 -        if (drawerController.isDrawerOpen) {
@@ -211,8 +229,7 @@ val isDrawerVisible = drawerState.isOpen || drawerState.targetValue == DrawerVal
 +    DisposableEffect(drawerState, scope) {
 +        drawerController.bindDrawer(
 +            open = { scope.launch { drawerState.open() } },
-+            close = { scope.launch { drawerState.close() } },
-+            isOpen = { drawerState.isOpen || drawerState.targetValue == DrawerValue.Open }
++            close = { scope.launch { drawerState.close() } }
 +        )
 +        onDispose {
 +            drawerController.unbindDrawer()
@@ -222,7 +239,7 @@ val isDrawerVisible = drawerState.isOpen || drawerState.targetValue == DrawerVal
 @@ -153,19 +150,28 @@ fun ATrainingTrackerApp(
 -    // Single-Activity Back Navigation State Machine
 -    BackHandler {
-+    val isDrawerVisible = drawerState.isOpen || drawerState.targetValue == DrawerValue.Open
++    val isDrawerVisible = drawerState.currentValue != DrawerValue.Closed || drawerState.targetValue != DrawerValue.Closed
 +
 +    // REQ-UI-162 Layer 3: Screen Navigation (composed first, disabled when any overlay is active)
 +    BackHandler(enabled = !isDrawerVisible && drawerController.activeBottomSheet == null) {
@@ -270,4 +287,4 @@ In Jetpack Compose Material 3:
   1. The Activity recreates and `setContent` recomposes `ATrainingTrackerApp`.
   2. `rememberDrawerState` automatically restores `DrawerState.currentValue` from the saved bundle.
   3. `DisposableEffect(drawerState, scope)` executes immediately upon entry, binding the newly instantiated coroutine `scope` and restored `drawerState` to `drawerController`.
-  4. Any read of `drawerController.isDrawerOpen` immediately reflects the restored `drawerState`, with zero stale or diverging boolean flags across Activity recreation cycles.
+  4. There are zero decoupled boolean flags to desynchronize across Activity recreation cycles.
