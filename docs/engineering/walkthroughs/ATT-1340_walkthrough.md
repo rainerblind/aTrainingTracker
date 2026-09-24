@@ -19,8 +19,7 @@ By binding `currentPagerState` and `currentScreenMode` via `rememberUpdatedState
   banalServiceRepository.trackingMode.asFlow().collect { mode ->
       if (mode == TrackingMode.TRACKING &&
           previousMode != null &&
-          previousMode != TrackingMode.TRACKING &&
-          previousMode != TrackingMode.PAUSED
+          previousMode != TrackingMode.TRACKING
       ) {
           Log.i("TrackingTabsViewModel", "Tracking started (rising edge) -> navigating to cockpit tab")
           _navigationEvent.emit(TabNavigationEvent.NavigateTo(0))
@@ -30,8 +29,8 @@ By binding `currentPagerState` and `currentScreenMode` via `rememberUpdatedState
   ```
 * **Guard Conditions**:
   - `previousMode != null`: Prevents cold start emissions when restoring process or rotating device while already in `TRACKING` mode.
-  - `previousMode != TrackingMode.PAUSED`: Prevents disruptive jumps when resuming a paused workout.
-  - `previousMode != TrackingMode.TRACKING`: Ignores redundant repeat state emissions.
+  - `previousMode != TrackingMode.TRACKING`: Ignores redundant repeat state emissions while tracking.
+  - Transition from `READY -> TRACKING` or `PAUSED -> TRACKING`: Navigates to first cockpit tab (Page 1) as requested.
 
 ### B. UI Layer (`TrackingTabsScreen.kt`)
 * **Removed Obsolete Listener**: Removed lines 196–204 (`val navigateTrigger by trackingTabsViewModel.navigateToTrackingTab.observeAsState()` and `LaunchedEffect(navigateTrigger)`).
@@ -51,7 +50,7 @@ By binding `currentPagerState` and `currentScreenMode` via `rememberUpdatedState
 Created comprehensive test suite verifying:
 1. `testTrackingStartNavigatesToFirstCockpitTab`: Transition from `READY` to `TRACKING` emits `TabNavigationEvent.NavigateTo(0)`.
 2. `testColdStartInTrackingModeDoesNotTriggerSpuriousNavigation`: Initialization while already in `TRACKING` emits 0 navigation events.
-3. `testPauseAndResumeDoesNotDisruptActivePage`: `TRACKING -> PAUSED -> TRACKING` preserves active page with 0 navigation events.
+3. `testResumeFromPausedNavigatesToFirstCockpitTab`: Transition from `PAUSED` to `TRACKING` emits `TabNavigationEvent.NavigateTo(0)`.
 4. `testMultipleStartStopCyclesReliability`: Multiple successive start/stop tracking cycles emit `NavigateTo(0)` reliably on every start without deadlocks.
 5. `testPagerOffsetCalculationForScreenMode`: Invariant verification for screen mode offset calculation.
 
