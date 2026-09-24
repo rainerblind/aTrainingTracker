@@ -109,40 +109,84 @@ Fatal Exception: java.lang.NoSuchMethodError: No virtual method setAccessibility
    - Relying on R8 compiler optimization rules to excise calls to `setAccessibilityDataSensitive`:
    - **Auditor Verdict**: **REJECTED (Brittle & Incomplete)**. `-assumenosideeffects` is an optimization hint on void methods that does not guarantee stripping across all build variants. Crucially, non-release variants (Debug builds used by developers, local tests, Profile builds) run without minification, leaving developer devices 100% vulnerable to crashes on physical defective OEM hardware.
 
-4. **Mandated Strategy: Direct Call-Site Classpath Shadowing with Defensive Try-Catch (SELECTED)**:
-   - Provide `AccessibilityEventCompat.java` in package `androidx.core.view.accessibility` within `app/src/main/java`.
-   - In `Api34Impl`, wrap platform invocations in targeted `try ... catch (Throwable t)` blocks:
-     ```java
-     @RequiresApi(34)
-     static class Api34Impl {
-         private Api34Impl() {
-             // This class is not instantiable.
-         }
+4. **Alternative 4: Compose Accessibility Delegate Wrapping / Reflection**:
+   - Subclassing, wrapping, or using reflection to replace `AndroidComposeViewAccessibilityDelegateCompat`:
+   - **Technical Evaluation**: **INFEASIBLE**.
+     - `AndroidComposeView` is an `internal` class in package `androidx.compose.ui.platform`.
+     - The accessibility delegate `accessibilityDelegate: AndroidComposeViewAccessibilityDelegateCompat` is an internal field instantiated and managed privately within `AndroidComposeView`.
+     - The bounds event loop (`boundsUpdatesEventLoop$ui`) runs as a private Kotlin coroutine within `AndroidComposeView`.
+     - Inside `createEvent()`, Compose has a hardcoded static method call:
+       `invokestatic androidx/core/view/accessibility/AccessibilityEventCompat.setAccessibilityDataSensitive(Landroid/view/accessibility/AccessibilityEvent;Z)V`.
+     - There is no public SPI or configuration hook in Jetpack Compose to substitute or intercept this delegate. Reflection on private framework fields violates Android runtime restrictions (hidden API restrictions) and cannot alter the static `invokestatic` call site.
 
-         static boolean isAccessibilityDataSensitive(AccessibilityEvent event) {
-             try {
-                 return event.isAccessibilityDataSensitive();
-             } catch (Throwable t) {
-                 Log.w(TAG, "isAccessibilityDataSensitive missing on platform; suppressing error", t);
-                 return false;
-             }
-         }
+5. **Alternative 5: App Source Classpath Shadowing (`app/src/main/java`)**:
+   - Placing `AccessibilityEventCompat.java` directly into `app/src/main/java/androidx/core/view/accessibility/`:
+   - **Technical Evaluation**: **FAILS IN RELEASE BUILD (D8 Duplicate Class Collision)**.
+     - While `./gradlew assembleDebug` compiles (because debug uses incremental dexing without monolithic dex merging), `./gradlew assembleRelease` (which has `minifyEnabled = false`) fails fatally:
+       ```text
+       com.android.builder.dexing.DexArchiveMergerException: Error while merging dex archives:
+       Type androidx.core.view.accessibility.AccessibilityEventCompat$Api34Impl is defined multiple times:
+       .../project_dex_archive/release/dexBuilderRelease/.../AccessibilityEventCompat$Api34Impl.dex,
+       .../external_libs_dex/release/mergeExtDexRelease/classes2.dex
+       ```
+     - D8 strictly forbids defining the same class in both `project_dex_archive` and `external_libs_dex`.
 
-         static void setAccessibilityDataSensitive(AccessibilityEvent event,
-                 boolean accessibilityDataSensitive) {
-             try {
-                 event.setAccessibilityDataSensitive(accessibilityDataSensitive);
-             } catch (Throwable t) {
-                 Log.w(TAG, "setAccessibilityDataSensitive missing on platform framework; suppressing error", t);
+6. **Selected Remediation Strategy: Targeted Gradle Dependency Substitution with Local Patched Artifact (SELECTED)**:
+   - Rather than shadowing classes in the app source tree, we cleanly substitute the external library artifact using Gradle's native `resolutionStrategy.dependencySubstitution`.
+   - **Local Maven Repository**: A self-contained local Maven repository is configured in the repository root (`local-repo/`) and declared in `settings.gradle`:
+     ```groovy
+     dependencyResolutionManagement {
+         repositories {
+             maven { url uri("${rootDir}/local-repo") }
+             google()
+             mavenCentral()
+             maven { url 'https://jitpack.io' }
+         }
+     }
+     ```
+   - **Patched Artifact (`androidx.core:core:1.15.0-patched`)**:
+     - Based on official `androidx.core:core:1.15.0.aar`, where `AccessibilityEventCompat.class` and `AccessibilityEventCompat$Api34Impl.class` are replaced with bytecode containing defensive try-catch guards:
+       ```java
+       @RequiresApi(34)
+       static class Api34Impl {
+           static boolean isAccessibilityDataSensitive(AccessibilityEvent event) {
+               try {
+                   return event.isAccessibilityDataSensitive();
+               } catch (Throwable t) {
+                   Log.w(TAG, "isAccessibilityDataSensitive failed on platform; suppressing error", t);
+                   return false;
+               }
+           }
+
+           static void setAccessibilityDataSensitive(AccessibilityEvent event,
+                   boolean accessibilityDataSensitive) {
+               try {
+                   event.setAccessibilityDataSensitive(accessibilityDataSensitive);
+               } catch (Throwable t) {
+                   Log.w(TAG, "setAccessibilityDataSensitive missing on platform framework; suppressing error", t);
+               }
+           }
+       }
+       ```
+   - **Deterministic Dependency Substitution**:
+     In `app/build.gradle`:
+     ```groovy
+     configurations.all {
+         resolutionStrategy {
+             dependencySubstitution {
+                 substitute module('androidx.core:core:1.15.0') using module('androidx.core:core:1.15.0-patched')
              }
+             force 'androidx.core:core:1.15.0-patched'
+             force 'androidx.core:core-ktx:1.15.0'
          }
      }
      ```
    - **Technical Advantages & Compliance**:
+     - **Zero Duplicate Class Conflicts**: Because `androidx.core:core:1.15.0-patched` replaces `androidx.core:core:1.15.0` at the dependency resolution level, there is exactly ONE definition of `AccessibilityEventCompat` in the entire build. D8 encounters zero duplicate classes.
+     - **Clean App Source Tree**: Zero package-spoofed or shadowed classes in `app/src/main/java`.
      - **Direct Call-Site Guard**: Intercepts the missing virtual method directly at the invocation site before any exception can escape into Compose coroutines. `createEvent()` succeeds normally.
      - **Zero Looper Disruption & Zero CPU Lockup**: Because `createEvent()` completes cleanly, Compose's `boundsUpdatesEventLoop$ui` processes its frame and suspends normally without crashing or infinite retry looping.
-     - **Build Variant Neutrality**: Provides identical 100% crash immunity across all build variants (Debug, Testing, Profile, Release) with zero reliance on compiler minification heuristics.
-     - **Standard Classpath Precedence**: Application source classes in `app/src/main/java` take deterministic precedence over library AAR classes in D8/R8 compilation.
+     - **Build Variant Neutrality**: Verified with clean, successful executions of `./gradlew assembleDebug`, `./gradlew assembleRelease`, and `./gradlew testDebugUnitTest`.
      - **Intact Platform Preservation**: On intact Android 14/15/16 devices, `event.setAccessibilityDataSensitive(...)` executes normally, preserving accessibility data privacy.
 
 ---
@@ -153,10 +197,11 @@ Fatal Exception: java.lang.NoSuchMethodError: No virtual method setAccessibility
 2. **INV-ACC-02**: **Comprehensive Crash Immunity (`REQ-UI-164`)**: 100% crash immunity on defective Android 14 builds across all build configurations (Debug, Profile, Release).
 3. **INV-ACC-03**: **Main Thread & Looper Stability**: Zero infinite dispatch loops, zero UI thread freezing, and zero CPU starvation.
 4. **INV-ACC-04**: **API Contract & Intact Platform Parity**: On standard Android 14+ devices where the method exists, the platform API is invoked normally without behavioral divergence. Pre-API 34 compatibility is 100% preserved.
+5. **INV-ACC-05**: **Build Toolchain Cleanliness**: No duplicate classes across dex archives, no D8/R8 merger conflicts, and no package-spoofing in `app/src/main/java`.
 
 ---
 
 ## 6. Risk Rating & Gate 1 Recommendation
 
-* **Risk Level**: **LOW** (Targeted defensive try-catch at direct call site, 100% backward compatible, deterministic build-variant neutrality, prevents both crash and infinite-loop hazards).
+* **Risk Level**: **LOW** (Targeted defensive try-catch at direct call site via clean Gradle dependency substitution, 100% backward compatible, deterministic build-variant neutrality, prevents both crash and infinite-loop hazards).
 * **Recommendation**: **RECOMMEND PASS**. Proceed to Stage 2: Test Specification & Requirements Synchronization.
