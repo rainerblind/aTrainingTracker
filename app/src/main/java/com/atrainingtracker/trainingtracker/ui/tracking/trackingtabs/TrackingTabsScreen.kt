@@ -45,6 +45,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -158,25 +159,56 @@ fun TrackingTabsScreen(
     }
 
 
-    // NAVIGATION COLLECTION (necessary, when deleting tabs)
+    val currentPagerState by rememberUpdatedState(pagerState)
+    val currentScreenMode by rememberUpdatedState(screenMode)
+
+    // NAVIGATION COLLECTION (necessary, when deleting tabs or tracking starts)
     LaunchedEffect(Unit) {
+        Log.i(TAG, "LaunchedEffect(Unit) started collecting navigationEvent")
         trackingTabsViewModel.navigationEvent.collect { tabNavigationEvent ->
+            Log.i(TAG, "navigationEvent received: $tabNavigationEvent, currentScreenMode=$currentScreenMode, pageCount=${currentPagerState.pageCount}, currentPage=${currentPagerState.currentPage}")
             when (tabNavigationEvent) {
                 is TabNavigationEvent.NavigateTo -> {
-
                     // Calculate offset: if TRACKING mode, page 0 is Control, so add 1
-                    val offset = if (screenMode == ScreenMode.TRACKING) 1 else 0
+                    val offset = if (currentScreenMode == ScreenMode.TRACKING) 1 else 0
                     val target = tabNavigationEvent.index + offset
+                    Log.i(TAG, "Navigating to target=$target (offset=$offset)")
 
-                    // Animate to the requested page
-                    scope.launch {
+                    lastKnownPage = target
+
+                    // If pager hasn't loaded enough pages yet, wait for pageCount to be ready
+                    if (currentPagerState.pageCount <= target) {
                         try {
-                            lastKnownPage = target
-                            pagerState.animateScrollToPage(target)
+                            kotlinx.coroutines.withTimeout(2000) {
+                                androidx.compose.runtime.snapshotFlow { currentPagerState.pageCount }
+                                    .collect { count ->
+                                        if (count > target) {
+                                            throw kotlinx.coroutines.CancellationException("PageCountReady")
+                                        }
+                                    }
+                            }
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            if (e.message != "PageCountReady") throw e
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Timed out waiting for pageCount > $target", e)
                         }
-                        catch (e: Exception) {
-                            Log.e(TAG, "Navigation failed: page $target not ready yet", e)
+                    }
+
+                    if (target in 0 until currentPagerState.pageCount) {
+                        try {
+                            currentPagerState.animateScrollToPage(target)
+                            Log.i(TAG, "Successfully animated to page $target")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "animateScrollToPage failed: page $target not ready yet", e)
+                            try {
+                                currentPagerState.scrollToPage(target)
+                                Log.i(TAG, "Fallback scrollToPage succeeded for page $target")
+                            } catch (e2: Exception) {
+                                Log.e(TAG, "Fallback scrollToPage also failed", e2)
+                            }
                         }
+                    } else {
+                        Log.e(TAG, "Cannot scroll to target $target: pageCount is ${currentPagerState.pageCount}")
                     }
                 }
                 is TabNavigationEvent.EditDevice -> {
@@ -193,15 +225,6 @@ fun TrackingTabsScreen(
         }
     }
 
-    // Move to first tab when tracking is started
-    val navigateTrigger by trackingTabsViewModel.navigateToTrackingTab.observeAsState()
-    LaunchedEffect(navigateTrigger) {
-        if (navigateTrigger != null) {
-            if (screenMode == ScreenMode.TRACKING) {
-                pagerState.scrollToPage(1)
-            }
-        }
-    }
 
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
