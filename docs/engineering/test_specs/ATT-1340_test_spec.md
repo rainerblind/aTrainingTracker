@@ -89,10 +89,10 @@ Verification addresses:
 
 | Test Case | Target Requirement | Description | Status |
 | :--- | :--- | :--- | :--- |
-| `TC-1` | `REQ-UI-163` | Rising-edge start navigation emission (`NavigateTo(0)`) | Draft |
-| `TC-2` | `REQ-UI-163` | Cold start / resume immunity without spurious scroll | Draft |
-| `TC-3` | `REQ-UI-163` | Pause/Resume neutrality | Draft |
-| `TC-4` | `REQ-UI-163` | Multiple start/stop cycle immunity | Draft |
-| `TC-5` | `REQ-UI-163` | `lastKnownPage` & PagerState synchronization | Draft |
-| `TC-6` | `REQ-UI-159` / `REQ-UI-163` | Full regression pass across all unit tests | Draft |
-| `TC-7` | `REQ-UI-163` | Physical device smooth scroll confirmation | Draft |
+| `TC-1` | `REQ-UI-163` | Rising-edge start navigation emission (`NavigateTo(0)`) | Verified |
+| `TC-2` | `REQ-UI-163` | Cold start / resume immunity without spurious scroll | Verified |
+| `TC-3` | `REQ-UI-163` | Pause/Resume navigation to cockpit tab | Verified |
+| `TC-4` | `REQ-UI-163` | Multiple start/stop cycle immunity | Verified |
+| `TC-5` | `REQ-UI-163` | `lastKnownPage` & PagerState synchronization | Verified |
+| `TC-6` | `REQ-UI-159` / `REQ-UI-163` | Full regression pass across all unit tests | Verified |
+| `TC-7` | `REQ-UI-163` | Physical device smooth scroll confirmation | Verified |
