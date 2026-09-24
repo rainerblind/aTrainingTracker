@@ -108,7 +108,7 @@ class TrackingTabsViewModel(
         }
     }
 
-    private val _navigationEvent = MutableSharedFlow<TabNavigationEvent>()
+    private val _navigationEvent = MutableSharedFlow<TabNavigationEvent>(extraBufferCapacity = 64)
     val navigationEvent: SharedFlow<TabNavigationEvent> = _navigationEvent.asSharedFlow()
 
     val trackingViews: StateFlow<List<TrackingViewInfo>> = combine(
