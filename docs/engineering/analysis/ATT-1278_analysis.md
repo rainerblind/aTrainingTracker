@@ -12,7 +12,7 @@
   - ATT-1353: *[Bug] AltitudeFromPressureDevice.setAltitudeCorrection*
 
 ### Domain Motivation
-The application utilizes the device's onboard barometric pressure sensor (`TYPE_PRESSURE`) to measure relative altitude changes with sub-meter vertical precision. However, converting atmospheric pressure to absolute altitude requires reference to the sea-level pressure ($P_0$, QNH). 
+The application utilizes the device's onboard barometric pressure sensor (`TYPE_PRESSURE`) to measure relative altitude changes with sub-meter vertical precision. However, converting atmospheric pressure to absolute altitude requires reference to sea-level pressure ($P_0$, QNH). 
 
 Currently, `KnownLocationsDatabaseManager.java` attempts to learn this reference altitude by calculating a weighted moving average of uncorrected raw pressure measurements (`mLastRawAltitude`). Because meteorological atmospheric pressure fluctuates by $\pm 20\text{ to } 30\text{ hPa}$ (equating to $\pm 165\text{m}$ to $\pm 250\text{m}$ altitude variation at the same spot), the moving average fails to converge cleanly and creates severe cold-start calibration errors (ATT-1366).
 
@@ -52,24 +52,62 @@ Three primary public elevation API options were evaluated:
 | **Latency** | < 150ms | 500ms - 2000ms | < 200ms |
 | **Recommendation** | **PRIMARY SELECTION** | Secondary Fallback | Excluded (unnecessary cost & setup) |
 
-### Protocol Specification
+### Protocol Specification & Error Code Matrix
 * **Request**:
   `GET https://api.open-meteo.com/v1/elevation?latitude=52.52&longitude=13.41`
 * **Response Header**: `Content-Type: application/json; charset=utf-8`
-* **Response Body**:
+* **Response Body (200 OK)**:
   ```json
   {
     "elevation": [38.0]
   }
   ```
-* **Failure Handling**: HTTP status $\ge 400$, connection timeout (5s), or invalid JSON parses gracefully without throwing.
+* **HTTP Status Code Handling**:
+  - `200 OK`: Parse `elevation[0]`. Valid range check ($-500\text{m} \le h \le 9000\text{m}$). On valid value, persist with `source = INTERNET_DEM`.
+  - `429 Too Many Requests`: Trigger exponential backoff (initial delay: 60s, max: 1hr). Temporarily fall back to GPS altitude.
+  - `503 Service Unavailable` / `5xx Server Error`: Log advisory warning. Fall back to GPS altitude without crashing. Trip short-term circuit breaker (cooldown: 5 minutes).
+  - Network Timeout (5s) / `IOException`: Unreachable network. Gracefully degrade to GPS altitude (`source = GPS_FALLBACK`).
 
 ---
 
 ## 4. Architectural & Component Impact Analysis
 
-### Affected Classes & Modules
+### Call-Site Threading Map & Execution Architecture
+To guarantee that UI responsiveness and hardware sensor processing are never stalled, all network interactions and database writes are strictly decoupled from the main thread and sensor dispatchers:
 
+```
+[SystemSensorManager / Binder Thread]
+                 │
+                 ▼
+AltitudeFromPressureDevice.onSensorChanged()
+                 │
+                 ▼
+AltitudeFromPressureDevice.initPressureSensor()
+                 │
+                 ├─► Check Cache: KnownLocationsDatabaseManager.getMyLocation(latLng) [Local SQLite, Fast]
+                 │        ├─► Cache Hit & is_locked == 1 ──► Apply correction immediately
+                 │        └─► Cache Hit & is_locked == 0 (Already has DEM) ──► Apply correction immediately
+                 │
+                 └─► Cache Miss or Uncalibrated:
+                          │
+                          ▼ (Non-blocking Dispatch)
+                 CoroutineScope(Dispatchers.IO).launch
+                          │
+                          ▼
+                 ElevationService.fetchElevation(lat, lng) [OkHttp, timeout: 5s]
+                          │
+                          ├─► [SUCCESS 200 OK] ──► KnownLocationsDatabaseManager.addNewLocation(...)
+                          │                              │
+                          │                              ▼
+                          │                        AltitudeFromPressureDevice.setAltitudeCorrection(...)
+                          │
+                          └─► [FAIL / TIMEOUT] ──► Fallback to GPS Altitude (if available)
+                                                         │
+                                                         ▼
+                                                   KnownLocationsDatabaseManager.addNewLocation(..., GPS_FALLBACK)
+```
+
+### Affected Classes & Modules
 ```
 com.atrainingtracker.
 ├── banalservice.devices
@@ -82,59 +120,71 @@ com.atrainingtracker.
     └── ElevationResult.kt                     <-- NEW: Sealed class / model for success/failure
 ```
 
-### Detailed Impact:
-1. **`KnownLocationsDatabaseManager.java`**:
-   - Upgrade SQLite schema from `DB_VERSION = 4` to `DB_VERSION = 5`.
-   - Add columns:
-     - `is_locked INTEGER DEFAULT 0`
-     - `source TEXT DEFAULT 'AUTO_LEARNED'`
-   - Update model `MyLocation` to expose `isLocked` (boolean) and `source` (`ElevationSource`).
-   - Invariant: If `is_locked == 1`, `learnLocation()` MUST NOT mutate or overwrite the altitude.
+---
 
-2. **`ElevationService.kt`**:
-   - Implemented in Kotlin using existing dependencies (`OkHttp` and `kotlinx.serialization` or lightweight `org.json`).
-   - Executes asynchronous network calls using Kotlin coroutines (`Dispatchers.IO`).
-   - Thread-safe and decoupled from UI.
+## 5. Spatial Caching, Precision Bounds & Jitter Prevention
 
-3. **`AltitudeFromPressureDevice.java`**:
-   - When a location is discovered at workout start:
-     - If the location is already known and `is_locked`: use existing altitude immediately.
-     - If new or not locked and internet is available: trigger async DEM lookup.
-     - Barometric calibration (`setAltitudeCorrection`) applies authoritative altitude as soon as available.
+### Spatial Matching & Geofence Bounds
+`KnownLocationsDatabaseManager.getMyLocation(LatLng currentLatLng)` performs a spatial radius query:
+- Each stored location has a configurable geofence `radius` (default: `DEFAULT_RADIUS = 200m`).
+- A candidate point matches an existing entry if $\text{distanceTo}(\text{startLocation}) < \text{radius}$.
+- If multiple locations match, the nearest entry ($\min \text{distance}$) is chosen.
+- **Cache Hit Guarantee**: Any workout starting within $200\text{m}$ of a known location is a cache hit and bypasses all network queries.
 
-4. **Offline Resilience & Invariants**:
-   - If device is offline (airplane mode, deep forest, lack of cellular signal):
-     - Fall back to GPS altitude if available, or temporary raw barometric altitude.
-     - Tag entry with `source = GPS_FALLBACK` and `is_locked = 0`.
-     - When network connectivity returns, a deferred lookup can upgrade the entry to `source = INTERNET_DEM`.
+### Coordinate Quantization
+To prevent floating-point GPS jitter (e.g. $52.5200001$ vs $52.5200003$) from generating duplicate spatial records or unnecessary lookups:
+- Coordinates stored in `StartLocation2Altitude.db` and sent to the elevation API are rounded to **5 decimal places**:
+  $$\text{precision} = 10^{-5}\text{ degrees} \approx 1.11\text{ meters}$$
+- This eliminates microscopic sensor jitter while preserving high topographic accuracy.
 
 ---
 
-## 5. System Invariants & Anti-Regression Rules
+## 6. Database Schema Evolution (V4 to V5) & Atomic Migration
 
-1. **Non-Blocking Operation**:
-   - Network calls to the elevation API MUST NEVER run on the main (UI) thread or block the sensor event processing thread (`onSensorChanged`).
-2. **Offline Immunity**:
-   - Sensor initialization and workout tracking MUST proceed uninterrupted even if network is completely unreachable or times out.
-3. **Chesterton's Fence & Cold-Start Protection**:
-   - Must preserve `REQ-CON-011` (cold-start baseline protection) and `REQ-CON-013` (null-safe correction dispatch).
-4. **Lock Invariant (Precursor to ATT-919)**:
-   - Any entry marked `is_locked = 1` MUST be strictly immutable against automated refinements.
+### Schema Changes
+The database `StartLocation2Altitude.db` (`KnownLocationsDatabaseManager.java`) will be upgraded from `DB_VERSION = 4` to `DB_VERSION = 5`:
+
+```sql
+-- Upgrading from V4:
+ALTER TABLE StartLocation2Altitude ADD COLUMN is_locked INTEGER DEFAULT 0;
+ALTER TABLE StartLocation2Altitude ADD COLUMN source TEXT DEFAULT 'AUTO_LEARNED';
+```
+
+### Adherence to `REQ-DAT-008` (Atomic Upgrade Invariant)
+In accordance with `REQ-DAT-008` (*Atomic Database Upgrades*):
+> "The system SHALL NOT perform manual transaction management (e.g., setTransactionSuccessful) within onUpgrade callbacks of SQLiteOpenHelper. All schema migrations MUST rely on the automatic transaction wrapper provided by the Android framework to prevent IllegalStateException and ensure data integrity."
+
+- The Android framework's `SQLiteOpenHelper.getWritableDatabase()` automatically wraps the entire `onUpgrade` invocation inside an atomic SQLite transaction (`BEGIN EXCLUSIVE TRANSACTION` ... `COMMIT`).
+- If an unhandled exception or crash occurs during column addition, Android automatically rolls back the transaction, preserving the intact V4 database.
+- Migration will be thoroughly tested in JVM unit tests using real in-memory SQLite instances.
 
 ---
 
-## 6. Risk Rating & Mitigation
+## 7. Formal Requirement Traceability Mapping
+
+| Requirement ID | Standard / Title | Traceability & Compliance Impact |
+| :--- | :--- | :--- |
+| **REQ-CON-011** | *Barometric Cold-Start Baseline Protection* | **Preserved**. `AltitudeFromPressureDevice` continues to withhold uncalibrated barometric readings from active workout statistics until a valid baseline (DEM elevation, locked location, or GPS fix) is established. |
+| **REQ-CON-013** | *Barometric Altitude Sensor Initialization & Null-Safe Correction Dispatch* | **Preserved**. When DEM elevation arrives asynchronously, `setAltitudeCorrection(double)` utilizes the defensive null-safe guards implemented in ATT-1353, preventing unboxing NPEs. |
+| **REQ-DAT-007** | *Automated Altitude Reference Discovery* | **Extended / Evolved**. Automated discovery is upgraded from noisy raw pressure averaging to authoritative DEM querying. |
+| **REQ-DAT-008** | *Atomic Database Upgrades* | **Verified**. Migration from V4 to V5 follows the automatic transaction wrapper invariant without manual transaction manipulation. |
+| **REQ-DAT-014** (NEW) | *Internet Digital Elevation Model (DEM) Reference Altitude Retrieval & Spatial Caching* | **Formulated**. Specifies the asynchronous retrieval of topographic elevation from Open-Meteo, 5-decimal coordinate quantization, spatial caching within 200m radius, and offline GPS fallback. |
+
+---
+
+## 8. Risk Rating & Mitigation
 
 * **Risk Rating**: **MEDIUM**
 * **Technical Justification**: Introducing an external network call into sensor initialization workflows introduces potential latency, timeouts, and connectivity failures.
-* **Mitigation**:
-  1. Strict 5-second timeout on network queries.
-  2. Asynchronous execution via coroutines / background thread pool.
-  3. Seamless fallback to local/GPS altitude upon network unavailability.
-  4. Comprehensive unit tests using mocked HTTP server / client.
+* **Mitigations**:
+  1. **Strict 5-Second Timeout**: OkHttp client configured with a 5s connect/read timeout.
+  2. **Non-Blocking Coroutines**: Executed strictly on `Dispatchers.IO`. Sensor thread (`onSensorChanged`) is never blocked.
+  3. **Circuit Breaker & Backoff**: Consecutive network errors trip a 5-minute circuit breaker to avoid battery drain or socket exhaustion.
+  4. **Seamless Offline Fallback**: Immediate fallback to GPS altitude (`source = GPS_FALLBACK`) if offline.
+  5. **Deterministic Mock Testing**: `MockWebServer` / mocked HTTP engine in unit tests to verify all status codes (200, 429, 503, timeout).
 
 ---
 
-## 7. Recommendation
+## 9. Recommendation
 
 **RECOMMEND PASS for Stage 1**. Proceed to Stage 2 (`ATT-1368`: Test Specification & Requirements Formulation).
