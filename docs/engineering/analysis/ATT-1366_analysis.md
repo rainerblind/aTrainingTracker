@@ -2,7 +2,7 @@
 
 ## 1. Feature / Bug Overview & Domain Context
 
-* **Issue Key**: `ATT-1366`
+* **Issue Key**: `ATT-1366` / `ATT-1372`
 * **Parent Epic**: `ATT-235` / Sensor Calibration & Data Integrity
 * **Target Version**: `V4.9.38` (Sprint `2026-39.2`)
 * **Related Issues**:
@@ -54,7 +54,7 @@ $$\Delta h \approx -8.3\text{ meters}$$
 
 ---
 
-## 3. Code-Level Root Cause & Race Analysis
+## 3. Code-Level Root Cause & Concurrency Race Analysis
 
 ### A. Race Condition on New Location Discovery
 In `AltitudeFromPressureDevice.java`:
@@ -68,11 +68,11 @@ if (myLocation != null) {
 knownLocationsDb.learnLocation(currentLatLng, mLastRawAltitude, ExtremaType.START);
 ```
 When a workout starts at an unknown location:
-1. `fetchDemOrFallbackAsync` is queued on the background executor `mExecutor`.
+1. `fetchDemOrFallbackAsync()` is queued asynchronously to `mExecutor`.
 2. Simultaneously on the calling thread, `knownLocationsDb.learnLocation()` executes immediately.
 3. Because the background DEM request has not completed yet, `getMyLocation(currentLatLng)` returns `null`.
 4. `learnLocation()` synchronously inserts a new location entry with source `AUTO_LEARNED` and altitude `mLastRawAltitude` (uncalibrated barometric reading).
-5. When `fetchDemOrFallbackAsync` finishes, it attempts to insert an `INTERNET_DEM` entry or update, causing duplicate or conflicting spatial cache entries.
+5. When `fetchDemOrFallbackAsync()` finishes on `mExecutor`, it attempts to insert an `INTERNET_DEM` entry at the same coordinates, causing duplicate spatial entries or inconsistent cache states.
 
 ### B. Inappropriate Altitude Mutation in `learnLocation()`
 In `KnownLocationsDatabaseManager.java`:
@@ -99,8 +99,15 @@ Even for locations that are not explicitly locked, mutating the altitude upon ev
 * It shall **not** create a preliminary uncalibrated `AUTO_LEARNED` record using `mLastRawAltitude`.
 * For existing locations, `learnLocation()` will record the visit (`hitCount++`) without touching the altitude.
 
-### C. Automatic Elevation Healing for Fallbacks
-* If an existing location has an uncalibrated or fallback source (`LEGACY_RAW`, `AUTO_LEARNED`, `GPS_FALLBACK`), `healLocationAsync()` / `healLegacyLocationsAsync()` will query DEM in the background to replace the altitude with authoritative topographic elevation.
+### C. Concurrency & Thread-Safety Guarantees
+* All mutations in `KnownLocationsDatabaseManager` (`addNewLocation`, `updateMyLocation`, `learnLocation`) are guarded by `synchronized (this)` monitor locking on the singleton manager.
+* In `fetchDemOrFallbackAsync()`, before creating a new record upon receiving DEM elevations, the callback executes a synchronized geofence query (`getMyLocation(latLng)`). If a location within the 200m radius was concurrently inserted or matched, it atomically updates the existing record rather than creating a duplicate row.
+
+### D. Migration & Automatic Elevation Healing for Existing `AUTO_LEARNED` Records
+* **Schema Version**: Database remains at **Schema V5** (`DB_VERSION = 5` introduced in `ATT-1278`). No schema bump is required because `is_locked` and `source` columns already exist.
+* **Legacy & Auto-Learned Healing**:
+  All records currently in the database with `source = 'AUTO_LEARNED'`, `source = 'LEGACY_RAW'`, or `source IS NULL` (as long as `is_locked == 0`) are automatically queried on app launch via `healLegacyLocationsAsync()` and batch-updated to `INTERNET_DEM` with authoritative Copernicus 30m DEM elevations.
+  Locked records (`is_locked == 1`) and user-modified locations (`MANUAL_USER`) remain strictly immutable.
 
 ---
 
@@ -123,6 +130,7 @@ Even for locations that are not explicitly locked, mutating the altitude upon ev
    - Verify `learnLocation()` increments `hitCount` on repeat visits.
    - Verify `learnLocation()` strictly preserves existing `altitude`, regardless of the `altitude` parameter passed into it.
    - Verify `source` remains intact.
+   - **Concurrency / Geofence Test**: Simulate concurrent `learnLocation()` and `fetchDemOrFallbackAsync()` completion to verify zero duplicate spatial rows.
 2. **Integration Tests in `AltitudeFromPressureDeviceTest.kt`**:
    - Verify sensor initialization does not trigger competing uncalibrated inserts.
 3. **Clean-Room Regression**:
