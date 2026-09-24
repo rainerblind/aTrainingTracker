@@ -94,7 +94,7 @@ This test specification defines the verification criteria, automated unit test s
   - Active tracking and sensor initialization proceed without interruption.
 
 ### Test Case 6: `testDatabaseUpgrade_fromV4toV5_preservesDataAndAddsColumns` (Unit Test - `TST-DAT-008.6`)
-* **Goal**: Verify SQLite schema migration from V4 to V5 adheres to `REQ-DAT-008` (atomic transaction wrapper) and preserves historical data.
+* **Goal**: Verify SQLite schema migration from V4 to V5 adheres to `REQ-DAT-008` (atomic transaction wrapper), preserves historical data, and initializes `source = 'LEGACY_RAW'`.
 * **Preconditions**:
   - SQLite database initialized at V4 schema with test records:
     - Row 1: `name = "Trailhead"`, `altitude = 540.0`, `radius = 200`, `hitCount = 3`.
@@ -102,7 +102,7 @@ This test specification defines the verification criteria, automated unit test s
   - Trigger `KnownLocationsDbHelper.onUpgrade(db, 4, 5)`.
 * **Expected Result**:
   - Columns `is_locked` and `source` exist in `StartLocation2Altitude`.
-  - Historical Row 1 has `is_locked == 0` (default) and `source == "AUTO_LEARNED"` (default).
+  - Historical Row 1 has `is_locked == 0` (default) and `source == "LEGACY_RAW"` (default).
   - Row 1 coordinates, name, altitude, and hitCount are 100% preserved.
   - Migration completes without manual transaction calls (`REQ-DAT-008`).
 
@@ -117,7 +117,18 @@ This test specification defines the verification criteria, automated unit test s
   - `hitCount` remains `5`.
   - Zero mutations written to SQLite for that row.
 
-### Test Case 8: `testFullCleanRoomRegressionSuite` (Regression Test - `TST-DAT-008.8`)
+### Test Case 8: `testLegacyLocationBatchHealing_updatesUnlockedLegacyRowsToDEM` (Unit Test - `TST-DAT-008.8`)
+* **Goal**: Verify that the batch healing mechanism queries Open-Meteo for unlocked `LEGACY_RAW` locations and atomically updates their altitude and source to `INTERNET_DEM`.
+* **Preconditions**:
+  - DB contains 2 unlocked locations with `source = LEGACY_RAW` and 1 locked location with `source = MANUAL_USER` / `is_locked = 1`.
+  - Mock Open-Meteo batch endpoint returns true DEM elevations.
+* **Action**:
+  - Execute batch healing coroutine `healLegacyLocations()`.
+* **Expected Result**:
+  - The 2 unlocked locations have their `altitude` updated to the authoritative DEM elevations, and `source` changed to `INTERNET_DEM`.
+  - The 1 locked location remains untouched with its original altitude and `is_locked == 1`.
+
+### Test Case 9: `testFullCleanRoomRegressionSuite` (Regression Test - `TST-DAT-008.9`)
 * **Goal**: Verify that the entire unit test suite passes with zero regressions.
 * **Command**: `./gradlew testDebugUnitTest`
 * **Expected Result**: `BUILD SUCCESSFUL`, 632+ tests passed, 0 failures, 0 errors.
@@ -133,6 +144,7 @@ This test specification defines the verification criteria, automated unit test s
 | `TST-DAT-008.3` | `REQ-DAT-014` | HTTP 429 Rate Limit & exponential backoff | Draft |
 | `TST-DAT-008.4` | `REQ-DAT-014` | HTTP 503 Server Error & circuit breaker | Draft |
 | `TST-DAT-008.5` | `REQ-DAT-014` | 5s Timeout & offline GPS fallback | Draft |
-| `TST-DAT-008.6` | `REQ-DAT-008`, `REQ-DAT-014` | Database V4 -> V5 atomic migration | Draft |
+| `TST-DAT-008.6` | `REQ-DAT-008`, `REQ-DAT-014` | Database V4 -> V5 atomic migration with LEGACY_RAW tagging | Draft |
 | `TST-DAT-008.7` | `REQ-DAT-014` | Locked location immutability invariant | Draft |
-| `TST-DAT-008.8` | `REQ-CON-011`, `REQ-CON-013`, `REQ-DAT-014` | Full clean-room test suite regression | Draft |
+| `TST-DAT-008.8` | `REQ-DAT-014` | Legacy location batch healing via multi-point DEM query | Draft |
+| `TST-DAT-008.9` | `REQ-CON-011`, `REQ-CON-013`, `REQ-DAT-014` | Full clean-room test suite regression | Draft |
