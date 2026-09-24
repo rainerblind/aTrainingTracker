@@ -28,6 +28,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.util.Log;
 
+import androidx.annotation.VisibleForTesting;
 import androidx.core.content.ContextCompat;
 
 import com.atrainingtracker.R;
@@ -144,10 +145,21 @@ public class AltitudeFromPressureDevice extends MyDevice
     /**
      * set the field mAltitudeCorrection
      */
-    private void setAltitudeCorrection(double correctAltitude) {
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    void setAltitudeCorrection(double correctAltitude) {
         if (DEBUG) Log.d(TAG, "setAltitudeCorrection");
 
-        mAltitudeCorrection = correctAltitude - mAltitudeSensor.getValue().doubleValue();
+        double currentAltitude;
+        if (mAltitudeSensor != null && mAltitudeSensor.getValue() != null) {
+            currentAltitude = mAltitudeSensor.getValue().doubleValue();
+        } else if (!Double.isNaN(mLastRawAltitude)) {
+            currentAltitude = mLastRawAltitude;
+        } else {
+            Log.w(TAG, "Cannot set altitude correction: neither current sensor value nor last raw altitude is available.");
+            return;
+        }
+
+        mAltitudeCorrection = correctAltitude - currentAltitude;
 
         if (mAltitudeCorrection != 0.0) {
             // 	also send broadcast to inform the others (like a tracker) of this change such that they can update all previous samples accordingly!
@@ -156,6 +168,36 @@ public class AltitudeFromPressureDevice extends MyDevice
                     .putExtra(ALTITUDE_CORRECTION_VALUE, mAltitudeCorrection);
             mContext.sendBroadcast(intent);
         }
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    double getAltitudeCorrection() {
+        return mAltitudeCorrection;
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    void setLastRawAltitude(double rawAltitude) {
+        mLastRawAltitude = rawAltitude;
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    double getLastRawAltitude() {
+        return mLastRawAltitude;
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    MySensor<Number> getAltitudeSensor() {
+        return mAltitudeSensor;
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    boolean isPressureSensorInitialized() {
+        return mPressureSensorInitialized;
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    void setPressureSensorInitialized(boolean initialized) {
+        mPressureSensorInitialized = initialized;
     }
 
 
@@ -177,7 +219,12 @@ public class AltitudeFromPressureDevice extends MyDevice
             registerSensors();
         }
 
-        mLastRawAltitude = SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, event.values[0]);
+        handlePressureMeasurement(event.values[0]);
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
+    void handlePressureMeasurement(float pressureHpa) {
+        mLastRawAltitude = SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, pressureHpa);
         if (!mPressureSensorInitialized) {
             initPressureSensor();
         }
