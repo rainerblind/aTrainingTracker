@@ -61,6 +61,7 @@ import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleService;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleServiceBuildIn;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.Watchapp;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
+import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHelper;
@@ -1007,6 +1008,7 @@ public class TrainingApplication extends Application {
         com.google.android.gms.maps.MapsInitializer.initialize(this);
 
         runWorkoutClusterMigration();
+        KnownLocationsDatabaseManager.getInstance(this).healLegacyLocationsAsync();
     }
 
     private void runWorkoutClusterMigration() {

@@ -147,6 +147,7 @@ public class AltitudeFromPressureDevice extends MyDevice
 
                 if (myLocation.source == ElevationSource.LEGACY_RAW && !myLocation.isLocked) {
                     healLocationAsync(myLocation);
+                    knownLocationsDb.healLegacyLocationsAsync();
                 }
             } else {
                 fetchDemOrFallbackAsync(latitude, longitude);

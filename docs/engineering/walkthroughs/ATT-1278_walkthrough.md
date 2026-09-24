@@ -46,10 +46,11 @@ Updated [KnownLocationsDatabaseManager.java](file:///home/rainer/AndroidStudioPr
   - Adhered strictly to `REQ-DAT-008`: zero manual calls to `beginTransaction()` or `setTransactionSuccessful()`, delegating 100% to Android's framework transaction wrapper.
 * **Locked Location Immutability**:
   - Enforced in `learnLocation()`: if `existing.isLocked` is true, or if `source` is already `INTERNET_DEM` or `MANUAL_USER`, auto-refinement is strictly bypassed.
-* **Batch Healing (`healLegacyLocations`)**:
-  - Queries all unlocked records where `is_locked == 0 AND source = 'LEGACY_RAW'`.
-  - Submits coordinates in a single batch query to `ElevationService.fetchBatchElevations()`.
-  - Atomically updates rows with authoritative DEM elevations and transitions their source to `INTERNET_DEM`.
+* **Batch Healing (`healLegacyLocations` / `healLegacyLocationsAsync`)**:
+  - Automatically triggered on application startup in [TrainingApplication.java](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/TrainingApplication.java#L1011) via a dedicated background thread (`LegacyLocationHealer`), as well as during sensor initialization in [AltitudeFromPressureDevice.java](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/banalservice/devices/AltitudeFromPressureDevice.java#L150).
+  - Queries all unlocked records where `is_locked == 0 AND (source = 'LEGACY_RAW' OR source = 'AUTO_LEARNED' OR source IS NULL)`.
+  - Chunks coordinates into URL-safe batches of 50 points to respect HTTP URL length limitations.
+  - Queries `ElevationService.fetchBatchElevations()` per chunk and atomically updates rows with authoritative DEM elevations, setting their source to `INTERNET_DEM`.
 
 ---
 
@@ -81,6 +82,8 @@ Updated [AltitudeFromPressureDevice.java](file:///home/rainer/AndroidStudioProje
   - `testDatabaseUpgrade_V4toV5` (`TST-DAT-008.6`): Verified non-destructive atomic V4->V5 upgrade with column defaults and zero manual transaction calls.
   - `testLockedLocation_immutability` (`TST-DAT-008.7`): Verified `is_locked == 1` records reject modification in `learnLocation()`.
   - `testLegacyBatchHealing_updatesUnlockedToDEM` (`TST-DAT-008.8`): Verified batch query heals unlocked `LEGACY_RAW` rows to `INTERNET_DEM`.
+  - `testLegacyBatchHealing_chunksRequestsAtFifty`: Verified batch healing divides large datasets (>50) into sequential 50-item batches.
+  - `testLegacyBatchHealing_whenNoLegacyRows_returnsZero`: Verified zero network overhead when database is already healed.
   - `testAddNewLocation_withLockAndSource`: Verified persistence of lock and source fields.
 
 ### B. Clean-Room Regression

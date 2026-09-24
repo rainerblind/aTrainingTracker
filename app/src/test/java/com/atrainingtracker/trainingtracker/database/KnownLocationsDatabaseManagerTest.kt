@@ -261,7 +261,7 @@ class KnownLocationsDatabaseManagerTest {
                 KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE,
                 null,
                 match { it.contains("is_locked=0") && it.contains("source=?") },
-                arrayOf("LEGACY_RAW"),
+                arrayOf("LEGACY_RAW", "AUTO_LEARNED"),
                 null,
                 null,
                 null
@@ -352,4 +352,72 @@ class KnownLocationsDatabaseManagerTest {
         assertTrue(loc.isLocked)
         assertEquals(ElevationSource.MANUAL_USER, loc.source)
     }
+
+    /**
+     * Verifies that legacy location batch healing chunks requests into batches of 50.
+     */
+    @Test
+    fun testLegacyBatchHealing_chunksRequestsAtFifty() {
+        resetSingleton()
+        val manager = KnownLocationsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        setupMockCursorColumns(mockCursor)
+
+        val totalLocations = 65
+        var currentIdx = 0
+        every { mockCursor.moveToNext() } answers {
+            if (currentIdx < totalLocations) {
+                currentIdx++
+                true
+            } else {
+                false
+            }
+        }
+        every { mockCursor.getLong(0) } answers { currentIdx.toLong() }
+        every { mockCursor.getString(1) } returns "Location"
+        every { mockCursor.getDouble(3) } returns 300.0
+        every { mockCursor.getDouble(4) } returns 11.0
+        every { mockCursor.getDouble(5) } returns 48.0
+        every { mockCursor.getInt(6) } returns 200
+        every { mockCursor.getInt(7) } returns 1
+        every { mockCursor.getInt(8) } returns 0
+        every { mockCursor.getString(9) } returns "LEGACY_RAW"
+
+        every {
+            mockDb.query(
+                KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE,
+                null,
+                any(),
+                any(),
+                null,
+                null,
+                null
+            )
+        } returns mockCursor
+
+        val mockElevationService = mockk<ElevationService>()
+        every { mockElevationService.fetchBatchElevations(match { it.size == 50 }) } returns ElevationResult.BatchSuccess(
+            List(50) { 350.0 }
+        )
+        every { mockElevationService.fetchBatchElevations(match { it.size == 15 }) } returns ElevationResult.BatchSuccess(
+            List(15) { 360.0 }
+        )
+
+        val healed = manager.healLegacyLocations(mockElevationService)
+
+        assertEquals(65, healed)
+        verify(exactly = 1) { mockElevationService.fetchBatchElevations(match { it.size == 50 }) }
+        verify(exactly = 1) { mockElevationService.fetchBatchElevations(match { it.size == 15 }) }
+        verify(exactly = 65) {
+            mockDb.update(
+                KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE,
+                any(),
+                any(),
+                any()
+            )
+        }
+    }
 }
+

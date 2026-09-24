@@ -307,10 +307,14 @@ public class KnownLocationsDatabaseManager {
     @NonNull
     public List<MyLocation> getLegacyLocations() {
         List<MyLocation> legacyLocations = new LinkedList<>();
+        String whereClause = KnownLocationsDbHelper.IS_LOCKED + "=0 AND ("
+                + KnownLocationsDbHelper.SOURCE + "=? OR "
+                + KnownLocationsDbHelper.SOURCE + "=? OR "
+                + KnownLocationsDbHelper.SOURCE + " IS NULL)";
         Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
                 null,
-                KnownLocationsDbHelper.IS_LOCKED + "=0 AND " + KnownLocationsDbHelper.SOURCE + "=?",
-                new String[]{ElevationSource.LEGACY_RAW.name()},
+                whereClause,
+                new String[]{ElevationSource.LEGACY_RAW.name(), ElevationSource.AUTO_LEARNED.name()},
                 null,
                 null,
                 null);
@@ -331,6 +335,7 @@ public class KnownLocationsDatabaseManager {
 
     /**
      * Executes batch healing of unlocked legacy locations with the provided ElevationService.
+     * Chunks requests into batches of 50 to guarantee URL length limits are respected.
      */
     public int healLegacyLocations(@NonNull ElevationService elevationService) {
         List<MyLocation> legacyLocations = getLegacyLocations();
@@ -338,34 +343,54 @@ public class KnownLocationsDatabaseManager {
             return 0;
         }
 
-        List<LatLng> coordinates = new LinkedList<>();
-        for (MyLocation loc : legacyLocations) {
-            coordinates.add(loc.latLng);
-        }
+        final int CHUNK_SIZE = 50;
+        int totalHealed = 0;
 
-        ElevationResult result = elevationService.fetchBatchElevations(coordinates);
-        if (result instanceof ElevationResult.BatchSuccess batchSuccess) {
-            List<Double> elevations = batchSuccess.getElevations();
-            int healedCount = 0;
-            synchronized (this) {
-                for (int i = 0; i < legacyLocations.size() && i < elevations.size(); i++) {
-                    Double elevation = elevations.get(i);
-                    if (elevation != null) {
-                        MyLocation loc = legacyLocations.get(i);
-                        ContentValues values = new ContentValues();
-                        values.put(KnownLocationsDbHelper.ALTITUDE, elevation);
-                        values.put(KnownLocationsDbHelper.SOURCE, ElevationSource.INTERNET_DEM.name());
-                        updateId(loc.id, values);
-                        healedCount++;
+        for (int i = 0; i < legacyLocations.size(); i += CHUNK_SIZE) {
+            int end = Math.min(i + CHUNK_SIZE, legacyLocations.size());
+            List<MyLocation> chunk = legacyLocations.subList(i, end);
+
+            List<LatLng> coordinates = new LinkedList<>();
+            for (MyLocation loc : chunk) {
+                coordinates.add(loc.latLng);
+            }
+
+            ElevationResult result = elevationService.fetchBatchElevations(coordinates);
+            if (result instanceof ElevationResult.BatchSuccess batchSuccess) {
+                List<Double> elevations = batchSuccess.getElevations();
+                synchronized (this) {
+                    for (int j = 0; j < chunk.size() && j < elevations.size(); j++) {
+                        Double elevation = elevations.get(j);
+                        if (elevation != null) {
+                            MyLocation loc = chunk.get(j);
+                            ContentValues values = new ContentValues();
+                            values.put(KnownLocationsDbHelper.ALTITUDE, elevation);
+                            values.put(KnownLocationsDbHelper.SOURCE, ElevationSource.INTERNET_DEM.name());
+                            updateId(loc.id, values);
+                            totalHealed++;
+                        }
                     }
                 }
+            } else {
+                Log.w(TAG, "Failed to batch heal legacy location chunk: " + result);
             }
-            if (DEBUG) Log.i(TAG, "Healed " + healedCount + " legacy locations with Open-Meteo DEM elevations.");
-            return healedCount;
-        } else {
-            Log.w(TAG, "Failed to batch heal legacy locations: " + result);
-            return 0;
         }
+
+        if (DEBUG) Log.i(TAG, "Healed " + totalHealed + " of " + legacyLocations.size() + " legacy locations with Open-Meteo DEM elevations.");
+        return totalHealed;
+    }
+
+    /**
+     * Asynchronously executes batch healing of legacy locations in a background thread (REQ-DAT-014).
+     */
+    public void healLegacyLocationsAsync() {
+        new Thread(() -> {
+            try {
+                healLegacyLocations();
+            } catch (Exception e) {
+                Log.w(TAG, "Background legacy location healing failed: " + e.getMessage());
+            }
+        }, "LegacyLocationHealer").start();
     }
 
     @NonNull
