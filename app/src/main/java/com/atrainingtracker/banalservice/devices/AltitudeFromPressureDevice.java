@@ -28,6 +28,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
 import androidx.core.content.ContextCompat;
 
@@ -38,7 +39,13 @@ import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.database.ExtremaType;
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
+import com.atrainingtracker.trainingtracker.elevation.ElevationResult;
+import com.atrainingtracker.trainingtracker.elevation.ElevationService;
+import com.atrainingtracker.trainingtracker.elevation.ElevationSource;
 import com.google.android.gms.maps.model.LatLng;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 // TODO: use database or preferences to store whether or not the pressure sensor is available.  really necessary??
 
@@ -66,6 +73,7 @@ public class AltitudeFromPressureDevice extends MyDevice
     private double mAltitudeCorrection = 0;
     private double mLastRawAltitude = Double.NaN;
     private boolean mPressureSensorInitialized = false;
+    private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
     private final BroadcastReceiver mGPSProviderEnabledReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             AltitudeFromPressureDevice.this.initPressureSensor();
@@ -103,6 +111,7 @@ public class AltitudeFromPressureDevice extends MyDevice
     @Override
     public void shutDown() {
         super.shutDown();
+        mExecutor.shutdown();
         ((SensorManager) mContext.getSystemService(Context.SENSOR_SERVICE)).unregisterListener(this);
 
         ContextCompat.registerReceiver(mContext, mGPSProviderEnabledReceiver, mGPSProviderEnabledFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
@@ -127,18 +136,64 @@ public class AltitudeFromPressureDevice extends MyDevice
 
             double latitude = ((Number) mMySensorManager.getSensor(SensorType.LATITUDE).getValue()).doubleValue();
             double longitude = ((Number) mMySensorManager.getSensor(SensorType.LONGITUDE).getValue()).doubleValue();
-            KnownLocationsDatabaseManager.MyLocation myLocation = KnownLocationsDatabaseManager.getInstance(mContext).getMyLocation(new LatLng(latitude, longitude));
+            LatLng currentLatLng = new LatLng(latitude, longitude);
+            KnownLocationsDatabaseManager knownLocationsDb = KnownLocationsDatabaseManager.getInstance(mContext);
+            KnownLocationsDatabaseManager.MyLocation myLocation = knownLocationsDb.getMyLocation(currentLatLng);
 
             if (myLocation != null) {
-                if (DEBUG) Log.i(TAG, "Location found: " + myLocation.name + " (Reference Alt: " + myLocation.altitude + "m)");
+                if (DEBUG) Log.i(TAG, "Location found: " + myLocation.name + " (Reference Alt: " + myLocation.altitude + "m, source: " + myLocation.source + ")");
                 setAltitudeCorrection(myLocation.altitude);
                 mAltitudeSensor.newValue(myLocation.altitude);
+
+                if (myLocation.source == ElevationSource.LEGACY_RAW && !myLocation.isLocked) {
+                    healLocationAsync(myLocation);
+                    knownLocationsDb.healLegacyLocationsAsync();
+                }
+            } else {
+                fetchDemOrFallbackAsync(latitude, longitude);
             }
 
-            // --- ATT-448: Refinement ---
+            // --- ATT-448 / REQ-DAT-007 / REQ-DAT-014: Refinement ---
             // Automatically discover or refine the learned reference altitude using the current raw measurement
-            KnownLocationsDatabaseManager.getInstance(mContext).learnLocation(new LatLng(latitude, longitude), mLastRawAltitude, ExtremaType.START);
+            // (KnownLocationsDatabaseManager safely protects locked, DEM, and user-defined records).
+            knownLocationsDb.learnLocation(currentLatLng, mLastRawAltitude, ExtremaType.START);
         }
+    }
+
+    private void healLocationAsync(@NonNull KnownLocationsDatabaseManager.MyLocation location) {
+        mExecutor.execute(() -> {
+            ElevationResult result = ElevationService.getInstance().fetchElevation(location.latLng.latitude, location.latLng.longitude);
+            if (result instanceof ElevationResult.Success success) {
+                if (DEBUG) Log.i(TAG, "Async healed location " + location.name + " to DEM elevation: " + success.getElevationMeters() + "m");
+                KnownLocationsDatabaseManager db = KnownLocationsDatabaseManager.getInstance(mContext);
+                KnownLocationsDatabaseManager.MyLocation current = db.getMyLocation(location.id);
+                if (current != null && !current.isLocked) {
+                    current.altitude = success.getElevationMeters();
+                    KnownLocationsDatabaseManager.MyLocation updated = new KnownLocationsDatabaseManager.MyLocation(
+                            current.id, current.latLng.latitude, current.latLng.longitude,
+                            current.name, success.getElevationMeters(), current.radius, current.hitCount,
+                            false, ElevationSource.INTERNET_DEM);
+                    db.updateMyLocation(current.id, updated);
+                    setAltitudeCorrection(success.getElevationMeters());
+                }
+            }
+        });
+    }
+
+    private void fetchDemOrFallbackAsync(double latitude, double longitude) {
+        mExecutor.execute(() -> {
+            ElevationResult result = ElevationService.getInstance().fetchElevation(latitude, longitude);
+            if (result instanceof ElevationResult.Success success) {
+                double demAlt = success.getElevationMeters();
+                if (DEBUG) Log.i(TAG, "Fetched DEM elevation: " + demAlt + "m for (" + latitude + ", " + longitude + ")");
+                KnownLocationsDatabaseManager db = KnownLocationsDatabaseManager.getInstance(mContext);
+                db.addNewLocation("Internet DEM start", demAlt, KnownLocationsDatabaseManager.DEFAULT_RADIUS,
+                        latitude, longitude, ExtremaType.START, false, ElevationSource.INTERNET_DEM);
+                setAltitudeCorrection(demAlt);
+            } else {
+                if (DEBUG) Log.d(TAG, "DEM lookup unsuccessful (" + result + "), maintaining default/GPS fallback.");
+            }
+        });
     }
 
 

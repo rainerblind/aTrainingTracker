@@ -32,6 +32,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.atrainingtracker.banalservice.BANALService;
+import com.atrainingtracker.trainingtracker.elevation.ElevationResult;
+import com.atrainingtracker.trainingtracker.elevation.ElevationService;
+import com.atrainingtracker.trainingtracker.elevation.ElevationSource;
 import com.google.android.gms.maps.model.LatLng;
 
 import java.util.LinkedList;
@@ -118,8 +121,13 @@ public class KnownLocationsDatabaseManager {
 
     @Nullable
     public MyLocation addNewLocation(String name, int altitude, int radius, double latitude, double longitude, @NonNull ExtremaType type) {
+        return addNewLocation(name, (double) altitude, radius, latitude, longitude, type, false, ElevationSource.LEGACY_RAW);
+    }
+
+    @Nullable
+    public MyLocation addNewLocation(String name, double altitude, int radius, double latitude, double longitude, @NonNull ExtremaType type, boolean isLocked, @NonNull ElevationSource source) {
         if (DEBUG)
-            Log.d(TAG, "addNewLocation: " + name + " " + altitude + " m" + ", radius=" + radius + ", type=" + type);
+            Log.d(TAG, "addNewLocation: " + name + " " + altitude + " m" + ", radius=" + radius + ", type=" + type + ", locked=" + isLocked + ", source=" + source);
 
         MyLocation myLocation = null;
 
@@ -132,15 +140,37 @@ public class KnownLocationsDatabaseManager {
         values.put(KnownLocationsDbHelper.LATITUDE, latitude);
         values.put(KnownLocationsDbHelper.EXTREMA_TYPE, type.name());
         values.put(KnownLocationsDbHelper.HIT_COUNT, 1);
+        values.put(KnownLocationsDbHelper.IS_LOCKED, isLocked ? 1 : 0);
+        values.put(KnownLocationsDbHelper.SOURCE, source.name());
 
         try {
             long id = getDatabase().insert(KnownLocationsDbHelper.TABLE, null, values);
-            myLocation = new MyLocation(id, latitude, longitude, name, altitude, radius, 1);
+            myLocation = new MyLocation(id, latitude, longitude, name, altitude, radius, 1, isLocked, source);
         } catch (SQLException e) {
             Log.e(TAG, "Error while writing" + e);
         }
 
         return myLocation;
+    }
+
+    @NonNull
+    private MyLocation cursorToMyLocation(@NonNull Cursor cursor) {
+        int isLockedIndex = cursor.getColumnIndex(KnownLocationsDbHelper.IS_LOCKED);
+        boolean isLocked = isLockedIndex != -1 && cursor.getInt(isLockedIndex) == 1;
+
+        int sourceIndex = cursor.getColumnIndex(KnownLocationsDbHelper.SOURCE);
+        ElevationSource source = sourceIndex != -1 ? ElevationSource.fromString(cursor.getString(sourceIndex)) : ElevationSource.LEGACY_RAW;
+
+        return new MyLocation(
+                cursor.getLong(cursor.getColumnIndex(KnownLocationsDbHelper.C_ID)),
+                cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.LATITUDE)),
+                cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.LONGITUDE)),
+                cursor.getString(cursor.getColumnIndex(KnownLocationsDbHelper.NAME)),
+                cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.ALTITUDE)),
+                cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.RADIUS)),
+                cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.HIT_COUNT)),
+                isLocked,
+                source);
     }
 
     // public static Integer getStartAltitude(Context context, double latitude, double longitude)
@@ -173,14 +203,7 @@ public class KnownLocationsDatabaseManager {
             if (distance < radius) { // acceptable start location
                 if (distance < minDistance) {
                     minDistance = distance;
-
-                    myLocation = new MyLocation(cursor.getLong(cursor.getColumnIndex(KnownLocationsDbHelper.C_ID)),
-                            cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.LATITUDE)),
-                            cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.LONGITUDE)),
-                            cursor.getString(cursor.getColumnIndex(KnownLocationsDbHelper.NAME)),
-                            cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.ALTITUDE)),
-                            cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.RADIUS)),
-                            cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.HIT_COUNT)));
+                    myLocation = cursorToMyLocation(cursor);
                 }
             }
         }
@@ -212,6 +235,8 @@ public class KnownLocationsDatabaseManager {
         contentValues.put(KnownLocationsDbHelper.LONGITUDE, myLocation.latLng.longitude);
         contentValues.put(KnownLocationsDbHelper.RADIUS, myLocation.radius);
         contentValues.put(KnownLocationsDbHelper.HIT_COUNT, myLocation.hitCount);
+        contentValues.put(KnownLocationsDbHelper.IS_LOCKED, myLocation.isLocked ? 1 : 0);
+        contentValues.put(KnownLocationsDbHelper.SOURCE, myLocation.source.name());
 
         updateId(id, contentValues);
     }
@@ -237,14 +262,7 @@ public class KnownLocationsDatabaseManager {
                 null);  // sorting
 
         if (cursor.moveToFirst()) {
-            myLocation = new MyLocation(myLocationId,
-                    cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.LATITUDE)),
-                    cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.LONGITUDE)),
-                    cursor.getString(cursor.getColumnIndex(KnownLocationsDbHelper.NAME)),
-                    cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.ALTITUDE)),
-                    cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.RADIUS)),
-                    cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.HIT_COUNT)));
-
+            myLocation = cursorToMyLocation(cursor);
         }
 
         cursor.close();
@@ -255,6 +273,7 @@ public class KnownLocationsDatabaseManager {
     /**
      * ATT-39: Automatically learns or refines a location's altitude.
      * Uses a weighted average to improve estimate over time.
+     * Respects locked records and authoritative internet DEM elevations (REQ-DAT-014).
      */
     public void learnLocation(@Nullable LatLng pos, @Nullable Double altitude, @NonNull ExtremaType type) {
         if (pos == null || altitude == null || altitude.isNaN()) return;
@@ -262,6 +281,10 @@ public class KnownLocationsDatabaseManager {
         synchronized (this) {
             MyLocation existing = getMyLocation(pos);
             if (existing != null) {
+                if (existing.isLocked || existing.source == ElevationSource.INTERNET_DEM || existing.source == ElevationSource.MANUAL_USER) {
+                    if (DEBUG) Log.d(TAG, "Location '" + existing.name + "' is protected (" + existing.source + ", locked=" + existing.isLocked + "). Skipping auto-refinement.");
+                    return;
+                }
                 // Weighted average refinement
                 double refinedAlt = (existing.altitude * existing.hitCount + altitude) / (existing.hitCount + 1);
                 ContentValues values = new ContentValues();
@@ -272,10 +295,102 @@ public class KnownLocationsDatabaseManager {
             } else {
                 // New discovery
                 String name = "Auto-learned " + type.name().toLowerCase();
-                addNewLocation(name, (int) Math.round(altitude), DEFAULT_RADIUS, pos.latitude, pos.longitude, type);
+                addNewLocation(name, (double) Math.round(altitude), DEFAULT_RADIUS, pos.latitude, pos.longitude, type, false, ElevationSource.AUTO_LEARNED);
                 if (DEBUG) Log.d(TAG, "Discovered new location at " + pos + " with altitude " + altitude + "m");
             }
         }
+    }
+
+    /**
+     * Queries all unlocked legacy locations requiring DEM elevation healing (REQ-DAT-014).
+     */
+    @NonNull
+    public List<MyLocation> getLegacyLocations() {
+        List<MyLocation> legacyLocations = new LinkedList<>();
+        String whereClause = KnownLocationsDbHelper.IS_LOCKED + "=0 AND ("
+                + KnownLocationsDbHelper.SOURCE + "=? OR "
+                + KnownLocationsDbHelper.SOURCE + "=? OR "
+                + KnownLocationsDbHelper.SOURCE + " IS NULL)";
+        Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
+                null,
+                whereClause,
+                new String[]{ElevationSource.LEGACY_RAW.name(), ElevationSource.AUTO_LEARNED.name()},
+                null,
+                null,
+                null);
+
+        while (cursor.moveToNext()) {
+            legacyLocations.add(cursorToMyLocation(cursor));
+        }
+        cursor.close();
+        return legacyLocations;
+    }
+
+    /**
+     * Executes batch healing of unlocked legacy locations using the default ElevationService (REQ-DAT-014).
+     */
+    public int healLegacyLocations() {
+        return healLegacyLocations(ElevationService.getInstance());
+    }
+
+    /**
+     * Executes batch healing of unlocked legacy locations with the provided ElevationService.
+     * Chunks requests into batches of 50 to guarantee URL length limits are respected.
+     */
+    public int healLegacyLocations(@NonNull ElevationService elevationService) {
+        List<MyLocation> legacyLocations = getLegacyLocations();
+        if (legacyLocations.isEmpty()) {
+            return 0;
+        }
+
+        final int CHUNK_SIZE = 50;
+        int totalHealed = 0;
+
+        for (int i = 0; i < legacyLocations.size(); i += CHUNK_SIZE) {
+            int end = Math.min(i + CHUNK_SIZE, legacyLocations.size());
+            List<MyLocation> chunk = legacyLocations.subList(i, end);
+
+            List<LatLng> coordinates = new LinkedList<>();
+            for (MyLocation loc : chunk) {
+                coordinates.add(loc.latLng);
+            }
+
+            ElevationResult result = elevationService.fetchBatchElevations(coordinates);
+            if (result instanceof ElevationResult.BatchSuccess batchSuccess) {
+                List<Double> elevations = batchSuccess.getElevations();
+                synchronized (this) {
+                    for (int j = 0; j < chunk.size() && j < elevations.size(); j++) {
+                        Double elevation = elevations.get(j);
+                        if (elevation != null) {
+                            MyLocation loc = chunk.get(j);
+                            ContentValues values = new ContentValues();
+                            values.put(KnownLocationsDbHelper.ALTITUDE, elevation);
+                            values.put(KnownLocationsDbHelper.SOURCE, ElevationSource.INTERNET_DEM.name());
+                            updateId(loc.id, values);
+                            totalHealed++;
+                        }
+                    }
+                }
+            } else {
+                Log.w(TAG, "Failed to batch heal legacy location chunk: " + result);
+            }
+        }
+
+        if (DEBUG) Log.i(TAG, "Healed " + totalHealed + " of " + legacyLocations.size() + " legacy locations with Open-Meteo DEM elevations.");
+        return totalHealed;
+    }
+
+    /**
+     * Asynchronously executes batch healing of legacy locations in a background thread (REQ-DAT-014).
+     */
+    public void healLegacyLocationsAsync() {
+        new Thread(() -> {
+            try {
+                healLegacyLocations();
+            } catch (Exception e) {
+                Log.w(TAG, "Background legacy location healing failed: " + e.getMessage());
+            }
+        }, "LegacyLocationHealer").start();
     }
 
     @NonNull
@@ -334,14 +449,23 @@ public class KnownLocationsDatabaseManager {
         public double altitude;
         public int radius;
         public int hitCount;
+        public final boolean isLocked;
+        @NonNull
+        public final ElevationSource source;
 
         public MyLocation(long id, double lat, double lng, String name, double altitude, int radius, int hitCount) {
+            this(id, lat, lng, name, altitude, radius, hitCount, false, ElevationSource.LEGACY_RAW);
+        }
+
+        public MyLocation(long id, double lat, double lng, String name, double altitude, int radius, int hitCount, boolean isLocked, @NonNull ElevationSource source) {
             this.id = id;
             latLng = new LatLng(lat, lng);
             this.name = name;
             this.altitude = altitude;
             this.radius = radius;
             this.hitCount = hitCount;
+            this.isLocked = isLocked;
+            this.source = source != null ? source : ElevationSource.LEGACY_RAW;
         }
     }
 
@@ -355,7 +479,7 @@ public class KnownLocationsDatabaseManager {
 
     public static class KnownLocationsDbHelper extends SQLiteOpenHelper {
         public static final String DB_NAME = "StartLocation2Altitude.db";
-        public static final int DB_VERSION = 4;
+        public static final int DB_VERSION = 5;
         public static final String TABLE = "StartLocation2Altitude";
         public static final String C_ID = BaseColumns._ID;
         public static final String NAME = "name";
@@ -365,6 +489,8 @@ public class KnownLocationsDatabaseManager {
         public static final String LATITUDE = "latitude";
         public static final String RADIUS = "radius";
         public static final String HIT_COUNT = "hitCount";
+        public static final String IS_LOCKED = "is_locked";
+        public static final String SOURCE = "source";
         protected static final String TAG = KnownLocationsDbHelper.class.getName();
         protected static final boolean DEBUG = BANALService.getDebug(false);
         protected static final String CREATE_TABLE_V4 = "create table " + TABLE + " ("
@@ -376,6 +502,17 @@ public class KnownLocationsDatabaseManager {
                 + LATITUDE + " real,"
                 + RADIUS + " int,"
                 + HIT_COUNT + " int)";
+        protected static final String CREATE_TABLE_V5 = "create table " + TABLE + " ("
+                + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + NAME + " text,"
+                + EXTREMA_TYPE + " text,"
+                + ALTITUDE + " real,"
+                + LONGITUDE + " real,"
+                + LATITUDE + " real,"
+                + RADIUS + " int,"
+                + HIT_COUNT + " int,"
+                + IS_LOCKED + " integer default 0,"
+                + SOURCE + " text default 'LEGACY_RAW')";
 
         // Constructor
         public KnownLocationsDbHelper(Context context) {
@@ -385,8 +522,8 @@ public class KnownLocationsDatabaseManager {
         // Called only once, first time the DB is created
         @Override
         public void onCreate(@NonNull SQLiteDatabase db) {
-            db.execSQL(CREATE_TABLE_V4);
-            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_TABLE_V4);
+            db.execSQL(CREATE_TABLE_V5);
+            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_TABLE_V5);
         }
 
         private void addColumn(@NonNull SQLiteDatabase db, String column, String type) {
@@ -420,6 +557,11 @@ public class KnownLocationsDatabaseManager {
                 db.execSQL("INSERT INTO " + TABLE + " (" + C_ID + ", " + NAME + ", " + EXTREMA_TYPE + ", " + ALTITUDE + ", " + LONGITUDE + ", " + LATITUDE + ", " + RADIUS + ", " + HIT_COUNT + ") " +
                         "SELECT " + C_ID + ", " + NAME + ", " + EXTREMA_TYPE + ", CAST(" + ALTITUDE + " AS REAL), " + LONGITUDE + ", " + LATITUDE + ", " + RADIUS + ", 1 FROM tmp_" + TABLE + ";");
                 db.execSQL("DROP TABLE tmp_" + TABLE + ";");
+            }
+
+            if (oldVersion < 5) {
+                addColumn(db, IS_LOCKED, "integer default 0");
+                addColumn(db, SOURCE, "text default 'LEGACY_RAW'");
             }
         }
     }
