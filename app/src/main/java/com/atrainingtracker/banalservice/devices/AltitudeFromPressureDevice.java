@@ -149,14 +149,13 @@ public class AltitudeFromPressureDevice extends MyDevice
                     healLocationAsync(myLocation);
                     knownLocationsDb.healLegacyLocationsAsync();
                 }
+
+                // --- ATT-1366 / REQ-DAT-007: Hit Count Tracking ---
+                // Record visit frequency without mutating the established reference altitude
+                knownLocationsDb.learnLocation(currentLatLng, mLastRawAltitude, ExtremaType.START);
             } else {
                 fetchDemOrFallbackAsync(latitude, longitude);
             }
-
-            // --- ATT-448 / REQ-DAT-007 / REQ-DAT-014: Refinement ---
-            // Automatically discover or refine the learned reference altitude using the current raw measurement
-            // (KnownLocationsDatabaseManager safely protects locked, DEM, and user-defined records).
-            knownLocationsDb.learnLocation(currentLatLng, mLastRawAltitude, ExtremaType.START);
         }
     }
 
@@ -187,8 +186,8 @@ public class AltitudeFromPressureDevice extends MyDevice
                 double demAlt = success.getElevationMeters();
                 if (DEBUG) Log.i(TAG, "Fetched DEM elevation: " + demAlt + "m for (" + latitude + ", " + longitude + ")");
                 KnownLocationsDatabaseManager db = KnownLocationsDatabaseManager.getInstance(mContext);
-                db.addNewLocation("Internet DEM start", demAlt, KnownLocationsDatabaseManager.DEFAULT_RADIUS,
-                        latitude, longitude, ExtremaType.START, false, ElevationSource.INTERNET_DEM);
+                db.upsertLocationByGeofence(new LatLng(latitude, longitude), demAlt, "Internet DEM start",
+                        ExtremaType.START, ElevationSource.INTERNET_DEM, false);
                 setAltitudeCorrection(demAlt);
             } else {
                 if (DEBUG) Log.d(TAG, "DEM lookup unsuccessful (" + result + "), maintaining default/GPS fallback.");
