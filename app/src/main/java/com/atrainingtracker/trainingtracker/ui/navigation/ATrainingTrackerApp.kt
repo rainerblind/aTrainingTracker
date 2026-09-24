@@ -152,7 +152,9 @@ fun ATrainingTrackerApp(
     }
 
     // Authoritative drawer visibility predicate across all animation phases (REQ-UI-162)
-    val isDrawerVisible = drawerState.currentValue != DrawerValue.Closed || drawerState.targetValue != DrawerValue.Closed
+    val isDrawerVisible = drawerState.currentValue != DrawerValue.Closed ||
+        drawerState.targetValue != DrawerValue.Closed ||
+        drawerState.isAnimationRunning
 
     // --- Back Handling Hierarchy (LIFO composition ordering) ---
     // Layer 3: Root Screen Navigation (composed first -> evaluated last)
@@ -173,21 +175,10 @@ fun ATrainingTrackerApp(
         }
     }
 
-    // Layer 2: Settings Bottom Sheet Overlay (composed second)
-    BackHandler(enabled = drawerController.activeBottomSheet != null) {
-        drawerController.activeBottomSheet = null
-    }
-
-    // Layer 1: Navigation Drawer Overlay (composed last -> evaluated first)
-    BackHandler(enabled = isDrawerVisible) {
-        scope.launch {
-            try {
-                withTimeoutOrNull(400L) {
-                    drawerState.close()
-                } ?: drawerState.snapTo(DrawerValue.Closed)
-            } catch (_: CancellationException) {
-                // Cooperative cancellation on rapid consecutive back taps
-            }
+    // Layer 2: Settings Bottom Sheet Overlay (dynamically composed when active)
+    if (drawerController.activeBottomSheet != null) {
+        BackHandler {
+            drawerController.activeBottomSheet = null
         }
     }
 
@@ -198,6 +189,21 @@ fun ATrainingTrackerApp(
         // scrolling. When open, full-screen gestures are enabled for swipe-to-close and scrim tap dismissal.
         gesturesEnabled = drawerState.isOpen,
         drawerContent = {
+            // Layer 1: Navigation Drawer Overlay BackHandler (REQ-UI-162)
+            // Dynamically composed when isDrawerVisible is true, appending callback to the top of OnBackPressedDispatcher LIFO queue
+            if (isDrawerVisible) {
+                BackHandler {
+                    scope.launch {
+                        try {
+                            withTimeoutOrNull(400L) {
+                                drawerState.close()
+                            } ?: drawerState.snapTo(DrawerValue.Closed)
+                        } catch (_: CancellationException) {
+                            // Cooperative cancellation on rapid consecutive back taps
+                        }
+                    }
+                }
+            }
             ModalDrawerSheet(
                 modifier = Modifier.width(300.dp),
                 drawerContainerColor = MaterialTheme.colorScheme.surface,

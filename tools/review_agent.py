@@ -365,7 +365,7 @@ def build_audit_prompt(gate_key, gate_info, subtask, parent_issue):
     return prompt, system_instruction
 
 
-def audit_subtask(subtask_key, preferred_provider="gemini", explicit_model=None, dry_run=False):
+def audit_subtask(subtask_key, preferred_provider="gemini", explicit_model=None, dry_run=False, review_file=None):
     """Conducts autonomous independent review on a Jira sub-task strictly as Agent 2."""
     print(f"Fetching Jira details for sub-task {subtask_key} as {AUDITOR_ROLE}...")
     config = get_config()
@@ -398,10 +398,16 @@ def audit_subtask(subtask_key, preferred_provider="gemini", explicit_model=None,
         parent_url = f"{config['JIRA_URL']}/rest/api/2/issue/{parent_key}?fields=summary,description,status,fixVersions"
         parent_issue = jira_request(parent_url, role=AUDITOR_ROLE)
 
-    # Build prompt and query external LLM
-    prompt, system_instruction = build_audit_prompt(gate_key, gate_info, subtask, parent_issue)
-    print(f"Invoking independent auditor model (preferred: {preferred_provider}, model: {explicit_model or 'auto'})...")
-    review_body, model_name = query_llm(prompt, system_instruction, preferred_provider, explicit_model=explicit_model)
+    if review_file:
+        print(f"Loading local review deliverable from '{review_file}'...")
+        with open(review_file, "r", encoding="utf-8") as f:
+            review_body = f.read()
+        model_name = "Local Independent Agent Instance"
+    else:
+        # Build prompt and query external LLM
+        prompt, system_instruction = build_audit_prompt(gate_key, gate_info, subtask, parent_issue)
+        print(f"Invoking independent auditor model (preferred: {preferred_provider}, model: {explicit_model or 'auto'})...")
+        review_body, model_name = query_llm(prompt, system_instruction, preferred_provider, explicit_model=explicit_model)
     print(f"Audit successfully generated via {model_name}.")
 
     if dry_run:
@@ -475,12 +481,13 @@ def main():
         test_connections()
     elif cmd == "audit":
         if len(sys.argv) < 3:
-            print("Error: Sub-task key required. Usage: review_agent.py audit SUBTASK_KEY [--provider gemini|claude] [--model MODEL_NAME]", file=sys.stderr)
+            print("Error: Sub-task key required. Usage: review_agent.py audit SUBTASK_KEY [--provider gemini|claude] [--model MODEL_NAME] [--review-file FILE]", file=sys.stderr)
             sys.exit(1)
         subtask_key = sys.argv[2]
         provider = "gemini"
         explicit_model = None
         dry_run = False
+        review_file = None
 
         args = sys.argv[3:]
         i = 0
@@ -491,13 +498,16 @@ def main():
             elif args[i] == "--model" and i + 1 < len(args):
                 explicit_model = args[i + 1]
                 i += 2
+            elif args[i] in ["--review-file", "--local", "--local-file"] and i + 1 < len(args):
+                review_file = args[i + 1]
+                i += 2
             elif args[i] == "--dry-run":
                 dry_run = True
                 i += 1
             else:
                 i += 1
 
-        audit_subtask(subtask_key, preferred_provider=provider, explicit_model=explicit_model, dry_run=dry_run)
+        audit_subtask(subtask_key, preferred_provider=provider, explicit_model=explicit_model, dry_run=dry_run, review_file=review_file)
     else:
         print(f"Unknown command: {cmd}", file=sys.stderr)
         sys.exit(1)

@@ -26,6 +26,8 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummary
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.OnBackPressedDispatcher
 import androidx.compose.material3.DrawerValue
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -411,6 +413,100 @@ class SingleActivityNavigationTest {
         assertFalse("Timed-out animation must return false/null from withTimeoutOrNull", closeResult)
         assertTrue("400ms timeout must execute safety valve fallback", fallbackExecuted)
         assertEquals("Safety valve snapTo must forcefully settle drawer to Closed", DrawerValue.Closed, simulatedDrawerValue)
+    }
+
+    /**
+     * Verifies dynamic LIFO evaluation precedence in OnBackPressedDispatcher (REQ-UI-162 / TST-UI-114 / ATT-1335).
+     *
+     * Validates that dynamically composed overlay BackHandlers (added when isDrawerVisible == true)
+     * strictly supersede NavHost's internal destination backstack callbacks, and that removing the
+     * overlay callback upon drawer closure fully restores NavHost destination popping.
+     */
+    @Test
+    fun testOnBackPressedDispatcherDynamicLIFOPrecedence() {
+        val dispatcher = OnBackPressedDispatcher()
+        var navHostPopCount = 0
+        var drawerCloseCount = 0
+
+        // Step 1: NavHost registers its internal back callback when on a child destination
+        val navHostCallback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                navHostPopCount++
+            }
+        }
+        dispatcher.addCallback(navHostCallback)
+
+        // When drawer is closed, pressing Back pops NavHost destination
+        assertTrue("NavHost callback must be enabled", navHostCallback.isEnabled)
+        dispatcher.onBackPressed()
+        assertEquals("Drawer closed: NavHost must pop destination", 1, navHostPopCount)
+        assertEquals("Drawer closed: Drawer close must not be called", 0, drawerCloseCount)
+
+        // Step 2: Athlete opens navigation drawer -> conditional BackHandler enters composition
+        // addCallback appends to the end of dispatcher deque (top of LIFO stack)
+        val drawerCallback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                drawerCloseCount++
+            }
+        }
+        dispatcher.addCallback(drawerCallback)
+
+        // Both callbacks are enabled simultaneously
+        assertTrue("NavHost callback remains enabled", navHostCallback.isEnabled)
+        assertTrue("Drawer callback is enabled", drawerCallback.isEnabled)
+
+        // When Back is pressed with drawer open, LIFO order guarantees drawerCallback executes FIRST
+        dispatcher.onBackPressed()
+        assertEquals("Drawer open: Drawer close callback must execute", 1, drawerCloseCount)
+        assertEquals("Drawer open: NavHost must NOT be triggered (destination stays unchanged)", 1, navHostPopCount)
+
+        // Step 3: Drawer closes -> Composable leaves composition -> onDispose calls remove()
+        drawerCallback.remove()
+
+        // When Back is pressed again with drawer unmounted, NavHost handles Back again
+        dispatcher.onBackPressed()
+        assertEquals("Drawer closed: NavHost must pop destination again", 2, navHostPopCount)
+        assertEquals("Drawer closed: Drawer callback was removed and must not execute", 1, drawerCloseCount)
+    }
+
+    /**
+     * Verifies comprehensive drawer visibility predicate across all animation phases (REQ-UI-162 / TST-UI-114 / ATT-1335).
+     */
+    @Test
+    fun testIsDrawerVisibleComprehensivePredicate() {
+        fun computeIsDrawerVisible(current: DrawerValue, target: DrawerValue, isAnimationRunning: Boolean): Boolean {
+            return current != DrawerValue.Closed || target != DrawerValue.Closed || isAnimationRunning
+        }
+
+        // Permutation 1: Settled Closed (idle)
+        assertFalse(
+            "Settled Closed (idle) must evaluate to false",
+            computeIsDrawerVisible(DrawerValue.Closed, DrawerValue.Closed, false)
+        )
+
+        // Permutation 2: Opening transition (animation in flight from Closed to Open)
+        assertTrue(
+            "Opening transition must evaluate to true",
+            computeIsDrawerVisible(DrawerValue.Closed, DrawerValue.Open, true)
+        )
+
+        // Permutation 3: Settled Open (idle)
+        assertTrue(
+            "Settled Open (idle) must evaluate to true",
+            computeIsDrawerVisible(DrawerValue.Open, DrawerValue.Open, false)
+        )
+
+        // Permutation 4: Closing transition (animation in flight from Open to Closed)
+        assertTrue(
+            "Closing transition must evaluate to true",
+            computeIsDrawerVisible(DrawerValue.Open, DrawerValue.Closed, true)
+        )
+
+        // Permutation 5: Post-target settle phase (target reached Closed, but animation finalizing)
+        assertTrue(
+            "Finalizing animation phase must evaluate to true",
+            computeIsDrawerVisible(DrawerValue.Closed, DrawerValue.Closed, true)
+        )
     }
 }
 
