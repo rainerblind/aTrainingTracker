@@ -193,15 +193,6 @@ fun TrackingTabsScreen(
         }
     }
 
-    // Move to first tab when tracking is started
-    val navigateTrigger by trackingTabsViewModel.navigateToTrackingTab.observeAsState()
-    LaunchedEffect(navigateTrigger) {
-        if (navigateTrigger != null) {
-            if (screenMode == ScreenMode.TRACKING) {
-                pagerState.scrollToPage(1)
-            }
-        }
-    }
 
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {

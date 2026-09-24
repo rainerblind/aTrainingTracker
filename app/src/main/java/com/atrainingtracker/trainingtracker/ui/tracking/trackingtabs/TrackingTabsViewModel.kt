@@ -36,7 +36,6 @@ import com.atrainingtracker.trainingtracker.repositories.LapEvent
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
-import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -124,19 +123,23 @@ class TrackingTabsViewModel(
             initialValue = emptyList()
         )
 
-    val navigateToTrackingTab = SingleLiveEvent<Unit>()
-
     init {
         // ensure the repository is bound to the BANALService
         banalServiceRepository.bindToBANALService()
 
         // Observe the tracking mode from the repository
         viewModelScope.launch {
+            var previousMode: TrackingMode? = null
             banalServiceRepository.trackingMode.asFlow().collect { mode ->
-                if (mode == TrackingMode.TRACKING) {
-                    Log.i("TrackingTabsViewModel", "Tracking started...")
-                    navigateToTrackingTab.call()
+                if (mode == TrackingMode.TRACKING &&
+                    previousMode != null &&
+                    previousMode != TrackingMode.TRACKING &&
+                    previousMode != TrackingMode.PAUSED
+                ) {
+                    Log.i("TrackingTabsViewModel", "Tracking started (rising edge) -> navigating to cockpit tab")
+                    _navigationEvent.emit(TabNavigationEvent.NavigateTo(0))
                 }
+                previousMode = mode
             }
         }
     }
