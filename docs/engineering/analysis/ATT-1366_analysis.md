@@ -8,7 +8,7 @@
 * **Related Issues**:
   - `ATT-1278`: *[Feature] Altitude Correction: Get correct altitude from the internet* (Precursor: Schema V5 & DEM Client)
   - `ATT-919`: *[Feature] Altitude Correction: Create UI for this DB such that the user can set the correct altitude that is then never ever updated* (Successor: Map UI & User Lock)
-  - `ATT-448` / `ATT-39`: Historical tickets that introduced raw barometric moving average learning (`REQ-DAT-007`)
+  - `ATT-448` / `ATT-39`: Historical tickets introducing raw barometric moving average learning (`REQ-DAT-007`)
   - `ATT-1353`: *[Bug] AltitudeFromPressureDevice.setAltitudeCorrection*
 
 ### Problem Statement
@@ -50,7 +50,7 @@ $$\Delta h \approx -8.3\text{ meters}$$
    On the first workout at a new start location (`hitCount = 1`), whatever weather happens to be active is recorded as the location's baseline. A single workout during an autumn storm or summer anticyclone traps an initial error of $\pm 150\text{m}$ that requires dozens of sessions to even partially dampen.
 
 4. **Destruction of Authoritative Calibrations**:
-   With the implementation of `ATT-1278` (Internet DEM) and the upcoming `ATT-919` (User manual lock), ground-truth reference altitudes (Copernicus 30m DEM or user survey heights) are available. Feeding noisy, weather-dependent `mLastRawAltitude` into a running mean degrades and corrupts authoritative ground-truth values.
+   With the implementation of `ATT-1278` (Internet DEM) and the upcoming `ATT-919` (User manual lock), ground-truth reference elevations are available. Feeding noisy, weather-dependent `mLastRawAltitude` into a running mean degrades and corrupts authoritative ground-truth values.
 
 ---
 
@@ -72,7 +72,7 @@ When a workout starts at an unknown location:
 2. Simultaneously on the calling thread, `knownLocationsDb.learnLocation()` executes immediately.
 3. Because the background DEM request has not completed yet, `getMyLocation(currentLatLng)` returns `null`.
 4. `learnLocation()` synchronously inserts a new location entry with source `AUTO_LEARNED` and altitude `mLastRawAltitude` (uncalibrated barometric reading).
-5. When `fetchDemOrFallbackAsync()` finishes on `mExecutor`, it attempts to insert an `INTERNET_DEM` entry at the same coordinates, causing duplicate spatial entries or inconsistent cache states.
+5. When `fetchDemOrFallbackAsync()` finishes on `mExecutor`, it races against this preliminary record, creating duplicate rows or conflicting spatial states.
 
 ### B. Inappropriate Altitude Mutation in `learnLocation()`
 In `KnownLocationsDatabaseManager.java`:
@@ -97,17 +97,36 @@ Even for locations that are not explicitly locked, mutating the altitude upon ev
 ### B. Eliminate Synchronous `AUTO_LEARNED` Race in `AltitudeFromPressureDevice`
 * When a location is unknown (`myLocation == null`), `AltitudeFromPressureDevice` shall rely exclusively on `fetchDemOrFallbackAsync()` to establish the initial location record with `INTERNET_DEM` or a validated fallback.
 * It shall **not** create a preliminary uncalibrated `AUTO_LEARNED` record using `mLastRawAltitude`.
+* Caller audit confirms: when `myLocation == null`, `AltitudeFromPressureDevice` cleanly falls back to GPS altitude without crashing or blocking the UI.
 * For existing locations, `learnLocation()` will record the visit (`hitCount++`) without touching the altitude.
 
-### C. Concurrency & Thread-Safety Guarantees
-* All mutations in `KnownLocationsDatabaseManager` (`addNewLocation`, `updateMyLocation`, `learnLocation`) are guarded by `synchronized (this)` monitor locking on the singleton manager.
-* In `fetchDemOrFallbackAsync()`, before creating a new record upon receiving DEM elevations, the callback executes a synchronized geofence query (`getMyLocation(latLng)`). If a location within the 200m radius was concurrently inserted or matched, it atomically updates the existing record rather than creating a duplicate row.
+### C. Concurrency & Explicit Transaction Boundaries
+* To eliminate TOCTOU (Time-of-Check to Time-of-Use) race conditions between asynchronous DEM resolution and synchronous sensor starts, `KnownLocationsDatabaseManager` encapsulates spatial discovery and upserts inside both a `synchronized (this)` monitor and an explicit SQLite transaction boundary:
+  ```java
+  SQLiteDatabase db = getDatabase();
+  db.beginTransaction();
+  try {
+      MyLocation existing = getMyLocation(latLng);
+      if (existing != null) {
+          // Increment hitCount or update DEM elevation if uncalibrated
+      } else {
+          // Atomic insert
+      }
+      db.setTransactionSuccessful();
+  } finally {
+      db.endTransaction();
+  }
+  ```
+* This guarantees atomic serializability across background threads and eliminates duplicate spatial rows.
 
-### D. Migration & Automatic Elevation Healing for Existing `AUTO_LEARNED` Records
+### D. Idempotency & Migration for Existing `AUTO_LEARNED` Records
 * **Schema Version**: Database remains at **Schema V5** (`DB_VERSION = 5` introduced in `ATT-1278`). No schema bump is required because `is_locked` and `source` columns already exist.
-* **Legacy & Auto-Learned Healing**:
-  All records currently in the database with `source = 'AUTO_LEARNED'`, `source = 'LEGACY_RAW'`, or `source IS NULL` (as long as `is_locked == 0`) are automatically queried on app launch via `healLegacyLocationsAsync()` and batch-updated to `INTERNET_DEM` with authoritative Copernicus 30m DEM elevations.
-  Locked records (`is_locked == 1`) and user-modified locations (`MANUAL_USER`) remain strictly immutable.
+* **Session-Level Idempotency Guard**:
+  To prevent redundant network requests and database contention, `KnownLocationsDatabaseManager` maintains an `AtomicBoolean sHealingDispatched = new AtomicBoolean(false)`. Batch healing runs at most once per application process lifetime.
+* **Target Criteria**:
+  The healing query strictly selects:
+  `is_locked = 0 AND (source = 'LEGACY_RAW' OR source = 'AUTO_LEARNED' OR source IS NULL)`
+  Locked records (`is_locked = 1`) and user-modified locations (`MANUAL_USER`) are strictly excluded and immutable.
 
 ---
 
@@ -130,7 +149,7 @@ Even for locations that are not explicitly locked, mutating the altitude upon ev
    - Verify `learnLocation()` increments `hitCount` on repeat visits.
    - Verify `learnLocation()` strictly preserves existing `altitude`, regardless of the `altitude` parameter passed into it.
    - Verify `source` remains intact.
-   - **Concurrency / Geofence Test**: Simulate concurrent `learnLocation()` and `fetchDemOrFallbackAsync()` completion to verify zero duplicate spatial rows.
+   - **Multi-Threaded Concurrency Test**: Use `CountDownLatch` across 2 worker threads simulating simultaneous `fetchDemOrFallbackAsync()` completion and `learnLocation()` calls to verify zero duplicate spatial rows and strict atomic transaction execution.
 2. **Integration Tests in `AltitudeFromPressureDeviceTest.kt`**:
    - Verify sensor initialization does not trigger competing uncalibrated inserts.
 3. **Clean-Room Regression**:
