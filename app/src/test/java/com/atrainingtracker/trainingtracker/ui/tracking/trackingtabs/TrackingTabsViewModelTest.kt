@@ -139,8 +139,8 @@ class TrackingTabsViewModelTest {
     }
 
     @Test
-    fun testPauseAndResumeDoesNotDisruptActivePage() = runTest(testDispatcher) {
-        // TC-3: READY -> TRACKING -> PAUSED -> TRACKING emits navigation only on the first start
+    fun testResumeFromPausedNavigatesToFirstCockpitTab() = runTest(testDispatcher) {
+        // TC-3: READY -> TRACKING -> PAUSED -> TRACKING emits navigation on start and on resume
         trackingModeLiveData.value = TrackingMode.READY
         val viewModel = createViewModel()
 
@@ -155,16 +155,18 @@ class TrackingTabsViewModelTest {
         trackingModeLiveData.value = TrackingMode.TRACKING
         testScheduler.advanceUntilIdle()
         assertEquals(1, events.size)
+        assertEquals(TabNavigationEvent.NavigateTo(0), events[0])
 
-        // 2. Pause tracking -> no event emitted
+        // 2. Pause tracking -> no new event emitted
         trackingModeLiveData.value = TrackingMode.PAUSED
         testScheduler.advanceUntilIdle()
         assertEquals(1, events.size)
 
-        // 3. Resume tracking from PAUSED -> no event emitted (must stay on current cockpit tab)
+        // 3. Resume tracking from PAUSED -> navigation emitted to first cockpit tab
         trackingModeLiveData.value = TrackingMode.TRACKING
         testScheduler.advanceUntilIdle()
-        assertEquals(1, events.size)
+        assertEquals(2, events.size)
+        assertEquals(TabNavigationEvent.NavigateTo(0), events[1])
 
         job.cancel()
     }

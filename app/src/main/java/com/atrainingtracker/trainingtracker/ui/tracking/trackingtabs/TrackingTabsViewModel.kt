@@ -133,8 +133,7 @@ class TrackingTabsViewModel(
             banalServiceRepository.trackingMode.asFlow().collect { mode ->
                 if (mode == TrackingMode.TRACKING &&
                     previousMode != null &&
-                    previousMode != TrackingMode.TRACKING &&
-                    previousMode != TrackingMode.PAUSED
+                    previousMode != TrackingMode.TRACKING
                 ) {
                     Log.i("TrackingTabsViewModel", "Tracking started (rising edge) -> navigating to cockpit tab")
                     _navigationEvent.emit(TabNavigationEvent.NavigateTo(0))
