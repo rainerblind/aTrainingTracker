@@ -39,6 +39,7 @@ import com.google.android.gms.maps.model.LatLng;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Orchestrates the persistent storage and retrieval of known geographical locations.
@@ -58,6 +59,12 @@ public class KnownLocationsDatabaseManager {
 
     // --- Modern Singleton Pattern ---
     private static volatile KnownLocationsDatabaseManager cInstance;
+    private static final AtomicBoolean sHealingDispatched = new AtomicBoolean(false);
+
+    public static void resetHealingDispatchedForTesting() {
+        sHealingDispatched.set(false);
+    }
+
     private final KnownLocationsDbHelper cDbHelper;
     private SQLiteDatabase mDatabase = null;
 
@@ -271,32 +278,71 @@ public class KnownLocationsDatabaseManager {
     }
 
     /**
-     * ATT-39: Automatically learns or refines a location's altitude.
-     * Uses a weighted average to improve estimate over time.
-     * Respects locked records and authoritative internet DEM elevations (REQ-DAT-014).
+     * ATT-39 / ATT-1366 / REQ-DAT-007: Records a visit to a workout start location.
+     * Increments the hit count without altering the reference altitude, preserving
+     * authoritative DEM elevations, user-locked values, and established baselines.
      */
     public void learnLocation(@Nullable LatLng pos, @Nullable Double altitude, @NonNull ExtremaType type) {
         if (pos == null || altitude == null || altitude.isNaN()) return;
 
         synchronized (this) {
-            MyLocation existing = getMyLocation(pos);
-            if (existing != null) {
-                if (existing.isLocked || existing.source == ElevationSource.INTERNET_DEM || existing.source == ElevationSource.MANUAL_USER) {
-                    if (DEBUG) Log.d(TAG, "Location '" + existing.name + "' is protected (" + existing.source + ", locked=" + existing.isLocked + "). Skipping auto-refinement.");
-                    return;
+            SQLiteDatabase db = getDatabase();
+            db.beginTransaction();
+            try {
+                MyLocation existing = getMyLocation(pos);
+                if (existing != null) {
+                    if (existing.isLocked) {
+                        if (DEBUG) Log.d(TAG, "Location '" + existing.name + "' is locked. Skipping hitCount update.");
+                        db.setTransactionSuccessful();
+                        return;
+                    }
+                    ContentValues values = new ContentValues();
+                    values.put(KnownLocationsDbHelper.HIT_COUNT, existing.hitCount + 1);
+                    updateId(existing.id, values);
+                    if (DEBUG) Log.d(TAG, "Incremented hitCount for '" + existing.name + "' to " + (existing.hitCount + 1));
+                } else {
+                    // New discovery fallback
+                    String name = "Auto-learned " + type.name().toLowerCase();
+                    addNewLocation(name, (double) Math.round(altitude), DEFAULT_RADIUS, pos.latitude, pos.longitude, type, false, ElevationSource.AUTO_LEARNED);
+                    if (DEBUG) Log.d(TAG, "Discovered new location at " + pos + " with altitude " + altitude + "m");
                 }
-                // Weighted average refinement
-                double refinedAlt = (existing.altitude * existing.hitCount + altitude) / (existing.hitCount + 1);
-                ContentValues values = new ContentValues();
-                values.put(KnownLocationsDbHelper.ALTITUDE, refinedAlt);
-                values.put(KnownLocationsDbHelper.HIT_COUNT, existing.hitCount + 1);
-                updateId(existing.id, values);
-                if (DEBUG) Log.d(TAG, "Refined altitude for '" + existing.name + "': " + refinedAlt + "m (hits: " + (existing.hitCount + 1) + ")");
-            } else {
-                // New discovery
-                String name = "Auto-learned " + type.name().toLowerCase();
-                addNewLocation(name, (double) Math.round(altitude), DEFAULT_RADIUS, pos.latitude, pos.longitude, type, false, ElevationSource.AUTO_LEARNED);
-                if (DEBUG) Log.d(TAG, "Discovered new location at " + pos + " with altitude " + altitude + "m");
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+        }
+    }
+
+    /**
+     * ATT-1366 / REQ-DAT-007: Atomically upserts a location within the spatial geofence radius.
+     * Prevents TOCTOU race conditions between concurrent sensor starts and asynchronous DEM resolution.
+     */
+    @Nullable
+    public MyLocation upsertLocationByGeofence(@NonNull LatLng latLng, double altitude, @NonNull String name,
+                                              @NonNull ExtremaType type, @NonNull ElevationSource source, boolean isLocked) {
+        synchronized (this) {
+            SQLiteDatabase db = getDatabase();
+            db.beginTransaction();
+            try {
+                MyLocation existing = getMyLocation(latLng);
+                if (existing != null) {
+                    if (!existing.isLocked) {
+                        ContentValues values = new ContentValues();
+                        values.put(KnownLocationsDbHelper.ALTITUDE, altitude);
+                        values.put(KnownLocationsDbHelper.SOURCE, source.name());
+                        values.put(KnownLocationsDbHelper.IS_LOCKED, isLocked ? 1 : 0);
+                        values.put(KnownLocationsDbHelper.HIT_COUNT, existing.hitCount + 1);
+                        updateId(existing.id, values);
+                    }
+                    db.setTransactionSuccessful();
+                    return getMyLocation(existing.id);
+                } else {
+                    MyLocation created = addNewLocation(name, altitude, DEFAULT_RADIUS, latLng.latitude, latLng.longitude, type, isLocked, source);
+                    db.setTransactionSuccessful();
+                    return created;
+                }
+            } finally {
+                db.endTransaction();
             }
         }
     }
@@ -382,8 +428,13 @@ public class KnownLocationsDatabaseManager {
 
     /**
      * Asynchronously executes batch healing of legacy locations in a background thread (REQ-DAT-014).
+     * Protected by session-level idempotency to prevent redundant concurrent runs.
      */
     public void healLegacyLocationsAsync() {
+        if (!sHealingDispatched.compareAndSet(false, true)) {
+            if (DEBUG) Log.d(TAG, "Legacy location batch healing already dispatched this session.");
+            return;
+        }
         new Thread(() -> {
             try {
                 healLegacyLocations();

@@ -268,7 +268,8 @@ class AltitudeFromPressureDeviceTest {
     }
 
     /**
-     * Additional coverage: when known location is NOT found, raw altitude is emitted without correction.
+     * TST-DAT-009.4: When known location is NOT found, raw altitude is emitted without correction,
+     * and learnLocation is NOT called synchronously (preventing speculative uncalibrated entries).
      */
     @Test
     fun testOnSensorChanged_whenKnownLocationNotFound_doesNotTriggerCorrection() {
@@ -291,5 +292,6 @@ class AltitudeFromPressureDeviceTest {
         assertEquals(0.0, device.altitudeCorrection, 0.001)
         assertEquals(500.0, (device.altitudeSensor.value as Number).toDouble(), 0.001)
         verify(exactly = 0) { mockContext.sendBroadcast(any()) }
+        verify(exactly = 0) { mockKnownLocationsDbManager.learnLocation(any<LatLng>(), any(), any()) }
     }
 }

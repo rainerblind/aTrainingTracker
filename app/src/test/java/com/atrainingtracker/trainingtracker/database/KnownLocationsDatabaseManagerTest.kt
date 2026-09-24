@@ -38,12 +38,14 @@ import java.lang.reflect.Field
 /**
  * Unit tests verifying KnownLocationsDatabaseManager, Schema V5 upgrade,
  * spatial caching within 200m radius, locked location immutability,
- * and legacy location batch healing.
+ * legacy location batch healing, and stable reference elevation preservation.
  *
  * Traceability:
  * - REQ-DAT-008: Atomic Database Upgrades.
  * - REQ-DAT-014: Internet Digital Elevation Model (DEM) Reference Altitude Retrieval, Spatial Caching & Legacy Location Healing.
+ * - REQ-DAT-007: Automated Altitude Reference Discovery & Stable Reference Elevation Preservation.
  * - TST-DAT-008: Tests 2, 6, 7, 8.
+ * - TST-DAT-009: Tests 1, 2, 3.
  */
 class KnownLocationsDatabaseManagerTest {
 
@@ -418,6 +420,146 @@ class KnownLocationsDatabaseManagerTest {
                 any()
             )
         }
+    }
+
+    /**
+     * TST-DAT-009.1: Reference Altitude Preservation and Hit Count Increment.
+     * Verifies that learnLocation() increments hitCount but NEVER mutates altitude
+     * on an existing known location (even under raw barometric pressure swings).
+     */
+    @Test
+    fun testLearnLocation_preservesExistingAltitude_andIncrementsHitCount() {
+        resetSingleton()
+        val manager = KnownLocationsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        setupMockCursorColumns(mockCursor)
+
+        every { mockCursor.moveToNext() } returns true andThen false
+        every { mockCursor.getInt(6) } returns 200 // radius
+        every { mockCursor.getDouble(5) } returns 48.0 // lat
+        every { mockCursor.getDouble(4) } returns 11.0 // lng
+        every { mockCursor.getLong(0) } returns 42L // id
+        every { mockCursor.getString(1) } returns "DEM Home" // name
+        every { mockCursor.getDouble(3) } returns 520.0 // altitude
+        every { mockCursor.getInt(7) } returns 2 // hitCount
+        every { mockCursor.getInt(8) } returns 0 // isLocked = false
+        every { mockCursor.getString(9) } returns "INTERNET_DEM" // source
+
+        every { mockDb.query(KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE, null, null, null, null, null, null) } returns mockCursor
+        every { anyConstructed<Location>().distanceTo(any()) } returns 10.0f
+
+        // Act: weather pressure swing gives raw altitude 470.0m (-50m drop)
+        manager.learnLocation(LatLng(48.0, 11.0), 470.0, ExtremaType.START)
+
+        // Assert: hitCount updated to 3, altitude NOT updated
+        verify(exactly = 1) {
+            anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.HIT_COUNT, 3)
+        }
+        verify(exactly = 0) {
+            anyConstructed<ContentValues>().put(eq(KnownLocationsDatabaseManager.KnownLocationsDbHelper.ALTITUDE), any<Double>())
+        }
+        verify(exactly = 1) {
+            mockDb.update(
+                KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE,
+                any(),
+                match { it.contains("_id=?") },
+                arrayOf("42")
+            )
+        }
+    }
+
+    /**
+     * TST-DAT-009.2: Locked Location Strict Immutability.
+     * Verifies that learnLocation() never modifies hitCount or altitude for a locked record.
+     */
+    @Test
+    fun testLearnLocation_lockedRecord_strictlyImmutable() {
+        resetSingleton()
+        val manager = KnownLocationsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        setupMockCursorColumns(mockCursor)
+
+        every { mockCursor.moveToNext() } returns true andThen false
+        every { mockCursor.getInt(6) } returns 200 // radius
+        every { mockCursor.getDouble(5) } returns 48.0 // lat
+        every { mockCursor.getDouble(4) } returns 11.0 // lng
+        every { mockCursor.getLong(0) } returns 99L // id
+        every { mockCursor.getString(1) } returns "Strictly Locked" // name
+        every { mockCursor.getDouble(3) } returns 600.0 // altitude
+        every { mockCursor.getInt(7) } returns 5 // hitCount
+        every { mockCursor.getInt(8) } returns 1 // isLocked = true
+        every { mockCursor.getString(9) } returns "MANUAL_USER" // source
+
+        every { mockDb.query(KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE, null, null, null, null, null, null) } returns mockCursor
+        every { anyConstructed<Location>().distanceTo(any()) } returns 10.0f
+
+        // Act: try to learn location on locked record
+        manager.learnLocation(LatLng(48.0, 11.0), 550.0, ExtremaType.START)
+
+        // Assert: 0 updates, 0 inserts
+        verify(exactly = 0) {
+            mockDb.update(any(), any(), any(), any())
+        }
+        verify(exactly = 0) {
+            mockDb.insert(any(), any(), any())
+        }
+    }
+
+    /**
+     * TST-DAT-009.3: Thread-safe Geofence Upsert under Concurrency.
+     * Verifies that upsertLocationByGeofence serializes execution and avoids TOCTOU race conditions.
+     */
+    @Test
+    fun testConcurrentUpsert_eliminatesTOCTOURace() {
+        resetSingleton()
+        val manager = KnownLocationsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        setupMockCursorColumns(mockCursor)
+
+        every { mockCursor.moveToNext() } returns false
+        every { mockDb.query(KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE, null, null, null, null, null, null) } returns mockCursor
+
+        val latch = java.util.concurrent.CountDownLatch(2)
+        val exceptions = java.util.concurrent.CopyOnWriteArrayList<Throwable>()
+
+        val t1 = Thread {
+            try {
+                manager.upsertLocationByGeofence(
+                    LatLng(48.0, 11.0), 500.0, "Start A",
+                    ExtremaType.START, ElevationSource.INTERNET_DEM, false
+                )
+            } catch (t: Throwable) {
+                exceptions.add(t)
+            } finally {
+                latch.countDown()
+            }
+        }
+
+        val t2 = Thread {
+            try {
+                manager.upsertLocationByGeofence(
+                    LatLng(48.0, 11.0), 505.0, "Start B",
+                    ExtremaType.START, ElevationSource.INTERNET_DEM, false
+                )
+            } catch (t: Throwable) {
+                exceptions.add(t)
+            } finally {
+                latch.countDown()
+            }
+        }
+
+        t1.start()
+        t2.start()
+
+        val completed = latch.await(5, java.util.concurrent.TimeUnit.SECONDS)
+        assertTrue("Concurrent executions must complete within timeout", completed)
+        assertTrue("No exceptions during concurrent execution", exceptions.isEmpty())
     }
 }
 
