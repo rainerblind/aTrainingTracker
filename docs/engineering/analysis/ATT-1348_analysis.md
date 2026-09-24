@@ -37,27 +37,49 @@ Fatal Exception: java.lang.NullPointerException: Attempt to invoke virtual metho
 
 ## 2. Requirement Traceability & ASPICE Mapping
 
-* **Parent Requirement (`REQ-CON-005`)**:
-  > "All BLE characteristic reads must be null-safe. Prevent application crashes when communicating with hardware."  
-  *Defect*: `REQ-CON-005` in `docs/requirements.md` was a legacy high-level placeholder lacking concrete behavioral specifications for thread concurrency, Binder-to-Handler handoffs, Time-of-Check to Time-of-Use (TOCTOU) race conditions, periodic delayed runnables, and disconnection cleanup.
+### 2.1 Baseline Requirements Verification (`docs/requirements.md`)
+An exhaustive audit of `docs/requirements.md` establishes the current connection and sensor requirement index:
+* `REQ-CON-001` through `REQ-CON-009`: Base ANT+ and BLE sensor profile requirements.
+* `REQ-CON-005`: Legacy placeholder (*"All BLE characteristic reads must be null-safe. Prevent application crashes when communicating with hardware."*). Lacks explicit behavioral specifications for thread concurrency, Binder-to-Handler handoffs, Time-of-Check to Time-of-Use (TOCTOU) race conditions, periodic delayed runnables, and disconnection cleanup.
+* `REQ-CON-010`: *Internal Sensor Pairing* (Verified in `ATT-508`).
+* `REQ-CON-011`: *Barometric Cold-Start Baseline Protection* (Verified in `ATT-508`).
+* **Next Sequential Identifier**: **`REQ-CON-012`** is strictly verified as the next available unique identifier in `docs/requirements.md`, with zero collision risk.
+* **Next Sequential Test Specification Identifier**: **`TST-CON-003`** (following `TST-CON-001` and `TST-CON-002` in `docs/tests.md`).
 
-* **Target Requirement (`REQ-CON-012`)**:
-  ```markdown
-  | **REQ-CON-012** | **Asynchronous BLE GATT Lifecycle, Thread-Safe Concurrency & Read Queue Null-Safety.** | The system SHALL guarantee thread-safe lifecycle and communication management for all Bluetooth Low Energy (BLE) peripherals (`MyBTLEDevice`):<br>1. *Thread Synchronization & TOCTOU Immunity*: All operations interacting with `mBluetoothGatt` and `mReadCharacteristicQueue` SHALL use thread-safe synchronization primitives (a dedicated reentrant lock/monitor `mGattLock` and thread-safe queue collections) and the local variable capture snapshot idiom (`final BluetoothGatt gatt = mBluetoothGatt; if (gatt != null) ...`), eliminating Time-of-Check to Time-of-Use (TOCTOU) race conditions between Binder callback threads and the UI Looper.<br>2. *Defensive Execution Guards*: Every characteristic read, characteristic write, descriptor write, and service discovery invocation SHALL verify that both `mBluetoothGatt != null` and the target characteristic/descriptor are non-null and that `Manifest.permission.BLUETOOTH_CONNECT` is granted before invoking framework APIs.<br>3. *Queue Purging & Connection Cleanup*: When transitioning to `STATE_DISCONNECTED`, upon search timeout, or during `shutDown()`, the system SHALL immediately clear `mReadCharacteristicQueue` and close and nullify the `mBluetoothGatt` reference under `mGattLock`, preventing stale or zombie operations against closed GATT instances.<br>4. *Handler Callback Lifecycle & Delayed Task Cancellation*: The system SHALL manage delayed periodic runnables (including the 5-minute battery percentage re-read `mBatteryReadRunnable`) using explicit object references and cancel them via `mHandler.removeCallbacks(...)` immediately upon disconnection or shutdown.<br><br>**Acceptance Criteria (Given-When-Then)**:<br>• *Given* an active or disconnected `MyBTLEDevice` instance where `mBluetoothGatt` is null or closed,<br>• *When* `readNextCharacteristic()` is invoked (from a Binder thread or Looper),<br>• *Then* the method and any posted runnables SHALL complete cleanly without throwing `NullPointerException` or `SecurityException`.<br>• *Given* a periodic battery re-read scheduled via `mHandler.postDelayed`,<br>• *When* the peripheral disconnects or `shutDown()` is called prior to timer expiration,<br>• *Then* the pending runnable SHALL be immediately cancelled from `mHandler` and `mReadCharacteristicQueue` SHALL be emptied.<br>• *Given* an empty characteristic queue and `sensorsRegistered() == false`,<br>• *When* service discovery finalizes and descriptor notifications are configured,<br>• *Then* all GATT service, characteristic, and descriptor references SHALL be guarded against null references prior to invocation.<br><br>**Invariants**: Normal BLE connection, service discovery, telemetry reception (HR, Bike Cadence/Speed/Power, Run Speed), battery reporting, and Android 12+ permission handling MUST NOT be regressed. |
-  ```
+### 2.2 Target Requirement Specification (`REQ-CON-012`)
+```markdown
+| **REQ-CON-012** | **Asynchronous BLE GATT Lifecycle, Thread-Safe Concurrency & Read Queue Null-Safety.** | The system SHALL guarantee thread-safe lifecycle and communication management for all Bluetooth Low Energy (BLE) peripherals (`MyBTLEDevice`):<br>1. *Thread Synchronization & TOCTOU Immunity*: All operations interacting with `mBluetoothGatt` and `mReadCharacteristicQueue` SHALL use thread-safe synchronization primitives (a dedicated reentrant lock/monitor `mGattLock` and thread-safe queue collections) and the local variable capture snapshot idiom (`final BluetoothGatt gatt = mBluetoothGatt; if (gatt != null) ...`), eliminating Time-of-Check to Time-of-Use (TOCTOU) race conditions between Binder callback threads and the UI Looper.<br>2. *Defensive Execution Guards*: Every characteristic read, characteristic write, descriptor write, and service discovery invocation SHALL verify that both `mBluetoothGatt != null` and the target characteristic/descriptor are non-null and that `Manifest.permission.BLUETOOTH_CONNECT` is granted before invoking framework APIs.<br>3. *Queue Purging & Connection Cleanup*: When transitioning to `STATE_DISCONNECTED`, upon search timeout, or during `shutDown()`, the system SHALL immediately clear `mReadCharacteristicQueue` and close and nullify the `mBluetoothGatt` reference under `mGattLock`, preventing stale or zombie operations against closed GATT instances.<br>4. *Handler Callback Lifecycle & Delayed Task Cancellation*: The system SHALL manage delayed periodic runnables (including the 5-minute battery percentage re-read `mBatteryReadRunnable`) using explicit object references and cancel them via `mHandler.removeCallbacks(...)` immediately upon disconnection or shutdown.<br><br>**Acceptance Criteria (Given-When-Then)**:<br>• *Given* an active or disconnected `MyBTLEDevice` instance where `mBluetoothGatt` is null or closed,<br>• *When* `readNextCharacteristic()` is invoked (from a Binder thread or Looper),<br>• *Then* the method and any posted runnables SHALL complete cleanly without throwing `NullPointerException` or `SecurityException`.<br>• *Given* a periodic battery re-read scheduled via `mHandler.postDelayed`,<br>• *When* the peripheral disconnects or `shutDown()` is called prior to timer expiration,<br>• *Then* the pending runnable SHALL be immediately cancelled from `mHandler` and `mReadCharacteristicQueue` SHALL be emptied.<br>• *Given* an empty characteristic queue and `sensorsRegistered() == false`,<br>• *When* service discovery finalizes and descriptor notifications are configured,<br>• *Then* all GATT service, characteristic, and descriptor references SHALL be guarded against null references prior to invocation.<br><br>**Invariants**: Normal BLE connection, service discovery, telemetry reception (HR, Bike Cadence/Speed/Power, Run Speed), battery reporting, and Android 12+ permission handling MUST NOT be regressed. |
+```
 
-* **Target Verification (`TST-CON-003`)**:
-  ```markdown
-  | **TST-CON-003** | `ATT-1348` | **BLE GATT Lifecycle, Thread-Safe Concurrency & Null-Safety Unit Tests** | `REQ-CON-012` | 1. *Null GATT Resilience*: Instantiate `MyBTLEDevice` with null `mBluetoothGatt`; populate `mReadCharacteristicQueue`; invoke `readNextCharacteristic()`; drain main Looper; verify zero NPEs.<br>2. *TOCTOU Race Simulation*: Trigger `readNextCharacteristic()`; nullify `mBluetoothGatt` concurrently before the Looper executes the runnable; verify the captured local snapshot prevents crash.<br>3. *Disconnection Draining*: Enqueue characteristics; trigger `onConnectionStateChange(..., STATE_DISCONNECTED)`; verify `mReadCharacteristicQueue` is empty and `mBluetoothGatt` is null.<br>4. *Delayed Battery Callback Cancellation*: Trigger battery update; verify delayed runnable is scheduled; trigger disconnection; verify delayed runnable is cancelled from `mHandler` and does not run.<br>5. *Empty Queue Descriptor Safety*: Invoke empty queue branch when `mBluetoothGatt` is null or service/characteristic is missing; verify zero crashes. | Robust execution across all BLE lifecycle transitions with 0 NPEs. | Proposed |
-  ```
+### 2.3 Target Test Specification (`TST-CON-003`)
+```markdown
+| **TST-CON-003** | `ATT-1348` | **BLE GATT Lifecycle, Thread-Safe Concurrency & Null-Safety Unit Tests** | `REQ-CON-012` | 1. *Null GATT Resilience*: Instantiate `MyBTLEDevice` with null `mBluetoothGatt`; populate `mReadCharacteristicQueue`; invoke `readNextCharacteristic()`; drain main Looper; verify zero NPEs.<br>2. *TOCTOU Race Simulation*: Trigger `readNextCharacteristic()`; nullify `mBluetoothGatt` concurrently before the Looper executes the runnable; verify the captured local snapshot prevents crash.<br>3. *Disconnection Draining*: Enqueue characteristics; trigger `onConnectionStateChange(..., STATE_DISCONNECTED)`; verify `mReadCharacteristicQueue` is empty and `mBluetoothGatt` is null.<br>4. *Delayed Battery Callback Cancellation*: Trigger battery update; verify delayed runnable is scheduled; trigger disconnection; verify delayed runnable is cancelled from `mHandler` and does not run.<br>5. *Empty Queue Descriptor Safety*: Invoke empty queue branch when `mBluetoothGatt` is null or service/characteristic is missing; verify zero crashes. | Robust execution across all BLE lifecycle transitions with 0 NPEs. | Proposed |
+```
 
 ---
 
-## 3. Forensic Root Cause Analysis (RCA)
+## 3. Call Site & Threading Boundary Matrix
 
-### 3.1 Asynchronous Execution Race Between Thread Pools
+To guarantee exhaustive coverage and prevent regression across the Bluetooth LE subsystem, every call site and lifecycle trigger interacting with `mBluetoothGatt`, `mReadCharacteristicQueue`, and `mHandler` has been audited across execution boundaries:
+
+| Method / Callback | Caller Location | Invoking Thread Context | Resource Accessed | Current Risk / Failure Mode | Mitigated Architecture Under `REQ-CON-012` |
+|:---|:---|:---|:---|:---|:---|
+| `onConnectionStateChange` | Android Bluetooth Stack IPC | Binder Thread (`Binder_X`) | `mState`, `mBluetoothGatt`, `mHandler` | When `STATE_DISCONNECTED`: calls `disconnectFromGatt()` which did not nullify `mBluetoothGatt` or clear queue; posts un-guarded `discoverServices()` on `STATE_CONNECTED`. | Synchronously cancel delayed battery runnable and clear queue; update state; guard `mBluetoothGatt.discoverServices()` with local snapshot. |
+| `onServicesDiscovered` | Android Bluetooth Stack IPC | Binder Thread (`Binder_X`) | `mReadCharacteristicQueue`, `mHandler` | Posts runnable adding battery characteristic and invoking `readNextCharacteristic()`. If GATT disconnected in interim, triggers NPE. | Enqueues to thread-safe `ConcurrentLinkedQueue`; captures local snapshot of `mBluetoothGatt`. |
+| `onCharacteristicRead` | Android Bluetooth Stack IPC | Binder Thread (`Binder_X`) | `mReadCharacteristicQueue`, `mHandler` | Calls `readNextCharacteristic()` directly on Binder thread while queue draining runs on Looper. | Thread-safe queue poll; posts safe Looper execution using local snapshot. |
+| `onCharacteristicChanged` | Android Bluetooth Stack IPC | Binder Thread (`Binder_X`) | Telemetry sensors, `mHandler` | Forwards measurement updates to abstract method. | Preserved; safe dispatch to sensors. |
+| `readNextCharacteristic` | `onServicesDiscovered:120`, `onCharacteristicRead:131`, `mBatteryReadRunnable:255` | Binder Thread OR Main Looper | `mReadCharacteristicQueue`, `mBluetoothGatt`, `mHandler` | **Crash Point (line 278)**: Unprotected poll and un-guarded `mBluetoothGatt.readCharacteristic(gattChar)`. Empty queue branch has 5 unprotected dereferences. | Local snapshot capture (`final BluetoothGatt gatt = mBluetoothGatt;`); null validation on `gatt` and `gattChar`; defensive guards on all descriptor setup. |
+| `disconnectFromGatt` | `onConnectionStateChange:87`, `startSearching timeout:169`, `shutDown:218` | Binder Thread OR Main Looper | `mBluetoothGatt`, `mReadCharacteristicQueue`, `mHandler` | Does not nullify `mBluetoothGatt`; does not purge `mReadCharacteristicQueue`; does not cancel pending `mBatteryReadRunnable`. | Atomically swaps and nullifies `mBluetoothGatt` under `mGattLock`; clears queue; cancels delayed runnables on `mHandler`. |
+| `startSearching` | `BANALService`, device reconnect:89 | Main UI Thread / Service Thread | `mState`, `mBluetoothGatt`, `mHandler` | `connectGatt` can return null or fail permission check, leaving `mBluetoothGatt` null. Timeout runnable calls `disconnectFromGatt()`. | Manages search timeout runnable; handles null return from `connectGatt` safely under `mGattLock`. |
+| `shutDown` | Device teardown / Service stop | Main UI Thread | `mHandler`, `mBluetoothGatt` | Relied on `removeCallbacksAndMessages(null)` which does not clear queues or nullify references. | Calls `disconnectFromGatt()`, purges queue, detaches listeners under `mGattLock`. |
+
+---
+
+## 4. Forensic Root Cause Analysis (RCA)
+
+### 4.1 Asynchronous Execution Race Between Thread Pools
 In `MyBTLEDevice.java`, GATT operations span two distinct execution environments:
-1. **Android Binder Threads**: The Android Bluetooth stack executes `BluetoothGattCallback` methods (`onConnectionStateChange`, `onServicesDiscovered`, `onCharacteristicRead`, `onCharacteristicChanged`) on arbitrary binder worker threads (`Binder:XXXX_X`).
+1. **Android Binder Threads**: The Android Bluetooth stack executes `BluetoothGattCallback` methods on arbitrary binder worker threads (`Binder:XXXX_X`).
 2. **Main Thread Looper**: `mHandler` dispatches posted runnables sequentially on the UI main thread (`Looper.getMainLooper()`).
 
 In `MyBTLEDevice.java:264-280`:
@@ -82,7 +104,7 @@ In `MyBTLEDevice.java:264-280`:
         }
 ```
 
-### 3.2 Detailed Defect Mechanisms
+### 4.2 Detailed Defect Mechanisms
 
 #### A. Time-of-Check to Time-of-Use (TOCTOU) Race Condition
 `mBluetoothGatt` is an un-synchronized field (`protected BluetoothGatt mBluetoothGatt;`).
@@ -91,7 +113,7 @@ If `readNextCharacteristic()` is called while a peripheral is active or disconne
 2. A `Runnable` is posted to `mHandler`.
 3. Before the main thread processes this `Runnable`, a disconnection event occurs on a Binder thread, or `disconnectFromGatt()` / `shutDown()` executes, or `mBluetoothGatt` is closed/nulled.
 4. When `mHandler` executes `run()`, `mBluetoothGatt` is `null`. Dereferencing `mBluetoothGatt.readCharacteristic(gattChar)` throws `NullPointerException`.
-5. Furthermore, without capturing a local reference (`final BluetoothGatt gatt = mBluetoothGatt`), even an `if (mBluetoothGatt != null)` check inside `run()` is vulnerable if another thread sets `mBluetoothGatt = null` immediately between the `if` check and the method call.
+5. Without capturing a local reference (`final BluetoothGatt gatt = mBluetoothGatt`), even an `if (mBluetoothGatt != null)` check inside `run()` is vulnerable if another thread sets `mBluetoothGatt = null` immediately between the `if` check and the method call.
 
 #### B. Delayed Periodic Battery Poll Leak
 In `characteristicUpdate`:
@@ -120,22 +142,6 @@ protected Queue<BluetoothGattCharacteristic> mReadCharacteristicQueue = new Link
 
 #### D. Failure to Nullify and Clean Up in `disconnectFromGatt()`
 In `disconnectFromGatt()`:
-```java
-private void disconnectFromGatt() {
-    if (mBluetoothGatt != null) {
-        mHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                    return;
-                }
-                mBluetoothGatt.disconnect();
-                mBluetoothGatt.close();
-            }
-        });
-    }
-}
-```
 * `mBluetoothGatt` was never nulled after `close()`, creating dangling references to a closed GATT client.
 * `mReadCharacteristicQueue` was never cleared upon disconnection, leaving obsolete characteristics queued.
 * No `removeCallbacks` was invoked to cancel pending delayed tasks.
@@ -157,21 +163,29 @@ mHandler.post(new Runnable() {
     }
 });
 ```
-This branch has multiple cascading NPE vulnerabilities:
+This branch has 5 cascading NPE vulnerabilities:
 1. `mBluetoothGatt.getService(...)` crashes if `mBluetoothGatt == null`.
-2. `btGattService.getCharacteristic(...)` crashes if `btGattService == null` (already logged as "WTF", but only returns after logging).
+2. `btGattService.getCharacteristic(...)` crashes if `btGattService == null`.
 3. `btGattChar.getDescriptor(...)` crashes if `btGattChar == null`.
 4. `descriptor.setValue(...)` crashes if `descriptor == null`.
 5. `mBluetoothGatt.writeDescriptor(...)` crashes if `mBluetoothGatt == null`.
 
 ---
 
-## 4. Architectural Solution & Thread Synchronization Design
+## 5. Architectural Solution, Thread Synchronization & Deadlock Hazard Analysis
 
-To permanently eliminate all race conditions, TOCTOU vulnerabilities, and NPEs, the architecture must implement explicit synchronization, thread-safe collections, snapshot capturing, and active callback cancellation.
+### 5.1 Deadlock Hazard Analysis & Synchronization Hierarchy
+A critical hazard in multi-threaded Android BLE development is the introduction of locks across IPC callback boundaries:
+* **The Hazard**: If `mGattLock` were held while calling Android Bluetooth framework methods (e.g. `connectGatt`, `disconnect`, `close`, `readCharacteristic`, `discoverServices`), or if `mGattLock` were held while synchronously waiting on the Main Looper, a classic **AB-BA Deadlock** can occur:
+  - Thread 1 (Main Looper): Holds `mGattLock`, calls a blocking/IPC Bluetooth method that waits on Android's Bluetooth Service lock.
+  - Thread 2 (Android Bluetooth Binder Thread): Holds Android's Bluetooth Service lock, calls `onCharacteristicRead` or `onConnectionStateChange`, which attempts to acquire `mGattLock`.
+  - Result: Complete process freeze / ANR (Application Not Responding).
 
-### 4.1 Synchronization Primitives & Thread-Safe Collections
-1. **Dedicated Mutex Object**:
+* **The Anti-Deadlock Architectural Rule**:
+  **`mGattLock` SHALL ONLY be used for short, non-blocking in-memory reference swapping and queue state protection. `mGattLock` MUST NEVER be held when invoking Android framework BLE methods or posting to handlers.**
+
+### 5.2 Synchronization Primitives & Atomic Boundaries
+1. **Dedicated In-Memory Mutex**:
    ```java
    private final Object mGattLock = new Object();
    ```
@@ -179,35 +193,33 @@ To permanently eliminate all race conditions, TOCTOU vulnerabilities, and NPEs, 
    ```java
    protected volatile BluetoothGatt mBluetoothGatt;
    ```
-3. **Thread-Safe Queue**:
+3. **Thread-Safe Concurrent Queue**:
    ```java
    protected final Queue<BluetoothGattCharacteristic> mReadCharacteristicQueue = new ConcurrentLinkedQueue<>();
    ```
-   Replacing `LinkedList` with `ConcurrentLinkedQueue` guarantees atomic thread-safe enqueue/dequeue operations across Binder threads and the Looper.
+4. **Local Variable Snapshot Idiom**:
+   Eliminates TOCTOU without holding locks during framework execution:
+   ```java
+   final BluetoothGatt gatt = mBluetoothGatt;
+   if (gatt != null) {
+       gatt.readCharacteristic(gattChar);
+   }
+   ```
+   Even if another thread clears `mBluetoothGatt = null` an instant later, `gatt` holds a non-null local stack reference. Framework calls on closed GATT instances safely return `false` without crashing.
 
-### 4.2 Local Variable Snapshot Idiom (TOCTOU Elimination)
-Whenever `mBluetoothGatt` is accessed inside a `Runnable` or method, capture a local snapshot:
-```java
-final BluetoothGatt gatt = mBluetoothGatt;
-if (gatt == null) {
-    if (DEBUG) Log.w(TAG, "GATT reference is null; skipping operation.");
-    return;
-}
-```
-Because `gatt` is a local stack variable, any concurrent action that nulls `mBluetoothGatt` cannot turn `gatt` into `null` between the check and the call.
-
-### 4.3 Explicit Handler Callback Management
+### 5.3 Explicit Handler Callback Management
 Replace the anonymous battery read runnable with a dedicated, cancellable instance:
 ```java
+private BluetoothGattCharacteristic mBatteryCharacteristic;
+
 private final Runnable mBatteryReadRunnable = new Runnable() {
     @Override
     public void run() {
-        synchronized (mGattLock) {
-            final BluetoothGatt gatt = mBluetoothGatt;
-            if (gatt != null && mBatteryCharacteristic != null) {
-                mReadCharacteristicQueue.add(mBatteryCharacteristic);
-                readNextCharacteristic();
-            }
+        final BluetoothGatt gatt = mBluetoothGatt;
+        final BluetoothGattCharacteristic batteryChar = mBatteryCharacteristic;
+        if (gatt != null && batteryChar != null) {
+            mReadCharacteristicQueue.add(batteryChar);
+            readNextCharacteristic();
         }
     }
 };
@@ -217,23 +229,23 @@ Upon disconnection (`STATE_DISCONNECTED`), search timeout, or `shutDown()`, imme
 mHandler.removeCallbacks(mBatteryReadRunnable);
 ```
 
-### 4.4 Comprehensive `disconnectFromGatt()` Redesign
+### 5.4 Redesigned `disconnectFromGatt()` Implementation
 ```java
 private void disconnectFromGatt() {
     if (DEBUG) Log.i(TAG, "disconnectFromGatt()");
 
-    // 1. Cancel delayed callbacks and drain queue immediately
+    // 1. Immediately cancel delayed callbacks and purge pending queue
     mHandler.removeCallbacks(mBatteryReadRunnable);
     mReadCharacteristicQueue.clear();
 
-    // 2. Synchronously detach and nullify mBluetoothGatt under lock
+    // 2. Atomically detach and nullify mBluetoothGatt under lock (non-blocking)
     final BluetoothGatt gattToClose;
     synchronized (mGattLock) {
         gattToClose = mBluetoothGatt;
         mBluetoothGatt = null;
     }
 
-    // 3. Post close to Handler if gattToClose was active
+    // 3. Close the detached GATT instance asynchronously on Handler without holding mGattLock
     if (gattToClose != null) {
         mHandler.post(new Runnable() {
             @Override
@@ -252,16 +264,13 @@ private void disconnectFromGatt() {
 }
 ```
 
-### 4.5 Robust `readNextCharacteristic()` Implementation
+### 5.5 Redesigned `readNextCharacteristic()` Implementation
 ```java
 protected void readNextCharacteristic() {
     if (DEBUG) Log.i(TAG, "readNextCharacteristic");
 
-    if (!mReadCharacteristicQueue.isEmpty()) {
-        final BluetoothGattCharacteristic gattChar = mReadCharacteristicQueue.poll();
-        if (gattChar == null) {
-            return;
-        }
+    final BluetoothGattCharacteristic gattChar = mReadCharacteristicQueue.poll();
+    if (gattChar != null) {
         mHandler.post(new Runnable() {
             @Override
             public void run() {
@@ -316,17 +325,17 @@ protected void readNextCharacteristic() {
 
 ---
 
-## 5. Preserved Invariants & Boundary Verification
+## 6. Preserved Invariants & Boundary Verification
 
 1. **BLE Functional Continuity**: All valid BLE device types (`BTLEHeartRateDevice`, `BTLEBikeDevice`, `BTLEBikePowerDevice`, `BTLERunSpeedDevice`) MUST continue to connect, discover services, read battery percentage, and receive measurement characteristic notifications without regression.
 2. **Permission Compliance**: `Manifest.permission.BLUETOOTH_CONNECT` checks MUST be preserved on all paths invoking Android BLE APIs.
 3. **Queue Discipline**: When a GATT connection is lost or closed, all stale characteristics in `mReadCharacteristicQueue` MUST be purged to prevent phantom reads upon future reconnection.
 4. **Handler Callback Cleanup**: Pending delayed battery re-read runnables MUST NOT trigger characteristic reads on dead connections.
-5. **Thread Safety**: Access to `mBluetoothGatt` and state transitions must be robust across background Binder threads and the UI Handler thread.
+5. **Deadlock Freedom**: `mGattLock` is never held across framework calls or thread waits.
 
 ---
 
-## 6. Acceptance Criteria & Test Strategy
+## 7. Acceptance Criteria & Test Strategy
 
 ### Acceptance Criteria
 1. Given an instance of `MyBTLEDevice` where `mBluetoothGatt` is null, calling `readNextCharacteristic()` SHALL NOT throw a `NullPointerException` and SHALL terminate safely.
