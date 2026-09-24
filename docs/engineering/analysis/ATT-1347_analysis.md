@@ -145,15 +145,15 @@ Fatal Exception: java.lang.NoSuchMethodError: No virtual method setAccessibility
      }
      ```
    - **Patched Artifact (`androidx.core:core:1.15.0-patched`)**:
-     - Based on official `androidx.core:core:1.15.0.aar`, where `AccessibilityEventCompat.class` and `AccessibilityEventCompat$Api34Impl.class` are replaced with bytecode containing defensive try-catch guards:
+     - Based on official `androidx.core:core:1.15.0.aar`, where `AccessibilityEventCompat.class` and `AccessibilityEventCompat$Api34Impl.class` are replaced with bytecode containing defensive try-catch guards catching `LinkageError` (specifically targeting `NoSuchMethodError` while strictly avoiding swallowing fatal JVM errors such as `OutOfMemoryError` or `ThreadDeath`):
        ```java
        @RequiresApi(34)
        static class Api34Impl {
            static boolean isAccessibilityDataSensitive(AccessibilityEvent event) {
                try {
                    return event.isAccessibilityDataSensitive();
-               } catch (Throwable t) {
-                   Log.w(TAG, "isAccessibilityDataSensitive failed on platform; suppressing error", t);
+               } catch (LinkageError e) {
+                   Log.w(TAG, "isAccessibilityDataSensitive failed on platform; suppressing error", e);
                    return false;
                }
            }
@@ -162,8 +162,8 @@ Fatal Exception: java.lang.NoSuchMethodError: No virtual method setAccessibility
                    boolean accessibilityDataSensitive) {
                try {
                    event.setAccessibilityDataSensitive(accessibilityDataSensitive);
-               } catch (Throwable t) {
-                   Log.w(TAG, "setAccessibilityDataSensitive missing on platform framework; suppressing error", t);
+               } catch (LinkageError e) {
+                   Log.w(TAG, "setAccessibilityDataSensitive missing on platform framework; suppressing error", e);
                }
            }
        }
@@ -184,6 +184,7 @@ Fatal Exception: java.lang.NoSuchMethodError: No virtual method setAccessibility
    - **Technical Advantages & Compliance**:
      - **Zero Duplicate Class Conflicts**: Because `androidx.core:core:1.15.0-patched` replaces `androidx.core:core:1.15.0` at the dependency resolution level, there is exactly ONE definition of `AccessibilityEventCompat` in the entire build. D8 encounters zero duplicate classes.
      - **Clean App Source Tree**: Zero package-spoofed or shadowed classes in `app/src/main/java`.
+     - **Precise Exception Boundary**: Catching `LinkageError` safely absorbs `NoSuchMethodError` and `IncompatibleClassChangeError` without catching or suppressing unrelated JVM fatal runtime errors.
      - **Direct Call-Site Guard**: Intercepts the missing virtual method directly at the invocation site before any exception can escape into Compose coroutines. `createEvent()` succeeds normally.
      - **Zero Looper Disruption & Zero CPU Lockup**: Because `createEvent()` completes cleanly, Compose's `boundsUpdatesEventLoop$ui` processes its frame and suspends normally without crashing or infinite retry looping.
      - **Build Variant Neutrality**: Verified with clean, successful executions of `./gradlew assembleDebug`, `./gradlew assembleRelease`, and `./gradlew testDebugUnitTest`.
