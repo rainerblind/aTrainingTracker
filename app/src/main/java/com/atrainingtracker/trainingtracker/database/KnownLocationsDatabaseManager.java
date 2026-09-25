@@ -291,15 +291,10 @@ public class KnownLocationsDatabaseManager {
             try {
                 MyLocation existing = getMyLocation(pos);
                 if (existing != null) {
-                    if (existing.isLocked) {
-                        if (DEBUG) Log.d(TAG, "Location '" + existing.name + "' is locked. Skipping hitCount update.");
-                        db.setTransactionSuccessful();
-                        return;
-                    }
                     ContentValues values = new ContentValues();
                     values.put(KnownLocationsDbHelper.HIT_COUNT, existing.hitCount + 1);
                     updateId(existing.id, values);
-                    if (DEBUG) Log.d(TAG, "Incremented hitCount for '" + existing.name + "' to " + (existing.hitCount + 1));
+                    if (DEBUG) Log.d(TAG, "Incremented hitCount for '" + existing.name + "' to " + (existing.hitCount + 1) + " (isLocked=" + existing.isLocked + ")");
                 } else {
                     // New discovery fallback
                     String name = "Auto-learned " + type.name().toLowerCase();
