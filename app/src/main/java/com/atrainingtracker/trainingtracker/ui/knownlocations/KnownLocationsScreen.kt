@@ -57,11 +57,15 @@ import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.map.createHeartPinMarker
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.ui.tooling.preview.Preview
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -430,7 +434,7 @@ private fun KnownLocationsListContent(
 }
 
 /**
- * High-density location card styled consistently with Lieblingsstrecken (RouteItem / RouteSummaryHeader).
+ * Modern location card with icon badge, inline metrics, trailing edit button, and long-press context menu.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -450,7 +454,7 @@ private fun KnownLocationCard(
                 .testTag("location_card_${item.id}"),
             onClick = onEdit
         ) {
-            Column(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .combinedClickable(
@@ -458,48 +462,97 @@ private fun KnownLocationCard(
                         onLongClick = { showContextMenu = true }
                     )
                     .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Top Row: Location Icon + Location Name
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                // Leading Icon Container Badge
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(44.dp)
                 ) {
-                    Icon(
-                        painter = painterResource(R.drawable.my_locations),
-                        contentDescription = null,
-                        modifier = Modifier.size(32.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            painter = painterResource(R.drawable.my_locations),
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
 
+                // Center Column: Title & Inline Metrics
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                     Text(
                         text = item.name,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
+                        overflow = TextOverflow.Ellipsis
                     )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_ascent),
+                                contentDescription = null,
+                                modifier = Modifier.size(15.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = KnownLocationsUnitConversions.formatAltitude(item.altitude, isMetric),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Text(
+                            text = "•",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.control_start),
+                                contentDescription = null,
+                                modifier = Modifier.size(15.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = stringResource(R.string.known_locations_starts_count, item.hitCount),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
 
-                // Second Row: Metrics (Altitude and Starts Count)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                // Trailing Edit Icon Button
+                IconButton(
+                    onClick = onEdit,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .testTag("location_card_edit_${item.id}")
                 ) {
-                    MetricItem(
-                        iconRes = R.drawable.ic_ascent,
-                        value = KnownLocationsUnitConversions.formatAltitude(item.altitude, isMetric),
-                        isPrimary = true
-                    )
-
-                    MetricItem(
-                        iconRes = R.drawable.control_start,
-                        value = stringResource(R.string.known_locations_starts_count, item.hitCount),
-                        isPrimary = true
+                    Icon(
+                        painter = painterResource(R.drawable.ic_table_edit),
+                        contentDescription = stringResource(R.string.edit_my_location),
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -749,3 +802,441 @@ private fun KnownLocationsMapContent(
         }
     }
 }
+
+// =============================================================================
+// PREVIEW DESIGN VARIANTS FOR ITERATION
+// =============================================================================
+
+/**
+ * Variant 2: Modern Card with circular/squircle icon badge, inline metrics, and trailing edit action.
+ */
+@Composable
+fun KnownLocationCardVariant2(
+    item: KnownLocationItem,
+    isMetric: Boolean = true,
+    onEdit: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    MappableListItem(
+        modifier = modifier.fillMaxWidth(),
+        onClick = onEdit
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(44.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        painter = painterResource(R.drawable.my_locations),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = item.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_ascent),
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = KnownLocationsUnitConversions.formatAltitude(item.altitude, isMetric),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Text(
+                        text = "•",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.control_start),
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = stringResource(R.string.known_locations_starts_count, item.hitCount),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            IconButton(
+                onClick = onEdit,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_table_edit),
+                    contentDescription = stringResource(R.string.edit_my_location),
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Variant 3: Material 3 Pill-Chip Badges for metrics.
+ */
+@Composable
+fun KnownLocationCardVariant3(
+    item: KnownLocationItem,
+    isMetric: Boolean = true,
+    onEdit: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    MappableListItem(
+        modifier = modifier.fillMaxWidth(),
+        onClick = onEdit
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.my_locations),
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+
+                Text(
+                    text = item.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+
+                IconButton(
+                    onClick = onEdit,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_table_edit),
+                        contentDescription = stringResource(R.string.edit_my_location),
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_ascent),
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = KnownLocationsUnitConversions.formatAltitude(item.altitude, isMetric),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.control_start),
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = stringResource(R.string.known_locations_starts_count, item.hitCount),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Variant 4: Compact Two-Tone Tile with left accent indicator.
+ */
+@Composable
+fun KnownLocationCardVariant4(
+    item: KnownLocationItem,
+    isMetric: Boolean = true,
+    onEdit: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    MappableListItem(
+        modifier = modifier.fillMaxWidth(),
+        onClick = onEdit
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(4.dp)
+                    .background(MaterialTheme.colorScheme.primary)
+            )
+
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.my_locations),
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = item.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "${KnownLocationsUnitConversions.formatAltitude(item.altitude, isMetric)}  •  ${stringResource(R.string.known_locations_starts_count, item.hitCount)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                IconButton(
+                    onClick = onEdit,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_table_edit),
+                        contentDescription = stringResource(R.string.edit_my_location),
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+// =============================================================================
+// COMPOSE PREVIEWS (Directly visible in Android Studio Split / Design View)
+// =============================================================================
+
+private val previewMockLocation1 = KnownLocationItem(
+    id = 1L,
+    name = "Zuhause",
+    altitude = 520.0,
+    radius = 50,
+    latLng = LatLng(48.137154, 11.576124),
+    hitCount = 42,
+    isLocked = true,
+    source = ElevationSource.MANUAL_USER
+)
+
+private val previewMockLocation2 = KnownLocationItem(
+    id = 2L,
+    name = "Olympiapark",
+    altitude = 512.0,
+    radius = 100,
+    latLng = LatLng(48.1751, 11.5518),
+    hitCount = 14,
+    isLocked = false,
+    source = ElevationSource.INTERNET_DEM
+)
+
+private val previewMockLocation3 = KnownLocationItem(
+    id = 3L,
+    name = "Starnberger See",
+    altitude = 584.0,
+    radius = 120,
+    latLng = LatLng(47.9984, 11.3435),
+    hitCount = 7,
+    isLocked = false,
+    source = ElevationSource.AUTO_LEARNED
+)
+
+@Preview(name = "Comparison - All 4 Variants", showBackground = true)
+@Composable
+fun PreviewAllLocationItemVariants() {
+    ATrainingTrackerTheme {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text("Variante 1: Aktuell (Route-Style)", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            KnownLocationCard(
+                item = previewMockLocation1,
+                isMetric = true,
+                onEdit = {},
+                onShowOnMap = {},
+                onDelete = {}
+            )
+
+            Text("Variante 2: Modern Icon-Badge & Inline-Metriken", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            KnownLocationCardVariant2(
+                item = previewMockLocation1,
+                isMetric = true,
+                onEdit = {}
+            )
+
+            Text("Variante 3: Material 3 Chip-Badges", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            KnownLocationCardVariant3(
+                item = previewMockLocation2,
+                isMetric = true,
+                onEdit = {}
+            )
+
+            Text("Variante 4: Compact Two-Tone Tile", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            KnownLocationCardVariant4(
+                item = previewMockLocation3,
+                isMetric = true,
+                onEdit = {}
+            )
+        }
+    }
+}
+
+@Preview(name = "Variant 1 - Current (Route-Style)", showBackground = true)
+@Composable
+fun PreviewVariant1Current() {
+    ATrainingTrackerTheme {
+        Box(modifier = Modifier.padding(16.dp)) {
+            KnownLocationCard(
+                item = previewMockLocation1,
+                isMetric = true,
+                onEdit = {},
+                onShowOnMap = {},
+                onDelete = {}
+            )
+        }
+    }
+}
+
+@Preview(name = "Variant 2 - Modern Icon-Badge", showBackground = true)
+@Composable
+fun PreviewVariant2Badge() {
+    ATrainingTrackerTheme {
+        Box(modifier = Modifier.padding(16.dp)) {
+            KnownLocationCardVariant2(
+                item = previewMockLocation1,
+                isMetric = true,
+                onEdit = {}
+            )
+        }
+    }
+}
+
+@Preview(name = "Variant 3 - Chip Badges", showBackground = true)
+@Composable
+fun PreviewVariant3Chips() {
+    ATrainingTrackerTheme {
+        Box(modifier = Modifier.padding(16.dp)) {
+            KnownLocationCardVariant3(
+                item = previewMockLocation2,
+                isMetric = true,
+                onEdit = {}
+            )
+        }
+    }
+}
+
+@Preview(name = "Variant 4 - Compact Tile", showBackground = true)
+@Composable
+fun PreviewVariant4Tile() {
+    ATrainingTrackerTheme {
+        Box(modifier = Modifier.padding(16.dp)) {
+            KnownLocationCardVariant4(
+                item = previewMockLocation3,
+                isMetric = true,
+                onEdit = {}
+            )
+        }
+    }
+}
+

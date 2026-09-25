@@ -8,18 +8,20 @@ The implementation adheres to the approved scope boundaries:
 # *Drawer Hierarchy & Iconography*:
 #* {{drawer_start_locations}} is positioned directly below {{drawer_my_locations}} (Lieblingsstrecken).
 #* Dedicated distinct drawables: {{drawer_start_locations}} (*Lieblingsorte*) uses {{my_locations.xml}} (pin with heart); {{drawer_my_locations}} (*Lieblingsstrecken*) uses {{ic_favorite_route.xml}} (route trajectory with heart overlay).
-# *Card Aesthetics & Alignment with Lieblingsstrecken*:
-#* List cards upgraded to app-standard {{MappableListItem}} ({{ElevatedCard}}, 16dp rounded corners, 2dp elevation) aligned with {{RouteSummaryHeader}}: leading 32dp {{my_locations}} pin icon with bold title in the top row, and standardized {{MetricItem}}s for Altitude ({{ic_ascent}}) and Visit Count ({{control_start}}).
-#* Removed cluttered raw coordinates (lat/long) and elevation source badges for a cleaner presentation.
+# *Card Aesthetics & Modern Icon-Badge Layout (Variant 2)*:
+#* List cards upgraded to app-standard {{MappableListItem}} ({{ElevatedCard}}, 16dp rounded corners, 2dp elevation) adopting the modern icon-badge design (Variant 2): 44dp rounded container ({{primaryContainer}}) with {{my_locations}} pin icon, bold title ({{titleMedium}}), flowing inline metrics ({{ic_ascent}} • {{control_start}}), and trailing edit button ({{ic_table_edit}}).
+#* Removed cluttered raw coordinates (lat/long) and elevation source badges for maximum clarity.
 #* Custom theme-colored vector map marker pin featuring a white heart glyph generated dynamically via {{createHeartPinMarker}}.
 # *Interaction & Context Menu*:
-#* Single tap on a list card opens the {{EditKnownLocationDialog}} directly.
+#* Single tap on a list card or trailing edit button opens the {{EditKnownLocationDialog}} directly.
 #* Long-press triggers a contextual {{DropdownMenu}} with options to Edit, Show on Map, and Delete (protected with {{DeleteConfirmationDialog}}).
 #* Standardized edit icon across the feature using {{R.drawable.ic_table_edit}} (matching workout/unit editing).
 # *Fallback Map Centering*:
 #* Map camera centers automatically on the location with the highest visit count (argmax(hitCount)), gracefully defaulting to Munich coordinates when empty.
 # *Localization Parity*:
 #* German naming updated from *"Startorte"* to *Lieblingsorte* (English: *"Favorite Locations"*) across all 9 supported locales.
+# *Interactive Compose Previews*:
+#* Added {{@Preview}} suite in {{KnownLocationsScreen.kt}} displaying all 4 design variants in Android Studio.
 
 h2. 2. Changes Implemented
 * *ic_favorite_route.xml*: Vector drawable combining route icon with heart overlay.

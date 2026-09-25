@@ -8,12 +8,15 @@ The implementation adheres to the approved scope boundaries:
 2. **Drawer Hierarchy & Iconography**:
    - `drawer_start_locations` is positioned directly below `drawer_my_locations` (Lieblingsstrecken).
    - Dedicated distinct drawables: `drawer_start_locations` (*Lieblingsorte*) uses [my_locations.xml](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/res/drawable/my_locations.xml) (pin with heart); `drawer_my_locations` (*Lieblingsstrecken*) uses [ic_favorite_route.xml](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/res/drawable/ic_favorite_route.xml) (route trajectory with heart overlay).
-3. **Card Aesthetics & Alignment with Lieblingsstrecken**:
-   - List cards upgraded from generic `Card` to app-standard `MappableListItem` (`ElevatedCard`, 16dp rounded corners, 2dp elevation) aligned with `RouteSummaryHeader`: leading 32dp `my_locations` pin icon with bold title in the top row, and standardized `MetricItem`s for Altitude (`ic_ascent`) and Visit Count (`control_start`).
-   - Removed cluttered raw coordinates (lat/long) and elevation source badges for a cleaner presentation.
+3. **Card Aesthetics & Modern Icon-Badge Layout (Variant 2)**:
+   - List cards upgraded from generic `Card` to app-standard `MappableListItem` (`ElevatedCard`, 16dp rounded corners, 2dp elevation) adopting the modern icon-badge design (Variant 2):
+     - Leading 44dp rounded container (`RoundedCornerShape(12.dp)`, `primaryContainer`) displaying `R.drawable.my_locations` (24dp, `onPrimaryContainer` tint).
+     - Bold location title (`titleMedium`) with flowing inline metrics: `ic_ascent` formatted altitude • `control_start` starts count.
+     - Direct trailing edit action button (`R.drawable.ic_table_edit`).
+   - Removed cluttered raw coordinates (lat/long) and elevation source badges for maximum clarity.
    - Custom theme-colored vector map marker pin featuring a white heart glyph generated dynamically via [createHeartPinMarker](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapUtils.kt#L76-L106).
 4. **Interaction & Context Menu**:
-   - Single tap on a list card opens the `EditKnownLocationDialog` directly.
+   - Single tap on a list card or trailing edit button opens the `EditKnownLocationDialog` directly.
    - Long-press triggers a contextual `DropdownMenu` with options to Edit, Show on Map, and Delete.
    - Deletion is protected with `DeleteConfirmationDialog`.
    - Standardized edit icon across the feature using `R.drawable.ic_table_edit` (matching workout/unit editing).
@@ -21,6 +24,8 @@ The implementation adheres to the approved scope boundaries:
    - Map camera centers automatically on the location with the highest visit count ($\operatorname{argmax}(\text{hitCount})$), gracefully defaulting to Munich coordinates when empty.
 6. **Localization Parity**:
    - German naming updated from *"Startorte"* to **`Lieblingsorte`** (English: *"Favorite Locations"*) across all 9 supported locales.
+7. **Interactive Compose Previews**:
+   - Integrated full `@Preview` suite in `KnownLocationsScreen.kt` displaying all design variants (`PreviewAllLocationItemVariants`, `PreviewVariant1Current`, `PreviewVariant2Badge`, `PreviewVariant3Chips`, `PreviewVariant4Tile`) directly in Android Studio's design/split view.
 
 ---
 
@@ -45,10 +50,11 @@ The implementation adheres to the approved scope boundaries:
   - Upgraded `KnownLocationCard` to use `MappableListItem` with `combinedClickable`:
     - Simple tap invokes edit dialog directly.
     - Long-press triggers anchored `DropdownMenu` with Edit (`ic_table_edit`), Show on Map (`Icons.Default.Map`), and Delete (`Icons.Default.Delete`).
-  - Redesigned card internal layout to mirror `RouteSummaryHeader`: top row with leading 32dp pin icon and location title; metric row with `MetricItem`s for Altitude (`ic_ascent`) and Starts count (`control_start`).
+  - Redesigned card internal layout to modern Variant 2: 44dp icon badge, title, inline metrics row (`ic_ascent`, `control_start`), and trailing edit button (`R.drawable.ic_table_edit`).
   - Coordinates and elevation source removed from list card.
   - Centered map camera using `viewModel.getFallbackMapLocation()`.
   - Standardized edit action icon to `R.drawable.ic_table_edit` in map bottom peek card.
+  - Added `@Preview` functions for all 4 design variants (`PreviewAllLocationItemVariants`, etc.) for real-time visualization in Android Studio.
 * **[EditKnownLocationDialog.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/knownlocations/EditKnownLocationDialog.kt)**:
   - Header icon updated to `R.drawable.ic_table_edit` matching workout/unit edit convention.
 * **[MapUtils.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapUtils.kt)**:
