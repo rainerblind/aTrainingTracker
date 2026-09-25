@@ -315,9 +315,11 @@ To guarantee test reliability, prevent state pollution, and avoid subtle cross-s
 4.  **Active Interface Verification Before Mocking (ATT-1126 Retrospective Hardening)**:
     *   Before writing unit test mocks, stubs, or verification assertions (`every { ... }`, `verify { ... }`), the agent **MUST** actively inspect the target class or repository method signatures in the active codebase using `view_file` or `grep`.
     *   Relying on memory or guessing method names (e.g., writing `pruneStaleRoutes` instead of `pruneExpiredRoutes`) causes preventable compilation failures and slows down verification.
-5.  **Gradle & Kotlin Daemon Recovery Protocol (ATT-1126 Retrospective Hardening)**:
-    *   Whenever build or test execution logs indicate Kotlin compiler daemon failures, communication drops, or fallback warnings (`"Using fallback strategy: Compile without Kotlin daemon"` or `NoSuchFileException` in `/tmp`), the agent **MUST** proactively execute `./gradlew --stop` before retrying.
-    *   This clears corrupted daemon memory, releases stale lock files, and prevents long-running test hangs.
+5.  **Gradle Daemon, Cache Lock & Execution Recovery Protocol (ATT-1126 & ATT-1250 Retrospective Hardening)**:
+    *   Whenever build or test execution logs indicate Kotlin compiler daemon failures, communication drops, fallback warnings (`"Using fallback strategy: Compile without Kotlin daemon"` or `NoSuchFileException` in `/tmp`), or cache lock timeouts (`"Timeout waiting to lock journal cache"` / `.lock` contention in `~/.gradle/caches`), the agent **MUST** proactively execute `./gradlew --stop` before retrying.
+    *   If a stale `.lock` file persists after `--stop`, the lock file or orphaned daemon process MUST be cleared before re-running.
+    *   This clears corrupted daemon memory, releases stale lock files, and prevents long-running build deadlocks.
+    *   All Gradle build and test commands MUST run with `BypassSandbox: true` to permit read/write access to global user directories (`~/.gradle` and `~/.android`).
 
 ## Five-Gate AI Review Protocol (Analysis, Test Spec, Plan, Implementation & Release Gates)
 
@@ -442,6 +444,58 @@ When executing commands in automated or IDE agent environments, strict filesyste
    * Gating and verification tools that interact with external services (Jira Cloud REST API, Gemini review auditor) require external HTTPS network connectivity.
    * Sandboxed environments without network access will fail with socket/name resolution errors (`gaierror`).
    * **Rule**: Commands running `tools/jira_util.py`, `tools/review_agent.py`, or Jira network queries MUST run with `BypassSandbox: true`.
+
+## Platform SDK Defect Remediation: Targeted Patched Dependency Substitution (ATT-1347 & ATT-1250 Blueprint)
+
+When dealing with third-party library or defective Android platform OEM SDK bugs (such as Android 14 API 34 `NoSuchMethodError` crashes in `AccessibilityEvent.setAccessibilityDataSensitive`):
+1. **Strict Prohibition on Classpath Shadowing Hacks**:
+   * Placing patched `.java` or `.kt` source files directly under `app/src/main/java/` that replicate an external library's package and class name is STRICTLY FORBIDDEN.
+   * *Rationale*: Shadowing causes non-deterministic compile-order collisions and fatal D8/R8 dex-merging duplicate class errors (`Type ... is defined multiple times`) during release builds.
+2. **Standardized Local Maven Repository Substitution**:
+   * The defect MUST be resolved by producing a cleanly versioned patched artifact (e.g. `androidx.core:core:1.15.0-patched`) hosted in a workspace local maven repository (`local-repo/`).
+   * The repository MUST be registered in `settings.gradle`:
+     ```groovy
+     dependencyResolutionManagement {
+         repositories {
+             maven { url "${rootDir}/local-repo" }
+             google()
+             mavenCentral()
+         }
+     }
+     ```
+   * The artifact MUST be substituted in `app/build.gradle` via Gradle's native resolution strategy:
+     ```groovy
+     configurations.all {
+         resolutionStrategy.dependencySubstitution {
+             substitute module('androidx.core:core:1.15.0') using module('androidx.core:core:1.15.0-patched')
+         }
+     }
+     ```
+   * *Benefits*: Guarantees 100% deterministic behavior across Debug, Profile, and Release variants, eliminates runtime reflection overhead, and leaves production application source code completely clean and maintainable.
+
+## Active Task Context Resilience Across Compactions (.active_task.json) (ATT-1250 Retrospective Hardening)
+
+In long-running pair programming sessions, context compactions occur periodically. To eliminate context recovery overhead and ensure that any resuming agent is instantly grounded:
+1. **Lightweight Workspace State Anchor**:
+   * Whenever an AI agent initiates or transitions a task stage, the agent SHALL maintain/update a lightweight workspace state tracking file at `.active_task.json`:
+     ```json
+     {
+       "parent_ticket": "ATT-1382",
+       "parent_summary": "Improve Lieblingsorte UI",
+       "active_subtask": "ATT-1388",
+       "subtask_summary": "[Test] Improve Lieblingsorte UI",
+       "stage": 5,
+       "stage_name": "Test Execution & Release Review",
+       "status": "Freigabe (Human)",
+       "branch": "feature/ATT-1382",
+       "target_release": "V4.9.38"
+     }
+     ```
+2. **Compaction Recovery Protocol**:
+   * Upon resuming from a compacted context, the agent SHOULD check for `.active_task.json` as its primary grounding anchor.
+   * This immediately identifies the active ticket, sub-task, stage, and branch in 1ms, completely eliminating redundant exploratory queries or lost state.
+3. **Lifecycle Finalization**:
+   * When the parent ticket completes and the branch is merged into `develop` (Stage 6), `.active_task.json` SHALL be cleared or updated to reflect `idle` state.
 
 ## How to use this in new sessions
 
