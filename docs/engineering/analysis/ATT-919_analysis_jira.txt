@@ -1,0 +1,100 @@
+h1. Stage 1 Deliverable: Problem & Architectural Analysis - ATT-919 / ATT-1377 (Revision 2)
+
+h2. 1. Executive Summary & Problem Statement
+* *Issue Key*: ATT-919 / ATT-1377
+* *Parent Issue*: ATT-919 (*[Feature] Altitude Correction: Create UI for this DB such that the user can set the correct altitude that is then never ever updated*)
+* *Milestone Cluster*: Stage 3 of 3 in the Altitude Calibration Cluster (ATT-1278 -> ATT-1366 -> ATT-919)
+* *Target Version*: V4.9.38 (Sprint 2026-39.2)
+* *Associated Requirements*: REQ-UI-165 (Known Start Locations Management & Altitude Lock UI), REQ-DAT-007, REQ-DAT-014
+
+h3. Problem Statement
+KnownLocationsDatabaseManager maintains geographical start locations in StartLocation2Altitude.db (Schema V5) to calibrate hardware barometric altimeters upon workout start. With ATT-1278 (Internet DEM ground truth) and ATT-1366 (elimination of flawed running mean altitude drift), the underlying data layer is robust, thread-safe, and capable of distinguishing between INTERNET_DEM, MANUAL_USER, AUTO_LEARNED, GPS_FALLBACK, and LEGACY_RAW elevations, as well as honoring is_locked write-protection.
+
+However, there is currently zero user interface for this database in the application:
+1. *Zero Visibility*: The user cannot view stored locations, their reference altitudes, the source of elevation data, or the number of workouts initiated from them.
+2. *No Manual Calibration*: If a user knows their true start altitude (e.g. from an official cadastral benchmark, building elevation plan, or calibrated survey instrument), they cannot manually enter it.
+3. *No User Locking*: The user cannot mark a location as write-protected (is_locked = 1), preventing them from asserting authority over their reference points.
+4. *No Spatial Context*: Users cannot visually inspect the 200m spatial geofence circles on a map to see which areas surrounding their home, trailheads, or tracks are covered by calibration points.
+5. *No Data Housekeeping*: Obsolete, misplaced, or redundant auto-discovered start locations cannot be renamed or deleted.
+
+h2. 2. User Experience & UI/UX Architecture
+To maintain consistency with existing high-density Jetpack Compose screens (e.g. RoutesScreen, WorkoutClustersScreen, StarredSegmentsScreen), the Known Locations UI will be implemented as a full-featured screen accessible from the Navigation Drawer.
+
+h3. A. Navigation Architecture
+* *Drawer Entry Point*: Added under the {{drawer__maps}} group in AppNavigationDrawer.kt:
+** ID: {{R.id.drawer_start_locations}}
+** Route: {{NavRoutes.START_LOCATIONS}} ("start_locations")
+** Icon: {{R.drawable.ic_map_marker_check}} / location pin
+** Localized Title: {{R.string.drawer_start_locations}} ("Start Locations" / "Startorte")
+* *Single-Activity Integration*: Integrated into ATrainingTrackerApp.kt NavHost composable routing.
+
+h3. B. Screen Structure (KnownLocationsScreen.kt)
+A top-level tabbed container offering two synchronized perspectives:
+1. *List Tab*:
+* Header with search/filter bar and total location count badge.
+* High-density Material 3 cards for each start location:
+** *Location Name*: Primary title (e.g., "Home", "Trailhead North", "Internet DEM start") with edit shortcut.
+** *Elevation & Unit*: Formatted in meters (m) or feet (ft) according to user preference (MyPreferenceManager.getUnitSystem()).
+** *Provenance Badge*: Chip indicating source (DEM, Manual, Auto, GPS, Legacy).
+** *Hit Count Badge*: Number of recordings started at this location (e.g., "42 Starts").
+** *Coordinates*: Quantized latitude and longitude (~5 decimal places).
+** *Fast Lock Switch*: Instant toggle for is_locked. When locked, altitude is permanently protected.
+** *Action Menu*: Edit details, Re-query DEM from Internet, Delete.
+2. *Map Tab & Scalability Guardrails*:
+* Google Map displaying all start locations as pins/markers with 200m circular geofence overlays.
+* *Performance Guardrails*: Camera viewport bounds filtering (visibleRegion.latLngBounds). Screen markers capped or clustered to ensure 60fps rendering under large datasets.
+* Marker color coding based on status (Locked/Manual = Primary, Unlocked DEM = Secondary, Fallback = Amber).
+* Tapping a marker centers the camera and opens a selection card with quick actions.
+3. *Action Triggers*:
+* *Floating Action Button (FAB)*: "Add Location" allows picking a point on the map or using current GPS coordinates.
+4. *Edit / Manual Calibration Dialog*:
+* Name input field.
+* Reference altitude number input (with current units: m / ft).
+* Lock switch ("Lock reference altitude against automatic changes").
+* "Fetch DEM Elevation" button to auto-populate ground truth from Open-Meteo on demand.
+* Save and Cancel actions.
+
+h2. 3. Data Layer, Concurrency & Reactive Architecture
+* *Dedicated Single-Thread SQLite Coroutine Dispatcher*:
+** To eliminate race conditions and monitor contention between foreground coroutines and background sensor callbacks (AltitudeFromPressureDevice), all database operations in KnownLocationsRepository are confined to a dedicated single-threaded dispatcher (Executors.newSingleThreadExecutor { Thread(it, "KnownLocationsDB-Thread") }.asCoroutineDispatcher()).
+** Completely eliminates Java synchronized(this) contention across arbitrary coroutine worker threads.
+** Background sensor updates and UI CRUD operations are serialized deterministically.
+** Changes atomically update MutableStateFlow<List<MyLocation>>, which Compose screens observe safely without TOCTOU races.
+* *Unit Conversion Precision & Round-Trip Invariants*:
+** SI Storage Canonical Invariant: All elevations in StartLocation2Altitude.db remain stored strictly in meters (Double).
+** Conversion Invariant: 1 ft = 0.3048 m (1 m ~ 3.28084 ft). When displaying in Imperial units, display elevation is rounded to nearest integer foot. When user enters altitude in feet, conversion back to meters is rounded to 1 decimal place (alt_m = round(h_ft * 0.3048 * 10.0) / 10.0). When user enters in meters, it is rounded to 1 decimal place (0.1m precision). This eliminates floating-point drift across repeated edit-save round-trips.
+* *ViewModel Layer (KnownLocationsViewModel.kt)*: Manages UI state (locations, selectedLocation, isEditDialogOpen, currentTab, searchQuery).
+
+h2. 4. Preservation of System Invariants & Non-Target Features
+1. *Schema V5 Integrity*: No modifications to SQLite table schemas or column definitions (is_locked and source were established under ATT-1278).
+2. *Sensor Calibration Invariants*: AltitudeFromPressureDevice.java continues reading from KnownLocationsDatabaseManager without alterations to calibration logic.
+3. *Immutability Contract*: Any location saved with is_locked = true and source = MANUAL_USER is strictly immutable against background batch healing and runtime discovery.
+4. *Hit Count Invariant*: Locations continue to increment hitCount on repeated workout starts regardless of is_locked state.
+
+h2. 5. Complete 9-Language Localization Specification
+All newly introduced strings are completely defined across all 9 supported locales:
+||Key||EN (values)||DE (values-de)||ES (values-es)||FR (values-fr)||IT (values-it)||JA (values-ja)||NL (values-nl)||PL (values-pl)||PT (values-pt)||
+|drawer_start_locations|Start Locations|Startorte|Ubicaciones de inicio|Lieux de départ|Posizioni di partenza|スタート地点|Startlocaties|Lokalizacje początkowe|Locais de início|
+|loc_tab_list|List|Liste|Lista|Liste|Elenco|リスト|Lijst|Lista|Lista|
+|loc_tab_map|Map|Karte|Mapa|Carte|Mappa|マップ|Kaart|Mapa|Mapa|
+|loc_empty_list|No start locations recorded yet|Noch keine Startorte erfasst|Aún no hay ubicaciones de inicio registradas|Aucun lieu de départ enregistré|Nessuna posizione di partenza registrata|スタート地点はまだ記録されていません|Nog geen startlocaties vastgelegd|Brak zarejestrowanych lokalizacji początkowych|Nenhum local de início registrado|
+|loc_starts_count|%d starts|%d Starts|%d inicios|%d départs|%d partenze|%d回スタート|%d starts|%d startów|%d partidas|
+|loc_badge_dem|DEM|DEM|DEM|DEM|DEM|DEM|DEM|DEM|DEM|
+|loc_badge_manual|Manual|Manuell|Manual|Manuel|Manuale|手動|Handmatig|Ręczny|Manual|
+|loc_badge_auto|Auto|Auto|Auto|Auto|Auto|自動|Auto|Auto|Auto|
+|loc_badge_gps|GPS|GPS|GPS|GPS|GPS|GPS|GPS|GPS|GPS|
+|loc_badge_legacy|Legacy|Legacy|Heredado|Hérité|Legacy|レガシー|Legacy|Starszy|Legado|
+|loc_locked_tooltip|Altitude write-protected|Höhe schreibgeschützt|Altitud protegida|Altitude protégée|Altitudine protetta|高度は保護されています|Hoogte beveiligd|Wysokość chroniona|Altitude protegida|
+|loc_unlocked_tooltip|Altitude unlocked|Höhe entsperrt|Altitud desbloqueada|Altitude déverrouillée|Altitudine sbloccata|高度は未保護です|Hoogte ontgrendeld|Wysokość odblokowana|Altitude desbloqueada|
+|loc_edit_title|Edit Start Location|Startort bearbeiten|Editar ubicación de inicio|Modifier le lieu de départ|Modifica posizione di partenza|スタート地点を編集|Startlocatie bewerken|Edytuj lokalizację początkową|Editar local de início|
+|loc_name_label|Location Name|Name des Ortes|Nombre de la ubicación|Nom du lieu|Nome della posizione|地点名|Naam locatie|Nazwa lokalizacji|Nome do local|
+|loc_altitude_label|Reference Altitude|Referenzhöhe|Altitud de referencia|Altitude de référence|Altitudine di riferimento|基準高度|Referentiehoogte|Wysokość referencyjna|Altitude de referência|
+|loc_lock_checkbox|Lock altitude against automatic changes|Höhe vor automatischen Änderungen sperren|Bloquear altitud contra cambios automáticos|Verrouiller l'altitude contre les modifications automatiques|Blocca altitudine da modifiche automatiche|高度を自動変更から保護してロック|Hoogte vergrendelen tegen automatische wijzigingen|Zablokuj wysokość przed automatycznymi zmianami|Bloquear altitude contra alterações automáticas|
+|loc_btn_fetch_dem|Fetch from Internet (DEM)|Aus Internet laden (DEM)|Obtener de Internet (DEM)|Récupérer d'Internet (DEM)|Scarica da Internet (DEM)|インターネットから取得 (DEM)|Ophalen van internet (DEM)|Pobierz z Internetu (DEM)|Obter da Internet (DEM)|
+|loc_delete_title|Delete Start Location|Startort löschen|Eliminar ubicación de inicio|Supprimer le lieu de départ|Elimina posizione di partenza|スタート地点を削除|Startlocatie verwijderen|Usuń lokalizację początkową|Excluir local de início|
+|loc_delete_confirm|Delete \"%s\"? This cannot be undone.|„%s“ löschen? Dies kann nicht rückgängig gemacht werden.|¿Eliminar \"%s\"? Esta acción no se puede deshacer.|Supprimer « %s » ? Cette action est irréversible.|Eliminare \"%s\"? L'operazione non può essere annullata.|「%s」を削除しますか？この操作は取り消せません。|\"%s\" verwijderen? Dit kan niet ongedaan worden gemaakt.|Usunąć „%s”? Tej operacji nie można cofnąć.|Excluir \"%s\"? Isso não pode ser desfeito.|
+|loc_add_location|Add Location|Ort hinzufügen|Añadir ubicación|Ajouter un lieu|Aggiungi posizione|地点を追加|Locatie toevoegen|Dodaj lokalizację|Adicionar local|
+
+h2. 6. ASPICE Traceability & Next Steps
+* *Requirement*: REQ-UI-165 (to be synchronized in docs/requirements.md during Stage 2).
+* *Verification Test Specification*: TST-UI-117 (specified in docs/tests.md).

@@ -43,6 +43,7 @@ object NavRoutes {
     const val MAP = "map"
     const val SEGMENTS = "segments"
     const val ROUTES = "routes"
+    const val START_LOCATIONS = "start_locations"
     const val LOCATIONS = "locations"
     const val SENSORS = "sensors"
     const val BIKES = "bikes"
@@ -62,6 +63,7 @@ object NavRoutes {
         R.id.drawer_map -> MAP
         R.id.drawer_segments -> SEGMENTS
         R.id.drawer_routes -> ROUTES
+        R.id.drawer_start_locations -> START_LOCATIONS
         R.id.drawer_my_locations -> LOCATIONS
         R.id.drawer_my_sensors -> SENSORS
         R.id.drawer_bikes -> BIKES
@@ -82,6 +84,7 @@ object NavRoutes {
         MAP -> R.id.drawer_map
         SEGMENTS -> R.id.drawer_segments
         ROUTES -> R.id.drawer_routes
+        START_LOCATIONS -> R.id.drawer_start_locations
         LOCATIONS -> R.id.drawer_my_locations
         SENSORS -> R.id.drawer_my_sensors
         BIKES -> R.id.drawer_bikes

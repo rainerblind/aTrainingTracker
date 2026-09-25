@@ -12,6 +12,7 @@
     <item name="drawer_map" type="id" />
     <item name="drawer_segments" type="id" />
     <item name="drawer_routes" type="id" />
+    <item name="drawer_start_locations" type="id" />
     <item name="drawer_my_locations" type="id" />
 
     <!-- Equipment / My Stuff -->

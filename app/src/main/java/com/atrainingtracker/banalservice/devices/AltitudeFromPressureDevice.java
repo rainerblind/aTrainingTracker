@@ -168,9 +168,13 @@ public class AltitudeFromPressureDevice extends MyDevice
                 KnownLocationsDatabaseManager.MyLocation current = db.getMyLocation(location.id);
                 if (current != null && !current.isLocked) {
                     current.altitude = success.getElevationMeters();
+                    String locationName = current.name;
+                    if (com.atrainingtracker.trainingtracker.location.LocationNameResolver.isPlaceholderName(locationName)) {
+                        locationName = com.atrainingtracker.trainingtracker.location.LocationNameResolver.resolveLocationNameBlocking(mContext, current.latLng.latitude, current.latLng.longitude);
+                    }
                     KnownLocationsDatabaseManager.MyLocation updated = new KnownLocationsDatabaseManager.MyLocation(
                             current.id, current.latLng.latitude, current.latLng.longitude,
-                            current.name, success.getElevationMeters(), current.radius, current.hitCount,
+                            locationName, success.getElevationMeters(), current.radius, current.hitCount,
                             false, ElevationSource.INTERNET_DEM);
                     db.updateMyLocation(current.id, updated);
                     setAltitudeCorrection(success.getElevationMeters());
@@ -186,7 +190,8 @@ public class AltitudeFromPressureDevice extends MyDevice
                 double demAlt = success.getElevationMeters();
                 if (DEBUG) Log.i(TAG, "Fetched DEM elevation: " + demAlt + "m for (" + latitude + ", " + longitude + ")");
                 KnownLocationsDatabaseManager db = KnownLocationsDatabaseManager.getInstance(mContext);
-                db.upsertLocationByGeofence(new LatLng(latitude, longitude), demAlt, "Internet DEM start",
+                String resolvedName = com.atrainingtracker.trainingtracker.location.LocationNameResolver.resolveLocationNameBlocking(mContext, latitude, longitude);
+                db.upsertLocationByGeofence(new LatLng(latitude, longitude), demAlt, resolvedName,
                         ExtremaType.START, ElevationSource.INTERNET_DEM, false);
                 setAltitudeCorrection(demAlt);
             } else {

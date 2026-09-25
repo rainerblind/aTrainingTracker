@@ -223,9 +223,12 @@ class KnownLocationsDatabaseManagerTest {
         // Act: try to learn location with different altitude
         manager.learnLocation(LatLng(48.0, 11.0), 520.0, ExtremaType.START)
 
-        // Assert: no updates or inserts written to SQLite for this locked location
+        // Assert: hitCount is incremented (5 -> 6), but altitude is strictly NOT updated
+        verify(exactly = 1) {
+            anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.HIT_COUNT, 6)
+        }
         verify(exactly = 0) {
-            mockDb.update(KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE, any(), any(), any())
+            anyConstructed<ContentValues>().put(eq(KnownLocationsDatabaseManager.KnownLocationsDbHelper.ALTITUDE), any<Double>())
         }
         verify(exactly = 0) {
             mockDb.insert(KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE, any(), any())
@@ -471,8 +474,8 @@ class KnownLocationsDatabaseManagerTest {
     }
 
     /**
-     * TST-DAT-009.2: Locked Location Strict Immutability.
-     * Verifies that learnLocation() never modifies hitCount or altitude for a locked record.
+     * TST-DAT-009.2: Locked Location Altitude Immutability and Hit Count Tracking.
+     * Verifies that learnLocation() increments hitCount but strictly preserves altitude on locked records.
      */
     @Test
     fun testLearnLocation_lockedRecord_strictlyImmutable() {
@@ -497,12 +500,15 @@ class KnownLocationsDatabaseManagerTest {
         every { mockDb.query(KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE, null, null, null, null, null, null) } returns mockCursor
         every { anyConstructed<Location>().distanceTo(any()) } returns 10.0f
 
-        // Act: try to learn location on locked record
+        // Act: try to learn location on locked record with different altitude
         manager.learnLocation(LatLng(48.0, 11.0), 550.0, ExtremaType.START)
 
-        // Assert: 0 updates, 0 inserts
+        // Assert: hitCount updated to 6, altitude NOT updated, 0 inserts
+        verify(exactly = 1) {
+            anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.HIT_COUNT, 6)
+        }
         verify(exactly = 0) {
-            mockDb.update(any(), any(), any(), any())
+            anyConstructed<ContentValues>().put(eq(KnownLocationsDatabaseManager.KnownLocationsDbHelper.ALTITUDE), any<Double>())
         }
         verify(exactly = 0) {
             mockDb.insert(any(), any(), any())

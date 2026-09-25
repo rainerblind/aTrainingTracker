@@ -171,6 +171,7 @@ fun AppNavigationDrawer(
                 DrawerItemConfig(R.id.drawer_map, R.drawable.ic_map, R.string.tab_map),
                 DrawerItemConfig(R.id.drawer_segments, R.drawable.ic_segment, R.string.segments),
                 DrawerItemConfig(R.id.drawer_routes, R.drawable.ic_route, R.string.routes),
+                DrawerItemConfig(R.id.drawer_start_locations, R.drawable.ic_place, R.string.drawer_start_locations),
                 DrawerItemConfig(R.id.drawer_my_locations, R.drawable.my_locations, R.string.my_locations)
             )
         ),

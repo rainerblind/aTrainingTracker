@@ -1394,4 +1394,22 @@
     <string name="lap_table_header_lap">Lap</string>
     <string name="lap_table_header_time">Time</string>
     <string name="lap_table_header_distance">Distance</string>
+
+    <!-- ATT-919: Known Start Locations Management & Altitude Lock UI -->
+    <string name="drawer_start_locations">Start Locations</string>
+    <string name="known_locations_title">Start Locations</string>
+    <string name="known_locations_tab_list">List</string>
+    <string name="known_locations_tab_map">Map</string>
+    <string name="known_locations_search_hint">Search start locations…</string>
+    <string name="known_locations_empty_title">No Start Locations Recorded</string>
+    <string name="known_locations_empty_desc">Start locations are automatically learned when starting a workout or can be calibrated manually.</string>
+    <string name="known_location_unnamed_format">Start Location (%1$.5f, %2$.5f)</string>
+    <string name="known_locations_starts_count">%1$d Starts</string>
+    <string name="source_internet_dem">Internet (DEM)</string>
+    <string name="source_manual_user">Manual</string>
+    <string name="source_auto_learned">Auto-learned</string>
+    <string name="source_gps_fallback">GPS</string>
+    <string name="source_legacy_raw">Legacy</string>
+    <string name="known_location_edit_title">Edit Start Location</string>
+    <string name="known_location_fetch_dem">Fetch from Internet (DEM)</string>
 </resources>
