@@ -35,7 +35,7 @@ ATT-1276 modernizes sensor smoothing configuration in `ConfigureFilterDialog` to
 * **Defensive Robustness**: Added null-safety guards in `getFullDeviceList` for uninitialized or null device ID/name arrays.
 
 ### 2.2 Modernized Compose Bottom Sheet (`ConfigureFilterDialog.kt`)
-* **Scaffold Invariants**: Maintained `AppModalBottomSheet` with `FilterAlt` icon and localized title `filter_configure_smoothing` (`REQ-UI-149`), and `AppDialogActions.SaveCancel` (`REQ-UI-150`).
+* **Scaffold Invariants**: Maintained `AppModalBottomSheet` with `FilterAlt` icon and localized title `filter_configure_smoothing` (`REQ-UI-149`), and `AppDialogActions.SaveCancel` (`REQ-UI-150`). Redundant inner `verticalScroll` was eliminated to prevent nested scroll crashes, as `AppModalBottomSheet` natively provides bounded vertical scroll behavior.
 * **Quick Presets Section**: Implemented a responsive `FlowRow` containing 7 Material 3 `FilterChip` items with touch targets $\ge 48\text{dp}$. Tapping a chip immediately updates state.
 * **Explanatory Guidance Surface Card**: Added a high-contrast `Surface` styled with `MaterialTheme.colorScheme.surfaceVariant` and `12.dp` rounded corners, rendering live summary and descriptive behavioral text.
 * **Expandable Custom / Expert Section**: Enclosed in `AnimatedVisibility`, automatically expanding when `FilterPreset.CUSTOM` is active or manual controls are toggled, exposing the raw `FilterTypeSpinner`, numeric constant inputs, and unit dropdowns.
