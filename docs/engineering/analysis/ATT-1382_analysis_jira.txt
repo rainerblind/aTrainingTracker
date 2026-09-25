@@ -1,0 +1,37 @@
+h1. Architectural & Problem Analysis - ATT-1382: Improve Lieblingsorte UI
+
+h2. 1. Executive Summary & Problem Statement
+* *Issue Key*: ATT-1382 / ATT-1384 (Sub-tasks: ATT-1384 Analysis, ATT-1385 Test Spec, ATT-1386 Plan, ATT-1387 Implementation)
+* *Parent Issue*: ATT-919 -> ATT-1382 ([Verbesserung] Improve Lieblingsorte UI)
+* *Target Version*: V4.9.38
+* *Associated Requirements*: [REQ-UI-165], [REQ-UI-166]
+
+h3. Identified Deficiencies in Initial Implementation
+1. *Non-Standard Tabbed Layout*: Screen used a generic white TopAppBar and non-standard TabRow without HorizontalPager swipe transitions, diverging from the app-wide primaryContainer dark blue header and surfaceContainerHighest tab bars (RouteTabbedScreen, WorkoutClustersTabsScreen).
+2. *Suboptimal Map Fallback*: Map camera defaulted arbitrarily to index 0 or Munich rather than focusing on the user's primary, most frequented start location (highest visit hitCount).
+3. *Navigation Drawer Order*: Start locations was placed above Lieblingsstrecken (drawer_my_locations), breaking the natural thematic grouping.
+4. *Mismatched Drawer Logos*:
+   - drawer_my_locations (Lieblingsstrecken) used a heart-in-a-pin (R.drawable.my_locations), which semantically represents a location.
+   - drawer_start_locations used a plain pin (R.drawable.ic_place).
+   - Solution: Assign R.drawable.my_locations to Lieblingsorte, and introduce R.drawable.ic_favorite_route for Lieblingsstrecken.
+5. *Map Marker Aesthetics*: Standard red Google Maps markers clashed with app theme; replace with custom theme-colored heart-pin markers.
+6. *Card Styling Disparity*: Used plain Cards instead of the app's unified MappableListItem (ElevatedCard, 16dp rounded corners, 2dp elevation).
+7. *German Translation*: Rename "Startorte" to "Lieblingsorte" across all strings and titles.
+
+h2. 2. Target UI/UX Architecture
+* *Header & Tabs*: primaryContainer Surface + HEADER_TITLE_ROW_HEIGHT + PrimaryTabRow(surfaceContainerHighest) + HorizontalPager swiping between "Liste" and "Karte".
+* *Map Centering*: Default camera target = argmax(hitCount).
+* *Drawer Realignment*: Place Lieblingsorte directly below Lieblingsstrecken with R.drawable.my_locations. Introduce R.drawable.ic_favorite_route for Lieblingsstrecken.
+* *Custom Map Markers*: Vector pin with white heart glyph in primaryContainer tint.
+* *List Cards*: Standard MappableListItem with prominent altitude, provenance chip, start counter, coordinates, and context actions.
+* *Localization*: Complete 9-language parity (German: "Lieblingsorte", English: "Favorite Locations").
+
+h2. 3. System Invariants Preserved
+* SQLite Schema V5 & KnownLocationsDB-Thread single-thread confinement preserved.
+* Automatic altitude write-protection (MANUAL_USER / is_locked = 1) preserved.
+* 200m spatial geofence matching & hitCount accumulation preserved.
+* Drawer routing contracts in NavRoutes.kt preserved.
+
+h2. 4. Risk Assessment
+* *Risk Rating*: LOW (presentation and resource improvements only; zero database mutations).
+* *Recommendation*: RECOMMEND PASS.

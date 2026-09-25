@@ -74,7 +74,7 @@ data class KnownLocationItem(
  *
  * Traceability: REQ-UI-165, REQ-DAT-007, REQ-DAT-014, TST-UI-117.
  */
-class KnownLocationsRepository @VisibleForTesting constructor(
+open class KnownLocationsRepository @VisibleForTesting constructor(
     private val context: Context,
     private val databaseManager: KnownLocationsDatabaseManager,
     private val elevationService: ElevationService = ElevationService.getInstance(),
@@ -85,23 +85,19 @@ class KnownLocationsRepository @VisibleForTesting constructor(
     private val repositoryScope = CoroutineScope(SupervisorJob() + dbDispatcher)
 
     private val _locations = MutableStateFlow<List<KnownLocationItem>>(emptyList())
-    val locationsFlow: StateFlow<List<KnownLocationItem>> = _locations.asStateFlow()
+    open val locationsFlow: StateFlow<List<KnownLocationItem>> = _locations.asStateFlow()
 
     init {
         repositoryScope.launch {
             loadLocations()
+            healLegacyNames()
         }
     }
 
     /**
-     * Returns reactive Flow of stored locations.
-     */
-    fun getLocationsFlow(): Flow<List<KnownLocationItem>> = locationsFlow
-
-    /**
      * Reads all locations from the database on [dbDispatcher] and updates [locationsFlow].
      */
-    suspend fun loadLocations(): List<KnownLocationItem> = withContext(dbDispatcher) {
+    open suspend fun loadLocations(): List<KnownLocationItem> = withContext(dbDispatcher) {
         val rawLocations = databaseManager.allLocations
         val items = rawLocations.map { loc ->
             KnownLocationItem(
@@ -123,7 +119,7 @@ class KnownLocationsRepository @VisibleForTesting constructor(
      * Atomically updates a location's name, altitude, and source.
      * When [source] is [ElevationSource.MANUAL_USER], [isLocked] is automatically set to true.
      */
-    suspend fun updateLocation(
+    open suspend fun updateLocation(
         id: Long,
         name: String,
         altitude: Double,
@@ -137,7 +133,7 @@ class KnownLocationsRepository @VisibleForTesting constructor(
     /**
      * Deletes a location by id and refreshes reactive state.
      */
-    suspend fun deleteLocation(id: Long) = withContext(dbDispatcher) {
+    open suspend fun deleteLocation(id: Long) = withContext(dbDispatcher) {
         databaseManager.deleteId(id)
         loadLocations()
     }
@@ -146,11 +142,15 @@ class KnownLocationsRepository @VisibleForTesting constructor(
      * Queries Open-Meteo DEM elevation for the specified location coordinates.
      * On success, persists the DEM elevation with [ElevationSource.INTERNET_DEM] and [isLocked] = false.
      */
-    suspend fun refreshDem(id: Long, latLng: LatLng): ElevationResult = withContext(dbDispatcher) {
+    open suspend fun refreshDem(id: Long, latLng: LatLng): ElevationResult = withContext(dbDispatcher) {
         val result = elevationService.fetchElevation(latLng.latitude, latLng.longitude)
         if (result is ElevationResult.Success) {
             val existing = databaseManager.getMyLocation(id)
-            val name = existing?.name ?: LocationNameResolver.resolveLocationName(context, latLng.latitude, latLng.longitude)
+            val name = if (existing != null && !LocationNameResolver.isPlaceholderName(existing.name)) {
+                existing.name
+            } else {
+                LocationNameResolver.resolveLocationName(context, latLng.latitude, latLng.longitude)
+            }
             databaseManager.updateLocation(id, name, result.elevationMeters, ElevationSource.INTERNET_DEM, false)
             loadLocations()
         }
@@ -162,13 +162,13 @@ class KnownLocationsRepository @VisibleForTesting constructor(
      * to human-readable names resolved via [LocationNameResolver].
      * Custom names (edited by user) are strictly preserved.
      */
-    suspend fun healLegacyNames() = withContext(dbDispatcher) {
+    open suspend fun healLegacyNames() = withContext(dbDispatcher) {
         val rawLocations = databaseManager.allLocations
         var changed = false
         for (loc in rawLocations) {
-            if (!loc.isLocked && LocationNameResolver.isPlaceholderName(loc.name)) {
+            if (LocationNameResolver.isPlaceholderName(loc.name)) {
                 val resolvedName = LocationNameResolver.resolveLocationName(context, loc.latLng.latitude, loc.latLng.longitude)
-                if (resolvedName != loc.name) {
+                if (!LocationNameResolver.isPlaceholderName(resolvedName) && resolvedName != loc.name) {
                     databaseManager.updateLocation(loc.id, resolvedName, loc.altitude, loc.source, loc.isLocked)
                     changed = true
                 }

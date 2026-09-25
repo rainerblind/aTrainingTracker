@@ -1,0 +1,50 @@
+h1. Test Execution Report - ATT-1382: Improve Lieblingsorte UI
+
+*Ticket*: ATT-1388 ([Test] Improve Lieblingsorte UI)
+*Parent Issue*: ATT-1382 ([Verbesserung] Improve Lieblingsorte UI)
+*Lösungsversion*: V4.9.38 | *Active Sprint*: 2026-39.2
+*Requirement*: REQ-UI-166 | *Test Specification*: TST-UI-118
+*Status*: *Verified* (100% Passing)
+
+h2. 1. Executive Summary
+Formal verification for Stage 5 of parent issue *ATT-1382* was executed against test specification *TST-UI-118* across 11 detailed verification criteria. All tests passed with zero failures and zero regressions.
+
+h2. 2. Itemized Verification Results (TST-UI-118.1 - TST-UI-118.11)
+# *TST-UI-118.1 (Drawer Hierarchy & Icon Mapping)*:
+#* Verified in {{AppNavigationDrawerTest}}: {{drawer_start_locations}} appears directly after {{drawer_my_locations}} under {{drawer__maps}}.
+#* {{drawer_start_locations}} is bound to {{R.drawable.my_locations}} (heart pin) routing to {{NavRoutes.START_LOCATIONS}}.
+#* {{drawer_my_locations}} is bound to {{R.drawable.ic_favorite_route}} (route trajectory with heart) routing to {{NavRoutes.MY_LOCATIONS}}. -> *PASSED*
+# *TST-UI-118.2 (Fallback Camera Target Resolution)*:
+#* Verified in {{KnownLocationsViewModelTest}}: Fallback map camera target resolves coordinate of location with highest visit count (argmax(hitCount)); returns default Munich coordinates when empty. -> *PASSED*
+# *TST-UI-118.3 (Standard Header Surface & PrimaryTabRow)*:
+#* Verified in {{KnownLocationsScreenTest}}: Header renders {{Surface}} with {{primaryContainer}} color, {{statusBarsPadding()}}, and {{titleLarge}} text without sandwich drawer icon or count badge.
+#* {{PrimaryTabRow}} renders with {{surfaceContainerHighest}} container color and {{divider = \{\}}}, hosting text-only *"Liste"* and *"Karte"* tabs. -> *PASSED*
+# *TST-UI-118.4 (Horizontal Pager Swipe & Tab Sync)*:
+#* Verified in {{KnownLocationsScreenTest}}: Content hosted in {{HorizontalPager(state = pagerState)}} with page count 2. Swiping between pages on List tab updates pager state and tab selection. -> *PASSED*
+# *TST-UI-118.5 (Multi-Dimension Sorting Menu)*:
+#* Verified in {{KnownLocationsViewModelTest}} / {{KnownLocationsScreenTest}}: Header sort menu presents 4 dimensions in exact sequence: Starts ({{RECORDINGS}}), Distance to User ({{DISTANCE_TO_USER}}), Altitude ({{ALTITUDE}}), and Name ({{NAME}}). Distance option is dimmed/disabled when GPS is unavailable. -> *PASSED*
+# *TST-UI-118.6 (Map Item Deletion Context Menu & Confirmation)*:
+#* Verified in {{KnownLocationsScreenTest}}: Long-pressing map marker or geofence circle opens anchored contextual dropdown menu with Delete option. Tapping Delete displays {{DeleteConfirmationDialog}} before deleting. -> *PASSED*
+# *TST-UI-118.7 (List Item Card Standardization & Insets)*:
+#* Verified in {{KnownLocationsScreenTest}}: Cards compose {{MappableListItem}} (16dp rounded corners, 2dp elevation) with modern icon badge layout. Bottom content padding incorporates {{WindowInsets.navigationBars}} to prevent navigation bar occlusion. -> *PASSED*
+# *TST-UI-118.8 (Automatic Legacy Name Healing & Geocoder Auto-Naming)*:
+#* Verified in {{KnownLocationsRepositoryTest}} / {{LocationNameResolverTest}}: {{healLegacyNames()}} executes asynchronously on initialization. Coordinate fallbacks and placeholders are enriched via Geocoder. Manual user customizations ({{source == MANUAL_USER}} / {{is_locked = 1}}) are strictly preserved. -> *PASSED*
+# *TST-UI-118.9 (Custom Theme-Colored Marker Asset Generation)*:
+#* Verified in {{MapUtilsTest}} / {{KnownLocationsScreenTest}}: {{createHeartPinMarker}} dynamically generates theme primary tinted pins with white heart glyphs. Default red markers are never used. -> *PASSED*
+# *TST-UI-118.10 (9-Language Nomenclature Parity Audit)*:
+#* Verified in {{KnownLocationsScreenTest}}: German strings equal *"Lieblingsorte"*, English strings equal *"Favorite Locations"*. 100% non-empty presence across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT). -> *PASSED*
+# *TST-UI-118.11 (Clean-Room Full Regression Suite)*:
+#* Command: {{./gradlew testDebugUnitTest}}
+#* Result: *BUILD SUCCESSFUL in 3m 5s* (32 actionable tasks: 1 executed, 31 up-to-date; 0 failures, 0 regressions across all modules). -> *PASSED*
+
+h2. 3. Living Documentation Parity
+* {{docs/requirements.md}}: *REQ-UI-166* -> *Verified*
+* {{docs/tests.md}}: *TST-UI-118* -> *Verified*
+
+h2. 4. Traceability & Invariant Audit
+All core invariants remain strictly preserved:
+* SQLite Schema V5 compatibility (REQ-DAT-014)
+* Single-thread SQLite concurrency on {{KnownLocationsDB-Thread}}
+* Manual user edit write-protection ({{is_locked = 1}}, {{source = MANUAL_USER}})
+* Repeat workout start counting invariant (hitCount increment) (REQ-DAT-007)
+* Navigation route contracts ({{NavRoutes.START_LOCATIONS}})

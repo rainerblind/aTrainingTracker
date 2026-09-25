@@ -137,13 +137,27 @@ object LocationNameResolver {
     @JvmStatic
     fun isPlaceholderName(name: String?): Boolean {
         if (name.isNullOrBlank()) return true
-        val lower = name.trim().lowercase(Locale.ROOT)
+        val trimmed = name.trim()
+        val lower = trimmed.lowercase(Locale.ROOT)
         return lower.startsWith("auto-learned") ||
                 lower.startsWith("internet dem") ||
                 lower.startsWith("startort") ||
                 lower.startsWith("start location") ||
+                lower.startsWith("lieblingsort") ||
+                lower.startsWith("favorite location") ||
+                lower.startsWith("lieu de départ") ||
+                lower.startsWith("ubicación de inicio") ||
+                lower.startsWith("posizione di partenza") ||
+                lower.startsWith("startlocatie") ||
+                lower.startsWith("miejsce startu") ||
+                lower.startsWith("local de início") ||
+                lower.startsWith("開始地点") ||
+                lower == "start" ||
+                lower == "starts" ||
                 lower == "default" ||
-                lower.matches(Regex("^[a-z_]+_start$"))
+                lower.matches(Regex("^[a-z_]+_start$")) ||
+                trimmed.matches(Regex(".*\\(\\s*[-+]?\\d+([.,]\\d+)?\\s*,\\s*[-+]?\\d+([.,]\\d+)?\\s*\\).*")) ||
+                trimmed.matches(Regex("^[-+]?\\d+([.,]\\d+)?\\s*,\\s*[-+]?\\d+([.,]\\d+)?$"))
     }
 
     @Suppress("DEPRECATION")

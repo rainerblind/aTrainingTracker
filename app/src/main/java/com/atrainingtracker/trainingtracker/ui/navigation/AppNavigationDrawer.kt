@@ -43,6 +43,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.annotation.VisibleForTesting
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -141,22 +142,11 @@ class NavigationDrawerController(
 }
 
 /**
- * Declarative Jetpack Compose Navigation Drawer replacing the legacy `NavigationView`.
- *
- * Delivers compact item density (ATT-243), deterministic non-reflective UI layout (ATT-516),
- * and reactive tracking state updates.
- *
- * @param selectedItemId ID of the currently selected destination.
- * @param startTrackingTitleRes Localized string resource ID for the dynamic tracking state label.
- * @param onItemSelected Callback invoked when a navigation drawer row is selected.
+ * Creates the list of [DrawerGroup] objects defining the drawer layout and items.
  */
-@Composable
-fun AppNavigationDrawer(
-    selectedItemId: Int,
-    startTrackingTitleRes: Int,
-    onItemSelected: (Int) -> Unit
-) {
-    val groups = listOf(
+@VisibleForTesting
+fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
+    return listOf(
         DrawerGroup(
             titleRes = R.string.drawer__training,
             items = listOf(
@@ -171,8 +161,8 @@ fun AppNavigationDrawer(
                 DrawerItemConfig(R.id.drawer_map, R.drawable.ic_map, R.string.tab_map),
                 DrawerItemConfig(R.id.drawer_segments, R.drawable.ic_segment, R.string.segments),
                 DrawerItemConfig(R.id.drawer_routes, R.drawable.ic_route, R.string.routes),
-                DrawerItemConfig(R.id.drawer_start_locations, R.drawable.ic_place, R.string.drawer_start_locations),
-                DrawerItemConfig(R.id.drawer_my_locations, R.drawable.my_locations, R.string.my_locations)
+                DrawerItemConfig(R.id.drawer_my_locations, R.drawable.ic_favorite_route, R.string.my_locations),
+                DrawerItemConfig(R.id.drawer_start_locations, R.drawable.my_locations, R.string.drawer_start_locations)
             )
         ),
         DrawerGroup(
@@ -205,6 +195,27 @@ fun AppNavigationDrawer(
             )
         )
     )
+}
+
+/**
+ * Declarative Jetpack Compose Navigation Drawer replacing the legacy `NavigationView`.
+ *
+ * Delivers compact item density (ATT-243), deterministic non-reflective UI layout (ATT-516),
+ * and reactive tracking state updates.
+ *
+ * @param selectedItemId ID of the currently selected destination.
+ * @param startTrackingTitleRes Localized string resource ID for the dynamic tracking state label.
+ * @param onItemSelected Callback invoked when a navigation drawer row is selected.
+ */
+@Composable
+fun AppNavigationDrawer(
+    selectedItemId: Int,
+    startTrackingTitleRes: Int,
+    onItemSelected: (Int) -> Unit
+) {
+    val groups = remember(startTrackingTitleRes) {
+        createDrawerGroups(startTrackingTitleRes)
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),

@@ -305,11 +305,17 @@ public class KnownLocationsDatabaseManager {
                 if (existing != null) {
                     ContentValues values = new ContentValues();
                     values.put(KnownLocationsDbHelper.HIT_COUNT, existing.hitCount + 1);
+                    if (com.atrainingtracker.trainingtracker.location.LocationNameResolver.isPlaceholderName(existing.name)) {
+                        String resolvedName = com.atrainingtracker.trainingtracker.location.LocationNameResolver.resolveLocationNameBlocking(mContext, pos.latitude, pos.longitude);
+                        if (!com.atrainingtracker.trainingtracker.location.LocationNameResolver.isPlaceholderName(resolvedName)) {
+                            values.put(KnownLocationsDbHelper.NAME, resolvedName);
+                        }
+                    }
                     updateId(existing.id, values);
                     if (DEBUG) Log.d(TAG, "Incremented hitCount for '" + existing.name + "' to " + (existing.hitCount + 1) + " (isLocked=" + existing.isLocked + ")");
                 } else {
-                    // New discovery fallback
-                    String name = "Auto-learned " + type.name().toLowerCase();
+                    // New discovery: resolve human-readable location name
+                    String name = com.atrainingtracker.trainingtracker.location.LocationNameResolver.resolveLocationNameBlocking(mContext, pos.latitude, pos.longitude);
                     addNewLocation(name, (double) Math.round(altitude), DEFAULT_RADIUS, pos.latitude, pos.longitude, type, false, ElevationSource.AUTO_LEARNED);
                     if (DEBUG) Log.d(TAG, "Discovered new location at " + pos + " with altitude " + altitude + "m");
                 }
@@ -339,6 +345,15 @@ public class KnownLocationsDatabaseManager {
                         values.put(KnownLocationsDbHelper.SOURCE, source.name());
                         values.put(KnownLocationsDbHelper.IS_LOCKED, isLocked ? 1 : 0);
                         values.put(KnownLocationsDbHelper.HIT_COUNT, existing.hitCount + 1);
+                        if (com.atrainingtracker.trainingtracker.location.LocationNameResolver.isPlaceholderName(existing.name)
+                                && !com.atrainingtracker.trainingtracker.location.LocationNameResolver.isPlaceholderName(name)) {
+                            values.put(KnownLocationsDbHelper.NAME, name);
+                        }
+                        updateId(existing.id, values);
+                    } else if (com.atrainingtracker.trainingtracker.location.LocationNameResolver.isPlaceholderName(existing.name)
+                            && !com.atrainingtracker.trainingtracker.location.LocationNameResolver.isPlaceholderName(name)) {
+                        ContentValues values = new ContentValues();
+                        values.put(KnownLocationsDbHelper.NAME, name);
                         updateId(existing.id, values);
                     }
                     db.setTransactionSuccessful();
@@ -419,6 +434,12 @@ public class KnownLocationsDatabaseManager {
                             ContentValues values = new ContentValues();
                             values.put(KnownLocationsDbHelper.ALTITUDE, elevation);
                             values.put(KnownLocationsDbHelper.SOURCE, ElevationSource.INTERNET_DEM.name());
+                            if (com.atrainingtracker.trainingtracker.location.LocationNameResolver.isPlaceholderName(loc.name)) {
+                                String resolvedName = com.atrainingtracker.trainingtracker.location.LocationNameResolver.resolveLocationNameBlocking(mContext, loc.latLng.latitude, loc.latLng.longitude);
+                                if (!com.atrainingtracker.trainingtracker.location.LocationNameResolver.isPlaceholderName(resolvedName)) {
+                                    values.put(KnownLocationsDbHelper.NAME, resolvedName);
+                                }
+                            }
                             updateId(loc.id, values);
                             totalHealed++;
                         }

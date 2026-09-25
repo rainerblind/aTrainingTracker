@@ -1188,21 +1188,28 @@
     <string name="lap_table_header_time">時間</string>
     <string name="lap_table_header_distance">距離</string>
 
-    <!-- ATT-919: Known Start Locations Management & Altitude Lock UI -->
-    <string name="drawer_start_locations">開始地点</string>
-    <string name="known_locations_title">開始地点</string>
+    <!-- ATT-919 / ATT-1382: Known Start Locations (Favorite Locations) Management & Altitude Lock UI -->
+    <string name="drawer_start_locations">お気に入りの場所</string>
+    <string name="known_locations_title">お気に入りの場所</string>
     <string name="known_locations_tab_list">リスト</string>
     <string name="known_locations_tab_map">地図</string>
-    <string name="known_locations_search_hint">開始地点を検索…</string>
-    <string name="known_locations_empty_title">記録された開始地点はありません</string>
-    <string name="known_locations_empty_desc">ワークアウト開始時に開始地点が自動的に学習されるか、手動で調整できます。</string>
+    <string name="known_locations_search_hint">お気に入りの場所を検索…</string>
+    <string name="known_locations_empty_title">記録されたお気に入りの場所はありません</string>
+    <string name="known_locations_empty_desc">ワークアウト開始時にお気に入りの場所が自動的に学習されるか、手動で調整できます。</string>
     <string name="known_location_unnamed_format">開始地点 (%1$.5f, %2$.5f)</string>
     <string name="known_locations_starts_count">%1$d 回開始</string>
+    <string name="known_locations_sort_starts">開始数</string>
+    <plurals name="known_locations_starts">
+        <item quantity="other">%1$d 回開始</item>
+    </plurals>
     <string name="source_internet_dem">インターネット (DEM)</string>
     <string name="source_manual_user">手動</string>
     <string name="source_auto_learned">自動学習</string>
     <string name="source_gps_fallback">GPS</string>
     <string name="source_legacy_raw">レガシー</string>
-    <string name="known_location_edit_title">開始地点を編集</string>
+    <string name="known_location_edit_title">お気に入りの場所を編集</string>
     <string name="known_location_fetch_dem">インターネットから取得 (DEM)</string>
+    <string name="known_location_show_map">地図上に表示</string>
+    <string name="known_location_hide_map">地図を非表示</string>
+    <string name="sort_altitude">標高</string>
 </resources>

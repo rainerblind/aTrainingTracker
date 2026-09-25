@@ -1,0 +1,53 @@
+h1. Test Specification & Requirement Synchronization - ATT-1382: Improve Lieblingsorte UI
+
+*Issue*: ATT-1382 / ATT-1385 (Sub-tasks: ATT-1384 Analysis, ATT-1385 Test Spec, ATT-1386 Plan, ATT-1387 Implementation)
+*Target Version*: V4.9.38
+*Related Requirements*: REQ-UI-165, REQ-UI-166
+*Related Tests*: TST-UI-118
+
+h2. Requirement Archaeology & Chesterton's Fence Audit
+# *Original Requirement ID & Target*: REQ-UI-165 (Known Start Locations Management, Interactive Map Geofences & Altitude Lock UI) in docs/requirements.md, targeting KnownLocationsScreen.kt and AppNavigationDrawer.kt.
+# *Historical Origin & Commit Trace*: Introduced in ticket ATT-919 via commits 48d0bdc8 and b4ebca54 (dated 2026-09-24).
+# *Root Reason for Existing Formulation*: In ATT-919, the primary focus was baseline functionality (SQLite V5 persistence, DEM resolution, manual altitude auto-locking, and reverse geocoding auto-naming). It utilized a default white TopAppBar and standard TabRow, with generic red map markers and arbitrary initial camera centering, before being reviewed for complete design language parity.
+# *Preservation of Core Invariants*: Schema V5 persistence (REQ-DAT-014), single-thread SQLite confinement (KnownLocationsDB-Thread), automatic altitude write-protection on manual user edits (is_locked = 1, source = MANUAL_USER), repeat workout start hitCount increments (REQ-DAT-007), and navigation route contracts (NavRoutes.START_LOCATIONS) remain 100% strictly intact.
+
+h2. Harmonized Requirement Specification (REQ-UI-166)
+The system SHALL provide a harmonized, design-system-compliant Jetpack Compose interface and navigation integration for known start locations (Lieblingsorte), matching the look and feel of aTrainingTracker core screens (RouteTabbedScreen, WorkoutTabsScreen, SegmentsTabsScreen):
+1. *Navigation Drawer Hierarchy & Icon Reallocation*: Position drawer_start_locations directly below drawer_my_locations (Lieblingsstrecken) in drawer__maps. Assign R.drawable.my_locations to Lieblingsorte and R.drawable.ic_favorite_route to Lieblingsstrecken.
+2. *Standard Tabbed Header Surface, Tab Row & Sorting Menu*: Header surface with primaryContainer color, titleLarge text, and PrimaryTabRow with surfaceContainerHighest and divider = {}. Two primary tabs: "Liste" and "Karte". Header sort dropdown offering 4 dimensions: Starts, Distance to User, Altitude, Name.
+3. *Fluid Page Navigation & Swipe Gestures*: Host content in HorizontalPager(state = pagerState) enabling swipe gestures from List to Map, with drag gestures reserved for map manipulation on Page 1.
+4. *Intelligent Fallback Map Centering*: When opening/recentering map without GPS or explicit selection, center on the location with highest visit count: argmax(hitCount). Default to Munich if empty.
+5. *Custom Theme-Colored Map Markers & Long-Click Context Menu*: Render custom theme-colored pins with embedded white heart glyphs on the map. Long-pressing marker pin or geofence circle opens context menu with Delete option, protected by DeleteConfirmationDialog.
+6. *List Item Card Standardization & Bottom Insets*: Wrap list items in MappableListItem (ElevatedCard, 16dp rounded corners, 2dp elevation) with prominent name, formatted altitude, and starts count. Include WindowInsets.navigationBars in bottom padding.
+7. *Automatic Legacy Name Healing & Geocoder Auto-Naming*: Automatically invoke healLegacyNames() on init to resolve human-readable place names for placeholder entries, while strictly preserving manual user edits.
+8. *9-Language Domain Nomenclature Parity*: Update German strings from "Startorte" to "Lieblingsorte", edit dialog to "Lieblingsort bearbeiten", English to "Favorite Locations" / "Edit Favorite Location", maintained with 100% parity across DE, EN, ES, FR, IT, JA, NL, PL, PT.
+
+h3. Acceptance Criteria (Given-When-Then)
+* *AC-1 (Drawer Ordering & Icons)*: Given drawer open, When viewing drawer__maps, Then Lieblingsorte appears below Lieblingsstrecken with R.drawable.my_locations, and Lieblingsstrecken displays R.drawable.ic_favorite_route.
+* *AC-2 (Header Surface & Tab Row)*: Given KnownLocationsScreen rendered, When checking header and tab row, Then header has primaryContainer color and tab row is PrimaryTabRow with surfaceContainerHighest without hamburger or count badge.
+* *AC-3 (Horizontal Pager)*: Given List tab, When swiping left, Then smoothly animate to Map tab with synchronized tab indicator.
+* *AC-4 (Map Centering on Max HitCount)*: Given multiple locations with different hitCounts, When viewing Map without selection, Then camera centers on argmax(hitCount).
+* *AC-5 (Custom Theme-Colored Heart Markers)*: Given map markers, When rendered, Then theme-colored pin with white heart glyph is shown instead of red marker.
+* *AC-6 (MappableListItem Card Design & Insets)*: Given List tab, When rendered, Then each card composes MappableListItem and the last item is not obscured by navigation bar.
+* *AC-7 (Multi-Dimension Sorting)*: Given sort menu, When opened, Then 4 dimensions are presented: Starts, Distance, Altitude, Name.
+* *AC-8 (Map Deletion Context Menu)*: Given Map tab, When long-pressing marker or geofence circle, Then context menu offering Delete appears and prompts DeleteConfirmationDialog.
+* *AC-9 (Legacy Name Healing)*: Given start locations with placeholder names, When screen loads, Then geocoded names are resolved and persisted without mutating custom user edits.
+* *AC-10 (Localization Parity)*: Given DE locale, Then "Lieblingsorte" and "Lieblingsort bearbeiten" are displayed across UI components.
+
+h3. System Invariants
+1. SQLite schema V5 and single-thread dispatcher (KnownLocationsDB-Thread) MUST NOT be altered.
+2. Manual altitude editing MUST automatically set is_locked = 1 and source = MANUAL_USER.
+3. Workout starts matching 200m geofence MUST increment hitCount without mutating locked altitude.
+4. Navigation routes (NavRoutes.START_LOCATIONS, NavRoutes.MY_LOCATIONS) MUST NOT be broken.
+
+h2. Test Verification Procedures (TST-UI-118)
+* *TST-UI-118.1*: Drawer item ordering index and drawable resource IDs match specification (AppNavigationDrawerTest.kt).
+* *TST-UI-118.2*: Fallback map target coordinates strictly match argmax(hitCount) (KnownLocationsViewModelTest.kt).
+* *TST-UI-118.3*: Composable card layout renders inside MappableListItem container (KnownLocationsScreenTest.kt).
+* *TST-UI-118.4*: PrimaryTabRow with surfaceContainerHighest and HorizontalPager pageCount 2 (KnownLocationsScreenTest.kt).
+* *TST-UI-118.5*: 4-way sorting menu orders items correctly; distance disabled when GPS unavailable.
+* *TST-UI-118.6*: Map marker long-press context menu opens DeleteConfirmationDialog before deleting location.
+* *TST-UI-118.7*: healLegacyNames() enriches placeholder names via Geocoder without mutating locked user names.
+* *TST-UI-118.8*: Custom theme-colored marker bitmap descriptor generation (MapUtilsTest.kt / KnownLocationsScreenTest.kt).
+* *TST-UI-118.9*: 100% localization parity across all 9 locales with DE="Lieblingsorte" and EN="Favorite Locations".
+* *TST-UI-118.10*: Full clean-room regression suite (./gradlew testDebugUnitTest).

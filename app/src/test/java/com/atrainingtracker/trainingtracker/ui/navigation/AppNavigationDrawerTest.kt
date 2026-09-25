@@ -81,4 +81,36 @@ class AppNavigationDrawerTest {
         controller.closeDrawer()
         assertTrue("Selecting destination item must trigger drawer close", drawerCloseCalled)
     }
+
+    @Test
+    fun testDrawerMapsGroupItemOrderingAndIcons() {
+        val groups = createDrawerGroups(R.string.tab_start)
+        val mapsGroup = groups.firstOrNull { it.titleRes == R.string.drawer__maps }
+        assertTrue("Maps drawer group must exist", mapsGroup != null)
+
+        val items = mapsGroup!!.items
+        val myLocationsIndex = items.indexOfFirst { it.id == R.id.drawer_my_locations }
+        val startLocationsIndex = items.indexOfFirst { it.id == R.id.drawer_start_locations }
+
+        assertTrue("Lieblingsstrecken (drawer_my_locations) must be in maps group", myLocationsIndex != -1)
+        assertTrue("Lieblingsorte (drawer_start_locations) must be in maps group", startLocationsIndex != -1)
+        assertTrue(
+            "Lieblingsorte must appear directly after Lieblingsstrecken (ATT-1382)",
+            startLocationsIndex == myLocationsIndex + 1
+        )
+
+        val myLocationsItem = items[myLocationsIndex]
+        val startLocationsItem = items[startLocationsIndex]
+
+        assertEquals(
+            "Lieblingsstrecken icon must be ic_favorite_route",
+            R.drawable.ic_favorite_route,
+            myLocationsItem.iconRes
+        )
+        assertEquals(
+            "Lieblingsorte icon must be my_locations (pin with heart)",
+            R.drawable.my_locations,
+            startLocationsItem.iconRes
+        )
+    }
 }
