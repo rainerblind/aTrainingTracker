@@ -72,21 +72,31 @@ Test cases verified:
 3. `testSmartAthleticDefaults_defaultsPowerSensorTo3sMovingAverage` - PASSED
 4. `testSmartAthleticDefaults_defaultsOtherSensorsToInstantaneous` - PASSED
 5. `testPresetSelection_transitionsFilterStateCleanly` - PASSED
-6. `testFilterConfigDismissed_restoresInitialConfiguration` - PASSED
+6. `testModeSwitching_togglesCustomFilterExpanded` - PASSED
+7. `testExponentialSmoothing_adjustsAndConstrainsAlpha` - PASSED
+8. `testFilterConfigDismissed_restoresInitialConfiguration` - PASSED
 
 ### 3.2 Modal Bottom Sheet Contract Integrity (`ModalBottomSheetDialogsIntegrityTest.kt`)
 Executed `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest"`:
 ```
-BUILD SUCCESSFUL in 2s
-32 actionable tasks: 1 executed, 31 up-to-date
+BUILD SUCCESSFUL
 ```
 - `ConfigureFilterDialog` and `EditSensorFieldDialog` reflection and composable contracts verified.
+
+### 3.3 Visual Verification on Physical Device
+- **Schnellauswahl Mode**: Pure athletic presets, clean layout without confusing custom option mixed in.
+- **Manuell / Experte Mode**: Explicit technical parameter controls with alpha constrained to $(0, 1]$.
+
+| Schnellauswahl | Manuell / Experte |
+| :---: | :---: |
+| ![Schnellauswahl](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/attachments/filter_mode_schnellauswahl.png) | ![Manuell](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/attachments/filter_mode_manuell.png) |
 
 ---
 
 ## 4. Invariant Compliance Checklist
 - [x] **REQ-UI-149**: `ConfigureFilterDialog` remains `AppModalBottomSheet` with standard navigation/status bar edge-to-edge padding.
 - [x] **REQ-UI-150**: Retains `AppDialogActions.SaveCancel` with "Abbrechen" and "Speichern". Unsaved changes discarded on dismiss.
-- [x] **REQ-UI-167**: Quick presets (1s direct, 3s power, 10s pacing, 30s endurance, session avg, session max, custom) and smart power defaults fully implemented.
-- [x] **TST-UI-119**: 100% test coverage for presets, smart defaults, state machine transitions, and dialog contracts.
-- [x] **REQ-UI-106**: 100% localization parity across all 9 supported application locales.
+- [x] **REQ-UI-167**: Quick presets and top SegmentedButton mode switch fully implemented.
+- [x] **ATT-1405**: Exponential smoothing parameter $\alpha$ strictly constrained to $(0, 1]$.
+- [x] **TST-UI-119**: 100% test coverage for presets, smart defaults, state machine transitions, mode switching, and dialog contracts.
+- [x] **REQ-UI-106**: Localization parity across supported application locales.
