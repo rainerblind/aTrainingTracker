@@ -31,6 +31,7 @@ GATE_DEFINITIONS = {
         "checklist": """1. Scrutinize Problem Domain & Analysis:
    - For bug tickets: Stress-test RCA conclusions (symptoms vs. cause, call-site audit, reproducible traces).
    - For features/improvements: Verify deep domain comprehension, user motivation, scope boundaries, and architectural side effects.
+   - User Scope Grounding (ATT-1250): Ground review expectations strictly in the user's specific problem statement and parent ticket description. Do NOT challenge deliverables or mandate out-of-scope refactorings, speculative edge cases, or theoretical redesigns not requested by the user.
 2. Call Site Audit:
    - Verify that all affected callers, classes, and resources are identified.
 3. Requirement Mapping Audit:
@@ -48,6 +49,7 @@ GATE_DEFINITIONS = {
    - Verify standard syntax: SHALL for functional behavior, MUST for technical constraints.
    - Verify atomic, unambiguous, system-centric, and state-oriented descriptions (not implementation steps).
    - Verify explicit Given-When-Then acceptance criteria and System Invariants.
+   - User Scope Grounding (ATT-1250): Verify requirements strictly focus on the scoped feature or bugfix. Do NOT require expanding requirements to unrelated components or unrequested workflows.
 2. Test Case Traceability:
    - Verify concrete test procedure and expected result in docs/tests.md.
    - Ensure complete bidirectional traceability between requirements and test cases.

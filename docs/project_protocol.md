@@ -11,6 +11,7 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   Examine the problem statement, user request, or failure logs.
     *   *For Bug Tickets*: Perform a forensic Root Cause Analysis (RCA), analyzing logs, traces, and code paths to distinguish superficial symptoms from true root causes.
     *   *For Feature & Improvement Tickets*: Thoroughly understand the feature, user motivation, scope boundaries, and potential architectural side effects.
+    *   *Bug Ticket Creation vs. Deferred Analysis (ATT-1250 Retrospective Hardening)*: Creating or filing a bug ticket (`create-issue`) MUST be fast, lightweight, and non-blocking. It only requires recording the problem summary, error logs, reproduction steps, and target release version. An AI agent MUST NOT automatically start Stage 1 Analysis or investigate root causes immediately upon ticket creation. Stage 1 Analysis is deferred until the bug ticket is explicitly prioritized, pulled into the active sprint, and transitioned to `In Bearbeitung`.
     *   Document the complete analysis directly in the **Description** of the automatically generated sub-task `[Analysis]`.
 
 2.  **Stage 2: Test Specification & Requirement Synchronization (SWE.4 / SWE.5 Spec Phase - The TDD Hard Stop)**:
@@ -328,6 +329,8 @@ To prevent side-effect regressions, "destroyed features", and architectural drif
     python3 tools/review_agent.py audit <Subtask-Key> [--provider gemini|claude]
     ```
     The runner reads credentials from `.env.gemini` / `.env.claude`, automatically detects the active gate from the sub-task summary, gathers repository and git diff context, evaluates the deliverable against the gate checklist using a decoupled LLM provider, posts the formatted audit comment to Jira prefixed with `[Automated comment by AI Agent (External Auditor)]`, and transitions the sub-task to `Freigabe (Human)`. It runs strictly on the Python 3 standard library with zero pip dependencies.
+*   **Reviewer-Implementer Scope Alignment & Grounding (ATT-1250 Retrospective Hardening)**:
+    To eliminate friction where the external review agent's theoretical expectations diverge from the actual task scope, Gate 1 through Gate 5 audits MUST strictly anchor to the **explicit user prompt, parent ticket description, and bounded problem scope**. The auditor MUST NOT challenge deliverables or mandate out-of-scope refactorings, speculative edge cases, or theoretical redesigns that were not requested by the user or required by the immediate ticket scope. Auditor recommendations MUST be grounded in whether the deliverable *faithfully and safely solves the user's specific problem statement* while preserving documented system invariants.
 
 ### Gate 1: Analysis & Problem Domain Review (Auditor Review on `[Analysis]` Sub-task)
 *   **Applicability**: All ticket types.
@@ -398,6 +401,19 @@ To maintain a high-fidelity "Digital Twin" of the codebase, the agent must:
 *   **Final Session Audit**: Perform a rigorous final review of all documentation at the end of each task to ensure it matches the final implementation.
 *   **Refine Architecture**: Whenever a deeper understanding of component interactions is gained, update `docs/architecture.md`.
 *   **Maintain Traceability**: Ensure the "Implementation File(s)" column in the requirements list is always kept up to date as files move or logic shifts.
+
+## Jetpack Compose UI Fast Iteration & Previews Protocol (ATT-1250 Retrospective Hardening)
+
+When working on Jetpack Compose user interfaces (screens, tabbed layouts, list cards, bottom sheets, dialogs), rapid visual feedback is critical to prevent slow compilation round-trips and ensure early alignment with user expectations:
+
+1. **Preview-First Construction**:
+   * Developers and AI agents SHALL define `@Preview` composables alongside newly created or significantly altered UI components.
+   * Previews SHOULD include light and dark theme wrappers (`AppTheme(darkTheme = false/true)`) and populate representative sample data.
+2. **Multi-Variant Visual Alignment**:
+   * For non-trivial design decisions, visual redesigns, or layout overhauls, the agent SHALL present visual design alternatives (e.g. side-by-side card variants or Compose Preview screenshots/renderings) to the user *before* wiring extensive backend or database plumbing.
+   * This guarantees that design aesthetics, typography, icon containers, and padding are agreed upon upfront without costly refactoring cycles.
+3. **Rapid Iteration Over Full Builds**:
+   * Agents and developers SHALL leverage Compose Previews and isolated component unit tests to iterate rapidly, avoiding slow end-to-end APK deployment cycles for visual-only adjustments.
 
 ## JVM Unit Test Fixtures & Android Framework Stubbing (MockCursorFactory)
 To eliminate repetitive, brittle MockK answer boilerplate across JVM unit tests interacting with Android SQLite databases, developers and AI agents SHALL use the standardized test fixture factory:
