@@ -3,9 +3,10 @@
 ## 1. Feature / Bug Overview & Test Scope
 
 * **Issue Key**: `ATT-1382` / `ATT-1385`
+* **Sub-tasks**: `ATT-1384` (Analysis), `ATT-1385` (Test Spec), `ATT-1386` (Plan), `ATT-1387` (Implementation)
 * **Parent Issue**: `ATT-1382` (*[Verbesserung] Improve Lieblingsorte UI*)
 * **Target Version**: `V4.9.38` (Sprint `2026-39.2`)
-* **Related Requirements**: `REQ-UI-165` (Refined / Chesterton's Fence), `REQ-UI-166` (Lieblingsorte UI/UX Harmonization, Standard Tabbed Layout & Custom Map Markers)
+* **Related Requirements**: `REQ-UI-165` (Refined / Chesterton's Fence), `REQ-UI-166` (Lieblingsorte UI/UX Harmonization, Standard Tabbed Layout, Sorting Options & Map Deletion Context Menu)
 * **Related Tests**: `TST-UI-118` (Lieblingsorte UI/UX Harmonization Verification)
 
 ### Objective
@@ -91,14 +92,26 @@ The system SHALL provide a harmonized, design-system-compliant Jetpack Compose i
   - *Given* known locations displayed on the map,
   - *When* rendered,
   - *Then* markers SHALL display custom theme-colored pins with embedded heart glyphs rather than default red markers.
-* **AC-6 (MappableListItem Card Design)**:
+* **AC-6 (MappableListItem Card Design & Insets)**:
   - *Given* the List tab with stored locations,
   - *When* rendered,
-  - *Then* each item card SHALL be wrapped in `MappableListItem` with 16dp rounded corners, 2dp elevation, and structured badges.
-* **AC-7 (Localization Parity)**:
+  - *Then* each item card SHALL be wrapped in `MappableListItem` with 16dp rounded corners, 2dp elevation, and the last item SHALL NOT be obscured by system navigation bars.
+* **AC-7 (Multi-Dimension Sorting)**:
+  - *Given* the List tab header,
+  - *When* opening the sort dropdown,
+  - *Then* 4 dimensions SHALL be offered in order: Starts (`RECORDINGS`), Distance (`DISTANCE_TO_USER`), Altitude (`ALTITUDE`), and Name (`NAME` last).
+* **AC-8 (Map Long-Click Deletion Context Menu)**:
+  - *Given* the Map tab,
+  - *When* long-pressing a marker or geofence circle,
+  - *Then* a context menu with Delete SHALL appear, prompting `DeleteConfirmationDialog` before removal.
+* **AC-9 (Automatic Legacy Name Healing)**:
+  - *Given* start locations with placeholder or coordinate-format names,
+  - *When* the screen or viewmodel initializes,
+  - *Then* `healLegacyNames()` SHALL asynchronously resolve geocoded addresses and update the database and UI while preserving custom user-edited names.
+* **AC-10 (Localization Parity)**:
   - *Given* German language device configuration,
-  - *When* viewing drawer and screen titles,
-  - *Then* "Lieblingsorte" SHALL be displayed across all relevant UI components.
+  - *When* viewing drawer, screen titles, and edit dialog,
+  - *Then* "Lieblingsorte" and "Lieblingsort bearbeiten" SHALL be displayed across all relevant UI components.
 
 #### System Invariants:
 1. **Schema V5 & SQLite Concurrency**: `StartLocation2Altitude.db` schema V5 and single-thread dispatcher (`KnownLocationsDB-Thread`) MUST NOT be altered.
@@ -110,17 +123,20 @@ The system SHALL provide a harmonized, design-system-compliant Jetpack Compose i
 
 ## 3. Test Verification Procedures (`TST-UI-118`)
 
-### TST-UI-118: Lieblingsorte UI/UX Harmonization, Standard Tabbed Layout & Custom Markers Verification
+### TST-UI-118: Lieblingsorte UI/UX Harmonization, Standard Tabbed Layout, Sorting, Map Deletion & Legacy Name Healing Verification
 
 | Test Step | Target Component | Action / Inputs | Expected Result | Pass Criteria |
 | :--- | :--- | :--- | :--- | :--- |
 | **TST-UI-118.1** | `AppNavigationDrawerTest.kt` | Query `drawer__maps` items configuration in `AppNavigationDrawer`. | `drawer_my_locations` precedes `drawer_start_locations`. Icon for `drawer_start_locations` is `R.drawable.my_locations`. Icon for `drawer_my_locations` is `R.drawable.ic_favorite_route`. | Drawer item ordering index and drawable resource IDs match specification exactly. |
-| **TST-UI-118.2** | `KnownLocationsViewModelTest.kt` | Populate locations with `hitCount` values: [A: 3, B: 25, C: 8]. Invoke `getPrimaryLocation()` / fallback target resolver. | Resolves to Location B (`hitCount = 25`). When list is empty, returns null / default Munich coordinates. | Fallback target coordinates strictly match `argmax(hitCount)`. |
-| **TST-UI-118.3** | `KnownLocationsScreenTest.kt` | Verify composable card layout rendering for known locations. | Each location item renders inside `MappableListItem` container with Name, formatted Altitude, Source badge, Hit Count, and Coordinates. | All fields present and styled per design system; card uses `MappableListItem`. |
-| **TST-UI-118.4** | `KnownLocationsScreenTest.kt` | Verify tab row and pager configuration. | `PrimaryTabRow` with container color `surfaceContainerHighest` and 2 tabs ("Liste", "Karte"); `HorizontalPager` with pageCount 2. | Proper composable hierarchy and tab indices. |
-| **TST-UI-118.5** | `MapUtilsTest.kt` / `KnownLocationsScreenTest.kt` | Generate marker bitmap descriptor using theme colors and heart drawable. | Returns non-null `BitmapDescriptor` generated from vector asset; default red marker is not used. | Non-null custom theme-colored marker bitmap descriptor. |
-| **TST-UI-118.6** | `KnownLocationsScreenTest.kt` | 9-Language Localization Audit: verify `drawer_start_locations`, `known_locations_title`, `known_locations_empty_title` across EN, DE, ES, FR, IT, JA, NL, PL, PT. | DE contains "Lieblingsorte", EN contains "Favorite Locations"; all 9 locales populated with 0 missing or blank strings. | 100% localization parity across all 9 locales. |
-| **TST-UI-118.7** | Full Repository | Execute full clean-room unit regression: `./gradlew testDebugUnitTest`. | All test suites pass with 0 failures and 0 errors. | BUILD SUCCESSFUL. |
+| **TST-UI-118.2** | `KnownLocationsViewModelTest.kt` | Populate locations with `hitCount` values: [A: 3, B: 25, C: 8]. Invoke fallback target resolver. | Resolves to Location B (`hitCount = 25`). When list is empty, returns null / default Munich coordinates. | Fallback target coordinates strictly match `argmax(hitCount)`. |
+| **TST-UI-118.3** | `KnownLocationsScreenTest.kt` | Verify composable card layout rendering for known locations. | Each location item renders inside `MappableListItem` container with Name, formatted Altitude, and Starts count. | All fields present and styled per design system; card uses `MappableListItem`. |
+| **TST-UI-118.4** | `KnownLocationsScreenTest.kt` | Verify tab row and pager configuration. | `PrimaryTabRow` with container color `surfaceContainerHighest` and 2 text-only tabs ("Liste", "Karte"); `HorizontalPager` with pageCount 2. | Proper composable hierarchy and tab indices; map gestures unaffected. |
+| **TST-UI-118.5** | `KnownLocationsViewModelTest.kt` / `KnownLocationsScreenTest.kt` | Verify 4-way sorting dropdown behavior. | Dimensions listed: Starts, Distance to User, Altitude, Name. Distance disabled if GPS location unavailable. | Sorting orders items correctly in UI. |
+| **TST-UI-118.6** | `KnownLocationsScreenTest.kt` | Long-press marker on map perspective. | Anchored context menu appears with Delete; tapping presents `DeleteConfirmationDialog`. | Deletion triggers confirmation dialog before SQLite purge. |
+| **TST-UI-118.7** | `KnownLocationsRepositoryTest.kt` / `LocationNameResolverTest.kt` | Initialize repository/viewmodel with placeholder names (e.g. `Startort (lat, lon)`). | `healLegacyNames()` resolves addresses and persists geocoded place names without mutating locked user names. | Legacy placeholder names successfully healed. |
+| **TST-UI-118.8** | `MapUtilsTest.kt` / `KnownLocationsScreenTest.kt` | Generate marker bitmap descriptor using theme colors and heart drawable. | Returns non-null `BitmapDescriptor` generated from vector asset; default red marker is not used. | Non-null custom theme-colored marker bitmap descriptor. |
+| **TST-UI-118.9** | `KnownLocationsScreenTest.kt` | 9-Language Localization Audit across EN, DE, ES, FR, IT, JA, NL, PL, PT. | DE contains "Lieblingsorte" and "Lieblingsort bearbeiten", EN contains "Favorite Locations"; all 9 locales populated with 0 missing or blank strings. | 100% localization parity across all 9 locales. |
+| **TST-UI-118.10** | Full Repository | Execute full clean-room unit regression: `./gradlew testDebugUnitTest`. | All test suites pass with 0 failures and 0 errors. | BUILD SUCCESSFUL. |
 
 ---
 
@@ -132,3 +148,4 @@ The system SHALL provide a harmonized, design-system-compliant Jetpack Compose i
 | `REQ-UI-166` (Harmonized) | `TST-UI-118` | Automated JUnit / MockK / Compose (`AppNavigationDrawerTest.kt`, `KnownLocationsViewModelTest.kt`, `KnownLocationsScreenTest.kt`) | Specified |
 | `REQ-DAT-007` | `TST-DAT-009` | Automated JUnit (`KnownLocationsDatabaseManagerTest.kt`) | Verified |
 | `REQ-DAT-014` | `TST-DAT-008` | Automated JUnit (`ElevationServiceTest.kt`) | Verified |
+

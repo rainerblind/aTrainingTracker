@@ -1,8 +1,7 @@
-# Walkthrough - ATT-1382: Improve Lieblingsorte UI
+# Walkthrough - ATT-1387: Implement Improved Lieblingsorte UI
 
-**Issue**: [ATT-1382](https://rainerblind.atlassian.net/browse/ATT-1382)  
-**Implementation Sub-Task**: [ATT-1387](https://rainerblind.atlassian.net/browse/ATT-1387)  
-**Parent Issue**: ATT-1382 (*[Verbesserung] Improve Lieblingsorte UI*)  
+**Issue**: [ATT-1387](https://rainerblind.atlassian.net/browse/ATT-1387)  
+**Parent Issue**: [ATT-1382](https://rainerblind.atlassian.net/browse/ATT-1382) (*[Verbesserung] Improve Lieblingsorte UI*)  
 **Active Sprint**: `2026-39.2` | **Target Release**: `V4.9.38`  
 **Requirement**: `REQ-UI-166` (referencing `REQ-UI-165`) | **Test Spec**: `TST-UI-118`  
 **Branch**: `feature/ATT-1382`  
@@ -10,7 +9,7 @@
 ---
 
 ## 1. Executive Summary
-Under **ATT-1382** (Sub-task **ATT-1387**), the known start locations feature (*Lieblingsorte*) originally introduced in `ATT-919` was comprehensively modernized and refined to align directly with `aTrainingTracker` core screens (`RouteTabbedScreen`, `WorkoutTabsScreen`, `SegmentsTabsScreen`).
+Under **ATT-1387** (Implementation sub-task of **ATT-1382**), the known start locations feature (*Lieblingsorte*) originally introduced in `ATT-919` was comprehensively modernized and refined to align directly with `aTrainingTracker` core screens (`RouteTabbedScreen`, `WorkoutTabsScreen`, `SegmentsTabsScreen`).
 
 The implementation incorporates all design system requirements and successive user refinements:
 1. **Standard Tabbed Layout & Header Surface**:

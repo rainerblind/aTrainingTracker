@@ -1,7 +1,7 @@
 h1. Architectural & Problem Analysis - ATT-1382: Improve Lieblingsorte UI
 
 h2. 1. Executive Summary & Problem Statement
-* *Issue Key*: ATT-1382 / ATT-1384
+* *Issue Key*: ATT-1382 / ATT-1384 (Sub-tasks: ATT-1384 Analysis, ATT-1385 Test Spec, ATT-1386 Plan, ATT-1387 Implementation)
 * *Parent Issue*: ATT-919 -> ATT-1382 ([Verbesserung] Improve Lieblingsorte UI)
 * *Target Version*: V4.9.38
 * *Associated Requirements*: [REQ-UI-165], [REQ-UI-166]

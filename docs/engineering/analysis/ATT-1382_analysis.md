@@ -3,9 +3,10 @@
 ## 1. Executive Summary & Problem Statement
 
 * **Issue Key**: `ATT-1382` / `ATT-1384`
+* **Sub-tasks**: `ATT-1384` (Analysis), `ATT-1385` (Test Spec), `ATT-1386` (Plan), `ATT-1387` (Implementation)
 * **Parent Issue**: `ATT-1382` (*[Verbesserung] Improve Lieblingsorte UI*)
 * **Target Version**: `V4.9.38` (Sprint `2026-39.2`)
-* **Associated Requirements**: `REQ-UI-165` (Known Start Locations Management, Interactive Map Geofences & Altitude Lock UI), `REQ-UI-166` (Lieblingsorte UI/UX Harmonization & Standard Tabbed Layout)
+* **Associated Requirements**: `REQ-UI-165` (Known Start Locations Management, Interactive Map Geofences & Altitude Lock UI), `REQ-UI-166` (Lieblingsorte UI/UX Harmonization, Standard Tabbed Layout, Sorting Options & Map Deletion Context Menu)
 * **Associated Verification**: `TST-UI-117` / `TST-UI-118`
 
 ### Problem Statement

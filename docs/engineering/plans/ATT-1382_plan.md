@@ -1,10 +1,10 @@
 # Architectural Implementation Plan - ATT-1382: Improve Lieblingsorte UI
 
 **Ticket**: [ATT-1382](https://rainerblind.atlassian.net/browse/ATT-1382)  
-**Sub-task**: [ATT-1386](https://rainerblind.atlassian.net/browse/ATT-1386)  
+**Sub-tasks**: [ATT-1384](https://rainerblind.atlassian.net/browse/ATT-1384) (Analysis), [ATT-1385](https://rainerblind.atlassian.net/browse/ATT-1385) (Test Spec), [ATT-1386](https://rainerblind.atlassian.net/browse/ATT-1386) (Plan), [ATT-1387](https://rainerblind.atlassian.net/browse/ATT-1387) (Implementation)  
 **Target Release**: `V4.9.38`  
 **Active Sprint**: `2026-39.2`  
-**Requirement**: `REQ-UI-166` (*Lieblingsorte UI/UX Harmonization, Standard Tabbed Layout & Custom Map Markers*), referencing `REQ-UI-165`  
+**Requirement**: `REQ-UI-166` (*Lieblingsorte UI/UX Harmonization, Standard Tabbed Layout, Sorting Options & Map Deletion Context Menu*), referencing `REQ-UI-165`  
 **Test Spec ID**: `TST-UI-118`  
 **Branch**: `feature/ATT-1382`  
 
@@ -12,7 +12,7 @@
 
 ## 1. Technical Architecture & Modifications
 
-To achieve complete aesthetic and ergonomic parity with the established `aTrainingTracker` design system (`RouteTabbedScreen`, `WorkoutTabsScreen`, `SegmentsTabsScreen`), the presentation layer is systematically refactored across seven distinct technical components:
+To achieve complete aesthetic and ergonomic parity with the established `aTrainingTracker` design system (`RouteTabbedScreen`, `WorkoutTabsScreen`, `SegmentsTabsScreen`), the presentation layer is systematically refactored across distinct technical components:
 
 ```mermaid
 graph TD
@@ -23,21 +23,25 @@ graph TD
 
     subgraph Presentation Layer: KnownLocationsScreen.kt
         HC[Surface: primaryContainer Header] --> TR[PrimaryTabRow: surfaceContainerHighest]
+        HC --> SM[Sorting DropdownMenu: 4 Dimensions]
         TR --> HP[HorizontalPager: swipeable List & Map]
         HP --> LP[Page 0: List Perspective]
         HP --> MP[Page 1: Map Perspective]
         LP --> MLI[MappableListItem: ElevatedCard 16dp rounded]
+        LP --> NBI[WindowInsets Navigation Bar Bottom Padding]
         MP --> CMM[Custom Theme Heart Markers & 200m Geofences]
         MP --> FMC[Fallback Centering: argmax hitCount]
+        MP --> MCM[Map Long-Click Context Menu: Delete Confirmation]
     end
 
     subgraph ViewModel & Domain Layer
         VM[KnownLocationsViewModel.kt] -->|resolveFallbackMapLocation| FMC
-        VM -->|StateFlow| LP
-        VM -->|StateFlow| MP
+        VM -->|sortLocations: RECORDINGS, DISTANCE, ALTITUDE, NAME| LP
+        VM -->|healLegacyNames on init| REP[KnownLocationsRepository.kt]
+        REP -->|isPlaceholderName & Geocoder Enrichment| LNR[LocationNameResolver.kt]
+        REP -->|upsertLocationByGeofence & learnLocation| DBM[KnownLocationsDatabaseManager.java]
     end
 ```
-
 ### 1.1 Navigation Drawer Hierarchy & Vector Asset Creation
 1. **New Vector Asset `app/src/main/res/drawable/ic_favorite_route.xml`**:
    - Create vector asset combining a route path trajectory with a heart glyph overlay.
@@ -48,28 +52,32 @@ graph TD
    - Assign `R.drawable.my_locations` (the location pin with embedded heart) to `drawer_start_locations`.
    - Preserve existing route resolution contracts: `NavRoutes.START_LOCATIONS` and `NavRoutes.MY_LOCATIONS`.
 
-### 1.2 Standard Tabbed Header Surface & Tab Row
+### 1.2 Standard Tabbed Header Surface, Tab Row & Sorting Menu
 In `KnownLocationsScreen.kt`:
 1. **Header Surface**:
-   - Remove generic `TopAppBar`.
+   - Remove generic `TopAppBar`, hamburger drawer icon, location counter badge, and search filter input.
    - Enclose header in `Surface(color = MaterialTheme.colorScheme.primaryContainer)`.
    - Add status bar padding: `Column(modifier = Modifier.statusBarsPadding())`.
    - Title Row (`LayoutConstants.HEADER_TITLE_ROW_HEIGHT`):
      - Title: `Text(text = stringResource(R.string.known_locations_title), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)`.
-     - Action icons (Search toggle, search input) styled with `tint = MaterialTheme.colorScheme.onPrimaryContainer`.
+     - Trailing action: Sort button (`Icons.Default.Sort`) with `DropdownMenu` offering 4 dimensions:
+       1. Starts (`RECORDINGS`, `@string/filter_section_recordings`)
+       2. Closest to Current Location (`DISTANCE_TO_USER`, `@string/sort_closest`) - dimmed if GPS unavailable
+       3. Altitude (`ALTITUDE`, `@string/sort_altitude`)
+       4. Name (`NAME`, `@string/sort_name`)
 2. **PrimaryTabRow**:
-   - Replace standard `TabRow` with `PrimaryTabRow(selectedTabIndex = pagerState.currentPage, containerColor = MaterialTheme.colorScheme.surfaceContainerHighest, divider = {})`.
-   - Tab 0: "Liste" (`R.string.known_locations_tab_list`) with `Icons.AutoMirrored.Filled.List`.
-   - Tab 1: "Karte" (`R.string.known_locations_tab_map`) with `Icons.Default.Map`.
+   - Replace standard `TabRow` with text-only `PrimaryTabRow(selectedTabIndex = pagerState.currentPage, containerColor = MaterialTheme.colorScheme.surfaceContainerHighest, divider = {})`.
+   - Tab 0: "Liste" (`R.string.known_locations_tab_list`).
+   - Tab 1: "Karte" (`R.string.known_locations_tab_map`).
 3. **Fluid Horizontal Pager**:
    - Host screen content in `HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize())` with `pageCount = 2`.
-   - Page 0 renders `KnownLocationsListContent`.
-   - Page 1 renders `KnownLocationsMapContent`.
-   - Bidirectional synchronization: swiping pages updates `pagerState.currentPage`; clicking tabs triggers `coroutineScope.launch { pagerState.animateScrollToPage(index) }`.
+   - Page 0 renders `KnownLocationsListContent` (`userScrollEnabled = true`).
+   - Page 1 renders `KnownLocationsMapContent` (`userScrollEnabled = false` to enable map drag gestures).
+   - Bidirectional synchronization: swiping from List to Map navigates to page 1; tapping tabs triggers `pagerState.animateScrollToPage(index)`.
 
 ### 1.3 Intelligent Fallback Map Centering on Max HitCount
 In `KnownLocationsViewModel.kt`:
-- Introduce a pure domain helper:
+- Pure domain helper:
   ```kotlin
   fun getFallbackMapLocation(): KnownLocationItem? {
       val locations = uiState.value.locations
@@ -81,40 +89,42 @@ In `KnownLocationsScreen.kt`:
   - If `fallbackLocation != null`, center camera on `fallbackLocation.latLng` at zoom level 15f.
   - If no locations exist in SQLite, center on standard default coordinates (Munich `48.13715, 11.57612`).
 
-### 1.4 Custom Theme-Colored Map Markers
+### 1.4 Custom Theme-Colored Map Markers & Long-Click Deletion Context Menu
 In `KnownLocationsScreen.kt` / `MapUtils.kt`:
-- Construct custom marker bitmap using `createSensorMarker(context, R.drawable.my_locations, pinColor = MaterialTheme.colorScheme.primary, iconColor = Color.White)` or vector-to-bitmap generator:
-  - Pin body rendered in `primary` theme color.
-  - Heart glyph rendered in crisp contrasting white.
-- Render map markers via Google Maps Compose `Marker(state = MarkerState(position = location.latLng), icon = customMarkerBitmap, title = location.name, onClick = { ... })`.
-- Maintain 200m circular geofence overlays with semi-transparent primary fill (`0x332196F3`) and stroke (`0x882196F3`).
-- Completely eliminate unstyled default red Google Maps markers.
+- Render custom `BitmapDescriptor` markers styled with primary theme pin and crisp contrasting white heart glyph via `createHeartPinMarker(context, pinColor, heartColor)`.
+- 200m circular geofence overlays rendered with semi-transparent primary fill (`0x332196F3`) and stroke (`0x882196F3`).
+- **Map Deletion Context Menu**: Long-pressing a marker or geofence circle opens an anchored `DropdownMenu` offering Delete (`@string/delete`).
+- Tapping Delete presents `DeleteConfirmationDialog` before purging the location from SQLite.
 
-### 1.5 List Item Card Standardization (`MappableListItem`)
+### 1.5 List Item Card Standardization (`MappableListItem`) & Bottom Inset Handling
 In `KnownLocationsScreen.kt`:
-- Replace plain `Card` with `com.atrainingtracker.trainingtracker.ui.components.MappableListItem`:
-  - `ElevatedCard` with `RoundedCornerShape(16.dp)` and `defaultElevation = 2.dp`.
-  - **Identity Row**: Heart/Pin icon, bold location name (`titleMedium`), prominently styled altitude chip.
-  - **Metadata & Badge Row**:
-    - Provenance badge (`INTERNET_DEM`, `MANUAL_USER`, `AUTO_LEARNED`, `GPS_FALLBACK`, `LEGACY_RAW`).
-    - Visit count badge ("X Starts").
-    - Formatted 5-decimal coordinates.
-  - **Interactions**:
-    - Card tap: Navigate to Map tab and animate camera to location.
-    - Context menu: Edit (opens `EditKnownLocationDialog`), Show on Map, Delete (opens `DeleteConfirmationDialog`).
+- Compose `MappableListItem` (`ElevatedCard`, 16dp rounded corners, 2dp elevation) with modern icon badge layout (Variant 2):
+  - Leading 44dp container with `my_locations` heart pin.
+  - Location title with inline ascent and starts count metrics.
+  - Trailing edit button (`R.drawable.ic_table_edit`).
+  - Single tap opens `EditKnownLocationDialog` with map preview.
+  - Long-press triggers anchored `DropdownMenu` with Edit, Show on Map, and Delete.
+- **System Navigation Inset**: `LazyColumn` content padding includes `WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()` ensuring the last item is never hidden behind system navigation bars.
 
-### 1.6 9-Language Domain Localization Parity
+### 1.6 Automatic Legacy Name Healing & Geocoder Auto-Naming
+In `KnownLocationsViewModel.kt`, `KnownLocationsRepository.kt`, `KnownLocationsDatabaseManager.java`, and `LocationNameResolver.kt`:
+- `healLegacyNames()` is executed automatically in background IO upon initialization.
+- Expanded `LocationNameResolver.isPlaceholderName()` recognizes coordinate fallback patterns across all locales.
+- Geocoded addresses enrich legacy placeholder entries while strictly preserving manual user edits (`source == MANUAL_USER` or custom names).
+
+### 1.7 9-Language Domain Localization Parity
 Update string resources across all 9 supported application locales (EN, DE, ES, FR, IT, JA, NL, PL, PT):
 - German (`values-de/strings.xml`):
   - `drawer_start_locations`: `"Lieblingsorte"`
   - `known_locations_title`: `"Lieblingsorte"`
   - `known_locations_empty_title`: `"Keine Lieblingsorte"`
-  - `known_locations_empty_subtitle`: `"Gespeicherte Startorte und Referenzhöhen werden hier angezeigt."`
+  - `known_location_edit_title`: `"Lieblingsort bearbeiten"`
 - English (`values/strings.xml`):
   - `drawer_start_locations`: `"Favorite Locations"`
   - `known_locations_title`: `"Favorite Locations"`
   - `known_locations_empty_title`: `"No Favorite Locations"`
-- Complete parity across Spanish, French, Italian, Japanese, Dutch, Polish, and Portuguese.
+  - `known_location_edit_title`: `"Edit Favorite Location"`
+- Parity across Spanish, French, Italian, Japanese, Dutch, Polish, and Portuguese.
 
 ---
 

@@ -1,6 +1,6 @@
 h1. Architectural Implementation Plan - ATT-1382: Improve Lieblingsorte UI
 
-*Ticket*: ATT-1382 / ATT-1386
+*Ticket*: ATT-1382 / ATT-1386 (Sub-tasks: ATT-1384 Analysis, ATT-1385 Test Spec, ATT-1386 Plan, ATT-1387 Implementation)
 *Target Release*: V4.9.38
 *Active Sprint*: 2026-39.2
 *Requirement*: REQ-UI-166, referencing REQ-UI-165
@@ -14,26 +14,33 @@ h3. 1. Navigation Drawer Hierarchy & Vector Asset Creation
 * *AppNavigationDrawer.kt*: Reorder drawer__maps: drawer_my_locations (Lieblingsstrecken) comes before drawer_start_locations (Lieblingsorte).
 * *Icons*: drawer_start_locations -> R.drawable.my_locations (pin with heart); drawer_my_locations -> R.drawable.ic_favorite_route.
 
-h3. 2. Standard Tabbed Header Surface & Tab Row (KnownLocationsScreen.kt)
-* *Header Surface*: Surface(color = MaterialTheme.colorScheme.primaryContainer) with Modifier.statusBarsPadding() and titleLarge text.
-* *Tab Row*: PrimaryTabRow(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest, divider = {}) with "Liste" and "Karte" tabs.
-* *Pager*: HorizontalPager(state = pagerState) with 2 pages, synchronized bidirectionally with PrimaryTabRow.
+h3. 2. Standard Tabbed Header Surface, Tab Row & Sorting Menu (KnownLocationsScreen.kt)
+* *Header Surface*: Surface(color = MaterialTheme.colorScheme.primaryContainer) with Modifier.statusBarsPadding() and titleLarge text. Removed hamburger icon, location count badge, and search filter input.
+* *Sorting Menu*: DropdownMenu offering 4 sorting dimensions: (1) Starts, (2) Closest to Location, (3) Altitude, (4) Name.
+* *Tab Row*: PrimaryTabRow(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest, divider = {}) with text-only "Liste" and "Karte" tabs.
+* *Pager*: HorizontalPager(state = pagerState) with 2 pages, synchronized bidirectionally with PrimaryTabRow. Drag gestures reserved for map on Page 1.
 
 h3. 3. Intelligent Fallback Map Centering (KnownLocationsViewModel.kt)
 * Introduce getFallbackMapLocation(): resolves location with max hitCount (argmax(hitCount)), null if empty.
 * Map centers on fallback location when opening map tab without GPS/selection; defaults to Munich if empty.
 
-h3. 4. Custom Theme-Colored Map Markers
+h3. 4. Custom Theme-Colored Map Markers & Long-Click Context Menu
 * Render custom BitmapDescriptor markers with primary theme pin body and contrasting white heart glyph.
 * Eliminate default red Google Maps markers. Maintain 200m circular geofences.
+* *Map Long-Click Deletion*: Long-pressing marker pin or geofence circle opens context menu with Delete option, protected by DeleteConfirmationDialog.
 
-h3. 5. List Item Card Standardization (MappableListItem)
-* Wrap list cards in MappableListItem (ElevatedCard, 16dp rounded corners, 2dp elevation).
-* Include Name, formatted Altitude chip, Provenance badge, Starts count badge, 5-decimal coordinates, and context overflow menu.
+h3. 5. List Item Card Standardization (MappableListItem) & Bottom Insets
+* Wrap list cards in MappableListItem (ElevatedCard, 16dp rounded corners, 2dp elevation) with modern icon badge (Variant 2).
+* Bottom list content padding accounts for WindowInsets.navigationBars to prevent obstruction.
+* Unified edit dialog with "Lieblingsort bearbeiten" / "Edit Favorite Location" title.
 
-h3. 6. 9-Language Localization Parity
-* Update German: drawer_start_locations and known_locations_title to "Lieblingsorte", known_locations_empty_title to "Keine Lieblingsorte".
-* English: "Favorite Locations", "No Favorite Locations".
+h3. 6. Automatic Legacy Name Healing & Geocoder Auto-Naming
+* healLegacyNames() invoked automatically on ViewModel/Repository initialization.
+* Geocoder resolution enriches legacy placeholder and coordinate-format names while strictly preserving manual user edits.
+
+h3. 7. 9-Language Localization Parity
+* Update German: drawer_start_locations and known_locations_title to "Lieblingsorte", known_location_edit_title to "Lieblingsort bearbeiten".
+* English: "Favorite Locations", "Edit Favorite Location".
 * 100% parity across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
 
 h2. Invariants & SWE.2 Layering
@@ -48,6 +55,8 @@ h2. Verification Coverage (TST-UI-118)
 * TST-UI-118.2: Fallback map target resolution to argmax(hitCount) in KnownLocationsViewModelTest.kt.
 * TST-UI-118.3: Composable card rendering inside MappableListItem in KnownLocationsScreenTest.kt.
 * TST-UI-118.4: PrimaryTabRow and HorizontalPager pageCount 2 in KnownLocationsScreenTest.kt.
-* TST-UI-118.5: Custom theme-colored marker bitmap descriptor generation.
-* TST-UI-118.6: 9-language localization audit across all 16 keys in all 9 locales.
-* TST-UI-118.7: Full clean-room regression suite (./gradlew testDebugUnitTest).
+* TST-UI-118.5: Multi-dimension sorting menu and map delete context menu verification.
+* TST-UI-118.6: Automatic legacy name healing and Geocoder enrichment verification.
+* TST-UI-118.7: Custom theme-colored marker bitmap descriptor generation.
+* TST-UI-118.8: 9-language localization audit across all keys in all 9 locales.
+* TST-UI-118.9: Full clean-room regression suite (./gradlew testDebugUnitTest).

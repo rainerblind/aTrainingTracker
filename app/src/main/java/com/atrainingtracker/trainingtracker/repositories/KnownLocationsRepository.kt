@@ -90,6 +90,7 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
     init {
         repositoryScope.launch {
             loadLocations()
+            healLegacyNames()
         }
     }
 
@@ -145,7 +146,11 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
         val result = elevationService.fetchElevation(latLng.latitude, latLng.longitude)
         if (result is ElevationResult.Success) {
             val existing = databaseManager.getMyLocation(id)
-            val name = existing?.name ?: LocationNameResolver.resolveLocationName(context, latLng.latitude, latLng.longitude)
+            val name = if (existing != null && !LocationNameResolver.isPlaceholderName(existing.name)) {
+                existing.name
+            } else {
+                LocationNameResolver.resolveLocationName(context, latLng.latitude, latLng.longitude)
+            }
             databaseManager.updateLocation(id, name, result.elevationMeters, ElevationSource.INTERNET_DEM, false)
             loadLocations()
         }
@@ -161,9 +166,9 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
         val rawLocations = databaseManager.allLocations
         var changed = false
         for (loc in rawLocations) {
-            if (!loc.isLocked && LocationNameResolver.isPlaceholderName(loc.name)) {
+            if (LocationNameResolver.isPlaceholderName(loc.name)) {
                 val resolvedName = LocationNameResolver.resolveLocationName(context, loc.latLng.latitude, loc.latLng.longitude)
-                if (resolvedName != loc.name) {
+                if (!LocationNameResolver.isPlaceholderName(resolvedName) && resolvedName != loc.name) {
                     databaseManager.updateLocation(loc.id, resolvedName, loc.altitude, loc.source, loc.isLocked)
                     changed = true
                 }

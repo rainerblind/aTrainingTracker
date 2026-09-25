@@ -1212,11 +1212,19 @@
     <string name="known_locations_empty_desc">I luoghi preferiti vengono memorizzati automaticamente all\'avvio di un allenamento o possono essere calibrati manualmente.</string>
     <string name="known_location_unnamed_format">Posizione di partenza (%1$.5f, %2$.5f)</string>
     <string name="known_locations_starts_count">%1$d partenze</string>
+    <string name="known_locations_sort_starts">Partenze</string>
+    <plurals name="known_locations_starts">
+        <item quantity="one">%1$d partenza</item>
+        <item quantity="other">%1$d partenze</item>
+    </plurals>
     <string name="source_internet_dem">Internet (DEM)</string>
     <string name="source_manual_user">Manuale</string>
     <string name="source_auto_learned">Automatico</string>
     <string name="source_gps_fallback">GPS</string>
     <string name="source_legacy_raw">Preesistente</string>
-    <string name="known_location_edit_title">Modifica posizione di partenza</string>
+    <string name="known_location_edit_title">Modifica luogo preferito</string>
     <string name="known_location_fetch_dem">Scarica da Internet (DEM)</string>
+    <string name="known_location_show_map">Mostra sulla mappa</string>
+    <string name="known_location_hide_map">Nascondi mappa</string>
+    <string name="sort_altitude">Altitudine</string>
 </resources>

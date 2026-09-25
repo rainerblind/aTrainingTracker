@@ -1213,11 +1213,19 @@
     <string name="known_locations_empty_desc">Les lieux favoris sont automatiquement mémorisés au démarrage d\'un entraînement ou peuvent être étalonnés manuellement.</string>
     <string name="known_location_unnamed_format">Lieu de départ (%1$.5f, %2$.5f)</string>
     <string name="known_locations_starts_count">%1$d départs</string>
+    <string name="known_locations_sort_starts">Départs</string>
+    <plurals name="known_locations_starts">
+        <item quantity="one">%1$d départ</item>
+        <item quantity="other">%1$d départs</item>
+    </plurals>
     <string name="source_internet_dem">Internet (MNT)</string>
     <string name="source_manual_user">Manuel</string>
     <string name="source_auto_learned">Automatique</string>
     <string name="source_gps_fallback">GPS</string>
     <string name="source_legacy_raw">Hérité</string>
-    <string name="known_location_edit_title">Modifier le lieu de départ</string>
+    <string name="known_location_edit_title">Modifier le lieu favori</string>
     <string name="known_location_fetch_dem">Télécharger depuis Internet (MNT)</string>
+    <string name="known_location_show_map">Afficher sur la carte</string>
+    <string name="known_location_hide_map">Masquer la carte</string>
+    <string name="sort_altitude">Altitude</string>
 </resources>

@@ -26,6 +26,7 @@ import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.elevation.ElevationResult
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
+import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
 import com.google.android.gms.maps.model.LatLng
@@ -52,11 +53,15 @@ data class KnownLocationsUiState(
     val filteredLocations: List<KnownLocationItem> = emptyList(),
     val visibleMapLocations: List<KnownLocationItem> = emptyList(),
     val selectedTab: KnownLocationsTab = KnownLocationsTab.LIST,
+    val sortOrder: KnownLocationSortOrder = KnownLocationSortOrder.STARTS,
+    val isLocationAvailable: Boolean = false,
+    val userLocation: LatLng? = null,
     val searchQuery: String = "",
     val isMetric: Boolean = true,
     val isLoading: Boolean = false,
     val selectedLocationForEdit: KnownLocationItem? = null,
-    val selectedLocationForMapPeek: KnownLocationItem? = null
+    val selectedLocationForMapPeek: KnownLocationItem? = null,
+    val showMapInEditDialog: Boolean = false
 )
 
 /**
@@ -68,8 +73,15 @@ data class KnownLocationsUiState(
 class KnownLocationsViewModel @JvmOverloads constructor(
     application: Application,
     private val repository: KnownLocationsRepository = KnownLocationsRepository.getInstance(application),
-    initialIsMetric: Boolean? = null
+    initialIsMetric: Boolean? = null,
+    banalServiceRepository: BANALServiceRepository? = null
 ) : AndroidViewModel(application) {
+
+    private val banalRepo: BANALServiceRepository? = banalServiceRepository ?: try {
+        BANALServiceRepository.getInstance(application)
+    } catch (_: Exception) {
+        null
+    }
 
     private val isMetricSetting: Boolean = initialIsMetric ?: try {
         TrainingApplication.getUnit() == MyUnits.METRIC
@@ -91,10 +103,11 @@ class KnownLocationsViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             repository.locationsFlow.collect { items ->
                 _uiState.update { state ->
-                    val filtered = applyFilter(items, state.searchQuery)
+                    val sorted = applySort(items, state.sortOrder, state.userLocation)
+                    val filtered = applyFilter(sorted, state.searchQuery)
                     val visibleMap = applyViewportCulling(filtered, currentViewportBounds)
                     state.copy(
-                        locations = items,
+                        locations = sorted,
                         filteredLocations = filtered,
                         visibleMapLocations = visibleMap,
                         isLoading = false,
@@ -105,6 +118,31 @@ class KnownLocationsViewModel @JvmOverloads constructor(
                 }
             }
         }
+
+        banalRepo?.currentLocation?.let { locFlow ->
+            viewModelScope.launch {
+                locFlow.collect { loc ->
+                    _uiState.update { state ->
+                        val locationAvailable = loc != null
+                        val sorted = if (state.sortOrder == KnownLocationSortOrder.DISTANCE_TO_USER) {
+                            applySort(state.locations, state.sortOrder, loc)
+                        } else {
+                            state.locations
+                        }
+                        state.copy(
+                            userLocation = loc,
+                            isLocationAvailable = locationAvailable,
+                            locations = sorted,
+                            filteredLocations = applyFilter(sorted, state.searchQuery)
+                        )
+                    }
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            repository.healLegacyNames()
+        }
     }
 
     /**
@@ -112,6 +150,21 @@ class KnownLocationsViewModel @JvmOverloads constructor(
      */
     fun selectTab(tab: KnownLocationsTab) {
         _uiState.update { it.copy(selectedTab = tab) }
+    }
+
+    /**
+     * Sets the active sort order for known locations.
+     */
+    fun setSortOrder(order: KnownLocationSortOrder) {
+        _uiState.update { state ->
+            val sorted = applySort(state.locations, order, state.userLocation)
+            val filtered = applyFilter(sorted, state.searchQuery)
+            state.copy(
+                sortOrder = order,
+                locations = sorted,
+                filteredLocations = filtered
+            )
+        }
     }
 
     /**
@@ -145,8 +198,13 @@ class KnownLocationsViewModel @JvmOverloads constructor(
     /**
      * Opens modal edit dialog for the specified location item.
      */
-    fun openEditDialog(location: KnownLocationItem) {
-        _uiState.update { it.copy(selectedLocationForEdit = location) }
+    fun openEditDialog(location: KnownLocationItem, showMap: Boolean = false) {
+        _uiState.update {
+            it.copy(
+                selectedLocationForEdit = location,
+                showMapInEditDialog = showMap
+            )
+        }
     }
 
     /**
@@ -222,6 +280,47 @@ class KnownLocationsViewModel @JvmOverloads constructor(
     fun getFallbackMapLocation(): KnownLocationItem? {
         val items = _uiState.value.locations
         return if (items.isEmpty()) null else items.maxByOrNull { it.hitCount }
+    }
+
+    private fun applySort(
+        items: List<KnownLocationItem>,
+        sortOrder: KnownLocationSortOrder,
+        userLocation: LatLng? = _uiState.value.userLocation
+    ): List<KnownLocationItem> {
+        return when (sortOrder) {
+            KnownLocationSortOrder.STARTS -> items.sortedWith(
+                compareByDescending<KnownLocationItem> { it.hitCount }
+                    .thenBy { it.name.lowercase() }
+            )
+            KnownLocationSortOrder.DISTANCE_TO_USER -> {
+                if (userLocation == null) {
+                    items.sortedWith(
+                        compareByDescending<KnownLocationItem> { it.hitCount }
+                            .thenBy { it.name.lowercase() }
+                    )
+                } else {
+                    items.sortedWith(
+                        compareBy<KnownLocationItem> { item ->
+                            val results = FloatArray(1)
+                            android.location.Location.distanceBetween(
+                                userLocation.latitude, userLocation.longitude,
+                                item.latLng.latitude, item.latLng.longitude,
+                                results
+                            )
+                            results[0]
+                        }.thenBy { it.name.lowercase() }
+                    )
+                }
+            }
+            KnownLocationSortOrder.ALTITUDE -> items.sortedWith(
+                compareByDescending<KnownLocationItem> { it.altitude }
+                    .thenBy { it.name.lowercase() }
+            )
+            KnownLocationSortOrder.NAME -> items.sortedWith(
+                compareBy<KnownLocationItem> { it.name.lowercase() }
+                    .thenByDescending { it.hitCount }
+            )
+        }
     }
 
     private fun applyFilter(items: List<KnownLocationItem>, query: String): List<KnownLocationItem> {
