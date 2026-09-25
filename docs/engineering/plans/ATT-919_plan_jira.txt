@@ -1,0 +1,109 @@
+h1. Implementation Plan - ATT-919: Known Start Locations Management, Interactive Map Geofences & Altitude Lock UI
+
+*Ticket*: [ATT-919|https://rainerblind.atlassian.net/browse/ATT-919]
+*Sub-task*: [ATT-1380|https://rainerblind.atlassian.net/browse/ATT-1380] ([Impl-Plan])
+*Parent Epic*: [ATT-355|https://rainerblind.atlassian.net/browse/ATT-355] (Good and consistent UI)
+*Target Release*: V4.9.38
+*Active Sprint*: 2026-39.2
+*Requirements*: {{REQ-UI-165}} (Net-New), {{REQ-DAT-007}} (Synchronized), {{REQ-DAT-014}}
+*Test Spec ID*: {{TST-UI-117}}
+*Branch*: feature/ATT-919
+
+----
+
+h2. 1. Technical Architecture & Components
+
+The feature delivers an end-to-end management experience for geographical workout start locations stored in {{StartLocation2Altitude.db}} (Schema V5).
+
+h3. 1.1 Navigation & Routing Architecture
+# *Drawer Navigation*:
+* Integrated into {{AppNavigationDrawer.kt}} under {{drawer__maps}} destinations:
+** Item ID: {{R.id.drawer_start_locations}}
+** Destination Route: {{NavRoutes.START_LOCATIONS}}
+** Icon: {{Icons.Default.Place}}
+** Title: {{@string/drawer_start_locations}} ("Start Locations" / "Startorte")
+# *NavHost Registration*:
+* Register route in {{NavRoutes.kt}} ({{const val START_LOCATIONS = "start_locations"}}).
+* Wire route in {{ATrainingTrackerApp.kt}} {{composable(NavRoutes.START_LOCATIONS)}} instantiating {{KnownLocationsScreen}}.
+
+h3. 1.2 Reverse Geocoding & Human-Readable Auto-Naming (LocationNameResolver.kt)
+# *Android Geocoder Integration*:
+* Encapsulate address resolution in {{com.atrainingtracker.trainingtracker.location.LocationNameResolver}}.
+* Queries {{android.location.Geocoder}} on {{Dispatchers.IO}}:
+** Combines address elements hierarchically: feature name + locality, thoroughfare + locality, or locality.
+** Fallback on offline/error/empty: Localized coordinates string {{@string/known_location_unnamed_format}} (e.g. "Startort (48.137, 11.576)").
+# *Discovery & Healing Integration*:
+* When {{AltitudeFromPressureDevice}} discovers a new start location or legacy healing detects a placeholder ("Internet DEM start", "Auto-learned start", or blank), it resolves a human-readable name asynchronously.
+* User-customized names ({{source == MANUAL_USER}} or user edits) are *strictly preserved* and immune to automatic overwriting.
+
+h3. 1.3 Concurrency & Single-Threaded SQLite Repository (KnownLocationsRepository.kt)
+# *Thread Confinement Invariant*:
+* To eliminate coroutine thread hopping and avoid deadlocks with Java {{synchronized}} blocks in {{KnownLocationsDatabaseManager}}, all SQLite operations are confined to a dedicated single-threaded dispatcher ({{Executors.newSingleThreadExecutor("KnownLocationsDB-Thread").asCoroutineDispatcher()}}).
+# *Repository API*:
+* {{getLocationsFlow(): Flow<List<KnownLocationItem>>}}: Emits reactive list of stored locations.
+* {{suspend fun updateLocation(id: Long, name: String, altitude: Double, source: ElevationSource)}}: Atomically updates name, altitude, source, and sets {{is_locked = (source == MANUAL_USER)}}.
+* {{suspend fun deleteLocation(id: Long)}}: Deletes location and refreshes flow.
+* {{suspend fun refreshDem(id: Long, latLng: LatLng): ElevationResult}}: Invokes {{ElevationService.fetchElevation()}}.
+
+h3. 1.4 State Management & Viewport Bounds Culling (KnownLocationsViewModel.kt)
+* {{KnownLocationsUiState}} captures active locations, search filter, tab selection, metric/imperial units, and editing states.
+* Viewport culling ({{onViewportBoundsChanged(bounds: LatLngBounds)}}) filters markers strictly inside the visible region, capping rendered map markers at 100 for 60 FPS performance.
+
+h3. 1.5 Dual-Perspective Jetpack Compose Screen (KnownLocationsScreen.kt)
+# *List Perspective*:
+* Search/filter bar and location count badge.
+* High-density Material 3 cards: Location Name, Altitude (m/ft), Provenance Source badge ({{INTERNET_DEM}}, {{MANUAL_USER}}, {{AUTO_LEARNED}}, {{GPS_FALLBACK}}, {{LEGACY_RAW}}), Hit Count badge, coordinates (5 decimals), and Action overflow menu (Edit, Show on Map, Delete).
+# *Map Perspective*:
+* Google Map rendering markers and 200m circular geofence overlays ({{CircleOptions}}, radius 200.0m, {{TTAlpha.HeatmapLow}} fill).
+* Tapping a marker opens a bottom sheet with summary and "Bearbeiten" action.
+
+h3. 1.6 Modal Edit Dialog (EditKnownLocationDialog.kt)
+* Outlined text fields for Name and Altitude.
+* "Fetch from Internet (DEM)" button with inline progress indicator.
+* Save / Cancel actions: saving a manual edit automatically persists {{source = MANUAL_USER}} and {{is_locked = 1}}.
+
+h3. 1.7 Unit Conversion Precision & Invariants
+* Database storage strictly SI meters ({{Double}}).
+* Metric manual edit preserves 0.1m precision.
+* Imperial conversions: foot to meter manual save h_m = round(h_ft * 0.3048 * 10.0) / 10.0; display h_ft = round(h_m / 0.3048).
+
+h3. 1.8 100% 9-Language Localization
+* 16 new localized string resources across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+
+----
+
+h2. 2. Impact Analysis & Invariants Cross-Check
+* {{REQ-UI-165}}: Fully Implemented.
+* {{REQ-DAT-007}}: Preserved (hitCount increments on locked/manual locations, altitude immutable).
+* {{REQ-DAT-014}}: Preserved (Schema V5 and DEM healing intact).
+* {{REQ-CON-013}}: Preserved (Barometric sensor calibration intact).
+* {{REQ-UI-159}} / {{REQ-UI-161}} / {{REQ-UI-162}}: Preserved (Navigation and drawer contracts intact).
+
+----
+
+h2. 3. Step-by-Step Implementation Sequence
+# *Gate Check*: Verify sub-task {{ATT-1380}} reaches Erledigt.
+# *String Resources*: Add all 16 string keys across all 9 {{strings.xml}} files.
+# *LocationNameResolver*: Implement {{LocationNameResolver.kt}} with unit tests in {{LocationNameResolverTest.kt}}.
+# *Data Layer Concurrency & Repository*: Implement {{KnownLocationsRepository.kt}} on {{KnownLocationsDB-Thread}} with unit tests in {{KnownLocationsRepositoryTest.kt}}.
+# *ViewModel & Unit Conversions*: Implement {{KnownLocationsViewModel.kt}} with tests in {{KnownLocationsViewModelTest.kt}} and {{KnownLocationsUnitConversionTest.kt}}.
+# *Navigation Integration*: Update {{NavRoutes.kt}}, {{AppNavigationDrawer.kt}}, {{ATrainingTrackerApp.kt}}, and test in {{AppNavigationDrawerTest.kt}}.
+# *Compose UI Screens & Dialog*: Implement {{EditKnownLocationDialog.kt}}, {{KnownLocationsScreen.kt}}, and tests in {{KnownLocationsScreenTest.kt}} and {{EditKnownLocationDialogTest.kt}}.
+# *Automated Verification & Regression*: Translation parity test and full clean-room unit regression ({{./gradlew testDebugUnitTest}}).
+
+----
+
+h2. 4. Test Verification Procedures (TST-UI-117)
+| *Test Procedure* | *Component* | *Verification Target* |
+| TST-UI-117.1 | {{AppNavigationDrawerTest.kt}} | Drawer item routes to {{NavRoutes.START_LOCATIONS}} and closes drawer. |
+| TST-UI-117.2 | {{KnownLocationsRepositoryTest.kt}} | Concurrency serialization on {{KnownLocationsDB-Thread}} with 0 deadlocks. |
+| TST-UI-117.3 | {{KnownLocationsViewModelTest.kt}} | {{updateLocation}} atomically persists {{name}}, {{altitude}}, {{source = MANUAL_USER}}, {{is_locked = 1}}. |
+| TST-UI-117.4 | {{LocationNameResolverTest.kt}} | Geocoder returns place names, handles network errors gracefully, protects custom names. |
+| TST-UI-117.5 | {{KnownLocationsUnitConversionTest.kt}} | Metric (0.1m) and Imperial (integer feet) round-trip precision without drift. |
+| TST-UI-117.6 | {{KnownLocationsScreenTest.kt}} | List tab renders cards with Name, Altitude, Source badge, Hit Count, Coordinates. |
+| TST-UI-117.7 | {{KnownLocationsViewModelTest.kt}} | Viewport culling filters locations intersecting active {{visibleRegion.latLngBounds}}. |
+| TST-UI-117.8 | {{EditKnownLocationDialogTest.kt}} | Editing altitude to 530.0m auto-locks and updates source to {{MANUAL_USER}}. |
+| TST-UI-117.9 | {{EditKnownLocationDialogTest.kt}} | "Fetch DEM" updates altitude text to DEM elevation and sets source to {{INTERNET_DEM}}. |
+| TST-UI-117.10 | {{KnownLocationsDatabaseManagerTest.kt}} | {{learnLocation}} on locked/manual location increments {{hitCount}} while altitude is unchanged. |
+| TST-UI-117.11 | {{TranslationParityTest.kt}} | 100% localization parity across all 16 keys in all 9 locales. |
+| TST-UI-117.12 | Clean-Room Suite | {{./gradlew testDebugUnitTest}} passes with 0 failures and 0 errors. |
