@@ -48,5 +48,7 @@
     <string name="filter_preset_max">Maksimum sesji</string>
     <string name="filter_preset_custom">Własne / Ekspert</string>
     <string name="filter_custom_header">Konfiguracja zaawansowana</string>
+    <string name="filter_mode_presets">Szybki wybór</string>
+    <string name="filter_mode_custom">Własne / Ekspert</string>
 
 </resources>

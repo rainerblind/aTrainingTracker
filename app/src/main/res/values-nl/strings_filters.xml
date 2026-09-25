@@ -48,5 +48,7 @@
     <string name="filter_preset_max">Sessiemaximum</string>
     <string name="filter_preset_custom">Aangepast / Expert</string>
     <string name="filter_custom_header">Aangepaste configuratie</string>
+    <string name="filter_mode_presets">Voorinstellingen</string>
+    <string name="filter_mode_custom">Aangepast / Expert</string>
 
 </resources>

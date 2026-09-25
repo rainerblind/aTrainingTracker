@@ -48,5 +48,7 @@
     <string name="filter_preset_max">Máximo de sesión</string>
     <string name="filter_preset_custom">Personalizado / Experto</string>
     <string name="filter_custom_header">Configuración avanzada</string>
+    <string name="filter_mode_presets">Ajustes rápidos</string>
+    <string name="filter_mode_custom">Personalizado / Experto</string>
 
 </resources>

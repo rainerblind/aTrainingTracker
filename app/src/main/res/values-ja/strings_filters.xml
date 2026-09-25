@@ -48,5 +48,7 @@
     <string name="filter_preset_max">セッション最大値</string>
     <string name="filter_preset_custom">カスタム / エキスパート</string>
     <string name="filter_custom_header">カスタム設定</string>
+    <string name="filter_mode_presets">プリセット</string>
+    <string name="filter_mode_custom">カスタム / エキスパート</string>
 
 </resources>

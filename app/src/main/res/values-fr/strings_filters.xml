@@ -48,5 +48,7 @@
     <string name="filter_preset_max">Maximum séance</string>
     <string name="filter_preset_custom">Personnalisé / Expert</string>
     <string name="filter_custom_header">Configuration personnalisée</string>
+    <string name="filter_mode_presets">Préréglages</string>
+    <string name="filter_mode_custom">Personnalisé / Expert</string>
 
 </resources>
