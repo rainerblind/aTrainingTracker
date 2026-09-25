@@ -573,9 +573,13 @@ public class TrackingViewsDatabaseManager {
                 values.put(COL_NR, rowData.col);
                 values.put(SENSOR_TYPE, rowData.sensorType.name());
                 values.put(TEXT_SIZE, 0);                              // no longer needed in version 8
-                values.put(VIEW_SIZE, rowData.viewSize().name());
-                values.put(FILTER_TYPE, FilterType.INSTANTANEOUS.name());
-                values.put(FILTER_CONSTANT, 1);
+                if (rowData.sensorType == SensorType.POWER) {
+                    values.put(FILTER_TYPE, FilterType.MOVING_AVERAGE_TIME.name());
+                    values.put(FILTER_CONSTANT, 3);
+                } else {
+                    values.put(FILTER_TYPE, FilterType.INSTANTANEOUS.name());
+                    values.put(FILTER_CONSTANT, 1);
+                }
                 db.insert(ROWS_TABLE, null, values);
             }
 
