@@ -42,5 +42,14 @@
     <string name="filter_type">Smoothing Type</string>
     <string name="filter_value">Value</string>
 
+    <string name="filter_presets_header">Quick Presets</string>
+    <string name="filter_preset_direct">Direct (1s)</string>
+    <string name="filter_preset_3s">3s (Power)</string>
+    <string name="filter_preset_10s">10s (Pacing)</string>
+    <string name="filter_preset_30s">30s (Endurance)</string>
+    <string name="filter_preset_avg">Session Avg (Ø)</string>
+    <string name="filter_preset_max">Session Max</string>
+    <string name="filter_preset_custom">Custom / Expert</string>
+    <string name="filter_custom_header">Custom Configuration</string>
 
 </resources>

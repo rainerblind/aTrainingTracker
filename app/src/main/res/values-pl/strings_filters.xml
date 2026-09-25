@@ -39,4 +39,14 @@
     <string name="filter_type">Typ wygładzania</string>
     <string name="filter_value">Wartość</string>
 
+    <string name="filter_presets_header">Szybkie ustawienia</string>
+    <string name="filter_preset_direct">Bezpośredni (1 s)</string>
+    <string name="filter_preset_3s">3 s (Moc)</string>
+    <string name="filter_preset_10s">10 s (Tempo)</string>
+    <string name="filter_preset_30s">30 s (Wytrzymałość)</string>
+    <string name="filter_preset_avg">Średnia sesji (Ø)</string>
+    <string name="filter_preset_max">Maksimum sesji</string>
+    <string name="filter_preset_custom">Własne / Ekspert</string>
+    <string name="filter_custom_header">Konfiguracja zaawansowana</string>
+
 </resources>

@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield
 
 import android.app.Application
 import android.util.Log
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -36,6 +37,51 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+/**
+ * Intuitive smoothing presets for athletic sensor configurations (ATT-1276, REQ-UI-167, TST-UI-119).
+ */
+enum class FilterPreset(val labelResId: Int) {
+    DIRECT(R.string.filter_preset_direct),
+    SMOOTH_3S(R.string.filter_preset_3s),
+    SMOOTH_10S(R.string.filter_preset_10s),
+    SMOOTH_30S(R.string.filter_preset_30s),
+    SESSION_AVG(R.string.filter_preset_avg),
+    SESSION_MAX(R.string.filter_preset_max),
+    CUSTOM(R.string.filter_preset_custom);
+
+    fun getDisplayName(context: Context): String = context.getString(labelResId)
+}
+
+/**
+ * Resolves the corresponding quick preset from raw filter configuration parameters.
+ */
+fun resolveFilterPreset(
+    filterType: FilterType,
+    constant: Double,
+    unit: String
+): FilterPreset {
+    return when (filterType) {
+        FilterType.INSTANTANEOUS -> FilterPreset.DIRECT
+        FilterType.AVERAGE -> FilterPreset.SESSION_AVG
+        FilterType.MAX_VALUE -> FilterPreset.SESSION_MAX
+        FilterType.MOVING_AVERAGE_TIME -> {
+            if (unit == "sec") {
+                when (constant) {
+                    1.0 -> FilterPreset.DIRECT
+                    3.0 -> FilterPreset.SMOOTH_3S
+                    10.0 -> FilterPreset.SMOOTH_10S
+                    30.0 -> FilterPreset.SMOOTH_30S
+                    else -> FilterPreset.CUSTOM
+                }
+            } else {
+                FilterPreset.CUSTOM
+            }
+        }
+        FilterType.MOVING_AVERAGE_NUMBER -> FilterPreset.CUSTOM
+        FilterType.EXPONENTIAL_SMOOTHING -> FilterPreset.CUSTOM
+    }
+}
+
 // This class will hold all the state for our dialog
 data class EditDialogUiState(
     val selectedSensorType: SensorType? = null,
@@ -49,8 +95,16 @@ data class EditDialogUiState(
     val filterSummary: String = "",
     val selectedFilterType: FilterType = FilterType.INSTANTANEOUS,
     val filterConstant: Double = 1.0,
-    val movingAverageUnit: String = "sec" // "sec", "min", or "samples"
-)
+    val movingAverageUnit: String = "sec", // "sec", "min", or "samples"
+    val isCustomFilterExpanded: Boolean = false
+) {
+    val activePreset: FilterPreset
+        get() = if (isCustomFilterExpanded && resolveFilterPreset(selectedFilterType, filterConstant, movingAverageUnit) != FilterPreset.CUSTOM) {
+            FilterPreset.CUSTOM
+        } else {
+            resolveFilterPreset(selectedFilterType, filterConstant, movingAverageUnit)
+        }
+}
 
 class EditSensorFieldViewModel(
     application: Application,
@@ -85,6 +139,8 @@ class EditSensorFieldViewModel(
         val context = getApplication<Application>().applicationContext
         // Use a default sensor type (e.g., first available)
         val defaultSensor = SensorType.SPEED_mps
+        val defaultFilterType = if (defaultSensor == SensorType.POWER) FilterType.MOVING_AVERAGE_TIME else FilterType.INSTANTANEOUS
+        val defaultConstant = if (defaultSensor == SensorType.POWER) 3.0 else 1.0
 
         // Create a MOCK initialConfig for the "Add" scenario.
         // This ensures that functions like onFilterConfigDismissed don't crash.
@@ -96,8 +152,8 @@ class EditSensorFieldViewModel(
             sourceDeviceId = -1,
             sourceDeviceName = context.getString(R.string.bestSensor),
             viewSize = ViewSize.NORMAL,
-            filterType = FilterType.INSTANTANEOUS,
-            filterConstant = 1.0
+            filterType = defaultFilterType,
+            filterConstant = defaultConstant
         )
 
         _uiState.update {
@@ -108,7 +164,11 @@ class EditSensorFieldViewModel(
                 selectedDeviceName = context.getString(R.string.bestSensor),
                 availableDevices = emptyList(), // Will be updated by side-effect if needed
                 selectedViewSize = ViewSize.NORMAL,
-                filterSummary = FilterType.INSTANTANEOUS.getSummary(context, 1.0)
+                selectedFilterType = defaultFilterType,
+                filterConstant = defaultConstant,
+                movingAverageUnit = "sec",
+                filterSummary = defaultFilterType.getSummary(context, defaultConstant),
+                isCustomFilterExpanded = false
             )
         }
     }
@@ -131,6 +191,8 @@ class EditSensorFieldViewModel(
                 initialUnit = "samples"
             }
 
+            val initialPreset = resolveFilterPreset(initialConfig.filterType, displayConstant, initialUnit)
+
             _uiState.value = EditDialogUiState(
                 selectedSensorType = initialConfig.sensorType,
                 availableSensorTypesForCurrentActivityType = ActivityType.getSensorTypeArray(activityType, context).toList(),
@@ -141,7 +203,8 @@ class EditSensorFieldViewModel(
                 filterSummary = initialConfig.filterType.getSummary(context, initialConfig.filterConstant),
                 selectedFilterType = initialConfig.filterType,
                 filterConstant = displayConstant,
-                movingAverageUnit = initialUnit
+                movingAverageUnit = initialUnit,
+                isCustomFilterExpanded = (initialPreset == FilterPreset.CUSTOM)
             )
         }
     }
@@ -149,6 +212,8 @@ class EditSensorFieldViewModel(
     fun onSensorTypeChanged(newSensorType: SensorType) {
         viewModelScope.launch {
             val context = getApplication<Application>().applicationContext
+            val defaultFilterType = if (newSensorType == SensorType.POWER) FilterType.MOVING_AVERAGE_TIME else FilterType.INSTANTANEOUS
+            val defaultConstant = if (newSensorType == SensorType.POWER) 3.0 else 1.0
 
             _uiState.update {
                 it.copy(
@@ -159,10 +224,12 @@ class EditSensorFieldViewModel(
                     selectedDeviceId = -1,
                     selectedDeviceName = context.getString(R.string.bestSensor),
                     availableDevices = getFullDeviceList(newSensorType),
-                    // set filter to instantaneous
-                    filterSummary = FilterType.INSTANTANEOUS.getSummary(context, 1.0),
-                    selectedFilterType = FilterType.INSTANTANEOUS,
-                    filterConstant = 1.0
+                    // set filter with smart defaults (3s for power, 1s direct for others)
+                    filterSummary = defaultFilterType.getSummary(context, defaultConstant),
+                    selectedFilterType = defaultFilterType,
+                    filterConstant = defaultConstant,
+                    movingAverageUnit = "sec",
+                    isCustomFilterExpanded = false
                 )
             }
         }
@@ -183,11 +250,89 @@ class EditSensorFieldViewModel(
         _uiState.update { it.copy(selectedViewSize = newViewSize) }
     }
 
+    fun onPresetSelected(preset: FilterPreset) {
+        val context = getApplication<Application>().applicationContext
+        when (preset) {
+            FilterPreset.DIRECT -> {
+                _uiState.update {
+                    it.copy(
+                        selectedFilterType = FilterType.INSTANTANEOUS,
+                        filterConstant = 1.0,
+                        movingAverageUnit = "sec",
+                        filterSummary = FilterType.INSTANTANEOUS.getSummary(context, 1.0),
+                        isCustomFilterExpanded = false
+                    )
+                }
+            }
+            FilterPreset.SMOOTH_3S -> {
+                _uiState.update {
+                    it.copy(
+                        selectedFilterType = FilterType.MOVING_AVERAGE_TIME,
+                        filterConstant = 3.0,
+                        movingAverageUnit = "sec",
+                        filterSummary = FilterType.MOVING_AVERAGE_TIME.getSummary(context, 3.0),
+                        isCustomFilterExpanded = false
+                    )
+                }
+            }
+            FilterPreset.SMOOTH_10S -> {
+                _uiState.update {
+                    it.copy(
+                        selectedFilterType = FilterType.MOVING_AVERAGE_TIME,
+                        filterConstant = 10.0,
+                        movingAverageUnit = "sec",
+                        filterSummary = FilterType.MOVING_AVERAGE_TIME.getSummary(context, 10.0),
+                        isCustomFilterExpanded = false
+                    )
+                }
+            }
+            FilterPreset.SMOOTH_30S -> {
+                _uiState.update {
+                    it.copy(
+                        selectedFilterType = FilterType.MOVING_AVERAGE_TIME,
+                        filterConstant = 30.0,
+                        movingAverageUnit = "sec",
+                        filterSummary = FilterType.MOVING_AVERAGE_TIME.getSummary(context, 30.0),
+                        isCustomFilterExpanded = false
+                    )
+                }
+            }
+            FilterPreset.SESSION_AVG -> {
+                _uiState.update {
+                    it.copy(
+                        selectedFilterType = FilterType.AVERAGE,
+                        filterConstant = 1.0,
+                        movingAverageUnit = "sec",
+                        filterSummary = FilterType.AVERAGE.getSummary(context, 1.0),
+                        isCustomFilterExpanded = false
+                    )
+                }
+            }
+            FilterPreset.SESSION_MAX -> {
+                _uiState.update {
+                    it.copy(
+                        selectedFilterType = FilterType.MAX_VALUE,
+                        filterConstant = 1.0,
+                        movingAverageUnit = "sec",
+                        filterSummary = FilterType.MAX_VALUE.getSummary(context, 1.0),
+                        isCustomFilterExpanded = false
+                    )
+                }
+            }
+            FilterPreset.CUSTOM -> {
+                _uiState.update {
+                    it.copy(isCustomFilterExpanded = true)
+                }
+            }
+        }
+    }
+
     fun onFilterTypeChanged(newFilterType: FilterType) {
         _uiState.update {
             it.copy(
                 selectedFilterType = newFilterType,
-                filterSummary = newFilterType.getSummary(getApplication<Application>().applicationContext, it.filterConstant)
+                filterSummary = newFilterType.getSummary(getApplication<Application>().applicationContext, it.filterConstant),
+                isCustomFilterExpanded = true
             )
         }
     }
@@ -196,7 +341,8 @@ class EditSensorFieldViewModel(
         _uiState.update {
             it.copy(
                 filterConstant = newConstant,
-                filterSummary = it.selectedFilterType.getSummary(getApplication<Application>().applicationContext, newConstant)
+                filterSummary = it.selectedFilterType.getSummary(getApplication<Application>().applicationContext, newConstant),
+                isCustomFilterExpanded = true
             )
         }
     }
@@ -205,7 +351,8 @@ class EditSensorFieldViewModel(
         _uiState.update {
             it.copy(
                 movingAverageUnit = newUnit,
-                filterSummary = it.selectedFilterType.getSummary(getApplication<Application>().applicationContext, it.filterConstant)
+                filterSummary = it.selectedFilterType.getSummary(getApplication<Application>().applicationContext, it.filterConstant),
+                isCustomFilterExpanded = true
             )
         }
     }
@@ -222,21 +369,38 @@ class EditSensorFieldViewModel(
             if (it.selectedSensorType == initialConfig.sensorType &&
                 it.selectedDeviceId == initialConfig.sourceDeviceId) {
                 // then copy the filter stuff from the initial config
+                var initialUnit = "sec"
+                var displayConstant = initialConfig.filterConstant
+                if (initialConfig.filterType == FilterType.MOVING_AVERAGE_TIME) {
+                    if (initialConfig.filterConstant >= 60 && initialConfig.filterConstant % 60 == 0.0) {
+                        initialUnit = "min"
+                        displayConstant = initialConfig.filterConstant / 60
+                    }
+                } else if (initialConfig.filterType == FilterType.MOVING_AVERAGE_NUMBER) {
+                    initialUnit = "samples"
+                }
+                val initialPreset = resolveFilterPreset(initialConfig.filterType, displayConstant, initialUnit)
                 it.copy(
                     showFilterConfigDialog = false,
                     filterSummary = initialConfig.filterType.getSummary(context, initialConfig.filterConstant),
-                    selectedFilterType = FilterType.INSTANTANEOUS,
-                    filterConstant = 1.0
+                    selectedFilterType = initialConfig.filterType,
+                    filterConstant = displayConstant,
+                    movingAverageUnit = initialUnit,
+                    isCustomFilterExpanded = (initialPreset == FilterPreset.CUSTOM)
                 )
 
             }
             else {
-                // otherwise, set it to the instantaneous filter
+                // otherwise, set it to the default for this sensor type
+                val defaultFilterType = if (it.selectedSensorType == SensorType.POWER) FilterType.MOVING_AVERAGE_TIME else FilterType.INSTANTANEOUS
+                val defaultConstant = if (it.selectedSensorType == SensorType.POWER) 3.0 else 1.0
                 it.copy(
                     showFilterConfigDialog = false,
-                    filterSummary = FilterType.INSTANTANEOUS.getSummary(context, 1.0),
-                    selectedFilterType = FilterType.INSTANTANEOUS,
-                    filterConstant = 1.0
+                    filterSummary = defaultFilterType.getSummary(context, defaultConstant),
+                    selectedFilterType = defaultFilterType,
+                    filterConstant = defaultConstant,
+                    movingAverageUnit = "sec",
+                    isCustomFilterExpanded = false
                 )
             }
         }
@@ -308,9 +472,12 @@ class EditSensorFieldViewModel(
     }
 
     private suspend fun getFullDeviceList(sensorType: SensorType): List<Pair<Long, String>> {
-        val deviceLists = trackingViewsRepository.getDeviceLists(sensorType) ?: return listOf(-1L to getApplication<Application>().getString(R.string.bestSensor))
         val context = getApplication<Application>().applicationContext
-        val devices = deviceLists.deviceIds.zip(deviceLists.names).toMutableList()
+        val defaultDevice = listOf(-1L to context.getString(R.string.bestSensor))
+        val deviceLists = trackingViewsRepository.getDeviceLists(sensorType) ?: return defaultDevice
+        val ids = deviceLists.deviceIds ?: return defaultDevice
+        val names = deviceLists.names ?: return defaultDevice
+        val devices = ids.zip(names).toMutableList()
         devices.add(0, -1L to context.getString(R.string.bestSensor))
         return devices
     }

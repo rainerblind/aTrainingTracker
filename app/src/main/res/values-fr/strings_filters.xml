@@ -39,4 +39,14 @@
     <string name="filter_type">Type de lissage</string>
     <string name="filter_value">Valeur</string>
 
+    <string name="filter_presets_header">Préréglages rapides</string>
+    <string name="filter_preset_direct">Direct (1 s)</string>
+    <string name="filter_preset_3s">3 s (Puissance)</string>
+    <string name="filter_preset_10s">10 s (Allure)</string>
+    <string name="filter_preset_30s">30 s (Endurance)</string>
+    <string name="filter_preset_avg">Moyenne séance (Ø)</string>
+    <string name="filter_preset_max">Maximum séance</string>
+    <string name="filter_preset_custom">Personnalisé / Expert</string>
+    <string name="filter_custom_header">Configuration personnalisée</string>
+
 </resources>

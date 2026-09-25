@@ -39,4 +39,14 @@
     <string name="filter_type">Glättungsart</string>
     <string name="filter_value">Wert</string>
 
+    <string name="filter_presets_header">Schnellauswahl</string>
+    <string name="filter_preset_direct">Direkt (1s)</string>
+    <string name="filter_preset_3s">3 Sek (Power)</string>
+    <string name="filter_preset_10s">10 Sek (Pacing)</string>
+    <string name="filter_preset_30s">30 Sek (Ausdauer)</string>
+    <string name="filter_preset_avg">Durchschnitt (Ø)</string>
+    <string name="filter_preset_max">Maximalwert</string>
+    <string name="filter_preset_custom">Manuell / Experte</string>
+    <string name="filter_custom_header">Erweiterte Einstellungen</string>
+
 </resources>

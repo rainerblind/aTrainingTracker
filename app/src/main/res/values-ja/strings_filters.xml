@@ -39,4 +39,14 @@
     <string name="filter_type">平滑化の種類</string>
     <string name="filter_value">値</string>
 
+    <string name="filter_presets_header">クイックプリセット</string>
+    <string name="filter_preset_direct">直接 (1秒)</string>
+    <string name="filter_preset_3s">3秒 (パワー)</string>
+    <string name="filter_preset_10s">10秒 (ペーシング)</string>
+    <string name="filter_preset_30s">30秒 (エンデュランス)</string>
+    <string name="filter_preset_avg">セッション平均 (Ø)</string>
+    <string name="filter_preset_max">セッション最大値</string>
+    <string name="filter_preset_custom">カスタム / エキスパート</string>
+    <string name="filter_custom_header">カスタム設定</string>
+
 </resources>

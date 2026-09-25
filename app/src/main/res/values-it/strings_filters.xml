@@ -39,4 +39,14 @@
     <string name="filter_type">Tipo di smoothing</string>
     <string name="filter_value">Valore</string>
 
+    <string name="filter_presets_header">Preimpostazioni rapide</string>
+    <string name="filter_preset_direct">Diretto (1 s)</string>
+    <string name="filter_preset_3s">3 s (Potenza)</string>
+    <string name="filter_preset_10s">10 s (Andatura)</string>
+    <string name="filter_preset_30s">30 s (Resistenza)</string>
+    <string name="filter_preset_avg">Media sessione (Ø)</string>
+    <string name="filter_preset_max">Massimo sessione</string>
+    <string name="filter_preset_custom">Personalizzato / Esperto</string>
+    <string name="filter_custom_header">Configurazione avanzata</string>
+
 </resources>
