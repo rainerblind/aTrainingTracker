@@ -222,4 +222,10 @@ class KnownLocationsViewModelTest {
         viewModel.dismissMapPeek()
         assertNull(viewModel.uiState.value.selectedLocationForMapPeek)
     }
+
+    @Test
+    fun testConstructor_supportsSingleApplicationArgumentForAndroidViewModelFactory() {
+        val constructor = KnownLocationsViewModel::class.java.getConstructor(Application::class.java)
+        assertNotNull(constructor)
+    }
 }

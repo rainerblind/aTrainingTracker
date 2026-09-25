@@ -65,7 +65,7 @@ data class KnownLocationsUiState(
  *
  * Traceability: REQ-UI-165, REQ-DAT-007, REQ-DAT-014, TST-UI-117.
  */
-class KnownLocationsViewModel @VisibleForTesting constructor(
+class KnownLocationsViewModel @JvmOverloads constructor(
     application: Application,
     private val repository: KnownLocationsRepository = KnownLocationsRepository.getInstance(application),
     initialIsMetric: Boolean? = null

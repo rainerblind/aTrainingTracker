@@ -137,8 +137,12 @@ fun KnownLocationsScreen(
     // Viewport bounds culling listener
     LaunchedEffect(cameraPositionState.isMoving) {
         if (!cameraPositionState.isMoving) {
-            val bounds = cameraPositionState.projection?.visibleRegion?.latLngBounds
-            viewModel.onViewportBoundsChanged(bounds)
+            try {
+                val bounds = cameraPositionState.projection?.visibleRegion?.latLngBounds
+                viewModel.onViewportBoundsChanged(bounds)
+            } catch (_: Exception) {
+                // Ignore projection query errors during early initialization
+            }
         }
     }
 
