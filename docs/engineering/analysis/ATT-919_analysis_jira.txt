@@ -97,4 +97,4 @@ All newly introduced strings are completely defined across all 9 supported local
 
 h2. 6. ASPICE Traceability & Next Steps
 * *Requirement*: REQ-UI-165 (to be synchronized in docs/requirements.md during Stage 2).
-* *Verification Test Specification*: TST-UI-094 (to be specified in docs/tests.md during Stage 2).
+* *Verification Test Specification*: TST-UI-117 (specified in docs/tests.md).

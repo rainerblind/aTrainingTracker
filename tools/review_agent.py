@@ -66,7 +66,7 @@ GATE_DEFINITIONS = {
         "prefix": "[Impl-Plan]",
         "name": "Gate 3: Architectural & Invariant Plan Review",
         "checklist": """1. Architectural Integrity & Layering:
-   - Verify component boundaries, layering rules (SWE.2), and interface stability.
+   - Verify component boundaries, layering rules (SWE.2), and interface stability. Note: This gate audits the architectural implementation plan document (Stage 3). Under ASPICE / TDD process governance, production code implementation is strictly deferred to Stage 4 after the plan receives human approval. Do not penalize Stage 3 for not yet having code modifications in the git diff.
 2. Invariant Verification:
    - Confirm all system invariants, non-target metrics, and file schemas are explicitly protected.
 3. Verification Coverage:
