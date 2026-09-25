@@ -1,0 +1,32 @@
+h1. Feature ATT-919: Known Start Locations Management, Interactive Map Geofences & Manual Altitude Correction UI
+
+h2. 1. Executive Summary & Problem Context
+*aTrainingTracker* maintains geographical start locations in {{StartLocation2Altitude.db}} (Schema V5) to calibrate hardware barometric altimeters upon workout start. With *ATT-1278* (Internet Digital Elevation Model ground truth) and *ATT-1366* (elimination of running mean altitude drift), the data layer provides thread-safe, robust reference elevations.
+
+However, there was zero user interface for this database:
+# *Zero Visibility*: Athletes could not view stored locations, reference altitudes, or workout start frequencies.
+# *No Manual Calibration*: Athletes knowing their exact cadastral or surveyed ground truth could not manually enter it.
+# *No Location Naming*: Discovered locations were labeled with technical placeholders (e.g. "Internet DEM start") and could not be named or edited.
+# *No Spatial Context*: Athletes could not inspect the 200m spatial geofence circles on an interactive map.
+
+h2. 2. Architecture & Solution Design
+* *Navigation Drawer*: Entry under {{drawer__maps}}: {{R.id.drawer_start_locations}} -> {{NavRoutes.START_LOCATIONS}} ("Start Locations" / "Startorte").
+* *Dual-Perspective Screen (KnownLocationsScreen.kt)*:
+** *List Tab*: High-density Material 3 cards rendering Location Name, Altitude (m/ft), Provenance Source badge ({{INTERNET_DEM}}, {{MANUAL_USER}}, {{AUTO_LEARNED}}, {{GPS_FALLBACK}}, {{LEGACY_RAW}}), Hit Count badge, coordinates (5 decimals), and Action overflow menu (Edit, Center on Map, Delete).
+** *Map Tab*: Google Map rendering pin markers and 200m circular geofence overlays with viewport bounds culling ({{visibleRegion.latLngBounds}}).
+* *Meaningful Location Naming & Editing*:
+** *Reverse Geocoding on Discovery*: Queries Android {{Geocoder}} in the background to assign a human-readable place name (locality, sublocality, thoroughfare).
+** *Legacy Healing Enrichment*: Unnamed or placeholder records are enriched with place names during healing.
+** *Custom Name Protection*: Names edited by the athlete are strictly preserved in SQLite ({{KnownLocationsDbHelper.NAME}}).
+* *Seamless Altitude Protection*:
+** In {{EditKnownLocationDialog.kt}}, manual altitude edits automatically persist with {{source = MANUAL_USER}} and {{is_locked = 1}}, protecting calibrations without requiring manual lock management.
+** "Fetch from Internet (DEM)" queries online elevation on demand and persists {{source = INTERNET_DEM}} with {{is_locked = 0}}.
+* *Concurrency & Invariants*:
+** Single-threaded SQLite dispatcher ({{KnownLocationsDB-Thread}}) prevents coroutine deadlocks.
+** Repeat starts at locked/manual locations increment {{hitCount}} while preserving reference altitudes ({{REQ-DAT-007}}).
+** Complete 9-language localization parity (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+
+h2. 3. Traceability
+* *Requirements*: {{REQ-UI-165}}, {{REQ-DAT-007}}, {{REQ-DAT-014}}
+* *Verification*: {{TST-UI-117}}
+* *Target Release*: V4.9.38
