@@ -61,6 +61,7 @@ fun ConfigureFilterDialog(
 
     ConfigureFilterDialogContent(
         uiState = uiState,
+        onModeChanged = { viewModel.onCustomFilterExpandedChanged(it) },
         onPresetSelected = { viewModel.onPresetSelected(it) },
         onFilterTypeChanged = { viewModel.onFilterTypeChanged(it) },
         onFilterConstantChanged = { viewModel.onFilterConstantChanged(it) },
@@ -77,6 +78,7 @@ fun ConfigureFilterDialog(
 @Composable
 fun ConfigureFilterDialogContent(
     uiState: EditDialogUiState,
+    onModeChanged: (Boolean) -> Unit = {},
     onPresetSelected: (FilterPreset) -> Unit,
     onFilterTypeChanged: (FilterType) -> Unit,
     onFilterConstantChanged: (Double) -> Unit,
@@ -130,128 +132,156 @@ fun ConfigureFilterDialogContent(
                 .fillMaxWidth()
                 .padding(horizontal = 4.dp, vertical = 4.dp)
         ) {
-            // 1. Quick Presets Header
-            Text(
-                text = stringResource(R.string.filter_presets_header),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            // Quick Preset Chips (FlowRow with all 7 presets)
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.fillMaxWidth()
+            // Mode Selector: Schnellauswahl vs. Manuell / Experte
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
             ) {
-                FilterPreset.entries.forEach { preset ->
-                    val isSelected = uiState.activePreset == preset
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { onPresetSelected(preset) },
-                        label = { Text(stringResource(preset.labelResId)) }
-                    )
+                SegmentedButton(
+                    selected = !uiState.isCustomFilterExpanded,
+                    onClick = { onModeChanged(false) },
+                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                    icon = { SegmentedButtonDefaults.Icon(active = !uiState.isCustomFilterExpanded) }
+                ) {
+                    Text(stringResource(R.string.filter_mode_presets))
+                }
+                SegmentedButton(
+                    selected = uiState.isCustomFilterExpanded,
+                    onClick = { onModeChanged(true) },
+                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                    icon = { SegmentedButtonDefaults.Icon(active = uiState.isCustomFilterExpanded) }
+                ) {
+                    Text(stringResource(R.string.filter_mode_custom))
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
-
-            // 2. Explanatory Guidance Surface Card
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = finalFilterType.getSummary(context, finalConstant),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = finalFilterType.getDetails(context, finalConstant),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+            if (!uiState.isCustomFilterExpanded) {
+                // Mode 1: Schnellauswahl (Standard athletic presets only)
+                val standardPresets = remember {
+                    listOf(
+                        FilterPreset.DIRECT,
+                        FilterPreset.SMOOTH_3S,
+                        FilterPreset.SMOOTH_10S,
+                        FilterPreset.SMOOTH_30S,
+                        FilterPreset.SESSION_AVG,
+                        FilterPreset.SESSION_MAX
                     )
                 }
-            }
 
-            // 3. Expandable Custom / Expert Configuration Section
-            AnimatedVisibility(
-                visible = uiState.activePreset == FilterPreset.CUSTOM || uiState.isCustomFilterExpanded,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
-            ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Spacer(Modifier.height(16.dp))
-                    HorizontalDivider()
-                    Spacer(Modifier.height(16.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    standardPresets.forEach { preset ->
+                        val isSelected = uiState.activePreset == preset
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { onPresetSelected(preset) },
+                            label = { Text(stringResource(preset.labelResId)) }
+                        )
+                    }
+                }
 
-                    Text(
-                        text = stringResource(R.string.filter_custom_header),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                Spacer(Modifier.height(16.dp))
 
-                    Spacer(Modifier.height(12.dp))
+                // Guidance Card for chosen preset
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = finalFilterType.getSummary(context, finalConstant),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = finalFilterType.getDetails(context, finalConstant),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                // Mode 2: Manuell / Experte (Detailed dropdowns and inputs)
+                FilterTypeSpinner(
+                    items = filterTypes.map { it.getDisplayName(context) },
+                    selectedItem = uiState.selectedFilterType.getDisplayName(context),
+                    onItemSelected = { index ->
+                        onFilterTypeChanged(filterTypes[index])
+                    }
+                )
 
-                    // Filter Type Spinner
-                    FilterTypeSpinner(
-                        items = filterTypes.map { it.getDisplayName(context) },
-                        selectedItem = uiState.selectedFilterType.getDisplayName(context),
-                        onItemSelected = { index ->
-                            onFilterTypeChanged(filterTypes[index])
-                        }
-                    )
+                Spacer(Modifier.height(12.dp))
 
-                    Spacer(Modifier.height(12.dp))
-
-                    // Constant and Unit inputs (conditionally visible)
-                    when (finalFilterType) {
-                        FilterType.MOVING_AVERAGE_TIME, FilterType.MOVING_AVERAGE_NUMBER -> {
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                OutlinedTextField(
-                                    value = uiState.filterConstant.toInt().toString(),
-                                    onValueChange = { textValue ->
-                                        val intValue = textValue.filter { it.isDigit() }.toIntOrNull() ?: 1
-                                        onFilterConstantChanged(intValue.toDouble())
-                                    },
-                                    label = { Text(stringResource(R.string.filter_value)) },
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                UnitSpinner(
-                                    selectedUnit = uiState.movingAverageUnit,
-                                    onUnitSelected = { onUnitChanged(it) },
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                        }
-                        FilterType.EXPONENTIAL_SMOOTHING -> {
-                            var textValue by remember(uiState.filterConstant) {
-                                mutableStateOf(uiState.filterConstant.toString())
-                            }
+                when (finalFilterType) {
+                    FilterType.MOVING_AVERAGE_TIME, FilterType.MOVING_AVERAGE_NUMBER -> {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             OutlinedTextField(
-                                value = textValue,
-                                onValueChange = { newText ->
-                                    textValue = newText
-                                    val parsedValue = newText.toDoubleOrNull()
-                                    if (parsedValue != null && parsedValue > 0.0 && parsedValue <= 1.0) {
-                                        onFilterConstantChanged(parsedValue)
-                                    }
+                                value = uiState.filterConstant.toInt().toString(),
+                                onValueChange = { textValue ->
+                                    val intValue = textValue.filter { it.isDigit() }.toIntOrNull() ?: 1
+                                    onFilterConstantChanged(intValue.toDouble())
                                 },
                                 label = { Text(stringResource(R.string.filter_value)) },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                modifier = Modifier.fillMaxWidth()
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            UnitSpinner(
+                                selectedUnit = uiState.movingAverageUnit,
+                                onUnitSelected = { onUnitChanged(it) },
+                                modifier = Modifier.weight(1f)
                             )
                         }
-                        else -> {}
+                    }
+                    FilterType.EXPONENTIAL_SMOOTHING -> {
+                        var textValue by remember(uiState.filterConstant) {
+                            mutableStateOf(uiState.filterConstant.toString())
+                        }
+                        OutlinedTextField(
+                            value = textValue,
+                            onValueChange = { newText ->
+                                textValue = newText
+                                val parsedValue = newText.toDoubleOrNull()
+                                if (parsedValue != null && parsedValue > 0.0 && parsedValue <= 1.0) {
+                                    onFilterConstantChanged(parsedValue)
+                                }
+                            },
+                            label = { Text(stringResource(R.string.filter_value)) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    else -> {}
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Guidance Card for custom configuration
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = finalFilterType.getSummary(context, finalConstant),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = finalFilterType.getDetails(context, finalConstant),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }

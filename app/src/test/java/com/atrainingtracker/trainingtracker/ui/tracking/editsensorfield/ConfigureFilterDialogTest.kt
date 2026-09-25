@@ -219,6 +219,31 @@ class ConfigureFilterDialogTest {
     }
 
     @Test
+    fun testModeSwitching_togglesCustomFilterExpanded() = runTest(testDispatcher) {
+        val viewModel = EditSensorFieldViewModel(
+            application = application,
+            trackingViewsRepository = trackingViewsRepo,
+            banalServiceRepository = banalServiceRepo,
+            activityType = ActivityType.BIKE_POWER,
+            sensorFieldId = -1L,
+            tabViewId = 1L,
+            rowNr = 1,
+            colNr = 1
+        )
+
+        // Initially in Schnellauswahl (presets) mode
+        assertFalse(viewModel.uiState.value.isCustomFilterExpanded)
+
+        // Switch to Manual / Expert mode
+        viewModel.onCustomFilterExpandedChanged(true)
+        assertTrue(viewModel.uiState.value.isCustomFilterExpanded)
+
+        // Switch back to Presets mode
+        viewModel.onCustomFilterExpandedChanged(false)
+        assertFalse(viewModel.uiState.value.isCustomFilterExpanded)
+    }
+
+    @Test
     fun testFilterConfigDismissed_restoresInitialConfiguration() = runTest(testDispatcher) {
         val existingConfig = SensorFieldConfig(
             sensorFieldId = 42L,

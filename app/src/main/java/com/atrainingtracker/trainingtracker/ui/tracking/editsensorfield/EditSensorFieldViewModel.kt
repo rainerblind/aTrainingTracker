@@ -331,6 +331,10 @@ class EditSensorFieldViewModel(
         }
     }
 
+    fun onCustomFilterExpandedChanged(isExpanded: Boolean) {
+        _uiState.update { it.copy(isCustomFilterExpanded = isExpanded) }
+    }
+
     fun onFilterTypeChanged(newFilterType: FilterType) {
         _uiState.update {
             val adjustedConstant = if (newFilterType == FilterType.EXPONENTIAL_SMOOTHING) {

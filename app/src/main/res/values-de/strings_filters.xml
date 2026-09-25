@@ -48,5 +48,7 @@
     <string name="filter_preset_max">Maximalwert</string>
     <string name="filter_preset_custom">Manuell / Experte</string>
     <string name="filter_custom_header">Erweiterte Einstellungen</string>
+    <string name="filter_mode_presets">Schnellauswahl</string>
+    <string name="filter_mode_custom">Manuell / Experte</string>
 
 </resources>

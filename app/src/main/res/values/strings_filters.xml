@@ -51,5 +51,7 @@
     <string name="filter_preset_max">Session Max</string>
     <string name="filter_preset_custom">Custom / Expert</string>
     <string name="filter_custom_header">Custom Configuration</string>
+    <string name="filter_mode_presets">Presets</string>
+    <string name="filter_mode_custom">Custom / Expert</string>
 
 </resources>
