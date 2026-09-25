@@ -228,4 +228,25 @@ class KnownLocationsViewModelTest {
         val constructor = KnownLocationsViewModel::class.java.getConstructor(Application::class.java)
         assertNotNull(constructor)
     }
+
+    @Test
+    fun testFallbackMapLocation_resolvesMaxHitCountOrNull() = runTest {
+        // When empty, fallback should be null
+        fakeLocationsFlow.value = emptyList()
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertNull(viewModel.getFallbackMapLocation())
+
+        // Given multiple locations with different hitCount values
+        val loc1 = KnownLocationItem(1L, "Home", 500.0, 200, LatLng(48.1, 11.5), 10, false, ElevationSource.INTERNET_DEM)
+        val loc2 = KnownLocationItem(2L, "Gym", 520.0, 200, LatLng(48.2, 11.6), 42, false, ElevationSource.INTERNET_DEM)
+        val loc3 = KnownLocationItem(3L, "Park", 510.0, 200, LatLng(48.3, 11.7), 5, false, ElevationSource.INTERNET_DEM)
+
+        fakeLocationsFlow.value = listOf(loc1, loc2, loc3)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val fallback = viewModel.getFallbackMapLocation()
+        assertNotNull(fallback)
+        assertEquals("Fallback must be the location with the maximum hitCount", 2L, fallback?.id)
+        assertEquals(42, fallback?.hitCount)
+    }
 }

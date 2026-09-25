@@ -212,6 +212,18 @@ class KnownLocationsViewModel @JvmOverloads constructor(
         }
     }
 
+    /**
+     * Resolves the primary/fallback location for initial map camera centering.
+     * Selects the location with the highest visit count ([KnownLocationItem.hitCount]),
+     * or null if no locations exist in SQLite.
+     *
+     * Traceability: REQ-UI-166, TST-UI-118.2.
+     */
+    fun getFallbackMapLocation(): KnownLocationItem? {
+        val items = _uiState.value.locations
+        return if (items.isEmpty()) null else items.maxByOrNull { it.hitCount }
+    }
+
     private fun applyFilter(items: List<KnownLocationItem>, query: String): List<KnownLocationItem> {
         val trimmed = query.trim().lowercase()
         if (trimmed.isEmpty()) return items

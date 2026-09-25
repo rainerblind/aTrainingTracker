@@ -157,6 +157,29 @@ class KnownLocationsScreenTest {
         }
     }
 
+    /**
+     * TST-UI-118.4: Verify German naming parity is "Lieblingsorte" and English is "Favorite Locations"
+     * for both drawer entry and screen title (ATT-1382 / REQ-UI-166).
+     */
+    @Test
+    fun testLieblingsorteNamingAcrossLocales() {
+        val resDir = findResDirectory()
+
+        // German
+        val deMap = parseStringsFile(File(resDir, "values-de/strings.xml"))
+        assertEquals("Lieblingsorte", deMap["drawer_start_locations"])
+        assertEquals("Lieblingsorte", deMap["known_locations_title"])
+        assertEquals("Liste", deMap["known_locations_tab_list"])
+        assertEquals("Karte", deMap["known_locations_tab_map"])
+
+        // English (default)
+        val enMap = parseStringsFile(File(resDir, "values/strings.xml"))
+        assertEquals("Favorite Locations", enMap["drawer_start_locations"])
+        assertEquals("Favorite Locations", enMap["known_locations_title"])
+        assertEquals("List", enMap["known_locations_tab_list"])
+        assertEquals("Map", enMap["known_locations_tab_map"])
+    }
+
     private fun findResDirectory(): File {
         val candidates = listOf(
             File("src/main/res"),

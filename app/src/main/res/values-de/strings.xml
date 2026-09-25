@@ -1289,14 +1289,14 @@
     <string name="lap_table_header_time">Zeit</string>
     <string name="lap_table_header_distance">Distanz</string>
 
-    <!-- ATT-919: Known Start Locations Management & Altitude Lock UI -->
-    <string name="drawer_start_locations">Startorte</string>
-    <string name="known_locations_title">Startorte</string>
+    <!-- ATT-919 / ATT-1382: Known Start Locations (Lieblingsorte) Management & Altitude Lock UI -->
+    <string name="drawer_start_locations">Lieblingsorte</string>
+    <string name="known_locations_title">Lieblingsorte</string>
     <string name="known_locations_tab_list">Liste</string>
     <string name="known_locations_tab_map">Karte</string>
-    <string name="known_locations_search_hint">Startorte suchen…</string>
-    <string name="known_locations_empty_title">Keine Startorte erfasst</string>
-    <string name="known_locations_empty_desc">Startorte werden beim Starten eines Workouts automatisch gelernt oder können manuell kalibriert werden.</string>
+    <string name="known_locations_search_hint">Lieblingsorte suchen…</string>
+    <string name="known_locations_empty_title">Keine Lieblingsorte erfasst</string>
+    <string name="known_locations_empty_desc">Lieblingsorte werden beim Starten eines Workouts automatisch gelernt oder können manuell kalibriert werden.</string>
     <string name="known_location_unnamed_format">Startort (%1$.5f, %2$.5f)</string>
     <string name="known_locations_starts_count">%1$d Starts</string>
     <string name="source_internet_dem">Internet (DEM)</string>

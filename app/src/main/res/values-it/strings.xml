@@ -1202,14 +1202,14 @@
     <string name="lap_table_header_time">Tempo</string>
     <string name="lap_table_header_distance">Distanza</string>
 
-    <!-- ATT-919: Known Start Locations Management & Altitude Lock UI -->
-    <string name="drawer_start_locations">Posizioni di partenza</string>
-    <string name="known_locations_title">Posizioni di partenza</string>
+    <!-- ATT-919 / ATT-1382: Known Start Locations (Favorite Locations) Management & Altitude Lock UI -->
+    <string name="drawer_start_locations">Luoghi preferiti</string>
+    <string name="known_locations_title">Luoghi preferiti</string>
     <string name="known_locations_tab_list">Elenco</string>
     <string name="known_locations_tab_map">Mappa</string>
-    <string name="known_locations_search_hint">Cerca posizioni di partenza…</string>
-    <string name="known_locations_empty_title">Nessuna posizione di partenza registrata</string>
-    <string name="known_locations_empty_desc">Le posizioni di partenza vengono memorizzate automaticamente all\'avvio di un allenamento o possono essere calibrate manualmente.</string>
+    <string name="known_locations_search_hint">Cerca luoghi preferiti…</string>
+    <string name="known_locations_empty_title">Nessun luogo preferito registrato</string>
+    <string name="known_locations_empty_desc">I luoghi preferiti vengono memorizzati automaticamente all\'avvio di un allenamento o possono essere calibrati manualmente.</string>
     <string name="known_location_unnamed_format">Posizione di partenza (%1$.5f, %2$.5f)</string>
     <string name="known_locations_starts_count">%1$d partenze</string>
     <string name="source_internet_dem">Internet (DEM)</string>

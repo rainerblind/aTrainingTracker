@@ -1,0 +1,33 @@
+h1. Walkthrough - ATT-1382: Improve Lieblingsorte UI
+
+h2. 1. Executive Summary
+Under *ATT-1382* ([Verbesserung] Improve Lieblingsorte UI), the known start locations feature introduced in ATT-919 was thoroughly modernized to match the look, feel, and design patterns of the rest of the application (specifically harmonized with Lieblingsstrecken / RouteTabbedScreen.kt).
+
+The implementation adheres to the approved scope boundaries:
+# *Standard Tabbed Layout*: Replaced generic Scaffold and TopAppBar with a dark blue {{primaryContainer}} header surface ({{titleLarge}} text, {{onPrimaryContainer}} action icons) and a {{PrimaryTabRow}} ({{containerColor = surfaceContainerHighest}}, {{divider = \{\}}}) hosting two tabs (*"Liste"* and *"Karte"*) linked to a {{HorizontalPager}} with swipeable page transitions.
+# *Drawer Hierarchy & Iconography*:
+#* {{drawer_start_locations}} is positioned directly below {{drawer_my_locations}} (Lieblingsstrecken).
+#* Dedicated distinct drawables: {{drawer_start_locations}} (*Lieblingsorte*) uses {{my_locations.xml}} (pin with heart); {{drawer_my_locations}} (*Lieblingsstrecken*) uses {{ic_favorite_route.xml}} (route trajectory with heart overlay).
+# *Card & Marker Aesthetics*:
+#* List cards upgraded from generic Card to app-standard {{MappableListItem}} ({{ElevatedCard}}, 16dp rounded corners, 2dp elevation, pin-with-heart icon).
+#* Custom theme-colored vector map marker pin featuring a white heart glyph generated dynamically via {{createHeartPinMarker}}.
+# *Fallback Map Centering*:
+#* Map camera centers automatically on the location with the highest visit count (argmax(hitCount)), gracefully defaulting to Munich coordinates when empty.
+# *Localization Parity*:
+#* German naming updated from *"Startorte"* to *Lieblingsorte* (English: *"Favorite Locations"*) across all 9 supported locales.
+
+h2. 2. Changes Implemented
+* *ic_favorite_route.xml*: Vector drawable combining route icon with heart overlay.
+* *AppNavigationDrawer.kt*: Extracted {{@VisibleForTesting createDrawerGroups}}, reordered drawer maps group, mapped icons.
+* *KnownLocationsScreen.kt*: Header surface, PrimaryTabRow, HorizontalPager, MappableListItem integration, heart pin marker.
+* *MapUtils.kt*: Added {{createHeartPinMarker}}.
+* *KnownLocationsViewModel.kt*: Added {{getFallbackMapLocation()}}.
+* *KnownLocationsRepository.kt*: Made open and removed duplicate getLocationsFlow() method.
+* *strings.xml (9 locales)*: Updated naming to "Lieblingsorte" / "Favorite Locations".
+
+h2. 3. Verification & Evidence
+* *AppNavigationDrawerTest.kt*: {{testDrawerMapsGroupItemOrderingAndIcons}} passed.
+* *KnownLocationsViewModelTest.kt*: {{testFallbackMapLocation_resolvesMaxHitCountOrNull}} passed.
+* *KnownLocationsScreenTest.kt*: String existence and naming parity tests passed.
+* *Full Regression*: {{./gradlew testDebugUnitTest}} 100% SUCCESS (0 failures, 0 regressions).
+* *Build*: {{./gradlew assembleDebug}} completed cleanly.

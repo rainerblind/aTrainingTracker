@@ -45,6 +45,14 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.ui.res.painterResource
+import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
+import com.atrainingtracker.trainingtracker.ui.map.createHeartPinMarker
+import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -124,14 +132,23 @@ fun KnownLocationsScreen(
 
     var locationPendingDeletion by remember { mutableStateOf<KnownLocationItem?>(null) }
 
-    // Map camera state
-    val defaultCenter = if (uiState.locations.isNotEmpty()) {
-        uiState.locations[0].latLng
-    } else {
-        LatLng(48.13715, 11.57612)
+    // Map camera state centered on fallback location (location with highest hitCount)
+    val fallbackTarget = remember(uiState.locations) {
+        viewModel.getFallbackMapLocation()?.latLng ?: LatLng(48.13715, 11.57612)
     }
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(defaultCenter, 13f)
+        position = CameraPosition.fromLatLngZoom(fallbackTarget, 14f)
+    }
+
+    var hasCenteredInitially by remember { mutableStateOf(false) }
+    LaunchedEffect(uiState.locations) {
+        if (!hasCenteredInitially && uiState.locations.isNotEmpty()) {
+            val primary = viewModel.getFallbackMapLocation()
+            if (primary != null) {
+                cameraPositionState.position = CameraPosition.fromLatLngZoom(primary.latLng, 14f)
+                hasCenteredInitially = true
+            }
+        }
     }
 
     // Viewport bounds culling listener
@@ -146,91 +163,130 @@ fun KnownLocationsScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = stringResource(R.string.known_locations_title),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        if (uiState.filteredLocations.isNotEmpty()) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Badge(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+    val pagerState = rememberPagerState(initialPage = uiState.selectedTab.ordinal) { 2 }
+
+    LaunchedEffect(pagerState.currentPage) {
+        val targetTab = if (pagerState.currentPage == 0) KnownLocationsTab.LIST else KnownLocationsTab.MAP
+        if (uiState.selectedTab != targetTab) {
+            viewModel.selectTab(targetTab)
+        }
+    }
+
+    LaunchedEffect(uiState.selectedTab) {
+        if (pagerState.currentPage != uiState.selectedTab.ordinal) {
+            pagerState.animateScrollToPage(uiState.selectedTab.ordinal)
+        }
+    }
+
+    Column(
+        modifier = modifier.fillMaxSize()
+    ) {
+        // --- HEADER SURFACE (Standard Dark Blue primaryContainer) ---
+        Surface(
+            color = MaterialTheme.colorScheme.primaryContainer,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column {
+                Column(modifier = Modifier.statusBarsPadding()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(LayoutConstants.HEADER_TITLE_ROW_HEIGHT)
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    if (onMenuClick != {}) {
+                                        onMenuClick()
+                                    } else {
+                                        (context as? MainActivityWithNavigation)?.openDrawer()
+                                    }
+                                },
+                                modifier = Modifier.testTag("known_locations_menu_button")
                             ) {
-                                Text(
-                                    text = "${uiState.filteredLocations.size}",
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
+                                Icon(
+                                    imageVector = Icons.Default.Menu,
+                                    contentDescription = "Menu",
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(R.string.known_locations_title),
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            if (uiState.filteredLocations.isNotEmpty()) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Badge(
+                                    containerColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f),
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                ) {
+                                    Text(
+                                        text = "${uiState.filteredLocations.size}",
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
                     }
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = {
-                            if (onMenuClick != {}) {
-                                onMenuClick()
-                            } else {
-                                (context as? MainActivityWithNavigation)?.openDrawer()
-                            }
-                        },
-                        modifier = Modifier.testTag("known_locations_menu_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Menu,
-                            contentDescription = "Menu"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
-        },
-        modifier = modifier.fillMaxSize()
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Dual Tab Row: List and Map
-            TabRow(
-                selectedTabIndex = uiState.selectedTab.ordinal,
-                containerColor = MaterialTheme.colorScheme.surface
-            ) {
-                Tab(
-                    selected = uiState.selectedTab == KnownLocationsTab.LIST,
-                    onClick = { viewModel.selectTab(KnownLocationsTab.LIST) },
-                    text = { Text(stringResource(R.string.known_locations_tab_list)) },
-                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
-                    modifier = Modifier.testTag("known_locations_tab_list")
-                )
-                Tab(
-                    selected = uiState.selectedTab == KnownLocationsTab.MAP,
-                    onClick = { viewModel.selectTab(KnownLocationsTab.MAP) },
-                    text = { Text(stringResource(R.string.known_locations_tab_map)) },
-                    icon = { Icon(Icons.Default.Map, contentDescription = null) },
-                    modifier = Modifier.testTag("known_locations_tab_map")
-                )
-            }
+                }
 
-            when (uiState.selectedTab) {
-                KnownLocationsTab.LIST -> {
+                // Standard PrimaryTabRow (surfaceContainerHighest, divider = {})
+                PrimaryTabRow(
+                    selectedTabIndex = pagerState.currentPage,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    divider = {}
+                ) {
+                    Tab(
+                        selected = pagerState.currentPage == 0,
+                        onClick = {
+                            scope.launch { pagerState.animateScrollToPage(0) }
+                            viewModel.selectTab(KnownLocationsTab.LIST)
+                        },
+                        text = { Text(stringResource(R.string.known_locations_tab_list)) },
+                        icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
+                        modifier = Modifier.testTag("known_locations_tab_list")
+                    )
+                    Tab(
+                        selected = pagerState.currentPage == 1,
+                        onClick = {
+                            scope.launch { pagerState.animateScrollToPage(1) }
+                            viewModel.selectTab(KnownLocationsTab.MAP)
+                        },
+                        text = { Text(stringResource(R.string.known_locations_tab_map)) },
+                        icon = { Icon(Icons.Default.Map, contentDescription = null) },
+                        modifier = Modifier.testTag("known_locations_tab_map")
+                    )
+                }
+            }
+        }
+
+        // Pager Content with swipe transitions
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize()
+        ) { page ->
+            when (page) {
+                0 -> {
                     KnownLocationsListContent(
                         uiState = uiState,
                         onSearchQueryChanged = { viewModel.setSearchQuery(it) },
                         onEdit = { viewModel.openEditDialog(it) },
                         onShowOnMap = { item ->
-                            viewModel.selectTab(KnownLocationsTab.MAP)
                             scope.launch {
+                                pagerState.animateScrollToPage(1)
+                                viewModel.selectTab(KnownLocationsTab.MAP)
                                 cameraPositionState.animate(
                                     CameraUpdateFactory.newLatLngZoom(item.latLng, 15f)
                                 )
@@ -241,7 +297,7 @@ fun KnownLocationsScreen(
                     )
                 }
 
-                KnownLocationsTab.MAP -> {
+                1 -> {
                     KnownLocationsMapContent(
                         uiState = uiState,
                         cameraPositionState = cameraPositionState,
@@ -384,14 +440,11 @@ private fun KnownLocationCard(
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
-    Card(
+    MappableListItem(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("location_card_${item.id}"),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        ),
-        shape = RoundedCornerShape(12.dp)
+        onClick = onShowOnMap
     ) {
         Column(
             modifier = Modifier
@@ -403,21 +456,33 @@ private fun KnownLocationCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = item.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.my_locations),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary
                     )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = KnownLocationsUnitConversions.formatAltitude(item.altitude, isMetric),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = item.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = KnownLocationsUnitConversions.formatAltitude(item.altitude, isMetric),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
 
                 Box {
@@ -555,6 +620,16 @@ private fun KnownLocationsMapContent(
     onDismissPeek: () -> Unit,
     onEditFromPeek: (KnownLocationItem) -> Unit
 ) {
+    val context = LocalContext.current
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val heartMarkerIcon = remember(primaryColor) {
+        createHeartPinMarker(
+            context = context,
+            pinColor = primaryColor,
+            heartColor = Color.White
+        )
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
@@ -568,6 +643,7 @@ private fun KnownLocationsMapContent(
                     state = MarkerState(position = location.latLng),
                     title = location.name,
                     snippet = KnownLocationsUnitConversions.formatAltitude(location.altitude, uiState.isMetric),
+                    icon = heartMarkerIcon,
                     onClick = {
                         onMarkerClick(location)
                         true
