@@ -32,6 +32,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,6 +41,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Menu
@@ -51,6 +54,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.ui.res.painterResource
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
+import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.map.createHeartPinMarker
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import androidx.compose.material3.Badge
@@ -242,7 +246,7 @@ fun KnownLocationsScreen(
                     }
                 }
 
-                // Standard PrimaryTabRow (surfaceContainerHighest, divider = {})
+                // Standard PrimaryTabRow (surfaceContainerHighest, divider = {}) without icons
                 PrimaryTabRow(
                     selectedTabIndex = pagerState.currentPage,
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -255,7 +259,6 @@ fun KnownLocationsScreen(
                             viewModel.selectTab(KnownLocationsTab.LIST)
                         },
                         text = { Text(stringResource(R.string.known_locations_tab_list)) },
-                        icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
                         modifier = Modifier.testTag("known_locations_tab_list")
                     )
                     Tab(
@@ -265,7 +268,6 @@ fun KnownLocationsScreen(
                             viewModel.selectTab(KnownLocationsTab.MAP)
                         },
                         text = { Text(stringResource(R.string.known_locations_tab_map)) },
-                        icon = { Icon(Icons.Default.Map, contentDescription = null) },
                         modifier = Modifier.testTag("known_locations_tab_map")
                     )
                 }
@@ -428,8 +430,9 @@ private fun KnownLocationsListContent(
 }
 
 /**
- * High-density location card.
+ * High-density location card styled consistently with Lieblingsstrecken (RouteItem / RouteSummaryHeader).
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun KnownLocationCard(
     item: KnownLocationItem,
@@ -438,124 +441,129 @@ private fun KnownLocationCard(
     onShowOnMap: () -> Unit,
     onDelete: () -> Unit
 ) {
-    var menuExpanded by remember { mutableStateOf(false) }
+    var showContextMenu by remember { mutableStateOf(false) }
 
-    MappableListItem(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("location_card_${item.id}"),
-        onClick = onShowOnMap
-    ) {
-        Column(
+    Box {
+        MappableListItem(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .testTag("location_card_${item.id}"),
+            onClick = onEdit
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(
+                        onClick = onEdit,
+                        onLongClick = { showContextMenu = true }
+                    )
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // Top Row: Location Icon + Location Name
                 Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.my_locations),
                         contentDescription = null,
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(32.dp),
                         tint = MaterialTheme.colorScheme.primary
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = item.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = KnownLocationsUnitConversions.formatAltitude(item.altitude, isMetric),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
 
-                Box {
-                    IconButton(
-                        onClick = { menuExpanded = true },
-                        modifier = Modifier.testTag("location_overflow_button_${item.id}")
-                    ) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Actions")
-                    }
-                    DropdownMenu(
-                        expanded = menuExpanded,
-                        onDismissRequest = { menuExpanded = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.edit_my_location)) },
-                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
-                            onClick = {
-                                menuExpanded = false
-                                onEdit()
-                            },
-                            modifier = Modifier.testTag("location_edit_action_${item.id}")
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.tab_map)) },
-                            leadingIcon = { Icon(Icons.Default.Map, contentDescription = null) },
-                            onClick = {
-                                menuExpanded = false
-                                onShowOnMap()
-                            },
-                            modifier = Modifier.testTag("location_show_map_action_${item.id}")
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
-                            onClick = {
-                                menuExpanded = false
-                                onDelete()
-                            },
-                            modifier = Modifier.testTag("location_delete_action_${item.id}")
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Semantic Badges: Provenance Source and Hit Count
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                ElevationSourceBadge(source = item.source)
-
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer
-                ) {
                     Text(
-                        text = stringResource(R.string.known_locations_starts_count, item.hitCount),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        text = item.name,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
                     )
                 }
 
-                Spacer(modifier = Modifier.weight(1f))
+                // Second Row: Metrics (Altitude and Starts Count)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    MetricItem(
+                        iconRes = R.drawable.ic_ascent,
+                        value = KnownLocationsUnitConversions.formatAltitude(item.altitude, isMetric),
+                        isPrimary = true
+                    )
 
-                // Geodetic Coordinates
-                Text(
-                    text = "${String.format(Locale.US, "%.5f", item.latLng.latitude)}, ${String.format(Locale.US, "%.5f", item.latLng.longitude)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    MetricItem(
+                        iconRes = R.drawable.control_start,
+                        value = stringResource(R.string.known_locations_starts_count, item.hitCount),
+                        isPrimary = true
+                    )
+                }
+            }
+        }
+
+        // Context Menu on Long Click
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 12.dp, top = 8.dp)
+        ) {
+            DropdownMenu(
+                expanded = showContextMenu,
+                onDismissRequest = { showContextMenu = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.edit_my_location)) },
+                    leadingIcon = {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_table_edit),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    onClick = {
+                        showContextMenu = false
+                        onEdit()
+                    },
+                    modifier = Modifier.testTag("location_edit_action_${item.id}")
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.tab_map)) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Map,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    onClick = {
+                        showContextMenu = false
+                        onShowOnMap()
+                    },
+                    modifier = Modifier.testTag("location_show_map_action_${item.id}")
+                )
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(R.string.delete),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    onClick = {
+                        showContextMenu = false
+                        onDelete()
+                    },
+                    modifier = Modifier.testTag("location_delete_action_${item.id}")
                 )
             }
         }
@@ -732,7 +740,7 @@ private fun KnownLocationsMapContent(
                             .fillMaxWidth()
                             .testTag("map_peek_edit_button")
                     ) {
-                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(painter = painterResource(R.drawable.ic_table_edit), contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(stringResource(R.string.edit_my_location))
                     }

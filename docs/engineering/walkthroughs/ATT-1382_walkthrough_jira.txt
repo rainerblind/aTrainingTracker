@@ -4,13 +4,18 @@ h2. 1. Executive Summary
 Under *ATT-1382* ([Verbesserung] Improve Lieblingsorte UI), the known start locations feature introduced in ATT-919 was thoroughly modernized to match the look, feel, and design patterns of the rest of the application (specifically harmonized with Lieblingsstrecken / RouteTabbedScreen.kt).
 
 The implementation adheres to the approved scope boundaries:
-# *Standard Tabbed Layout*: Replaced generic Scaffold and TopAppBar with a dark blue {{primaryContainer}} header surface ({{titleLarge}} text, {{onPrimaryContainer}} action icons) and a {{PrimaryTabRow}} ({{containerColor = surfaceContainerHighest}}, {{divider = \{\}}}) hosting two tabs (*"Liste"* and *"Karte"*) linked to a {{HorizontalPager}} with swipeable page transitions.
+# *Standard Tabbed Layout*: Replaced generic Scaffold and TopAppBar with a dark blue {{primaryContainer}} header surface ({{titleLarge}} text, {{onPrimaryContainer}} action icons) and a clean text-only {{PrimaryTabRow}} ({{containerColor = surfaceContainerHighest}}, {{divider = \{\}}}) hosting two tabs (*"Liste"* and *"Karte"*) linked to a {{HorizontalPager}} with swipeable page transitions.
 # *Drawer Hierarchy & Iconography*:
 #* {{drawer_start_locations}} is positioned directly below {{drawer_my_locations}} (Lieblingsstrecken).
 #* Dedicated distinct drawables: {{drawer_start_locations}} (*Lieblingsorte*) uses {{my_locations.xml}} (pin with heart); {{drawer_my_locations}} (*Lieblingsstrecken*) uses {{ic_favorite_route.xml}} (route trajectory with heart overlay).
-# *Card & Marker Aesthetics*:
-#* List cards upgraded from generic Card to app-standard {{MappableListItem}} ({{ElevatedCard}}, 16dp rounded corners, 2dp elevation, pin-with-heart icon).
+# *Card Aesthetics & Alignment with Lieblingsstrecken*:
+#* List cards upgraded to app-standard {{MappableListItem}} ({{ElevatedCard}}, 16dp rounded corners, 2dp elevation) aligned with {{RouteSummaryHeader}}: leading 32dp {{my_locations}} pin icon with bold title in the top row, and standardized {{MetricItem}}s for Altitude ({{ic_ascent}}) and Visit Count ({{control_start}}).
+#* Removed cluttered raw coordinates (lat/long) and elevation source badges for a cleaner presentation.
 #* Custom theme-colored vector map marker pin featuring a white heart glyph generated dynamically via {{createHeartPinMarker}}.
+# *Interaction & Context Menu*:
+#* Single tap on a list card opens the {{EditKnownLocationDialog}} directly.
+#* Long-press triggers a contextual {{DropdownMenu}} with options to Edit, Show on Map, and Delete (protected with {{DeleteConfirmationDialog}}).
+#* Standardized edit icon across the feature using {{R.drawable.ic_table_edit}} (matching workout/unit editing).
 # *Fallback Map Centering*:
 #* Map camera centers automatically on the location with the highest visit count (argmax(hitCount)), gracefully defaulting to Munich coordinates when empty.
 # *Localization Parity*:
@@ -19,7 +24,8 @@ The implementation adheres to the approved scope boundaries:
 h2. 2. Changes Implemented
 * *ic_favorite_route.xml*: Vector drawable combining route icon with heart overlay.
 * *AppNavigationDrawer.kt*: Extracted {{@VisibleForTesting createDrawerGroups}}, reordered drawer maps group, mapped icons.
-* *KnownLocationsScreen.kt*: Header surface, PrimaryTabRow, HorizontalPager, MappableListItem integration, heart pin marker.
+* *KnownLocationsScreen.kt*: Header surface, text-only PrimaryTabRow, HorizontalPager, MappableListItem with combinedClickable, MetricItem styling, context menu, heart pin marker.
+* *EditKnownLocationDialog.kt*: Header icon set to {{ic_table_edit}}.
 * *MapUtils.kt*: Added {{createHeartPinMarker}}.
 * *KnownLocationsViewModel.kt*: Added {{getFallbackMapLocation()}}.
 * *KnownLocationsRepository.kt*: Made open and removed duplicate getLocationsFlow() method.

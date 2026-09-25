@@ -4,16 +4,22 @@
 Under **ATT-1382** ([Verbesserung] Improve Lieblingsorte UI), the known start locations feature introduced in `ATT-919` was thoroughly modernized to match the look, feel, and design patterns of the rest of the application (specifically harmonized with [Lieblingsstrecken / `RouteTabbedScreen.kt`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteTabbedScreen.kt)).
 
 The implementation adheres to the approved scope boundaries:
-1. **Standard Tabbed Layout**: Replaced generic `Scaffold` and `TopAppBar` with a dark blue `primaryContainer` header surface (`titleLarge` text, `onPrimaryContainer` action icons) and a `PrimaryTabRow` (`containerColor = surfaceContainerHighest`, `divider = {}`) hosting two tabs (**"Liste"** and **"Karte"**) linked to a `HorizontalPager` with swipeable page transitions.
+1. **Standard Tabbed Layout**: Replaced generic `Scaffold` and `TopAppBar` with a dark blue `primaryContainer` header surface (`titleLarge` text, `onPrimaryContainer` action icons) and a clean text-only `PrimaryTabRow` (`containerColor = surfaceContainerHighest`, `divider = {}`) hosting two tabs (**"Liste"** and **"Karte"**) linked to a `HorizontalPager` with swipeable page transitions.
 2. **Drawer Hierarchy & Iconography**:
    - `drawer_start_locations` is positioned directly below `drawer_my_locations` (Lieblingsstrecken).
    - Dedicated distinct drawables: `drawer_start_locations` (*Lieblingsorte*) uses [my_locations.xml](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/res/drawable/my_locations.xml) (pin with heart); `drawer_my_locations` (*Lieblingsstrecken*) uses [ic_favorite_route.xml](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/res/drawable/ic_favorite_route.xml) (route trajectory with heart overlay).
-3. **Card & Marker Aesthetics**:
-   - List cards upgraded from generic `Card` to app-standard `MappableListItem` (`ElevatedCard`, 16dp rounded corners, 2dp elevation, pin-with-heart icon).
+3. **Card Aesthetics & Alignment with Lieblingsstrecken**:
+   - List cards upgraded from generic `Card` to app-standard `MappableListItem` (`ElevatedCard`, 16dp rounded corners, 2dp elevation) aligned with `RouteSummaryHeader`: leading 32dp `my_locations` pin icon with bold title in the top row, and standardized `MetricItem`s for Altitude (`ic_ascent`) and Visit Count (`control_start`).
+   - Removed cluttered raw coordinates (lat/long) and elevation source badges for a cleaner presentation.
    - Custom theme-colored vector map marker pin featuring a white heart glyph generated dynamically via [createHeartPinMarker](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapUtils.kt#L76-L106).
-4. **Fallback Map Centering**:
+4. **Interaction & Context Menu**:
+   - Single tap on a list card opens the `EditKnownLocationDialog` directly.
+   - Long-press triggers a contextual `DropdownMenu` with options to Edit, Show on Map, and Delete.
+   - Deletion is protected with `DeleteConfirmationDialog`.
+   - Standardized edit icon across the feature using `R.drawable.ic_table_edit` (matching workout/unit editing).
+5. **Fallback Map Centering**:
    - Map camera centers automatically on the location with the highest visit count ($\operatorname{argmax}(\text{hitCount})$), gracefully defaulting to Munich coordinates when empty.
-5. **Localization Parity**:
+6. **Localization Parity**:
    - German naming updated from *"Startorte"* to **`Lieblingsorte`** (English: *"Favorite Locations"*) across all 9 supported locales.
 
 ---
@@ -31,15 +37,20 @@ The implementation adheres to the approved scope boundaries:
 * **[KnownLocationsScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/knownlocations/KnownLocationsScreen.kt)**:
   - Eliminated `Scaffold` + `TopAppBar` overhead.
   - Constructed the standard `Surface(color = MaterialTheme.colorScheme.primaryContainer)` header with hamburger menu button, `titleLarge` screen title, and actions (search toggle, heal names, refresh DEM).
-  - Implemented `PrimaryTabRow` with `containerColor = MaterialTheme.colorScheme.surfaceContainerHighest` and `divider = {}`.
+  - Implemented text-only `PrimaryTabRow` (icons removed per UI refinement) with `containerColor = MaterialTheme.colorScheme.surfaceContainerHighest` and `divider = {}`.
   - Integrated `HorizontalPager` with `pagerState` enabling smooth swipe transitions between "Liste" (page 0) and "Karte" (page 1).
-  - Tapping a list item navigates to the map tab, animating the camera to the selected location coordinates.
 
 ### C. List & Map Presentation Modernization
 * **[KnownLocationsScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/knownlocations/KnownLocationsScreen.kt)**:
-  - Upgraded `KnownLocationCard` to wrap contents in `MappableListItem(onClick = onShowOnMap)`.
-  - Added leading `R.drawable.my_locations` pin icon to card headers.
+  - Upgraded `KnownLocationCard` to use `MappableListItem` with `combinedClickable`:
+    - Simple tap invokes edit dialog directly.
+    - Long-press triggers anchored `DropdownMenu` with Edit (`ic_table_edit`), Show on Map (`Icons.Default.Map`), and Delete (`Icons.Default.Delete`).
+  - Redesigned card internal layout to mirror `RouteSummaryHeader`: top row with leading 32dp pin icon and location title; metric row with `MetricItem`s for Altitude (`ic_ascent`) and Starts count (`control_start`).
+  - Coordinates and elevation source removed from list card.
   - Centered map camera using `viewModel.getFallbackMapLocation()`.
+  - Standardized edit action icon to `R.drawable.ic_table_edit` in map bottom peek card.
+* **[EditKnownLocationDialog.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/knownlocations/EditKnownLocationDialog.kt)**:
+  - Header icon updated to `R.drawable.ic_table_edit` matching workout/unit edit convention.
 * **[MapUtils.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapUtils.kt)**:
   - Implemented `createHeartPinMarker(context, pinColor, heartColor)` generating a theme-colored pin with solid white heart glyph.
 
