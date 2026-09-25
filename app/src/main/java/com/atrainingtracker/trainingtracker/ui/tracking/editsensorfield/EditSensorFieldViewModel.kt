@@ -189,6 +189,10 @@ class EditSensorFieldViewModel(
                 }
             } else if (initialConfig.filterType == FilterType.MOVING_AVERAGE_NUMBER) {
                 initialUnit = "samples"
+            } else if (initialConfig.filterType == FilterType.EXPONENTIAL_SMOOTHING) {
+                if (displayConstant <= 0.0 || displayConstant > 1.0) {
+                    displayConstant = 0.8
+                }
             }
 
             val initialPreset = resolveFilterPreset(initialConfig.filterType, displayConstant, initialUnit)
@@ -329,9 +333,19 @@ class EditSensorFieldViewModel(
 
     fun onFilterTypeChanged(newFilterType: FilterType) {
         _uiState.update {
+            val adjustedConstant = if (newFilterType == FilterType.EXPONENTIAL_SMOOTHING) {
+                if (it.filterConstant <= 0.0 || it.filterConstant > 1.0) 0.8 else it.filterConstant
+            } else if (it.selectedFilterType == FilterType.EXPONENTIAL_SMOOTHING &&
+                (newFilterType == FilterType.MOVING_AVERAGE_TIME || newFilterType == FilterType.MOVING_AVERAGE_NUMBER)
+            ) {
+                if (it.filterConstant <= 1.0) 3.0 else it.filterConstant
+            } else {
+                it.filterConstant
+            }
             it.copy(
                 selectedFilterType = newFilterType,
-                filterSummary = newFilterType.getSummary(getApplication<Application>().applicationContext, it.filterConstant),
+                filterConstant = adjustedConstant,
+                filterSummary = newFilterType.getSummary(getApplication<Application>().applicationContext, adjustedConstant),
                 isCustomFilterExpanded = true
             )
         }
@@ -339,9 +353,14 @@ class EditSensorFieldViewModel(
 
     fun onFilterConstantChanged(newConstant: Double) {
         _uiState.update {
+            val validConstant = if (it.selectedFilterType == FilterType.EXPONENTIAL_SMOOTHING) {
+                newConstant.coerceIn(0.01, 1.0)
+            } else {
+                newConstant
+            }
             it.copy(
-                filterConstant = newConstant,
-                filterSummary = it.selectedFilterType.getSummary(getApplication<Application>().applicationContext, newConstant),
+                filterConstant = validConstant,
+                filterSummary = it.selectedFilterType.getSummary(getApplication<Application>().applicationContext, validConstant),
                 isCustomFilterExpanded = true
             )
         }
@@ -378,6 +397,10 @@ class EditSensorFieldViewModel(
                     }
                 } else if (initialConfig.filterType == FilterType.MOVING_AVERAGE_NUMBER) {
                     initialUnit = "samples"
+                } else if (initialConfig.filterType == FilterType.EXPONENTIAL_SMOOTHING) {
+                    if (displayConstant <= 0.0 || displayConstant > 1.0) {
+                        displayConstant = 0.8
+                    }
                 }
                 val initialPreset = resolveFilterPreset(initialConfig.filterType, displayConstant, initialUnit)
                 it.copy(
@@ -414,10 +437,14 @@ class EditSensorFieldViewModel(
 
     private fun getFinalFilterConstant(): Double {
         val state = _uiState.value
-        return if (state.selectedFilterType == FilterType.MOVING_AVERAGE_TIME && state.movingAverageUnit == "min") {
-            state.filterConstant * 60
-        } else {
-            state.filterConstant
+        return when (state.selectedFilterType) {
+            FilterType.MOVING_AVERAGE_TIME -> {
+                if (state.movingAverageUnit == "min") state.filterConstant * 60 else state.filterConstant
+            }
+            FilterType.EXPONENTIAL_SMOOTHING -> {
+                state.filterConstant.coerceIn(0.01, 1.0)
+            }
+            else -> state.filterConstant
         }
     }
 

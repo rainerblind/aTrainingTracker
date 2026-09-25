@@ -267,4 +267,45 @@ class ConfigureFilterDialogTest {
         assertEquals(FilterPreset.SMOOTH_3S, state.activePreset)
         assertFalse(state.showFilterConfigDialog)
     }
+
+    @Test
+    fun testExponentialSmoothing_adjustsAndConstrainsAlpha() = runTest(testDispatcher) {
+        val viewModel = EditSensorFieldViewModel(
+            application = application,
+            trackingViewsRepository = trackingViewsRepo,
+            banalServiceRepository = banalServiceRepo,
+            activityType = ActivityType.BIKE_POWER,
+            sensorFieldId = -1L,
+            tabViewId = 1L,
+            rowNr = 1,
+            colNr = 1
+        )
+
+        // Default power sensor has 3s moving average (constant = 3.0)
+        viewModel.onSensorTypeChanged(SensorType.POWER)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(3.0, viewModel.uiState.value.filterConstant, 0.001)
+
+        // Switching to EXPONENTIAL_SMOOTHING must adjust constant from 3.0 to 0.8 (within (0, 1])
+        viewModel.onFilterTypeChanged(FilterType.EXPONENTIAL_SMOOTHING)
+        var state = viewModel.uiState.value
+        assertEquals(FilterType.EXPONENTIAL_SMOOTHING, state.selectedFilterType)
+        assertEquals(0.8, state.filterConstant, 0.001)
+        assertTrue(state.filterConstant > 0.0 && state.filterConstant <= 1.0)
+
+        // Changing constant while in EXPONENTIAL_SMOOTHING must clamp to (0, 1]
+        viewModel.onFilterConstantChanged(3.0)
+        assertEquals(1.0, viewModel.uiState.value.filterConstant, 0.001)
+
+        viewModel.onFilterConstantChanged(0.0)
+        assertEquals(0.01, viewModel.uiState.value.filterConstant, 0.001)
+
+        viewModel.onFilterConstantChanged(0.5)
+        assertEquals(0.5, viewModel.uiState.value.filterConstant, 0.001)
+
+        // Switching back to MOVING_AVERAGE_TIME adjusts constant from <= 1.0 to 3.0
+        viewModel.onFilterTypeChanged(FilterType.MOVING_AVERAGE_TIME)
+        assertEquals(3.0, viewModel.uiState.value.filterConstant, 0.001)
+    }
 }
+

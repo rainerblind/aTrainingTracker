@@ -103,10 +103,14 @@ fun ConfigureFilterDialogContent(
         uiState.selectedFilterType
     }
 
-    val finalConstant = if (uiState.selectedFilterType == FilterType.MOVING_AVERAGE_TIME && uiState.movingAverageUnit == "min") {
-        uiState.filterConstant * 60
-    } else {
-        uiState.filterConstant
+    val finalConstant = when (uiState.selectedFilterType) {
+        FilterType.MOVING_AVERAGE_TIME -> {
+            if (uiState.movingAverageUnit == "min") uiState.filterConstant * 60 else uiState.filterConstant
+        }
+        FilterType.EXPONENTIAL_SMOOTHING -> {
+            uiState.filterConstant.coerceIn(0.01, 1.0)
+        }
+        else -> uiState.filterConstant
     }
 
     AppModalBottomSheet(
@@ -230,12 +234,17 @@ fun ConfigureFilterDialogContent(
                             }
                         }
                         FilterType.EXPONENTIAL_SMOOTHING -> {
+                            var textValue by remember(uiState.filterConstant) {
+                                mutableStateOf(uiState.filterConstant.toString())
+                            }
                             OutlinedTextField(
-                                value = uiState.filterConstant.toString(),
-                                onValueChange = { textValue ->
-                                    val parsedValue = textValue.toDoubleOrNull() ?: 0.0
-                                    val clampedValue = parsedValue.coerceIn(0.0, 1.0)
-                                    onFilterConstantChanged(clampedValue)
+                                value = textValue,
+                                onValueChange = { newText ->
+                                    textValue = newText
+                                    val parsedValue = newText.toDoubleOrNull()
+                                    if (parsedValue != null && parsedValue > 0.0 && parsedValue <= 1.0) {
+                                        onFilterConstantChanged(parsedValue)
+                                    }
                                 },
                                 label = { Text(stringResource(R.string.filter_value)) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
