@@ -76,6 +76,8 @@ import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersScreen
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModel
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentTabsScreen
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModel
+import com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationsScreen
+import com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationsViewModel
 import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModel
 import com.atrainingtracker.trainingtracker.ui.map.MapScreenWithTrack
 import com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModel
@@ -311,6 +313,14 @@ fun ATrainingTrackerApp(
                 composable(NavRoutes.ROUTES) {
                     val routesViewModel: RoutesViewModel = viewModel(activity)
                     RoutesScreen(viewModel = routesViewModel)
+                }
+
+                composable(NavRoutes.START_LOCATIONS) {
+                    val knownLocationsViewModel: KnownLocationsViewModel = viewModel(activity)
+                    KnownLocationsScreen(
+                        viewModel = knownLocationsViewModel,
+                        onMenuClick = { drawerController.openDrawer() }
+                    )
                 }
 
                 composable(NavRoutes.LOCATIONS) {

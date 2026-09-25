@@ -1191,4 +1191,22 @@
     <string name="lap_table_header_lap">Okrążenie</string>
     <string name="lap_table_header_time">Czas</string>
     <string name="lap_table_header_distance">Dystans</string>
+
+    <!-- ATT-919: Known Start Locations Management & Altitude Lock UI -->
+    <string name="drawer_start_locations">Miejsca startu</string>
+    <string name="known_locations_title">Miejsca startu</string>
+    <string name="known_locations_tab_list">Lista</string>
+    <string name="known_locations_tab_map">Mapa</string>
+    <string name="known_locations_search_hint">Szukaj miejsc startu…</string>
+    <string name="known_locations_empty_title">Brak zarejestrowanych miejsc startu</string>
+    <string name="known_locations_empty_desc">Miejsca startu są automatycznie zapisywane podczas rozpoczynania treningu lub mogą być kalibrowane ręcznie.</string>
+    <string name="known_location_unnamed_format">Miejsce startu (%1$.5f, %2$.5f)</string>
+    <string name="known_locations_starts_count">%1$d startów</string>
+    <string name="source_internet_dem">Internet (NMT)</string>
+    <string name="source_manual_user">Ręczny</string>
+    <string name="source_auto_learned">Automatyczny</string>
+    <string name="source_gps_fallback">GPS</string>
+    <string name="source_legacy_raw">Starszy</string>
+    <string name="known_location_edit_title">Edytuj miejsce startu</string>
+    <string name="known_location_fetch_dem">Pobierz z Internetu (NMT)</string>
 </resources>

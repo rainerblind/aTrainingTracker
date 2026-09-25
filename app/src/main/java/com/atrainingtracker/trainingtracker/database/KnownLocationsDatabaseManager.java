@@ -65,12 +65,14 @@ public class KnownLocationsDatabaseManager {
         sHealingDispatched.set(false);
     }
 
+    private final Context mContext;
     private final KnownLocationsDbHelper cDbHelper;
     private SQLiteDatabase mDatabase = null;
 
     // Private constructor
     private KnownLocationsDatabaseManager(@NonNull Context context) {
-        cDbHelper = new KnownLocationsDbHelper(context.getApplicationContext());
+        mContext = context.getApplicationContext();
+        cDbHelper = new KnownLocationsDbHelper(mContext);
     }
 
     @NonNull
@@ -244,6 +246,16 @@ public class KnownLocationsDatabaseManager {
         contentValues.put(KnownLocationsDbHelper.HIT_COUNT, myLocation.hitCount);
         contentValues.put(KnownLocationsDbHelper.IS_LOCKED, myLocation.isLocked ? 1 : 0);
         contentValues.put(KnownLocationsDbHelper.SOURCE, myLocation.source.name());
+
+        updateId(id, contentValues);
+    }
+
+    public void updateLocation(long id, @NonNull String name, double altitude, @NonNull ElevationSource source, boolean isLocked) {
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(KnownLocationsDbHelper.NAME, name);
+        contentValues.put(KnownLocationsDbHelper.ALTITUDE, altitude);
+        contentValues.put(KnownLocationsDbHelper.SOURCE, source.name());
+        contentValues.put(KnownLocationsDbHelper.IS_LOCKED, isLocked ? 1 : 0);
 
         updateId(id, contentValues);
     }
@@ -437,6 +449,24 @@ public class KnownLocationsDatabaseManager {
                 Log.w(TAG, "Background legacy location healing failed: " + e.getMessage());
             }
         }, "LegacyLocationHealer").start();
+    }
+
+    @NonNull
+    public List<MyLocation> getAllLocations() {
+        List<MyLocation> locations = new LinkedList<>();
+        Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
+                null,
+                null,
+                null,
+                null,
+                null,
+                KnownLocationsDbHelper.HIT_COUNT + " DESC, " + KnownLocationsDbHelper.NAME + " ASC");
+
+        while (cursor.moveToNext()) {
+            locations.add(cursorToMyLocation(cursor));
+        }
+        cursor.close();
+        return locations;
     }
 
     @NonNull
