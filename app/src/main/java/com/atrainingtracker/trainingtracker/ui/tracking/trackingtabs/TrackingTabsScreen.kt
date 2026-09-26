@@ -65,10 +65,12 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import androidx.core.view.WindowCompat
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode
 import com.atrainingtracker.trainingtracker.ui.theme.resolveEffectiveCockpitDarkTheme
+import com.atrainingtracker.trainingtracker.ui.theme.resolveEffectiveCockpitThemeState
 import com.atrainingtracker.trainingtracker.ui.tracking.LapSummaryDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlNavigation
@@ -101,7 +103,6 @@ fun TrackingTabsScreen(
             prefs.unregisterOnSharedPreferenceChangeListener(listener)
         }
     }
-    val isCockpitDark = resolveEffectiveCockpitDarkTheme(cockpitThemeMode, isSystemDark)
 
     val trackingViews by trackingTabsViewModel.trackingViews.collectAsState(initial = emptyList())
     val trackingMode by trackingTabsViewModel.trackingMode.observeAsState(TrackingMode.READY)
@@ -159,6 +160,13 @@ fun TrackingTabsScreen(
     LaunchedEffect(pagerState.currentPage) {
         lastKnownPage = pagerState.currentPage
     }
+
+    val cockpitThemeState = resolveEffectiveCockpitThemeState(
+        screenMode = screenMode,
+        currentPage = pagerState.currentPage,
+        cockpitThemeMode = cockpitThemeMode,
+        isSystemDark = isSystemDark
+    )
 
     val scope = rememberCoroutineScope()
 
@@ -261,10 +269,26 @@ fun TrackingTabsScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
+    DisposableEffect(context, isSystemDark) {
+        onDispose {
+            if (!context.isFinishing && !context.isDestroyed) {
+                context.window?.let { window ->
+                    val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+                    insetsController.isAppearanceLightStatusBars = !isSystemDark
+                    insetsController.isAppearanceLightNavigationBars = !isSystemDark
+                }
+            }
+        }
+    }
+
+    ATrainingTrackerTheme(
+        darkTheme = cockpitThemeState.darkTheme,
+        amoled = cockpitThemeState.amoled
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
 
             // Get the current view info
             val currentViewInfo = if (screenMode != ScreenMode.TRACKING) {
@@ -438,12 +462,10 @@ fun TrackingTabsScreen(
                         val viewInfo = trackingViews.getOrNull(viewIndex)
 
                         if (viewInfo != null) {
-                            ATrainingTrackerTheme(darkTheme = isCockpitDark, amoled = isCockpitDark) {
-                                TrackingTabGridContent(
-                                    viewInfo.tabViewId,
-                                    screenMode,
-                                )
-                            }
+                            TrackingTabGridContent(
+                                viewInfo.tabViewId,
+                                screenMode,
+                            )
                         } else {
                             // Optional: Show a placeholder or empty box while loading
                             Box(Modifier.fillMaxSize())
@@ -462,19 +484,18 @@ fun TrackingTabsScreen(
                         .padding(bottom = 8.dp), // Space from bottom of screen
                     contentAlignment = Alignment.BottomCenter
                 ) {
-                    ATrainingTrackerTheme(darkTheme = isCockpitDark, amoled = isCockpitDark) {
-                        LapButton(
-                            modifier = Modifier
-                                .wrapContentSize() // Don't fill width anymore
-                                .padding(horizontal = 16.dp),
-                            trackingMode = trackingMode,
-                            onClick = { trackingTabsViewModel.onLapButtonClick() }
-                        )
-                    }
+                    LapButton(
+                        modifier = Modifier
+                            .wrapContentSize() // Don't fill width anymore
+                            .padding(horizontal = 16.dp),
+                        trackingMode = trackingMode,
+                        onClick = { trackingTabsViewModel.onLapButtonClick() }
+                    )
                 }
             }
         }
     }
+}
 }
 
 @Composable
