@@ -484,9 +484,9 @@
     <string name="check_ANT_installation">verificar instalação ANT</string>
     <string name="forcePortrait">Orientação vertical</string>
     <string name="Display">Ecrã</string>
-    <string name="settings_category_savings">Poupança de energia</string>
-    <string name="settings_category_savings_desc">Otimizar o consumo de bateria durante os treinos</string>
-    <string name="prefs_battery_saver_title">Economia de bateria / Diminuição do ecrã</string>
+    <string name="settings_category_savings">Poupança de bateria</string>
+    <string name="settings_category_savings_desc">Prolonga a duração da bateria para treinos mais longos</string>
+    <string name="prefs_battery_saver_title">Atenuação dinâmica do ecrã</string>
     <string name="prefs_battery_saver_summary">Ajusta dinamicamente o brilho do ecrã com base na inclinação e nas zonas de treino</string>
     <string name="prefs_battery_saver_savings_hint">Economiza até 40–50%% de energia em telas OLED</string>
     <string name="cockpit_theme_title">Tema do cockpit (durante o treino)</string>

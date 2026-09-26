@@ -484,9 +484,9 @@
     <string name="check_ANT_installation">ANT installatie controleren</string>
     <string name="forcePortrait">Staande oriëntatie</string>
     <string name="Display">Scherm</string>
-    <string name="settings_category_savings">Energiebesparingen</string>
-    <string name="settings_category_savings_desc">Optimaliseer batterijverbruik tijdens trainingen</string>
-    <string name="prefs_battery_saver_title">Batterijbesparing / Scherm dimmen</string>
+    <string name="settings_category_savings">Batterijbesparing</string>
+    <string name="settings_category_savings_desc">Verlengt de batterijduur voor langere trainingssessies</string>
+    <string name="prefs_battery_saver_title">Dynamisch scherm dimmen</string>
     <string name="prefs_battery_saver_summary">Past de schermhelderheid dynamisch aan op basis van helling en trainingszones</string>
     <string name="prefs_battery_saver_savings_hint">Bespaart tot 40-50%% energie op OLED-schermen</string>
     <string name="cockpit_theme_title">Cockpitthema (tijdens training)</string>

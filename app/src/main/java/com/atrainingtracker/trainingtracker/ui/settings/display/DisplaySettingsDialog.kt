@@ -95,56 +95,63 @@ fun DisplaySettingsDialog(
 
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = stringResource(R.string.cockpit_theme_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = stringResource(R.string.cockpit_theme_description),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                SingleChoiceSegmentedButtonRow(
-                    modifier = Modifier.fillMaxWidth()
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    SegmentedButton(
-                        selected = currentThemeMode == CockpitThemeMode.SYSTEM,
-                        onClick = { currentThemeMode = CockpitThemeMode.SYSTEM },
-                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                        icon = { SegmentedButtonDefaults.Icon(active = currentThemeMode == CockpitThemeMode.SYSTEM) }
+                    Text(
+                        text = stringResource(R.string.settings_category_savings),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_category_savings_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.cockpit_theme_title),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = stringResource(R.string.cockpit_theme_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    SingleChoiceSegmentedButtonRow(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(stringResource(R.string.cockpit_theme_system))
-                    }
-                    SegmentedButton(
-                        selected = currentThemeMode == CockpitThemeMode.ALWAYS_DARK,
-                        onClick = { currentThemeMode = CockpitThemeMode.ALWAYS_DARK },
-                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                        icon = { SegmentedButtonDefaults.Icon(active = currentThemeMode == CockpitThemeMode.ALWAYS_DARK) }
-                    ) {
-                        Text(stringResource(R.string.cockpit_theme_always_dark))
+                        SegmentedButton(
+                            selected = currentThemeMode == CockpitThemeMode.SYSTEM,
+                            onClick = { currentThemeMode = CockpitThemeMode.SYSTEM },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                            icon = { SegmentedButtonDefaults.Icon(active = currentThemeMode == CockpitThemeMode.SYSTEM) }
+                        ) {
+                            Text(stringResource(R.string.cockpit_theme_system))
+                        }
+                        SegmentedButton(
+                            selected = currentThemeMode == CockpitThemeMode.ALWAYS_DARK,
+                            onClick = { currentThemeMode = CockpitThemeMode.ALWAYS_DARK },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                            icon = { SegmentedButtonDefaults.Icon(active = currentThemeMode == CockpitThemeMode.ALWAYS_DARK) }
+                        ) {
+                            Text(stringResource(R.string.cockpit_theme_always_dark))
+                        }
                     }
                 }
-            }
-
-            HorizontalDivider()
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.settings_category_savings),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
 
                 DisplayOptionToggleWithSubtitle(
                     label = stringResource(R.string.prefs_battery_saver_title),
                     subtitle = stringResource(R.string.prefs_battery_saver_summary),
-                    hint = stringResource(R.string.prefs_battery_saver_savings_hint).replace("%%", "%"),
                     isChecked = isBatterySaverEnabled,
                     onCheckedChange = { isBatterySaverEnabled = it }
                 )
@@ -157,7 +164,6 @@ fun DisplaySettingsDialog(
 private fun DisplayOptionToggleWithSubtitle(
     label: String,
     subtitle: String,
-    hint: String? = null,
     isChecked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
@@ -178,13 +184,6 @@ private fun DisplayOptionToggleWithSubtitle(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            if (!hint.isNullOrBlank()) {
-                Text(
-                    text = hint,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
         }
         Switch(
             checked = isChecked,

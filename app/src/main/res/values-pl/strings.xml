@@ -229,9 +229,9 @@
     <string name="check_ANT_installation">sprawdź instalację ANT</string>
     <string name="forcePortrait">Orientacja pionowa</string>
     <string name="Display">Ekran</string>
-    <string name="settings_category_savings">Oszczędzanie energii</string>
-    <string name="settings_category_savings_desc">Optymalizuj zużycie baterii podczas treningów</string>
-    <string name="prefs_battery_saver_title">Oszczędzanie baterii / Przyciemnianie ekranu</string>
+    <string name="settings_category_savings">Oszczędzanie baterii</string>
+    <string name="settings_category_savings_desc">Wydłuża czas pracy baterii na dłuższe sesje treningowe</string>
+    <string name="prefs_battery_saver_title">Dynamiczne przyciemnianie ekranu</string>
     <string name="prefs_battery_saver_summary">Dynamicznie dostosowuje jasność ekranu na podstawie nachylenia i stref treningowych</string>
     <string name="prefs_battery_saver_savings_hint">Oszczędza do 40–50%% energii na ekranach OLED</string>
     <string name="cockpit_theme_title">Motyw kokpitu (podczas treningu)</string>
