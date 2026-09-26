@@ -89,7 +89,7 @@ internal val AmoledDarkColorScheme = DarkColorScheme.copy(
     outlineVariant = AmoledOutlineVariant,
     onSurface = Color.White,
     onBackground = Color.White,
-    onSurfaceVariant = Color(0xFFC4C6D0)
+    onSurfaceVariant = AmoledOnSurfaceVariant
 )
 
 private val LightColorScheme = lightColorScheme(

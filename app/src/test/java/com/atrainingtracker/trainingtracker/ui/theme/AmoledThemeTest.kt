@@ -37,12 +37,11 @@ class AmoledThemeTest {
         assertEquals(Color(0xFF121212), AmoledDarkColorScheme.surfaceContainerHigh)
         assertEquals(Color(0xFF000000), AmoledDarkColorScheme.surfaceContainerHighest)
         assertEquals(Color(0xFF000000), AmoledDarkColorScheme.primaryContainer)
-        assertEquals(Color(0xFFFFFFFF), AmoledDarkColorScheme.onPrimaryContainer)
-        assertEquals(Color(0xFF2C2C2E), AmoledDarkColorScheme.outlineVariant)
+        assertEquals(Color(0xFF262626), AmoledDarkColorScheme.outlineVariant)
         assertEquals(Color(0xFF38383A), AmoledDarkColorScheme.outline)
         assertEquals(Color(0xFFFFFFFF), AmoledDarkColorScheme.onSurface)
         assertEquals(Color(0xFFFFFFFF), AmoledDarkColorScheme.onBackground)
-        assertEquals(Color(0xFFC4C6D0), AmoledDarkColorScheme.onSurfaceVariant)
+        assertEquals(Color(0xFF9E9E9E), AmoledDarkColorScheme.onSurfaceVariant)
     }
 
     @Test
@@ -52,7 +51,10 @@ class AmoledThemeTest {
         assertEquals(Color(0xFF1B1B1F), DarkSurface)
         assertEquals(DarkBackground, DarkColorScheme.background)
         assertEquals(DarkSurface, DarkColorScheme.surface)
+        assertEquals(DarkOnSurfaceVariant, DarkColorScheme.onSurfaceVariant)
         assertNotEquals(DarkColorScheme.background, AmoledDarkColorScheme.background)
         assertNotEquals(DarkColorScheme.surface, AmoledDarkColorScheme.surface)
+        assertNotEquals(DarkColorScheme.outlineVariant, AmoledDarkColorScheme.outlineVariant)
+        assertNotEquals(DarkColorScheme.onSurfaceVariant, AmoledDarkColorScheme.onSurfaceVariant)
     }
 }
