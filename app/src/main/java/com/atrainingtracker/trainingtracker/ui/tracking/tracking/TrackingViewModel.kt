@@ -39,6 +39,7 @@ import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.MapRoute
@@ -54,6 +55,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -162,6 +164,8 @@ class TrackingViewModel(
     )
 
     private val sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(application)
+    private val settingsDataStore = SettingsDataStore(application)
+    private val zoneDisplayOptionsMap = mutableMapOf<SettingsDataStore.ZoneType, ZoneDisplayOptions>()
     private val defaultZoneColor = Color.Transparent
 
     // Pre-load the zone colors into a list for efficient access. The order is important.
@@ -174,9 +178,24 @@ class TrackingViewModel(
     )
 
     init {
+        observeZoneDisplayOptions()
         // Load both the main UI state and the activity type
         loadSensorFieldStates()
         loadActivityType()
+    }
+
+    private fun observeZoneDisplayOptions() {
+        viewModelScope.launch {
+            combine(
+                settingsDataStore.getZoneDisplayOptionsFlow(SettingsDataStore.ZoneType.HR_RUN),
+                settingsDataStore.getZoneDisplayOptionsFlow(SettingsDataStore.ZoneType.HR_BIKE),
+                settingsDataStore.getZoneDisplayOptionsFlow(SettingsDataStore.ZoneType.PWR_BIKE)
+            ) { hrRun, hrBike, pwrBike ->
+                zoneDisplayOptionsMap[SettingsDataStore.ZoneType.HR_RUN] = hrRun
+                zoneDisplayOptionsMap[SettingsDataStore.ZoneType.HR_BIKE] = hrBike
+                zoneDisplayOptionsMap[SettingsDataStore.ZoneType.PWR_BIKE] = pwrBike
+            }.collect()
+        }
     }
 
     private fun loadActivityType() {
@@ -208,6 +227,7 @@ class TrackingViewModel(
                 val (allLiveSegments, activeLiveSegments, allRoutes) = mapData
 
                 // --- Step 1: Create the base state from the latest configurations ---
+                val currentActivity = banalServiceRepository.activityType.value
                 val baseFields = configs.map { config ->
                     val uniqueHash = Objects.hash(config.sensorType, config.filterType, config.filterConstant, config.sourceDeviceName)
                     var filterDescription = config.filterType.getShortSummary(application, config.filterConstant)
@@ -219,6 +239,9 @@ class TrackingViewModel(
                         }
                     }
 
+                    val zoneType = getZoneType(config.sensorType, currentActivity.sportType)
+                    val displayOptions = zoneType?.let { zoneDisplayOptionsMap[it] } ?: ZoneDisplayOptions()
+
                     SensorFieldState(
                         configHash = uniqueHash,
                         sensorFieldId = config.sensorFieldId,
@@ -229,13 +252,13 @@ class TrackingViewModel(
                         filterDescription = filterDescription,
                         value = "--",
                         units = application.getString(MyHelper.getShortUnitsId(config.sensorType)),
-                        zoneColor = defaultZoneColor
+                        zoneColor = defaultZoneColor,
+                        zoneDisplayOptions = displayOptions
                     )
                 }
 
                 // --- Step 2: Apply live sensor data to the base state ---
-                val activity = banalServiceRepository.activityType.value
-                val finalFields = applySensorData(baseFields, allSensorData, activity)
+                val finalFields = applySensorData(baseFields, allSensorData, currentActivity)
 
                 val currentTrack = banalServiceRepository.currentTrack.value
                 val markerList = mutableListOf<LocationMarker>()
@@ -305,14 +328,22 @@ class TrackingViewModel(
             if (fieldsToUpdate != null) {
                 val newFormattedValue = sensorData.stringValue
                 val newZoneColor = calculateZoneColor(sensorData, activityType)
+                val zoneType = getZoneType(sensorData.sensorType, activityType.sportType)
+                val displayOptions = zoneType?.let { zoneDisplayOptionsMap[it] } ?: ZoneDisplayOptions()
 
                 // 3. Iterate through every field that needs this update.
                 for (fieldToUpdate in fieldsToUpdate) {
                     // Check if this specific instance needs an update to avoid unnecessary changes.
-                    if (fieldToUpdate.value != newFormattedValue || fieldToUpdate.zoneColor != newZoneColor) {
+                    if (fieldToUpdate.value != newFormattedValue ||
+                        fieldToUpdate.zoneColor != newZoneColor ||
+                        fieldToUpdate.zoneDisplayOptions != displayOptions) {
                         val index = updatedFields.indexOf(fieldToUpdate)
                         if (index != -1) {
-                            updatedFields[index] = fieldToUpdate.copy(value = newFormattedValue, zoneColor = newZoneColor)
+                            updatedFields[index] = fieldToUpdate.copy(
+                                value = newFormattedValue,
+                                zoneColor = newZoneColor,
+                                zoneDisplayOptions = displayOptions
+                            )
                             hasChanged = true
                         }
                     }

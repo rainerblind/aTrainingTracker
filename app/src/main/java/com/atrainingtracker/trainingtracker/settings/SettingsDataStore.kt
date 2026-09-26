@@ -22,6 +22,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -73,6 +74,22 @@ class SettingsDataStore(private val context: Context) {
         private val PWR_BIKE_ZONE2_MAX = intPreferencesKey("pwr_bike_zone2_max")
         private val PWR_BIKE_ZONE3_MAX = intPreferencesKey("pwr_bike_zone3_max")
         private val PWR_BIKE_ZONE4_MAX = intPreferencesKey("pwr_bike_zone4_max")
+
+        // Zone Display Options
+        private val HR_RUN_ZONE_SHOW_BACKGROUND = booleanPreferencesKey("hr_run_zone_show_background")
+        private val HR_RUN_ZONE_SHOW_LEFT_BAR = booleanPreferencesKey("hr_run_zone_show_left_bar")
+        private val HR_RUN_ZONE_SHOW_RIGHT_BAR = booleanPreferencesKey("hr_run_zone_show_right_bar")
+        private val HR_RUN_ZONE_SHOW_TEXT_COLOR = booleanPreferencesKey("hr_run_zone_show_text_color")
+
+        private val HR_BIKE_ZONE_SHOW_BACKGROUND = booleanPreferencesKey("hr_bike_zone_show_background")
+        private val HR_BIKE_ZONE_SHOW_LEFT_BAR = booleanPreferencesKey("hr_bike_zone_show_left_bar")
+        private val HR_BIKE_ZONE_SHOW_RIGHT_BAR = booleanPreferencesKey("hr_bike_zone_show_right_bar")
+        private val HR_BIKE_ZONE_SHOW_TEXT_COLOR = booleanPreferencesKey("hr_bike_zone_show_text_color")
+
+        private val PWR_BIKE_ZONE_SHOW_BACKGROUND = booleanPreferencesKey("pwr_bike_zone_show_background")
+        private val PWR_BIKE_ZONE_SHOW_LEFT_BAR = booleanPreferencesKey("pwr_bike_zone_show_left_bar")
+        private val PWR_BIKE_ZONE_SHOW_RIGHT_BAR = booleanPreferencesKey("pwr_bike_zone_show_right_bar")
+        private val PWR_BIKE_ZONE_SHOW_TEXT_COLOR = booleanPreferencesKey("pwr_bike_zone_show_text_color")
     }
 
     // --- HELPER: Map Enums to Keys ---
@@ -164,6 +181,58 @@ class SettingsDataStore(private val context: Context) {
     suspend fun saveHrZoneMax(zoneType: ZoneType, zone: Zone, value: Int) {
         context.dataStore.edit { prefs ->
             prefs[getKey(zoneType, zone)] = value
+        }
+    }
+
+    private data class ZoneDisplayKeys(
+        val bgKey: Preferences.Key<Boolean>,
+        val leftBarKey: Preferences.Key<Boolean>,
+        val rightBarKey: Preferences.Key<Boolean>,
+        val textColorKey: Preferences.Key<Boolean>
+    )
+
+    private fun getZoneDisplayKeys(zoneType: ZoneType): ZoneDisplayKeys {
+        return when (zoneType) {
+            ZoneType.HR_RUN -> ZoneDisplayKeys(
+                HR_RUN_ZONE_SHOW_BACKGROUND,
+                HR_RUN_ZONE_SHOW_LEFT_BAR,
+                HR_RUN_ZONE_SHOW_RIGHT_BAR,
+                HR_RUN_ZONE_SHOW_TEXT_COLOR
+            )
+            ZoneType.HR_BIKE -> ZoneDisplayKeys(
+                HR_BIKE_ZONE_SHOW_BACKGROUND,
+                HR_BIKE_ZONE_SHOW_LEFT_BAR,
+                HR_BIKE_ZONE_SHOW_RIGHT_BAR,
+                HR_BIKE_ZONE_SHOW_TEXT_COLOR
+            )
+            ZoneType.PWR_BIKE -> ZoneDisplayKeys(
+                PWR_BIKE_ZONE_SHOW_BACKGROUND,
+                PWR_BIKE_ZONE_SHOW_LEFT_BAR,
+                PWR_BIKE_ZONE_SHOW_RIGHT_BAR,
+                PWR_BIKE_ZONE_SHOW_TEXT_COLOR
+            )
+        }
+    }
+
+    fun getZoneDisplayOptionsFlow(zoneType: ZoneType): Flow<ZoneDisplayOptions> {
+        val keys = getZoneDisplayKeys(zoneType)
+        return context.dataStore.data.map { prefs ->
+            ZoneDisplayOptions(
+                showBackground = prefs[keys.bgKey] ?: true,
+                showLeftBar = prefs[keys.leftBarKey] ?: true,
+                showRightBar = prefs[keys.rightBarKey] ?: false,
+                showTextColor = prefs[keys.textColorKey] ?: false
+            )
+        }
+    }
+
+    suspend fun saveZoneDisplayOptions(zoneType: ZoneType, options: ZoneDisplayOptions) {
+        val keys = getZoneDisplayKeys(zoneType)
+        context.dataStore.edit { prefs ->
+            prefs[keys.bgKey] = options.showBackground
+            prefs[keys.leftBarKey] = options.showLeftBar
+            prefs[keys.rightBarKey] = options.showRightBar
+            prefs[keys.textColorKey] = options.showTextColor
         }
     }
 }

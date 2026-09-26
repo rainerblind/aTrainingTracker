@@ -600,7 +600,15 @@
     <string name="label_min">Mín</string>
     <string name="label_max">Máx</string>
 
+    <string name="zone_display_title">Visualización de zonas</string>
+    <string name="zone_display_background">Fondo claro</string>
+    <string name="zone_display_left_bar">Barra izquierda</string>
+    <string name="zone_display_right_bar">Barra derecha</string>
+    <string name="zone_display_text_color">Color de texto</string>
+    <string name="zone_display_preview_title">Vista previa</string>
+
     <string name="prefEmailExport">e-Mail</string>
+
 
 
 <!-- 2026 -->

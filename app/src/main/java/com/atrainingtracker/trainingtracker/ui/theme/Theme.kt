@@ -135,6 +135,7 @@ fun ATrainingTrackerTheme(
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = false,
     amoled: Boolean = false,
+    setWindowColors: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -148,7 +149,7 @@ fun ATrainingTrackerTheme(
     }
 
     val view = LocalView.current
-    if (!view.isInEditMode) {
+    if (setWindowColors && !view.isInEditMode) {
         SideEffect {
             var context = view.context
             while (context is ContextWrapper) {

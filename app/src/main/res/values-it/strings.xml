@@ -598,7 +598,15 @@
     <string name="label_min">Min</string>
     <string name="label_max">Max</string>
 
+    <string name="zone_display_title">Visualizzazione delle zone</string>
+    <string name="zone_display_background">Sfondo chiaro</string>
+    <string name="zone_display_left_bar">Barra sinistra</string>
+    <string name="zone_display_right_bar">Barra destra</string>
+    <string name="zone_display_text_color">Colore del testo</string>
+    <string name="zone_display_preview_title">Anteprima</string>
+
     <string name="prefEmailExport">e-Mail</string>
+
 
 <!-- 2026 -->
     <!-- StringUtils -->

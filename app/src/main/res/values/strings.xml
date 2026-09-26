@@ -751,6 +751,13 @@
     <string name="label_min">Min</string>
     <string name="label_max">Max</string>
 
+    <string name="zone_display_title">Zone Visualization</string>
+    <string name="zone_display_background">Light background</string>
+    <string name="zone_display_left_bar">Left bar</string>
+    <string name="zone_display_right_bar">Right bar</string>
+    <string name="zone_display_text_color">Text color</string>
+    <string name="zone_display_preview_title">Preview</string>
+
     <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/develop/privacy.md</string> <!-- TODO: replace develop with master -->
     <string name="prefEmailExport">e-Mail</string>
 

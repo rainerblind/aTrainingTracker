@@ -47,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -165,17 +166,17 @@ fun SensorFieldView(
             ),
         shape = RectangleShape,
         colors = CardDefaults.cardColors(
-            containerColor = if (fieldState.zoneColor == Color.Transparent) {
-                MaterialTheme.colorScheme.surface
+            containerColor = if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showBackground) {
+                fieldState.zoneColor.copy(alpha = 0.12f).compositeOver(MaterialTheme.colorScheme.surface)
             } else {
-                fieldState.zoneColor.copy(alpha = 0.12f)
+                MaterialTheme.colorScheme.surface
             }
         ),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-            // 1. Vertical Indicator Strip
-            if (fieldState.zoneColor != Color.Transparent) {
+            // 1. Left Indicator Strip
+            if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showLeftBar) {
                 Spacer(
                     modifier = Modifier
                         .width(6.dp)
@@ -183,73 +184,89 @@ fun SensorFieldView(
                         .background(fieldState.zoneColor)
                 )
             }
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-        ) {
-            // Top row for Label and Filter information
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                // Label on the top-left
-                Text(
-                    text = fieldState.label,
-                    style = labelStyle,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                // Filter info on the top-right
-                Text(
-                    text = fieldState.filterDescription,
-                    style = filterStyle,
-                    fontStyle = FontStyle.Italic,
-                    textAlign = TextAlign.End,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // Value and Unit Row, centered
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.Bottom,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = fieldState.value,
-                    style = valueStyle,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = fieldState.units,
-                    style = unitStyle,
-                    modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // Conditionally add the delete button at the bottom in configuration mode
-            if (screenMode == ScreenMode.CONFIGURATION) {
-                Spacer(modifier = Modifier.height(8.dp))
+                // Top row for Label and Filter information
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
                 ) {
-                    IconButton(
-                        onClick = onDelete,
-                        modifier = Modifier.size(24.dp) // Make the button compact
+                    // Label on the top-left
+                    Text(
+                        text = fieldState.label,
+                        style = labelStyle,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    // Filter info on the top-right
+                    Text(
+                        text = fieldState.filterDescription,
+                        style = filterStyle,
+                        fontStyle = FontStyle.Italic,
+                        textAlign = TextAlign.End,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Value and Unit Row, centered
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.Bottom,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = fieldState.value,
+                        style = valueStyle,
+                        color = if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showTextColor) {
+                            fieldState.zoneColor
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        }
+                    )
+                    Text(
+                        text = fieldState.units,
+                        style = unitStyle,
+                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Conditionally add the delete button at the bottom in configuration mode
+                if (screenMode == ScreenMode.CONFIGURATION) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete Field", // For accessibility
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(24.dp) // Make the button compact
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete Field", // For accessibility
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
-        }
+            // 2. Right Indicator Strip
+            if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showRightBar) {
+                Spacer(
+                    modifier = Modifier
+                        .width(6.dp)
+                        .fillMaxHeight()
+                        .background(fieldState.zoneColor)
+                )
+            }
         }
     }
 }
+
 
 
 //================================================================================

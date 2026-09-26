@@ -596,7 +596,15 @@
     <string name="label_min">最小</string>
     <string name="label_max">最大</string>
 
+    <string name="zone_display_title">ゾーン表示</string>
+    <string name="zone_display_background">明るい背景</string>
+    <string name="zone_display_left_bar">左バー</string>
+    <string name="zone_display_right_bar">右バー</string>
+    <string name="zone_display_text_color">文字色</string>
+    <string name="zone_display_preview_title">プレビュー</string>
+
     <string name="prefEmailExport">eメール</string>
+
 
 <!-- 2026 -->
     <!-- StringUtils -->
