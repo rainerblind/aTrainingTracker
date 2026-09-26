@@ -520,6 +520,10 @@
     <string name="check_ANT_installation">Überprüfe ANT Installation</string>
     <string name="forcePortrait">Portrait Orientierung</string>
     <string name="Display">Display</string>
+    <string name="settings_category_savings">Einsparungen</string>
+    <string name="settings_category_savings_desc">Optimierung des Energieverbrauchs während des Trainings</string>
+    <string name="prefs_battery_saver_title">Akkusparer / Display-Dimming</string>
+    <string name="prefs_battery_saver_summary">Passt die Bildschirmhelligkeit dynamisch an Steigung und Trainingszonen an</string>
     <string name="cockpit_theme_title">Cockpit-Design (während des Trainings)</string>
     <string name="cockpit_theme_description">Gilt nur für die Daten- und Sensoranzeigen des aktiven Workouts. Das restliche Menü und \'Control Tracking\' behalten das Standarddesign.</string>
     <string name="cockpit_theme_system">Systemstandard</string>

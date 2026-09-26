@@ -486,6 +486,10 @@
     <string name="check_ANT_installation">comprobar instalación ANT</string>
     <string name="forcePortrait">Orientación vertical</string>
     <string name="Display">Pantalla</string>
+    <string name="settings_category_savings">Ahorro de energía</string>
+    <string name="settings_category_savings_desc">Optimizar el consumo de batería durante los entrenamientos</string>
+    <string name="prefs_battery_saver_title">Ahorro de batería / Atenuación de pantalla</string>
+    <string name="prefs_battery_saver_summary">Ajusta dinámicamente el brillo de la pantalla según la pendiente y las zonas de entrenamiento</string>
     <string name="cockpit_theme_title">Diseño del cockpit (durante el entrenamiento)</string>
     <string name="cockpit_theme_description">Se aplica exclusivamente a las vistas de telemetría y sensores durante entrenamientos activos. El menú principal y \'Control Tracking\' mantienen el diseño estándar.</string>
     <string name="cockpit_theme_system">Sistema</string>

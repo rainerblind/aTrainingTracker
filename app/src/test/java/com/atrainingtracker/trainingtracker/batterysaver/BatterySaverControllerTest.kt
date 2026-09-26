@@ -1,0 +1,109 @@
+/*
+ * aTrainingTracker (ANT+ BTLE)
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ */
+
+package com.atrainingtracker.trainingtracker.batterysaver
+
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class BatterySaverControllerTest {
+
+    private val testDispatcher = StandardTestDispatcher()
+    private val testScope = TestScope(testDispatcher)
+
+    private var lastAppliedBrightness: Float = -1f
+    private lateinit var controller: BatterySaverController
+
+    @Before
+    fun setUp() {
+        lastAppliedBrightness = -1f
+        controller = BatterySaverController(
+            activity = null,
+            scope = testScope,
+            stateMachine = BatterySaverStateMachine(hysteresisMs = 3000L),
+            brightnessApplier = { brightness ->
+                lastAppliedBrightness = brightness
+            }
+        )
+    }
+
+    @Test
+    fun setEnabled_togglesStateAndAppliesBrightness() {
+        assertFalse(controller.isEnabled)
+
+        controller.setEnabled(true)
+        assertTrue(controller.isEnabled)
+        assertTrue(controller.isWakeupActive)
+        assertEquals(1.0f, lastAppliedBrightness, 0.001f)
+
+        controller.setEnabled(false)
+        assertFalse(controller.isEnabled)
+        assertFalse(controller.isWakeupActive)
+        assertEquals(1.0f, lastAppliedBrightness, 0.001f)
+    }
+
+    @Test
+    fun wakeupEvent_setsFullBrightnessAndRestoresAfter15Seconds() = testScope.runTest {
+        controller.setEnabled(true)
+
+        // Simulate steady telemetry that would result in FULL_DIM
+        controller.stateMachine.reset(DimmingLevel.FULL_DIM)
+
+        // Wakeup event occurs
+        controller.onWakeupEvent()
+        assertTrue(controller.isWakeupActive)
+        assertEquals(1.0f, lastAppliedBrightness, 0.001f)
+
+        // Advance 10 seconds -> still active
+        testDispatcher.scheduler.advanceTimeBy(10_000L)
+        assertTrue(controller.isWakeupActive)
+        assertEquals(1.0f, lastAppliedBrightness, 0.001f)
+
+        // Overlapping wakeup event resets the timer
+        controller.onWakeupEvent()
+        assertTrue(controller.isWakeupActive)
+
+        // Advance 10 more seconds (total 20s from first, 10s from second) -> still active
+        testDispatcher.scheduler.advanceTimeBy(10_000L)
+        assertTrue(controller.isWakeupActive)
+
+        // Advance 5.1 seconds -> second timer expires (15.1s from second event)
+        testDispatcher.scheduler.advanceTimeBy(5_100L)
+        assertFalse(controller.isWakeupActive)
+        assertEquals(DimmingLevel.FULL_DIM.brightness, lastAppliedBrightness, 0.001f)
+    }
+
+    @Test
+    fun safetyFloor_isStrictlyEnforced() {
+        // Even if an absurdly low brightness level is given, safety floor (>= 0.05f) is enforced
+        controller.applyBrightness(0.01f)
+        assertEquals(DimmingLevel.SAFETY_FLOOR, controller.currentAppliedBrightness, 0.001f)
+        assertEquals(0.05f, DimmingLevel.SAFETY_FLOOR, 0.001f)
+    }
+
+    @Test
+    fun release_resetsBrightnessAndCancelsTimers() = testScope.runTest {
+        controller.setEnabled(true)
+        controller.onWakeupEvent()
+        assertTrue(controller.isWakeupActive)
+
+        controller.release()
+        assertEquals(1.0f, lastAppliedBrightness, 0.001f)
+    }
+}

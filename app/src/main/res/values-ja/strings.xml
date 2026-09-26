@@ -482,6 +482,10 @@
     <string name="check_ANT_installation">ANTのインストール状況を確認</string>
     <string name="forcePortrait">縦向き固定</string>
     <string name="Display">画面</string>
+    <string name="settings_category_savings">省電力</string>
+    <string name="settings_category_savings_desc">ワークアウト中のバッテリー消費を最適化</string>
+    <string name="prefs_battery_saver_title">バッテリーセーバー / 画面減光</string>
+    <string name="prefs_battery_saver_summary">勾配とトレーニングゾーンに基づいて画面の明るさを動的に調整します</string>
     <string name="cockpit_theme_title">コックピットテーマ（ワークアウト中）</string>
     <string name="cockpit_theme_description">アクティブなワークアウト中のテレメトリとセンサー画面にのみ適用されます。メインメニューと「Control Tracking」は標準テーマのままです。</string>
     <string name="cockpit_theme_system">システム</string>

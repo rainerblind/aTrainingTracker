@@ -1,7 +1,7 @@
 {
-  "parent_ticket": "ATT-1276",
-  "active_subtask": "ATT-1404",
+  "parent_ticket": "ATT-1268",
+  "active_subtask": "ATT-1455",
   "stage": "Stage 4: Implementation",
   "status": "In Bearbeitung",
-  "branch": "feature/ATT-1276"
+  "branch": "feature/ATT-1268"
 }

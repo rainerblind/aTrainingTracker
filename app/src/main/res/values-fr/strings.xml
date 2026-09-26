@@ -484,6 +484,10 @@
     <string name="check_ANT_installation">vérifier installation ANT</string>
     <string name="forcePortrait">Orientation portrait</string>
     <string name="Display">Affichage</string>
+    <string name="settings_category_savings">Économie d\'énergie</string>
+    <string name="settings_category_savings_desc">Optimiser la consommation de la batterie pendant l\'entraînement</string>
+    <string name="prefs_battery_saver_title">Économiseur de batterie / Atténuation de l\'écran</string>
+    <string name="prefs_battery_saver_summary">Ajuste dynamiquement la luminosité de l\'écran en fonction de la pente et des zones d\'entraînement</string>
     <string name="cockpit_theme_title">Thème du cockpit (pendant l\'entraînement)</string>
     <string name="cockpit_theme_description">S\'applique exclusivement aux affichages de télémétrie et de capteurs pendant les entraînements actifs. Le menu principal et \'Control Tracking\' conservent le thème standard.</string>
     <string name="cockpit_theme_system">Système</string>

@@ -476,6 +476,17 @@ public class TrainingApplication extends Application {
         cSharedPreferences.edit().putString(SP_COCKPIT_THEME_MODE, mode.getId()).apply();
     }
 
+    public static final String SP_BATTERY_SAVER = "battery_saver";
+    public static final boolean DEFAULT_BATTERY_SAVER = false;
+
+    public static boolean isBatterySaverEnabled() {
+        return cSharedPreferences.getBoolean(SP_BATTERY_SAVER, DEFAULT_BATTERY_SAVER);
+    }
+
+    public static void setBatterySaverEnabled(boolean enabled) {
+        cSharedPreferences.edit().putBoolean(SP_BATTERY_SAVER, enabled).apply();
+    }
+
     @NonNull
     public static String getAppName() {
         return cAppContext.getString(R.string.application_name);

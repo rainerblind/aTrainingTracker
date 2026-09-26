@@ -38,6 +38,9 @@ fun DisplaySettingsDialog(
     var currentThemeMode by remember {
         mutableStateOf(TrainingApplication.getCockpitThemeMode())
     }
+    var isBatterySaverEnabled by remember {
+        mutableStateOf(TrainingApplication.isBatterySaverEnabled())
+    }
     
     AppBottomSheetContent(
         title = stringResource(R.string.Display),
@@ -48,6 +51,7 @@ fun DisplaySettingsDialog(
                 onSave = {
                     TrainingApplication.setDisplayOptions(currentOptions)
                     TrainingApplication.setCockpitThemeMode(currentThemeMode)
+                    TrainingApplication.setBatterySaverEnabled(isBatterySaverEnabled)
                     onSettingsChanged?.invoke()
                     onDismiss()
                 },
@@ -91,40 +95,101 @@ fun DisplaySettingsDialog(
 
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = stringResource(R.string.cockpit_theme_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = stringResource(R.string.cockpit_theme_description),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                SingleChoiceSegmentedButtonRow(
-                    modifier = Modifier.fillMaxWidth()
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    SegmentedButton(
-                        selected = currentThemeMode == CockpitThemeMode.SYSTEM,
-                        onClick = { currentThemeMode = CockpitThemeMode.SYSTEM },
-                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                        icon = { SegmentedButtonDefaults.Icon(active = currentThemeMode == CockpitThemeMode.SYSTEM) }
+                    Text(
+                        text = stringResource(R.string.settings_category_savings),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_category_savings_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                DisplayOptionToggleWithSubtitle(
+                    label = stringResource(R.string.prefs_battery_saver_title),
+                    subtitle = stringResource(R.string.prefs_battery_saver_summary),
+                    isChecked = isBatterySaverEnabled,
+                    onCheckedChange = { isBatterySaverEnabled = it }
+                )
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.cockpit_theme_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = stringResource(R.string.cockpit_theme_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    SingleChoiceSegmentedButtonRow(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(stringResource(R.string.cockpit_theme_system))
-                    }
-                    SegmentedButton(
-                        selected = currentThemeMode == CockpitThemeMode.ALWAYS_DARK,
-                        onClick = { currentThemeMode = CockpitThemeMode.ALWAYS_DARK },
-                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                        icon = { SegmentedButtonDefaults.Icon(active = currentThemeMode == CockpitThemeMode.ALWAYS_DARK) }
-                    ) {
-                        Text(stringResource(R.string.cockpit_theme_always_dark))
+                        SegmentedButton(
+                            selected = currentThemeMode == CockpitThemeMode.SYSTEM,
+                            onClick = { currentThemeMode = CockpitThemeMode.SYSTEM },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                            icon = { SegmentedButtonDefaults.Icon(active = currentThemeMode == CockpitThemeMode.SYSTEM) }
+                        ) {
+                            Text(stringResource(R.string.cockpit_theme_system))
+                        }
+                        SegmentedButton(
+                            selected = currentThemeMode == CockpitThemeMode.ALWAYS_DARK,
+                            onClick = { currentThemeMode = CockpitThemeMode.ALWAYS_DARK },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                            icon = { SegmentedButtonDefaults.Icon(active = currentThemeMode == CockpitThemeMode.ALWAYS_DARK) }
+                        ) {
+                            Text(stringResource(R.string.cockpit_theme_always_dark))
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DisplayOptionToggleWithSubtitle(
+    label: String,
+    subtitle: String,
+    isChecked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(text = label, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Switch(
+            checked = isChecked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.scale(0.7f)
+        )
     }
 }
 

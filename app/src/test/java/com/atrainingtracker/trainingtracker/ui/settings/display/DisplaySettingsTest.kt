@@ -56,6 +56,11 @@ class DisplaySettingsTest {
             val def = secondArg<String?>()
             (prefStorage[key] as? String) ?: def
         }
+        every { mockPrefs.getBoolean(any(), any()) } answers {
+            val key = firstArg<String>()
+            val def = secondArg<Boolean>()
+            (prefStorage[key] as? Boolean) ?: def
+        }
 
         every { mockPrefs.edit() } returns mockEditor
         every { mockEditor.putStringSet(any(), any()) } answers {
@@ -67,6 +72,12 @@ class DisplaySettingsTest {
         every { mockEditor.putString(any(), any()) } answers {
             val key = firstArg<String>()
             val value = secondArg<String>()
+            prefStorage[key] = value
+            mockEditor
+        }
+        every { mockEditor.putBoolean(any(), any()) } answers {
+            val key = firstArg<String>()
+            val value = secondArg<Boolean>()
             prefStorage[key] = value
             mockEditor
         }
@@ -188,6 +199,23 @@ class DisplaySettingsTest {
     fun testInvalidCockpitThemeModeFallsBackToSystem() {
         prefStorage[TrainingApplication.SP_COCKPIT_THEME_MODE] = "invalid_or_legacy_value"
         assertEquals(CockpitThemeMode.SYSTEM, TrainingApplication.getCockpitThemeMode())
+    }
+
+    @Test
+    fun testDefaultBatterySaverIsDisabled() {
+        assertTrue(prefStorage.isEmpty())
+        assertFalse(TrainingApplication.isBatterySaverEnabled())
+    }
+
+    @Test
+    fun testUpdateBatterySaverMode() {
+        TrainingApplication.setBatterySaverEnabled(true)
+        assertTrue(TrainingApplication.isBatterySaverEnabled())
+        assertEquals(true, prefStorage[TrainingApplication.SP_BATTERY_SAVER])
+
+        TrainingApplication.setBatterySaverEnabled(false)
+        assertFalse(TrainingApplication.isBatterySaverEnabled())
+        assertEquals(false, prefStorage[TrainingApplication.SP_BATTERY_SAVER])
     }
 
     private fun setStaticField(clazz: Class<*>, fieldName: String, value: Any?) {
