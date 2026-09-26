@@ -202,20 +202,20 @@ class DisplaySettingsTest {
     }
 
     @Test
-    fun testDefaultBatterySaverIsDisabled() {
+    fun testDefaultBatterySaverIsEnabled() {
         assertTrue(prefStorage.isEmpty())
-        assertFalse(TrainingApplication.isBatterySaverEnabled())
+        assertTrue(TrainingApplication.isBatterySaverEnabled())
     }
 
     @Test
     fun testUpdateBatterySaverMode() {
-        TrainingApplication.setBatterySaverEnabled(true)
-        assertTrue(TrainingApplication.isBatterySaverEnabled())
-        assertEquals(true, prefStorage[TrainingApplication.SP_BATTERY_SAVER])
-
         TrainingApplication.setBatterySaverEnabled(false)
         assertFalse(TrainingApplication.isBatterySaverEnabled())
         assertEquals(false, prefStorage[TrainingApplication.SP_BATTERY_SAVER])
+
+        TrainingApplication.setBatterySaverEnabled(true)
+        assertTrue(TrainingApplication.isBatterySaverEnabled())
+        assertEquals(true, prefStorage[TrainingApplication.SP_BATTERY_SAVER])
     }
 
     private fun setStaticField(clazz: Class<*>, fieldName: String, value: Any?) {

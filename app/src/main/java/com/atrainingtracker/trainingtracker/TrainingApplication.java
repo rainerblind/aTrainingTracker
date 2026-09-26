@@ -477,7 +477,7 @@ public class TrainingApplication extends Application {
     }
 
     public static final String SP_BATTERY_SAVER = "battery_saver";
-    public static final boolean DEFAULT_BATTERY_SAVER = false;
+    public static final boolean DEFAULT_BATTERY_SAVER = true;
 
     public static boolean isBatterySaverEnabled() {
         return cSharedPreferences.getBoolean(SP_BATTERY_SAVER, DEFAULT_BATTERY_SAVER);

@@ -490,7 +490,6 @@
     <string name="settings_category_savings_desc">Prolonga la duración de la batería para entrenamientos más largos</string>
     <string name="prefs_battery_saver_title">Atenuación dinámica de pantalla</string>
     <string name="prefs_battery_saver_summary">Ajusta dinámicamente el brillo de la pantalla según la pendiente y las zonas de entrenamiento</string>
-    <string name="prefs_battery_saver_savings_hint">Ahorra hasta un 40-50%% de energía en paneles OLED</string>
     <string name="cockpit_theme_title">Diseño del cockpit (durante el entrenamiento)</string>
     <string name="cockpit_theme_description">Se aplica exclusivamente a las vistas de telemetría y sensores durante entrenamientos activos. El menú principal y \'Control Tracking\' mantienen el diseño estándar.</string>
     <string name="cockpit_theme_system">Sistema</string>

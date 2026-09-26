@@ -625,7 +625,6 @@
     <string name="settings_category_savings_desc">Extends battery life for longer tracking sessions</string>
     <string name="prefs_battery_saver_title">Dynamic Display Dimming</string>
     <string name="prefs_battery_saver_summary">Dynamically adjusts screen brightness based on grade and training zones</string>
-    <string name="prefs_battery_saver_savings_hint">Saves up to 40–50%% energy on OLED screens</string>
     <string name="cockpit_theme_title">Cockpit Theme (During Workout)</string>
     <string name="cockpit_theme_description">Applies exclusively to telemetry and sensor views during active workouts. The main menu and \'Control Tracking\' keep the standard theme.</string>
     <string name="cockpit_theme_system">System</string>

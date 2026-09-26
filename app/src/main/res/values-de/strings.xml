@@ -524,7 +524,6 @@
     <string name="settings_category_savings_desc">Verlängert die Akkulaufzeit für längere Trainings</string>
     <string name="prefs_battery_saver_title">Dynamisches Display-Dimming</string>
     <string name="prefs_battery_saver_summary">Passt die Bildschirmhelligkeit dynamisch an Steigung und Trainingszonen an</string>
-    <string name="prefs_battery_saver_savings_hint">Spart auf OLED-Displays bis zu 40–50%% Energie</string>
     <string name="cockpit_theme_title">Cockpit-Design (während des Trainings)</string>
     <string name="cockpit_theme_description">Gilt nur für die Daten- und Sensoranzeigen des aktiven Workouts. Das restliche Menü und \'Control Tracking\' behalten das Standarddesign.</string>
     <string name="cockpit_theme_system">Systemstandard</string>

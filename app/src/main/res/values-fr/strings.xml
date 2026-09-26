@@ -488,7 +488,6 @@
     <string name="settings_category_savings_desc">Prolonge l\'autonomie de la batterie pour des entraînements plus longs</string>
     <string name="prefs_battery_saver_title">Atténuation dynamique de l\'écran</string>
     <string name="prefs_battery_saver_summary">Ajuste dynamiquement la luminosité de l\'écran en fonction de la pente et des zones d\'entraînement</string>
-    <string name="prefs_battery_saver_savings_hint">Économise jusqu\'à 40 à 50%% d\'énergie sur écran OLED</string>
     <string name="cockpit_theme_title">Thème du cockpit (pendant l\'entraînement)</string>
     <string name="cockpit_theme_description">S\'applique exclusivement aux affichages de télémétrie et de capteurs pendant les entraînements actifs. Le menu principal et \'Control Tracking\' conservent le thème standard.</string>
     <string name="cockpit_theme_system">Système</string>
