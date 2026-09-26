@@ -35,7 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(
+internal val DarkColorScheme = darkColorScheme(
     primary = DarkPrimary,
     onPrimary = DarkOnPrimary,
     primaryContainer = BabyBlueEyeInverse,
@@ -70,6 +70,24 @@ private val DarkColorScheme = darkColorScheme(
     surfaceContainerHigh = DarkSurface,
     surfaceContainerHighest = surfaceContainerDark, // Used for tab backgrounds
     surfaceTint = Color.Transparent
+)
+
+internal val AmoledDarkColorScheme = DarkColorScheme.copy(
+    background = AmoledBackground,
+    surface = AmoledSurface,
+    surfaceVariant = AmoledSurface,
+    surfaceDim = AmoledSurface,
+    surfaceBright = Color(0xFF1A1A1A),
+    surfaceContainerLowest = AmoledSurface,
+    surfaceContainerLow = AmoledSurface,
+    surfaceContainer = AmoledSurface,
+    surfaceContainerHigh = Color(0xFF121212),
+    surfaceContainerHighest = Color(0xFF1E1E1E),
+    outline = AmoledOutline,
+    outlineVariant = AmoledOutlineVariant,
+    onSurface = Color.White,
+    onBackground = Color.White,
+    onSurfaceVariant = Color(0xFFC4C6D0)
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -114,6 +132,7 @@ fun ATrainingTrackerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = false,
+    amoled: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -121,6 +140,7 @@ fun ATrainingTrackerTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
+        darkTheme && amoled -> AmoledDarkColorScheme
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
