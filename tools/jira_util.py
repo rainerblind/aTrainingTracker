@@ -372,6 +372,45 @@ def download_all_attachments(issue_key, role="agent1"):
     for a in attachments:
         download_attachment(a['content'], a['filename'], role=role)
 
+def upload_attachment(issue_key, file_path, role="agent1"):
+    if not os.path.exists(file_path):
+        print(f"Error: File '{file_path}' not found.", file=sys.stderr)
+        sys.exit(1)
+    config = get_config()
+    user, token = resolve_account(role, config)
+    filename = os.path.basename(file_path)
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}/attachments"
+
+    import uuid
+    import mimetypes
+    boundary = f"----FormBoundary{uuid.uuid4().hex}"
+    content_type = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
+
+    with open(file_path, "rb") as f:
+        file_bytes = f.read()
+
+    body = bytearray()
+    body.extend(f"--{boundary}\r\n".encode("utf-8"))
+    body.extend(f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'.encode("utf-8"))
+    body.extend(f"Content-Type: {content_type}\r\n\r\n".encode("utf-8"))
+    body.extend(file_bytes)
+    body.extend(f"\r\n--{boundary}--\r\n".encode("utf-8"))
+
+    auth_str = f"{user}:{token}"
+    encoded_auth = base64.b64encode(auth_str.encode("ascii")).decode("ascii")
+
+    req = urllib.request.Request(url, data=body, method="POST")
+    req.add_header("Authorization", f"Basic {encoded_auth}")
+    req.add_header("X-Atlassian-Token", "no-check")
+    req.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
+
+    try:
+        with urllib.request.urlopen(req) as resp:
+            print(f"Uploaded {filename} to {issue_key} successfully.")
+    except Exception as e:
+        print(f"Error uploading attachment: {e}", file=sys.stderr)
+        sys.exit(1)
+
 def transition_issue(issue_key, status_name, role="agent1"):
     # Strict Human Gate Guard: Prohibit AI agents from moving to Erledigt / Freigabe erteilt
     prohibited_targets = ["erledigt", "done", "freigabe erteilt"]
@@ -586,6 +625,8 @@ if __name__ == "__main__":
         download_attachment(remaining_argv[1], remaining_argv[2], role=active_role)
     elif cmd == "download-all" and len(remaining_argv) == 2:
         download_all_attachments(remaining_argv[1], role=active_role)
+    elif cmd in ("upload", "upload-attachment") and len(remaining_argv) == 3:
+        upload_attachment(remaining_argv[1], remaining_argv[2], role=active_role)
     elif cmd == "move" and len(remaining_argv) == 3:
         transition_issue(remaining_argv[1], remaining_argv[2], role=active_role)
     elif (cmd == "comment" or cmd == "add-comment") and len(remaining_argv) == 3:

@@ -438,7 +438,7 @@ fun TrackingTabsScreen(
                         val viewInfo = trackingViews.getOrNull(viewIndex)
 
                         if (viewInfo != null) {
-                            ATrainingTrackerTheme(darkTheme = isCockpitDark) {
+                            ATrainingTrackerTheme(darkTheme = isCockpitDark, amoled = isCockpitDark) {
                                 TrackingTabGridContent(
                                     viewInfo.tabViewId,
                                     screenMode,
@@ -462,7 +462,7 @@ fun TrackingTabsScreen(
                         .padding(bottom = 8.dp), // Space from bottom of screen
                     contentAlignment = Alignment.BottomCenter
                 ) {
-                    ATrainingTrackerTheme(darkTheme = isCockpitDark) {
+                    ATrainingTrackerTheme(darkTheme = isCockpitDark, amoled = isCockpitDark) {
                         LapButton(
                             modifier = Modifier
                                 .wrapContentSize() // Don't fill width anymore

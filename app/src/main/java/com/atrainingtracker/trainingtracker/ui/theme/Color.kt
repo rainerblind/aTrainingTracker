@@ -101,6 +101,12 @@ val surfaceContainerDark = Color(0xFF201F20)
 val surfaceContainerHighDark = Color(0xFF2A2A2A)
 val surfaceContainerHighestDark = Color(0xFF353435)
 
+// AMOLED Pure Black Cockpit Theme Colors (ATT-1263 / REQ-UI-169)
+val AmoledBackground = Color(0xFF000000)
+val AmoledSurface = Color(0xFF000000)
+val AmoledOutlineVariant = Color(0xFF2C2C2E)
+val AmoledOutline = Color(0xFF38383A)
+
 
 object TTColor {
     // Achievements
