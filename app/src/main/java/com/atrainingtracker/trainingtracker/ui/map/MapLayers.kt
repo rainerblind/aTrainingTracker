@@ -174,16 +174,28 @@ private fun SegmentDecorations(
 }
 
 /**
+ * Resolves high-contrast track polyline color based on dark mode state.
+ *
+ * Requirements: REQ-MAP-021
+ * - Dark mode: High-contrast electric cyan Color(0xFF00E5FF)
+ * - Light mode: Classic Color.Blue
+ */
+fun resolveLiveTrackColor(isDark: Boolean): Color {
+    return if (isDark) Color(0xFF00E5FF) else Color.Blue
+}
+
+/**
  * Renders the live session track as it is being recorded.
  */
 @Composable
 fun LiveTrackLayer(path: List<LatLng>) {
     if (path.isEmpty()) return
     val style = LocalMapStyle.current
+    val trackColor = resolveLiveTrackColor(style.isDark)
     
     XRayPolyline(
         points = path,
-        color = Color.Blue,
+        color = trackColor,
         width = style.trackWidth,
         baseZIndex = style.trackBaseZIndex,
         overlayZIndex = style.trackOverlayZIndex,

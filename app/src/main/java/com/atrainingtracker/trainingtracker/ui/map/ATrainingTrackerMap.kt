@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,6 +41,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapEffect
 import com.google.maps.android.compose.MapProperties
@@ -66,6 +68,30 @@ import kotlinx.coroutines.flow.StateFlow
  * @param activeScrubPath The path used for the interactive scrubber (e.g., when sliding a finger on a chart).
  * @param content The DSL block defining what additional data layers to render.
  */
+/**
+ * Resolves [MapProperties] dynamically based on dark mode state.
+ *
+ * Requirements: REQ-MAP-021
+ * - Dark mode (isDark == true): MapType.NORMAL + DarkMapStyle
+ * - Light mode (isDark == false): MapType.TERRAIN + null style options (standard baseline)
+ */
+fun resolveMapProperties(
+    isDark: Boolean,
+    darkMapStyleOptions: MapStyleOptions?
+): MapProperties {
+    return if (isDark) {
+        MapProperties(
+            mapType = MapType.NORMAL,
+            mapStyleOptions = darkMapStyleOptions
+        )
+    } else {
+        MapProperties(
+            mapType = MapType.TERRAIN,
+            mapStyleOptions = null
+        )
+    }
+}
+
 @OptIn(MapsComposeExperimentalApi::class)
 @Composable
 fun ATrainingTrackerMap(
@@ -84,6 +110,7 @@ fun ATrainingTrackerMap(
 
     // Visualization Context
     style: MapStyle = MapStyle(),
+    darkTheme: Boolean? = null,
 
     // UI & Callbacks
     modifier: Modifier = Modifier,
@@ -158,12 +185,18 @@ fun ATrainingTrackerMap(
     }
 
     // 4. THE MAP
-    androidx.compose.runtime.CompositionLocalProvider(LocalMapStyle provides style) {
+    val isDark = darkTheme ?: (MaterialTheme.colorScheme.surface.luminance() < 0.5f)
+    val mapProperties = remember(isDark, context) {
+        val darkOptions = if (isDark) DarkMapStyle.getMapStyleOptions(context) else null
+        resolveMapProperties(isDark, darkOptions)
+    }
+
+    androidx.compose.runtime.CompositionLocalProvider(LocalMapStyle provides style.copy(isDark = isDark)) {
         GoogleMap(
             modifier = modifier,
             cameraPositionState = cameraPositionState,
             onMapClick = { latLng -> onMapClick?.invoke(latLng) },
-            properties = MapProperties(mapType = MapType.TERRAIN),
+            properties = mapProperties,
             uiSettings = MapUiSettings(zoomControlsEnabled = false, tiltGesturesEnabled = true),
             onMapLoaded = { isMapLoaded = true }
         ) {
