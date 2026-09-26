@@ -101,6 +101,7 @@ fun SensorStatus(
             ) {
                 sensorDefinitions.forEach { type ->
                     val isAvailable = activeSensors.contains(type)
+                    val iconAlpha = if (isAvailable) 1f else INACTIVE_SENSOR_ALPHA
 
                     Icon(
                         painter = painterResource(id = type.iconResId),
@@ -108,11 +109,11 @@ fun SensorStatus(
                         modifier = Modifier
                             .padding(horizontal = 6.dp)
                             .size(22.dp)
-                            .alpha(if (isAvailable) 1f else 0.2f)
+                            .alpha(iconAlpha)
                             .clickable {
                                 selectedSensor = type
                             },
-                        tint = if (isAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -135,6 +136,9 @@ fun SensorStatus(
     }
 }
 
+// Inactive sensor content alpha adhering to Material Design 3 disabled content standards (REQ-UI-173)
+internal const val INACTIVE_SENSOR_ALPHA = 0.38f
+
 // --- Previews ---
 
 @Preview(showBackground = true, name = "Light Mode")
@@ -153,6 +157,16 @@ fun PreviewSensorStatusRowDark() {
     ATrainingTrackerTheme(darkTheme = true) {
         Surface {
             SensorStatus(activeSensors = setOf(SensorType.TIME_ACTIVE, SensorType.DISTANCE_m))
+        }
+    }
+}
+
+@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES, name = "AMOLED Dark Mode")
+@Composable
+fun PreviewSensorStatusRowAmoled() {
+    ATrainingTrackerTheme(darkTheme = true, amoled = true) {
+        Surface {
+            SensorStatus(activeSensors = setOf(SensorType.TIME_ACTIVE, SensorType.ACCURACY, SensorType.ALTITUDE))
         }
     }
 }
