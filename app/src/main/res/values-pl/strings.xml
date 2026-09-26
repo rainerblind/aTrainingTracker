@@ -229,6 +229,10 @@
     <string name="check_ANT_installation">sprawdź instalację ANT</string>
     <string name="forcePortrait">Orientacja pionowa</string>
     <string name="Display">Ekran</string>
+    <string name="cockpit_theme_title">Motyw kokpitu (podczas treningu)</string>
+    <string name="cockpit_theme_description">Dotyczy wyłącznie widoków telemetrycznych i sensorów podczas aktywnych treningów. Menu główne i \'Control Tracking\' zachowują motyw standardowy.</string>
+    <string name="cockpit_theme_system">System</string>
+    <string name="cockpit_theme_always_dark">Zawsze ciemny</string>
     <string name="smoothing">Wygładzanie wartości</string>
     <string name="powerSmoothingTitle">Współczynnik wygładzania mocy α</string>
     <string name="powerSmoothingTitle_format">Wygładzanie mocy: α=%1$f</string>

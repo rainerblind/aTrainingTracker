@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.settings.display
 
 import android.content.SharedPreferences
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode
 import io.mockk.*
 import org.junit.After
 import org.junit.Assert.*
@@ -50,12 +51,23 @@ class DisplaySettingsTest {
             @Suppress("UNCHECKED_CAST")
             (prefStorage[key] as? Set<String>) ?: def
         }
+        every { mockPrefs.getString(any(), any()) } answers {
+            val key = firstArg<String>()
+            val def = secondArg<String?>()
+            (prefStorage[key] as? String) ?: def
+        }
 
         every { mockPrefs.edit() } returns mockEditor
         every { mockEditor.putStringSet(any(), any()) } answers {
             val key = firstArg<String>()
             val set = secondArg<Set<String>>()
             prefStorage[key] = HashSet(set)
+            mockEditor
+        }
+        every { mockEditor.putString(any(), any()) } answers {
+            val key = firstArg<String>()
+            val value = secondArg<String>()
+            prefStorage[key] = value
             mockEditor
         }
         every { mockEditor.apply() } just Runs
@@ -146,6 +158,36 @@ class DisplaySettingsTest {
         assertTrue(TrainingApplication.forcePortrait())
         assertTrue(TrainingApplication.keepScreenOn())
         assertTrue(TrainingApplication.NoUnlocking())
+    }
+
+    @Test
+    fun testDefaultCockpitThemeModeIsSystem() {
+        assertTrue(prefStorage.isEmpty())
+        val mode = TrainingApplication.getCockpitThemeMode()
+        assertEquals(CockpitThemeMode.SYSTEM, mode)
+    }
+
+    @Test
+    fun testUpdateCockpitThemeModeToAlwaysDark() {
+        TrainingApplication.setCockpitThemeMode(CockpitThemeMode.ALWAYS_DARK)
+        assertEquals(CockpitThemeMode.ALWAYS_DARK, TrainingApplication.getCockpitThemeMode())
+        assertEquals("always_dark", prefStorage[TrainingApplication.SP_COCKPIT_THEME_MODE])
+    }
+
+    @Test
+    fun testUpdateCockpitThemeModeBackToSystem() {
+        TrainingApplication.setCockpitThemeMode(CockpitThemeMode.ALWAYS_DARK)
+        assertEquals(CockpitThemeMode.ALWAYS_DARK, TrainingApplication.getCockpitThemeMode())
+
+        TrainingApplication.setCockpitThemeMode(CockpitThemeMode.SYSTEM)
+        assertEquals(CockpitThemeMode.SYSTEM, TrainingApplication.getCockpitThemeMode())
+        assertEquals("system", prefStorage[TrainingApplication.SP_COCKPIT_THEME_MODE])
+    }
+
+    @Test
+    fun testInvalidCockpitThemeModeFallsBackToSystem() {
+        prefStorage[TrainingApplication.SP_COCKPIT_THEME_MODE] = "invalid_or_legacy_value"
+        assertEquals(CockpitThemeMode.SYSTEM, TrainingApplication.getCockpitThemeMode())
     }
 
     private fun setStaticField(clazz: Class<*>, fieldName: String, value: Any?) {

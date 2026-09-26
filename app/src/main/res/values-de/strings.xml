@@ -520,6 +520,10 @@
     <string name="check_ANT_installation">Überprüfe ANT Installation</string>
     <string name="forcePortrait">Portrait Orientierung</string>
     <string name="Display">Display</string>
+    <string name="cockpit_theme_title">Cockpit-Design (während des Trainings)</string>
+    <string name="cockpit_theme_description">Gilt nur für die Daten- und Sensoranzeigen des aktiven Workouts. Das restliche Menü und \'Control Tracking\' behalten das Standarddesign.</string>
+    <string name="cockpit_theme_system">Systemstandard</string>
+    <string name="cockpit_theme_always_dark">Immer Dunkel</string>
     <string name="smoothing">Glättung der Werte</string>
     <string name="powerSmoothingTitle">Faktor α zur Glättung der Leistungswerte</string>
     <string name="powerSmoothingTitle_format">Glättung der Leistung: α=%1$f</string>

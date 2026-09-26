@@ -484,6 +484,10 @@
     <string name="check_ANT_installation">controlla installazione ANT</string>
     <string name="forcePortrait">Orientamento verticale</string>
     <string name="Display">Schermo</string>
+    <string name="cockpit_theme_title">Tema del cockpit (durante l\'allenamento)</string>
+    <string name="cockpit_theme_description">Si applica esclusivamente alle visualizzazioni di telemetria e sensori durante gli allenamenti attivi. Il menu principale e \'Control Tracking\' mantengono il design standard.</string>
+    <string name="cockpit_theme_system">Sistema</string>
+    <string name="cockpit_theme_always_dark">Sempre scuro</string>
     <string name="smoothing">Smoothing valori</string>
     <string name="powerSmoothingTitle">Fattore α smoothing potenza</string>
     <string name="powerSmoothingTitle_format">Smoothing potenza: α=%1$f</string>

@@ -44,6 +44,8 @@ import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
 
+import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode;
+
 import android.util.Log;
 import android.widget.Toast;
 
@@ -95,6 +97,8 @@ public class TrainingApplication extends Application {
             "keepScreenOn",
             "noUnlocking"
     )));
+    public static final String SP_COCKPIT_THEME_MODE = "cockpit_theme_mode";
+    public static final String DEFAULT_COCKPIT_THEME_MODE = "system";
     public static final String SP_UNITS = "listUnits";
 
     // configure search behaviour
@@ -460,6 +464,16 @@ public class TrainingApplication extends Application {
 
     public static boolean NoUnlocking() {
         return getDisplayOptions().contains("noUnlocking");
+    }
+
+    @NonNull
+    public static CockpitThemeMode getCockpitThemeMode() {
+        String modeId = cSharedPreferences.getString(SP_COCKPIT_THEME_MODE, DEFAULT_COCKPIT_THEME_MODE);
+        return CockpitThemeMode.Companion.fromId(modeId);
+    }
+
+    public static void setCockpitThemeMode(@NonNull CockpitThemeMode mode) {
+        cSharedPreferences.edit().putString(SP_COCKPIT_THEME_MODE, mode.getId()).apply();
     }
 
     @NonNull

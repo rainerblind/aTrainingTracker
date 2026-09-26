@@ -25,6 +25,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 
 import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode
 
 @Composable
 fun DisplaySettingsDialog(
@@ -33,6 +34,9 @@ fun DisplaySettingsDialog(
 ) {
     var currentOptions by remember { 
         mutableStateOf(TrainingApplication.getDisplayOptions().toSet())
+    }
+    var currentThemeMode by remember {
+        mutableStateOf(TrainingApplication.getCockpitThemeMode())
     }
     
     AppBottomSheetContent(
@@ -43,6 +47,7 @@ fun DisplaySettingsDialog(
             AppDialogActions.SaveCancel(
                 onSave = {
                     TrainingApplication.setDisplayOptions(currentOptions)
+                    TrainingApplication.setCockpitThemeMode(currentThemeMode)
                     onSettingsChanged?.invoke()
                     onDismiss()
                 },
@@ -53,29 +58,72 @@ fun DisplaySettingsDialog(
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            DisplayOptionToggle(
-                label = stringResource(R.string.forcePortrait),
-                isChecked = currentOptions.contains("forcePortrait"),
-                onCheckedChange = { checked ->
-                    currentOptions = if (checked) currentOptions + "forcePortrait" else currentOptions - "forcePortrait"
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                DisplayOptionToggle(
+                    label = stringResource(R.string.forcePortrait),
+                    isChecked = currentOptions.contains("forcePortrait"),
+                    onCheckedChange = { checked ->
+                        currentOptions = if (checked) currentOptions + "forcePortrait" else currentOptions - "forcePortrait"
+                    }
+                )
+                DisplayOptionToggle(
+                    label = stringResource(R.string.prefsKeepScreenOnTitle),
+                    isChecked = currentOptions.contains("keepScreenOn"),
+                    onCheckedChange = { checked ->
+                        currentOptions = if (checked) currentOptions + "keepScreenOn" else currentOptions - "keepScreenOn"
+                    }
+                )
+                DisplayOptionToggle(
+                    label = stringResource(R.string.prefsNoUnlockingTitle),
+                    isChecked = currentOptions.contains("noUnlocking"),
+                    onCheckedChange = { checked ->
+                        currentOptions = if (checked) currentOptions + "noUnlocking" else currentOptions - "noUnlocking"
+                    }
+                )
+            }
+
+            HorizontalDivider()
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.cockpit_theme_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = stringResource(R.string.cockpit_theme_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    SegmentedButton(
+                        selected = currentThemeMode == CockpitThemeMode.SYSTEM,
+                        onClick = { currentThemeMode = CockpitThemeMode.SYSTEM },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                        icon = { SegmentedButtonDefaults.Icon(active = currentThemeMode == CockpitThemeMode.SYSTEM) }
+                    ) {
+                        Text(stringResource(R.string.cockpit_theme_system))
+                    }
+                    SegmentedButton(
+                        selected = currentThemeMode == CockpitThemeMode.ALWAYS_DARK,
+                        onClick = { currentThemeMode = CockpitThemeMode.ALWAYS_DARK },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                        icon = { SegmentedButtonDefaults.Icon(active = currentThemeMode == CockpitThemeMode.ALWAYS_DARK) }
+                    ) {
+                        Text(stringResource(R.string.cockpit_theme_always_dark))
+                    }
                 }
-            )
-            DisplayOptionToggle(
-                label = stringResource(R.string.prefsKeepScreenOnTitle),
-                isChecked = currentOptions.contains("keepScreenOn"),
-                onCheckedChange = { checked ->
-                    currentOptions = if (checked) currentOptions + "keepScreenOn" else currentOptions - "keepScreenOn"
-                }
-            )
-            DisplayOptionToggle(
-                label = stringResource(R.string.prefsNoUnlockingTitle),
-                isChecked = currentOptions.contains("noUnlocking"),
-                onCheckedChange = { checked ->
-                    currentOptions = if (checked) currentOptions + "noUnlocking" else currentOptions - "noUnlocking"
-                }
-            )
+            }
         }
     }
 }

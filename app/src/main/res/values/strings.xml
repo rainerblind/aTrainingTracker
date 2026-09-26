@@ -621,6 +621,10 @@
     <string name="check_ANT_installation">check ANT installation</string>
     <string name="forcePortrait">Portrait Orientation</string>
     <string name="Display">Display</string>
+    <string name="cockpit_theme_title">Cockpit Theme (During Workout)</string>
+    <string name="cockpit_theme_description">Applies exclusively to telemetry and sensor views during active workouts. The main menu and \'Control Tracking\' keep the standard theme.</string>
+    <string name="cockpit_theme_system">System</string>
+    <string name="cockpit_theme_always_dark">Always Dark</string>
     <string name="smoothing">Smoothing displayed values</string>
     <string name="powerSmoothingTitle">Power smoothing factor α</string>
     <string name="powerSmoothingTitle_format">Power smoothing: α=%1$f</string>
