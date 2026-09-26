@@ -73,6 +73,8 @@ internal val DarkColorScheme = darkColorScheme(
 )
 
 internal val AmoledDarkColorScheme = DarkColorScheme.copy(
+    primaryContainer = Color(0xFF000000),
+    onPrimaryContainer = Color(0xFFFFFFFF),
     background = AmoledBackground,
     surface = AmoledSurface,
     surfaceVariant = AmoledSurface,
@@ -82,7 +84,7 @@ internal val AmoledDarkColorScheme = DarkColorScheme.copy(
     surfaceContainerLow = AmoledSurface,
     surfaceContainer = AmoledSurface,
     surfaceContainerHigh = Color(0xFF121212),
-    surfaceContainerHighest = Color(0xFF1E1E1E),
+    surfaceContainerHighest = Color(0xFF000000),
     outline = AmoledOutline,
     outlineVariant = AmoledOutlineVariant,
     onSurface = Color.White,
@@ -153,9 +155,15 @@ fun ATrainingTrackerTheme(
                 if (context is Activity) break
                 context = context.baseContext
             }
-            (context as? Activity)?.window?.let { window ->
-                window.statusBarColor = colorScheme.surface.toArgb()
-                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            val activity = context as? Activity
+            if (activity != null && !activity.isFinishing && !activity.isDestroyed) {
+                activity.window?.let { window ->
+                    window.statusBarColor = colorScheme.surface.toArgb()
+                    window.navigationBarColor = colorScheme.surface.toArgb()
+                    val insetsController = WindowCompat.getInsetsController(window, view)
+                    insetsController.isAppearanceLightStatusBars = !darkTheme
+                    insetsController.isAppearanceLightNavigationBars = !darkTheme
+                }
             }
         }
     }

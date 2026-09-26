@@ -47,3 +47,36 @@ fun resolveEffectiveCockpitDarkTheme(
         CockpitThemeMode.ALWAYS_DARK -> true
     }
 }
+
+/**
+ * Resolved theme state for the entire workout cockpit layout (REQ-UI-170).
+ */
+data class CockpitThemeState(
+    val darkTheme: Boolean,
+    val amoled: Boolean
+)
+
+/**
+ * Resolves the effective theme state across the entire TrackingTabsScreen layout (REQ-UI-170).
+ *
+ * Telemetry Views (Pages 1..N in TRACKING mode, or all pages in CONFIGURATION / PREVIEW mode):
+ * - Renders in pure AMOLED dark theme if cockpit dark mode is active.
+ *
+ * Control Tracking View (Page 0 in TRACKING mode):
+ * - Strictly follows the host OS / ambient system theme (isSystemDark), keeping Page 0 light when device is in light mode.
+ */
+fun resolveEffectiveCockpitThemeState(
+    screenMode: com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode,
+    currentPage: Int,
+    cockpitThemeMode: CockpitThemeMode,
+    isSystemDark: Boolean
+): CockpitThemeState {
+    val isTelemetryTab = (screenMode != com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode.TRACKING) || (currentPage > 0)
+    val isCockpitDark = resolveEffectiveCockpitDarkTheme(cockpitThemeMode, isSystemDark)
+    return if (isTelemetryTab) {
+        CockpitThemeState(darkTheme = isCockpitDark, amoled = isCockpitDark)
+    } else {
+        CockpitThemeState(darkTheme = isSystemDark, amoled = false)
+    }
+}
+
