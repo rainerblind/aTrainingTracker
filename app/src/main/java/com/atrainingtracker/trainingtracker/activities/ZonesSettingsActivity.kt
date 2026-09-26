@@ -45,11 +45,21 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.Zone
+import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode
+import com.atrainingtracker.trainingtracker.ui.theme.resolveEffectiveCockpitDarkTheme
+import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
+import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
+import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
+import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -78,8 +88,10 @@ data class ZoneProfileState(
     val z1: Int,
     val z2: Int,
     val z3: Int,
-    val z4: Int
+    val z4: Int,
+    val displayOptions: ZoneDisplayOptions = ZoneDisplayOptions()
 )
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -124,6 +136,7 @@ fun ZoneSettingsScreen(
             dataStore.saveHrZoneMax(profile.type, Zone.ZONE_2, profile.z2)
             dataStore.saveHrZoneMax(profile.type, Zone.ZONE_3, profile.z3)
             dataStore.saveHrZoneMax(profile.type, Zone.ZONE_4, profile.z4)
+            dataStore.saveZoneDisplayOptions(profile.type, profile.displayOptions)
         }
     }
 
@@ -136,7 +149,8 @@ fun ZoneSettingsScreen(
                     z1 = dataStore.getZone1MaxFlow(type).first(),
                     z2 = dataStore.getZone2MaxFlow(type).first(),
                     z3 = dataStore.getZone3MaxFlow(type).first(),
-                    z4 = dataStore.getZone4MaxFlow(type).first()
+                    z4 = dataStore.getZone4MaxFlow(type).first(),
+                    displayOptions = dataStore.getZoneDisplayOptionsFlow(type).first()
                 )
             }
             allProfilesData = loadedData
@@ -206,11 +220,13 @@ fun ZoneSettingsScreen(
                         z2Max = profileState.z2,
                         z3Max = profileState.z3,
                         z4Max = profileState.z4,
+                        displayOptions = profileState.displayOptions,
+                        zoneType = profileState.type,
 
                         onUpdateZone1Max = { new ->
                             val updated = updateProfile(allProfilesData, page) { it.copy(z1 = new) }
                             allProfilesData = updated
-                            saveProfile(updated[page]) // Save immediately on change}
+                            saveProfile(updated[page]) // Save immediately on change
                         },
                         onUpdateZone2Max = { new ->
                             val updated = updateProfile(allProfilesData, page) { it.copy(z2 = new) }
@@ -227,6 +243,11 @@ fun ZoneSettingsScreen(
                             allProfilesData = updated
                             saveProfile(updated[page]) // Save immediately on change
                         },
+                        onUpdateDisplayOptions = { newOptions ->
+                            val updated = updateProfile(allProfilesData, page) { it.copy(displayOptions = newOptions) }
+                            allProfilesData = updated
+                            saveProfile(updated[page]) // Save immediately on change
+                        }
                     )
                 }
             }
@@ -269,10 +290,13 @@ fun SettingsScreenContent(
     z2Max: Int,
     z3Max: Int,
     z4Max: Int,
+    displayOptions: ZoneDisplayOptions = ZoneDisplayOptions(),
+    zoneType: ZoneType = ZoneType.HR_RUN,
     onUpdateZone1Max: (Int) -> Unit,
     onUpdateZone2Max: (Int) -> Unit,
     onUpdateZone3Max: (Int) -> Unit,
     onUpdateZone4Max: (Int) -> Unit,
+    onUpdateDisplayOptions: (ZoneDisplayOptions) -> Unit = {}
 ) {
     // Load Colors from resources
     val zone1Color = colorResource(id = R.color.zone_1)
@@ -342,9 +366,185 @@ fun SettingsScreenContent(
             containerColor = zone5Color
         )
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Section: Zonendarstellung / Zone Visualization
+        Text(
+            text = stringResource(R.string.zone_display_title),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+        )
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.medium,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+            ) {
+                // Toggle: Light background
+                ZoneDisplayToggleRow(
+                    label = stringResource(R.string.zone_display_background),
+                    checked = displayOptions.showBackground,
+                    onCheckedChange = { onUpdateDisplayOptions(displayOptions.copy(showBackground = it)) }
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                // Toggle: Left bar
+                ZoneDisplayToggleRow(
+                    label = stringResource(R.string.zone_display_left_bar),
+                    checked = displayOptions.showLeftBar,
+                    onCheckedChange = { onUpdateDisplayOptions(displayOptions.copy(showLeftBar = it)) }
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                // Toggle: Right bar
+                ZoneDisplayToggleRow(
+                    label = stringResource(R.string.zone_display_right_bar),
+                    checked = displayOptions.showRightBar,
+                    onCheckedChange = { onUpdateDisplayOptions(displayOptions.copy(showRightBar = it)) }
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                // Toggle: Text color
+                ZoneDisplayToggleRow(
+                    label = stringResource(R.string.zone_display_text_color),
+                    checked = displayOptions.showTextColor,
+                    onCheckedChange = { onUpdateDisplayOptions(displayOptions.copy(showTextColor = it)) }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Section: Live Theme-Aware Preview
+        Text(
+            text = stringResource(R.string.zone_display_preview_title),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+        )
+
+        // Interactive Zone selector chips (Z1 to Z5)
+        var previewZone by remember { mutableStateOf(2) } // Default to Zone 2
+        val zoneLabels = listOf("Z1", "Z2", "Z3", "Z4", "Z5")
+        val zoneColorsList = listOf(zone1Color, zone2Color, zone3Color, zone4Color, zone5Color)
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            (1..5).forEach { zIndex ->
+                FilterChip(
+                    selected = (previewZone == zIndex),
+                    onClick = { previewZone = zIndex },
+                    label = { Text(zoneLabels[zIndex - 1]) },
+                    leadingIcon = {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .background(zoneColorsList[zIndex - 1], shape = CircleShape)
+                        )
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
         Spacer(modifier = Modifier.height(8.dp))
+
+        // Preview Tile: uses value within the athlete's configured interval (z1Max for Z1, min threshold for Z2..Z5)
+        val previewZoneColor = zoneColorsList[previewZone - 1]
+        val previewValue = when (previewZone) {
+            1 -> z1Max.toString()
+            2 -> (z1Max + 1).toString()
+            3 -> (z2Max + 1).toString()
+            4 -> (z3Max + 1).toString()
+            else -> (z4Max + 1).toString()
+        }
+        val previewLabel = if (zoneType == ZoneType.PWR_BIKE) "Power" else "Heart Rate"
+        val previewUnits = if (zoneType == ZoneType.PWR_BIKE) "W" else "bpm"
+
+        val previewFieldState = SensorFieldState(
+            configHash = 0,
+            sensorFieldId = 0,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            label = previewLabel,
+            filterDescription = "",
+            value = previewValue,
+            units = previewUnits,
+            zoneColor = previewZoneColor,
+            zoneDisplayOptions = displayOptions
+        )
+
+        val isSystemDark = isSystemInDarkTheme()
+        val cockpitThemeMode = remember {
+            try {
+                TrainingApplication.getCockpitThemeMode()
+            } catch (e: Exception) {
+                CockpitThemeMode.SYSTEM
+            }
+        }
+        val isCockpitDark = resolveEffectiveCockpitDarkTheme(cockpitThemeMode, isSystemDark)
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+        ) {
+            ATrainingTrackerTheme(
+                darkTheme = isCockpitDark,
+                amoled = isCockpitDark,
+                setWindowColors = false
+            ) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    SensorFieldView(
+                        fieldState = previewFieldState,
+                        screenMode = ScreenMode.TRACKING
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
+
+@Composable
+fun ZoneDisplayToggleRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 8.dp, horizontal = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
+    }
+}
+
 
 @Composable
 fun ZoneRow(

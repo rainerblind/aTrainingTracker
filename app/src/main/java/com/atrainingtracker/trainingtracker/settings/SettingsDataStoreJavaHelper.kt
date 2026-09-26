@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.settings
 
 import android.content.Context
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
@@ -48,6 +49,18 @@ object SettingsDataStoreJavaHelper {
                 4 -> dataStore.getZone4MaxFlow(zoneType).first()
                 else -> 0 // Fallback
             }
+        }
+    }
+
+    /**
+     * Synchronous bridge for legacy Java or non-coroutine callers to fetch zone display options.
+     * Executes safely on Dispatchers.IO to prevent UI thread blocking.
+     */
+    @JvmStatic
+    fun getZoneDisplayOptions(context: Context, zoneType: SettingsDataStore.ZoneType): ZoneDisplayOptions {
+        val dataStore = SettingsDataStore(context)
+        return runBlocking(Dispatchers.IO) {
+            dataStore.getZoneDisplayOptionsFlow(zoneType).first()
         }
     }
 }

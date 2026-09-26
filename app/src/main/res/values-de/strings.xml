@@ -636,7 +636,15 @@
 
     <string name="label_min">Min</string>
     <string name="label_max">Max</string>
+
+    <string name="zone_display_title">Zonendarstellung</string>
+    <string name="zone_display_background">Heller Hintergrund</string>
+    <string name="zone_display_left_bar">Balken links</string>
+    <string name="zone_display_right_bar">Balken rechts</string>
+    <string name="zone_display_text_color">Textfarbe</string>
+    <string name="zone_display_preview_title">Vorschau</string>
     <string name="prefEmailExport">e-Mail</string>
+
 
 
 <!-- 2026 -->

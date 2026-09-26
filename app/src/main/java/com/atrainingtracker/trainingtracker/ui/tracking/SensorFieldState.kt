@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.tracking
 
 import androidx.compose.ui.graphics.Color
+import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
 
 /**
  * A simple, plain data class that represents the complete state of a single sensor field on the UI.
@@ -49,5 +50,8 @@ data class SensorFieldState(
     val units: String,
 
     // The background color, calculated from the training zone.
-    val zoneColor: Color
+    val zoneColor: Color,
+
+    // The presentation cues for training zone accenting.
+    val zoneDisplayOptions: ZoneDisplayOptions = ZoneDisplayOptions()
 )
