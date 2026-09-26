@@ -86,7 +86,8 @@ data class MapStyle(
     val routeGapLength: Float = 15f,
     val segmentWidth: Float = 10f,
     val segmentZIndex: Float = 30f,
-    val segmentUnselectedAlpha: Float = 0.3f
+    val segmentUnselectedAlpha: Float = 0.3f,
+    val isDark: Boolean = false
 )
 
 val LocalMapStyle = androidx.compose.runtime.staticCompositionLocalOf { MapStyle() }
