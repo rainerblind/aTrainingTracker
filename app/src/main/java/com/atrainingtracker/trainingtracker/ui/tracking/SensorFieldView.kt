@@ -49,7 +49,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material3.Typography
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
@@ -80,6 +82,37 @@ fun ViewSize.getDisplayName(context: Context): String {
 }
 
 /**
+ * Resolves the typography style for the primary sensor metric value, enforcing semibold font weight (ATT-1264 / REQ-UI-171).
+ */
+fun getSensorValueTextStyle(viewSize: ViewSize, typography: Typography): TextStyle {
+    val baseStyle = when (viewSize) {
+        ViewSize.XSMALL -> typography.headlineSmall.copy(fontSize = 20.sp)
+        ViewSize.SMALL -> typography.headlineMedium
+        ViewSize.NORMAL -> typography.displaySmall
+        ViewSize.LARGE -> typography.displayMedium
+        ViewSize.XLARGE -> typography.displayLarge.copy(fontSize = 50.sp)
+        ViewSize.HUGE -> typography.displayLarge.copy(fontSize = 76.sp)
+        ViewSize.XHUGE -> typography.displayLarge.copy(fontSize = 100.sp)
+    }
+    return baseStyle.copy(fontWeight = FontWeight.SemiBold)
+}
+
+/**
+ * Resolves the typography style for the sensor metric unit annotation (ATT-1264 / REQ-UI-171).
+ */
+fun getSensorUnitTextStyle(viewSize: ViewSize, typography: Typography): TextStyle {
+    return when (viewSize) {
+        ViewSize.XSMALL -> typography.bodySmall.copy(fontSize = 10.sp)
+        ViewSize.SMALL -> typography.bodySmall
+        ViewSize.NORMAL -> typography.bodyLarge
+        ViewSize.LARGE -> typography.headlineSmall
+        ViewSize.XLARGE -> typography.headlineMedium.copy(fontSize = 32.sp)
+        ViewSize.HUGE -> typography.headlineMedium.copy(fontSize = 40.sp)
+        ViewSize.XHUGE -> typography.headlineLarge.copy(fontSize = 48.sp)
+    }
+}
+
+/**
  * A Composable that displays a single sensor field.
  * It is a "dumb" component that simply renders the FieldState it's given.
  */
@@ -93,76 +126,25 @@ fun SensorFieldView(
     onDelete: () -> Unit = {}
 ) {
     // Determine text styles based on the size parameter.
-    val valueStyle: TextStyle
-    val unitStyle: TextStyle
-    val labelStyle: TextStyle
-    val filterStyle: TextStyle
-    when (fieldState.viewSize) {
-        ViewSize.XSMALL -> {
-        // --- MANUALLY DECREASE FONT SIZE ---
-            valueStyle = MaterialTheme.typography.headlineSmall.copy(
-                fontSize = 20.sp // Manually set a much smaller font size
-            )
-            unitStyle = MaterialTheme.typography.bodySmall.copy(
-                fontSize = 10.sp
-            )
-            labelStyle = MaterialTheme.typography.bodySmall
-            filterStyle = MaterialTheme.typography.labelSmall
-        }
-
-        ViewSize.SMALL -> {
-            valueStyle = MaterialTheme.typography.headlineMedium
-            unitStyle = MaterialTheme.typography.bodySmall
-            labelStyle = MaterialTheme.typography.bodyMedium
-            filterStyle = MaterialTheme.typography.bodySmall
-        }
-        ViewSize.NORMAL -> {
-            valueStyle = MaterialTheme.typography.displaySmall
-            unitStyle = MaterialTheme.typography.bodyLarge
-            labelStyle = MaterialTheme.typography.titleMedium
-            filterStyle = MaterialTheme.typography.bodySmall
-        }
-        ViewSize.LARGE -> {
-            valueStyle = MaterialTheme.typography.displayMedium
-            unitStyle = MaterialTheme.typography.headlineSmall
-            labelStyle = MaterialTheme.typography.titleLarge
-            filterStyle = MaterialTheme.typography.bodyMedium
-        }
-        ViewSize.XLARGE -> {
-            valueStyle = MaterialTheme.typography.displayLarge.copy(
-                fontSize = 50.sp // Manually set a much larger font size
-            )
-            unitStyle = MaterialTheme.typography.headlineMedium.copy(
-                fontSize = 32.sp // Also increase the unit size
-            )
-            labelStyle = MaterialTheme.typography.headlineSmall
-            filterStyle = MaterialTheme.typography.bodyLarge
-        }
-        ViewSize.HUGE -> {
-            valueStyle = MaterialTheme.typography.displayLarge.copy(
-                fontSize = 76.sp // Significantly larger
-            )
-            unitStyle = MaterialTheme.typography.headlineMedium.copy(
-                fontSize = 40.sp
-            )
-            labelStyle = MaterialTheme.typography.headlineSmall.copy(
-                fontSize = 28.sp
-            )
-            filterStyle = MaterialTheme.typography.bodyLarge
-        }
-        ViewSize.XHUGE -> {
-            valueStyle = MaterialTheme.typography.displayLarge.copy(
-                fontSize = 100.sp // Very large "Jumbotron" size
-            )
-            unitStyle = MaterialTheme.typography.headlineLarge.copy(
-                fontSize = 48.sp
-            )
-            labelStyle = MaterialTheme.typography.headlineMedium.copy(
-                fontSize = 32.sp
-            )
-            filterStyle = MaterialTheme.typography.titleMedium
-        }
-
+    val valueStyle = getSensorValueTextStyle(fieldState.viewSize, MaterialTheme.typography)
+    val unitStyle = getSensorUnitTextStyle(fieldState.viewSize, MaterialTheme.typography)
+    val labelStyle = when (fieldState.viewSize) {
+        ViewSize.XSMALL -> MaterialTheme.typography.bodySmall
+        ViewSize.SMALL -> MaterialTheme.typography.bodyMedium
+        ViewSize.NORMAL -> MaterialTheme.typography.titleMedium
+        ViewSize.LARGE -> MaterialTheme.typography.titleLarge
+        ViewSize.XLARGE -> MaterialTheme.typography.headlineSmall
+        ViewSize.HUGE -> MaterialTheme.typography.headlineSmall.copy(fontSize = 28.sp)
+        ViewSize.XHUGE -> MaterialTheme.typography.headlineMedium.copy(fontSize = 32.sp)
+    }
+    val filterStyle = when (fieldState.viewSize) {
+        ViewSize.XSMALL -> MaterialTheme.typography.labelSmall
+        ViewSize.SMALL -> MaterialTheme.typography.bodySmall
+        ViewSize.NORMAL -> MaterialTheme.typography.bodySmall
+        ViewSize.LARGE -> MaterialTheme.typography.bodyMedium
+        ViewSize.XLARGE -> MaterialTheme.typography.bodyLarge
+        ViewSize.HUGE -> MaterialTheme.typography.bodyLarge
+        ViewSize.XHUGE -> MaterialTheme.typography.titleMedium
     }
 
     Card(
@@ -214,7 +196,7 @@ fun SensorFieldView(
                 Text(
                     text = fieldState.label,
                     style = labelStyle,
-                    color = MaterialTheme.colorScheme.onSurface // Ensure readability
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 // Filter info on the top-right
                 Text(
@@ -241,7 +223,7 @@ fun SensorFieldView(
                     text = fieldState.units,
                     style = unitStyle,
                     modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
