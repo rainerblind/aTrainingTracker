@@ -484,6 +484,10 @@
     <string name="check_ANT_installation">vérifier installation ANT</string>
     <string name="forcePortrait">Orientation portrait</string>
     <string name="Display">Affichage</string>
+    <string name="cockpit_theme_title">Thème du cockpit (pendant l\'entraînement)</string>
+    <string name="cockpit_theme_description">S\'applique exclusivement aux affichages de télémétrie et de capteurs pendant les entraînements actifs. Le menu principal et \'Control Tracking\' conservent le thème standard.</string>
+    <string name="cockpit_theme_system">Système</string>
+    <string name="cockpit_theme_always_dark">Toujours sombre</string>
     <string name="smoothing">Lissage des valeurs</string>
     <string name="powerSmoothingTitle">Facteur α lissage puissance</string>
     <string name="powerSmoothingTitle_format">Lissage puissance : α=%1$f</string>

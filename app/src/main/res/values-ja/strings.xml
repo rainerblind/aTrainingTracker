@@ -482,6 +482,10 @@
     <string name="check_ANT_installation">ANTのインストール状況を確認</string>
     <string name="forcePortrait">縦向き固定</string>
     <string name="Display">画面</string>
+    <string name="cockpit_theme_title">コックピットテーマ（ワークアウト中）</string>
+    <string name="cockpit_theme_description">アクティブなワークアウト中のテレメトリとセンサー画面にのみ適用されます。メインメニューと「Control Tracking」は標準テーマのままです。</string>
+    <string name="cockpit_theme_system">システム</string>
+    <string name="cockpit_theme_always_dark">常にダーク</string>
     <string name="smoothing">表示値の平滑化</string>
     <string name="powerSmoothingTitle">パワー平滑化係数 α</string>
     <string name="powerSmoothingTitle_format">パワー平滑化: α=%1$f</string>

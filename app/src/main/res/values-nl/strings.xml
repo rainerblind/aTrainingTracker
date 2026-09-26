@@ -484,6 +484,10 @@
     <string name="check_ANT_installation">ANT installatie controleren</string>
     <string name="forcePortrait">Staande oriëntatie</string>
     <string name="Display">Scherm</string>
+    <string name="cockpit_theme_title">Cockpitthema (tijdens training)</string>
+    <string name="cockpit_theme_description">Geldt uitsluitend voor de telemetrie- en sensorweergaven tijdens actieve workouts. Het hoofdmenu en \'Control Tracking\' behouden het standaardthema.</string>
+    <string name="cockpit_theme_system">Systeem</string>
+    <string name="cockpit_theme_always_dark">Altijd donker</string>
     <string name="smoothing">Smoothing waarden</string>
     <string name="powerSmoothingTitle">Vermogen smoothing factor α</string>
     <string name="powerSmoothingTitle_format">Vermogen smoothing: α=%1$f</string>

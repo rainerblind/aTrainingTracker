@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
 import android.util.Log
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,12 +38,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -56,11 +59,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.preference.PreferenceManager
 import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory
 import com.atrainingtracker.trainingtracker.TrackingMode
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode
+import com.atrainingtracker.trainingtracker.ui.theme.resolveEffectiveCockpitDarkTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.LapSummaryDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlNavigation
@@ -78,6 +86,22 @@ fun TrackingTabsScreen(
     trackingTabsViewModel: TrackingTabsViewModel
 ) {
     val context = LocalContext.current as androidx.appcompat.app.AppCompatActivity
+
+    val isSystemDark = isSystemInDarkTheme()
+    var cockpitThemeMode by remember { mutableStateOf(TrainingApplication.getCockpitThemeMode()) }
+    DisposableEffect(context) {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == TrainingApplication.SP_COCKPIT_THEME_MODE) {
+                cockpitThemeMode = TrainingApplication.getCockpitThemeMode()
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose {
+            prefs.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }
+    val isCockpitDark = resolveEffectiveCockpitDarkTheme(cockpitThemeMode, isSystemDark)
 
     val trackingViews by trackingTabsViewModel.trackingViews.collectAsState(initial = emptyList())
     val trackingMode by trackingTabsViewModel.trackingMode.observeAsState(TrackingMode.READY)
@@ -414,10 +438,12 @@ fun TrackingTabsScreen(
                         val viewInfo = trackingViews.getOrNull(viewIndex)
 
                         if (viewInfo != null) {
-                            TrackingTabGridContent(
-                                viewInfo.tabViewId,
-                                screenMode,
-                            )
+                            ATrainingTrackerTheme(darkTheme = isCockpitDark) {
+                                TrackingTabGridContent(
+                                    viewInfo.tabViewId,
+                                    screenMode,
+                                )
+                            }
                         } else {
                             // Optional: Show a placeholder or empty box while loading
                             Box(Modifier.fillMaxSize())
@@ -436,13 +462,15 @@ fun TrackingTabsScreen(
                         .padding(bottom = 8.dp), // Space from bottom of screen
                     contentAlignment = Alignment.BottomCenter
                 ) {
-                    LapButton(
-                        modifier = Modifier
-                            .wrapContentSize() // Don't fill width anymore
-                            .padding(horizontal = 16.dp),
-                        trackingMode = trackingMode,
-                        onClick = { trackingTabsViewModel.onLapButtonClick() }
-                    )
+                    ATrainingTrackerTheme(darkTheme = isCockpitDark) {
+                        LapButton(
+                            modifier = Modifier
+                                .wrapContentSize() // Don't fill width anymore
+                                .padding(horizontal = 16.dp),
+                            trackingMode = trackingMode,
+                            onClick = { trackingTabsViewModel.onLapButtonClick() }
+                        )
+                    }
                 }
             }
         }
