@@ -384,7 +384,7 @@ fun TrackingTabsScreen(
                     .pointerInput(Unit) {
                         awaitPointerEventScope {
                             while (true) {
-                                awaitPointerEvent()
+                                awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
                                 batterySaverController.onWakeupEvent()
                             }
                         }

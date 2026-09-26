@@ -40,7 +40,9 @@ class BatterySaverController(
     var currentAppliedBrightness: Float = 1.0f
         private set
 
+    private var lastSnapshot: TelemetrySnapshot = TelemetrySnapshot()
     private var wakeupTimerJob: Job? = null
+    private var hysteresisJob: Job? = null
     private var sensorManager: SensorManager? = null
     private var proximitySensor: Sensor? = null
     private var isListeningToProximity = false
@@ -63,6 +65,8 @@ class BatterySaverController(
         } else {
             stopProximityListening()
             cancelWakeupTimer()
+            hysteresisJob?.cancel()
+            hysteresisJob = null
             applyBrightness(1.0f)
         }
     }
@@ -71,20 +75,47 @@ class BatterySaverController(
         if (!isEnabled) return
 
         cancelWakeupTimer()
+        hysteresisJob?.cancel()
+        hysteresisJob = null
         isWakeupActive = true
         applyBrightness(1.0f)
 
         wakeupTimerJob = scope.launch {
             delay(DimmingLevel.WAKEUP_DURATION_MS)
             isWakeupActive = false
-            applyBrightness(stateMachine.currentLevel.brightness)
+            val targetLevel = stateMachine.evaluateRawLevel(lastSnapshot)
+            stateMachine.forceLevel(targetLevel)
+            applyBrightness(targetLevel.brightness)
         }
     }
 
     fun updateTelemetry(snapshot: TelemetrySnapshot, currentTimeMs: Long = System.currentTimeMillis()) {
-        val level = stateMachine.update(snapshot, currentTimeMs)
-        if (isEnabled && !isWakeupActive) {
-            applyBrightness(level.brightness)
+        lastSnapshot = snapshot
+        if (!isEnabled) return
+
+        val raw = stateMachine.evaluateRawLevel(snapshot)
+        if (raw.brightness > stateMachine.currentLevel.brightness) {
+            // Immediate upward transition (e.g. hill climb or high effort)
+            hysteresisJob?.cancel()
+            hysteresisJob = null
+            stateMachine.forceLevel(raw)
+            if (!isWakeupActive) {
+                applyBrightness(raw.brightness)
+            }
+        } else if (raw.brightness < stateMachine.currentLevel.brightness) {
+            // Downward transition with 3-second damping hysteresis
+            if (hysteresisJob == null || !hysteresisJob!!.isActive) {
+                hysteresisJob = scope.launch {
+                    delay(DimmingLevel.DOWNWARD_HYSTERESIS_MS)
+                    stateMachine.forceLevel(raw)
+                    if (!isWakeupActive) {
+                        applyBrightness(raw.brightness)
+                    }
+                }
+            }
+        } else {
+            hysteresisJob?.cancel()
+            hysteresisJob = null
         }
     }
 
@@ -133,6 +164,8 @@ class BatterySaverController(
     fun release() {
         stopProximityListening()
         cancelWakeupTimer()
+        hysteresisJob?.cancel()
+        hysteresisJob = null
         applyBrightness(1.0f)
     }
 

@@ -80,6 +80,12 @@ class BatterySaverStateMachine(
         return currentLevel
     }
 
+    fun forceLevel(level: DimmingLevel) {
+        currentLevel = level
+        pendingCandidate = null
+        pendingTimestamp = 0L
+    }
+
     fun reset(initialLevel: DimmingLevel = DimmingLevel.NO_DIM) {
         currentLevel = initialLevel
         pendingCandidate = null
