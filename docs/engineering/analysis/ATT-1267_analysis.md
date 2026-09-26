@@ -1,13 +1,13 @@
-# Architectural & Domain Analysis - ATT-1267: [Settings] Independent Theme Selector for Workout Cockpit (Always Dark, Auto Day/Night, System)
+# Architectural & Domain Analysis - ATT-1267: [Settings] Independent Theme Selector for Workout Cockpit (Always Dark, System)
 
 ## 1. Executive Summary & Problem Statement
 
-* **Issue Key**: `ATT-1267`
-* **Sub-tasks**: `[Analysis]`, `[Test-Spec]`, `[Impl-Plan]`, `[Implementation]`, `[Test]`
+* **Issue Key**: `ATT-1267` / `ATT-1408`
+* **Sub-tasks**: `ATT-1408` (Analysis), `[Test-Spec]`, `[Impl-Plan]`, `[Implementation]`, `[Test]`
 * **Parent Issue**: `ATT-1267` (*[Feature] [Settings] Independent Theme Selector for Workout Cockpit (Always Dark, Auto Day/Night, System)*)
 * **Parent Epic**: `ATT-1157` (*[Epic] Optimize dark mode*)
 * **Target Version**: `V4.9.38` (Sprint `2026-39.3`)
-* **Associated Requirements**: `REQ-UI-106` (Localization Parity), `REQ-UI-149` (AppModalBottomSheet), `REQ-UI-150` (AppDialogActions.SaveCancel), `REQ-UI-168` (Proposed: Independent Workout Cockpit Theme Selector)
+* **Associated Requirements**: `REQ-UI-106` (Localization Parity), `REQ-UI-149` (AppModalBottomSheet), `REQ-UI-150` (AppDialogActions.SaveCancel), `REQ-UI-168` (Proposed: Workout Cockpit Theme Selector)
 * **Associated Verification**: `TST-UI-120` (Proposed: Workout Cockpit Theme Selection & Isolation Verification)
 
 ### Problem Statement
@@ -16,8 +16,7 @@ In `aTrainingTracker`, endurance athletes mount their smartphones on bike handle
 Currently, the app's theme is strictly bound to the global Android system theme via `isSystemInDarkTheme()`. This creates several severe friction points for athletes:
 1. **Battery Drain on OLED/AMOLED Displays**: Long outdoor activities (3–8 hours) quickly drain phone batteries when running a bright light theme. True black OLED mode can reduce display power draw by 40–60%. However, athletes whose phones are globally set to light mode are unable to use battery-saving dark mode during training without altering their entire OS setting.
 2. **Glaring and Night Blindness**: In evening or dawn rides, a bright white tracking screen blinds the athlete and impairs night vision.
-3. **Sunlight Readability Preferences**: Conversely, some riders mounted under intense direct noon sun prefer a high-contrast light background with black typography, even if their phone OS is set to dark mode.
-4. **App-Wide vs. Cockpit Separation**: Athletes want a specialized, high-performance cockpit during training, while keeping the rest of the application (Settings, Navigation Drawer, History, Workout Summaries, Periods, Strava/Dropbox sync) clean, approachable, and adhering to the standard theme.
+3. **App-Wide vs. Cockpit Separation**: Athletes want a specialized, high-performance cockpit during training, while keeping the rest of the application (Settings, Navigation Drawer, History, Workout Summaries, Periods, Strava/Dropbox sync) clean, approachable, and adhering to the standard theme.
 
 ---
 
@@ -63,30 +62,29 @@ As confirmed by product requirements, there is a strict and crucial semantic bou
 
 ---
 
-## 3. Cockpit Theme Modes & Behavior
+## 3. Cockpit Theme Modes & Rationalization
 
-The selector provides **4 explicit modes**:
+Following domain analysis and human review, the mode selection was intentionally streamlined to **2 clean, robust options**:
 
 | Mode | Identifier | Display Behavior | Target Athletic Use Case |
 |:---|:---|:---|:---|
-| **Systemstandard** | `SYSTEM` (*Default*) | Matches Android OS mode (`isSystemInDarkTheme()`). | Default expected behavior for new users. |
-| **Immer Dunkel (AMOLED)** | `ALWAYS_DARK` | Cockpit renders in AMOLED dark mode (`#000000` / `DarkColorScheme`), regardless of OS setting. | Maximum battery life on OLED displays, twilight/night rides, reduced eye strain. |
-| **Immer Hell** | `ALWAYS_LIGHT` | Cockpit renders in clean light mode (`LightColorScheme`), regardless of OS setting. | High ambient brightness, riders who find white backgrounds easier to read in midday sun. |
-| **Automatisch (Tag/Nacht)** | `AUTO` | Dynamically switches between Light and Dark based on local sunrise and sunset or ambient conditions. | Commuters and long-distance riders spanning day and night transitions without touching the phone. |
+| **Systemstandard** | `SYSTEM` (*Default*) | Matches Android OS mode (`isSystemInDarkTheme()`). | Respects the user's OS preference. If the user has Android's native *"Sunset to Sunrise"* schedule enabled, day/night switching is handled seamlessly by Android. |
+| **Immer Dunkel (AMOLED)** | `ALWAYS_DARK` | Cockpit renders in AMOLED dark mode (`#000000` / `DarkColorScheme`), regardless of OS setting. | Maximum battery life on OLED displays, twilight/night rides, reduced eye strain, and glare prevention during training. |
 
-### 3.1 Resolving the Effective Cockpit Theme
-The effective theme state for the cockpit is resolved via a pure function:
+### 3.1 Architectural Justification for Dropping Hypothetical Modes
+1. **Omission of "Always Light"**: Athletes whose phones are globally set to Dark Mode do not want a glaring white cockpit mounted on their handlebars. Anyone wanting a light cockpit already uses `System` on a light-themed device.
+2. **Omission of Custom GPS Solar "Auto" Engine**: Android 10+ natively provides a system-wide *"Sunset to Sunrise"* schedule in Display settings. Users who want automatic day/night transitions can enable this OS feature, and the `System` option will automatically honor it without bloating the app with redundant, error-prone solar twilight math or ambient light sensor listeners.
+
+### 3.2 Resolving the Effective Cockpit Theme
+The effective theme state for the cockpit is resolved via a simple pure function:
 ```kotlin
 fun resolveEffectiveCockpitDarkTheme(
     mode: CockpitThemeMode,
-    isSystemDark: Boolean,
-    isNightTime: Boolean = false // e.g. from solar / time calculation or sensor
+    isSystemDark: Boolean
 ): Boolean {
     return when (mode) {
         CockpitThemeMode.SYSTEM -> isSystemDark
         CockpitThemeMode.ALWAYS_DARK -> true
-        CockpitThemeMode.ALWAYS_LIGHT -> false
-        CockpitThemeMode.AUTO -> isNightTime
     }
 }
 ```
@@ -100,14 +98,13 @@ The setting will be integrated directly into [`DisplaySettingsDialog`](file:///h
 ### 4.1 Ergonomic Layout & Visual Clarity
 To prevent any user confusion regarding what the setting affects:
 1. **Section Header**:
-   - Crisp category title: `Cockpit-Design (während des Trainings)` (`cockpit_theme_title`).
+   - Category title: `Cockpit-Design (während des Trainings)` (`cockpit_theme_title`).
    - Subtitle / helper caption: `Gilt nur für die Daten- und Sensoranzeigen des aktiven Workouts. Das restliche Menü und 'Control Tracking' behalten das Standarddesign.` (`cockpit_theme_description`).
 2. **Selection Control**:
-   - Modern Material 3 `SingleChoiceSegmentedButtonRow` (or stylized choice chips/dropdown if 4 items require wrapping):
-     - `System` (`cockpit_theme_system`)
-     - `Dunkel` (`cockpit_theme_dark`)
-     - `Hell` (`cockpit_theme_light`)
-     - `Auto` (`cockpit_theme_auto`)
+   - Modern Material 3 `SingleChoiceSegmentedButtonRow`:
+     - `Systemstandard` (`cockpit_theme_system`)
+     - `Immer Dunkel (AMOLED)` (`cockpit_theme_always_dark`)
+   - Clean 2-way toggle fits horizontally across all device sizes without text clipping or awkward wrapping.
 3. **Existing Display Toggles Maintained**:
    - `Hochformat erzwingen` (`forcePortrait`)
    - `Display immer an` (`keepScreenOn`)
@@ -126,7 +123,6 @@ To prevent any user confusion regarding what the setting affects:
   - Provide getters/setters:
     - `getCockpitThemeMode(): CockpitThemeMode`
     - `setCockpitThemeMode(mode: CockpitThemeMode)`
-    - Flow / LiveData support for reactive Compose recomposition.
 
 ### 5.2 Compose Scoping & Theme Injection
 - In `TrackingTabsScreen.kt`:
@@ -142,13 +138,13 @@ To prevent any user confusion regarding what the setting affects:
 
 | Component / File | Purpose of Modification |
 |:---|:---|
-| [DisplaySettingsDialog.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/display/DisplaySettingsDialog.kt) | Add Cockpit Theme selector with title, explanatory text, and 4-way mode selection. |
+| [DisplaySettingsDialog.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/display/DisplaySettingsDialog.kt) | Add Cockpit Theme selector with title, explanatory text, and 2-way mode selection (`System` vs `Immer Dunkel`). |
 | [TrainingApplication.java](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/TrainingApplication.java) | Add persistent SharedPreferences accessors for `CockpitThemeMode`. |
-| [CockpitThemeMode.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/theme/CockpitThemeMode.kt) | New enum defining `SYSTEM`, `ALWAYS_DARK`, `ALWAYS_LIGHT`, `AUTO` and resolution logic. |
+| [CockpitThemeMode.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/theme/CockpitThemeMode.kt) | New enum defining `SYSTEM`, `ALWAYS_DARK` and resolution logic. |
 | [TrackingTabsScreen.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/trackingtabs/TrackingTabsScreen.kt) | Apply localized `ATrainingTrackerTheme(darkTheme = isCockpitDark)` to pages > 0 while leaving Page 0 (`ControlTrackingScreen`) on default theme. |
-| `strings.xml` & `strings_display.xml` (all 9 locales) | Add localized labels and descriptions across EN, DE, ES, FR, IT, JA, NL, PL, PT (`REQ-UI-106`). |
+| `strings_display.xml` / `strings.xml` (all 9 locales) | Add localized labels and descriptions across EN, DE, ES, FR, IT, JA, NL, PL, PT (`REQ-UI-106`). |
 | [DisplaySettingsDialogTest.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/test/java/com/atrainingtracker/trainingtracker/ui/settings/display/DisplaySettingsDialogTest.kt) | Unit tests verifying mode selection, persistence, and state transitions. |
-| [CockpitThemeModeTest.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/test/java/com/atrainingtracker/trainingtracker/ui/theme/CockpitThemeModeTest.kt) | Pure logic tests verifying resolution of effective dark theme across modes, system state, and time of day. |
+| [CockpitThemeModeTest.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/test/java/com/atrainingtracker/trainingtracker/ui/theme/CockpitThemeModeTest.kt) | Unit tests verifying resolution of effective dark theme across modes and system states. |
 
 ---
 
@@ -157,7 +153,7 @@ To prevent any user confusion regarding what the setting affects:
 * **Gate 1 (Analysis Review)**:
   - Clear user motivation and problem definition.
   - Precise architectural boundary between Cockpit and Control Tracking.
-  - Traceability to parent Epic `ATT-1157` and requirements.
+  - Streamlined 2-way mode architecture (`SYSTEM`, `ALWAYS_DARK`).
 * **Gate 2 (Test Specification)**:
   - Formulate atomic requirements in `docs/requirements.md` (`REQ-UI-168`).
   - Specify test cases in `docs/tests.md` (`TST-UI-120`).
