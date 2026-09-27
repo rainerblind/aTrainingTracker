@@ -92,7 +92,7 @@ internal val AmoledDarkColorScheme = DarkColorScheme.copy(
     onSurfaceVariant = AmoledOnSurfaceVariant
 )
 
-private val LightColorScheme = lightColorScheme(
+internal val LightColorScheme = lightColorScheme(
     primary = LightPrimary,
     onPrimary = LightOnPrimary,
     primaryContainer = BabyBlueEye,
