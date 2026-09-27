@@ -19,11 +19,11 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -35,17 +35,14 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.Badge
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
@@ -70,6 +67,8 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
+import com.atrainingtracker.trainingtracker.ui.components.MetricItem
+import com.atrainingtracker.trainingtracker.ui.components.core.MinimumDragHandle
 import com.atrainingtracker.trainingtracker.ui.knownlocations.EditKnownLocationDialog
 import com.atrainingtracker.trainingtracker.ui.knownlocations.ElevationSourceBadge
 import com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationsUnitConversions
@@ -77,6 +76,7 @@ import com.atrainingtracker.trainingtracker.ui.routes.RouteOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentOnMapScreen
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
+import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
@@ -145,7 +145,7 @@ fun MapScreenWithTrack(
             sheetPeekHeight = when {
                 selectedSegmentId != null -> 185.dp + navBarHeight
                 selectedRouteId != null -> 100.dp + navBarHeight
-                selectedLocationId != null -> 140.dp + navBarHeight
+                selectedLocationId != null -> 100.dp + navBarHeight
                 else -> 0.dp
             },
             sheetDragHandle = null,
@@ -159,99 +159,12 @@ fun MapScreenWithTrack(
 
                                 if (selectedLocation != null) {
                                     val isMetric = remember { TrainingApplication.getUnit() == MyUnits.METRIC }
-                                    Surface(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                                        color = MaterialTheme.colorScheme.surface,
-                                        shape = RoundedCornerShape(16.dp),
-                                        tonalElevation = 3.dp
-                                    ) {
-                                        Column(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(16.dp)
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.SpaceBetween
-                                            ) {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    modifier = Modifier.weight(1f)
-                                                ) {
-                                                    Icon(
-                                                        painter = painterResource(id = R.drawable.my_locations),
-                                                        contentDescription = null,
-                                                        tint = MaterialTheme.colorScheme.primary,
-                                                        modifier = Modifier.size(24.dp)
-                                                    )
-                                                    Spacer(modifier = Modifier.width(8.dp))
-                                                    Text(
-                                                        text = selectedLocation.name,
-                                                        style = MaterialTheme.typography.titleMedium,
-                                                        fontWeight = FontWeight.Bold,
-                                                        maxLines = 1,
-                                                        overflow = TextOverflow.Ellipsis
-                                                    )
-                                                }
-
-                                                Badge(
-                                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                                ) {
-                                                    Text(
-                                                        text = pluralStringResource(R.plurals.known_locations_starts, selectedLocation.hitCount, selectedLocation.hitCount),
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                    )
-                                                }
-                                            }
-
-                                            Spacer(modifier = Modifier.height(8.dp))
-
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.SpaceBetween
-                                            ) {
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.ic_ascent),
-                                                        contentDescription = null,
-                                                        modifier = Modifier.size(16.dp),
-                                                        tint = MaterialTheme.colorScheme.primary
-                                                    )
-                                                    Spacer(modifier = Modifier.width(4.dp))
-                                                    Text(
-                                                        text = KnownLocationsUnitConversions.formatAltitude(selectedLocation.altitude, isMetric),
-                                                        style = MaterialTheme.typography.bodyMedium,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    )
-                                                    Spacer(modifier = Modifier.width(8.dp))
-                                                    ElevationSourceBadge(source = selectedLocation.source)
-                                                }
-
-                                                OutlinedButton(
-                                                    onClick = { editingLocation = selectedLocation },
-                                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                                                    modifier = Modifier.height(36.dp)
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.Edit,
-                                                        contentDescription = stringResource(R.string.Edit),
-                                                        modifier = Modifier.size(16.dp)
-                                                    )
-                                                    Spacer(modifier = Modifier.width(4.dp))
-                                                    Text(
-                                                        text = stringResource(R.string.Edit),
-                                                        style = MaterialTheme.typography.labelMedium
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
+                                    KnownLocationOnMapSheet(
+                                        location = selectedLocation,
+                                        isMetric = isMetric,
+                                        onEdit = { editingLocation = selectedLocation },
+                                        modifier = Modifier.fillMaxSize()
+                                    )
                                 }
                             }
                             selectedSegmentId != null -> {
@@ -340,5 +253,113 @@ fun MapScreenWithTrack(
         selectedSegmentId = null
         selectedRouteId = null
         selectedLocationId = null
+    }
+}
+
+/**
+ * Bottom sheet peek and detail layout for favorite locations (Lieblingsorte) on the central map.
+ * Harmonized with [RouteOnMapScreen] and [SegmentOnMapScreen] (REQ-UI-180).
+ */
+@Composable
+fun KnownLocationOnMapSheet(
+    location: KnownLocationItem,
+    isMetric: Boolean,
+    onEdit: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+    ) {
+        MinimumDragHandle()
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            // --- TOP ROW: Location Icon, Name, and Edit Button ---
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.my_locations),
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+
+                Text(
+                    text = location.name,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+
+                IconButton(
+                    onClick = onEdit,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = stringResource(R.string.Edit),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            // --- SECOND ROW: Metrics (Altitude, Starts, Elevation Source) ---
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                MetricItem(
+                    iconRes = R.drawable.ic_ascent,
+                    value = KnownLocationsUnitConversions.formatAltitude(location.altitude, isMetric),
+                    isPrimary = true
+                )
+
+                MetricItem(
+                    iconRes = R.drawable.control_start,
+                    value = pluralStringResource(R.plurals.known_locations_starts, location.hitCount, location.hitCount),
+                    isPrimary = true
+                )
+
+                ElevationSourceBadge(source = location.source)
+            }
+        }
+
+        HorizontalDivider(
+            modifier = Modifier.fillMaxWidth(),
+            thickness = 0.5.dp,
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
+
+        // Expanded details: Coordinates and Geofence Radius
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            MetricItem(
+                iconRes = R.drawable.ic_location,
+                value = "${String.format(Locale.US, "%.5f", location.latLng.latitude)}, ${String.format(Locale.US, "%.5f", location.latLng.longitude)}"
+            )
+
+            MetricItem(
+                iconRes = R.drawable.ic_distance,
+                value = if (isMetric) "${location.radius} m" else "${(location.radius * 3.28084).toInt()} ft"
+            )
+        }
     }
 }
