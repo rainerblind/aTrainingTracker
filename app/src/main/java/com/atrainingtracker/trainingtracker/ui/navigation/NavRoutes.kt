@@ -41,6 +41,8 @@ object NavRoutes {
     const val WORKOUTS = "workouts"
     const val PERIODS = "periods"
     const val MAP = "map"
+    const val MAP_PATTERN = "map?locationId={locationId}"
+    const val ARG_LOCATION_ID = "locationId"
     const val SEGMENTS = "segments"
     const val ROUTES = "routes"
     const val START_LOCATIONS = "start_locations"
@@ -53,6 +55,12 @@ object NavRoutes {
     const val SPORT_TYPES = "sport_types"
     const val TRAINING_ZONES = "training_zones"
     const val BACKUP_RESTORE = "backup_restore"
+
+    /**
+     * Builds a navigation route to the central map, optionally parameterized with a target location ID.
+     */
+    fun map(locationId: Long? = null): String =
+        if (locationId != null && locationId > 0) "map?$ARG_LOCATION_ID=$locationId" else MAP
 
     /**
      * Builds a navigation route to the cluster destination, optionally parameterized with a target cluster ID.
