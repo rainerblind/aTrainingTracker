@@ -492,6 +492,14 @@
     <string name="cockpit_theme_description">S\'applique exclusivement aux affichages de télémétrie et de capteurs pendant les entraînements actifs. Le menu principal et \'Control Tracking\' conservent le thème standard.</string>
     <string name="cockpit_theme_system">Système</string>
     <string name="cockpit_theme_always_dark">Toujours sombre</string>
+    <string name="display_brightness_title">Luminosité de l\'écran (pendant l\'entraînement)</string>
+    <string name="display_brightness_system">Système</string>
+    <string name="display_brightness_auto">Auto</string>
+    <string name="display_brightness_custom">Personnalisé</string>
+    <string name="display_brightness_system_desc">Utilise la luminosité d\'écran par défaut du système</string>
+    <string name="display_brightness_auto_desc">Ajuste dynamiquement la luminosité de l\'écran en fonction de la pente et des zones d\'entraînement</string>
+    <string name="display_brightness_custom_desc">Niveau de luminosité constant pendant tout l\'entraînement</string>
+    <string name="display_brightness_slider_format">Luminosité : %1$d%%</string>
     <string name="smoothing">Lissage des valeurs</string>
     <string name="powerSmoothingTitle">Facteur α lissage puissance</string>
     <string name="powerSmoothingTitle_format">Lissage puissance : α=%1$f</string>

@@ -31,8 +31,14 @@ class BatterySaverController(
     private val brightnessApplier: ((Float) -> Unit)? = null
 ) : SensorEventListener {
 
-    var isEnabled: Boolean = false
+    var brightnessMode: DisplayBrightnessMode = DisplayBrightnessMode.SYSTEM
         private set
+
+    var customBrightness: Float = 0.30f
+        private set
+
+    val isEnabled: Boolean
+        get() = brightnessMode != DisplayBrightnessMode.SYSTEM
 
     var isWakeupActive: Boolean = false
         private set
@@ -54,25 +60,38 @@ class BatterySaverController(
         }
     }
 
-    fun setEnabled(enabled: Boolean) {
-        if (isEnabled == enabled) return
-        isEnabled = enabled
+    fun setMode(mode: DisplayBrightnessMode, custom: Float = customBrightness) {
+        brightnessMode = mode
+        customBrightness = custom.coerceIn(DimmingLevel.SAFETY_FLOOR, 1.0f)
 
-        if (enabled) {
-            startProximityListening()
-            // Start with full illumination for initial awareness
-            onWakeupEvent()
-        } else {
-            stopProximityListening()
-            cancelWakeupTimer()
-            hysteresisJob?.cancel()
-            hysteresisJob = null
-            applyBrightness(1.0f)
+        when (mode) {
+            DisplayBrightnessMode.SYSTEM -> {
+                stopProximityListening()
+                cancelWakeupTimer()
+                hysteresisJob?.cancel()
+                hysteresisJob = null
+                applyBrightness(1.0f)
+            }
+            DisplayBrightnessMode.AUTO -> {
+                startProximityListening()
+                onWakeupEvent()
+            }
+            DisplayBrightnessMode.CUSTOM -> {
+                stopProximityListening()
+                cancelWakeupTimer()
+                hysteresisJob?.cancel()
+                hysteresisJob = null
+                applyBrightness(customBrightness)
+            }
         }
     }
 
+    fun setEnabled(enabled: Boolean) {
+        setMode(if (enabled) DisplayBrightnessMode.AUTO else DisplayBrightnessMode.SYSTEM)
+    }
+
     fun onWakeupEvent() {
-        if (!isEnabled) return
+        if (brightnessMode != DisplayBrightnessMode.AUTO) return
 
         cancelWakeupTimer()
         hysteresisJob?.cancel()
@@ -91,7 +110,7 @@ class BatterySaverController(
 
     fun updateTelemetry(snapshot: TelemetrySnapshot, currentTimeMs: Long = System.currentTimeMillis()) {
         lastSnapshot = snapshot
-        if (!isEnabled) return
+        if (brightnessMode != DisplayBrightnessMode.AUTO) return
 
         val raw = stateMachine.evaluateRawLevel(snapshot)
         if (raw.brightness > stateMachine.currentLevel.brightness) {
@@ -170,7 +189,7 @@ class BatterySaverController(
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
-        if (event == null || !isEnabled) return
+        if (event == null || brightnessMode != DisplayBrightnessMode.AUTO) return
         if (event.sensor.type == Sensor.TYPE_PROXIMITY) {
             val distance = event.values.getOrNull(0) ?: return
             val maxRange = proximitySensor?.maximumRange ?: 5.0f

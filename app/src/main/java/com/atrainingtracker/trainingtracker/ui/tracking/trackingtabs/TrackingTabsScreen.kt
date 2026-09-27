@@ -72,6 +72,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.batterysaver.BatterySaverController
 import com.atrainingtracker.trainingtracker.batterysaver.TelemetrySnapshot
+import com.atrainingtracker.trainingtracker.batterysaver.DisplayBrightnessMode
 import com.atrainingtracker.trainingtracker.batterysaver.calculateZoneIndex
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
@@ -99,14 +100,17 @@ fun TrackingTabsScreen(
 
     val isSystemDark = isSystemInDarkTheme()
     var cockpitThemeMode by remember { mutableStateOf(TrainingApplication.getCockpitThemeMode()) }
-    var isBatterySaverEnabled by remember { mutableStateOf(TrainingApplication.isBatterySaverEnabled()) }
+    var brightnessMode by remember { mutableStateOf(TrainingApplication.getDisplayBrightnessMode()) }
+    var customBrightness by remember { mutableStateOf(TrainingApplication.getCustomDisplayBrightness()) }
     DisposableEffect(context) {
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key == TrainingApplication.SP_COCKPIT_THEME_MODE) {
                 cockpitThemeMode = TrainingApplication.getCockpitThemeMode()
-            } else if (key == TrainingApplication.SP_BATTERY_SAVER) {
-                isBatterySaverEnabled = TrainingApplication.isBatterySaverEnabled()
+            } else if (key == TrainingApplication.SP_DISPLAY_BRIGHTNESS_MODE || key == TrainingApplication.SP_BATTERY_SAVER) {
+                brightnessMode = TrainingApplication.getDisplayBrightnessMode()
+            } else if (key == TrainingApplication.SP_CUSTOM_DISPLAY_BRIGHTNESS) {
+                customBrightness = TrainingApplication.getCustomDisplayBrightness()
             }
         }
         prefs.registerOnSharedPreferenceChangeListener(listener)
@@ -116,8 +120,8 @@ fun TrackingTabsScreen(
     }
 
     val batterySaverController = remember { BatterySaverController(activity = context) }
-    LaunchedEffect(isBatterySaverEnabled) {
-        batterySaverController.setEnabled(isBatterySaverEnabled)
+    LaunchedEffect(brightnessMode, customBrightness) {
+        batterySaverController.setMode(brightnessMode, customBrightness)
     }
     DisposableEffect(batterySaverController) {
         onDispose {
@@ -156,8 +160,8 @@ fun TrackingTabsScreen(
     val activityType by trackingTabsViewModel.activityType.collectAsState()
     val liveSegments by trackingTabsViewModel.liveSegments.collectAsState()
 
-    LaunchedEffect(filteredSensorData, activityType, isBatterySaverEnabled) {
-        if (!isBatterySaverEnabled) return@LaunchedEffect
+    LaunchedEffect(filteredSensorData, activityType, brightnessMode) {
+        if (brightnessMode != DisplayBrightnessMode.AUTO) return@LaunchedEffect
 
         val slopeData = filteredSensorData.find { it.sensorType == SensorType.SLOPE }
         val slope = (slopeData?.value as? Number)?.toFloat()

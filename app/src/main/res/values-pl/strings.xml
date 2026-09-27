@@ -237,6 +237,14 @@
     <string name="cockpit_theme_description">Dotyczy wyłącznie widoków telemetrycznych i sensorów podczas aktywnych treningów. Menu główne i \'Control Tracking\' zachowują motyw standardowy.</string>
     <string name="cockpit_theme_system">System</string>
     <string name="cockpit_theme_always_dark">Zawsze ciemny</string>
+    <string name="display_brightness_title">Jasność ekranu (podczas treningu)</string>
+    <string name="display_brightness_system">System</string>
+    <string name="display_brightness_auto">Auto</string>
+    <string name="display_brightness_custom">Ręczny</string>
+    <string name="display_brightness_system_desc">Używa domyślnej jasności ekranu systemu</string>
+    <string name="display_brightness_auto_desc">Dynamicznie dostosowuje jasność ekranu na podstawie nachylenia i stref treningowych</string>
+    <string name="display_brightness_custom_desc">Stały poziom jasności przez cały trening</string>
+    <string name="display_brightness_slider_format">Jasność: %1$d%%</string>
     <string name="smoothing">Wygładzanie wartości</string>
     <string name="powerSmoothingTitle">Współczynnik wygładzania mocy α</string>
     <string name="powerSmoothingTitle_format">Wygładzanie mocy: α=%1$f</string>

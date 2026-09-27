@@ -20,6 +20,8 @@ package com.atrainingtracker.trainingtracker.ui.settings.display
 
 import android.content.SharedPreferences
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.batterysaver.DimmingLevel
+import com.atrainingtracker.trainingtracker.batterysaver.DisplayBrightnessMode
 import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode
 import io.mockk.*
 import org.junit.After
@@ -61,6 +63,14 @@ class DisplaySettingsTest {
             val def = secondArg<Boolean>()
             (prefStorage[key] as? Boolean) ?: def
         }
+        every { mockPrefs.getFloat(any(), any()) } answers {
+            val key = firstArg<String>()
+            val def = secondArg<Float>()
+            (prefStorage[key] as? Float) ?: def
+        }
+        every { mockPrefs.contains(any()) } answers {
+            prefStorage.containsKey(firstArg<String>())
+        }
 
         every { mockPrefs.edit() } returns mockEditor
         every { mockEditor.putStringSet(any(), any()) } answers {
@@ -78,6 +88,12 @@ class DisplaySettingsTest {
         every { mockEditor.putBoolean(any(), any()) } answers {
             val key = firstArg<String>()
             val value = secondArg<Boolean>()
+            prefStorage[key] = value
+            mockEditor
+        }
+        every { mockEditor.putFloat(any(), any()) } answers {
+            val key = firstArg<String>()
+            val value = secondArg<Float>()
             prefStorage[key] = value
             mockEditor
         }
@@ -216,6 +232,65 @@ class DisplaySettingsTest {
         TrainingApplication.setBatterySaverEnabled(true)
         assertTrue(TrainingApplication.isBatterySaverEnabled())
         assertEquals(true, prefStorage[TrainingApplication.SP_BATTERY_SAVER])
+    }
+
+    @Test
+    fun testDefaultDisplayBrightnessModeIsAuto() {
+        assertTrue(prefStorage.isEmpty())
+        val mode = TrainingApplication.getDisplayBrightnessMode()
+        assertEquals(DisplayBrightnessMode.AUTO, mode)
+        assertTrue(TrainingApplication.isBatterySaverEnabled())
+    }
+
+    @Test
+    fun testSetDisplayBrightnessModeUpdatesSharedPreferences() {
+        TrainingApplication.setDisplayBrightnessMode(DisplayBrightnessMode.SYSTEM)
+        assertEquals(DisplayBrightnessMode.SYSTEM, TrainingApplication.getDisplayBrightnessMode())
+        assertEquals("system", prefStorage[TrainingApplication.SP_DISPLAY_BRIGHTNESS_MODE])
+        assertEquals(false, prefStorage[TrainingApplication.SP_BATTERY_SAVER])
+        assertFalse(TrainingApplication.isBatterySaverEnabled())
+
+        TrainingApplication.setDisplayBrightnessMode(DisplayBrightnessMode.CUSTOM)
+        assertEquals(DisplayBrightnessMode.CUSTOM, TrainingApplication.getDisplayBrightnessMode())
+        assertEquals("custom", prefStorage[TrainingApplication.SP_DISPLAY_BRIGHTNESS_MODE])
+        assertEquals(false, prefStorage[TrainingApplication.SP_BATTERY_SAVER])
+        assertFalse(TrainingApplication.isBatterySaverEnabled())
+
+        TrainingApplication.setDisplayBrightnessMode(DisplayBrightnessMode.AUTO)
+        assertEquals(DisplayBrightnessMode.AUTO, TrainingApplication.getDisplayBrightnessMode())
+        assertEquals("auto", prefStorage[TrainingApplication.SP_DISPLAY_BRIGHTNESS_MODE])
+        assertEquals(true, prefStorage[TrainingApplication.SP_BATTERY_SAVER])
+        assertTrue(TrainingApplication.isBatterySaverEnabled())
+    }
+
+    @Test
+    fun testLegacyBatterySaverPreferenceFallback() {
+        // When display_brightness_mode is not set, but legacy battery_saver is present
+        prefStorage[TrainingApplication.SP_BATTERY_SAVER] = false
+        assertEquals(DisplayBrightnessMode.SYSTEM, TrainingApplication.getDisplayBrightnessMode())
+
+        prefStorage[TrainingApplication.SP_BATTERY_SAVER] = true
+        assertEquals(DisplayBrightnessMode.AUTO, TrainingApplication.getDisplayBrightnessMode())
+    }
+
+    @Test
+    fun testDefaultCustomDisplayBrightness() {
+        assertTrue(prefStorage.isEmpty())
+        assertEquals(TrainingApplication.DEFAULT_CUSTOM_DISPLAY_BRIGHTNESS, TrainingApplication.getCustomDisplayBrightness(), 0.001f)
+    }
+
+    @Test
+    fun testSetCustomDisplayBrightnessClamping() {
+        TrainingApplication.setCustomDisplayBrightness(0.50f)
+        assertEquals(0.50f, TrainingApplication.getCustomDisplayBrightness(), 0.001f)
+
+        // Safety floor clamping at DimmingLevel.SAFETY_FLOOR (0.05f)
+        TrainingApplication.setCustomDisplayBrightness(0.01f)
+        assertEquals(DimmingLevel.SAFETY_FLOOR, TrainingApplication.getCustomDisplayBrightness(), 0.001f)
+
+        // Upper limit clamping at 1.0f
+        TrainingApplication.setCustomDisplayBrightness(1.50f)
+        assertEquals(1.0f, TrainingApplication.getCustomDisplayBrightness(), 0.001f)
     }
 
     private fun setStaticField(clazz: Class<*>, fieldName: String, value: Any?) {

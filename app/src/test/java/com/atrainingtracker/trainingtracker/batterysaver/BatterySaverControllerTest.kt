@@ -106,4 +106,39 @@ class BatterySaverControllerTest {
         controller.release()
         assertEquals(1.0f, lastAppliedBrightness, 0.001f)
     }
+
+    @Test
+    fun setMode_customMode_appliesConstantBrightnessAndIgnoresEvents() = testScope.runTest {
+        controller.setMode(DisplayBrightnessMode.CUSTOM, 0.45f)
+        assertEquals(DisplayBrightnessMode.CUSTOM, controller.brightnessMode)
+        assertEquals(0.45f, controller.customBrightness, 0.001f)
+        assertEquals(0.45f, lastAppliedBrightness, 0.001f)
+
+        // Wakeup events are ignored in CUSTOM mode
+        controller.onWakeupEvent()
+        assertFalse(controller.isWakeupActive)
+        assertEquals(0.45f, lastAppliedBrightness, 0.001f)
+
+        // Telemetry changes are ignored in CUSTOM mode
+        controller.updateTelemetry(TelemetrySnapshot(slopePercent = 12.0f, hrZone = 5))
+        assertEquals(0.45f, lastAppliedBrightness, 0.001f)
+    }
+
+    @Test
+    fun setMode_customMode_clampsToSafetyFloor() {
+        controller.setMode(DisplayBrightnessMode.CUSTOM, 0.01f)
+        assertEquals(DimmingLevel.SAFETY_FLOOR, controller.customBrightness, 0.001f)
+        assertEquals(DimmingLevel.SAFETY_FLOOR, lastAppliedBrightness, 0.001f)
+    }
+
+    @Test
+    fun setMode_systemMode_disablesDimmingAndIgnoresEvents() {
+        controller.setMode(DisplayBrightnessMode.SYSTEM)
+        assertEquals(DisplayBrightnessMode.SYSTEM, controller.brightnessMode)
+        assertEquals(1.0f, lastAppliedBrightness, 0.001f)
+
+        controller.onWakeupEvent()
+        assertFalse(controller.isWakeupActive)
+        assertEquals(1.0f, lastAppliedBrightness, 0.001f)
+    }
 }

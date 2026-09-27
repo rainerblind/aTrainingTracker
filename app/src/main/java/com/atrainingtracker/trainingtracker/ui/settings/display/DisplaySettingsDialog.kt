@@ -26,6 +26,8 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode
+import com.atrainingtracker.trainingtracker.batterysaver.DisplayBrightnessMode
+import kotlin.math.roundToInt
 
 @Composable
 fun DisplaySettingsDialog(
@@ -38,8 +40,11 @@ fun DisplaySettingsDialog(
     var currentThemeMode by remember {
         mutableStateOf(TrainingApplication.getCockpitThemeMode())
     }
-    var isBatterySaverEnabled by remember {
-        mutableStateOf(TrainingApplication.isBatterySaverEnabled())
+    var currentBrightnessMode by remember {
+        mutableStateOf(TrainingApplication.getDisplayBrightnessMode())
+    }
+    var currentCustomBrightness by remember {
+        mutableStateOf(TrainingApplication.getCustomDisplayBrightness())
     }
     
     AppBottomSheetContent(
@@ -51,7 +56,8 @@ fun DisplaySettingsDialog(
                 onSave = {
                     TrainingApplication.setDisplayOptions(currentOptions)
                     TrainingApplication.setCockpitThemeMode(currentThemeMode)
-                    TrainingApplication.setBatterySaverEnabled(isBatterySaverEnabled)
+                    TrainingApplication.setDisplayBrightnessMode(currentBrightnessMode)
+                    TrainingApplication.setCustomDisplayBrightness(currentCustomBrightness)
                     onSettingsChanged?.invoke()
                     onDismiss()
                 },
@@ -149,47 +155,79 @@ fun DisplaySettingsDialog(
                     }
                 }
 
-                DisplayOptionToggleWithSubtitle(
-                    label = stringResource(R.string.prefs_battery_saver_title),
-                    subtitle = stringResource(R.string.prefs_battery_saver_summary),
-                    isChecked = isBatterySaverEnabled,
-                    onCheckedChange = { isBatterySaverEnabled = it }
-                )
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.display_brightness_title),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    val brightnessDesc = when (currentBrightnessMode) {
+                        DisplayBrightnessMode.SYSTEM -> stringResource(R.string.display_brightness_system_desc)
+                        DisplayBrightnessMode.AUTO -> stringResource(R.string.display_brightness_auto_desc)
+                        DisplayBrightnessMode.CUSTOM -> stringResource(R.string.display_brightness_custom_desc)
+                    }
+                    Text(
+                        text = brightnessDesc,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    SingleChoiceSegmentedButtonRow(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        SegmentedButton(
+                            selected = currentBrightnessMode == DisplayBrightnessMode.SYSTEM,
+                            onClick = { currentBrightnessMode = DisplayBrightnessMode.SYSTEM },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
+                            icon = { SegmentedButtonDefaults.Icon(active = currentBrightnessMode == DisplayBrightnessMode.SYSTEM) }
+                        ) {
+                            Text(stringResource(R.string.display_brightness_system))
+                        }
+                        SegmentedButton(
+                            selected = currentBrightnessMode == DisplayBrightnessMode.AUTO,
+                            onClick = { currentBrightnessMode = DisplayBrightnessMode.AUTO },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
+                            icon = { SegmentedButtonDefaults.Icon(active = currentBrightnessMode == DisplayBrightnessMode.AUTO) }
+                        ) {
+                            Text(stringResource(R.string.display_brightness_auto))
+                        }
+                        SegmentedButton(
+                            selected = currentBrightnessMode == DisplayBrightnessMode.CUSTOM,
+                            onClick = { currentBrightnessMode = DisplayBrightnessMode.CUSTOM },
+                            shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
+                            icon = { SegmentedButtonDefaults.Icon(active = currentBrightnessMode == DisplayBrightnessMode.CUSTOM) }
+                        ) {
+                            Text(stringResource(R.string.display_brightness_custom))
+                        }
+                    }
+
+                    if (currentBrightnessMode == DisplayBrightnessMode.CUSTOM) {
+                        val percent = (currentCustomBrightness * 100f).roundToInt()
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.display_brightness_slider_format, percent),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Slider(
+                                value = currentCustomBrightness,
+                                onValueChange = { currentCustomBrightness = it },
+                                valueRange = 0.05f..1.0f,
+                                steps = 18,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
             }
         }
-    }
-}
-
-@Composable
-private fun DisplayOptionToggleWithSubtitle(
-    label: String,
-    subtitle: String,
-    isChecked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(end = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Text(text = label, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Switch(
-            checked = isChecked,
-            onCheckedChange = onCheckedChange,
-            modifier = Modifier.scale(0.7f)
-        )
     }
 }
 
