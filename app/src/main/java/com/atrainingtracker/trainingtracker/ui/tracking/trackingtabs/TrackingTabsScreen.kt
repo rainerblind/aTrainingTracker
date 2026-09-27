@@ -274,10 +274,12 @@ fun TrackingTabsScreen(
 
     val scope = rememberCoroutineScope()
 
-    // BACK NAVIGATION HANDLER: CONFIG -> PREVIEW (ATT-245)
-    // PREVIEW -> FINISH is handled by the Activity
+    // BACK NAVIGATION HANDLER: CONFIG -> PREVIEW -> TRACKING (ATT-245 / ATT-1456)
     BackHandler(enabled = screenMode == ScreenMode.CONFIGURATION) {
         trackingTabsViewModel.handleBackPressToPreview()
+    }
+    BackHandler(enabled = screenMode == ScreenMode.PREVIEW) {
+        trackingTabsViewModel.exitConfiguration()
     }
 
     // -- Show Lap Summary Dialog
@@ -481,6 +483,7 @@ fun TrackingTabsScreen(
                                     TrackingTabPreviewHeader(
                                         viewInfo = currentViewInfo,
                                         onToggleMode = { trackingTabsViewModel.toggleScreenMode() },
+                                        onExitConfig = { trackingTabsViewModel.exitConfiguration() }
                                     )
                                 }
                             }

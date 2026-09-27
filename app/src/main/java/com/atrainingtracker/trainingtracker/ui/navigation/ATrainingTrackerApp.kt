@@ -264,15 +264,9 @@ fun ATrainingTrackerApp(
             ) {
                 composable(NavRoutes.START_TRACKING) {
                     val trackingTabsViewModel: TrackingTabsViewModel = viewModel(
+                        viewModelStoreOwner = activity,
                         factory = TrackingTabsViewModelFactory(activity.application)
                     )
-                    LaunchedEffect(activity.pendingActivityType) {
-                        activity.pendingActivityType?.let { type ->
-                            trackingTabsViewModel.setExplicitActivityType(type)
-                            trackingTabsViewModel.setScreenMode(ScreenMode.CONFIGURATION)
-                            activity.pendingActivityType = null
-                        }
-                    }
                     TrackingTabsScreen(trackingTabsViewModel = trackingTabsViewModel)
                 }
 
