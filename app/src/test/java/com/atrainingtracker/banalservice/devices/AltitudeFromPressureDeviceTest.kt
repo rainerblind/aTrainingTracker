@@ -261,9 +261,10 @@ class AltitudeFromPressureDeviceTest {
         verify(exactly = 1) { mockContext.sendBroadcast(any()) }
         assertEquals(20.0, broadcastSlot.captured.getDoubleExtra(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE, 0.0), 0.001)
 
-        // Verify raw altitude was passed to location learning (REQ-DAT-007 invariant)
-        verify(exactly = 1) {
-            mockKnownLocationsDbManager.learnLocation(any<LatLng>(), 500.0, ExtremaType.START)
+        // ATT-1447 / REQ-DAT-015 / TST-DAT-010.1: Altimeter calibration operates read-only on sensor warmup.
+        // verify learnLocation is NEVER invoked on sensor initialization.
+        verify(exactly = 0) {
+            mockKnownLocationsDbManager.learnLocation(any<LatLng>(), any(), any())
         }
     }
 

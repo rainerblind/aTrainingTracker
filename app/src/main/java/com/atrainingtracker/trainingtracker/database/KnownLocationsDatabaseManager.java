@@ -327,6 +327,51 @@ public class KnownLocationsDatabaseManager {
     }
 
     /**
+     * ATT-1447 / REQ-DAT-015: Records an athlete-initiated workout start at the given GPS coordinate.
+     * If the coordinate falls within the geofence radius of an existing known location, increments its hitCount by 1.
+     * If no known location exists, discovers and creates a new location with hitCount = 1.
+     */
+    public void recordWorkoutStart(@Nullable LatLng pos) {
+        recordWorkoutStart(pos, null);
+    }
+
+    public void recordWorkoutStart(@Nullable LatLng pos, @Nullable Double altitude) {
+        if (pos == null) return;
+
+        synchronized (this) {
+            SQLiteDatabase db = getDatabase();
+            db.beginTransaction();
+            try {
+                MyLocation existing = getMyLocation(pos);
+                if (existing != null) {
+                    ContentValues values = new ContentValues();
+                    values.put(KnownLocationsDbHelper.HIT_COUNT, existing.hitCount + 1);
+                    if (com.atrainingtracker.trainingtracker.location.LocationNameResolver.isPlaceholderName(existing.name)) {
+                        String resolvedName = com.atrainingtracker.trainingtracker.location.LocationNameResolver.resolveLocationNameBlocking(mContext, pos.latitude, pos.longitude);
+                        if (!com.atrainingtracker.trainingtracker.location.LocationNameResolver.isPlaceholderName(resolvedName)) {
+                            values.put(KnownLocationsDbHelper.NAME, resolvedName);
+                        }
+                    }
+                    updateId(existing.id, values);
+                    if (DEBUG) Log.d(TAG, "Recorded workout start for '" + existing.name + "': hitCount incremented to " + (existing.hitCount + 1));
+                } else {
+                    String name = com.atrainingtracker.trainingtracker.location.LocationNameResolver.resolveLocationNameBlocking(mContext, pos.latitude, pos.longitude);
+                    double altToStore = (altitude != null && !altitude.isNaN()) ? Math.round(altitude) : 0.0;
+                    ElevationSource source = (altitude != null && !altitude.isNaN()) ? ElevationSource.AUTO_LEARNED : ElevationSource.LEGACY_RAW;
+                    MyLocation created = addNewLocation(name, altToStore, DEFAULT_RADIUS, pos.latitude, pos.longitude, ExtremaType.START, false, source);
+                    if (created != null && source == ElevationSource.LEGACY_RAW) {
+                        healLegacyLocationsAsync();
+                    }
+                    if (DEBUG) Log.d(TAG, "Recorded workout start at new location: " + name + " (hitCount = 1)");
+                }
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+        }
+    }
+
+    /**
      * ATT-1366 / REQ-DAT-007: Atomically upserts a location within the spatial geofence radius.
      * Prevents TOCTOU race conditions between concurrent sensor starts and asynchronous DEM resolution.
      */

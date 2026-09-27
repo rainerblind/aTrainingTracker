@@ -33,4 +33,5 @@ __pycache__/
 # Kotlin
 .kotlin/
 
-
+# Scratch
+scratch/

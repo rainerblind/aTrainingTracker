@@ -149,10 +149,8 @@ public class AltitudeFromPressureDevice extends MyDevice
                     healLocationAsync(myLocation);
                     knownLocationsDb.healLegacyLocationsAsync();
                 }
-
-                // --- ATT-1366 / REQ-DAT-007: Hit Count Tracking ---
-                // Record visit frequency without mutating the established reference altitude
-                knownLocationsDb.learnLocation(currentLatLng, mLastRawAltitude, ExtremaType.START);
+                // ATT-1447 / REQ-DAT-015: Altimeter calibration operates strictly read-only on sensor warmup.
+                // Workout starts are recorded authoritatively in TrackerService on START_NORMAL.
             } else {
                 fetchDemOrFallbackAsync(latitude, longitude);
             }
