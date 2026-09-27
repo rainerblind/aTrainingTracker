@@ -1252,4 +1252,6 @@
     <string name="known_location_show_map">Afficher sur la carte</string>
     <string name="known_location_hide_map">Masquer la carte</string>
     <string name="sort_altitude">Altitude</string>
+    <string name="known_location_radius_label">Rayon de couverture</string>
+    <string name="known_location_radius_format">%1$s: %2$s</string>
 </resources>

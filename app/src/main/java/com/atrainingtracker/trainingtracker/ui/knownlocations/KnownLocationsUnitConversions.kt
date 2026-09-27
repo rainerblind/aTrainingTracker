@@ -97,4 +97,18 @@ object KnownLocationsUnitConversions {
             feetToMeters(parsed)
         }
     }
+
+    /**
+     * Formats geofence radius for UI presentation.
+     * In Metric mode: "200 m"
+     * In Imperial mode: "200 m (656 ft)"
+     */
+    fun formatRadius(meters: Int, isMetric: Boolean): String {
+        return if (isMetric) {
+            "$meters m"
+        } else {
+            val feet = metersToFeet(meters.toDouble())
+            "$meters m ($feet ft)"
+        }
+    }
 }

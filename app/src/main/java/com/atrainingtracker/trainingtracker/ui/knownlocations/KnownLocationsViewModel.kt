@@ -240,6 +240,17 @@ class KnownLocationsViewModel @JvmOverloads constructor(
     }
 
     /**
+     * Commits edited location changes including custom geofence radius to database via repository.
+     * When [source] is [ElevationSource.MANUAL_USER], the record is automatically locked.
+     */
+    fun updateLocation(id: Long, name: String, altitude: Double, radius: Int, source: ElevationSource) {
+        viewModelScope.launch {
+            repository.updateLocation(id, name, altitude, radius, source)
+            dismissEditDialog()
+        }
+    }
+
+    /**
      * Deletes a known location.
      */
     fun deleteLocation(id: Long) {

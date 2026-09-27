@@ -131,6 +131,22 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
     }
 
     /**
+     * Atomically updates a location's name, altitude, radius, and source.
+     * When [source] is [ElevationSource.MANUAL_USER], [isLocked] is automatically set to true.
+     */
+    open suspend fun updateLocation(
+        id: Long,
+        name: String,
+        altitude: Double,
+        radius: Int,
+        source: ElevationSource
+    ) = withContext(dbDispatcher) {
+        val isLocked = (source == ElevationSource.MANUAL_USER)
+        databaseManager.updateLocation(id, name, altitude, radius, source, isLocked)
+        loadLocations()
+    }
+
+    /**
      * Deletes a location by id and refreshes reactive state.
      */
     open suspend fun deleteLocation(id: Long) = withContext(dbDispatcher) {

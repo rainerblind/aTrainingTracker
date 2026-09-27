@@ -105,6 +105,35 @@ class KnownLocationsRepositoryTest {
         assertEquals(1, repository.locationsFlow.value.size)
     }
 
+    /**
+     * TST-UI-131.1: Updating location with custom radius persists radius to database and refreshes flow.
+     */
+    @Test
+    fun testUpdateLocation_withCustomRadius_persistsRadiusAndRefreshesFlow() = runTest {
+        val updatedLoc = KnownLocationsDatabaseManager.MyLocation(
+            10L, 48.137, 11.576, "Trailhead North", 450.0, 500, 3, true, ElevationSource.MANUAL_USER
+        )
+        every { mockDbManager.allLocations } returns listOf(updatedLoc)
+
+        repository.updateLocation(
+            id = 10L,
+            name = "Trailhead North",
+            altitude = 450.0,
+            radius = 500,
+            source = ElevationSource.MANUAL_USER
+        )
+
+        verify(exactly = 1) {
+            mockDbManager.updateLocation(10L, "Trailhead North", 450.0, 500, ElevationSource.MANUAL_USER, true)
+        }
+        assertEquals(1, repository.locationsFlow.value.size)
+        assertEquals(500, repository.locationsFlow.value[0].radius)
+        assertTrue(repository.locationsFlow.value[0].isLocked)
+    }
+
+    /**
+     * TST-UI-131.2: Backward-compatible 4-argument overload delegates cleanly and automatically locks for MANUAL_USER.
+     */
     @Test
     fun testUpdateLocation_manualSource_automaticallyLocksRecord() = runTest {
         val updatedLoc = KnownLocationsDatabaseManager.MyLocation(

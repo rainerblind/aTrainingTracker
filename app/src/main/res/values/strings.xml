@@ -1443,4 +1443,6 @@
     <string name="known_location_show_map">Show on map</string>
     <string name="known_location_hide_map">Hide map</string>
     <string name="sort_altitude">Altitude</string>
+    <string name="known_location_radius_label">Radius</string>
+    <string name="known_location_radius_format">%1$s: %2$s</string>
 </resources>

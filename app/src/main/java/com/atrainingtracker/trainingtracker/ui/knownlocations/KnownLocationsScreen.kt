@@ -361,8 +361,8 @@ fun KnownLocationsScreen(
             location = itemToEdit,
             isMetric = uiState.isMetric,
             showMap = uiState.showMapInEditDialog,
-            onConfirm = { id, name, altitude, source ->
-                viewModel.updateLocation(id, name, altitude, source)
+            onConfirm = { id, name, altitude, radius, source ->
+                viewModel.updateLocation(id, name, altitude, radius, source)
             },
             onDismiss = { viewModel.dismissEditDialog() }
         )
@@ -971,7 +971,7 @@ fun PreviewEditKnownLocationWithoutMap() {
             location = previewMockLocation,
             isMetric = true,
             showMap = false,
-            onConfirm = { _, _, _, _ -> },
+            onConfirm = { _, _, _, _, _ -> },
             onDismiss = {}
         )
     }
@@ -985,7 +985,7 @@ fun PreviewEditKnownLocationWithMap() {
             location = previewMockLocation,
             isMetric = true,
             showMap = true,
-            onConfirm = { _, _, _, _ -> },
+            onConfirm = { _, _, _, _, _ -> },
             onDismiss = {}
         )
     }

@@ -1236,4 +1236,6 @@
     <string name="known_location_show_map">地図上に表示</string>
     <string name="known_location_hide_map">地図を非表示</string>
     <string name="sort_altitude">標高</string>
+    <string name="known_location_radius_label">検知半径</string>
+    <string name="known_location_radius_format">%1$s: %2$s</string>
 </resources>

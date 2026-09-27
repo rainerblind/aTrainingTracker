@@ -725,5 +725,50 @@ class KnownLocationsDatabaseManagerTest {
             mockDb.update(any(), any(), any(), any())
         }
     }
+
+    /**
+     * TST-UI-131.6: Verifies that updateLocation with radius persists RADIUS to ContentValues.
+     */
+    @Test
+    fun testUpdateLocation_withRadius_persistsRadiusColumn() {
+        resetSingleton()
+        val manager = KnownLocationsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        every {
+            mockDb.update(
+                KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE,
+                any(),
+                match { it.contains("_id=?") },
+                arrayOf("42")
+            )
+        } returns 1
+
+        manager.updateLocation(42L, "Trail Center", 300.0, 450, ElevationSource.MANUAL_USER, true)
+
+        verify(exactly = 1) {
+            mockDb.update(
+                KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE,
+                any(),
+                match { it.contains("_id=?") },
+                arrayOf("42")
+            )
+        }
+        verify(exactly = 1) {
+            anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.RADIUS, 450)
+        }
+        verify(exactly = 1) {
+            anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.NAME, "Trail Center")
+        }
+        verify(exactly = 1) {
+            anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.ALTITUDE, 300.0)
+        }
+        verify(exactly = 1) {
+            anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.SOURCE, "MANUAL_USER")
+        }
+        verify(exactly = 1) {
+            anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.IS_LOCKED, 1)
+        }
+    }
 }
 

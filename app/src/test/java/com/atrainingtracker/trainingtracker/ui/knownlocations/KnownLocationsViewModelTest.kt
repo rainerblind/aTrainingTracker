@@ -185,6 +185,30 @@ class KnownLocationsViewModelTest {
         assertNull(viewModel.uiState.value.selectedLocationForEdit)
     }
 
+    /**
+     * TST-UI-131.3: updateLocation with radius propagates radius to repository and dismisses edit dialog.
+     */
+    @Test
+    fun testUpdateLocation_withRadius_propagatesRadiusAndDismissesDialog() = runTest {
+        val sampleItem = KnownLocationItem(1L, "Home Spot", 520.0, 200, LatLng(48.1, 11.5), 5, false, ElevationSource.INTERNET_DEM)
+        viewModel.openEditDialog(sampleItem)
+        assertNotNull(viewModel.uiState.value.selectedLocationForEdit)
+
+        viewModel.updateLocation(
+            id = 1L,
+            name = "Home Spot",
+            altitude = 520.0,
+            radius = 75,
+            source = ElevationSource.MANUAL_USER
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 1) {
+            mockRepository.updateLocation(1L, "Home Spot", 520.0, 75, ElevationSource.MANUAL_USER)
+        }
+        assertNull(viewModel.uiState.value.selectedLocationForEdit)
+    }
+
     @Test
     fun testDeleteLocation_callsRepository() = runTest {
         viewModel.deleteLocation(42L)

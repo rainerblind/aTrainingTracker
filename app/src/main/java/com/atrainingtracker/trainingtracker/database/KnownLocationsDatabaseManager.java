@@ -260,6 +260,17 @@ public class KnownLocationsDatabaseManager {
         updateId(id, contentValues);
     }
 
+    public void updateLocation(long id, @NonNull String name, double altitude, int radius, @NonNull ElevationSource source, boolean isLocked) {
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(KnownLocationsDbHelper.NAME, name);
+        contentValues.put(KnownLocationsDbHelper.ALTITUDE, altitude);
+        contentValues.put(KnownLocationsDbHelper.RADIUS, radius);
+        contentValues.put(KnownLocationsDbHelper.SOURCE, source.name());
+        contentValues.put(KnownLocationsDbHelper.IS_LOCKED, isLocked ? 1 : 0);
+
+        updateId(id, contentValues);
+    }
+
     private void updateId(long id, ContentValues contentValues) {
         getDatabase().update(KnownLocationsDbHelper.TABLE,
                 contentValues,

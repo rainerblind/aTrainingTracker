@@ -36,10 +36,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -75,9 +77,11 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import java.util.Locale
+import kotlin.math.round
+import kotlin.math.roundToInt
 
 /**
- * Modal Bottom Sheet for editing a known start location name and reference altitude (REQ-UI-165).
+ * Modal Bottom Sheet for editing a known start location name, reference altitude, and geofence radius (REQ-UI-165, REQ-UI-179).
  *
  * Key Invariants:
  * - No manual lock checkbox: The user is never burdened with manual locking.
@@ -85,8 +89,9 @@ import java.util.Locale
  *   [ElevationSource.MANUAL_USER] and is_locked = 1.
  * - Configurable map view: Can be shown with or without the embedded map depending on caller context
  *   (e.g., shown with map when triggered from list; shown without map when triggered from map peek).
+ * - Real-time geofence preview: Adjusting the radius slider updates the map preview circle dynamically.
  *
- * Traceability: REQ-UI-165, TST-UI-117.8, TST-UI-117.9.
+ * Traceability: REQ-UI-165, REQ-UI-179, TST-UI-117.8, TST-UI-117.9, TST-UI-131.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,13 +99,16 @@ fun EditKnownLocationDialog(
     location: KnownLocationItem,
     isMetric: Boolean,
     showMap: Boolean = false,
-    onConfirm: (id: Long, name: String, altitudeMeters: Double, source: ElevationSource) -> Unit,
+    onConfirm: (id: Long, name: String, altitudeMeters: Double, radiusMeters: Int, source: ElevationSource) -> Unit,
     onDismiss: () -> Unit,
     onFetchDem: (suspend (id: Long, latLng: LatLng) -> ElevationResult)? = null
 ) {
     var name by remember { mutableStateOf(location.name) }
     var altitudeText by remember {
         mutableStateOf(KnownLocationsUnitConversions.formatAltitudeForEdit(location.altitude, isMetric))
+    }
+    var radiusMeters by remember {
+        mutableFloatStateOf(location.radius.coerceIn(50, 1000).toFloat())
     }
     var currentSource by remember { mutableStateOf(location.source) }
     var isAltitudeError by remember { mutableStateOf(false) }
@@ -117,7 +125,7 @@ fun EditKnownLocationDialog(
                     val parsed = KnownLocationsUnitConversions.parseInputToMeters(altitudeText, isMetric)
                     if (parsed != null) {
                         val finalName = if (name.isNotBlank()) name.trim() else location.name
-                        onConfirm(location.id, finalName, parsed, currentSource)
+                        onConfirm(location.id, finalName, parsed, radiusMeters.roundToInt(), currentSource)
                     } else {
                         isAltitudeError = true
                     }
@@ -171,6 +179,32 @@ fun EditKnownLocationDialog(
                 )
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Geofence Radius Control (REQ-UI-179)
+            Text(
+                text = stringResource(
+                    R.string.known_location_radius_format,
+                    stringResource(R.string.known_location_radius_label),
+                    KnownLocationsUnitConversions.formatRadius(radiusMeters.roundToInt(), isMetric)
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.testTag("edit_location_radius_label")
+            )
+
+            Slider(
+                value = radiusMeters,
+                onValueChange = {
+                    radiusMeters = (round(it / 25f) * 25f).coerceIn(50f, 1000f)
+                },
+                valueRange = 50f..1000f,
+                steps = 37,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("edit_location_radius_slider")
+            )
+
             // Embedded Map (shown when requested by caller context)
             if (showMap) {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -183,7 +217,7 @@ fun EditKnownLocationDialog(
                 ) {
                     LocationMiniMap(
                         latLng = location.latLng,
-                        radius = location.radius.toDouble().takeIf { it > 0 } ?: 200.0,
+                        radius = radiusMeters.toDouble(),
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -203,13 +237,16 @@ fun EditKnownLocationSheetContent(
     location: KnownLocationItem,
     isMetric: Boolean,
     showMap: Boolean = false,
-    onConfirm: (id: Long, name: String, altitudeMeters: Double, source: ElevationSource) -> Unit,
+    onConfirm: (id: Long, name: String, altitudeMeters: Double, radiusMeters: Int, source: ElevationSource) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var name by remember { mutableStateOf(location.name) }
     var altitudeText by remember {
         mutableStateOf(KnownLocationsUnitConversions.formatAltitudeForEdit(location.altitude, isMetric))
+    }
+    var radiusMeters by remember {
+        mutableFloatStateOf(location.radius.coerceIn(50, 1000).toFloat())
     }
     var currentSource by remember { mutableStateOf(location.source) }
     var isAltitudeError by remember { mutableStateOf(false) }
@@ -226,7 +263,7 @@ fun EditKnownLocationSheetContent(
                     val parsed = KnownLocationsUnitConversions.parseInputToMeters(altitudeText, isMetric)
                     if (parsed != null) {
                         val finalName = if (name.isNotBlank()) name.trim() else location.name
-                        onConfirm(location.id, finalName, parsed, currentSource)
+                        onConfirm(location.id, finalName, parsed, radiusMeters.roundToInt(), currentSource)
                     } else {
                         isAltitudeError = true
                     }
@@ -281,6 +318,32 @@ fun EditKnownLocationSheetContent(
                 )
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Geofence Radius Control (REQ-UI-179)
+            Text(
+                text = stringResource(
+                    R.string.known_location_radius_format,
+                    stringResource(R.string.known_location_radius_label),
+                    KnownLocationsUnitConversions.formatRadius(radiusMeters.roundToInt(), isMetric)
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.testTag("edit_location_radius_label")
+            )
+
+            Slider(
+                value = radiusMeters,
+                onValueChange = {
+                    radiusMeters = (round(it / 25f) * 25f).coerceIn(50f, 1000f)
+                },
+                valueRange = 50f..1000f,
+                steps = 37,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("edit_location_radius_slider")
+            )
+
             // Embedded Map (shown when requested by caller context)
             if (showMap) {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -293,7 +356,7 @@ fun EditKnownLocationSheetContent(
                 ) {
                     LocationMiniMap(
                         latLng = location.latLng,
-                        radius = location.radius.toDouble().takeIf { it > 0 } ?: 200.0,
+                        radius = radiusMeters.toDouble(),
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -417,7 +480,7 @@ fun PreviewEditKnownLocationSheetWithoutMapLight() {
             location = previewEditMockLocation,
             isMetric = true,
             showMap = false,
-            onConfirm = { _, _, _, _ -> },
+            onConfirm = { _, _, _, _, _ -> },
             onDismiss = {}
         )
     }
@@ -431,7 +494,7 @@ fun PreviewEditKnownLocationSheetWithMapLight() {
             location = previewEditMockLocation,
             isMetric = true,
             showMap = true,
-            onConfirm = { _, _, _, _ -> },
+            onConfirm = { _, _, _, _, _ -> },
             onDismiss = {}
         )
     }
@@ -445,7 +508,7 @@ fun PreviewEditKnownLocationSheetWithMapDark() {
             location = previewEditMockLocation,
             isMetric = true,
             showMap = true,
-            onConfirm = { _, _, _, _ -> },
+            onConfirm = { _, _, _, _, _ -> },
             onDismiss = {}
         )
     }

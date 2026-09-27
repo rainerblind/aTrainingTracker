@@ -1338,4 +1338,6 @@
     <string name="known_location_show_map">Auf Karte anzeigen</string>
     <string name="known_location_hide_map">Karte ausblenden</string>
     <string name="sort_altitude">Höhe</string>
+    <string name="known_location_radius_label">Erfassungsradius</string>
+    <string name="known_location_radius_format">%1$s: %2$s</string>
 </resources>
