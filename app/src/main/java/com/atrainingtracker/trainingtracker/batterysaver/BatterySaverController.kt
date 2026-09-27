@@ -160,11 +160,7 @@ class BatterySaverController(
                 lp.screenBrightness = when (brightnessMode) {
                     DisplayBrightnessMode.SYSTEM -> WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
                     DisplayBrightnessMode.CUSTOM -> customBrightness.coerceIn(DimmingLevel.SAFETY_FLOOR, 1.0f)
-                    DisplayBrightnessMode.AUTO -> if (target >= 1.0f) {
-                        WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
-                    } else {
-                        target
-                    }
+                    DisplayBrightnessMode.AUTO -> target.coerceIn(DimmingLevel.SAFETY_FLOOR, 1.0f)
                 }
                 window.attributes = lp
             }
@@ -193,7 +189,22 @@ class BatterySaverController(
         cancelWakeupTimer()
         hysteresisJob?.cancel()
         hysteresisJob = null
-        applyBrightness(1.0f)
+        if (brightnessApplier != null) {
+            brightnessApplier.invoke(1.0f)
+            return
+        }
+        val applier = {
+            activity?.window?.let { window ->
+                val lp = window.attributes
+                lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                window.attributes = lp
+            }
+        }
+        if (activity != null && Looper.myLooper() != Looper.getMainLooper()) {
+            activity.runOnUiThread { applier() }
+        } else {
+            applier()
+        }
     }
 
     override fun onSensorChanged(event: SensorEvent?) {

@@ -174,8 +174,12 @@ fun TrackingTabsScreen(
     LaunchedEffect(filteredSensorData, activityType, brightnessMode) {
         if (brightnessMode != DisplayBrightnessMode.AUTO) return@LaunchedEffect
 
+        val speedData = filteredSensorData.find { it.sensorType == SensorType.SPEED_mps }
+        val speed = (speedData?.value as? Number)?.toDouble() ?: 0.0
+
         val slopeData = filteredSensorData.find { it.sensorType == SensorType.SLOPE }
-        val slope = (slopeData?.value as? Number)?.toFloat()
+        val rawSlope = (slopeData?.value as? Number)?.toFloat()
+        val slope = if (speed > 0.5 && rawSlope != null && !rawSlope.isNaN() && !rawSlope.isInfinite()) rawSlope else 0.0f
 
         val hrData = filteredSensorData.find { it.sensorType == SensorType.HR }
         val hrValue = (hrData?.value as? Number)?.toDouble()
