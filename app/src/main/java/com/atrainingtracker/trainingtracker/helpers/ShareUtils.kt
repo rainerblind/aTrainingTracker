@@ -11,6 +11,9 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
 package com.atrainingtracker.trainingtracker.helpers
@@ -18,6 +21,7 @@ package com.atrainingtracker.trainingtracker.helpers
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -34,9 +38,52 @@ import java.io.File
 import java.io.FileOutputStream
 
 /**
+ * Theme color tokens for share snapshot composition (ATT-1472 / REQ-UI-177).
+ */
+data class ShareThemeColors(
+    val canvasBackground: Int,
+    val footerBackground: Int,
+    val footerTextColor: Int
+)
+
+/**
+ * Resolves theme colors and night mode state for post-workout and period share snapshots (ATT-1472 / REQ-UI-177).
+ */
+object ShareThemeResolver {
+    val Light = ShareThemeColors(
+        canvasBackground = 0xFFFFFFFF.toInt(), // Color.WHITE
+        footerBackground = 0xFFF5F5F5.toInt(), // #F5F5F5
+        footerTextColor = 0xFF444444.toInt()   // Color.DKGRAY
+    )
+
+    val Dark = ShareThemeColors(
+        canvasBackground = 0xFF000000.toInt(), // Color.BLACK
+        footerBackground = 0xFF1E1E1E.toInt(), // #1E1E1E
+        footerTextColor = 0xFFE0E0E0.toInt()   // #E0E0E0
+    )
+
+    @JvmStatic
+    fun resolveColors(isDark: Boolean): ShareThemeColors {
+        return if (isDark) Dark else Light
+    }
+
+    @JvmStatic
+    fun isNightMode(context: Context): Boolean {
+        val nightModeFlags = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        return nightModeFlags == Configuration.UI_MODE_NIGHT_YES
+    }
+}
+
+/**
  * Shares a summary consisting of a Header and a Map.
  */
-suspend fun combineAndShare(context: Context, header: Bitmap, map: Bitmap) = withContext(Dispatchers.Default) {
+suspend fun combineAndShare(
+    context: Context,
+    header: Bitmap,
+    map: Bitmap,
+    isDark: Boolean = ShareThemeResolver.isNightMode(context)
+) = withContext(Dispatchers.Default) {
+    val colors = ShareThemeResolver.resolveColors(isDark)
     val sHeader = ensureSoftwareBitmap(header)
     val sMap = ensureSoftwareBitmap(map)
 
@@ -46,7 +93,7 @@ suspend fun combineAndShare(context: Context, header: Bitmap, map: Bitmap) = wit
 
     val combined = createBitmap(totalWidth, totalHeight)
     val canvas = Canvas(combined)
-    canvas.drawColor(Color.WHITE)
+    canvas.drawColor(colors.canvasBackground)
 
     // Draw Sections
     canvas.drawBitmap(sHeader, 0f, 0f, null)
@@ -54,7 +101,7 @@ suspend fun combineAndShare(context: Context, header: Bitmap, map: Bitmap) = wit
 
     // Draw Branding
     val footerTop = (sHeader.height + sMap.height).toFloat()
-    drawFooter(context, canvas, totalWidth, footerTop, footerHeight)
+    drawFooter(context, canvas, totalWidth, footerTop, footerHeight, colors)
 
     saveAndShare(context, combined, "period_summary.png")
 }
@@ -71,7 +118,14 @@ suspend fun combineAndShare(context: Context, header: Bitmap, map: Bitmap) = wit
  * 4. **Persistence**: Saves the final image to a secure cache directory and triggers
  *    the system sharing intent via a [FileProvider].
  */
-suspend fun combineWorkoutAndShare(context: Context, header: Bitmap?, map: Bitmap, elevation: Bitmap?) = withContext(Dispatchers.Default) {
+suspend fun combineWorkoutAndShare(
+    context: Context,
+    header: Bitmap?,
+    map: Bitmap,
+    elevation: Bitmap?,
+    isDark: Boolean = ShareThemeResolver.isNightMode(context)
+) = withContext(Dispatchers.Default) {
+    val colors = ShareThemeResolver.resolveColors(isDark)
     val sHeader = header?.let { ensureSoftwareBitmap(it) }
     val sMap = ensureSoftwareBitmap(map)
     val sElevation = elevation?.let { ensureSoftwareBitmap(it) }
@@ -82,7 +136,7 @@ suspend fun combineWorkoutAndShare(context: Context, header: Bitmap?, map: Bitma
 
     val combined = createBitmap(totalWidth, totalHeight)
     val canvas = Canvas(combined)
-    canvas.drawColor(Color.WHITE)
+    canvas.drawColor(colors.canvasBackground)
 
     var currentY = 0f
 
@@ -103,7 +157,7 @@ suspend fun combineWorkoutAndShare(context: Context, header: Bitmap?, map: Bitma
     }
 
     // 4. Branding
-    drawFooter(context, canvas, totalWidth, currentY, footerHeight)
+    drawFooter(context, canvas, totalWidth, currentY, footerHeight, colors)
 
     saveAndShare(context, combined, "workout_summary.png")
 }
@@ -116,10 +170,17 @@ private fun ensureSoftwareBitmap(bitmap: Bitmap): Bitmap {
     } else bitmap
 }
 
-private fun drawFooter(context: Context, canvas: Canvas, width: Int, top: Float, height: Int) {
+private fun drawFooter(
+    context: Context,
+    canvas: Canvas,
+    width: Int,
+    top: Float,
+    height: Int,
+    colors: ShareThemeColors
+) {
     // Background
     val bgPaint = Paint().apply {
-        color = Color.parseColor("#F5F5F5")
+        color = colors.footerBackground
         isAntiAlias = true
     }
     canvas.drawRect(0f, top, width.toFloat(), top + height, bgPaint)
@@ -133,7 +194,7 @@ private fun drawFooter(context: Context, canvas: Canvas, width: Int, top: Float,
 
     // Text
     val textPaint = Paint().apply {
-        color = Color.DKGRAY
+        color = colors.footerTextColor
         textSize = 42f
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
         isAntiAlias = true
