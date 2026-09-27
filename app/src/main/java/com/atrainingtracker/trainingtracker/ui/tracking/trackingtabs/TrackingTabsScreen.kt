@@ -497,20 +497,27 @@ fun TrackingTabsScreen(
                             divider = {}
                         ) {
                             if (screenMode == ScreenMode.TRACKING) {
+                                val isSelected = pagerState.currentPage == 0
                                 Tab(
-                                    selected = pagerState.currentPage == 0,
+                                    selected = isSelected,
                                     onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
+                                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                     text = {
                                         // Dynamic Title for Control Tab (Tracking/Paused/Start)
-                                        Text(getControlTabTitle(trackingMode))
+                                        Text(
+                                            text = getControlTabTitle(trackingMode),
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
                                 )
                             }
                             trackingViews.forEachIndexed { index, view ->
                                 val targetPage =
                                     if (screenMode == ScreenMode.TRACKING) index + 1 else index
+                                val isSelected = pagerState.currentPage == targetPage
                                 Tab(
-                                    selected = pagerState.currentPage == targetPage,
+                                    selected = isSelected,
                                     onClick = {
                                         scope.launch {
                                             pagerState.animateScrollToPage(
@@ -518,7 +525,14 @@ fun TrackingTabsScreen(
                                             )
                                         }
                                     },
-                                    text = { Text(view.name) }
+                                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    text = {
+                                        Text(
+                                            text = view.name,
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 )
                             }
                         }
