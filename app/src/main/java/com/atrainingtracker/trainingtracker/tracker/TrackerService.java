@@ -48,6 +48,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.app.PendingIntent;
 import android.content.pm.PackageManager;
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
+import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
@@ -180,6 +181,8 @@ public class TrackerService extends Service {
     private volatile long mWorkoutID;
     private LiveWorkoutSession mLiveSession;
     private volatile CompletableFuture<Void> mTableInitializationFuture = CompletableFuture.completedFuture(null);
+    private StartType mStartType;
+    private boolean mWorkoutStartLocationRecorded = false;
 
     public CompletableFuture<Void> getTableInitializationFuture() {
         return mTableInitializationFuture;
@@ -413,6 +416,8 @@ public class TrackerService extends Service {
         } else {
             startType = StartType.valueOf(intent.getStringExtra(START_TYPE));
         }
+        mStartType = startType;
+        mWorkoutStartLocationRecorded = (startType != StartType.START_NORMAL);
         switch (startType) {
             case START_NORMAL:
                 if (DEBUG) Log.d(TAG, "starting a new workout");
@@ -964,6 +969,17 @@ public class TrackerService extends Service {
             }
         }
         final LatLng currentPos = currentPosTemp;
+
+        // ATT-1447 / REQ-DAT-015: Record workout start location atomically on first valid GPS fix
+        if (mStartType == StartType.START_NORMAL && !mWorkoutStartLocationRecorded && currentPos != null) {
+            mWorkoutStartLocationRecorded = true;
+            final LatLng startPos = currentPos;
+            SensorData<Number> altData = (mBanalService != null) ? mBanalService.getBestSensorData(SensorType.ALTITUDE) : null;
+            final Double startAlt = (altData != null && altData.getValue() != null) ? altData.getValue().doubleValue() : null;
+            mDbExecutor.execute(() -> {
+                KnownLocationsDatabaseManager.getInstance(TrackerService.this).recordWorkoutStart(startPos, startAlt);
+            });
+        }
 
         Map<String, SensorValueType> sensorName2Type = new HashMap<>();
 

@@ -60,8 +60,18 @@ class KnownLocationsDatabaseManagerTest {
         every { Log.w(any<String>(), any<String>()) } returns 0
         every { Log.e(any<String>(), any<String>()) } returns 0
 
+        val mockResources = mockk<android.content.res.Resources>(relaxed = true)
+        every { mockResources.getString(any()) } returns "Startort"
+        every { mockResources.getString(any(), any()) } returns "Startort"
+        every { mockResources.getString(any(), any(), any()) } returns "Startort"
+        every { mockResources.getString(any(), *anyVararg()) } returns "Startort"
         mockContext = mockk(relaxed = true)
         every { mockContext.applicationContext } returns mockContext
+        every { mockContext.resources } returns mockResources
+        every { mockContext.getString(any()) } returns "Startort"
+        every { mockContext.getString(any(), any()) } returns "Startort"
+        every { mockContext.getString(any(), any(), any()) } returns "Startort"
+        every { mockContext.getString(any(), *anyVararg()) } returns "Startort"
         mockDb = mockk(relaxed = true)
         every { mockDb.isOpen } returns true
 
@@ -566,6 +576,154 @@ class KnownLocationsDatabaseManagerTest {
         val completed = latch.await(5, java.util.concurrent.TimeUnit.SECONDS)
         assertTrue("Concurrent executions must complete within timeout", completed)
         assertTrue("No exceptions during concurrent execution", exceptions.isEmpty())
+    }
+
+    /**
+     * TST-DAT-010.2: Verifies that recordWorkoutStart() increments hitCount on an existing location
+     * while strictly preserving stored reference altitude.
+     */
+    @Test
+    fun testRecordWorkoutStart_incrementsHitCountForExistingLocation() {
+        resetSingleton()
+        val manager = KnownLocationsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        setupMockCursorColumns(mockCursor)
+
+        every { mockCursor.moveToNext() } returns true andThen false
+        every { mockCursor.getInt(6) } returns 200 // radius
+        every { mockCursor.getDouble(5) } returns 48.0 // lat
+        every { mockCursor.getDouble(4) } returns 11.0 // lng
+        every { mockCursor.getLong(0) } returns 42L // id
+        every { mockCursor.getString(1) } returns "DEM Home" // name
+        every { mockCursor.getDouble(3) } returns 520.0 // altitude
+        every { mockCursor.getInt(7) } returns 3 // hitCount
+        every { mockCursor.getInt(8) } returns 0 // isLocked = false
+        every { mockCursor.getString(9) } returns "INTERNET_DEM" // source
+
+        every { mockDb.query(KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE, null, null, null, null, null, null) } returns mockCursor
+        every { anyConstructed<Location>().distanceTo(any()) } returns 10.0f
+
+        // Act: athlete starts workout at home coordinate
+        manager.recordWorkoutStart(LatLng(48.0, 11.0), 480.0)
+
+        // Assert: hitCount updated to 4, altitude NOT updated
+        verify(exactly = 1) {
+            anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.HIT_COUNT, 4)
+        }
+        verify(exactly = 0) {
+            anyConstructed<ContentValues>().put(eq(KnownLocationsDatabaseManager.KnownLocationsDbHelper.ALTITUDE), any<Double>())
+        }
+        verify(exactly = 1) {
+            mockDb.update(
+                KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE,
+                any(),
+                match { it.contains("_id=?") },
+                arrayOf("42")
+            )
+        }
+    }
+
+    /**
+     * TST-DAT-010.3: Verifies that recordWorkoutStart() increments hitCount on a locked location
+     * while strictly preserving stored locked altitude.
+     */
+    @Test
+    fun testRecordWorkoutStart_preservesLockedLocationAltitude() {
+        resetSingleton()
+        val manager = KnownLocationsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        setupMockCursorColumns(mockCursor)
+
+        every { mockCursor.moveToNext() } returns true andThen false
+        every { mockCursor.getInt(6) } returns 200 // radius
+        every { mockCursor.getDouble(5) } returns 48.0 // lat
+        every { mockCursor.getDouble(4) } returns 11.0 // lng
+        every { mockCursor.getLong(0) } returns 99L // id
+        every { mockCursor.getString(1) } returns "Alpine Trailhead" // name
+        every { mockCursor.getDouble(3) } returns 1250.0 // altitude
+        every { mockCursor.getInt(7) } returns 2 // hitCount
+        every { mockCursor.getInt(8) } returns 1 // isLocked = true
+        every { mockCursor.getString(9) } returns "MANUAL_USER" // source
+
+        every { mockDb.query(KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE, null, null, null, null, null, null) } returns mockCursor
+        every { anyConstructed<Location>().distanceTo(any()) } returns 25.0f
+
+        // Act: athlete starts workout at locked location with different raw altitude
+        manager.recordWorkoutStart(LatLng(48.0, 11.0), 1200.0)
+
+        // Assert: hitCount updated to 3, altitude NOT updated
+        verify(exactly = 1) {
+            anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.HIT_COUNT, 3)
+        }
+        verify(exactly = 0) {
+            anyConstructed<ContentValues>().put(eq(KnownLocationsDatabaseManager.KnownLocationsDbHelper.ALTITUDE), any<Double>())
+        }
+        verify(exactly = 1) {
+            mockDb.update(
+                KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE,
+                any(),
+                match { it.contains("_id=?") },
+                arrayOf("99")
+            )
+        }
+    }
+
+    /**
+     * TST-DAT-010.4: Verifies that recordWorkoutStart() discovers and creates a new location
+     * with hitCount = 1 when starting outside any existing geofence.
+     */
+    @Test
+    fun testRecordWorkoutStart_createsNewLocationWhenOutsideGeofence() {
+        resetSingleton()
+        val manager = KnownLocationsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        setupMockCursorColumns(mockCursor)
+
+        every { mockCursor.moveToNext() } returns false
+        every { mockDb.query(KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE, null, null, null, null, null, null) } returns mockCursor
+        every { mockDb.insert(KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE, null, any()) } returns 101L
+
+        mockkStatic(com.atrainingtracker.trainingtracker.location.LocationNameResolver::class)
+        mockkObject(com.atrainingtracker.trainingtracker.location.LocationNameResolver)
+        every { com.atrainingtracker.trainingtracker.location.LocationNameResolver.resolveLocationNameBlocking(any(), any(), any()) } returns "New Trailhead"
+        every { com.atrainingtracker.trainingtracker.location.LocationNameResolver.resolveLocationNameBlocking(any(), any(), any(), any()) } returns "New Trailhead"
+
+        // Act: athlete starts workout at a novel location
+        manager.recordWorkoutStart(LatLng(47.5, 11.2), 650.0)
+
+        // Assert: new location inserted
+        verify(exactly = 1) {
+            mockDb.insert(
+                KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE,
+                null,
+                any()
+            )
+        }
+    }
+
+    /**
+     * TST-DAT-010.5: Verifies that recordWorkoutStart(null) handles null coordinates safely without exceptions.
+     */
+    @Test
+    fun testRecordWorkoutStart_nullCoordinates_returnsCleanly() {
+        resetSingleton()
+        val manager = KnownLocationsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        // Act & Assert: should not throw exception or query DB
+        manager.recordWorkoutStart(null as LatLng?, 500.0)
+
+        verify(exactly = 0) {
+            mockDb.query(any(), any(), any(), any(), any(), any(), any())
+            mockDb.insert(any(), any(), any())
+            mockDb.update(any(), any(), any(), any())
+        }
     }
 }
 
