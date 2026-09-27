@@ -293,6 +293,24 @@ class DisplaySettingsTest {
         assertEquals(1.0f, TrainingApplication.getCustomDisplayBrightness(), 0.001f)
     }
 
+    @Test
+    fun testSetDisplayBrightnessSettingsAtomicUpdateAndListener() {
+        var listenerCalled = false
+        val listener = TrainingApplication.OnDisplaySettingsChangeListener {
+            listenerCalled = true
+        }
+        TrainingApplication.addDisplaySettingsChangeListener(listener)
+
+        TrainingApplication.setDisplayBrightnessSettings(DisplayBrightnessMode.CUSTOM, 0.65f)
+        assertEquals(DisplayBrightnessMode.CUSTOM, TrainingApplication.getDisplayBrightnessMode())
+        assertEquals(0.65f, TrainingApplication.getCustomDisplayBrightness(), 0.001f)
+        assertEquals("custom", prefStorage[TrainingApplication.SP_DISPLAY_BRIGHTNESS_MODE])
+        assertEquals(0.65f, prefStorage[TrainingApplication.SP_CUSTOM_DISPLAY_BRIGHTNESS])
+        assertTrue(listenerCalled)
+
+        TrainingApplication.removeDisplaySettingsChangeListener(listener)
+    }
+
     private fun setStaticField(clazz: Class<*>, fieldName: String, value: Any?) {
         try {
             val field: Field = clazz.getDeclaredField(fieldName)

@@ -56,8 +56,7 @@ fun DisplaySettingsDialog(
                 onSave = {
                     TrainingApplication.setDisplayOptions(currentOptions)
                     TrainingApplication.setCockpitThemeMode(currentThemeMode)
-                    TrainingApplication.setDisplayBrightnessMode(currentBrightnessMode)
-                    TrainingApplication.setCustomDisplayBrightness(currentCustomBrightness)
+                    TrainingApplication.setDisplayBrightnessSettings(currentBrightnessMode, currentCustomBrightness)
                     onSettingsChanged?.invoke()
                     onDismiss()
                 },

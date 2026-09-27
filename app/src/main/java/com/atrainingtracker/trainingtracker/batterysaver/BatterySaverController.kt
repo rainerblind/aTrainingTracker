@@ -16,6 +16,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.Looper
 import android.view.WindowManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -145,11 +146,7 @@ class BatterySaverController(
     }
 
     internal fun applyBrightness(brightness: Float) {
-        val target = if (brightness >= 1.0f) {
-            1.0f
-        } else {
-            brightness.coerceIn(DimmingLevel.SAFETY_FLOOR, 1.0f)
-        }
+        val target = brightness.coerceIn(DimmingLevel.SAFETY_FLOOR, 1.0f)
         currentAppliedBrightness = target
 
         if (brightnessApplier != null) {
@@ -157,14 +154,25 @@ class BatterySaverController(
             return
         }
 
-        activity?.window?.let { window ->
-            val lp = window.attributes
-            lp.screenBrightness = if (target >= 1.0f) {
-                WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
-            } else {
-                target
+        val applier = {
+            activity?.window?.let { window ->
+                val lp = window.attributes
+                lp.screenBrightness = when (brightnessMode) {
+                    DisplayBrightnessMode.SYSTEM -> WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                    DisplayBrightnessMode.CUSTOM -> customBrightness.coerceIn(DimmingLevel.SAFETY_FLOOR, 1.0f)
+                    DisplayBrightnessMode.AUTO -> if (target >= 1.0f) {
+                        WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                    } else {
+                        target
+                    }
+                }
+                window.attributes = lp
             }
-            window.attributes = lp
+        }
+        if (activity != null && Looper.myLooper() != Looper.getMainLooper()) {
+            activity.runOnUiThread { applier() }
+        } else {
+            applier()
         }
     }
 

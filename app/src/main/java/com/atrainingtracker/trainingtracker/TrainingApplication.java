@@ -476,6 +476,28 @@ public class TrainingApplication extends Application {
 
     public static void setCockpitThemeMode(@NonNull CockpitThemeMode mode) {
         cSharedPreferences.edit().putString(SP_COCKPIT_THEME_MODE, mode.getId()).apply();
+        notifyDisplaySettingsChanged();
+    }
+
+    public interface OnDisplaySettingsChangeListener {
+        void onDisplaySettingsChanged();
+    }
+    private static final java.util.List<OnDisplaySettingsChangeListener> cDisplaySettingsChangeListeners = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    public static void addDisplaySettingsChangeListener(@NonNull OnDisplaySettingsChangeListener listener) {
+        if (!cDisplaySettingsChangeListeners.contains(listener)) {
+            cDisplaySettingsChangeListeners.add(listener);
+        }
+    }
+
+    public static void removeDisplaySettingsChangeListener(@NonNull OnDisplaySettingsChangeListener listener) {
+        cDisplaySettingsChangeListeners.remove(listener);
+    }
+
+    public static void notifyDisplaySettingsChanged() {
+        for (OnDisplaySettingsChangeListener listener : cDisplaySettingsChangeListeners) {
+            listener.onDisplaySettingsChanged();
+        }
     }
 
     public static final String SP_BATTERY_SAVER = "battery_saver";
@@ -505,6 +527,7 @@ public class TrainingApplication extends Application {
                 .putString(SP_DISPLAY_BRIGHTNESS_MODE, mode.getId())
                 .putBoolean(SP_BATTERY_SAVER, mode == DisplayBrightnessMode.AUTO)
                 .apply();
+        notifyDisplaySettingsChanged();
     }
 
     public static float getCustomDisplayBrightness() {
@@ -514,6 +537,17 @@ public class TrainingApplication extends Application {
     public static void setCustomDisplayBrightness(float brightness) {
         float clamped = Math.max(DimmingLevel.SAFETY_FLOOR, Math.min(1.0f, brightness));
         cSharedPreferences.edit().putFloat(SP_CUSTOM_DISPLAY_BRIGHTNESS, clamped).apply();
+        notifyDisplaySettingsChanged();
+    }
+
+    public static void setDisplayBrightnessSettings(@NonNull DisplayBrightnessMode mode, float customBrightness) {
+        float clamped = Math.max(DimmingLevel.SAFETY_FLOOR, Math.min(1.0f, customBrightness));
+        cSharedPreferences.edit()
+                .putString(SP_DISPLAY_BRIGHTNESS_MODE, mode.getId())
+                .putBoolean(SP_BATTERY_SAVER, mode == DisplayBrightnessMode.AUTO)
+                .putFloat(SP_CUSTOM_DISPLAY_BRIGHTNESS, clamped)
+                .apply();
+        notifyDisplaySettingsChanged();
     }
 
     public static boolean isBatterySaverEnabled() {

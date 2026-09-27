@@ -102,9 +102,9 @@ fun TrackingTabsScreen(
     var cockpitThemeMode by remember { mutableStateOf(TrainingApplication.getCockpitThemeMode()) }
     var brightnessMode by remember { mutableStateOf(TrainingApplication.getDisplayBrightnessMode()) }
     var customBrightness by remember { mutableStateOf(TrainingApplication.getCustomDisplayBrightness()) }
-    DisposableEffect(context) {
-        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+    val prefsListener = remember {
+        android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key == TrainingApplication.SP_COCKPIT_THEME_MODE) {
                 cockpitThemeMode = TrainingApplication.getCockpitThemeMode()
             } else if (key == TrainingApplication.SP_DISPLAY_BRIGHTNESS_MODE || key == TrainingApplication.SP_BATTERY_SAVER) {
@@ -113,9 +113,20 @@ fun TrackingTabsScreen(
                 customBrightness = TrainingApplication.getCustomDisplayBrightness()
             }
         }
-        prefs.registerOnSharedPreferenceChangeListener(listener)
+    }
+    val displaySettingsListener = remember {
+        TrainingApplication.OnDisplaySettingsChangeListener {
+            cockpitThemeMode = TrainingApplication.getCockpitThemeMode()
+            brightnessMode = TrainingApplication.getDisplayBrightnessMode()
+            customBrightness = TrainingApplication.getCustomDisplayBrightness()
+        }
+    }
+    DisposableEffect(prefs, prefsListener, displaySettingsListener) {
+        prefs.registerOnSharedPreferenceChangeListener(prefsListener)
+        TrainingApplication.addDisplaySettingsChangeListener(displaySettingsListener)
         onDispose {
-            prefs.unregisterOnSharedPreferenceChangeListener(listener)
+            prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
+            TrainingApplication.removeDisplaySettingsChangeListener(displaySettingsListener)
         }
     }
 
@@ -357,6 +368,10 @@ fun TrackingTabsScreen(
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 trackingTabsViewModel.onResume()
+                cockpitThemeMode = TrainingApplication.getCockpitThemeMode()
+                brightnessMode = TrainingApplication.getDisplayBrightnessMode()
+                customBrightness = TrainingApplication.getCustomDisplayBrightness()
+                batterySaverController.setMode(brightnessMode, customBrightness)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
