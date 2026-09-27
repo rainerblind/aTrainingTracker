@@ -14,10 +14,13 @@ import android.content.Context
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 
-enum class DimmingLevel(val brightness: Float) {
-    FULL_DIM(0.15f),
+enum class DimmingLevel(val factor: Float) {
+    FULL_DIM(0.25f),
     MEDIUM_DIM(0.50f),
     NO_DIM(1.0f);
+
+    val brightness: Float
+        get() = factor
 
     companion object {
         const val SAFETY_FLOOR = 0.05f

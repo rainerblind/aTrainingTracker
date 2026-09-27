@@ -30,6 +30,8 @@ class BatterySaverControllerTest {
     private var lastAppliedBrightness: Float = -1f
     private lateinit var controller: BatterySaverController
 
+    private val testBaselineBrightness = 0.80f
+
     @Before
     fun setUp() {
         lastAppliedBrightness = -1f
@@ -37,6 +39,7 @@ class BatterySaverControllerTest {
             activity = null,
             scope = testScope,
             stateMachine = BatterySaverStateMachine(hysteresisMs = 3000L),
+            systemBrightnessProvider = { testBaselineBrightness },
             brightnessApplier = { brightness ->
                 lastAppliedBrightness = brightness
             }
@@ -50,7 +53,7 @@ class BatterySaverControllerTest {
         controller.setEnabled(true)
         assertTrue(controller.isEnabled)
         assertTrue(controller.isWakeupActive)
-        assertEquals(1.0f, lastAppliedBrightness, 0.001f)
+        assertEquals(testBaselineBrightness, lastAppliedBrightness, 0.001f)
 
         controller.setEnabled(false)
         assertFalse(controller.isEnabled)
@@ -59,21 +62,21 @@ class BatterySaverControllerTest {
     }
 
     @Test
-    fun wakeupEvent_setsFullBrightnessAndRestoresAfter15Seconds() = testScope.runTest {
+    fun wakeupEvent_setsBaselineBrightnessAndRestoresScaledDimmingAfter15Seconds() = testScope.runTest {
         controller.setEnabled(true)
 
-        // Simulate steady telemetry that would result in FULL_DIM
+        // Simulate steady telemetry that would result in FULL_DIM (25% of baseline)
         controller.stateMachine.reset(DimmingLevel.FULL_DIM)
 
-        // Wakeup event occurs
+        // Wakeup event occurs -> 100% of baseline
         controller.onWakeupEvent()
         assertTrue(controller.isWakeupActive)
-        assertEquals(1.0f, lastAppliedBrightness, 0.001f)
+        assertEquals(testBaselineBrightness, lastAppliedBrightness, 0.001f)
 
         // Advance 10 seconds -> still active
         testDispatcher.scheduler.advanceTimeBy(10_000L)
         assertTrue(controller.isWakeupActive)
-        assertEquals(1.0f, lastAppliedBrightness, 0.001f)
+        assertEquals(testBaselineBrightness, lastAppliedBrightness, 0.001f)
 
         // Overlapping wakeup event resets the timer
         controller.onWakeupEvent()
@@ -86,11 +89,13 @@ class BatterySaverControllerTest {
         // Advance 5.1 seconds -> second timer expires (15.1s from second event)
         testDispatcher.scheduler.advanceTimeBy(5_100L)
         assertFalse(controller.isWakeupActive)
-        assertEquals(DimmingLevel.FULL_DIM.brightness, lastAppliedBrightness, 0.001f)
+        val expectedDimmed = testBaselineBrightness * DimmingLevel.FULL_DIM.factor
+        assertEquals(expectedDimmed, lastAppliedBrightness, 0.001f)
     }
 
     @Test
     fun safetyFloor_isStrictlyEnforced() {
+        controller.setMode(DisplayBrightnessMode.AUTO)
         // Even if an absurdly low brightness level is given, safety floor (>= 0.05f) is enforced
         controller.applyBrightness(0.01f)
         assertEquals(DimmingLevel.SAFETY_FLOOR, controller.currentAppliedBrightness, 0.001f)
@@ -140,5 +145,34 @@ class BatterySaverControllerTest {
         controller.onWakeupEvent()
         assertFalse(controller.isWakeupActive)
         assertEquals(1.0f, lastAppliedBrightness, 0.001f)
+    }
+
+    @Test
+    fun relativeSystemBrightnessScaling_scalesAgainstSystemBaseline() {
+        var mockedSystemBrightness = 0.40f
+        val customController = BatterySaverController(
+            activity = null,
+            scope = testScope,
+            systemBrightnessProvider = { mockedSystemBrightness },
+            brightnessApplier = { brightness -> lastAppliedBrightness = brightness }
+        )
+        customController.setMode(DisplayBrightnessMode.AUTO)
+
+        // Wakeup event -> 100% of system baseline (0.40f)
+        customController.onWakeupEvent()
+        assertEquals(0.40f, lastAppliedBrightness, 0.001f)
+
+        // Medium dimming (50% of 0.40f = 0.20f)
+        customController.applyBrightness(DimmingLevel.MEDIUM_DIM.factor)
+        assertEquals(0.20f, lastAppliedBrightness, 0.001f)
+
+        // Full dimming (25% of 0.40f = 0.10f)
+        customController.applyBrightness(DimmingLevel.FULL_DIM.factor)
+        assertEquals(0.10f, lastAppliedBrightness, 0.001f)
+
+        // If system brightness is very dim (e.g. 0.10f), full dimming enforces safety floor (0.05f)
+        mockedSystemBrightness = 0.10f
+        customController.applyBrightness(DimmingLevel.FULL_DIM.factor)
+        assertEquals(DimmingLevel.SAFETY_FLOOR, lastAppliedBrightness, 0.001f)
     }
 }

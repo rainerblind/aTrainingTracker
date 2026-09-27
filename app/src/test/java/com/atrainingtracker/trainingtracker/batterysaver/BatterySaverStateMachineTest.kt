@@ -29,16 +29,17 @@ class BatterySaverStateMachineTest {
 
     @Test
     fun fullDimmingMatrix_returnsFullDim() {
-        // Slope -1.5%, HR Zone 1, Power Zone 1 -> FULL_DIM (0.15f)
+        // Slope -1.5%, HR Zone 1, Power Zone 1 -> FULL_DIM (0.25f)
         val snapshot1 = TelemetrySnapshot(slopePercent = -1.5f, hrZone = 1, powerZone = 1, isCycling = true)
         assertEquals(DimmingLevel.FULL_DIM, stateMachine.evaluateRawLevel(snapshot1))
-        assertEquals(0.15f, DimmingLevel.FULL_DIM.brightness, 0.001f)
+        assertEquals(0.25f, DimmingLevel.FULL_DIM.factor, 0.001f)
+        assertEquals(0.25f, DimmingLevel.FULL_DIM.brightness, 0.001f)
 
-        // Slope 0.0%, HR Zone 2, Power Zone 2 -> FULL_DIM (0.15f)
+        // Slope 0.0%, HR Zone 2, Power Zone 2 -> FULL_DIM (0.25f)
         val snapshot2 = TelemetrySnapshot(slopePercent = 0.0f, hrZone = 2, powerZone = 2, isCycling = true)
         assertEquals(DimmingLevel.FULL_DIM, stateMachine.evaluateRawLevel(snapshot2))
 
-        // Slope 1.9%, HR Zone 2, Power Zone 1 -> FULL_DIM (0.15f)
+        // Slope 1.9%, HR Zone 2, Power Zone 1 -> FULL_DIM (0.25f)
         val snapshot3 = TelemetrySnapshot(slopePercent = 1.9f, hrZone = 2, powerZone = 1, isCycling = true)
         assertEquals(DimmingLevel.FULL_DIM, stateMachine.evaluateRawLevel(snapshot3))
     }

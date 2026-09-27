@@ -29,6 +29,7 @@ class BatterySaverController(
     private val activity: Activity? = null,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob()),
     val stateMachine: BatterySaverStateMachine = BatterySaverStateMachine(),
+    private val systemBrightnessProvider: (() -> Float)? = null,
     private val brightnessApplier: ((Float) -> Unit)? = null
 ) : SensorEventListener {
 
@@ -145,12 +146,39 @@ class BatterySaverController(
         isWakeupActive = false
     }
 
+    fun getSystemBrightness(): Float {
+        if (systemBrightnessProvider != null) {
+            return systemBrightnessProvider.invoke().coerceIn(DimmingLevel.SAFETY_FLOOR, 1.0f)
+        }
+        val act = activity ?: return 0.70f
+        return try {
+            val brightnessInt = android.provider.Settings.System.getInt(
+                act.contentResolver,
+                android.provider.Settings.System.SCREEN_BRIGHTNESS
+            )
+            (brightnessInt / 255.0f).coerceIn(DimmingLevel.SAFETY_FLOOR, 1.0f)
+        } catch (e: Exception) {
+            0.70f
+        }
+    }
+
     internal fun applyBrightness(brightness: Float) {
         val target = brightness.coerceIn(DimmingLevel.SAFETY_FLOOR, 1.0f)
-        currentAppliedBrightness = target
+        val baseBrightness = getSystemBrightness()
+
+        val effectiveBrightness = when (brightnessMode) {
+            DisplayBrightnessMode.SYSTEM -> 1.0f
+            DisplayBrightnessMode.CUSTOM -> customBrightness.coerceIn(DimmingLevel.SAFETY_FLOOR, 1.0f)
+            DisplayBrightnessMode.AUTO -> if (target >= 1.0f) {
+                baseBrightness
+            } else {
+                (baseBrightness * target).coerceIn(DimmingLevel.SAFETY_FLOOR, 1.0f)
+            }
+        }
+        currentAppliedBrightness = effectiveBrightness
 
         if (brightnessApplier != null) {
-            brightnessApplier.invoke(target)
+            brightnessApplier.invoke(effectiveBrightness)
             return
         }
 
@@ -160,7 +188,11 @@ class BatterySaverController(
                 lp.screenBrightness = when (brightnessMode) {
                     DisplayBrightnessMode.SYSTEM -> WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
                     DisplayBrightnessMode.CUSTOM -> customBrightness.coerceIn(DimmingLevel.SAFETY_FLOOR, 1.0f)
-                    DisplayBrightnessMode.AUTO -> target.coerceIn(DimmingLevel.SAFETY_FLOOR, 1.0f)
+                    DisplayBrightnessMode.AUTO -> if (target >= 1.0f) {
+                        WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                    } else {
+                        effectiveBrightness
+                    }
                 }
                 window.attributes = lp
             }
