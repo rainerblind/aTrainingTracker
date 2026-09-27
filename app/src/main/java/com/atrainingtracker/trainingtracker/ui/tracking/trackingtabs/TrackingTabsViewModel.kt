@@ -60,7 +60,8 @@ class TrackingTabsViewModel(
     application: Application,
     private val trackingViewsRepository: TrackingViewsRepository,
     private val banalServiceRepository: BANALServiceRepository,
-    private val devicesRepository: DeviceDataRepository
+    private val devicesRepository: DeviceDataRepository,
+    liveSegmentsRepository: com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository? = null
 ) : AndroidViewModel(application) {
 
     // State to hold the explicitly selected ActivityType
@@ -87,7 +88,14 @@ class TrackingTabsViewModel(
     val activeSensors = banalServiceRepository.activeSensors
     val sensorSourceMapping = banalServiceRepository.sensorSourceDeviceIds
     val allTelemetry = banalServiceRepository.allActiveDevicesTelemetry
+    val allFilteredSensorData = banalServiceRepository.allFilteredSensorData
     val allDevices = devicesRepository.allDevices
+    val liveSegments: StateFlow<List<com.atrainingtracker.trainingtracker.segments.LiveSegment>> = liveSegmentsRepository?.liveSegments
+        ?: try {
+            com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository.getInstance(application).liveSegments
+        } catch (_: Throwable) {
+            MutableStateFlow(emptyList())
+        }
 
     val lapEvent: LiveData<LapEvent?> = banalServiceRepository.lapEvent
     fun clearLapEvent() = banalServiceRepository.clearLapEvent()

@@ -520,10 +520,22 @@
     <string name="check_ANT_installation">Überprüfe ANT Installation</string>
     <string name="forcePortrait">Portrait Orientierung</string>
     <string name="Display">Display</string>
+    <string name="settings_category_savings">Akku-Einsparung</string>
+    <string name="settings_category_savings_desc">Verlängert die Akkulaufzeit für längere Trainings</string>
+    <string name="prefs_battery_saver_title">Dynamisches Display-Dimming</string>
+    <string name="prefs_battery_saver_summary">Passt die Bildschirmhelligkeit dynamisch an Steigung und Trainingszonen an</string>
     <string name="cockpit_theme_title">Cockpit-Design (während des Trainings)</string>
     <string name="cockpit_theme_description">Gilt nur für die Daten- und Sensoranzeigen des aktiven Workouts. Das restliche Menü und \'Control Tracking\' behalten das Standarddesign.</string>
     <string name="cockpit_theme_system">Systemstandard</string>
     <string name="cockpit_theme_always_dark">Immer Dunkel</string>
+    <string name="display_brightness_title">Display-Helligkeit (während des Trainings)</string>
+    <string name="display_brightness_system">System</string>
+    <string name="display_brightness_auto">Auto</string>
+    <string name="display_brightness_custom">Manuell</string>
+    <string name="display_brightness_system_desc">Verwendet die Standard-Bildschirmhelligkeit des Systems</string>
+    <string name="display_brightness_auto_desc">Passt die Bildschirmhelligkeit dynamisch an Steigung und Trainingszonen an</string>
+    <string name="display_brightness_custom_desc">Konstante Helligkeit während des gesamten Trainings</string>
+    <string name="display_brightness_slider_format">Helligkeit: %1$d%%</string>
     <string name="smoothing">Glättung der Werte</string>
     <string name="powerSmoothingTitle">Faktor α zur Glättung der Leistungswerte</string>
     <string name="powerSmoothingTitle_format">Glättung der Leistung: α=%1$f</string>

@@ -26,6 +26,8 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode
+import com.atrainingtracker.trainingtracker.batterysaver.DisplayBrightnessMode
+import kotlin.math.roundToInt
 
 @Composable
 fun DisplaySettingsDialog(
@@ -38,6 +40,12 @@ fun DisplaySettingsDialog(
     var currentThemeMode by remember {
         mutableStateOf(TrainingApplication.getCockpitThemeMode())
     }
+    var currentBrightnessMode by remember {
+        mutableStateOf(TrainingApplication.getDisplayBrightnessMode())
+    }
+    var currentCustomBrightness by remember {
+        mutableStateOf(TrainingApplication.getCustomDisplayBrightness())
+    }
     
     AppBottomSheetContent(
         title = stringResource(R.string.Display),
@@ -48,6 +56,7 @@ fun DisplaySettingsDialog(
                 onSave = {
                     TrainingApplication.setDisplayOptions(currentOptions)
                     TrainingApplication.setCockpitThemeMode(currentThemeMode)
+                    TrainingApplication.setDisplayBrightnessSettings(currentBrightnessMode, currentCustomBrightness)
                     onSettingsChanged?.invoke()
                     onDismiss()
                 },
@@ -91,36 +100,129 @@ fun DisplaySettingsDialog(
 
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = stringResource(R.string.cockpit_theme_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = stringResource(R.string.cockpit_theme_description),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                SingleChoiceSegmentedButtonRow(
-                    modifier = Modifier.fillMaxWidth()
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    SegmentedButton(
-                        selected = currentThemeMode == CockpitThemeMode.SYSTEM,
-                        onClick = { currentThemeMode = CockpitThemeMode.SYSTEM },
-                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                        icon = { SegmentedButtonDefaults.Icon(active = currentThemeMode == CockpitThemeMode.SYSTEM) }
+                    Text(
+                        text = stringResource(R.string.settings_category_savings),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_category_savings_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.cockpit_theme_title),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = stringResource(R.string.cockpit_theme_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    SingleChoiceSegmentedButtonRow(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(stringResource(R.string.cockpit_theme_system))
+                        SegmentedButton(
+                            selected = currentThemeMode == CockpitThemeMode.SYSTEM,
+                            onClick = { currentThemeMode = CockpitThemeMode.SYSTEM },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                            icon = { SegmentedButtonDefaults.Icon(active = currentThemeMode == CockpitThemeMode.SYSTEM) }
+                        ) {
+                            Text(stringResource(R.string.cockpit_theme_system))
+                        }
+                        SegmentedButton(
+                            selected = currentThemeMode == CockpitThemeMode.ALWAYS_DARK,
+                            onClick = { currentThemeMode = CockpitThemeMode.ALWAYS_DARK },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                            icon = { SegmentedButtonDefaults.Icon(active = currentThemeMode == CockpitThemeMode.ALWAYS_DARK) }
+                        ) {
+                            Text(stringResource(R.string.cockpit_theme_always_dark))
+                        }
                     }
-                    SegmentedButton(
-                        selected = currentThemeMode == CockpitThemeMode.ALWAYS_DARK,
-                        onClick = { currentThemeMode = CockpitThemeMode.ALWAYS_DARK },
-                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                        icon = { SegmentedButtonDefaults.Icon(active = currentThemeMode == CockpitThemeMode.ALWAYS_DARK) }
+                }
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.display_brightness_title),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    val brightnessDesc = when (currentBrightnessMode) {
+                        DisplayBrightnessMode.SYSTEM -> stringResource(R.string.display_brightness_system_desc)
+                        DisplayBrightnessMode.AUTO -> stringResource(R.string.display_brightness_auto_desc)
+                        DisplayBrightnessMode.CUSTOM -> stringResource(R.string.display_brightness_custom_desc)
+                    }
+                    Text(
+                        text = brightnessDesc,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    SingleChoiceSegmentedButtonRow(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(stringResource(R.string.cockpit_theme_always_dark))
+                        SegmentedButton(
+                            selected = currentBrightnessMode == DisplayBrightnessMode.SYSTEM,
+                            onClick = { currentBrightnessMode = DisplayBrightnessMode.SYSTEM },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
+                            icon = { SegmentedButtonDefaults.Icon(active = currentBrightnessMode == DisplayBrightnessMode.SYSTEM) }
+                        ) {
+                            Text(stringResource(R.string.display_brightness_system))
+                        }
+                        SegmentedButton(
+                            selected = currentBrightnessMode == DisplayBrightnessMode.AUTO,
+                            onClick = { currentBrightnessMode = DisplayBrightnessMode.AUTO },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
+                            icon = { SegmentedButtonDefaults.Icon(active = currentBrightnessMode == DisplayBrightnessMode.AUTO) }
+                        ) {
+                            Text(stringResource(R.string.display_brightness_auto))
+                        }
+                        SegmentedButton(
+                            selected = currentBrightnessMode == DisplayBrightnessMode.CUSTOM,
+                            onClick = { currentBrightnessMode = DisplayBrightnessMode.CUSTOM },
+                            shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
+                            icon = { SegmentedButtonDefaults.Icon(active = currentBrightnessMode == DisplayBrightnessMode.CUSTOM) }
+                        ) {
+                            Text(stringResource(R.string.display_brightness_custom))
+                        }
+                    }
+
+                    if (currentBrightnessMode == DisplayBrightnessMode.CUSTOM) {
+                        val percent = (currentCustomBrightness * 100f).roundToInt()
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.display_brightness_slider_format, percent),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Slider(
+                                value = currentCustomBrightness,
+                                onValueChange = { currentCustomBrightness = it },
+                                valueRange = 0.05f..1.0f,
+                                steps = 18,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                 }
             }

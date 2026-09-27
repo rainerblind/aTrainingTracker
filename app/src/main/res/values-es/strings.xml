@@ -486,10 +486,22 @@
     <string name="check_ANT_installation">comprobar instalación ANT</string>
     <string name="forcePortrait">Orientación vertical</string>
     <string name="Display">Pantalla</string>
+    <string name="settings_category_savings">Ahorro de batería</string>
+    <string name="settings_category_savings_desc">Prolonga la duración de la batería para entrenamientos más largos</string>
+    <string name="prefs_battery_saver_title">Atenuación dinámica de pantalla</string>
+    <string name="prefs_battery_saver_summary">Ajusta dinámicamente el brillo de la pantalla según la pendiente y las zonas de entrenamiento</string>
     <string name="cockpit_theme_title">Diseño del cockpit (durante el entrenamiento)</string>
     <string name="cockpit_theme_description">Se aplica exclusivamente a las vistas de telemetría y sensores durante entrenamientos activos. El menú principal y \'Control Tracking\' mantienen el diseño estándar.</string>
     <string name="cockpit_theme_system">Sistema</string>
     <string name="cockpit_theme_always_dark">Siempre oscuro</string>
+    <string name="display_brightness_title">Brillo de pantalla (durante el entrenamiento)</string>
+    <string name="display_brightness_system">Sistema</string>
+    <string name="display_brightness_auto">Auto</string>
+    <string name="display_brightness_custom">Manual</string>
+    <string name="display_brightness_system_desc">Utiliza el brillo de pantalla predeterminado del sistema</string>
+    <string name="display_brightness_auto_desc">Ajusta dinámicamente el brillo de la pantalla según la pendiente y las zonas de entrenamiento</string>
+    <string name="display_brightness_custom_desc">Nivel de brillo constante durante todo el entrenamiento</string>
+    <string name="display_brightness_slider_format">Brillo: %1$d%%</string>
     <string name="smoothing">Suavizado de valores</string>
     <string name="powerSmoothingTitle">Factor α de suavizado de potencia</string>
     <string name="powerSmoothingTitle_format">Suavizado de potencia: α=%1$f</string>

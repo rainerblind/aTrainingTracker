@@ -484,10 +484,22 @@
     <string name="check_ANT_installation">verificar instalação ANT</string>
     <string name="forcePortrait">Orientação vertical</string>
     <string name="Display">Ecrã</string>
+    <string name="settings_category_savings">Poupança de bateria</string>
+    <string name="settings_category_savings_desc">Prolonga a duração da bateria para treinos mais longos</string>
+    <string name="prefs_battery_saver_title">Atenuação dinâmica do ecrã</string>
+    <string name="prefs_battery_saver_summary">Ajusta dinamicamente o brilho do ecrã com base na inclinação e nas zonas de treino</string>
     <string name="cockpit_theme_title">Tema do cockpit (durante o treino)</string>
     <string name="cockpit_theme_description">Aplica-se exclusivamente às vistas de telemetria e sensores durante treinos ativos. O menu principal e \'Control Tracking\' mantêm o design padrão.</string>
     <string name="cockpit_theme_system">Sistema</string>
     <string name="cockpit_theme_always_dark">Sempre escuro</string>
+    <string name="display_brightness_title">Brilho do ecrã (durante o treino)</string>
+    <string name="display_brightness_system">Sistema</string>
+    <string name="display_brightness_auto">Auto</string>
+    <string name="display_brightness_custom">Manual</string>
+    <string name="display_brightness_system_desc">Utiliza o brilho de ecrã predefinido do sistema</string>
+    <string name="display_brightness_auto_desc">Ajusta dinamicamente o brilho do ecrã com base na inclinação e nas zonas de treino</string>
+    <string name="display_brightness_custom_desc">Nível de brilho constante durante todo o treino</string>
+    <string name="display_brightness_slider_format">Brilho: %1$d%%</string>
     <string name="smoothing">Suavização de valores</string>
     <string name="powerSmoothingTitle">Fator α suavização potência</string>
     <string name="powerSmoothingTitle_format">Suavização potência: α=%1$f</string>

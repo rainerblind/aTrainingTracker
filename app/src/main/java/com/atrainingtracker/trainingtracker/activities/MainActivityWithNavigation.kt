@@ -118,6 +118,7 @@ import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ActivityTyp
 import com.atrainingtracker.trainingtracker.ui.settings.units.UnitsSettingsDialogFragment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment
+import com.atrainingtracker.trainingtracker.batterysaver.DisplayBrightnessMode
 import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GooglePlayServicesUtil
@@ -639,6 +640,21 @@ class MainActivityWithNavigation :
         } else {
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
+
+        val mode = TrainingApplication.getDisplayBrightnessMode()
+        val lp = window.attributes
+        when (mode) {
+            DisplayBrightnessMode.SYSTEM -> {
+                lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+            }
+            DisplayBrightnessMode.CUSTOM -> {
+                lp.screenBrightness = TrainingApplication.getCustomDisplayBrightness()
+            }
+            DisplayBrightnessMode.AUTO -> {
+                // In AUTO mode, brightness is dynamically managed by BatterySaverController in TrackingTabsScreen
+            }
+        }
+        window.attributes = lp
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

@@ -482,10 +482,22 @@
     <string name="check_ANT_installation">ANTのインストール状況を確認</string>
     <string name="forcePortrait">縦向き固定</string>
     <string name="Display">画面</string>
+    <string name="settings_category_savings">バッテリー節約</string>
+    <string name="settings_category_savings_desc">バッテリー駆動時間を延ばし、より長時間のトラッキングを可能にします</string>
+    <string name="prefs_battery_saver_title">動的画面減光</string>
+    <string name="prefs_battery_saver_summary">勾配とトレーニングゾーンに基づいて画面の明るさを動的に調整します</string>
     <string name="cockpit_theme_title">コックピットテーマ（ワークアウト中）</string>
     <string name="cockpit_theme_description">アクティブなワークアウト中のテレメトリとセンサー画面にのみ適用されます。メインメニューと「Control Tracking」は標準テーマのままです。</string>
     <string name="cockpit_theme_system">システム</string>
     <string name="cockpit_theme_always_dark">常にダーク</string>
+    <string name="display_brightness_title">画面の明るさ（ワークアウト中）</string>
+    <string name="display_brightness_system">システム</string>
+    <string name="display_brightness_auto">自動</string>
+    <string name="display_brightness_custom">手動</string>
+    <string name="display_brightness_system_desc">システムの標準画面の明るさを使用します</string>
+    <string name="display_brightness_auto_desc">勾配とトレーニングゾーンに基づいて画面の明るさを動的に調整します</string>
+    <string name="display_brightness_custom_desc">ワークアウト全体で一定の明るさを維持します</string>
+    <string name="display_brightness_slider_format">明るさ: %1$d%%</string>
     <string name="smoothing">表示値の平滑化</string>
     <string name="powerSmoothingTitle">パワー平滑化係数 α</string>
     <string name="powerSmoothingTitle_format">パワー平滑化: α=%1$f</string>

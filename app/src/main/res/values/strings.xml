@@ -621,10 +621,22 @@
     <string name="check_ANT_installation">check ANT installation</string>
     <string name="forcePortrait">Portrait Orientation</string>
     <string name="Display">Display</string>
+    <string name="settings_category_savings">Battery Savings</string>
+    <string name="settings_category_savings_desc">Extends battery life for longer tracking sessions</string>
+    <string name="prefs_battery_saver_title">Dynamic Display Dimming</string>
+    <string name="prefs_battery_saver_summary">Dynamically adjusts screen brightness based on grade and training zones</string>
     <string name="cockpit_theme_title">Cockpit Theme (During Workout)</string>
     <string name="cockpit_theme_description">Applies exclusively to telemetry and sensor views during active workouts. The main menu and \'Control Tracking\' keep the standard theme.</string>
     <string name="cockpit_theme_system">System</string>
     <string name="cockpit_theme_always_dark">Always Dark</string>
+    <string name="display_brightness_title">Display Brightness (During Workout)</string>
+    <string name="display_brightness_system">System</string>
+    <string name="display_brightness_auto">Auto</string>
+    <string name="display_brightness_custom">Custom</string>
+    <string name="display_brightness_system_desc">Uses the system screen brightness</string>
+    <string name="display_brightness_auto_desc">Dynamically adjusts screen brightness based on grade and training zones</string>
+    <string name="display_brightness_custom_desc">Constant brightness level throughout the workout</string>
+    <string name="display_brightness_slider_format">Brightness: %1$d%%</string>
     <string name="smoothing">Smoothing displayed values</string>
     <string name="powerSmoothingTitle">Power smoothing factor α</string>
     <string name="powerSmoothingTitle_format">Power smoothing: α=%1$f</string>
