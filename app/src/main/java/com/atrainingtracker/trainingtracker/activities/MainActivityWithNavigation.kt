@@ -119,6 +119,9 @@ import com.atrainingtracker.trainingtracker.ui.settings.units.UnitsSettingsDialo
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment
 import com.atrainingtracker.trainingtracker.batterysaver.DisplayBrightnessMode
+import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
+import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModel
+import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelFactory
 import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GooglePlayServicesUtil
@@ -173,7 +176,6 @@ class MainActivityWithNavigation :
         NavigationDrawerController(DEFAULT_SELECTED_FRAGMENT_ID, R.string.tab_start)
     protected var mFragment: Fragment? = null
     var navController: NavHostController? = null
-    var pendingActivityType: ActivityType? = null
     protected val mHandler: Handler = Handler(Looper.getMainLooper())
     protected var mStartAndNotResume: Boolean = true
     private var mResumingFromInterruptedNotification: Boolean = false
@@ -793,8 +795,18 @@ class MainActivityWithNavigation :
         mDrawerController.closeDrawer()
     }
 
+    /**
+     * Callback invoked when an [ActivityType] is selected from the tracking tabs sport selection dialog.
+     * Directly transitions the Activity-scoped [TrackingTabsViewModel] into [ScreenMode.CONFIGURATION]
+     * for the selected activity type and switches navigation to the tracking screen.
+     */
     fun onActivityTypeSelected(activityType: ActivityType) {
-        pendingActivityType = activityType
+        val trackingTabsViewModel = androidx.lifecycle.ViewModelProvider(
+            this,
+            TrackingTabsViewModelFactory(application)
+        )[TrackingTabsViewModel::class.java]
+        trackingTabsViewModel.setExplicitActivityType(activityType)
+        trackingTabsViewModel.setScreenMode(ScreenMode.CONFIGURATION)
         navigateToDrawerItem(R.id.drawer_start_tracking)
     }
 

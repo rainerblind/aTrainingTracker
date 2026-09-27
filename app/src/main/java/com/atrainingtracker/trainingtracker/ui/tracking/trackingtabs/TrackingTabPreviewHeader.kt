@@ -56,12 +56,18 @@ import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorStatus
 
 /**
- * Ported directly from TrackingTabsFragmentClassic.kt
+ * Header displayed during tracking tab preview mode ([ScreenMode.PREVIEW]).
+ * Shows the tab title and provides actions to enter edit mode or exit configuration.
+ *
+ * @param viewInfo Metadata of the active tracking view tab.
+ * @param onToggleMode Callback invoked when the user taps the edit button to switch to [ScreenMode.CONFIGURATION].
+ * @param onExitConfig Callback invoked when the user taps the checkmark/done button to exit configuration and return to [ScreenMode.TRACKING].
  */
 @Composable
 fun TrackingTabPreviewHeader(
     viewInfo: TrackingViewInfo,
     onToggleMode: () -> Unit,
+    onExitConfig: () -> Unit = {},
 ) {
     Surface(
         color = Color.Transparent,
@@ -79,7 +85,7 @@ fun TrackingTabPreviewHeader(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = viewInfo?.name ?: stringResource(R.string.app_name),
+                text = viewInfo.name.ifEmpty { stringResource(R.string.app_name) },
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.weight(1f)
             )
@@ -90,6 +96,15 @@ fun TrackingTabPreviewHeader(
                     imageVector = Icons.Default.Edit,
                     contentDescription = stringResource(R.string.Edit),
                     tint = MaterialTheme.colorScheme.secondary
+                )
+            }
+
+            // DONE / EXIT BUTTON
+            IconButton(onClick = onExitConfig) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = stringResource(R.string.Done),
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }
