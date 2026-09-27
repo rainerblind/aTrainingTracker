@@ -45,12 +45,20 @@ object NavRoutes {
     const val ROUTES = "routes"
     const val START_LOCATIONS = "start_locations"
     const val LOCATIONS = "locations"
+    const val LOCATIONS_PATTERN = "locations?clusterId={clusterId}"
+    const val ARG_CLUSTER_ID = "clusterId"
     const val SENSORS = "sensors"
     const val BIKES = "bikes"
     const val SHOES = "shoes"
     const val SPORT_TYPES = "sport_types"
     const val TRAINING_ZONES = "training_zones"
     const val BACKUP_RESTORE = "backup_restore"
+
+    /**
+     * Builds a navigation route to the cluster destination, optionally parameterized with a target cluster ID.
+     */
+    fun locations(clusterId: Long? = null): String =
+        if (clusterId != null && clusterId > 0) "locations?$ARG_CLUSTER_ID=$clusterId" else LOCATIONS
 
     /**
      * Resolves a drawer item resource ID to its primary Compose navigation route.
@@ -77,7 +85,7 @@ object NavRoutes {
     /**
      * Resolves a Compose route to its corresponding drawer navigation menu resource ID.
      */
-    fun toDrawerItemId(route: String?): Int = when (route?.substringBefore("/")) {
+    fun toDrawerItemId(route: String?): Int = when (route?.substringBefore("?")?.substringBefore("/")) {
         START_TRACKING -> R.id.drawer_start_tracking
         WORKOUTS -> R.id.drawer_workouts
         PERIODS -> R.id.drawer_periods

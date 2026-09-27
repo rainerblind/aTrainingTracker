@@ -53,10 +53,12 @@ import kotlin.math.abs
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.dialogs.InstallANTShitDialog
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedScreen
@@ -317,14 +319,28 @@ fun ATrainingTrackerApp(
                     )
                 }
 
-                composable(NavRoutes.LOCATIONS) {
+                composable(
+                    route = NavRoutes.LOCATIONS_PATTERN,
+                    arguments = listOf(
+                        navArgument(NavRoutes.ARG_CLUSTER_ID) {
+                            type = NavType.LongType
+                            defaultValue = -1L
+                        }
+                    )
+                ) { backStackEntry ->
+                    val clusterIdArg = backStackEntry.arguments?.getLong(NavRoutes.ARG_CLUSTER_ID)?.takeIf { it > 0 }
                     val clustersViewModel: WorkoutClustersViewModel = viewModel(activity)
                     val summariesViewModel: WorkoutSummariesViewModel = viewModel(activity)
                     val trackOnMapViewModel: TrackOnMapAftermathViewModel = viewModel(activity)
                     WorkoutClustersScreen(
                         viewModel = clustersViewModel,
                         summariesViewModel = summariesViewModel,
-                        trackOnMapViewModel = trackOnMapViewModel
+                        trackOnMapViewModel = trackOnMapViewModel,
+                        initialClusterId = clusterIdArg,
+                        onBackToNav = {
+                            clustersViewModel.selectCluster(null)
+                            navController.popBackStack()
+                        }
                     )
                 }
 

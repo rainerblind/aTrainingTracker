@@ -99,6 +99,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilt
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModel
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersFragment
+import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModel
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment
 import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack
@@ -440,9 +441,10 @@ class MainActivityWithNavigation :
         WorkoutNavigationEvents.navigateToClusterLiveData.observe(this) { clusterId: Long? ->
             if (clusterId == null || clusterId <= 0) return@observe
 
-            mSelectedFragmentId = R.id.drawer_my_locations
-            mDrawerController.selectedItemId = mSelectedFragmentId
-            navigateToDrawerItem(R.id.drawer_my_locations)
+            val clustersViewModel = ViewModelProvider(this)[WorkoutClustersViewModel::class.java]
+            clustersViewModel.selectClusterById(clusterId)
+
+            navController?.navigate(NavRoutes.locations(clusterId))
 
             WorkoutNavigationEvents.resetCluster()
         }
