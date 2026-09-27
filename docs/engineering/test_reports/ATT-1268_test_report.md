@@ -17,11 +17,11 @@
 
 1. **`TST-UI-126.1` (Pure State Machine Unit Verification - `BatterySaverStateMachineTest.kt`)**:
    - `evaluateRawLevel_fullDimmingRule`: **PASSED**.
-     Asserts that slope < 2.0%, HR <= Zone 2, and Power <= Zone 2 evaluates to `DimmingLevel.FULL_DIM` (0.15f / 15%).
+     Asserts that slope < 2.0%, HR <= Zone 2, and Power <= Zone 2 evaluates to `DimmingLevel.FULL_DIM` (factor 0.25f / 25% of baseline).
    - `evaluateRawLevel_mediumDimmingRule`: **PASSED**.
-     Asserts that slope in [2.0%, 5.0%] or HR == Zone 3 or Power == Zone 3 evaluates to `DimmingLevel.MEDIUM_DIM` (0.50f / 50%).
+     Asserts that slope in [2.0%, 5.0%] or HR == Zone 3 or Power == Zone 3 evaluates to `DimmingLevel.MEDIUM_DIM` (factor 0.50f / 50% of baseline).
    - `evaluateRawLevel_noDimmingRule`: **PASSED**.
-     Asserts that slope > 5.0% or HR >= Zone 4 or Power >= Zone 4 evaluates to `DimmingLevel.NO_DIM` (1.0f / 100%).
+     Asserts that slope > 5.0% or HR >= Zone 4 or Power >= Zone 4 evaluates to `DimmingLevel.NO_DIM` (factor 1.0f / 100% of baseline).
    - `evaluateRawLevel_sensorFallbacks`: **PASSED**.
      Asserts graceful fallback when Power is missing (running), HR is missing, or peripheral sensors are absent (GPS-only slope).
    - `update_immediateUpwardTransition`: **PASSED**.
@@ -31,8 +31,10 @@
 
 2. **`TST-UI-126.2` (Battery Saver Controller Lifecycle & Modes - `BatterySaverControllerTest.kt`)**:
    - `setEnabled_togglesStateAndAppliesBrightness`: **PASSED**.
-   - `wakeupEvent_setsFullBrightnessAndRestoresAfter15Seconds`: **PASSED**.
-     Asserts that touch/proximity/laps trigger immediate 100% illumination (`1.0f`) and overlapping wakeup events reset the 15-second timer.
+   - `wakeupEvent_setsBaselineBrightnessAndRestoresScaledDimmingAfter15Seconds`: **PASSED**.
+     Asserts that touch/proximity/laps trigger immediate 100% illumination of system baseline brightness (`BRIGHTNESS_OVERRIDE_NONE` in WindowManager) and overlapping wakeup events reset the 15-second timer.
+   - `relativeSystemBrightnessScaling_scalesAgainstSystemBaseline`: **PASSED**.
+     Asserts dimming factors scale dynamically against system baseline brightness (100% on wakeup, 50% for medium dimming, 25% for full dimming) with safety floor $\ge 0.05f$ strictly enforced.
    - `safetyFloor_isStrictlyEnforced`: **PASSED**.
      Asserts that window brightness is strictly clamped to $\ge 0.05f$ (5%).
    - `release_resetsBrightnessAndCancelsTimers`: **PASSED**.
@@ -57,7 +59,7 @@
    - **Command**: `./gradlew testDebugUnitTest`
    - **Result**: **BUILD SUCCESSFUL**, 32 actionable tasks, 0 failures, 0 regressions across all modules.
    - **Build Command**: `./gradlew assembleDebug`
-   - **Result**: **BUILD SUCCESSFUL**, debug APK built cleanly in 15s.
+   - **Result**: **BUILD SUCCESSFUL**, debug APK built cleanly.
 
 ---
 
@@ -88,8 +90,8 @@
 - [x] Multi-factor dimming state machine evaluates slope, HR zones, and power zones dynamically.
 - [x] 3-second downward damping hysteresis prevents brightness oscillation; upward transitions occur immediately.
 - [x] 3-way display brightness architecture supports `SYSTEM`, `AUTO`, and `CUSTOM` modes.
-- [x] Event-based wakeup triggers (touch, proximity wave, lap split, segment status) restore 100% full illumination for 15 seconds.
-- [x] Auto mode brightness override maps directly to target brightness (`1.0f` on wakeup, `0.15f`/`0.50f` when dimmed) and restores `BRIGHTNESS_OVERRIDE_NONE` on release.
+- [x] Event-based wakeup triggers (touch, proximity wave, lap split, segment status) restore 100% system baseline illumination for 15 seconds.
+- [x] Auto mode brightness override scales relative to system baseline brightness (100% system baseline / `BRIGHTNESS_OVERRIDE_NONE` on wakeup, 25%/50% of system baseline when dimmed) and restores `BRIGHTNESS_OVERRIDE_NONE` on release.
 - [x] Stationary GPS jitter is guarded (`speed > 0.5 m/s`) to avoid false steep slope evaluations at rest.
 - [x] Screen brightness enforces safety floor $\ge 0.05f$ (5%).
 - [x] Display Settings dialog groups options under *Akku-Einsparung* / *Battery Savings* positioned cleanly below Cockpit Design.
