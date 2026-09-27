@@ -98,34 +98,70 @@ public class BTLERunSpeedDevice extends MyBTLEDevice {
 
     @Override
     protected void measurementCharacteristicUpdate(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-        int flag = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
-
-        boolean stride_length_present = (flag & 0x01) != 0;
-        if (DEBUG) Log.i(TAG, "stride length " + (stride_length_present ? "" : "not ") + "present");
-        mDistancePresent = (flag & 0x02) != 0;
-        // boolean walking                = (flag & 0x04) == 0;
-        // boolean running                = (flag & 0x04) == 0;
-        int distance_offset = stride_length_present ? 6 : 4;
-        if (DEBUG) Log.i(TAG, "distance_offset=" + distance_offset);
-
-        int speed = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 1); // Unit is in m/s with a resolution of 1/256 s
-        mSpeed = mCalibrationFactor * speed / 256;
-        mSpeedSensor.newValue(mSpeed);
-        if (speed != 0) {
-            mPaceSensor.newValue(1 / mSpeed);
+        if (characteristic == null) {
+            return;
+        }
+        byte[] value = characteristic.getValue();
+        if (value == null || value.length < 4) {
+            if (DEBUG) Log.w(TAG, "measurementCharacteristicUpdate: packet too short or null");
+            return;
         }
 
-        mCadenceSensor.newValue(characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 3));
+        try {
+            Integer flag = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
+            if (flag == null) {
+                return;
+            }
 
-        if (stride_length_present) {
-            Log.i(TAG, "strideLength=" + characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 4) + " cm");
-        }
+            boolean stride_length_present = (flag & 0x01) != 0;
+            if (DEBUG) Log.i(TAG, "stride length " + (stride_length_present ? "" : "not ") + "present");
+            mDistancePresent = (flag & 0x02) != 0;
+            // boolean walking                = (flag & 0x04) == 0;
+            // boolean running                = (flag & 0x04) == 0;
+            int distance_offset = stride_length_present ? 6 : 4;
+            if (DEBUG) Log.i(TAG, "distance_offset=" + distance_offset);
 
-        if (mDistancePresent) {
-            mDistance = mCalibrationFactor * characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, distance_offset) / 10;
-            if (DEBUG) Log.d(TAG, "got distance (in meters): " + mDistance);
-            mDistanceSensor.accumulate(mDistance);
-            mLapDistanceSensor.accumulate(mDistance);
+            Integer speedInt = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 1); // Unit is in m/s with a resolution of 1/256 s
+            if (speedInt != null) {
+                int speed = speedInt;
+                mSpeed = mCalibrationFactor * speed / 256;
+                mSpeedSensor.newValue(mSpeed);
+                if (speed != 0) {
+                    mPaceSensor.newValue(1 / mSpeed);
+                }
+            }
+
+            Integer cadence = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 3);
+            if (cadence != null && mCadenceSensor != null) {
+                mCadenceSensor.newValue(cadence);
+            }
+
+            if (stride_length_present) {
+                if (value.length >= 6) {
+                    Integer strideLength = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 4);
+                    if (DEBUG && strideLength != null) {
+                        Log.i(TAG, "strideLength=" + strideLength + " cm");
+                    }
+                } else {
+                    Log.w(TAG, "Stride length present in flags but packet truncated: length=" + value.length);
+                }
+            }
+
+            if (mDistancePresent) {
+                if (value.length >= distance_offset + 4) {
+                    Integer rawDistance = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, distance_offset);
+                    if (rawDistance != null) {
+                        mDistance = mCalibrationFactor * (rawDistance.longValue() & 0xFFFFFFFFL) / 10.0;
+                        if (DEBUG) Log.d(TAG, "got distance (in meters): " + mDistance);
+                        mDistanceSensor.accumulate(mDistance);
+                        mLapDistanceSensor.accumulate(mDistance);
+                    }
+                } else {
+                    Log.w(TAG, "Distance present in flags but packet truncated: length=" + value.length + ", offset=" + distance_offset);
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Error parsing RSC characteristic notification", e);
         }
     }
 
