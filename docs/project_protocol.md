@@ -43,19 +43,20 @@ Each lifecycle sub-task follows this strict progression:
 * **Sub-Task Self-Sufficiency**: Every sub-task Description MUST be self-contained. Empty descriptions or redirection stubs (e.g. "see parent") are strictly forbidden.
 * **Documentation-Before-Transition Sequencing**: Agents MUST update the sub-task Description and post any audit comments **BEFORE** calling `move` to transition to `In Überprüfung` or `Freigabe (Human)`.
 * **Mandatory Lösungsversion (Fix Version/s)**: Parent tickets MUST have an active unreleased `Lösungsversion` assigned (e.g. `V4.9.38`). It is technically enforced by Jira workflow screens and verified during Stage 5 / Gate 5.
+* **Sub-Tasks Excluded From FixVersion (ATT-1394)**: Sub-tasks MUST NOT have a `Lösungsversion` (Fix Version/s) assigned. The `Lösungsversion` is maintained exclusively on the parent ticket; sub-tasks inherit release context from their parent.
 * **Bug Ticket Creation vs. Deferred Analysis (ATT-1250)**: Filing a bug ticket (`create-issue`) MUST be fast and lightweight (summary, error logs, reproduction steps, FixVersion). An agent MUST NOT start Stage 1 Analysis upon creation; analysis is deferred until the ticket is prioritized and transitioned to `In Bearbeitung`.
 * **Compaction Resilience (`.active_task.json`) (ATT-1250)**: When transitioning stages, the agent SHALL maintain `.active_task.json` tracking `parent_ticket`, `active_subtask`, `stage`, `status`, and `branch`. Resuming after a context compaction reads this file for immediate, 1ms grounding.
 
 ### C. Git Branching, Commits & Merging
 * **Branch Creation**: Always branch off `develop` before starting work: `git checkout develop && git checkout -b feature/ATT-XXX` (or `bugfix/ATT-XXX`).
 * **Conventional Commits**: Commit logical increments using format `<type>(<scope>): <summary> (ATT-XXX)` with asterisk `*` bullet points in the body.
-* **Develop Integration (Stage 6)**: Once 100% of sub-tasks are `Erledigt` and release is signed off:
+* **Develop Integration & Mandatory Branch Closure (Stage 6) (ATT-1394)**: Once 100% of sub-tasks are `Erledigt` and release is signed off, the feature/bugfix branch MUST be merged and immediately deleted locally:
   ```bash
   git checkout develop
   git merge --no-ff <branch_name> -m "Merge branch '<branch_name>' into develop (ATT-XXX)"
   git branch -d <branch_name>
   ```
-  Direct commits to `develop` or `master` are strictly prohibited.
+  Leaving merged feature branches open locally is strictly prohibited. Direct commits to `develop` or `master` are strictly prohibited.
 
 ---
 
@@ -82,6 +83,12 @@ Each lifecycle sub-task follows this strict progression:
    python3 tools/jira_util.py check-gate <Impl-Plan-Subtask-Key>
    ```
    If exit code is non-zero, code construction is strictly blocked awaiting human approval in Jira.
+
+### Autonomous Sprint Execution & Dual-Gate Model (ATT-1394 / ATT-1508)
+To eliminate human-in-the-loop bottlenecks and achieve maximum agentic velocity:
+* **Sprint Screening Gate (Upfront)**: At sprint start, human and agent review and align on all sprint backlog tickets (e.g. in a dedicated strategic session) to establish clear acceptance criteria and scope boundaries.
+* **Autonomous In-Sprint Progression**: During the sprint, AI agents progress autonomously through Stages 1 (Analysis), 2 (Test-Spec), 3 (Implementation Plan), and 4 (Code Construction) without stopping for intermediate human approvals. Quality gates 1–3 are evaluated by automated auditor tooling (Agent 2).
+* **Exit Gate (Human Verification & Release)**: Human review is focused at the end of implementation / verification (Stage 4/5 exit gate: code diff inspection and on-device hardware testing on Pixel 10) before terminal release and merge.
 
 ---
 
@@ -124,6 +131,9 @@ When working around third-party library or defective Android platform OEM SDK bu
 5. **Sandbox Isolation Rules**:
    * Commands invoking Gradle builds or test suites (`./gradlew testDebugUnitTest`, `./gradlew assembleDebug`) MUST run with `BypassSandbox: true` to access global user directories (`~/.gradle`, `~/.android`).
    * REST API operations (`tools/jira_util.py`, `tools/review_agent.py`) MUST run with `BypassSandbox: true` for outbound HTTPS connectivity.
+6. **Test Phasing & Performance Optimization (ATT-1394)**:
+   * **Stage 4 (Implementation / Iteration)**: Execute ONLY targeted package/class unit tests (e.g. `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.tracking.*"` ~5–15s). The full clean-room suite MUST NOT be run in Stage 4 to prevent developer waiting bottlenecks.
+   * **Stage 5 (Verification & Testing)**: The complete clean-room unit test suite (`./gradlew testDebugUnitTest` ~2–3m) is executed exclusively in Stage 5 to confirm zero regressions before release.
 
 ---
 
