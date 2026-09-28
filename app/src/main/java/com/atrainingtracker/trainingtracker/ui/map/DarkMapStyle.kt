@@ -21,6 +21,12 @@ package com.atrainingtracker.trainingtracker.ui.map
 import android.content.Context
 import android.util.Log
 import androidx.annotation.RawRes
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import com.atrainingtracker.R
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.MapProperties
@@ -35,6 +41,8 @@ import com.google.maps.android.compose.MapType
  */
 object DarkMapStyle {
     private const val TAG = "DarkMapStyle"
+
+    val DARK_MAP_BACKGROUND_COLOR: Color = Color(0xFF121212)
 
     @Volatile
     private var cachedStyleOptions: MapStyleOptions? = null
@@ -131,6 +139,33 @@ object DarkMapStyle {
             darkMapStyleOptions = options,
             isMyLocationEnabled = isMyLocationEnabled,
             lightMapType = lightMapType
+        )
+    }
+}
+
+/**
+ * Renders an active anti-flash surface mask over GoogleMap composables in dark mode
+ * while the asynchronous vector tile styling pipeline is initializing.
+ *
+ * Requirements: REQ-MAP-021 (ATT-1553)
+ *
+ * @param isMapLoaded True when GoogleMap onMapLoaded callback has fired.
+ * @param isDark True when dark mode or AMOLED theme is active.
+ * @param modifier Optional modifier to apply to the overlay Box.
+ * @param backgroundColor Background color of the anti-flash mask (defaults to #121212).
+ */
+@Composable
+fun DarkMapAntiFlashOverlay(
+    isMapLoaded: Boolean,
+    isDark: Boolean,
+    modifier: Modifier = Modifier,
+    backgroundColor: Color = DarkMapStyle.DARK_MAP_BACKGROUND_COLOR
+) {
+    if (isDark && !isMapLoaded) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(backgroundColor)
         )
     }
 }

@@ -19,6 +19,8 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -63,77 +65,84 @@ fun PathPreviewMap(
         DarkMapStyle.resolveMapProperties(isDark, context)
     }
 
-    GoogleMap(
-        modifier = modifier.background(if (isDark) Color(0xFF121212) else Color.White),
-        cameraPositionState = cameraPositionState,
-        googleMapOptionsFactory = {
-            GoogleMapOptions().liteMode(true)
-        },
-        uiSettings = MapUiSettings(
-            zoomControlsEnabled = false,
-            compassEnabled = false,
-            mapToolbarEnabled = false,
-            myLocationButtonEnabled = false,
-            scrollGesturesEnabled = false, // Static look for list rows
-            zoomGesturesEnabled = false
-        ),
-        properties = mapProperties,
-        onMapLoaded = { isMapLoaded = true },
-        onMapClick = { onMapClick() }
-    ) {
-        if (path != null && path.latLngs.isNotEmpty()) {
+    Box(modifier = modifier.background(if (isDark) Color(0xFF121212) else Color.White)) {
+        GoogleMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState,
+            googleMapOptionsFactory = {
+                GoogleMapOptions().liteMode(true)
+            },
+            uiSettings = MapUiSettings(
+                zoomControlsEnabled = false,
+                compassEnabled = false,
+                mapToolbarEnabled = false,
+                myLocationButtonEnabled = false,
+                scrollGesturesEnabled = false, // Static look for list rows
+                zoomGesturesEnabled = false
+            ),
+            properties = mapProperties,
+            onMapLoaded = { isMapLoaded = true },
+            onMapClick = { onMapClick() }
+        ) {
+            if (path != null && path.latLngs.isNotEmpty()) {
 
-            Polyline(
-                points = path.latLngs,
-                color = path.color,
-                width = 8f
-            )
-
-            // --- START, END, APEX MARKERS (SCRUM-233) ---
-            val actualStart = start ?: path.latLngs.firstOrNull()
-            val actualEnd = end ?: path.latLngs.lastOrNull()
-            val actualApex = apex
-
-            actualStart?.let {
-                Marker(
-                    state = remember(it) { MarkerState(position = it) },
-                    icon = remember { createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint) }
+                Polyline(
+                    points = path.latLngs,
+                    color = path.color,
+                    width = 8f
                 )
-            }
-            actualEnd?.let {
-                Marker(
-                    state = remember(it) { MarkerState(position = it) },
-                    icon = remember { createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint) }
-                )
-            }
-            actualApex?.let {
-                Marker(
-                    state = remember(it) { MarkerState(position = it) },
-                    icon = remember { createSensorMarker(context, R.drawable.ic_distance, TTColor.ApexPoint) }
-                )
-            }
 
-            // Auto-zoom to fit the segment whenever pathPoints change
-            LaunchedEffect(path, actualStart, actualEnd, actualApex, isMapLoaded) {
-                if (isMapLoaded && path.latLngs.isNotEmpty()) {
-                    val boundsBuilder = LatLngBounds.Builder()
-                    path.latLngs.forEach { boundsBuilder.include(it) }
-                    actualStart?.let { boundsBuilder.include(it) }
-                    actualEnd?.let { boundsBuilder.include(it) }
-                    actualApex?.let { boundsBuilder.include(it) }
+                // --- START, END, APEX MARKERS (SCRUM-233) ---
+                val actualStart = start ?: path.latLngs.firstOrNull()
+                val actualEnd = end ?: path.latLngs.lastOrNull()
+                val actualApex = apex
 
-                    try {
-                        cameraPositionState.move(
-                            CameraUpdateFactory.newLatLngBounds(
-                                boundsBuilder.build(),
-                                20 // padding in px
+                actualStart?.let {
+                    Marker(
+                        state = remember(it) { MarkerState(position = it) },
+                        icon = remember { createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint) }
+                    )
+                }
+                actualEnd?.let {
+                    Marker(
+                        state = remember(it) { MarkerState(position = it) },
+                        icon = remember { createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint) }
+                    )
+                }
+                actualApex?.let {
+                    Marker(
+                        state = remember(it) { MarkerState(position = it) },
+                        icon = remember { createSensorMarker(context, R.drawable.ic_distance, TTColor.ApexPoint) }
+                    )
+                }
+
+                // Auto-zoom to fit the segment whenever pathPoints change
+                LaunchedEffect(path, actualStart, actualEnd, actualApex, isMapLoaded) {
+                    if (isMapLoaded && path.latLngs.isNotEmpty()) {
+                        val boundsBuilder = LatLngBounds.Builder()
+                        path.latLngs.forEach { boundsBuilder.include(it) }
+                        actualStart?.let { boundsBuilder.include(it) }
+                        actualEnd?.let { boundsBuilder.include(it) }
+                        actualApex?.let { boundsBuilder.include(it) }
+
+                        try {
+                            cameraPositionState.move(
+                                CameraUpdateFactory.newLatLngBounds(
+                                    boundsBuilder.build(),
+                                    20 // padding in px
+                                )
                             )
-                        )
-                    } catch (e: Exception) {
-                        // Map not laid out yet or size is 0
+                        } catch (e: Exception) {
+                            // Map not laid out yet or size is 0
+                        }
                     }
                 }
             }
         }
+
+        DarkMapAntiFlashOverlay(
+            isMapLoaded = isMapLoaded,
+            isDark = isDark
+        )
     }
 }

@@ -55,6 +55,7 @@ import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
+import com.atrainingtracker.trainingtracker.ui.map.DarkMapAntiFlashOverlay
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -579,34 +580,41 @@ private fun PeriodMultiWorkoutMap(
         DarkMapStyle.resolveMapProperties(isDark, context)
     }
 
-    GoogleMap(
-        modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White),
-        cameraPositionState = cameraPositionState,
-        properties = mapProperties,
-        onMapLoaded = { isMapLoaded = true },
-        uiSettings = MapUiSettings(
-            zoomControlsEnabled = false,
-            scrollGesturesEnabled = false,
-            zoomGesturesEnabled = false,
-            tiltGesturesEnabled = false
-        ),
-        onMapClick = { onMapClick() }
-    ) {
-        allPaths.forEach { path ->
-            Polyline(
-                points = path,
-                color = TrackType.BEST.color.copy(alpha = visuals.polylineAlpha),
-                width = visuals.polylineWidth,
-                startCap = RoundCap(),
-                endCap = RoundCap(),
-                jointType = JointType.ROUND
-            )
+    Box(modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White)) {
+        GoogleMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState,
+            properties = mapProperties,
+            onMapLoaded = { isMapLoaded = true },
+            uiSettings = MapUiSettings(
+                zoomControlsEnabled = false,
+                scrollGesturesEnabled = false,
+                zoomGesturesEnabled = false,
+                tiltGesturesEnabled = false
+            ),
+            onMapClick = { onMapClick() }
+        ) {
+            allPaths.forEach { path ->
+                Polyline(
+                    points = path,
+                    color = TrackType.BEST.color.copy(alpha = visuals.polylineAlpha),
+                    width = visuals.polylineWidth,
+                    startCap = RoundCap(),
+                    endCap = RoundCap(),
+                    jointType = JointType.ROUND
+                )
+            }
+
+            // Heatmap Layer (Drawn on top)
+            visuals.heatmapProvider?.let {
+                TileOverlay(tileProvider = it)
+            }
         }
 
-        // Heatmap Layer (Drawn on top)
-        visuals.heatmapProvider?.let {
-            TileOverlay(tileProvider = it)
-        }
+        DarkMapAntiFlashOverlay(
+            isMapLoaded = isMapLoaded,
+            isDark = isDark
+        )
     }
 }
 
