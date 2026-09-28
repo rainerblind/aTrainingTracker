@@ -650,7 +650,7 @@ if __name__ == "__main__":
     elif cmd == "show" and len(remaining_argv) == 2:
         show_issue(remaining_argv[1], role=active_role)
     elif cmd == "status" and len(remaining_argv) == 2:
-        check_status(remaining_argv[1], role=active_role)
+        print_status(remaining_argv[1], role=active_role)
     elif cmd == "check-gate" and len(remaining_argv) == 2:
         check_gate(remaining_argv[1], role=active_role)
     elif cmd == "versions":
