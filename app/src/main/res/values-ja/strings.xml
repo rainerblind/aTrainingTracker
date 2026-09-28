@@ -752,6 +752,8 @@
     <string name="view_size_xlarge">特大</string>
     <string name="view_size_huge">巨大</string>
     <string name="view_size_xhuge">最大</string>
+    <string name="view_size_xxhuge">超特大</string>
+    <string name="view_size_xxxhuge">極大</string>
     <string name="configure">設定</string>
     <string name="tab_name">名前</string>
 

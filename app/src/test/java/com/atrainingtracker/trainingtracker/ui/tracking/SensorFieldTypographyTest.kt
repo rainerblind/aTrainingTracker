@@ -70,5 +70,11 @@ class SensorFieldTypographyTest {
 
         assertEquals(100.sp, getSensorValueTextStyle(ViewSize.XHUGE, typography).fontSize)
         assertEquals(48.sp, getSensorUnitTextStyle(ViewSize.XHUGE, typography).fontSize)
+
+        assertEquals(140.sp, getSensorValueTextStyle(ViewSize.XXHUGE, typography).fontSize)
+        assertEquals(56.sp, getSensorUnitTextStyle(ViewSize.XXHUGE, typography).fontSize)
+
+        assertEquals(180.sp, getSensorValueTextStyle(ViewSize.XXXHUGE, typography).fontSize)
+        assertEquals(64.sp, getSensorUnitTextStyle(ViewSize.XXXHUGE, typography).fontSize)
     }
 }

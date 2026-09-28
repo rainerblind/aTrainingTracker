@@ -968,6 +968,8 @@
     <string name="view_size_xlarge">XLarge</string>
     <string name="view_size_huge">Huge</string>
     <string name="view_size_xhuge">XHuge</string>
+    <string name="view_size_xxhuge">XXHuge</string>
+    <string name="view_size_xxxhuge">XXXHuge</string>
     <string name="configure">Configure</string>
     <string name="tab_name">Name</string>
 

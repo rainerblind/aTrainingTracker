@@ -1168,6 +1168,8 @@
     <string name="view_size_normal">Normal</string>
     <string name="view_size_small">Klein</string>
     <string name="view_size_xhuge">Gigantisch</string>
+    <string name="view_size_xxhuge">XX-Riesig</string>
+    <string name="view_size_xxxhuge">XXX-Riesig</string>
     <string name="view_size_xlarge">Sehr groß</string>
     <string name="view_size_xsmall">Sehr klein</string>
     <string name="import_backup">Import \u0026 Backup</string>
