@@ -412,31 +412,60 @@ def upload_attachment(issue_key, file_path, role="agent1"):
         sys.exit(1)
 
 def transition_issue(issue_key, status_name, role="agent1"):
-    # Strict Human Gate Guard: Prohibit AI agents from moving to Erledigt / Freigabe erteilt
-    prohibited_targets = ["erledigt", "done", "freigabe erteilt"]
+    config = get_config()
+    # Check if issue is a subtask
+    issue_info_url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=issuetype"
+    issue_info = jira_request(issue_info_url, role=role)
+    is_subtask = issue_info.get("fields", {}).get("issuetype", {}).get("subtask", False)
+
     normalized_input = status_name.lower().strip()
-    if normalized_input in prohibited_targets:
-        print(f"ERROR: Transitioning '{issue_key}' to '{status_name}' is strictly prohibited for AI agents.\n"
-              f"Moving tickets or sub-tasks to 'Erledigt' ('Freigabe erteilt') is a Human Decision Gate reserved exclusively for the human user.",
+    # Strict Human Gate Guard on parent tickets: Prohibit AI agents from moving parent tickets to Erledigt / Done
+    if not is_subtask and normalized_input in ["erledigt", "done", "freigabe erteilt"]:
+        print(f"ERROR: Transitioning parent ticket '{issue_key}' to '{status_name}' is strictly prohibited for AI agents.\n"
+              f"Moving parent tickets to 'Erledigt' is a Human Decision Gate reserved exclusively for the human user.",
               file=sys.stderr)
         sys.exit(1)
 
-    config = get_config()
     url = f"{config['JIRA_URL']}/rest/api/3/issue/{issue_key}/transitions"
     data = jira_request(url, role=role)
     available_transitions = data.get("transitions", [])
 
-    aliases = {
-        "todo": "zu erledigen",
-        "in_progress": "in bearbeitung",
-        "in_review": "in überprüfung",
-        "review": "in überprüfung",
-        "freigabe": "freigabe (human)",
-        "human": "freigabe (human)",
-        "revision": "in bearbeitung",
-        "rework": "in bearbeitung",
-        "nochmals von vorne": "in bearbeitung"
-    }
+    if is_subtask:
+        aliases = {
+            "todo": "zu erledigen",
+            "in_progress": "in bearbeitung",
+            "in_review": "in überprüfung",
+            "review": "in überprüfung",
+            "freigabe": "freigabe",
+            "human": "freigabe",
+            "done": "freigabe",
+            "erledigt": "freigabe",
+            "revision": "in bearbeitung",
+            "rework": "in bearbeitung",
+            "nochmals von vorne": "in bearbeitung",
+            "überarbeitung notwendig": "in bearbeitung"
+        }
+    else:
+        aliases = {
+            "todo": "zu erledigen",
+            "analysis": "analysis",
+            "test_spec": "test spec",
+            "test spec": "test spec",
+            "plan": "implementation plan",
+            "implementation_plan": "implementation plan",
+            "implementation plan": "implementation plan",
+            "implementation": "implementation",
+            "test": "test",
+            "testing": "test",
+            "final_review": "final review (human)",
+            "final review": "final review (human)",
+            "final review (human)": "final review (human)",
+            "review": "final review (human)",
+            "human": "final review (human)",
+            "human_review": "final review (human)",
+            "revision": "implementation",
+            "rework": "implementation"
+        }
     normalized_target = aliases.get(normalized_input, normalized_input)
 
     chosen_trans = None
@@ -457,8 +486,8 @@ def transition_issue(issue_key, status_name, role="agent1"):
 
     target_name = chosen_trans.get("to", {}).get("name", "").lower()
     trans_name = chosen_trans.get("name", "").lower()
-    if target_name == "erledigt" or trans_name == "freigabe erteilt":
-        print(f"ERROR: Transition '{chosen_trans['name']}' to '{chosen_trans.get('to', {}).get('name')}' is strictly prohibited for AI agents.\n"
+    if not is_subtask and (target_name == "erledigt" or trans_name == "freigabe erteilt"):
+        print(f"ERROR: Transition '{chosen_trans['name']}' to '{chosen_trans.get('to', {}).get('name')}' is strictly prohibited for AI agents on parent tickets.\n"
               f"This transition is a Human Decision Gate reserved exclusively for the human user.", file=sys.stderr)
         sys.exit(1)
 
@@ -469,7 +498,9 @@ def transition_issue(issue_key, status_name, role="agent1"):
 
     # Auto-assign based on target workflow stage
     norm_target_lower = target_name.lower()
-    if "überprüfung" in norm_target_lower or "review" in norm_target_lower:
+    if "final review" in norm_target_lower or ("human" in norm_target_lower and not is_subtask):
+        assign_issue(issue_key, "human", role=role)
+    elif "überprüfung" in norm_target_lower or "review" in norm_target_lower:
         assign_issue(issue_key, "agent2", role=role)
     elif "bearbeitung" in norm_target_lower or "progress" in norm_target_lower:
         assign_issue(issue_key, "agent1", role=role)

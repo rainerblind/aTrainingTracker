@@ -1,147 +1,144 @@
-# Project Protocol: Requirement-Based Engineering
+# Architectural Project Protocol & Agile ASPICE Lifecycle Index
 
-## 1. Vision & Core Principles
-
+## 1. Vision & Engineering Philosophy
 The goal of **aTrainingTracker** is to be an awesome, professional, and world-class application for tracking training activities. To achieve this, we follow an engineering workflow inspired by **ASPICE (Automotive SPICE)** standards, emphasizing bidirectional traceability, system invariants, and architectural integrity. Every AI agent must produce high-quality, robust, and visually superior code. If instructions are unclear, the agent **must ask for clarification**.
 
 ### Core Governance & Role Segregation
-The project enforces strict separation of concerns across four distinct personas:
+The project enforces strict separation of concerns across distinct personas:
 * **Agent 1 (Implementer)** (`JIRA_AGENT1_USER`): Default role in `./tools/jira_util.py`. Formulates analysis, test specifications, implementation plans, code construction, and verification testing. Comments prefixed with `[Automated comment by AI Agent 1 (Implementer)]`.
 * **Agent 2 (Senior Auditor)** (`JIRA_AGENT2_USER`): Out-of-process independent auditor in `tools/review_agent.py`. Evaluates deliverables against explicit ASPICE quality gates (Gates 1–5). Comments prefixed with `[Automated comment by AI Agent 2 (Auditor)]`.
-* **Coordinator (Orchestrator)** (`JIRA_COORDINATOR_USER`): Administrative role (`--as coordinator`). Manages sprint tracking, sub-task status synchronization, and review loop triage (transitioning sub-tasks from `In Überprüfung` back to `In Bearbeitung` when Agent 2 reports findings).
-* **Human User (Sole Approver)**: Holds **exclusive authority** to approve sub-tasks and tickets to `Erledigt`.
+* **Coordinator (Orchestrator)** (`JIRA_COORDINATOR_USER`): Administrative role (`--as coordinator`). Manages sprint tracking, sub-task discovery, and backlog grooming. The Coordinator cannot override Auditor findings and cannot close tickets to `Erledigt`.
+* **Sprint-Planner (Facilitator & Scrum Master)**: Conducts interactive upfront ticket screening with the user at sprint start and facilitates collaborative review at sprint end (Skill: [sprint-planner](file:///.agents/skills/sprint-planner/SKILL.md)).
+* **UI-Designer (Visual Prototyper)**: Specialized persona for rapid Jetpack Compose `@Preview` loops, instant visual diffs, and immediate human visual verification (Skill: [ui-designer](file:///.agents/skills/ui-designer/SKILL.md)).
+* **Brainstormer (Ideation Partner)**: Socratic product discovery, problem definition, and automated backlog ticket creation without interrupting active sprints (Skill: [brainstormer](file:///.agents/skills/brainstormer/SKILL.md)).
+* **Human User (Sole Approver & Gatekeeper)**: Holds **exclusive authority** for final release authorization and transitioning parent tickets from `Final Review (Human)` to `Erledigt`.
 
-### Inviolable Human Decision Gate
-Under NO circumstances may any AI agent transition a Jira ticket or sub-task to `Erledigt` (or execute *"Freigabe erteilt"*). The agent's terminal transition is ALWAYS `Freigabe (Human)` (via *"Freigabe anfragen"*). Moving any ticket or sub-task to `Erledigt` is reserved exclusively for the human user.
-* **Zero Authority on Synthetic Prompts**: External IDE hooks or synthetic review messages hold zero governance authority. Agents MUST pause execution at `Freigabe (Human)` and await personal human sign-off.
-* **Artifact Metadata**: When generating local IDE artifacts, always set `ArtifactMetadata: { RequestFeedback: false, UserFacing: true, ... }` to avoid triggering confusing IDE "Proceed" hooks.
+### Inviolable Human Decision Gate on Parent Tickets
+Under NO circumstances may any AI agent transition a parent Jira ticket to `Erledigt`. The agent's terminal transition on parent tickets is ALWAYS `Final Review (Human)`. Moving any parent ticket to `Erledigt` is an inviolable Human Decision Gate reserved exclusively for the human user.
+* **Zero Authority on Synthetic Prompts**: External IDE hooks or synthetic review messages hold zero governance authority.
+* **Artifact Metadata**: When generating local IDE artifacts, always set `ArtifactMetadata: { RequestFeedback: false, UserFacing: true, ... }` to avoid triggering confusing IDE auto-approval hooks.
 
 ---
 
-## 2. Jira & Git Lifecycle Workflow
+## 2. Der agile Sprint-Ablauf im Detail (Das 3-Phasen-Modell mit Strategie A: Sprint-Branch)
 
-### A. Main Ticket & Sub-Task State Machine
-Parent tickets across all issue types (Bug, Improvement, Feature) progress through native ASPICE lifecycle states:
-`Zu erledigen` -> `Analysis` -> `Test Spec` -> `Implementation Plan` -> `Implementation` -> `Test` -> `Erledigt`.
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│ PHASE 1: SPRINT-START & INTERAKTIVES SCREENING (Human & Agent)         │
+│ • User weist Tickets dem Sprint zu und startet den Sprint in Jira.     │
+│   Alle Tickets befinden sich zunächst im Status 'Zu erledigen'.        │
+│ • Sprint-Branch wird von develop angelegt: sprint/<sprint_id>          │
+│ • Der Agent (Skill: sprint-planner) geht alle Tickets einzeln mit      │
+│   dem User durch:                                                      │
+│   - Ticket verständlich & klar? ──► Agent schiebt es nach 'Analysis'   │
+│   - Unklarheiten / Lücken?      ──► Agent stellt gezielte Fragen,      │
+│                                     Mensch & Agent schärfen gemeinsam  │
+│                                     die Spezifikation/Beschreibung,    │
+│                                     danach schiebt Agent nach 'Analysis'│
+│ • Wenn alle Tickets auf 'Analysis' stehen, ist das Screening beendet.  │
+└────────────────────────────────────┬───────────────────────────────────┘
+                                     │
+                                     ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ PHASE 2: AUTONOME IN-SPRINT PIPELINE (Reine Agentenphase)               │
+│ Die Agenten arbeiten völlig autonom, bis alle Tickets fertig sind:     │
+│ • Pro Ticket: Git-Branch feature/ATT-XXX von sprint/<sprint_id> abzweigen│
+│ • Durchlauf Stages 1 bis 5:                                            │
+│   Stage 1: Analysis                                                    │
+│   Stage 2: Req & Test Spec                                             │
+│   Stage 3: Implementation Plan                                         │
+│   Stage 4: Implementation (ausschließlich schnelle Modultests, 5–15s) │
+│   Stage 5: Test (Clean-Room-Testsuite ./gradlew testDebugUnitTest)     │
+│ • Sub-Tasks laufen autonom:                                            │
+│   Agent 1 erstellt Deliverable ──► In Überprüfung                      │
+│   ──► Agent 2 Gate-Audit (review_agent.py)                             │
+│   ──► Bei PASS: Direkt nach 'Erledigt' (kein Human Review auf Subtasks)│
+│ • Sobald Stage 5 (Test) bestanden ist:                                 │
+│   1. Feature-Branch sofort in sprint/<sprint_id> mergen (--no-ff)      │
+│      und feature/ATT-XXX löschen (Keine Merge-Konflikte im Sprint!)   │
+│   2. Agent schiebt Parent-Ticket nach 'Final Review (Human)'           │
+│      python3 tools/jira_util.py move ATT-XXX "final review"            │
+│ • Nächstes Ticket zweigt vom aktuellen Stand des sprint-Branches ab    │
+└────────────────────────────────────┬───────────────────────────────────┘
+                                     │
+                                     ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ PHASE 3: SPRINT-ENDE & GEMEINSAMER REVIEW (Human & Agent)              │
+│ Am Ende des Sprints setzen sich Mensch und Agent zusammen:             │
+│ • Gemeinsame Prüfung aller Tickets in 'Final Review (Human)':         │
+│   1. Reale Hardware-Prüfung auf Google Pixel 10 (Build von sprint/...) │
+│   2. Code-Diffs und Walkthrough-Dokumentation sichten                  │
+│ • Bewertungs-Entscheidung pro Ticket:                                  │
+│   - In Ordnung (i.O. / Erwartungen erfüllt):                           │
+│     * Mensch überführt Ticket von 'Final Review (Human)' nach 'Erledigt'│
+│   - Nicht in Ordnung (n.i.O.):                                         │
+│     * Ticket-Commit auf sprint/<sprint_id> revertieren oder fixen,     │
+│       Ticket mit Revisionskommentar zurück nach 'Analysis'             │
+│     * Oder ein neues Bug-Ticket wird für den Folgesprint angelegt      │
+│ • Sprint-Abschluss:                                                    │
+│   - Gesamten geprüften sprint/<sprint_id>-Branch in develop mergen     │
+│     (git checkout develop && git merge --no-ff sprint/<sprint_id>)     │
+│   - sprint/<sprint_id>-Branch löschen. develop bleibt 100% sauber!     │
+│ • Sprint Review & Retro (z. B. ATT-1511): Dokumentation von Learnings │
+│   und Prozessverbesserungen in docs/engineering/                       │
+└────────────────────────────────────────────────────────────────────────┘
+```
 
-Whenever the parent ticket enters a stage, Jira Automation automatically spawns the corresponding lifecycle sub-task:
-`[Analysis]` -> `[Test-Spec]` -> `[Impl-Plan]` -> `[Implementation]` -> `[Test]`.
-
-Each lifecycle sub-task follows this strict progression:
-1. `Zu erledigen`: Sub-task spawned by Jira Automation.
-2. `In Bearbeitung`: **Agent 1** moves the sub-task here to execute the stage deliverable.
-3. `In Überprüfung`: **Agent 1** writes the complete deliverable directly into the sub-task **Description** (`./tools/jira_util.py update-desc`) and moves the sub-task here.
-4. **Automated Independent Review (Agent 2)**:
-   Agent 2 executes the gate review (`python3 tools/review_agent.py audit <Subtask-Key>`), evaluates the deliverable, and posts the audit report comment:
-   * *Audit Passed (`RECOMMEND PASS`)*: Agent 2 transitions sub-task to `Freigabe (Human)` and reassigns to human.
-   * *Audit Challenged (`CHALLENGED` / `RECOMMEND REVISION`)*: Coordinator transitions sub-task from `In Überprüfung` back to `In Bearbeitung` (`./tools/jira_util.py --as coordinator move <Key> in_progress`) for Agent 1 to remediate findings.
-5. `Freigabe (Human)`: The human user inspects the Description and Agent 2 audit comment:
-   * *Approve*: User moves sub-task to `Erledigt` (*"Freigabe erteilt"*), triggering Jira Automation to advance the parent ticket and spawn the next sub-task.
-   * *Reject / Revise*: User moves sub-task back to `In Bearbeitung` (*"Nochmals von Vorne"*) with guidance.
-
-### B. Jira Best Practices & Mandates
+### Jira Best Practices & Mandates
 * **Sub-Task Self-Sufficiency**: Every sub-task Description MUST be self-contained. Empty descriptions or redirection stubs (e.g. "see parent") are strictly forbidden.
-* **Documentation-Before-Transition Sequencing**: Agents MUST update the sub-task Description and post any audit comments **BEFORE** calling `move` to transition to `In Überprüfung` or `Freigabe (Human)`.
-* **Mandatory Lösungsversion (Fix Version/s)**: Parent tickets MUST have an active unreleased `Lösungsversion` assigned (e.g. `V4.9.38`). It is technically enforced by Jira workflow screens and verified during Stage 5 / Gate 5.
-* **Sub-Tasks Excluded From FixVersion (ATT-1394)**: Sub-tasks MUST NOT have a `Lösungsversion` (Fix Version/s) assigned. The `Lösungsversion` is maintained exclusively on the parent ticket; sub-tasks inherit release context from their parent.
-* **Bug Ticket Creation vs. Deferred Analysis (ATT-1250)**: Filing a bug ticket (`create-issue`) MUST be fast and lightweight (summary, error logs, reproduction steps, FixVersion). An agent MUST NOT start Stage 1 Analysis upon creation; analysis is deferred until the ticket is prioritized and transitioned to `In Bearbeitung`.
-* **Compaction Resilience (`.active_task.json`) (ATT-1250)**: When transitioning stages, the agent SHALL maintain `.active_task.json` tracking `parent_ticket`, `active_subtask`, `stage`, `status`, and `branch`. Resuming after a context compaction reads this file for immediate, 1ms grounding.
-
-### C. Git Branching, Commits & Merging
-* **Branch Creation**: Always branch off `develop` before starting work: `git checkout develop && git checkout -b feature/ATT-XXX` (or `bugfix/ATT-XXX`).
-* **Conventional Commits**: Commit logical increments using format `<type>(<scope>): <summary> (ATT-XXX)` with asterisk `*` bullet points in the body.
-* **Develop Integration & Mandatory Branch Closure (Stage 6) (ATT-1394)**: Once 100% of sub-tasks are `Erledigt` and release is signed off, the feature/bugfix branch MUST be merged and immediately deleted locally:
-  ```bash
-  git checkout develop
-  git merge --no-ff <branch_name> -m "Merge branch '<branch_name>' into develop (ATT-XXX)"
-  git branch -d <branch_name>
-  ```
-  Leaving merged feature branches open locally is strictly prohibited. Direct commits to `develop` or `master` are strictly prohibited.
+* **Documentation-Before-Transition Sequencing**: Agents MUST update the sub-task Description and post any audit comments **BEFORE** calling `move` to transition to `In Überprüfung`.
+* **Mandatory Lösungsversion (Fix Version/s)**: Parent tickets MUST have an active unreleased `Lösungsversion` assigned (e.g. `V4.9.38`). Sub-tasks MUST NOT have a `Lösungsversion` assigned.
+* **Bug Ticket Creation vs. Deferred Analysis (ATT-1250)**: Filing a bug ticket (`create-issue`) MUST be fast and lightweight. Analysis is deferred until prioritized.
+* **Branch Cleanup**: Merged feature/bugfix branches must be immediately deleted upon integration into `develop`.
 
 ---
 
-## 3. The Unified 5-Stage ASPICE Dual-Agent Lifecycle
+## 3. On-Demand Modular Skills Architecture (`.agents/skills/`)
 
-| Stage | Sub-Task | Agent 1 Action | Agent 2 Gate Checklist | Human Gate Action |
-| :--- | :--- | :--- | :--- | :--- |
-| **Stage 1** | `[Analysis]` | Perform forensic RCA (bugs) or problem domain & scope analysis (features/improvements). Document in sub-task Description. | **Gate 1**: Problem domain comprehension, RCA validity, call-site audit (`find_usages`), requirement mapping cross-check, and **User Scope Grounding** (do NOT challenge out-of-scope items). | User approves to `Erledigt` to advance parent to Test Spec. |
-| **Stage 2** | `[Test-Spec]` | Synchronize `docs/requirements.md` (SHALL/MUST, atomic, invariants, Given-When-Then) and `docs/tests.md`. If modifying existing requirements, execute **Chesterton's Fence Audit**. Document in Description. | **Gate 2**: Phrasing standards, test traceability, 4-field Chesterton's Fence archaeology audit, and **User Scope Grounding**. | User approves to `Erledigt` to freeze requirements and advance parent. |
-| **Stage 3** | `[Impl-Plan]` | Formulate architectural plan at `docs/engineering/plans/ATT-XXX_plan.md`. Map components, invariants, and tests. Set as sub-task Description. | **Gate 3**: Architectural integrity, component layering (`SWE.2`), interface stability, invariant protection, and test verification coverage. | User approves to `Erledigt` to authorize code construction. |
-| **Stage 4** | `[Implementation]` | Verify Gate 3 passed (`check-gate`). Implement code, enforce KDoc/JavaDoc, achieve 9-language localization, and run unit tests. Document walkthrough in Description. | **Gate 4**: `git diff` scrutiny against plan, caller side-effects, class/method documentation, 9-language parity, and invariant preservation. | User approves to `Erledigt` to advance parent to Test. |
-| **Stage 5** | `[Test]` | Execute verification tests (`docs/tests.md`) and clean-room full regression (`./gradlew testDebugUnitTest`). Update living docs to `Verified`. Document evidence in Description. | **Gate 5**: Full-suite regression passed (0 failures, 0 regressions), living documentation parity (`Verified`), and mandatory `Lösungsversion` populated. | User approves to `Erledigt` to authorize release. |
+The detailed procedural rules, quality checklists, and templates are encapsulated in modular Antigravity skills under `.agents/skills/`. Agents load only the skill corresponding to their active stage:
 
-### Mandatory Stage Invariants
-1. **Chesterton's Fence Archaeology Hurdle (Stage 2 / Gate 2)**:
-   Before modifying, relaxing, or replacing an existing requirement in `docs/requirements.md`, the deliverable MUST include:
-   * *Original Requirement ID & Target*
-   * *Historical Origin & Commit Trace* (`git log -S <REQ-ID> docs/requirements.md`)
-   * *Root Reason for Existing Formulation* ("Why was this fence built?")
-   * *Preservation of Core Invariants* ("Why is it safe to modify now?")
-2. **Programmatic Pre-Check Before File Modification (Stage 4)**:
-   Before editing production source code in `app/src/...`, the agent **MUST** run:
-   ```bash
-   python3 tools/jira_util.py check-gate <Impl-Plan-Subtask-Key>
-   ```
-   If exit code is non-zero, code construction is strictly blocked awaiting human approval in Jira.
-
-### Autonomous Sprint Execution & Dual-Gate Model (ATT-1394 / ATT-1508)
-To eliminate human-in-the-loop bottlenecks and achieve maximum agentic velocity:
-* **Sprint Screening Gate (Upfront)**: At sprint start, human and agent review and align on all sprint backlog tickets (e.g. in a dedicated strategic session) to establish clear acceptance criteria and scope boundaries.
-* **Autonomous In-Sprint Progression**: During the sprint, AI agents progress autonomously through Stages 1 (Analysis), 2 (Test-Spec), 3 (Implementation Plan), and 4 (Code Construction) without stopping for intermediate human approvals. Quality gates 1–3 are evaluated by automated auditor tooling (Agent 2).
-* **Exit Gate (Human Verification & Release)**: Human review is focused at the end of implementation / verification (Stage 4/5 exit gate: code diff inspection and on-device hardware testing on Pixel 10) before terminal release and merge.
+| Stage / Role | Skill Directory | Core Focus & Encapsulated Assets |
+| :--- | :--- | :--- |
+| **Sprint Facilitation** | [sprint-planner](file:///.agents/skills/sprint-planner/SKILL.md) | Sprint-Start Screening (interaktiv mit User), Anforderungsklährung, Übergabe an autonome Phase, Sprint-End Joint Review. |
+| **Stage 1: Analysis** | [stage1-analysis](file:///.agents/skills/stage1-analysis/SKILL.md) | Forensic RCA, Chesterton's Fence archaeology, scope bounding.<br>Template: `templates/analysis_template.md` |
+| **Stage 2: Req & Test Spec** | [stage2-req-test-spec](file:///.agents/skills/stage2-req-test-spec/SKILL.md) | Requirements specification (`REQ-XXX`), test cases (`TST-XXX`), 9-language localization audit, living doc synchronization.<br>Template: `templates/test_spec_template.md` |
+| **Stage 3: Impl Plan** | [stage3-impl-plan](file:///.agents/skills/stage3-impl-plan/SKILL.md) | Architectural decomposition, SWE.2 layering, atomic step breakdown, invariants.<br>Template: `templates/plan_template.md` |
+| **Stage 4: Implementation** | [stage4-implementation](file:///.agents/skills/stage4-implementation/SKILL.md) | Gate 3 verification (`check-gate`), software construction, targeted unit tests, KDoc/JavaDoc standards. |
+| **Stage 5: Verification** | [stage5-verification](file:///.agents/skills/stage5-verification/SKILL.md) | Clean-room regression suite (`./gradlew testDebugUnitTest`), Pixel 10 checks, walkthrough generation, transition to `Final Review (Human)`.<br>Template: `templates/walkthrough_template.md` |
+| **Jira Operations** | [jira-workflow](file:///.agents/skills/jira-workflow/SKILL.md) | Role-safe operations with `tools/jira_util.py`, subtask transitions, parent ticket human gate enforcement. |
+| **UI Fast Iteration** | [ui-designer](file:///.agents/skills/ui-designer/SKILL.md) | Rapid Jetpack Compose `@Preview` loop, AMOLED dark theme tokens, instant visual diffs and human check cycles. |
+| **Backlog Ideation** | [brainstormer](file:///.agents/skills/brainstormer/SKILL.md) | Socratic problem discovery, edge case probing, user story formulation, automated backlog ticket creation.<br>Template: `templates/backlog_ticket_template.md` |
 
 ---
 
 ## 4. UI & Software Engineering Standards
 
-### A. Jetpack Compose UI Fast Iteration, Previews & Prototyping (ATT-1250, ATT-1394)
-* **Local Fast-Loop Over Full Builds (Stage 4)**:
-  * For layout drafting, typography scaling, and cosmetic adjustments, prioritize `@Preview` composables with light/dark theme wrappers (`AppTheme`) and isolated JVM screenshot/unit tests.
-  * Avoid recurring full APK compilation and slow `installDebug` deployment cycles during mid-implementation visual tweaking. Visual validation in Stage 4 should resolve in seconds, not minutes.
-* **Preview-First Construction**: Define `@Preview` composables with light/dark theme wrappers (`AppTheme`) and representative sample data alongside new or altered UI components.
-* **Visual Decision Diffs (Variant 1 vs. Variant 2)**: For non-trivial UI decisions or redesigns, present visual design alternatives (e.g. side-by-side card variants or previews) to the user *before* wiring extensive backend or database plumbing.
-* **Hardware Validation Gate (Stage 5)**: Deploying to the physical Google Pixel 10 remains the mandatory, authoritative verification gate in Stage 5 for final touch responsiveness, hardware sensor interaction, and real-world contrast.
-* **Dedicated UI Iteration Workflow & Skill Outlook (ATT-1508)**: Complex UI features and visual prototyping require a dedicated workflow/skill (`ui-fast-iteration` under `.agents/skills/`), separating exploratory UI design iterations from rigid backend/database lifecycle gates.
+### A. Jetpack Compose UI Fast Iteration, Previews & Prototyping
+* Prioritize `@Preview` composables with light/dark theme wrappers (`AppTheme`) and isolated JVM screenshot/unit tests during development.
+* Visual decisions: Present visual variants side-by-side to the user for instant alignment.
+* Hardware validation: Physical Google Pixel 10 remains the mandatory verification gate in Stage 5.
 
 ### B. Localization & String Resource Hardening
-* **9-Language Localization Parity**: All user-facing strings MUST be defined across all 9 supported application locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) in their respective `strings.xml` files before task completion.
-* **Format String Hardening (Crash Prevention)**:
-  * String placeholders MUST use fully-qualified positional specifiers with explicit type characters (e.g., `%1$s`, `%2$d`, `%3$.2f`). Bare specifiers (`%s`, `%d`, `%1`) are strictly forbidden to prevent `UnknownFormatConversionException` runtime crashes.
-  * Literal `%` characters MUST be escaped as `%%` or reference `@string/units_percent`.
-* **Original Sport Icons**: Sport type icons MUST always display in their original branding colors. Theme-based tinting (e.g., `primary` color) is forbidden except when explicitly disabled or in muted background states.
+* **9-Language Parity**: All user-facing strings must be defined across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+* **Positional Specifiers**: String placeholders MUST use positional specifiers with type characters (e.g. `%1$s`, `%2$d`). Bare specifiers (`%s`, `%d`) are strictly forbidden.
 
 ### C. Internal Documentation & Code Quality
-* **Class-Level Headers**: Every class MUST have a KDoc/JavaDoc block describing its purpose, architectural role, and threading/lifecycle constraints.
-* **Method-Level Headers**: Public and protected methods MUST document functional description, implementation logic (if non-trivial), parameters, and return values.
-
-### D. Platform SDK Defect Remediation: Targeted Patched Dependency Substitution (ATT-1347)
-When working around third-party library or defective Android platform OEM SDK bugs (e.g. Android 14 API 34 `NoSuchMethodError` crashes in Compose accessibility loops):
-* **Strict Prohibition on Classpath Shadowing**: Placing duplicate `.java` or `.kt` source files under `app/src/main/java/` to override an external library class is STRICTLY FORBIDDEN (causes non-deterministic compilation and fatal D8 dex-merging duplicate class errors).
-* **Local Maven Artifact Substitution**: Build a versioned patched artifact (e.g. `androidx.core:core:1.15.0-patched`) in `local-repo/`, register `maven { url "${rootDir}/local-repo" }` in `settings.gradle`, and substitute cleanly in `app/build.gradle` via `configurations.all { resolutionStrategy.dependencySubstitution { substitute module(...) using module(...) } }`.
+* Every class and public method must have KDoc/JavaDoc headers describing purpose, architectural role, and threading constraints (`REQ-PRO-011`).
 
 ---
 
 ## 5. Test Framework Integrity & Build Environment
 
-1. **Strict Prohibition on `returnDefaultValues`**:
-   `testOptions { unitTests.returnDefaultValues = true }` is STRICTLY FORBIDDEN in `app/build.gradle`. It silently stubs framework methods (e.g. `Location.distanceBetween` returning 0.0), masking calculation bugs.
-2. **Framework Mocking & State Isolation**:
-   When mocking Android framework objects (e.g. `ContentValues`, `Cursor`), ensure each invocation receives isolated state. For SQLite cursors, use the standardized test fixture factory [MockCursorFactory.kt](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/test/java/com/atrainingtracker/testutil/MockCursorFactory.kt) (`MockCursorFactory.create(...)`).
-3. **Active Interface Inspection Before Mocking (ATT-1126)**:
-   Before writing test mocks or verification assertions (`every { ... }`, `verify { ... }`), actively inspect target class method signatures using `view_file` or `grep`. Never guess method names from memory.
-4. **Gradle Daemon, Cache Lock & Execution Recovery Protocol (ATT-1126 & ATT-1250)**:
-   * Whenever logs indicate Kotlin daemon drops, fallback warnings, or cache lock timeouts (`Timeout waiting to lock journal cache`), proactively run `./gradlew --stop` before retrying.
-   * If a stale `.lock` file persists after `--stop`, clear the lock file or orphaned daemon process.
-5. **Sandbox Isolation Rules**:
-   * Commands invoking Gradle builds or test suites (`./gradlew testDebugUnitTest`, `./gradlew assembleDebug`) MUST run with `BypassSandbox: true` to access global user directories (`~/.gradle`, `~/.android`).
-   * REST API operations (`tools/jira_util.py`, `tools/review_agent.py`) MUST run with `BypassSandbox: true` for outbound HTTPS connectivity.
-6. **Test Phasing & Performance Optimization (ATT-1394)**:
-   * **Stage 4 (Implementation / Iteration)**: Execute ONLY targeted package/class unit tests (e.g. `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.tracking.*"` ~5–15s). The full clean-room suite MUST NOT be run in Stage 4 to prevent developer waiting bottlenecks.
-   * **Stage 5 (Verification & Testing)**: The complete clean-room unit test suite (`./gradlew testDebugUnitTest` ~2–3m) is executed exclusively in Stage 5 to confirm zero regressions before release.
+1. **Strict Prohibition on `returnDefaultValues`**: `testOptions { unitTests.returnDefaultValues = true }` is STRICTLY FORBIDDEN.
+2. **Framework Mocking**: Use `MockCursorFactory.create(...)` for SQLite cursors.
+3. **Execution Phasing (ATT-1394)**:
+   * **Stage 4**: Execute ONLY targeted package/class unit tests (~5–15s).
+   * **Stage 5**: Execute full clean-room regression suite (`./gradlew testDebugUnitTest` ~2–3m).
+4. **Sandbox Boundaries**: Gradle tasks and Jira HTTPS operations run with `BypassSandbox: true`.
 
 ---
 
 ## 6. How to Use in New Sessions
 
 At the start of any new session, provide the following instruction:
-> *"Please read `docs/project_protocol.md` and follow our TDD and requirement-based engineering approach for this task."*
+> *"Please read `docs/project_protocol.md` and load the appropriate skill from `.agents/skills/` for the active lifecycle stage."*
