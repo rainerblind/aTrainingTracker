@@ -42,12 +42,14 @@ class EditIconConsistencyTest {
     ).firstOrNull { it.exists() } ?: File("src/main/java")
 
     @Test
-    fun testLegacyTableEditDrawableDoesNotExist() {
-        val legacyDrawable = File(resDir, "drawable/ic_table_edit.xml")
-        assertFalse(
-            "drawable/ic_table_edit.xml must be permanently deleted from the codebase",
-            legacyDrawable.exists()
+    fun testTableEditDrawableReservedForDrawerLayouts() {
+        val tableEditDrawable = File(resDir, "drawable/ic_table_edit.xml")
+        assertTrue(
+            "drawable/ic_table_edit.xml must exist for drawer tracking table configuration",
+            tableEditDrawable.exists()
         )
+        val content = tableEditDrawable.readText()
+        assertTrue("ic_table_edit.xml must be a vector drawable", content.contains("<vector"))
     }
 
     @Test
@@ -82,7 +84,7 @@ class EditIconConsistencyTest {
     }
 
     @Test
-    fun testNoLegacyTableEditReferencesInSourceCode() {
+    fun testNoLegacyTableEditReferencesInEntityHeaders() {
         val uiDir = File(javaDir, "com/atrainingtracker/trainingtracker/ui")
         assertTrue("UI directory must exist: ${uiDir.absolutePath}", uiDir.exists() && uiDir.isDirectory)
 
@@ -91,7 +93,6 @@ class EditIconConsistencyTest {
             File(uiDir, "clusters/WorkoutClusterHeatmapScreen.kt"),
             File(uiDir, "knownlocations/EditKnownLocationDialog.kt"),
             File(uiDir, "settings/trackingtabs/ActivityTypeSelectionDialog.kt"),
-            File(uiDir, "navigation/AppNavigationDrawer.kt"),
             File(uiDir, "tracking/trackingtabs/TrackingTabPreviewHeader.kt"),
             File(uiDir, "map/MapScreenWithTrack.kt")
         )
@@ -100,10 +101,19 @@ class EditIconConsistencyTest {
             assertTrue("${file.name} must exist at ${file.absolutePath}", file.exists())
             val text = file.readText()
             assertFalse(
-                "${file.name} must not reference ic_table_edit",
+                "${file.name} must not reference ic_table_edit for entity editing",
                 text.contains("ic_table_edit")
             )
         }
+
+        // Verify AppNavigationDrawer explicitly uses ic_table_edit for drawer_tracking_layouts
+        val drawerFile = File(uiDir, "navigation/AppNavigationDrawer.kt")
+        assertTrue("AppNavigationDrawer.kt must exist", drawerFile.exists())
+        val drawerText = drawerFile.readText()
+        assertTrue(
+            "AppNavigationDrawer.kt must use R.drawable.ic_table_edit for drawer_tracking_layouts",
+            drawerText.contains("DrawerItemConfig(R.id.drawer_tracking_layouts, R.drawable.ic_table_edit")
+        )
     }
 
     @Test

@@ -188,7 +188,7 @@ fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
             items = listOf(
                 DrawerItemConfig(R.id.drawer_units, R.drawable.ic_square_foot, R.string.prefsUnitsTitle),
                 DrawerItemConfig(R.id.drawer_display_settings, R.drawable.ic_display_settings, R.string.Display),
-                DrawerItemConfig(R.id.drawer_tracking_layouts, R.drawable.ic_edit, R.string.prefsConfigureDisplaysTitle),
+                DrawerItemConfig(R.id.drawer_tracking_layouts, R.drawable.ic_table_edit, R.string.prefsConfigureDisplaysTitle),
                 DrawerItemConfig(R.id.drawer_search_settings, R.drawable.ic_search, R.string.Search_Settings),
                 DrawerItemConfig(R.id.drawer_backup_restore, R.drawable.ic_save_to_disc, R.string.import_backup),
                 DrawerItemConfig(R.id.drawer_privacy_policy, R.drawable.ic_privacy, R.string.privacy_policy)

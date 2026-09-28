@@ -16,10 +16,11 @@
 ## 1. Executive Summary & Verification Overview
 
 This release harmonizes the visual presentation of all "Edit" action triggers, dialog headers, and menus across the entire application, establishing a single canonical visual standard based on Material 3:
-1. **Canonical Diagonal Pencil Standard**: All interactive Compose edit triggers and dialog headers standardize on `Icons.Default.Edit`. Legacy XML menus and the navigation drawer now reference a dedicated vector drawable asset `app/src/main/res/drawable/ic_edit.xml`, completely eliminating `@android:drawable/ic_menu_edit` and permanently deleting `app/src/main/res/drawable/ic_table_edit.xml`.
-2. **100% Design Token Tinting Uniformity**: All interactive edit action triggers across workout headers (`WorkoutHeader.kt`), cluster heatmaps (`WorkoutClusterHeatmapScreen.kt`), tracking tab preview headers (`TrackingTabPreviewHeader.kt`), and map peek sheets (`MapScreenWithTrack.kt`) now uniformly use `MaterialTheme.colorScheme.primary`.
-3. **Specialized Geographic Boundary Invariant**: In `WorkoutClusterHeatmapScreen.kt`, `Icons.Default.EditLocationAlt` is retained specifically for geofence coordinate adjustment while cluster renaming adopts `Icons.Default.Edit`, both with unified `MaterialTheme.colorScheme.primary` tinting.
-4. **Clean-Room Verification**: All 5 targeted unit tests in `EditIconConsistencyTest`, the 9-language `TranslationParityTest`, and the full project regression test suite (`./gradlew testDebugUnitTest`) passed with 100% success rate (0 failures).
+1. **Canonical Diagonal Pencil Standard**: All interactive Compose entity edit triggers and dialog headers standardize on `Icons.Default.Edit`. Legacy XML menus reference a dedicated vector drawable asset `app/src/main/res/drawable/ic_edit.xml`, completely eliminating `@android:drawable/ic_menu_edit`.
+2. **Domain-Specific Table Layout Icon Invariant**: In `AppNavigationDrawer.kt`, `ic_table_edit.xml` is explicitly preserved for the "Tracking-Layouts / Configure Displays" (`R.id.drawer_tracking_layouts`) navigation destination, where the table grid/layout icon accurately represents the layout configuration of telemetry display tables.
+3. **100% Design Token Tinting Uniformity**: All interactive edit action triggers across workout headers (`WorkoutHeader.kt`), cluster heatmaps (`WorkoutClusterHeatmapScreen.kt`), tracking tab preview headers (`TrackingTabPreviewHeader.kt`), and map peek sheets (`MapScreenWithTrack.kt`) now uniformly use `MaterialTheme.colorScheme.primary`.
+4. **Specialized Geographic Boundary Invariant**: In `WorkoutClusterHeatmapScreen.kt`, `Icons.Default.EditLocationAlt` is retained specifically for geofence coordinate adjustment while cluster renaming adopts `Icons.Default.Edit`, both with unified `MaterialTheme.colorScheme.primary` tinting.
+5. **Clean-Room Verification**: All 5 targeted unit tests in `EditIconConsistencyTest`, the 9-language `TranslationParityTest`, and the full project regression test suite (`./gradlew testDebugUnitTest`) passed with 100% success rate (0 failures).
 
 ---
 
