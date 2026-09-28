@@ -537,8 +537,8 @@
     <string name="view_size_xlarge">Bardzo duży</string>
     <string name="view_size_huge">Ogromny</string>
     <string name="view_size_xhuge">Gigantyczny</string>
-    <string name="view_size_xxhuge">XXGigantyczny</string>
-    <string name="view_size_xxxhuge">XXXGigantyczny</string>
+    <string name="view_size_xxhuge">XGigantyczny</string>
+    <string name="view_size_xxxhuge">XXGigantyczny</string>
     <string name="configure">Konfiguruj</string>
     <string name="tab_name">Nazwa</string>
 
