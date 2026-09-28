@@ -23,6 +23,8 @@ import android.util.Log
 import androidx.annotation.RawRes
 import com.atrainingtracker.R
 import com.google.android.gms.maps.model.MapStyleOptions
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapType
 
 /**
  * Singleton cache and loader for Google Maps dark vector tile styling.
@@ -66,6 +68,7 @@ object DarkMapStyle {
      */
     fun parseStyleJson(json: String): MapStyleOptions? {
         return try {
+            org.json.JSONArray(json)
             MapStyleOptions(json)
         } catch (e: Exception) {
             Log.w(TAG, "Failed to parse dark map style JSON string", e)
@@ -80,5 +83,54 @@ object DarkMapStyle {
         synchronized(this) {
             cachedStyleOptions = null
         }
+    }
+
+    /**
+     * Resolves [MapProperties] dynamically based on dark mode state.
+     *
+     * Requirements: REQ-MAP-021
+     * - Dark mode (isDark == true): MapType.NORMAL + [darkMapStyleOptions]
+     * - Light mode (isDark == false): [lightMapType] (defaults to MapType.TERRAIN) + null style options
+     */
+    fun resolveMapProperties(
+        isDark: Boolean,
+        darkMapStyleOptions: MapStyleOptions?,
+        isMyLocationEnabled: Boolean = false,
+        lightMapType: MapType = MapType.TERRAIN
+    ): MapProperties {
+        return if (isDark) {
+            MapProperties(
+                mapType = MapType.NORMAL,
+                mapStyleOptions = darkMapStyleOptions,
+                isMyLocationEnabled = isMyLocationEnabled
+            )
+        } else {
+            MapProperties(
+                mapType = lightMapType,
+                mapStyleOptions = null,
+                isMyLocationEnabled = isMyLocationEnabled
+            )
+        }
+    }
+
+    /**
+     * Resolves [MapProperties] dynamically based on dark mode state using Android [Context]
+     * to lazily obtain singleton-cached [MapStyleOptions].
+     *
+     * Requirements: REQ-MAP-021
+     */
+    fun resolveMapProperties(
+        isDark: Boolean,
+        context: Context,
+        isMyLocationEnabled: Boolean = false,
+        lightMapType: MapType = MapType.TERRAIN
+    ): MapProperties {
+        val options = if (isDark) getMapStyleOptions(context) else null
+        return resolveMapProperties(
+            isDark = isDark,
+            darkMapStyleOptions = options,
+            isMyLocationEnabled = isMyLocationEnabled,
+            lightMapType = lightMapType
+        )
     }
 }

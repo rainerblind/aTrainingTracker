@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
+import androidx.compose.foundation.background
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
@@ -55,9 +58,13 @@ fun PathPreviewMap(
     val cameraPositionState = rememberCameraPositionState()
     var isMapLoaded by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val mapProperties = remember(isDark, context) {
+        DarkMapStyle.resolveMapProperties(isDark, context)
+    }
 
     GoogleMap(
-        modifier = modifier,
+        modifier = modifier.background(if (isDark) Color(0xFF121212) else Color.White),
         cameraPositionState = cameraPositionState,
         googleMapOptionsFactory = {
             GoogleMapOptions().liteMode(true)
@@ -70,7 +77,7 @@ fun PathPreviewMap(
             scrollGesturesEnabled = false, // Static look for list rows
             zoomGesturesEnabled = false
         ),
-        properties = MapProperties(mapType = MapType.TERRAIN),
+        properties = mapProperties,
         onMapLoaded = { isMapLoaded = true },
         onMapClick = { onMapClick() }
     ) {

@@ -31,6 +31,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -53,6 +55,7 @@ import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
+import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLngBounds
@@ -570,10 +573,16 @@ private fun PeriodMultiWorkoutMap(
         }
     }
 
+    val context = LocalContext.current
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val mapProperties = remember(isDark, context) {
+        DarkMapStyle.resolveMapProperties(isDark, context)
+    }
+
     GoogleMap(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White),
         cameraPositionState = cameraPositionState,
-        properties = MapProperties(mapType = MapType.TERRAIN),
+        properties = mapProperties,
         onMapLoaded = { isMapLoaded = true },
         uiSettings = MapUiSettings(
             zoomControlsEnabled = false,

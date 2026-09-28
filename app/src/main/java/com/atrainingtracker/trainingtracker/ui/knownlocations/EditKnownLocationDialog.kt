@@ -47,10 +47,12 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.background
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.testTag
@@ -66,6 +68,7 @@ import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
+import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
 import com.atrainingtracker.trainingtracker.ui.map.createHeartPinMarker
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.google.android.gms.maps.model.CameraPosition
@@ -440,10 +443,15 @@ fun LocationMiniMap(
         )
     }
 
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val mapProperties = remember(isDark, context) {
+        DarkMapStyle.resolveMapProperties(isDark, context)
+    }
+
     GoogleMap(
-        modifier = modifier,
+        modifier = modifier.background(if (isDark) Color(0xFF121212) else Color.White),
         cameraPositionState = cameraPositionState,
-        properties = MapProperties(mapType = MapType.TERRAIN),
+        properties = mapProperties,
         uiSettings = MapUiSettings(
             zoomControlsEnabled = false,
             myLocationButtonEnabled = false,

@@ -45,6 +45,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -62,6 +63,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.components.MetricLayout
 import com.atrainingtracker.trainingtracker.ui.map.LapSegmentUtils
+import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
@@ -542,6 +544,11 @@ fun LapEditBottomSheet(
                                 ) {
                                     val cameraPositionState = rememberCameraPositionState()
                                     var isMapLoaded by remember { mutableStateOf(false) }
+                                    val context = LocalContext.current
+                                    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                                    val mapProperties = remember(isDark, context) {
+                                        DarkMapStyle.resolveMapProperties(isDark, context)
+                                    }
 
                                     LaunchedEffect(workoutBounds, isMapLoaded) {
                                         if (isMapLoaded && workoutBounds != null) {
@@ -561,7 +568,7 @@ fun LapEditBottomSheet(
                                     }
 
                                     GoogleMap(
-                                        modifier = Modifier.fillMaxSize(),
+                                        modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White),
                                         cameraPositionState = cameraPositionState,
                                         uiSettings = MapUiSettings(
                                             zoomControlsEnabled = false,
@@ -573,7 +580,7 @@ fun LapEditBottomSheet(
                                             rotationGesturesEnabled = false,
                                             tiltGesturesEnabled = false
                                         ),
-                                        properties = MapProperties(mapType = MapType.TERRAIN),
+                                        properties = mapProperties,
                                         onMapLoaded = { isMapLoaded = true }
                                     ) {
                                         // Full workout polyline in subtle muted color

@@ -29,10 +29,12 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
+import androidx.compose.foundation.background
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -50,6 +52,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
+import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
@@ -245,7 +248,11 @@ fun ClusterItem(
                             color = MaterialTheme.colorScheme.surfaceContainerHigh
                         ) {
                             val context = LocalContext.current
-                            Box(modifier = Modifier.fillMaxSize()) {
+                            val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                            val mapProperties = remember(isDark, context) {
+                                DarkMapStyle.resolveMapProperties(isDark, context)
+                            }
+                            Box(modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White)) {
                                 val start = LatLng(cluster.startLat, cluster.startLng)
                                 val end = LatLng(cluster.endLat, cluster.endLng)
                                 val apex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
@@ -272,12 +279,12 @@ fun ClusterItem(
                                 }
 
                                 GoogleMap(
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White),
                                     cameraPositionState = cameraPositionState,
                                     googleMapOptionsFactory = {
                                         GoogleMapOptions().liteMode(true)
                                     },
-                                    properties = MapProperties(mapType = MapType.TERRAIN),
+                                    properties = mapProperties,
                                     onMapLoaded = { isMapLoaded = true },
                                     uiSettings = MapUiSettings(
                                         zoomControlsEnabled = false,
@@ -464,7 +471,11 @@ fun UnclusteredWorkoutItem(
                             color = MaterialTheme.colorScheme.surfaceContainerHigh
                         ) {
                             val context = LocalContext.current
-                            Box(modifier = Modifier.fillMaxSize()) {
+                            val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                            val mapProperties = remember(isDark, context) {
+                                DarkMapStyle.resolveMapProperties(isDark, context)
+                            }
+                            Box(modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White)) {
                                 val start = workout.startLatLng
                                 val end = workout.endLatLng
                                 val apex = workout.maxDisplacementLatLng
@@ -487,12 +498,12 @@ fun UnclusteredWorkoutItem(
                                 }
 
                                 GoogleMap(
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White),
                                     cameraPositionState = cameraPositionState,
                                     googleMapOptionsFactory = {
                                         GoogleMapOptions().liteMode(true)
                                     },
-                                    properties = MapProperties(mapType = MapType.TERRAIN),
+                                    properties = mapProperties,
                                     onMapLoaded = { isMapLoaded = true },
                                     uiSettings = MapUiSettings(
                                         zoomControlsEnabled = false,
