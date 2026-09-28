@@ -430,20 +430,42 @@ def transition_issue(issue_key, status_name, role="agent1"):
     data = jira_request(url, role=role)
     available_transitions = data.get("transitions", [])
 
-    aliases = {
-        "todo": "zu erledigen",
-        "in_progress": "in bearbeitung",
-        "in_review": "in überprüfung",
-        "review": "in überprüfung",
-        "freigabe": "freigabe",
-        "human": "freigabe",
-        "done": "freigabe",
-        "erledigt": "freigabe",
-        "revision": "in bearbeitung",
-        "rework": "in bearbeitung",
-        "nochmals von vorne": "in bearbeitung",
-        "überarbeitung notwendig": "in bearbeitung"
-    }
+    if is_subtask:
+        aliases = {
+            "todo": "zu erledigen",
+            "in_progress": "in bearbeitung",
+            "in_review": "in überprüfung",
+            "review": "in überprüfung",
+            "freigabe": "freigabe",
+            "human": "freigabe",
+            "done": "freigabe",
+            "erledigt": "freigabe",
+            "revision": "in bearbeitung",
+            "rework": "in bearbeitung",
+            "nochmals von vorne": "in bearbeitung",
+            "überarbeitung notwendig": "in bearbeitung"
+        }
+    else:
+        aliases = {
+            "todo": "zu erledigen",
+            "analysis": "analysis",
+            "test_spec": "test spec",
+            "test spec": "test spec",
+            "plan": "implementation plan",
+            "implementation_plan": "implementation plan",
+            "implementation plan": "implementation plan",
+            "implementation": "implementation",
+            "test": "test",
+            "testing": "test",
+            "final_review": "final review (human)",
+            "final review": "final review (human)",
+            "final review (human)": "final review (human)",
+            "review": "final review (human)",
+            "human": "final review (human)",
+            "human_review": "final review (human)",
+            "revision": "implementation",
+            "rework": "implementation"
+        }
     normalized_target = aliases.get(normalized_input, normalized_input)
 
     chosen_trans = None
@@ -476,7 +498,9 @@ def transition_issue(issue_key, status_name, role="agent1"):
 
     # Auto-assign based on target workflow stage
     norm_target_lower = target_name.lower()
-    if "überprüfung" in norm_target_lower or "review" in norm_target_lower:
+    if "final review" in norm_target_lower or ("human" in norm_target_lower and not is_subtask):
+        assign_issue(issue_key, "human", role=role)
+    elif "überprüfung" in norm_target_lower or "review" in norm_target_lower:
         assign_issue(issue_key, "agent2", role=role)
     elif "bearbeitung" in norm_target_lower or "progress" in norm_target_lower:
         assign_issue(issue_key, "agent1", role=role)
