@@ -318,7 +318,7 @@ fun KnownLocationOnMapSheet(
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = stringResource(R.string.Edit),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
