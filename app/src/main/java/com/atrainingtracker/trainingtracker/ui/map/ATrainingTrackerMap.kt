@@ -77,20 +77,15 @@ import kotlinx.coroutines.flow.StateFlow
  */
 fun resolveMapProperties(
     isDark: Boolean,
-    darkMapStyleOptions: MapStyleOptions?
-): MapProperties {
-    return if (isDark) {
-        MapProperties(
-            mapType = MapType.NORMAL,
-            mapStyleOptions = darkMapStyleOptions
-        )
-    } else {
-        MapProperties(
-            mapType = MapType.TERRAIN,
-            mapStyleOptions = null
-        )
-    }
-}
+    darkMapStyleOptions: MapStyleOptions?,
+    isMyLocationEnabled: Boolean = false,
+    lightMapType: MapType = MapType.TERRAIN
+): MapProperties = DarkMapStyle.resolveMapProperties(
+    isDark = isDark,
+    darkMapStyleOptions = darkMapStyleOptions,
+    isMyLocationEnabled = isMyLocationEnabled,
+    lightMapType = lightMapType
+)
 
 @OptIn(MapsComposeExperimentalApi::class)
 @Composable
@@ -193,7 +188,7 @@ fun ATrainingTrackerMap(
 
     androidx.compose.runtime.CompositionLocalProvider(LocalMapStyle provides style.copy(isDark = isDark)) {
         GoogleMap(
-            modifier = modifier,
+            modifier = modifier.background(if (isDark) Color(0xFF121212) else Color.White),
             cameraPositionState = cameraPositionState,
             onMapClick = { latLng -> onMapClick?.invoke(latLng) },
             properties = mapProperties,

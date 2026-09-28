@@ -27,6 +27,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -44,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -63,6 +65,7 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import androidx.compose.material.icons.outlined.Info
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
+import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
@@ -606,10 +609,16 @@ fun ClusterNamingDialog(
                     }
                 }
                 
-                Box(modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(8.dp))) {
+                val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                val mapProperties = remember(isDark, localContext) {
+                    DarkMapStyle.resolveMapProperties(isDark, localContext)
+                }
+                
+                Box(modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(8.dp)).background(if (isDark) Color(0xFF121212) else Color.White)) {
                     GoogleMap(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White),
                         cameraPositionState = cameraPositionState,
+                        properties = mapProperties,
                         uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false)
                     ) {
                         Polyline(

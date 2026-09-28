@@ -42,6 +42,9 @@ import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.components.DropdownSelector
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.luminance
+import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
@@ -210,9 +213,18 @@ fun ManualClusterScreen(
                 }
             }
 
-            Box(modifier = Modifier.weight(0.55f).fillMaxWidth()) {
+            val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+            val mapProperties = remember(isDark, context, currentLocation != null) {
+                DarkMapStyle.resolveMapProperties(
+                    isDark = isDark,
+                    context = context,
+                    isMyLocationEnabled = currentLocation != null
+                )
+            }
+
+            Box(modifier = Modifier.weight(0.55f).fillMaxWidth().background(if (isDark) Color(0xFF121212) else Color.White)) {
                 GoogleMap(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White),
                     cameraPositionState = cameraPositionState,
                     onMapClick = { latLng ->
                         when (selectionMode) {
@@ -235,9 +247,7 @@ fun ManualClusterScreen(
                         myLocationButtonEnabled = true,
                         zoomControlsEnabled = false
                     ),
-                    properties = MapProperties(
-                        isMyLocationEnabled = currentLocation != null
-                    )
+                    properties = mapProperties
                 ) {
                     startPos?.let {
                         Marker(
