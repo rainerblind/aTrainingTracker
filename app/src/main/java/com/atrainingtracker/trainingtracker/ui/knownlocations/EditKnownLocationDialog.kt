@@ -101,7 +101,8 @@ fun EditKnownLocationDialog(
     showMap: Boolean = false,
     onConfirm: (id: Long, name: String, altitudeMeters: Double, radiusMeters: Int, source: ElevationSource) -> Unit,
     onDismiss: () -> Unit,
-    onFetchDem: (suspend (id: Long, latLng: LatLng) -> ElevationResult)? = null
+    onFetchDem: (suspend (id: Long, latLng: LatLng) -> ElevationResult)? = null,
+    onRadiusChange: ((Int) -> Unit)? = null
 ) {
     var name by remember { mutableStateOf(location.name) }
     var altitudeText by remember {
@@ -196,7 +197,9 @@ fun EditKnownLocationDialog(
             Slider(
                 value = radiusMeters,
                 onValueChange = {
-                    radiusMeters = (round(it / 25f) * 25f).coerceIn(50f, 1000f)
+                    val newRadius = (round(it / 25f) * 25f).coerceIn(50f, 1000f)
+                    radiusMeters = newRadius
+                    onRadiusChange?.invoke(newRadius.roundToInt())
                 },
                 valueRange = 50f..1000f,
                 steps = 37,
@@ -239,7 +242,8 @@ fun EditKnownLocationSheetContent(
     showMap: Boolean = false,
     onConfirm: (id: Long, name: String, altitudeMeters: Double, radiusMeters: Int, source: ElevationSource) -> Unit,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onRadiusChange: ((Int) -> Unit)? = null
 ) {
     var name by remember { mutableStateOf(location.name) }
     var altitudeText by remember {
@@ -335,7 +339,9 @@ fun EditKnownLocationSheetContent(
             Slider(
                 value = radiusMeters,
                 onValueChange = {
-                    radiusMeters = (round(it / 25f) * 25f).coerceIn(50f, 1000f)
+                    val newRadius = (round(it / 25f) * 25f).coerceIn(50f, 1000f)
+                    radiusMeters = newRadius
+                    onRadiusChange?.invoke(newRadius.roundToInt())
                 },
                 valueRange = 50f..1000f,
                 steps = 37,

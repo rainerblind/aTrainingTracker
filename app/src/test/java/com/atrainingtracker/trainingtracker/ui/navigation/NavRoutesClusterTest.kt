@@ -113,4 +113,19 @@ class NavRoutesClusterTest {
         WorkoutNavigationEvents.resetCluster()
         assertNull(WorkoutNavigationEvents.navigateToCluster.replayCache.firstOrNull())
     }
+
+    @Test
+    fun testMapRoute_parameterizedAndDrawerMapping() {
+        assertEquals("map", NavRoutes.map(null))
+        assertEquals("map", NavRoutes.map(-1L))
+        assertEquals("map", NavRoutes.map(0L))
+        assertEquals("map?locationId=42", NavRoutes.map(42L))
+        assertEquals("map?locationId=1", NavRoutes.map(1L))
+        assertEquals("map?locationId={locationId}", NavRoutes.MAP_PATTERN)
+        assertEquals("locationId", NavRoutes.ARG_LOCATION_ID)
+
+        assertEquals(R.id.drawer_map, NavRoutes.toDrawerItemId("map"))
+        assertEquals(R.id.drawer_map, NavRoutes.toDrawerItemId("map?locationId=42"))
+        assertEquals(R.id.drawer_map, NavRoutes.toDrawerItemId("map?locationId=1&extra=true"))
+    }
 }

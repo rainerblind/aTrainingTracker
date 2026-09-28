@@ -21,7 +21,12 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.Circle
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.rememberUpdatedMarkerState
+import androidx.compose.ui.graphics.Color
 import com.google.maps.android.heatmaps.HeatmapTileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -77,6 +82,14 @@ interface MapContentScope {
      * Renders a high-frequency live track, typically used during active recording.
      */
     fun liveTrack(path: List<LatLng>)
+
+    /**
+     * Renders athlete's favorite start locations (Lieblingsorte) with heart-pin markers and geofence overlays.
+     */
+    fun knownLocations(
+        locations: List<KnownLocationItem>,
+        onLocationClick: (Long) -> Unit = {}
+    )
 
     /**
      * Renders a density-based heatmap using a Cyan -> Indigo sequential gradient.
@@ -145,6 +158,9 @@ internal class MapContentScopeImpl(
     private data class ContextualPathData(val path: MappablePath, val alpha: Float)
     private val contextualPaths = mutableStateListOf<ContextualPathData>()
 
+    private data class LocationData(val location: KnownLocationItem, val onClick: (Long) -> Unit)
+    private val locationData = mutableStateListOf<LocationData>()
+
     fun collect(block: MapContentScope.() -> Unit) {
         trackData.clear()
         segmentData.clear()
@@ -153,6 +169,7 @@ internal class MapContentScopeImpl(
         currentTracks.clear()
         heatmaps.clear()
         contextualPaths.clear()
+        locationData.clear()
         this.apply(block)
     }
 
@@ -310,6 +327,32 @@ internal class MapContentScopeImpl(
                 com.google.maps.android.compose.TileOverlay(tileProvider = it)
             }
         }
+
+        // 8. Known Locations (Lieblingsorte)
+        locationData.forEach { data ->
+            val loc = data.location
+            val markerBitmap = remember(loc.id, primaryColor) {
+                createHeartPinMarker(context, primaryColor, Color.White)
+            }
+
+            Circle(
+                center = loc.latLng,
+                radius = loc.radius.toDouble(),
+                fillColor = primaryColor.copy(alpha = 0.15f),
+                strokeColor = primaryColor.copy(alpha = 0.5f),
+                strokeWidth = 2f
+            )
+
+            Marker(
+                state = rememberUpdatedMarkerState(position = loc.latLng),
+                title = loc.name,
+                icon = markerBitmap,
+                onClick = {
+                    data.onClick(loc.id)
+                    true
+                }
+            )
+        }
     }
 
     override fun path(path: MappablePath, alpha: Float, onPathClick: (Long) -> Unit) {
@@ -366,5 +409,11 @@ internal class MapContentScopeImpl(
 
     override fun heatmap(allPaths: List<List<LatLng>>, opacity: Double, radius: Int?, densifyInterval: Double?, maxPoints: Int?) {
         this.heatmaps.add(HeatmapData(allPaths, opacity, radius, densifyInterval, maxPoints))
+    }
+
+    override fun knownLocations(locations: List<KnownLocationItem>, onLocationClick: (Long) -> Unit) {
+        locations.forEach { location ->
+            this.locationData.add(LocationData(location, onLocationClick))
+        }
     }
 }

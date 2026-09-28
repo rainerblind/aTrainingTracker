@@ -291,9 +291,21 @@ fun ATrainingTrackerApp(
                     )
                 }
 
-                composable(NavRoutes.MAP) {
+                composable(
+                    route = NavRoutes.MAP_PATTERN,
+                    arguments = listOf(
+                        navArgument(NavRoutes.ARG_LOCATION_ID) {
+                            type = NavType.LongType
+                            defaultValue = -1L
+                        }
+                    )
+                ) { backStackEntry ->
+                    val locationIdArg = backStackEntry.arguments?.getLong(NavRoutes.ARG_LOCATION_ID)?.takeIf { it > 0 }
                     val mapViewModel: MapFragmentWithTrackViewModel = viewModel(activity)
-                    MapScreenWithTrack(viewModel = mapViewModel)
+                    MapScreenWithTrack(
+                        viewModel = mapViewModel,
+                        targetLocationId = locationIdArg
+                    )
                 }
 
                 composable(NavRoutes.SEGMENTS) {
@@ -315,7 +327,10 @@ fun ATrainingTrackerApp(
                     val knownLocationsViewModel: KnownLocationsViewModel = viewModel(activity)
                     KnownLocationsScreen(
                         viewModel = knownLocationsViewModel,
-                        onMenuClick = { drawerController.openDrawer() }
+                        onMenuClick = { drawerController.openDrawer() },
+                        onShowOnMap = { locationId ->
+                            navController.navigate(NavRoutes.map(locationId))
+                        }
                     )
                 }
 

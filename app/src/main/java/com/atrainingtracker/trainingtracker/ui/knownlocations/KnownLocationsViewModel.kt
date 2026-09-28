@@ -30,7 +30,6 @@ import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.LatLngBounds
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,21 +37,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Active tab perspective on the Known Start Locations screen.
- */
-enum class KnownLocationsTab {
-    LIST,
-    MAP
-}
-
-/**
- * Unified UI State for Known Start Locations management.
+ * Unified UI State for Known Start Locations management (REQ-UI-165, REQ-UI-180).
  */
 data class KnownLocationsUiState(
     val locations: List<KnownLocationItem> = emptyList(),
     val filteredLocations: List<KnownLocationItem> = emptyList(),
-    val visibleMapLocations: List<KnownLocationItem> = emptyList(),
-    val selectedTab: KnownLocationsTab = KnownLocationsTab.LIST,
     val sortOrder: KnownLocationSortOrder = KnownLocationSortOrder.STARTS,
     val isLocationAvailable: Boolean = false,
     val userLocation: LatLng? = null,
@@ -60,15 +49,12 @@ data class KnownLocationsUiState(
     val isMetric: Boolean = true,
     val isLoading: Boolean = false,
     val selectedLocationForEdit: KnownLocationItem? = null,
-    val selectedLocationForMapPeek: KnownLocationItem? = null,
     val showMapInEditDialog: Boolean = false
 )
 
 /**
  * ViewModel orchestrating Known Start Locations screen state, search filtering,
- * viewport-based map culling, and editing operations.
- *
- * Traceability: REQ-UI-165, REQ-DAT-007, REQ-DAT-014, TST-UI-117.
+ * and editing operations (REQ-UI-165, REQ-UI-180).
  */
 class KnownLocationsViewModel @JvmOverloads constructor(
     application: Application,
@@ -97,23 +83,17 @@ class KnownLocationsViewModel @JvmOverloads constructor(
     )
     val uiState: StateFlow<KnownLocationsUiState> = _uiState.asStateFlow()
 
-    private var currentViewportBounds: LatLngBounds? = null
-
     init {
         viewModelScope.launch {
             repository.locationsFlow.collect { items ->
                 _uiState.update { state ->
                     val sorted = applySort(items, state.sortOrder, state.userLocation)
                     val filtered = applyFilter(sorted, state.searchQuery)
-                    val visibleMap = applyViewportCulling(filtered, currentViewportBounds)
                     state.copy(
                         locations = sorted,
                         filteredLocations = filtered,
-                        visibleMapLocations = visibleMap,
                         isLoading = false,
-                        // Update edit/peek references if data updated
-                        selectedLocationForEdit = items.find { it.id == state.selectedLocationForEdit?.id },
-                        selectedLocationForMapPeek = items.find { it.id == state.selectedLocationForMapPeek?.id }
+                        selectedLocationForEdit = items.find { it.id == state.selectedLocationForEdit?.id }
                     )
                 }
             }
@@ -146,13 +126,6 @@ class KnownLocationsViewModel @JvmOverloads constructor(
     }
 
     /**
-     * Switches between List and Map tabs.
-     */
-    fun selectTab(tab: KnownLocationsTab) {
-        _uiState.update { it.copy(selectedTab = tab) }
-    }
-
-    /**
      * Sets the active sort order for known locations.
      */
     fun setSortOrder(order: KnownLocationSortOrder) {
@@ -173,24 +146,9 @@ class KnownLocationsViewModel @JvmOverloads constructor(
     fun setSearchQuery(query: String) {
         _uiState.update { state ->
             val filtered = applyFilter(state.locations, query)
-            val visibleMap = applyViewportCulling(filtered, currentViewportBounds)
             state.copy(
                 searchQuery = query,
-                filteredLocations = filtered,
-                visibleMapLocations = visibleMap
-            )
-        }
-    }
-
-    /**
-     * Restricts visible map pins to the active Google Maps camera viewport bounds.
-     * Caps rendering to 100 locations to preserve 60 FPS performance.
-     */
-    fun onViewportBoundsChanged(bounds: LatLngBounds?) {
-        currentViewportBounds = bounds
-        _uiState.update { state ->
-            state.copy(
-                visibleMapLocations = applyViewportCulling(state.filteredLocations, bounds)
+                filteredLocations = filtered
             )
         }
     }
@@ -212,20 +170,6 @@ class KnownLocationsViewModel @JvmOverloads constructor(
      */
     fun dismissEditDialog() {
         _uiState.update { it.copy(selectedLocationForEdit = null) }
-    }
-
-    /**
-     * Opens map peek summary card for the tapped map marker pin.
-     */
-    fun openMapPeek(location: KnownLocationItem) {
-        _uiState.update { it.copy(selectedLocationForMapPeek = location) }
-    }
-
-    /**
-     * Dismisses map peek summary card.
-     */
-    fun dismissMapPeek() {
-        _uiState.update { it.copy(selectedLocationForMapPeek = null) }
     }
 
     /**
@@ -256,9 +200,6 @@ class KnownLocationsViewModel @JvmOverloads constructor(
     fun deleteLocation(id: Long) {
         viewModelScope.launch {
             repository.deleteLocation(id)
-            if (_uiState.value.selectedLocationForMapPeek?.id == id) {
-                dismissMapPeek()
-            }
             if (_uiState.value.selectedLocationForEdit?.id == id) {
                 dismissEditDialog()
             }
@@ -279,18 +220,6 @@ class KnownLocationsViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             repository.healLegacyNames()
         }
-    }
-
-    /**
-     * Resolves the primary/fallback location for initial map camera centering.
-     * Selects the location with the highest visit count ([KnownLocationItem.hitCount]),
-     * or null if no locations exist in SQLite.
-     *
-     * Traceability: REQ-UI-166, TST-UI-118.2.
-     */
-    fun getFallbackMapLocation(): KnownLocationItem? {
-        val items = _uiState.value.locations
-        return if (items.isEmpty()) null else items.maxByOrNull { it.hitCount }
     }
 
     private fun applySort(
@@ -342,18 +271,5 @@ class KnownLocationsViewModel @JvmOverloads constructor(
             item.latLng.latitude.toString().contains(trimmed) ||
             item.latLng.longitude.toString().contains(trimmed)
         }
-    }
-
-    private fun applyViewportCulling(items: List<KnownLocationItem>, bounds: LatLngBounds?): List<KnownLocationItem> {
-        val candidateList = if (bounds != null) {
-            items.filter { bounds.contains(it.latLng) }
-        } else {
-            items
-        }
-        return candidateList.take(MAX_RENDERED_MAP_LOCATIONS)
-    }
-
-    companion object {
-        const val MAX_RENDERED_MAP_LOCATIONS = 100
     }
 }

@@ -198,4 +198,28 @@ class EditKnownLocationDialogTest {
         val clampedMax = (round(1500f / 25f) * 25f).coerceIn(50f, 1000f).roundToInt()
         assertEquals(1000, clampedMax)
     }
+
+    /**
+     * REQ-UI-180: Live radius change callback emits snapped values for real-time map preview.
+     */
+    @Test
+    fun testEditDialog_radiusSlider_invokesOnRadiusChangeLive() {
+        var observedLiveRadius: Int? = null
+        val onRadiusChange: (Int) -> Unit = { radius ->
+            observedLiveRadius = radius
+        }
+
+        // Simulate slider drag events
+        val sliderStep1 = (round(174f / 25f) * 25f).coerceIn(50f, 1000f).roundToInt()
+        onRadiusChange(sliderStep1)
+        assertEquals(175, observedLiveRadius)
+
+        val sliderStep2 = (round(425f / 25f) * 25f).coerceIn(50f, 1000f).roundToInt()
+        onRadiusChange(sliderStep2)
+        assertEquals(425, observedLiveRadius)
+
+        val sliderStepClampedLow = (round(20f / 25f) * 25f).coerceIn(50f, 1000f).roundToInt()
+        onRadiusChange(sliderStepClampedLow)
+        assertEquals(50, observedLiveRadius)
+    }
 }

@@ -23,9 +23,7 @@ import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.LatLngBounds
 import io.mockk.clearAllMocks
-import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -47,11 +45,12 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Unit test suite for [KnownLocationsViewModel].
+ * Unit test suite for streamlined [KnownLocationsViewModel].
  *
  * Traceability:
  * - TST-UI-117.3: updateLocation atomically persists name, altitude, source=MANUAL_USER, is_locked=1.
- * - TST-UI-117.7: Viewport culling filters locations intersecting active visibleRegion.latLngBounds.
+ * - TST-UI-131.3: updateLocation with radius propagates radius to repository and dismisses edit dialog.
+ * - TST-UI-132.4: Streamlined ViewModel retains list sorting, search filtering, and editing.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class KnownLocationsViewModelTest {
@@ -88,12 +87,10 @@ class KnownLocationsViewModelTest {
     fun testInitialUiState() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
         val state = viewModel.uiState.value
-        assertEquals(KnownLocationsTab.LIST, state.selectedTab)
         assertTrue(state.isMetric)
         assertEquals("", state.searchQuery)
         assertTrue(state.locations.isEmpty())
         assertNull(state.selectedLocationForEdit)
-        assertNull(state.selectedLocationForMapPeek)
     }
 
     @Test
@@ -108,7 +105,6 @@ class KnownLocationsViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(2, state.locations.size)
         assertEquals(2, state.filteredLocations.size)
-        assertEquals(2, state.visibleMapLocations.size)
         assertFalse(state.isLoading)
     }
 
@@ -137,33 +133,6 @@ class KnownLocationsViewModelTest {
         viewModel.setSearchQuery("")
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(2, viewModel.uiState.value.filteredLocations.size)
-    }
-
-    /**
-     * TST-UI-117.7: Viewport culling filters locations intersecting active bounds.
-     */
-    @Test
-    fun testViewportCulling_filtersStrictlyWithinBounds() = runTest {
-        val testLocations = listOf(
-            // Inside Munich City center bounds (48.13 to 48.15, 11.56 to 11.59)
-            KnownLocationItem(1L, "Marienplatz", 520.0, 200, LatLng(48.137, 11.576), 12, true, ElevationSource.MANUAL_USER),
-            // Outside bounds (Berlin)
-            KnownLocationItem(2L, "Brandenburger Tor", 34.0, 200, LatLng(52.516, 13.377), 1, false, ElevationSource.INTERNET_DEM)
-        )
-        fakeLocationsFlow.value = testLocations
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        val munichBounds = LatLngBounds(
-            LatLng(48.12, 11.55), // Southwest
-            LatLng(48.16, 11.60)  // Northeast
-        )
-
-        viewModel.onViewportBoundsChanged(munichBounds)
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        val visible = viewModel.uiState.value.visibleMapLocations
-        assertEquals(1, visible.size)
-        assertEquals("Marienplatz", visible[0].name)
     }
 
     /**
@@ -220,16 +189,7 @@ class KnownLocationsViewModelTest {
     }
 
     @Test
-    fun testTabSelection() = runTest {
-        viewModel.selectTab(KnownLocationsTab.MAP)
-        assertEquals(KnownLocationsTab.MAP, viewModel.uiState.value.selectedTab)
-
-        viewModel.selectTab(KnownLocationsTab.LIST)
-        assertEquals(KnownLocationsTab.LIST, viewModel.uiState.value.selectedTab)
-    }
-
-    @Test
-    fun testEditAndPeekDialogTransitions() = runTest {
+    fun testEditDialogTransitions() = runTest {
         val item = KnownLocationItem(1L, "Test", 500.0, 200, LatLng(48.0, 11.0), 1, false, ElevationSource.INTERNET_DEM)
 
         viewModel.openEditDialog(item)
@@ -238,39 +198,11 @@ class KnownLocationsViewModelTest {
 
         viewModel.dismissEditDialog()
         assertNull(viewModel.uiState.value.selectedLocationForEdit)
-
-        viewModel.openMapPeek(item)
-        assertNotNull(viewModel.uiState.value.selectedLocationForMapPeek)
-        assertEquals(1L, viewModel.uiState.value.selectedLocationForMapPeek?.id)
-
-        viewModel.dismissMapPeek()
-        assertNull(viewModel.uiState.value.selectedLocationForMapPeek)
     }
 
     @Test
     fun testConstructor_supportsSingleApplicationArgumentForAndroidViewModelFactory() {
         val constructor = KnownLocationsViewModel::class.java.getConstructor(Application::class.java)
         assertNotNull(constructor)
-    }
-
-    @Test
-    fun testFallbackMapLocation_resolvesMaxHitCountOrNull() = runTest {
-        // When empty, fallback should be null
-        fakeLocationsFlow.value = emptyList()
-        testDispatcher.scheduler.advanceUntilIdle()
-        assertNull(viewModel.getFallbackMapLocation())
-
-        // Given multiple locations with different hitCount values
-        val loc1 = KnownLocationItem(1L, "Home", 500.0, 200, LatLng(48.1, 11.5), 10, false, ElevationSource.INTERNET_DEM)
-        val loc2 = KnownLocationItem(2L, "Gym", 520.0, 200, LatLng(48.2, 11.6), 42, false, ElevationSource.INTERNET_DEM)
-        val loc3 = KnownLocationItem(3L, "Park", 510.0, 200, LatLng(48.3, 11.7), 5, false, ElevationSource.INTERNET_DEM)
-
-        fakeLocationsFlow.value = listOf(loc1, loc2, loc3)
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        val fallback = viewModel.getFallbackMapLocation()
-        assertNotNull(fallback)
-        assertEquals("Fallback must be the location with the maximum hitCount", 2L, fallback?.id)
-        assertEquals(42, fallback?.hitCount)
     }
 }
