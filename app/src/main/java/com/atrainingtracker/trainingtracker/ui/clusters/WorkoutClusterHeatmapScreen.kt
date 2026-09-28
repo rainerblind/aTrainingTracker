@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.EditLocationAlt
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Save
@@ -739,12 +740,17 @@ fun WorkoutClusterSummaryHeader(
                     }
                 } else {
                     IconButton(onClick = onEditFingerprint) {
-                        Icon(Icons.Default.EditLocationAlt, contentDescription = stringResource(R.string.cluster_edit_fingerprint_content_desc))
+                        Icon(
+                            imageVector = Icons.Default.EditLocationAlt,
+                            contentDescription = stringResource(R.string.cluster_edit_fingerprint_content_desc),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                     IconButton(onClick = onRename) {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_table_edit),
-                            contentDescription = stringResource(R.string.edit_workout_name)
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = stringResource(R.string.edit_workout_name),
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
