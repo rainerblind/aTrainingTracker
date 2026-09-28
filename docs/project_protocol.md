@@ -94,10 +94,14 @@ To eliminate human-in-the-loop bottlenecks and achieve maximum agentic velocity:
 
 ## 4. UI & Software Engineering Standards
 
-### A. Jetpack Compose UI Fast Iteration & Previews (ATT-1250)
+### A. Jetpack Compose UI Fast Iteration, Previews & Prototyping (ATT-1250, ATT-1394)
+* **Local Fast-Loop Over Full Builds (Stage 4)**:
+  * For layout drafting, typography scaling, and cosmetic adjustments, prioritize `@Preview` composables with light/dark theme wrappers (`AppTheme`) and isolated JVM screenshot/unit tests.
+  * Avoid recurring full APK compilation and slow `installDebug` deployment cycles during mid-implementation visual tweaking. Visual validation in Stage 4 should resolve in seconds, not minutes.
 * **Preview-First Construction**: Define `@Preview` composables with light/dark theme wrappers (`AppTheme`) and representative sample data alongside new or altered UI components.
 * **Visual Decision Diffs (Variant 1 vs. Variant 2)**: For non-trivial UI decisions or redesigns, present visual design alternatives (e.g. side-by-side card variants or previews) to the user *before* wiring extensive backend or database plumbing.
-* **Rapid Iteration Over Full Builds**: Leverage Compose Previews and isolated unit tests to iterate rapidly, avoiding slow end-to-end APK deployment cycles for visual-only adjustments.
+* **Hardware Validation Gate (Stage 5)**: Deploying to the physical Google Pixel 10 remains the mandatory, authoritative verification gate in Stage 5 for final touch responsiveness, hardware sensor interaction, and real-world contrast.
+* **Dedicated UI Iteration Workflow & Skill Outlook (ATT-1508)**: Complex UI features and visual prototyping require a dedicated workflow/skill (`ui-fast-iteration` under `.agents/skills/`), separating exploratory UI design iterations from rigid backend/database lifecycle gates.
 
 ### B. Localization & String Resource Hardening
 * **9-Language Localization Parity**: All user-facing strings MUST be defined across all 9 supported application locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) in their respective `strings.xml` files before task completion.
