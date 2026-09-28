@@ -561,6 +561,10 @@ def update_issue_summary(issue_key, summary, role="agent1"):
     print(f"Summary updated for {issue_key}.")
 
 def create_subtask(parent_key, summary, description, role="coordinator", add_to_sprint=False, fix_version=None):
+    if fix_version:
+        print("Error: Sub-tasks must not get a solution ('Lösungsversion') assigned! (Governance mandate)", file=sys.stderr)
+        sys.exit(1)
+
     if summary.startswith("[Impl] "):
         summary = "[Implementation] " + summary[7:]
         print("Normalized subtask prefix '[Impl]' -> '[Implementation]' to ensure Jira automation compatibility.")
@@ -574,8 +578,6 @@ def create_subtask(parent_key, summary, description, role="coordinator", add_to_
         "description": description,
         "issuetype": {"id": "10002"}  # Subtask ID
     }
-    if fix_version:
-        fields["fixVersions"] = [{"name": fix_version}]
 
     payload = {"fields": fields}
     data = jira_request(url, method="POST", payload=payload, role=role)
@@ -614,6 +616,9 @@ def create_issue(summary, description, issuetype_id="10008", parent_key=None, ro
     print(f"Issue {new_key} created.")
 
     if add_to_sprint:
+        if role in ("agent1", "agent2", "coordinator"):
+            print("Error: Agents must not move tickets to sprints! Only the human user assigns tickets to sprints during Sprint-Start Screening.", file=sys.stderr)
+            sys.exit(1)
         add_to_active_sprint(new_key, role=role)
 
     return new_key
@@ -636,7 +641,7 @@ if __name__ == "__main__":
     active_role, remaining_argv = parse_role_from_args(sys.argv[1:])
 
     if len(remaining_argv) < 1:
-        print("Usage: jira_util.py [--as agent1|agent2|coordinator] [list | show KEY | status KEY | check-gate KEY | versions | set-fixversion KEY VERSION | move KEY todo|in_progress|in_review|freigabe | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC [--add-to-sprint] [--fixversion=VERSION] | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY] [--add-to-sprint] [--fixversion=VERSION] | add-to-sprint KEY]", file=sys.stderr)
+        print("Usage: jira_util.py [--as agent1|agent2|coordinator] [list | show KEY | status KEY | check-gate KEY | versions | set-fixversion KEY VERSION | move KEY todo|in_progress|in_review|freigabe | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC [--add-to-sprint] | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY] [--fixversion=VERSION] | add-to-sprint KEY]", file=sys.stderr)
         sys.exit(1)
 
     cmd = remaining_argv[0]
@@ -645,7 +650,7 @@ if __name__ == "__main__":
     elif cmd == "show" and len(remaining_argv) == 2:
         show_issue(remaining_argv[1], role=active_role)
     elif cmd == "status" and len(remaining_argv) == 2:
-        print_status(remaining_argv[1], role=active_role)
+        check_status(remaining_argv[1], role=active_role)
     elif cmd == "check-gate" and len(remaining_argv) == 2:
         check_gate(remaining_argv[1], role=active_role)
     elif cmd == "versions":
@@ -673,21 +678,18 @@ if __name__ == "__main__":
     elif cmd == "create-subtask" and len(remaining_argv) >= 4:
         # Parse optional flags
         add_sprint = False
-        fix_ver = None
         filtered_args = []
         for arg in remaining_argv[1:]:
             if arg == "--add-to-sprint":
                 add_sprint = True
-            elif arg.startswith("--fixversion="):
-                fix_ver = arg.split("=", 1)[1]
-            elif arg == "--fixversion" or arg.startswith("--fix-version"):
-                # Handle next arg if separated
-                pass
+            elif arg.startswith("--fixversion") or arg.startswith("--fix-version"):
+                print("Error: Sub-tasks must not get a solution ('Lösungsversion') assigned! (Governance mandate)", file=sys.stderr)
+                sys.exit(1)
             else:
                 filtered_args.append(arg)
 
         if len(filtered_args) < 3:
-            print("Usage: create-subtask PARENT_KEY SUMMARY DESC [--add-to-sprint] [--fixversion=VERSION]", file=sys.stderr)
+            print("Usage: create-subtask PARENT_KEY SUMMARY DESC [--add-to-sprint]", file=sys.stderr)
             sys.exit(1)
 
         parent_k = filtered_args[0]
@@ -696,13 +698,16 @@ if __name__ == "__main__":
 
         # Default subtask creation role to coordinator unless explicitly overridden
         subtask_role = active_role if active_role != "agent1" or "--as" in sys.argv or any(a.startswith("--as=") for a in sys.argv) or os.environ.get("JIRA_ACTOR") else "coordinator"
-        create_subtask(parent_k, summ, desc, role=subtask_role, add_to_sprint=add_sprint, fix_version=fix_ver)
+        create_subtask(parent_k, summ, desc, role=subtask_role, add_to_sprint=add_sprint)
     elif cmd == "create-issue" and len(remaining_argv) >= 3:
         add_sprint = False
         fix_ver = None
         filtered_args = []
         for arg in remaining_argv[1:]:
             if arg == "--add-to-sprint":
+                if active_role in ("agent1", "agent2", "coordinator"):
+                    print("Error: Agents must not move tickets to sprints! Only the human user assigns tickets to sprints during Sprint-Start Screening.", file=sys.stderr)
+                    sys.exit(1)
                 add_sprint = True
             elif arg.startswith("--fixversion="):
                 fix_ver = arg.split("=", 1)[1]
@@ -719,6 +724,9 @@ if __name__ == "__main__":
         parent = filtered_args[3] if len(filtered_args) >= 4 else None
         create_issue(summary, desc, type_id, parent, role=active_role, add_to_sprint=add_sprint, fix_version=fix_ver)
     elif cmd == "add-to-sprint" and len(remaining_argv) == 2:
+        if active_role in ("agent1", "agent2", "coordinator"):
+            print("Error: Agents must not move tickets to sprints! Only the human user assigns tickets to sprints during Sprint-Start Screening.", file=sys.stderr)
+            sys.exit(1)
         add_to_active_sprint(remaining_argv[1], role=active_role)
     else:
         print("Invalid command or arguments.", file=sys.stderr)

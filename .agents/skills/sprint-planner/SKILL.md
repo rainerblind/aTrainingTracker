@@ -34,6 +34,7 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
    ```bash
    python3 tools/jira_util.py search "project = ATT AND sprint in openSprints() AND status = 'Zu erledigen' ORDER BY rank ASC"
    ```
+   *Strict Invariant*: AI agents MUST NEVER move tickets into active sprints or pull backlog items autonomously (`"Agents must not move tickets to sprints!"`). Only the human user assigns tickets to sprints.
 2. **Establish Sprint Integration Branch**:
    Create and push the sprint integration branch from latest `develop`:
    ```bash
@@ -64,6 +65,7 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
    Once all sprint tickets are in status `Analysis`, Phase 1 concludes. The implementation agents (`agent1`, `agent2`) take over Phase 2:
    * Each ticket branches from the active `sprint/<SPRINT_NAME>` branch.
    * Upon completing Stage 5 verification, the ticket is merged back into `sprint/<SPRINT_NAME>` immediately.
+   * *In-Sprint Anomaly Logging*: Any process hiccups, tool issues, or user corrections during execution are immediately logged as comments in the sprint's `Review & Retro` ticket.
 
 ---
 
@@ -80,7 +82,7 @@ Jointly review all completed sprint tickets with the human user against expectat
    ```
 2. **Collaborative Ticket Inspection**:
    Ensure git is checked out on `sprint/<SPRINT_NAME>` (which contains all integrated sprint changes).
-   **Rule (Single-Ticket Focus)**: Evaluate tickets **strictly one-by-one**. Never batch or present multiple tickets simultaneously. Complete verification and human acceptance for the current ticket before proceeding to the next.
+   **Rule (Single-Ticket Focus)**: Evaluate tickets **strictly one-by-one** (`"Please make one ticket after the other. Please also keep this in mind for the retro."`). Never batch or present multiple tickets simultaneously. Complete verification and human acceptance for the current ticket before proceeding to the next.
    For each ticket in `Final Review (Human)`:
    * Present the walkthrough deliverable (`docs/engineering/walkthroughs/<KEY>_walkthrough.md`) and summary of changes.
    * User verifies on-device behavior (Pixel 10 APK built from `sprint/<SPRINT_NAME>`) and inspects code diffs.
@@ -93,7 +95,7 @@ Jointly review all completed sprint tickets with the human user against expectat
          python3 tools/jira_util.py comment <KEY> "Revision needed: [Human feedback]"
          python3 tools/jira_util.py move <KEY> "analysis"
          ```
-       * *Separate follow-up issue*: Keep parent ticket approved and file a dedicated Bug ticket for the next sprint backlog via `tools/jira_util.py create-issue`.
+       * *Separate follow-up issue*: Keep parent ticket approved and file a dedicated Bug ticket for the next sprint backlog via `tools/jira_util.py create-issue`. (Remember: creating the ticket stops immediately and does not trigger realization).
 3. **Sprint Closure & Merge to `develop`**:
    Once all accepted sprint tickets are signed off:
    ```bash
@@ -105,4 +107,6 @@ Jointly review all completed sprint tickets with the human user against expectat
    Post final integration notice to Jira.
 4. **Sprint Retrospective**:
    * Review sprint metrics, velocity, and process findings in the sprint's `Review & Retro` ticket (e.g. `ATT-1511`).
+   * Synthesize real-time comments logged during the sprint into actionable root cause analyses.
    * Document insights in `docs/engineering/Sprint_Review_and_Retro_<KEY>.md`.
+   * Update `.agents/rules/aspice_governance.md`, relevant skills, and `docs/project_protocol.md` with permanent countermeasures.
