@@ -766,6 +766,8 @@
     <string name="view_size_xlarge">Muito grande</string>
     <string name="view_size_huge">Enorme</string>
     <string name="view_size_xhuge">Gigante</string>
+    <string name="view_size_xxhuge">XGigante</string>
+    <string name="view_size_xxxhuge">XXGigante</string>
     <string name="configure">Configurar</string>
     <string name="tab_name">Nome</string>
 

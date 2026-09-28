@@ -63,7 +63,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 
 enum class ViewSize {
-    XSMALL, SMALL, NORMAL, LARGE, XLARGE, HUGE, XHUGE
+    XSMALL, SMALL, NORMAL, LARGE, XLARGE, HUGE, XHUGE, XXHUGE, XXXHUGE
 }
 
 /**
@@ -78,6 +78,8 @@ fun ViewSize.getDisplayName(context: Context): String {
         ViewSize.XLARGE -> R.string.view_size_xlarge
         ViewSize.HUGE -> R.string.view_size_huge
         ViewSize.XHUGE -> R.string.view_size_xhuge
+        ViewSize.XXHUGE -> R.string.view_size_xxhuge
+        ViewSize.XXXHUGE -> R.string.view_size_xxxhuge
     }
     return context.getString(resourceId)
 }
@@ -94,6 +96,8 @@ fun getSensorValueTextStyle(viewSize: ViewSize, typography: Typography): TextSty
         ViewSize.XLARGE -> typography.displayLarge.copy(fontSize = 50.sp)
         ViewSize.HUGE -> typography.displayLarge.copy(fontSize = 76.sp)
         ViewSize.XHUGE -> typography.displayLarge.copy(fontSize = 100.sp)
+        ViewSize.XXHUGE -> typography.displayLarge.copy(fontSize = 140.sp)
+        ViewSize.XXXHUGE -> typography.displayLarge.copy(fontSize = 180.sp)
     }
     return baseStyle.copy(fontWeight = FontWeight.SemiBold)
 }
@@ -110,6 +114,8 @@ fun getSensorUnitTextStyle(viewSize: ViewSize, typography: Typography): TextStyl
         ViewSize.XLARGE -> typography.headlineMedium.copy(fontSize = 32.sp)
         ViewSize.HUGE -> typography.headlineMedium.copy(fontSize = 40.sp)
         ViewSize.XHUGE -> typography.headlineLarge.copy(fontSize = 48.sp)
+        ViewSize.XXHUGE -> typography.headlineLarge.copy(fontSize = 56.sp)
+        ViewSize.XXXHUGE -> typography.headlineLarge.copy(fontSize = 64.sp)
     }
 }
 
@@ -137,6 +143,8 @@ fun SensorFieldView(
         ViewSize.XLARGE -> MaterialTheme.typography.headlineSmall
         ViewSize.HUGE -> MaterialTheme.typography.headlineSmall.copy(fontSize = 28.sp)
         ViewSize.XHUGE -> MaterialTheme.typography.headlineMedium.copy(fontSize = 32.sp)
+        ViewSize.XXHUGE -> MaterialTheme.typography.headlineMedium.copy(fontSize = 36.sp)
+        ViewSize.XXXHUGE -> MaterialTheme.typography.headlineLarge.copy(fontSize = 40.sp)
     }
     val filterStyle = when (fieldState.viewSize) {
         ViewSize.XSMALL -> MaterialTheme.typography.labelSmall
@@ -146,6 +154,8 @@ fun SensorFieldView(
         ViewSize.XLARGE -> MaterialTheme.typography.bodyLarge
         ViewSize.HUGE -> MaterialTheme.typography.bodyLarge
         ViewSize.XHUGE -> MaterialTheme.typography.titleMedium
+        ViewSize.XXHUGE -> MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp)
+        ViewSize.XXXHUGE -> MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp)
     }
 
     Card(
