@@ -44,6 +44,7 @@ import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.luminance
+import com.atrainingtracker.trainingtracker.ui.map.DarkMapAntiFlashOverlay
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
@@ -222,10 +223,13 @@ fun ManualClusterScreen(
                 )
             }
 
+            var isMapLoaded by remember { mutableStateOf(false) }
+
             Box(modifier = Modifier.weight(0.55f).fillMaxWidth().background(if (isDark) Color(0xFF121212) else Color.White)) {
                 GoogleMap(
-                    modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White),
+                    modifier = Modifier.fillMaxSize(),
                     cameraPositionState = cameraPositionState,
+                    onMapLoaded = { isMapLoaded = true },
                     onMapClick = { latLng ->
                         when (selectionMode) {
                             SelectionMode.START -> {
@@ -271,6 +275,11 @@ fun ManualClusterScreen(
                         )
                     }
                 }
+
+                DarkMapAntiFlashOverlay(
+                    isMapLoaded = isMapLoaded,
+                    isDark = isDark
+                )
                 
                 if (selectionMode != SelectionMode.NONE) {
                     val modeLabel = when (selectionMode) {

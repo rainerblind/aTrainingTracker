@@ -69,6 +69,7 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetCon
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
+import com.atrainingtracker.trainingtracker.ui.map.DarkMapAntiFlashOverlay
 import com.atrainingtracker.trainingtracker.ui.map.createHeartPinMarker
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.google.android.gms.maps.model.CameraPosition
@@ -448,28 +449,34 @@ fun LocationMiniMap(
         DarkMapStyle.resolveMapProperties(isDark, context)
     }
 
-    GoogleMap(
-        modifier = modifier.background(if (isDark) Color(0xFF121212) else Color.White),
-        cameraPositionState = cameraPositionState,
-        properties = mapProperties,
-        uiSettings = MapUiSettings(
-            zoomControlsEnabled = false,
-            myLocationButtonEnabled = false,
-            compassEnabled = false,
-            mapToolbarEnabled = false
-        )
-    ) {
-        Marker(
-            state = MarkerState(position = latLng),
-            icon = heartMarkerIcon
-        )
-        Circle(
-            center = latLng,
-            radius = radius,
-            fillColor = Color(0x332196F3),
-            strokeColor = Color(0x882196F3),
-            strokeWidth = 2f
-        )
+    var isMapLoaded by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
+        GoogleMap(
+            modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White),
+            cameraPositionState = cameraPositionState,
+            properties = mapProperties,
+            onMapLoaded = { isMapLoaded = true },
+            uiSettings = MapUiSettings(
+                zoomControlsEnabled = false,
+                myLocationButtonEnabled = false,
+                compassEnabled = false,
+                mapToolbarEnabled = false
+            )
+        ) {
+            Marker(
+                state = MarkerState(position = latLng),
+                icon = heartMarkerIcon
+            )
+            Circle(
+                center = latLng,
+                radius = radius,
+                fillColor = Color(0x332196F3),
+                strokeColor = Color(0x882196F3),
+                strokeWidth = 2f
+            )
+        }
+        DarkMapAntiFlashOverlay(isMapLoaded = isMapLoaded, isDark = isDark)
     }
 }
 

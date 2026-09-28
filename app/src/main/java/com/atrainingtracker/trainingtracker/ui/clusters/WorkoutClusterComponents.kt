@@ -52,6 +52,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
+import com.atrainingtracker.trainingtracker.ui.map.DarkMapAntiFlashOverlay
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
@@ -347,6 +348,11 @@ fun ClusterItem(
                                         icon = remember { createSensorMarker(context, R.drawable.ic_distance, TTColor.ApexPoint) }
                                     )
                                 }
+
+                                DarkMapAntiFlashOverlay(
+                                    isMapLoaded = isMapLoaded,
+                                    isDark = isDark
+                                )
                                 
                                 // Transparent overlay to ensure reliable click handling in a scrollable list
                                 Box(modifier = Modifier.fillMaxSize().combinedClickable(
@@ -548,6 +554,11 @@ fun UnclusteredWorkoutItem(
                                         )
                                     }
                                 }
+
+                                DarkMapAntiFlashOverlay(
+                                    isMapLoaded = isMapLoaded,
+                                    isDark = isDark
+                                )
                                 
                                 Box(modifier = Modifier.fillMaxSize().clickable { onClick() })
                             }
