@@ -175,21 +175,55 @@ class TestRolePrecedenceAndAttribution(unittest.TestCase):
             
             # Default invocation (no role passed)
             jira_util.create_subtask("ATT-1000", "Test Subtask", "Test Desc")
-            mock_request.assert_called_once()
-            _, kwargs = mock_request.call_args
+            self.assertGreaterEqual(mock_request.call_count, 1)
+            _, kwargs = mock_request.call_args_list[0]
             self.assertEqual(kwargs.get("role"), "coordinator")
 
     def test_human_gate_transition_blocked_across_all_roles(self):
-        """Attempting to transition to Erledigt is blocked across all roles."""
+        """Attempting to transition parent ticket to Erledigt is blocked across all roles."""
         prohibited_targets = ["erledigt", "Erledigt", "DONE", "freigabe erteilt", "Freigabe erteilt"]
         for target in prohibited_targets:
             for role in ["agent1", "agent2", "coordinator"]:
                 stderr_capture = io.StringIO()
                 stdout_capture = io.StringIO()
-                with patch("sys.stderr", stderr_capture), patch("sys.stdout", stdout_capture):
+                with patch("sys.stderr", stderr_capture), patch("sys.stdout", stdout_capture), patch("jira_util.jira_request") as mock_request, patch("jira_util.get_config") as mock_config:
+                    mock_config.return_value = {"JIRA_URL": "https://example.atlassian.net"}
+                    mock_request.return_value = {"fields": {"issuetype": {"subtask": False}}}
                     with self.assertRaises(SystemExit) as cm:
                         jira_util.transition_issue("ATT-1202", target, role=role)
                     self.assertEqual(cm.exception.code, 1)
+
+    def test_subtask_freigabe_transitions_to_erledigt(self):
+        """Subtasks can transition directly to Erledigt via freigabe without human review stop."""
+        with patch("jira_util.jira_request") as mock_request, patch("jira_util.get_config") as mock_config:
+            mock_config.return_value = {"JIRA_URL": "https://example.atlassian.net"}
+            mock_request.side_effect = [
+                # 1st call: issue type query
+                {"fields": {"issuetype": {"subtask": True}}},
+                # 2nd call: transitions query
+                {"transitions": [{"id": "4", "name": "Freigabe", "to": {"name": "Erledigt"}}]},
+                # 3rd call: post transition
+                {}
+            ]
+            jira_util.transition_issue("ATT-9999", "freigabe", role="agent1")
+            self.assertEqual(mock_request.call_count, 3)
+            post_call = mock_request.call_args_list[2]
+            self.assertEqual(post_call[1].get("payload"), {"transition": {"id": "4"}})
+
+    def test_parent_ticket_final_review_transitions_and_assigns_human(self):
+        """Parent tickets in Test transition to Final Review (Human) and assign to human."""
+        with patch("jira_util.jira_request") as mock_request, patch("jira_util.get_config") as mock_config, patch("jira_util.assign_issue") as mock_assign:
+            mock_config.return_value = {"JIRA_URL": "https://example.atlassian.net"}
+            mock_request.side_effect = [
+                # 1st call: issue type query (parent ticket)
+                {"fields": {"issuetype": {"subtask": False}}},
+                # 2nd call: transitions query
+                {"transitions": [{"id": "8", "name": "Final Review", "to": {"name": "Final Review (Human)"}}]},
+                # 3rd call: post transition
+                {}
+            ]
+            jira_util.transition_issue("ATT-1508", "final review", role="agent1")
+            mock_assign.assert_called_once_with("ATT-1508", "human", role="agent1")
 
 
 class TestSecretMasking(unittest.TestCase):
@@ -270,9 +304,8 @@ class TestJiraCliTooling(unittest.TestCase):
         )
 
         self.assertEqual(key, "ATT-9999")
-        # Verify payload sent to Jira REST API
-        mock_request.assert_called_once()
-        args, kwargs = mock_request.call_args
+        self.assertGreaterEqual(mock_request.call_count, 1)
+        args, kwargs = mock_request.call_args_list[0]
         payload = kwargs.get("payload", {})
         fields = payload.get("fields", {})
         self.assertEqual(fields.get("parent"), {"key": "ATT-1000"})

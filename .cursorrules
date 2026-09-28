@@ -63,4 +63,17 @@ Before performing any task, you must:
     *   **Gradle Build Caches (`~/.gradle`, `~/.android`)**: Gradle daemons and Android SDK metrics write outside the workspace. Sandboxed executions will fail due to filesystem access denial. All `./gradlew` commands MUST run with elevated permissions (`BypassSandbox: true`).
     *   **External REST APIs**: Tools accessing Jira Cloud or Gemini APIs require network access. All `jira_util.py` and `review_agent.py` executions MUST run with `BypassSandbox: true`.
 
+15. **Modular Antigravity Skills Architecture & Streamlined Subtask Lifecycle (`.agents/skills/`) (ATT-1508 Standards)**:
+    *   **On-Demand Skill Modularization**: Procedural rules, templates, and domain practices are encapsulated in on-demand skills under `.agents/skills/`:
+        *   `stage1-analysis`: Root cause analysis, Chesterton's Fence archaeology, scope bounding (`templates/analysis_template.md`).
+        *   `stage2-req-test-spec`: Requirements formulation (`REQ-XXX`), test cases (`TST-XXX`), 9-language localization audit (`templates/test_spec_template.md`).
+        *   `stage3-impl-plan`: Architecture, SWE.2 layering, atomic steps, invariant protection (`templates/plan_template.md`).
+        *   `stage4-implementation`: Software construction, Gate 3 verification, targeted unit testing, KDoc/JavaDoc standards.
+        *   `stage5-verification`: Full clean-room test suite (`./gradlew testDebugUnitTest`), walkthrough authoring (`templates/walkthrough_template.md`), parent handover.
+        *   `jira-workflow`: Role-safe Jira operations via `tools/jira_util.py`, subtask transitions, parent ticket human gate enforcement.
+        *   `ui-designer`: Rapid Jetpack Compose `@Preview` loop, instant visual diffs, and immediate human visual verification.
+        *   `brainstormer`: Socratic discovery, problem definition, user story formulation, and automated backlog ticket creation (`templates/backlog_ticket_template.md`).
+    *   **Subtask Lifecycle Simplification**: Subtasks in `In Überprüfung` transition directly to `Erledigt` via transition `freigabe` upon passing Agent 2 Gate audit (`tools/review_agent.py`). Intermediate human review pause on subtasks is no longer required.
+    *   **Parent Ticket Final Human Review Gate**: Standard parent tickets (Bug, Feature, Improvement) mandate an explicit `Final Review (Human)` state following Stage 5 (`Test`). The AI agent transitions parent tickets to `Final Review (Human)` and assigns them to `human`. The terminal transition to `Erledigt` remains an inviolable Human Decision Gate reserved exclusively for the human user.
+
 
