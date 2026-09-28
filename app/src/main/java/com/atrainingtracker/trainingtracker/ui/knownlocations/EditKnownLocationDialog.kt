@@ -32,6 +32,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -119,7 +121,7 @@ fun EditKnownLocationDialog(
     AppModalBottomSheet(
         title = stringResource(id = R.string.known_location_edit_title),
         onDismissRequest = onDismiss,
-        iconPainter = painterResource(R.drawable.ic_table_edit),
+        icon = Icons.Default.Edit,
         actions = {
             AppDialogActions.SaveCancel(
                 onSave = {
@@ -260,7 +262,7 @@ fun EditKnownLocationSheetContent(
     AppBottomSheetContent(
         title = stringResource(id = R.string.known_location_edit_title),
         onDismissRequest = onDismiss,
-        iconPainter = painterResource(R.drawable.ic_table_edit),
+        icon = Icons.Default.Edit,
         actions = {
             AppDialogActions.SaveCancel(
                 onSave = {
