@@ -95,6 +95,7 @@ fun MapScreenWithTrack(
     var selectedRouteId by rememberSaveable { mutableStateOf<Long?>(null) }
     var selectedLocationId by rememberSaveable { mutableStateOf<Long?>(targetLocationId) }
     var editingLocation by remember { mutableStateOf<KnownLocationItem?>(null) }
+    var previewRadius by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(targetLocationId) {
         if (targetLocationId != null && targetLocationId > 0) {
@@ -128,6 +129,18 @@ fun MapScreenWithTrack(
                 )
             } else null
         } else null
+    }
+
+    val displayLocations = remember(uiState.knownLocations, editingLocation, previewRadius) {
+        val editing = editingLocation
+        val radius = previewRadius
+        if (editing != null && radius != null) {
+            uiState.knownLocations.map { loc ->
+                if (loc.id == editing.id) loc.copy(radius = radius) else loc
+            }
+        } else {
+            uiState.knownLocations
+        }
     }
 
     val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -208,7 +221,7 @@ fun MapScreenWithTrack(
                 },
                 modifier = Modifier.fillMaxSize()
             ) {
-                knownLocations(uiState.knownLocations, onLocationClick = { id ->
+                knownLocations(displayLocations, onLocationClick = { id ->
                     selectedSegmentId = null
                     selectedRouteId = null
                     selectedLocationId = id
@@ -236,11 +249,18 @@ fun MapScreenWithTrack(
             location = loc,
             isMetric = isMetric,
             showMap = false,
+            onRadiusChange = { newRadius ->
+                previewRadius = newRadius
+            },
             onConfirm = { id, name, altitude, radius, source ->
                 viewModel.updateKnownLocation(id, name, altitude, radius, source)
+                previewRadius = null
                 editingLocation = null
             },
-            onDismiss = { editingLocation = null }
+            onDismiss = {
+                previewRadius = null
+                editingLocation = null
+            }
         )
     }
 
