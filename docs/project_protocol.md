@@ -87,8 +87,11 @@ Under NO circumstances may any AI agent transition a parent Jira ticket to `Erle
 ### Jira Best Practices & Mandates
 * **Sub-Task Self-Sufficiency**: Every sub-task Description MUST be self-contained. Empty descriptions or redirection stubs (e.g. "see parent") are strictly forbidden.
 * **Documentation-Before-Transition Sequencing**: Agents MUST update the sub-task Description and post any audit comments **BEFORE** calling `move` to transition to `In Überprüfung`.
-* **Mandatory Lösungsversion (Fix Version/s)**: Parent tickets MUST have an active unreleased `Lösungsversion` assigned (e.g. `V4.9.38`). Sub-tasks MUST NOT have a `Lösungsversion` assigned.
-* **Bug Ticket Creation vs. Deferred Analysis (ATT-1250)**: Filing a bug ticket (`create-issue`) MUST be fast and lightweight. Analysis is deferred until prioritized.
+* **Mandatory Lösungsversion (Fix Version/s)**: Parent tickets MUST have an active unreleased `Lösungsversion` assigned (e.g. `V4.9.38`). Sub-tasks MUST NOT have a `Lösungsversion` assigned ("Sub-Tasks must not get a solution").
+* **Bug Ticket Creation vs. Deferred Analysis (ATT-1250)**: Filing a bug ticket (`create-issue`) MUST be fast and lightweight. Creating a ticket never triggers autonomous execution.
+* **Prohibition on Agent Sprint Manipulation**: Agents MUST NEVER move tickets into sprints or pull tickets from the backlog autonomously. Only the human user assigns tickets to sprints.
+* **Single-Ticket Review Rule**: During sprint reviews, tickets must be reviewed strictly one-by-one. Never present multiple tickets for joint review simultaneously.
+* **Continuous Retro Logging**: Any process anomalies, tool failures, or user corrections must be logged immediately as comments in the active sprint's `Review & Retro` ticket.
 * **Branch Cleanup**: Merged feature/bugfix branches must be immediately deleted upon integration into `develop`.
 
 ---
