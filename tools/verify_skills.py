@@ -17,6 +17,7 @@ EXPECTED_SKILLS = [
     "jira-workflow",
     "ui-designer",
     "brainstormer",
+    "sprint-planner",
 ]
 
 EXPECTED_TEMPLATES = {

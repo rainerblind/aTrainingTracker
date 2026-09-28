@@ -8,6 +8,7 @@ The project enforces strict separation of concerns across distinct personas:
 * **Agent 1 (Implementer)** (`JIRA_AGENT1_USER`): Default role in `./tools/jira_util.py`. Formulates analysis, test specifications, implementation plans, code construction, and verification testing. Comments prefixed with `[Automated comment by AI Agent 1 (Implementer)]`.
 * **Agent 2 (Senior Auditor)** (`JIRA_AGENT2_USER`): Out-of-process independent auditor in `tools/review_agent.py`. Evaluates deliverables against explicit ASPICE quality gates (Gates 1–5). Comments prefixed with `[Automated comment by AI Agent 2 (Auditor)]`.
 * **Coordinator (Orchestrator)** (`JIRA_COORDINATOR_USER`): Administrative role (`--as coordinator`). Manages sprint tracking, sub-task discovery, and backlog grooming. The Coordinator cannot override Auditor findings and cannot close tickets to `Erledigt`.
+* **Sprint-Planner (Facilitator & Scrum Master)**: Conducts interactive upfront ticket screening with the user at sprint start and facilitates collaborative review at sprint end (Skill: [sprint-planner](file:///.agents/skills/sprint-planner/SKILL.md)).
 * **UI-Designer (Visual Prototyper)**: Specialized persona for rapid Jetpack Compose `@Preview` loops, instant visual diffs, and immediate human visual verification (Skill: [ui-designer](file:///.agents/skills/ui-designer/SKILL.md)).
 * **Brainstormer (Ideation Partner)**: Socratic product discovery, problem definition, and automated backlog ticket creation without interrupting active sprints (Skill: [brainstormer](file:///.agents/skills/brainstormer/SKILL.md)).
 * **Human User (Sole Approver & Gatekeeper)**: Holds **exclusive authority** for final release authorization and transitioning parent tickets from `Final Review (Human)` to `Erledigt`.
@@ -19,40 +20,76 @@ Under NO circumstances may any AI agent transition a parent Jira ticket to `Erle
 
 ---
 
-## 2. Jira & Git Lifecycle Workflow
+## 2. Der agile Sprint-Ablauf im Detail (Das 3-Phasen-Modell mit Strategie A: Sprint-Branch)
 
-### A. Main Ticket & Sub-Task State Machine
-Parent tickets across all issue types (Bug, Improvement, Feature) progress through native lifecycle states:
-`Zu erledigen` -> `Analysis` -> `Test Spec` -> `Implementation Plan` -> `Implementation` -> `Test` -> `Final Review (Human)` -> `Erledigt`.
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│ PHASE 1: SPRINT-START & INTERAKTIVES SCREENING (Human & Agent)         │
+│ • User weist Tickets dem Sprint zu und startet den Sprint in Jira.     │
+│   Alle Tickets befinden sich zunächst im Status 'Zu erledigen'.        │
+│ • Sprint-Branch wird von develop angelegt: sprint/<sprint_id>          │
+│ • Der Agent (Skill: sprint-planner) geht alle Tickets einzeln mit      │
+│   dem User durch:                                                      │
+│   - Ticket verständlich & klar? ──► Agent schiebt es nach 'Analysis'   │
+│   - Unklarheiten / Lücken?      ──► Agent stellt gezielte Fragen,      │
+│                                     Mensch & Agent schärfen gemeinsam  │
+│                                     die Spezifikation/Beschreibung,    │
+│                                     danach schiebt Agent nach 'Analysis'│
+│ • Wenn alle Tickets auf 'Analysis' stehen, ist das Screening beendet.  │
+└────────────────────────────────────┬───────────────────────────────────┘
+                                     │
+                                     ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ PHASE 2: AUTONOME IN-SPRINT PIPELINE (Reine Agentenphase)               │
+│ Die Agenten arbeiten völlig autonom, bis alle Tickets fertig sind:     │
+│ • Pro Ticket: Git-Branch feature/ATT-XXX von sprint/<sprint_id> abzweigen│
+│ • Durchlauf Stages 1 bis 5:                                            │
+│   Stage 1: Analysis                                                    │
+│   Stage 2: Req & Test Spec                                             │
+│   Stage 3: Implementation Plan                                         │
+│   Stage 4: Implementation (ausschließlich schnelle Modultests, 5–15s) │
+│   Stage 5: Test (Clean-Room-Testsuite ./gradlew testDebugUnitTest)     │
+│ • Sub-Tasks laufen autonom:                                            │
+│   Agent 1 erstellt Deliverable ──► In Überprüfung                      │
+│   ──► Agent 2 Gate-Audit (review_agent.py)                             │
+│   ──► Bei PASS: Direkt nach 'Erledigt' (kein Human Review auf Subtasks)│
+│ • Sobald Stage 5 (Test) bestanden ist:                                 │
+│   1. Feature-Branch sofort in sprint/<sprint_id> mergen (--no-ff)      │
+│      und feature/ATT-XXX löschen (Keine Merge-Konflikte im Sprint!)   │
+│   2. Agent schiebt Parent-Ticket nach 'Final Review (Human)'           │
+│      python3 tools/jira_util.py move ATT-XXX "final review"            │
+│ • Nächstes Ticket zweigt vom aktuellen Stand des sprint-Branches ab    │
+└────────────────────────────────────┬───────────────────────────────────┘
+                                     │
+                                     ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ PHASE 3: SPRINT-ENDE & GEMEINSAMER REVIEW (Human & Agent)              │
+│ Am Ende des Sprints setzen sich Mensch und Agent zusammen:             │
+│ • Gemeinsame Prüfung aller Tickets in 'Final Review (Human)':         │
+│   1. Reale Hardware-Prüfung auf Google Pixel 10 (Build von sprint/...) │
+│   2. Code-Diffs und Walkthrough-Dokumentation sichten                  │
+│ • Bewertungs-Entscheidung pro Ticket:                                  │
+│   - In Ordnung (i.O. / Erwartungen erfüllt):                           │
+│     * Mensch überführt Ticket von 'Final Review (Human)' nach 'Erledigt'│
+│   - Nicht in Ordnung (n.i.O.):                                         │
+│     * Ticket-Commit auf sprint/<sprint_id> revertieren oder fixen,     │
+│       Ticket mit Revisionskommentar zurück nach 'Analysis'             │
+│     * Oder ein neues Bug-Ticket wird für den Folgesprint angelegt      │
+│ • Sprint-Abschluss:                                                    │
+│   - Gesamten geprüften sprint/<sprint_id>-Branch in develop mergen     │
+│     (git checkout develop && git merge --no-ff sprint/<sprint_id>)     │
+│   - sprint/<sprint_id>-Branch löschen. develop bleibt 100% sauber!     │
+│ • Sprint Review & Retro (z. B. ATT-1511): Dokumentation von Learnings │
+│   und Prozessverbesserungen in docs/engineering/                       │
+└────────────────────────────────────────────────────────────────────────┘
+```
 
-Whenever the parent ticket enters a stage, Jira Automation automatically spawns the corresponding lifecycle sub-task:
-`[Analysis]` -> `[Req & Test Spec]` -> `[Impl-Plan]` -> `[Implementation]` -> `[Test]`.
-
-Each lifecycle sub-task follows this streamlined progression:
-1. `Zu erledigen`: Sub-task spawned by Jira Automation.
-2. `In Bearbeitung`: **Agent 1** moves the sub-task here to execute the stage deliverable.
-3. `In Überprüfung`: **Agent 1** writes the complete deliverable directly into the sub-task **Description** (`./tools/jira_util.py update-desc`) and moves the sub-task here.
-4. **Automated Independent Review (Agent 2)**:
-   Agent 2 executes the gate review (`python3 tools/review_agent.py audit <Subtask-Key>`), evaluates the deliverable, and posts the audit report comment:
-   * *Audit Passed (`RECOMMEND PASS`)*: Transitions sub-task directly to `Erledigt` via transition `Freigabe`. **No intermediate human review stop is necessary on sub-tasks.**
-   * *Audit Challenged (`CHALLENGED` / `RECOMMEND REVISION`)*: Transitions sub-task from `In Überprüfung` back to `In Bearbeitung` for Agent 1 to remediate findings.
-5. **Parent Ticket Final Human Review**:
-   Upon completing Stage 5 (`Test`), the agent transitions the parent ticket to `Final Review (Human)`:
-   ```bash
-   python3 tools/jira_util.py move <PARENT_KEY> "final review"
-   ```
-   The human user performs on-device testing and visual inspection, and personally transitions the parent ticket to `Erledigt`.
-
-### B. Jira Best Practices & Mandates
+### Jira Best Practices & Mandates
 * **Sub-Task Self-Sufficiency**: Every sub-task Description MUST be self-contained. Empty descriptions or redirection stubs (e.g. "see parent") are strictly forbidden.
 * **Documentation-Before-Transition Sequencing**: Agents MUST update the sub-task Description and post any audit comments **BEFORE** calling `move` to transition to `In Überprüfung`.
 * **Mandatory Lösungsversion (Fix Version/s)**: Parent tickets MUST have an active unreleased `Lösungsversion` assigned (e.g. `V4.9.38`). Sub-tasks MUST NOT have a `Lösungsversion` assigned.
 * **Bug Ticket Creation vs. Deferred Analysis (ATT-1250)**: Filing a bug ticket (`create-issue`) MUST be fast and lightweight. Analysis is deferred until prioritized.
-
-### C. Git Branching, Commits & Merging
-* **Branch Creation**: Always branch off `develop` before starting work: `git checkout develop && git checkout -b feature/ATT-XXX` (or `bugfix/ATT-XXX`).
-* **Conventional Commits**: Commit logical increments using format `<type>(<scope>): <summary> (ATT-XXX)` with asterisk `*` bullet points in the body.
-* **Develop Integration & Mandatory Branch Closure (ATT-1394)**: Once 100% of sub-tasks are `Erledigt` and human release is authorized in `Final Review (Human)`, the feature branch is merged into `develop` using `--no-ff` and immediately deleted locally.
+* **Branch Cleanup**: Merged feature/bugfix branches must be immediately deleted upon integration into `develop`.
 
 ---
 
@@ -62,6 +99,7 @@ The detailed procedural rules, quality checklists, and templates are encapsulate
 
 | Stage / Role | Skill Directory | Core Focus & Encapsulated Assets |
 | :--- | :--- | :--- |
+| **Sprint Facilitation** | [sprint-planner](file:///.agents/skills/sprint-planner/SKILL.md) | Sprint-Start Screening (interaktiv mit User), Anforderungsklährung, Übergabe an autonome Phase, Sprint-End Joint Review. |
 | **Stage 1: Analysis** | [stage1-analysis](file:///.agents/skills/stage1-analysis/SKILL.md) | Forensic RCA, Chesterton's Fence archaeology, scope bounding.<br>Template: `templates/analysis_template.md` |
 | **Stage 2: Req & Test Spec** | [stage2-req-test-spec](file:///.agents/skills/stage2-req-test-spec/SKILL.md) | Requirements specification (`REQ-XXX`), test cases (`TST-XXX`), 9-language localization audit, living doc synchronization.<br>Template: `templates/test_spec_template.md` |
 | **Stage 3: Impl Plan** | [stage3-impl-plan](file:///.agents/skills/stage3-impl-plan/SKILL.md) | Architectural decomposition, SWE.2 layering, atomic step breakdown, invariants.<br>Template: `templates/plan_template.md` |
