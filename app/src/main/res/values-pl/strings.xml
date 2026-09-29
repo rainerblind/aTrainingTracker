@@ -1269,4 +1269,6 @@
     <string name="workout_start_location">Start: %s</string>
     <string name="workout_destination_location">Cel: %s</string>
     <string name="workout_start_and_destination">Start i meta: %s</string>
+    <string name="filter_start_location">Miejsce startu</string>
+    <string name="known_locations_view_workouts">Pokaż treningi</string>
 </resources>

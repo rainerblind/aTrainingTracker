@@ -1279,4 +1279,6 @@
     <string name="workout_start_location">Inicio: %s</string>
     <string name="workout_destination_location">Destino: %s</string>
     <string name="workout_start_and_destination">Inicio y destino: %s</string>
+    <string name="filter_start_location">Lugar de inicio</string>
+    <string name="known_locations_view_workouts">Ver entrenamientos</string>
 </resources>

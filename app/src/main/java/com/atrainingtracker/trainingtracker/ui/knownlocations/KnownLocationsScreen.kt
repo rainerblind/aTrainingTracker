@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,6 +39,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
@@ -87,6 +89,7 @@ fun KnownLocationsScreen(
     viewModel: KnownLocationsViewModel,
     onMenuClick: () -> Unit = { },
     onShowOnMap: (Long) -> Unit = { },
+    onShowWorkouts: (KnownLocationItem) -> Unit = { },
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -181,6 +184,7 @@ fun KnownLocationsScreen(
             uiState = uiState,
             onEdit = { viewModel.openEditDialog(it, showMap = true) },
             onShowOnMap = { item -> onShowOnMap(item.id) },
+            onShowWorkouts = onShowWorkouts,
             onDelete = { locationPendingDeletion = it },
             modifier = Modifier.fillMaxSize()
         )
@@ -221,6 +225,7 @@ private fun KnownLocationsListContent(
     uiState: KnownLocationsUiState,
     onEdit: (KnownLocationItem) -> Unit,
     onShowOnMap: (KnownLocationItem) -> Unit,
+    onShowWorkouts: (KnownLocationItem) -> Unit = { },
     onDelete: (KnownLocationItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -277,6 +282,7 @@ private fun KnownLocationsListContent(
                     isMetric = uiState.isMetric,
                     onEdit = { onEdit(item) },
                     onShowOnMap = { onShowOnMap(item) },
+                    onShowWorkouts = { onShowWorkouts(item) },
                     onDelete = { onDelete(item) }
                 )
             }
@@ -293,6 +299,7 @@ private fun KnownLocationCard(
     isMetric: Boolean,
     onEdit: () -> Unit,
     onShowOnMap: () -> Unit = {},
+    onShowWorkouts: () -> Unit = {},
     onDelete: () -> Unit,
     initialShowContextMenu: Boolean = false
 ) {
@@ -350,13 +357,41 @@ private fun KnownLocationCard(
                         )
                     }
 
-                    // Number of Starts
-                    Text(
-                        text = pluralStringResource(R.plurals.known_locations_starts, item.hitCount, item.hitCount),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    // Number of Starts (Interactive Drill-Down Touch Target)
+                    Surface(
+                        onClick = onShowWorkouts,
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .defaultMinSize(minHeight = 48.dp)
+                            .testTag("location_starts_badge_${item.id}")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Place,
+                                contentDescription = stringResource(R.string.known_locations_view_workouts),
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = pluralStringResource(R.plurals.known_locations_starts, item.hitCount, item.hitCount),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -462,6 +497,7 @@ fun PreviewKnownLocationCardLight() {
                 isMetric = true,
                 onEdit = {},
                 onShowOnMap = {},
+                onShowWorkouts = {},
                 onDelete = {}
             )
         }
@@ -478,6 +514,7 @@ fun PreviewKnownLocationCardDark() {
                 isMetric = true,
                 onEdit = {},
                 onShowOnMap = {},
+                onShowWorkouts = {},
                 onDelete = {}
             )
         }
@@ -494,6 +531,7 @@ fun PreviewKnownLocationCardContextMenu() {
                 isMetric = true,
                 onEdit = {},
                 onShowOnMap = {},
+                onShowWorkouts = {},
                 onDelete = {},
                 initialShowContextMenu = true
             )
