@@ -41,9 +41,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -288,7 +285,7 @@ private fun KnownLocationsListContent(
 }
 
 /**
- * Modern location card with icon badge, inline metrics, and overflow/context menu.
+ * Modern location card with icon badge, inline metrics, and universal delete-only long-press context menu.
  */
 @Composable
 private fun KnownLocationCard(
@@ -317,8 +314,7 @@ private fun KnownLocationCard(
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = item.name,
@@ -327,21 +323,8 @@ private fun KnownLocationCard(
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth()
                     )
-
-                    IconButton(
-                        onClick = { showContextMenu = true },
-                        modifier = Modifier
-                            .size(24.dp)
-                            .testTag("location_overflow_button_${item.id}")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
 
                 Row(
@@ -378,44 +361,16 @@ private fun KnownLocationCard(
             }
         }
 
-        // Context Menu for Actions (Show on map, Edit, Delete)
+        // Universal Long-Press Context Menu (Delete-only, Top-Left aligned per REQ-UI-061)
         Box(
             modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(end = 12.dp, top = 8.dp)
+                .align(Alignment.TopStart)
+                .padding(start = 12.dp, top = 8.dp)
         ) {
             DropdownMenu(
                 expanded = showContextMenu,
                 onDismissRequest = { showContextMenu = false }
             ) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.known_location_show_map)) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Map,
-                            contentDescription = null
-                        )
-                    },
-                    onClick = {
-                        showContextMenu = false
-                        onShowOnMap()
-                    },
-                    modifier = Modifier.testTag("location_show_on_map_action_${item.id}")
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.Edit)) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = null
-                        )
-                    },
-                    onClick = {
-                        showContextMenu = false
-                        onEdit()
-                    },
-                    modifier = Modifier.testTag("location_edit_action_${item.id}")
-                )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.delete)) },
                     leadingIcon = {
