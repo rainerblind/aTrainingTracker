@@ -20,6 +20,8 @@ package com.atrainingtracker.trainingtracker.ui.routes
 
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -47,6 +49,7 @@ fun RouteSummaryHeader(
     summary: RouteSummary,
     onToggleSelection: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    onEditClick: (() -> Unit)? = null,
     showSwitch: Boolean = true,
     switchScale: Float = 0.7f
 ) {
@@ -92,6 +95,20 @@ fun RouteSummaryHeader(
                                 text = stringResource(R.string.routes_source_label, stringResource(summary.source.displayNameResId)),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+                            )
+                        }
+                    }
+
+                    if (onEditClick != null) {
+                        IconButton(
+                            onClick = onEditClick,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = stringResource(R.string.route_edit),
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                     }
