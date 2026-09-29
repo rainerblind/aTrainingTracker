@@ -33,6 +33,10 @@ import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -56,6 +60,11 @@ class WorkoutSummariesViewModel(application: Application) :
     BaseMappableListViewModel<WorkoutData, WorkoutSortOrder>(application, WorkoutSortOrder.DATE) {
     private val workoutRepo = WorkoutRepository.getInstance(application)
     private val prefManager = MyPreferenceManager(application)
+    private val knownLocationsRepo = KnownLocationsRepository.getInstance(application)
+    private val clusterRepo = WorkoutClusterRepository.getInstance(application)
+
+    val knownLocations: StateFlow<List<KnownLocationItem>> = knownLocationsRepo.locationsFlow
+    val availableClusters: StateFlow<List<WorkoutCluster>> = clusterRepo.allClusters
 
     // Status for saving a route to provide feedback to the UI
     private val _saveRouteStatus = MutableStateFlow<Boolean?>(null)

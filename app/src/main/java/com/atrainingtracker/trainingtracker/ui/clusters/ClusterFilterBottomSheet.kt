@@ -44,20 +44,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterBottomSheetScaffold
 
 /**
- * Material 3 modal bottom sheet for multi-dimensional Favorite Tracks / Workout Clusters filtering.
+ * Material 3 modal bottom sheet for multi-dimensional Favorite Tracks / Workout Clusters filtering (REQ-UI-187).
  *
  * Employs [FilterBottomSheetScaffold] for strict consistency with workout, route, and segment filtering.
- * Allows users to search by keyword (track name), filter by linked equipment, choose minimum reference distance
- * thresholds (10km, 25km, 50km, 100km), and choose minimum recordings count thresholds (≥ 3, 5, 10, 25).
+ * Allows users to search by keyword (track name), filter by favorite starting locations (Lieblingsorte),
+ * filter by linked equipment, choose minimum reference distance thresholds (10km, 25km, 50km, 100km),
+ * and choose minimum recordings count thresholds (≥ 3, 5, 10, 25).
  *
  * @param criteria Active filter criteria to initialize local UI state.
  * @param availableEquipment List of distinct equipment names linked across clusters.
  * @param onApplyCriteria Callback invoked when the user applies updated criteria.
  * @param onClearAll Callback invoked when the user resets all criteria.
  * @param onDismissRequest Callback invoked when the sheet is closed.
+ * @param knownLocations List of available favorite locations for spatial filtering.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -66,12 +69,17 @@ fun ClusterFilterBottomSheet(
     availableEquipment: List<String>,
     onApplyCriteria: (ClusterFilterCriteria) -> Unit,
     onClearAll: () -> Unit,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
+    knownLocations: List<KnownLocationItem> = emptyList()
 ) {
     var localQuery by remember(criteria.query) { mutableStateOf(criteria.query) }
     var localEquipmentName by remember(criteria.equipmentName) { mutableStateOf(criteria.equipmentName) }
     var localMinDistanceMeters by remember(criteria.minDistanceMeters) { mutableStateOf(criteria.minDistanceMeters) }
     var localMinHitCount by remember(criteria.minHitCount) { mutableStateOf(criteria.minHitCount) }
+    var localStartLocationName by remember(criteria.startLocationName) { mutableStateOf(criteria.startLocationName) }
+    var localStartLocationLat by remember(criteria.startLocationLat) { mutableStateOf(criteria.startLocationLat) }
+    var localStartLocationLng by remember(criteria.startLocationLng) { mutableStateOf(criteria.startLocationLng) }
+    var localStartLocationRadiusM by remember(criteria.startLocationRadiusM) { mutableStateOf(criteria.startLocationRadiusM) }
 
     FilterBottomSheetScaffold(
         title = stringResource(R.string.filter_clusters_title),
@@ -81,6 +89,10 @@ fun ClusterFilterBottomSheet(
             localEquipmentName = null
             localMinDistanceMeters = null
             localMinHitCount = null
+            localStartLocationName = null
+            localStartLocationLat = null
+            localStartLocationLng = null
+            localStartLocationRadiusM = null
             onClearAll()
         },
         onApply = {
@@ -88,7 +100,11 @@ fun ClusterFilterBottomSheet(
                 query = localQuery.trim(),
                 equipmentName = localEquipmentName,
                 minDistanceMeters = localMinDistanceMeters,
-                minHitCount = localMinHitCount
+                minHitCount = localMinHitCount,
+                startLocationName = localStartLocationName,
+                startLocationLat = localStartLocationLat,
+                startLocationLng = localStartLocationLng,
+                startLocationRadiusM = localStartLocationRadiusM
             )
             onApplyCriteria(updated)
             onDismissRequest()
@@ -118,6 +134,44 @@ fun ClusterFilterBottomSheet(
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
+
+        // 2. Favorite Locations Selection (Lieblingsorte, REQ-UI-187)
+        if (knownLocations.isNotEmpty()) {
+            Column {
+                Text(
+                    text = stringResource(R.string.known_locations_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    knownLocations.forEach { loc ->
+                        val isSelected = localStartLocationLat == loc.latLng.latitude &&
+                                localStartLocationLng == loc.latLng.longitude
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = {
+                                if (isSelected) {
+                                    localStartLocationName = null
+                                    localStartLocationLat = null
+                                    localStartLocationLng = null
+                                    localStartLocationRadiusM = null
+                                } else {
+                                    localStartLocationName = loc.name
+                                    localStartLocationLat = loc.latLng.latitude
+                                    localStartLocationLng = loc.latLng.longitude
+                                    localStartLocationRadiusM = loc.radius.toDouble()
+                                }
+                            },
+                            label = { Text("📍 ${loc.name}") }
+                        )
+                    }
+                }
+            }
+        }
 
         // 2. Equipment Selection
         if (availableEquipment.isNotEmpty()) {

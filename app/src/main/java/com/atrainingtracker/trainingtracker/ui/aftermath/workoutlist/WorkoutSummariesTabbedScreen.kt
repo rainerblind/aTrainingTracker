@@ -138,6 +138,8 @@ fun WorkoutSummariesTabbedScreen(
     val isCompactView by viewModel.isCompactView.collectAsState()
     val filterCriteria by viewModel.filterCriteria.collectAsStateWithLifecycle()
     val allWorkouts by viewModel.allWorkouts.collectAsStateWithLifecycle()
+    val knownLocations by viewModel.knownLocations.collectAsStateWithLifecycle()
+    val availableClusters by viewModel.availableClusters.collectAsStateWithLifecycle()
     val deletionProgress by viewModel.deletionProgress.observeAsState(DeletionProgress.Idle)
 
     // --- SNACKBAR FEEDBACK ---
@@ -248,7 +250,9 @@ fun WorkoutSummariesTabbedScreen(
                     onClearAllFilters = { viewModel.clearFilterCriteria() },
                     onUpdateFilterCriteria = { viewModel.updateFilterCriteria(it) },
                     onClusterClick = { clusterId -> WorkoutNavigationEvents.triggerCluster(clusterId) },
-                    onMarkFinished = { workoutId -> viewModel.markWorkoutFinished(workoutId) }
+                    onMarkFinished = { workoutId -> viewModel.markWorkoutFinished(workoutId) },
+                    knownLocations = knownLocations,
+                    availableClusters = availableClusters
                 )
             }
 
