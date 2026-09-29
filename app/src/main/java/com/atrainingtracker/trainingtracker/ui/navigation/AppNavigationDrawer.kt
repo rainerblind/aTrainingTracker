@@ -55,6 +55,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
@@ -76,11 +77,13 @@ import com.google.accompanist.drawablepainter.rememberDrawablePainter
  * @property id Android resource ID associated with the navigation destination (e.g. `R.id.drawer_start_tracking`).
  * @property iconRes Drawable resource ID for the item's leading icon.
  * @property titleRes String resource ID for the item's localized display label.
+ * @property tintIcon Whether the icon should adapt with theme-aware contrast tinting. Set false for multi-colored brand assets.
  */
 data class DrawerItemConfig(
     val id: Int,
     val iconRes: Int,
-    val titleRes: Int
+    val titleRes: Int,
+    val tintIcon: Boolean = true
 )
 
 /**
@@ -178,8 +181,8 @@ fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
         DrawerGroup(
             titleRes = R.string.prefsOnlineCommunities,
             items = listOf(
-                DrawerItemConfig(R.id.drawer_strava, R.drawable.logo_square_strava, R.string.Strava),
-                DrawerItemConfig(R.id.drawer_dropbox, R.drawable.dropbox_logo_blue, R.string.Dropbox),
+                DrawerItemConfig(R.id.drawer_strava, R.drawable.logo_square_strava, R.string.Strava, tintIcon = false),
+                DrawerItemConfig(R.id.drawer_dropbox, R.drawable.dropbox_logo_blue, R.string.Dropbox, tintIcon = false),
                 DrawerItemConfig(R.id.drawer_export, R.drawable.ic_upload, R.string.prefsExportTitle)
             )
         ),
@@ -366,7 +369,8 @@ fun DrawerItemView(
             Image(
                 painter = rememberDrawablePainter(drawable),
                 contentDescription = null,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(24.dp),
+                colorFilter = if (item.tintIcon) ColorFilter.tint(contentColor) else null
             )
         } else {
             Spacer(modifier = Modifier.size(24.dp))
