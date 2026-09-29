@@ -1479,5 +1479,35 @@
     <string name="cluster_start_location">Start: %s</string>
     <string name="known_location_routes_header">Routes starting here (%d):</string>
     <string name="filter_by_start_location">Filter by Start Location</string>
+
+    <!-- Advanced Tuning Preferences (ATT-1304 / REQ-SET-073) -->
+    <string name="advanced_tuning_title">Advanced Tuning</string>
+    <string name="advanced_tuning_open">Advanced Tuning…</string>
+    <string name="advanced_tuning_warning_title">Expert Settings</string>
+    <string name="advanced_tuning_warning_desc">Modifying these parameters alters core tracking heuristics, sensor filtering, and battery saving behavior. You can restore factory defaults at any time.</string>
+    <string name="tuning_cat_battery_saver">AMOLED Battery Saver</string>
+    <string name="tuning_cat_gps">GPS &amp; Location Filtering</string>
+    <string name="tuning_cat_elevation">Elevation &amp; Gradient Dynamics</string>
+    <string name="tuning_full_dim_factor_title">Full Dimming Brightness</string>
+    <string name="tuning_full_dim_factor_desc">Target display brightness during flat terrain and low-effort intervals (clamped &gt;= 5%).</string>
+    <string name="tuning_medium_dim_factor_title">Medium Dimming Brightness</string>
+    <string name="tuning_medium_dim_factor_desc">Target display brightness during moderate grades or tempo training zones.</string>
+    <string name="tuning_slope_flat_title">Flat Terrain Threshold</string>
+    <string name="tuning_slope_flat_desc">Slope percentage below which full battery saver dimming is allowed.</string>
+    <string name="tuning_slope_steep_title">Steep Climb Threshold</string>
+    <string name="tuning_slope_steep_desc">Slope percentage above which screen illumination is forced to full brightness.</string>
+    <string name="tuning_wakeup_duration_title">Wake-up Duration</string>
+    <string name="tuning_wakeup_duration_desc">Duration the screen remains fully bright after a touch or proximity gesture.</string>
+    <string name="tuning_downward_delay_title">Downward Damping Delay</string>
+    <string name="tuning_downward_delay_desc">Hysteresis delay before dimming the screen to prevent flickering during transient gradient changes.</string>
+    <string name="tuning_gps_accuracy_title">GPS Accuracy Threshold</string>
+    <string name="tuning_gps_accuracy_desc">Maximum acceptable horizontal error; location fixes with worse accuracy will be rejected.</string>
+    <string name="tuning_altitude_window_title">Altitude Smoothing Window</string>
+    <string name="tuning_altitude_window_desc">Moving average time window for instantaneous altitude and vertical speed.</string>
+    <string name="tuning_slope_min_speed_title">Slope Minimum Speed</string>
+    <string name="tuning_slope_min_speed_desc">Minimum moving speed required to calculate real-time gradient.</string>
+    <string name="tuning_default_format">Default: %1$s</string>
+    <string name="reset_to_defaults">Reset to Defaults</string>
+    <string name="reset_to_defaults_success">Tuning preferences restored to factory defaults.</string>
 </resources>
 

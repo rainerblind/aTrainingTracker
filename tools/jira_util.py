@@ -469,15 +469,22 @@ def transition_issue(issue_key, status_name, role="agent1"):
     normalized_target = aliases.get(normalized_input, normalized_input)
 
     chosen_trans = None
+    # First pass: exact match
     for t in available_transitions:
         target_name = t.get("to", {}).get("name", "").lower()
         trans_name = t.get("name", "").lower()
-        if (normalized_target == target_name or 
-            normalized_target == trans_name or 
-            normalized_target in target_name or 
-            normalized_target in trans_name):
+        if normalized_target == target_name or normalized_target == trans_name:
             chosen_trans = t
             break
+
+    # Second pass: substring match fallback
+    if not chosen_trans:
+        for t in available_transitions:
+            target_name = t.get("to", {}).get("name", "").lower()
+            trans_name = t.get("name", "").lower()
+            if normalized_target in target_name or normalized_target in trans_name:
+                chosen_trans = t
+                break
 
     if not chosen_trans:
         avail_str = ", ".join([f"'{t['name']}' -> '{t.get('to', {}).get('name')}' (id {t['id']})" for t in available_transitions])

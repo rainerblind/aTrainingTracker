@@ -168,11 +168,29 @@ fun TrackingTabsScreen(
     val locationCalibrationStatus by trackingTabsViewModel.locationCalibrationStatus.collectAsState()
 
     // Battery Saver Telemetry & Event Subscriptions
+    val tuningDataStore = remember { com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore(context) }
+    val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(
+        initial = com.atrainingtracker.trainingtracker.settings.TuningConfig()
+    )
+
+    LaunchedEffect(tuningConfig) {
+        batterySaverController.updateTuningConfig(
+            com.atrainingtracker.trainingtracker.batterysaver.BatterySaverTuningConfig(
+                fullDimFactor = tuningConfig.fullDimFactor,
+                mediumDimFactor = tuningConfig.mediumDimFactor,
+                slopeFlatThreshold = tuningConfig.slopeFlatThreshold,
+                slopeSteepThreshold = tuningConfig.slopeSteepThreshold,
+                wakeupDurationMs = tuningConfig.wakeupDurationSec * 1000L,
+                downwardHysteresisMs = tuningConfig.downwardDelaySec * 1000L
+            )
+        )
+    }
+
     val filteredSensorData by trackingTabsViewModel.allFilteredSensorData.collectAsState()
     val activityType by trackingTabsViewModel.activityType.collectAsState()
     val liveSegments by trackingTabsViewModel.liveSegments.collectAsState()
 
-    LaunchedEffect(filteredSensorData, activityType, brightnessMode) {
+    LaunchedEffect(filteredSensorData, activityType, brightnessMode, tuningConfig) {
         if (brightnessMode != DisplayBrightnessMode.AUTO) return@LaunchedEffect
 
         val speedData = filteredSensorData.find { it.sensorType == SensorType.SPEED_mps }
@@ -180,7 +198,7 @@ fun TrackingTabsScreen(
 
         val slopeData = filteredSensorData.find { it.sensorType == SensorType.SLOPE }
         val rawSlope = (slopeData?.value as? Number)?.toFloat()
-        val slope = if (speed > 0.5 && rawSlope != null && !rawSlope.isNaN() && !rawSlope.isInfinite()) rawSlope else 0.0f
+        val slope = if (speed > tuningConfig.slopeMinSpeedMps && rawSlope != null && !rawSlope.isNaN() && !rawSlope.isInfinite()) rawSlope else 0.0f
 
         val hrData = filteredSensorData.find { it.sensorType == SensorType.HR }
         val hrValue = (hrData?.value as? Number)?.toDouble()
