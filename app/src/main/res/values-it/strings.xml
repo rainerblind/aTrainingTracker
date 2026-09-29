@@ -1255,4 +1255,9 @@
     <string name="sort_altitude">Altitudine</string>
     <string name="known_location_radius_label">Raggio di copertura</string>
     <string name="known_location_radius_format">%1$s: %2$s</string>
+    <string name="phone_battery">Batteria del telefono</string>
+    <string name="phone_battery_short">Batteria</string>
+    <string name="battery_remaining_time">Tempo residuo batteria</string>
+    <string name="battery_remaining_time_short">Residuo</string>
+    <string name="battery_charging">In carica</string>
 </resources>

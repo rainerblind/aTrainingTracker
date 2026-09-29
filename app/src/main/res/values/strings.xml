@@ -1447,4 +1447,9 @@
     <string name="sort_altitude">Altitude</string>
     <string name="known_location_radius_label">Radius</string>
     <string name="known_location_radius_format">%1$s: %2$s</string>
+    <string name="phone_battery">Phone Battery</string>
+    <string name="phone_battery_short">Battery</string>
+    <string name="battery_remaining_time">Remaining Battery Time</string>
+    <string name="battery_remaining_time_short">Battery Left</string>
+    <string name="battery_charging">Charging</string>
 </resources>

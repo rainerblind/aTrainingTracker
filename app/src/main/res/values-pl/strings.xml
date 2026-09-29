@@ -1247,4 +1247,9 @@
     <string name="sort_altitude">Wysokość</string>
     <string name="known_location_radius_label">Promień wykrywania</string>
     <string name="known_location_radius_format">%1$s: %2$s</string>
+    <string name="phone_battery">Bateria telefonu</string>
+    <string name="phone_battery_short">Bateria</string>
+    <string name="battery_remaining_time">Pozostały czas baterii</string>
+    <string name="battery_remaining_time_short">Pozostało</string>
+    <string name="battery_charging">Ładowanie</string>
 </resources>

@@ -1255,4 +1255,9 @@
     <string name="sort_altitude">Hoogte</string>
     <string name="known_location_radius_label">Detectiestraal</string>
     <string name="known_location_radius_format">%1$s: %2$s</string>
+    <string name="phone_battery">Telefoonbatterij</string>
+    <string name="phone_battery_short">Batterij</string>
+    <string name="battery_remaining_time">Resterende batterijtijd</string>
+    <string name="battery_remaining_time_short">Resterend</string>
+    <string name="battery_charging">Opladen</string>
 </resources>

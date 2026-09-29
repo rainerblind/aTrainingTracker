@@ -1342,4 +1342,9 @@
     <string name="sort_altitude">Höhe</string>
     <string name="known_location_radius_label">Erfassungsradius</string>
     <string name="known_location_radius_format">%1$s: %2$s</string>
+    <string name="phone_battery">Smartphone-Akku</string>
+    <string name="phone_battery_short">Akku</string>
+    <string name="battery_remaining_time">Verbleibende Akkulaufzeit</string>
+    <string name="battery_remaining_time_short">Akku-Rest</string>
+    <string name="battery_charging">Lädt</string>
 </resources>
