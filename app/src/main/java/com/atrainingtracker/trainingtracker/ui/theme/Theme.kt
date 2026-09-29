@@ -38,8 +38,8 @@ import androidx.core.view.WindowCompat
 internal val DarkColorScheme = darkColorScheme(
     primary = DarkPrimary,
     onPrimary = DarkOnPrimary,
-    primaryContainer = BabyBlueEyeInverse,
-    onPrimaryContainer = BabyBlueEye,
+    primaryContainer = DarkPrimaryContainer,
+    onPrimaryContainer = DarkOnPrimaryContainer,
     secondary = DarkSecondary,
     onSecondary = DarkOnSecondary,
     secondaryContainer = DarkSecondaryContainer,
@@ -59,16 +59,17 @@ internal val DarkColorScheme = darkColorScheme(
     surfaceVariant = DarkSurface,
     onSurfaceVariant = DarkOnSurfaceVariant,
     outline = DarkOutline,
+    outlineVariant = DarkOutlineVariant,
     inverseOnSurface = DarkInverseOnSurface,
     inverseSurface = DarkInverseSurface,
     inversePrimary = DarkPrimaryInverse,
-    surfaceDim = DarkSurface,
-    surfaceBright = DarkSurface,
-    surfaceContainerLowest = DarkSurface,
-    surfaceContainerLow = DarkSurface,
-    surfaceContainer = DarkSurface,
-    surfaceContainerHigh = DarkSurface,
-    surfaceContainerHighest = surfaceContainerDark, // Used for tab backgrounds
+    surfaceDim = surfaceDimDark,
+    surfaceBright = surfaceBrightDark,
+    surfaceContainerLowest = surfaceContainerLowestDark,
+    surfaceContainerLow = surfaceContainerLowDark,
+    surfaceContainer = surfaceContainerDark,
+    surfaceContainerHigh = surfaceContainerHighDark,
+    surfaceContainerHighest = surfaceContainerHighestDark, // Used for tab backgrounds
     surfaceTint = Color.Transparent
 )
 

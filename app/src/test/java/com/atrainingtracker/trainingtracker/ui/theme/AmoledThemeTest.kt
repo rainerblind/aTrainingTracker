@@ -46,9 +46,9 @@ class AmoledThemeTest {
 
     @Test
     fun testStandardDarkColorSchemeIsolation() {
-        // Ensure standard app dark mode is unchanged (charcoal grey #1B1B1F)
-        assertEquals(Color(0xFF1B1B1F), DarkBackground)
-        assertEquals(Color(0xFF1B1B1F), DarkSurface)
+        // Ensure standard app dark mode is isolated from AMOLED mode and uses standard dark palette
+        assertEquals(Color(0xFF121214), DarkBackground)
+        assertEquals(Color(0xFF16161A), DarkSurface)
         assertEquals(DarkBackground, DarkColorScheme.background)
         assertEquals(DarkSurface, DarkColorScheme.surface)
         assertEquals(DarkOnSurfaceVariant, DarkColorScheme.onSurfaceVariant)
