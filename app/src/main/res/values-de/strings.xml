@@ -1347,4 +1347,15 @@
     <string name="battery_remaining_time">Verbleibende Akkulaufzeit</string>
     <string name="battery_remaining_time_short">Akku-Rest</string>
     <string name="battery_charging">Lädt</string>
+    <string name="workout_name_run_from">Lauf ab %1$s</string>
+    <string name="workout_name_ride_from">Fahrt ab %1$s</string>
+    <string name="workout_name_activity_from">Aktivität ab %1$s</string>
+    <string name="workout_name_round_trip">Runde ab %1$s</string>
+    <string name="workout_name_run_from_to">Lauf von %1$s nach %2$s</string>
+    <string name="workout_name_ride_from_to">Fahrt von %1$s nach %2$s</string>
+    <string name="workout_name_activity_from_to">Aktivität von %1$s nach %2$s</string>
+    <string name="workout_name_run_to">Lauf nach %1$s</string>
+    <string name="workout_name_ride_to">Fahrt nach %1$s</string>
+    <string name="workout_name_activity_to">Aktivität nach %1$s</string>
+    <string name="cluster_seed_name_loop_format">Runde ab %1$s</string>
 </resources>
