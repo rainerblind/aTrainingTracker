@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.migration
 
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import java.text.DateFormat
 import java.util.Date
 import com.atrainingtracker.banalservice.BSportType
@@ -515,10 +516,16 @@ fun ClusterNamingDialog(
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(bounds?.center ?: LatLng(0.0, 0.0), 12f)
     }
+    var isMapLoaded by remember(state) { mutableStateOf(false) }
 
-    LaunchedEffect(bounds) {
-        bounds?.let {
-            cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(it, 50))
+    LaunchedEffect(bounds, isMapLoaded) {
+        if (isMapLoaded && bounds != null) {
+            try {
+                cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(bounds, 50))
+            } catch (e: Exception) {
+                Log.w("ImportBackupTabsScreen", "CameraUpdateFactory animation failed, falling back to static bounds center: ${e.message}")
+                cameraPositionState.position = CameraPosition.fromLatLngZoom(bounds.center, 12f)
+            }
         }
     }
 
@@ -619,6 +626,7 @@ fun ClusterNamingDialog(
                         modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White),
                         cameraPositionState = cameraPositionState,
                         properties = mapProperties,
+                        onMapLoaded = { isMapLoaded = true },
                         uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false)
                     ) {
                         Polyline(
