@@ -61,7 +61,8 @@ class TrackingTabsViewModel(
     private val trackingViewsRepository: TrackingViewsRepository,
     private val banalServiceRepository: BANALServiceRepository,
     private val devicesRepository: DeviceDataRepository,
-    liveSegmentsRepository: com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository? = null
+    liveSegmentsRepository: com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository? = null,
+    knownLocationsRepository: com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository? = null
 ) : AndroidViewModel(application) {
 
     // State to hold the explicitly selected ActivityType
@@ -104,7 +105,73 @@ class TrackingTabsViewModel(
     private val _screenMode = MutableStateFlow(ScreenMode.TRACKING)
     val screenMode: StateFlow<ScreenMode> = _screenMode.asStateFlow()
 
+    private val knownLocationsRepo: com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository? = knownLocationsRepository
+
+    private val _isFeedbackEnabled = MutableStateFlow(
+        try {
+            com.atrainingtracker.trainingtracker.TrainingApplication.isLieblingsortCockpitFeedbackEnabled()
+        } catch (_: Throwable) {
+            true
+        }
+    )
+
+    private val displaySettingsListener = com.atrainingtracker.trainingtracker.TrainingApplication.OnDisplaySettingsChangeListener {
+        _isFeedbackEnabled.value = try {
+            com.atrainingtracker.trainingtracker.TrainingApplication.isLieblingsortCockpitFeedbackEnabled()
+        } catch (_: Throwable) {
+            true
+        }
+    }
+
+    val locationCalibrationStatus: StateFlow<LocationCalibrationStatus?> = if (knownLocationsRepo == null) {
+        MutableStateFlow(null)
+    } else {
+        kotlinx.coroutines.flow.combine(
+            banalServiceRepository.currentLocation,
+            knownLocationsRepo.locationsFlow,
+            _isFeedbackEnabled
+        ) { location, knownLocations, isEnabled ->
+            if (!isEnabled || location == null) {
+                null
+            } else {
+                var closestItem: com.atrainingtracker.trainingtracker.repositories.KnownLocationItem? = null
+                var minDistance = Float.MAX_VALUE
+                val results = FloatArray(1)
+                for (item in knownLocations) {
+                    android.location.Location.distanceBetween(
+                        location.latitude, location.longitude,
+                        item.latLng.latitude, item.latLng.longitude,
+                        results
+                    )
+                    val dist = results[0]
+                    if (dist < item.radius && dist < minDistance) {
+                        minDistance = dist
+                        closestItem = item
+                    }
+                }
+                closestItem?.let {
+                    LocationCalibrationStatus(
+                        locationId = it.id,
+                        locationName = it.name,
+                        referenceAltitude = it.altitude,
+                        isCalibrated = true,
+                        source = it.source
+                    )
+                }
+            }
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
+    }
+
     fun onResume() {
+        _isFeedbackEnabled.value = try {
+            com.atrainingtracker.trainingtracker.TrainingApplication.isLieblingsortCockpitFeedbackEnabled()
+        } catch (_: Throwable) {
+            true
+        }
         viewModelScope.launch {
             devicesRepository.loadAllDevices()
         }
@@ -135,6 +202,11 @@ class TrackingTabsViewModel(
         // ensure the repository is bound to the BANALService
         banalServiceRepository.bindToBANALService()
 
+        try {
+            com.atrainingtracker.trainingtracker.TrainingApplication.addDisplaySettingsChangeListener(displaySettingsListener)
+        } catch (_: Throwable) {
+        }
+
         // Observe the tracking mode from the repository
         viewModelScope.launch {
             var previousMode: TrackingMode? = null
@@ -153,6 +225,10 @@ class TrackingTabsViewModel(
 
     override fun onCleared() {
         super.onCleared()
+        try {
+            com.atrainingtracker.trainingtracker.TrainingApplication.removeDisplaySettingsChangeListener(displaySettingsListener)
+        } catch (_: Throwable) {
+        }
         // unbind from the BANALService
         banalServiceRepository.unbindFromBANALService()
     }
@@ -263,13 +339,15 @@ class TrackingTabsViewModelFactory(private val application: Application) : ViewM
             val trackingViewsRepository = TrackingViewsRepository.getInstance(application)
             val banalServiceRepository = BANALServiceRepository.Companion.getInstance(application)
             val devicesRepository = DeviceDataRepository.getInstance(application)
+            val knownLocationsRepository = com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository.getInstance(application)
 
             @Suppress("UNCHECKED_CAST")
             return TrackingTabsViewModel(
                 application,
                 trackingViewsRepository,
                 banalServiceRepository,
-                devicesRepository
+                devicesRepository,
+                knownLocationsRepository = knownLocationsRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

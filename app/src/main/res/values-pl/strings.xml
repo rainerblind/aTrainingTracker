@@ -1263,4 +1263,7 @@
     <string name="workout_name_ride_to">Jazda do %1$s</string>
     <string name="workout_name_activity_to">Aktywność do %1$s</string>
     <string name="cluster_seed_name_loop_format">Pętla z %1$s</string>
+    <string name="prefs_lieblingsort_feedback_title">Ulubiona lokalizacja i informacja zwrotna o kalibracji</string>
+    <string name="prefs_lieblingsort_feedback_summary">Potwierdza rozpoznane miejsce startu i kalibrację barometru w kokpicie</string>
+    <string name="location_calibrated_format">%1$s (%2$s skalibrowany)</string>
 </resources>

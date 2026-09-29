@@ -1271,4 +1271,7 @@
     <string name="workout_name_ride_to">Rit naar %1$s</string>
     <string name="workout_name_activity_to">Activiteit naar %1$s</string>
     <string name="cluster_seed_name_loop_format">Ronde vanaf %1$s</string>
+    <string name="prefs_lieblingsort_feedback_title">Favoriete locatie &amp; kalibratiefeedback</string>
+    <string name="prefs_lieblingsort_feedback_summary">Bevestigt herkende startlocatie en barometerkalibratie in de cockpit</string>
+    <string name="location_calibrated_format">%1$s (%2$s gekalibreerd)</string>
 </resources>
