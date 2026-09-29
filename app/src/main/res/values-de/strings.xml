@@ -1330,6 +1330,10 @@
         <item quantity="one">%1$d Start</item>
         <item quantity="other">%1$d Starts</item>
     </plurals>
+    <plurals name="known_locations_routes">
+        <item quantity="one">%1$d Strecke</item>
+        <item quantity="other">%1$d Strecken</item>
+    </plurals>
     <string name="source_internet_dem">Internet (DEM)</string>
     <string name="source_manual_user">Manuell</string>
     <string name="source_auto_learned">Automatisch</string>
@@ -1366,6 +1370,7 @@
     <string name="workout_start_and_destination">Start &amp; Ziel: %s</string>
     <string name="filter_start_location">Startort</string>
     <string name="known_locations_view_workouts">Workouts anzeigen</string>
+    <string name="known_locations_view_routes">Strecken anzeigen</string>
     <string name="cluster_start_location">Start: %s</string>
     <string name="known_location_routes_header">Lieblingsstrecken ab hier (%d):</string>
     <string name="filter_by_start_location">Nach Startort filtern</string>

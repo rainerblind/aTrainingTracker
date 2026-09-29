@@ -1245,6 +1245,10 @@
         <item quantity="one">%1$d inicio</item>
         <item quantity="other">%1$d inicios</item>
     </plurals>
+    <plurals name="known_locations_routes">
+        <item quantity="one">%1$d ruta</item>
+        <item quantity="other">%1$d rutas</item>
+    </plurals>
     <string name="source_internet_dem">Internet (DEM)</string>
     <string name="source_manual_user">Manual</string>
     <string name="source_auto_learned">Automático</string>
@@ -1281,6 +1285,7 @@
     <string name="workout_start_and_destination">Inicio y destino: %s</string>
     <string name="filter_start_location">Lugar de inicio</string>
     <string name="known_locations_view_workouts">Ver entrenamientos</string>
+    <string name="known_locations_view_routes">Ver rutas</string>
     <string name="cluster_start_location">Inicio: %s</string>
     <string name="known_location_routes_header">Rutas desde aquí (%d):</string>
     <string name="filter_by_start_location">Filtrar por lugar de inicio</string>
