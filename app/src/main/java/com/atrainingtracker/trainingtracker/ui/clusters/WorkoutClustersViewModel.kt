@@ -482,4 +482,16 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
         val sportName = getSportName(sportId)
         return discoveryManager.getEquipmentNamesForSport(sportName)
     }
+
+    /**
+     * Resolves the recognized start location name for a cluster's start coordinates (REQ-UI-186, ATT-1402).
+     */
+    fun getStartLocationName(lat: Double, lng: Double): String? {
+        return try {
+            val loc = com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.getInstance(getApplication()).getMyLocation(LatLng(lat, lng))
+            loc?.name
+        } catch (_: Exception) {
+            null
+        }
+    }
 }

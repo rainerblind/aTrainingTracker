@@ -1264,4 +1264,7 @@
     <string name="workout_start_and_destination">スタート＆ゴール: %s</string>
     <string name="filter_start_location">開始地点</string>
     <string name="known_locations_view_workouts">ワークアウトを表示</string>
+    <string name="cluster_start_location">開始: %s</string>
+    <string name="known_location_routes_header">ここからのルート (%d):</string>
+    <string name="filter_by_start_location">開始地点で絞り込む</string>
 </resources>

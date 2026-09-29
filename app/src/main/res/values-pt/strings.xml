@@ -1279,4 +1279,7 @@
     <string name="workout_start_and_destination">Início e destino: %s</string>
     <string name="filter_start_location">Local de início</string>
     <string name="known_locations_view_workouts">Ver treinos</string>
+    <string name="cluster_start_location">Início: %s</string>
+    <string name="known_location_routes_header">Rotas a partir daqui (%d):</string>
+    <string name="filter_by_start_location">Filtrar por local de início</string>
 </resources>

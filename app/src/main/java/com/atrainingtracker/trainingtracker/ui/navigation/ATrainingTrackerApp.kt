@@ -342,6 +342,9 @@ fun ATrainingTrackerApp(
                             )
                             summariesViewModel.setFilterCriteria(criteria)
                             navController.navigate(NavRoutes.WORKOUTS)
+                        },
+                        onSelectCluster = { clusterId ->
+                            navController.navigate(NavRoutes.locations(clusterId))
                         }
                     )
                 }

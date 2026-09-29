@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.knownlocations
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -50,6 +51,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -70,6 +72,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
@@ -90,6 +93,7 @@ fun KnownLocationsScreen(
     onMenuClick: () -> Unit = { },
     onShowOnMap: (Long) -> Unit = { },
     onShowWorkouts: (KnownLocationItem) -> Unit = { },
+    onSelectCluster: (Long) -> Unit = { },
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -185,6 +189,7 @@ fun KnownLocationsScreen(
             onEdit = { viewModel.openEditDialog(it, showMap = true) },
             onShowOnMap = { item -> onShowOnMap(item.id) },
             onShowWorkouts = onShowWorkouts,
+            onSelectCluster = onSelectCluster,
             onDelete = { locationPendingDeletion = it },
             modifier = Modifier.fillMaxSize()
         )
@@ -226,6 +231,7 @@ private fun KnownLocationsListContent(
     onEdit: (KnownLocationItem) -> Unit,
     onShowOnMap: (KnownLocationItem) -> Unit,
     onShowWorkouts: (KnownLocationItem) -> Unit = { },
+    onSelectCluster: (Long) -> Unit = { },
     onDelete: (KnownLocationItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -280,9 +286,11 @@ private fun KnownLocationsListContent(
                 KnownLocationCard(
                     item = item,
                     isMetric = uiState.isMetric,
+                    linkedClusters = uiState.clustersByLocationId[item.id] ?: emptyList(),
                     onEdit = { onEdit(item) },
                     onShowOnMap = { onShowOnMap(item) },
                     onShowWorkouts = { onShowWorkouts(item) },
+                    onSelectCluster = onSelectCluster,
                     onDelete = { onDelete(item) }
                 )
             }
@@ -297,9 +305,11 @@ private fun KnownLocationsListContent(
 private fun KnownLocationCard(
     item: KnownLocationItem,
     isMetric: Boolean,
+    linkedClusters: List<WorkoutCluster> = emptyList(),
     onEdit: () -> Unit,
     onShowOnMap: () -> Unit = {},
     onShowWorkouts: () -> Unit = {},
+    onSelectCluster: (Long) -> Unit = {},
     onDelete: () -> Unit,
     initialShowContextMenu: Boolean = false
 ) {
@@ -389,6 +399,35 @@ private fun KnownLocationCard(
                                 contentDescription = null,
                                 modifier = Modifier.size(14.dp),
                                 tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+
+                // Linked Route Clusters (REQ-UI-186, ATT-1402)
+                if (linkedClusters.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.known_location_routes_header, linkedClusters.size),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        linkedClusters.forEach { cluster ->
+                            SuggestionChip(
+                                onClick = { onSelectCluster(cluster.id) },
+                                label = {
+                                    Text(
+                                        text = cluster.name,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                },
+                                modifier = Modifier.testTag("location_cluster_chip_${cluster.id}")
                             )
                         }
                     }

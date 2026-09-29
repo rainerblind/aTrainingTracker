@@ -20,6 +20,8 @@ package com.atrainingtracker.trainingtracker.ui.clusters
 
 import androidx.compose.runtime.Immutable
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
+import com.google.android.gms.maps.model.LatLng
 import org.json.JSONObject
 
 /**
@@ -30,6 +32,7 @@ import org.json.JSONObject
  * - [equipmentName]: Linked gear name inferred via the cluster's sport type.
  * - [minDistanceMeters]: Minimum reference distance threshold in meters.
  * - [minHitCount]: Minimum number of recorded workouts associated with the cluster.
+ * - [startLocationName], [startLocationLat], [startLocationLng], [startLocationRadiusM]: Spatial geofence filter around starting hub (REQ-UI-186).
  *
  * Provides high-performance predicate evaluation via [matches] and lightweight JSON
  * serialization for asynchronous preference persistence via DataStore.
@@ -39,7 +42,11 @@ data class ClusterFilterCriteria(
     val query: String = "",
     val equipmentName: String? = null,
     val minDistanceMeters: Double? = null,
-    val minHitCount: Int? = null
+    val minHitCount: Int? = null,
+    val startLocationName: String? = null,
+    val startLocationLat: Double? = null,
+    val startLocationLng: Double? = null,
+    val startLocationRadiusM: Double? = null
 ) {
     /**
      * Total count of distinct active filter dimensions.
@@ -51,6 +58,7 @@ data class ClusterFilterCriteria(
             if (equipmentName != null) count++
             if (minDistanceMeters != null) count++
             if (minHitCount != null) count++
+            if (startLocationLat != null && startLocationLng != null) count++
             return count
         }
 
@@ -100,6 +108,17 @@ data class ClusterFilterCriteria(
             return false
         }
 
+        // Spatial Starting Location Geofence filter (REQ-UI-186, ATT-1402)
+        if (startLocationLat != null && startLocationLng != null) {
+            val radius = startLocationRadiusM ?: 200.0
+            val clusterStart = LatLng(cluster.startLat, cluster.startLng)
+            val filterCenter = LatLng(startLocationLat, startLocationLng)
+            val distance = WorkoutClusterEngine.distanceBetween(clusterStart, filterCenter)
+            if (distance > radius) {
+                return false
+            }
+        }
+
         return true
     }
 
@@ -112,6 +131,10 @@ data class ClusterFilterCriteria(
         equipmentName?.let { json.put("equipmentName", it) }
         minDistanceMeters?.let { json.put("minDistanceMeters", it) }
         minHitCount?.let { json.put("minHitCount", it) }
+        startLocationName?.let { json.put("startLocationName", it) }
+        startLocationLat?.let { json.put("startLocationLat", it) }
+        startLocationLng?.let { json.put("startLocationLng", it) }
+        startLocationRadiusM?.let { json.put("startLocationRadiusM", it) }
         return json.toString()
     }
 
@@ -128,7 +151,11 @@ data class ClusterFilterCriteria(
                     query = json.optString("query", ""),
                     equipmentName = if (json.has("equipmentName")) json.getString("equipmentName") else null,
                     minDistanceMeters = if (json.has("minDistanceMeters")) json.getDouble("minDistanceMeters") else null,
-                    minHitCount = if (json.has("minHitCount")) json.getInt("minHitCount") else null
+                    minHitCount = if (json.has("minHitCount")) json.getInt("minHitCount") else null,
+                    startLocationName = if (json.has("startLocationName")) json.getString("startLocationName") else null,
+                    startLocationLat = if (json.has("startLocationLat")) json.getDouble("startLocationLat") else null,
+                    startLocationLng = if (json.has("startLocationLng")) json.getDouble("startLocationLng") else null,
+                    startLocationRadiusM = if (json.has("startLocationRadiusM")) json.getDouble("startLocationRadiusM") else null
                 )
             } catch (_: Exception) {
                 ClusterFilterCriteria()
