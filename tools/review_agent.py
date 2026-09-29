@@ -53,6 +53,7 @@ GATE_DEFINITIONS = {
 2. Test Case Traceability:
    - Verify concrete test procedure and expected result in docs/tests.md.
    - Ensure complete bidirectional traceability between requirements and test cases.
+   - Stage Awareness: In Gate 2 (Stage 2), test cases and procedures are SPECIFIED in docs/tests.md and the deliverable. Implementation code and unit test files are constructed during Stage 4. Do NOT reject Gate 2 for uncommitted test code files.
 3. Requirement Archaeology (Chesterton's Fence):
    - If existing requirements are modified, relaxed, or replaced in docs/requirements.md, verify presence and validity of the 4-field archaeology section:
      * Original Requirement ID & Target
@@ -289,7 +290,18 @@ def detect_gate(summary):
 
 
 def get_git_diff():
-    """Returns complete ticket diff against develop merge-base, including uncommitted changes."""
+    """Returns complete ticket diff against sprint or develop merge-base, including uncommitted changes."""
+    try:
+        branches = subprocess.check_output(["git", "branch", "--list", "sprint/*"], stderr=subprocess.DEVNULL).decode("utf-8").strip().splitlines()
+        for b in branches:
+            clean_b = b.replace("*", "").strip()
+            if clean_b:
+                base = subprocess.check_output(["git", "merge-base", clean_b, "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
+                diff = subprocess.check_output(["git", "diff", base], stderr=subprocess.DEVNULL).decode("utf-8")
+                if diff.strip():
+                    return diff[:100000]
+    except Exception:
+        pass
     try:
         base = subprocess.check_output(["git", "merge-base", "develop", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
         diff = subprocess.check_output(["git", "diff", base], stderr=subprocess.DEVNULL).decode("utf-8")
