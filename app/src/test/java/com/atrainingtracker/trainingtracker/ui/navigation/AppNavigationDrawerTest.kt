@@ -113,4 +113,97 @@ class AppNavigationDrawerTest {
             startLocationsItem.iconRes
         )
     }
+
+    // --- TST-UI-135: Theme-Aware Icon Contrast Tinting Verification (ATT-1547 / REQ-UI-123) ---
+
+    @Test
+    fun testDrawerGroups_monochromeItems_enableTinting() {
+        val groups = createDrawerGroups(R.string.tab_start)
+        val allItems = groups.flatMap { it.items }
+        val monochromeItems = allItems.filter { it.id != R.id.drawer_strava && it.id != R.id.drawer_dropbox }
+
+        assertTrue("Drawer must define multiple monochrome items", monochromeItems.size >= 19)
+        monochromeItems.forEach { item ->
+            assertTrue(
+                "Item ${item.id} (${item.titleRes}) must enable theme-aware tinting (tintIcon = true)",
+                item.tintIcon
+            )
+        }
+    }
+
+    @Test
+    fun testDrawerGroups_partnerBrandItems_exemptFromTinting() {
+        val groups = createDrawerGroups(R.string.tab_start)
+        val allItems = groups.flatMap { it.items }
+
+        val stravaItem = allItems.firstOrNull { it.id == R.id.drawer_strava }
+        assertTrue("Strava drawer item must exist", stravaItem != null)
+        assertFalse("Strava icon must NOT be tinted with monochrome colors (tintIcon = false)", stravaItem!!.tintIcon)
+
+        val dropboxItem = allItems.firstOrNull { it.id == R.id.drawer_dropbox }
+        assertTrue("Dropbox drawer item must exist", dropboxItem != null)
+        assertFalse("Dropbox icon must NOT be tinted with monochrome colors (tintIcon = false)", dropboxItem!!.tintIcon)
+    }
+
+    @Test
+    fun testDrawerItemView_appliesConditionalColorFilter() {
+        val relativePath = "app/src/main/java/com/atrainingtracker/trainingtracker/ui/navigation/AppNavigationDrawer.kt"
+        val candidates = listOf(
+            java.io.File(relativePath),
+            java.io.File("../$relativePath"),
+            java.io.File("../../$relativePath")
+        )
+        val sourceFile = candidates.firstOrNull { it.exists() }
+        assertTrue("AppNavigationDrawer.kt source file must exist", sourceFile != null && sourceFile.exists())
+
+        val sourceContent = sourceFile!!.readText()
+        assertTrue(
+            "DrawerItemView must apply conditional colorFilter based on item.tintIcon",
+            sourceContent.contains("colorFilter = if (item.tintIcon) ColorFilter.tint(contentColor) else null")
+        )
+        assertTrue(
+            "AppNavigationDrawer.kt must import androidx.compose.ui.graphics.ColorFilter",
+            sourceContent.contains("import androidx.compose.ui.graphics.ColorFilter")
+        )
+    }
+
+    @Test
+    fun testThemeTokens_contrastRatioExceedsWcagAA() {
+        fun linearize(channel: Double): Double {
+            return if (channel <= 0.04045) channel / 12.92 else Math.pow((channel + 0.055) / 1.055, 2.4)
+        }
+
+        fun relativeLuminance(r: Int, g: Int, b: Int): Double {
+            val rLin = linearize(r / 255.0)
+            val gLin = linearize(g / 255.0)
+            val bLin = linearize(b / 255.0)
+            return 0.2126 * rLin + 0.7152 * gLin + 0.0722 * bLin
+        }
+
+        fun contrastRatio(l1: Double, l2: Double): Double {
+            val lighter = Math.max(l1, l2)
+            val darker = Math.min(l1, l2)
+            return (lighter + 0.05) / (darker + 0.05)
+        }
+
+        // Dark surface: #121212
+        val darkSurfaceLum = relativeLuminance(0x12, 0x12, 0x12)
+        // Night mode on_surface: #ffffff
+        val darkTextLum = relativeLuminance(0xFF, 0xFF, 0xFF)
+        val darkContrast = contrastRatio(darkTextLum, darkSurfaceLum)
+        assertTrue(
+            "Dark mode contrast ratio ($darkContrast) must exceed WCAG AA 4.5:1",
+            darkContrast >= 4.5
+        )
+
+        // Light surface: #ffffff
+        val lightSurfaceLum = relativeLuminance(0xFF, 0xFF, 0xFF)
+        // Default mode on_surface: #000080
+        val lightTextLum = relativeLuminance(0x00, 0x00, 0x80)
+        val lightContrast = contrastRatio(lightSurfaceLum, lightTextLum)
+        assertTrue(
+            "Light mode contrast ratio ($lightContrast) must exceed WCAG AA 4.5:1",
+            lightContrast >= 4.5
+        )
+    }
 }
