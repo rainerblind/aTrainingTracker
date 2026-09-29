@@ -574,9 +574,17 @@ class WorkoutClusterEngine private constructor(context: Context) {
                         dbManager.updateCluster(updated)
                         assignClusterToWorkout(context, workoutId, updated.id)
                     } else {
-                        val startLoc = KnownLocationsDatabaseManager.getInstance(context).getMyLocation(start)
-                        val seedName = WorkoutAutoNamingHelper.generateClusterSeedName(context, startLoc)
-                        val clusterName = if (!isDefault) normalizedName!! else (seedName ?: context.getString(R.string.cluster_default_name_format, fileBaseName?.take(10) ?: "Workout"))
+                        val clusterName = if (!isDefault) {
+                            normalizedName!!
+                        } else {
+                            val seedName = try {
+                                val startLoc = KnownLocationsDatabaseManager.getInstance(context).getMyLocation(start)
+                                WorkoutAutoNamingHelper.generateClusterSeedName(context, startLoc)
+                            } catch (e: Exception) {
+                                null
+                            }
+                            seedName ?: context.getString(R.string.cluster_default_name_format, fileBaseName?.take(10) ?: "Workout")
+                        }
                         
                         val wMinLat = summariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MIN_LAT)
                         val wMinLng = summariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MIN_LNG)
@@ -721,10 +729,19 @@ class WorkoutClusterEngine private constructor(context: Context) {
         val apex = workout.maxDisplacementLatLng ?: summariesManager.getExtremaPosition(workout.id, SensorType.LINE_DISTANCE_m, ExtremaType.MAX) ?: end
         val distance = workout.totalDistance
         val sportId = workout.sportId
-        val startLoc = KnownLocationsDatabaseManager.getInstance(context).getMyLocation(start)
-        val seedName = WorkoutAutoNamingHelper.generateClusterSeedName(context, startLoc)
-        val fallbackName = workout.workoutName.ifBlank { seedName ?: context.getString(R.string.cluster_default_name_format, "Workout") }
-        val clusterName = if (!customName.isNullOrBlank()) customName else fallbackName
+        val clusterName = if (!customName.isNullOrBlank()) {
+            customName
+        } else if (workout.workoutName.isNotBlank()) {
+            workout.workoutName
+        } else {
+            val seedName = try {
+                val startLoc = KnownLocationsDatabaseManager.getInstance(context).getMyLocation(start)
+                WorkoutAutoNamingHelper.generateClusterSeedName(context, startLoc)
+            } catch (e: Exception) {
+                null
+            }
+            seedName ?: context.getString(R.string.cluster_default_name_format, "Workout")
+        }
 
         val minAltPos = workout.minAltitudeLatLng ?: summariesManager.getExtremaPosition(workout.id, SensorType.ALTITUDE, ExtremaType.MIN)
         val maxAltPos = workout.maxAltitudeLatLng ?: summariesManager.getExtremaPosition(workout.id, SensorType.ALTITUDE, ExtremaType.MAX)
@@ -782,10 +799,19 @@ class WorkoutClusterEngine private constructor(context: Context) {
         val wMaxLat = summariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MAX_LAT)
         val wMaxLng = summariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MAX_LNG)
         val workoutName = summariesManager.getString(workoutId, WorkoutSummaries.WORKOUT_NAME)
-        val startLoc = KnownLocationsDatabaseManager.getInstance(context).getMyLocation(start)
-        val seedName = WorkoutAutoNamingHelper.generateClusterSeedName(context, startLoc)
-        val fallbackName = if (!workoutName.isNullOrBlank()) workoutName else (seedName ?: context.getString(R.string.cluster_default_name_format, "Workout"))
-        val clusterName = if (!customName.isNullOrBlank()) customName else fallbackName
+        val clusterName = if (!customName.isNullOrBlank()) {
+            customName
+        } else if (!workoutName.isNullOrBlank()) {
+            workoutName
+        } else {
+            val seedName = try {
+                val startLoc = KnownLocationsDatabaseManager.getInstance(context).getMyLocation(start)
+                WorkoutAutoNamingHelper.generateClusterSeedName(context, startLoc)
+            } catch (e: Exception) {
+                null
+            }
+            seedName ?: context.getString(R.string.cluster_default_name_format, "Workout")
+        }
 
         val minAltPos = summariesManager.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MIN)
         val maxAltPos = summariesManager.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MAX)
