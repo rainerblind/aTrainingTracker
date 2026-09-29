@@ -94,6 +94,7 @@ fun KnownLocationsScreen(
     onShowOnMap: (Long) -> Unit = { },
     onShowWorkouts: (KnownLocationItem) -> Unit = { },
     onSelectCluster: (Long) -> Unit = { },
+    onShowRoutes: (KnownLocationItem) -> Unit = { },
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -190,6 +191,7 @@ fun KnownLocationsScreen(
             onShowOnMap = { item -> onShowOnMap(item.id) },
             onShowWorkouts = onShowWorkouts,
             onSelectCluster = onSelectCluster,
+            onShowRoutes = onShowRoutes,
             onDelete = { locationPendingDeletion = it },
             modifier = Modifier.fillMaxSize()
         )
@@ -232,6 +234,7 @@ private fun KnownLocationsListContent(
     onShowOnMap: (KnownLocationItem) -> Unit,
     onShowWorkouts: (KnownLocationItem) -> Unit = { },
     onSelectCluster: (Long) -> Unit = { },
+    onShowRoutes: (KnownLocationItem) -> Unit = { },
     onDelete: (KnownLocationItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -291,6 +294,7 @@ private fun KnownLocationsListContent(
                     onShowOnMap = { onShowOnMap(item) },
                     onShowWorkouts = { onShowWorkouts(item) },
                     onSelectCluster = onSelectCluster,
+                    onShowRoutes = { onShowRoutes(item) },
                     onDelete = { onDelete(item) }
                 )
             }
@@ -310,6 +314,7 @@ private fun KnownLocationCard(
     onShowOnMap: () -> Unit = {},
     onShowWorkouts: () -> Unit = {},
     onSelectCluster: (Long) -> Unit = {},
+    onShowRoutes: () -> Unit = {},
     onDelete: () -> Unit,
     initialShowContextMenu: Boolean = false
 ) {
@@ -344,9 +349,9 @@ private fun KnownLocationCard(
                     )
                 }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     // Prominent Altitude Metric
                     Row(
@@ -402,33 +407,42 @@ private fun KnownLocationCard(
                             )
                         }
                     }
-                }
 
-                // Linked Route Clusters (REQ-UI-186, ATT-1402)
-                if (linkedClusters.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.known_location_routes_header, linkedClusters.size),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        linkedClusters.forEach { cluster ->
-                            SuggestionChip(
-                                onClick = { onSelectCluster(cluster.id) },
-                                label = {
-                                    Text(
-                                        text = cluster.name,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                },
-                                modifier = Modifier.testTag("location_cluster_chip_${cluster.id}")
-                            )
+                    // Number of Routes (Interactive Drill-Down Touch Target per REQ-UI-188)
+                    if (linkedClusters.isNotEmpty()) {
+                        Surface(
+                            onClick = onShowRoutes,
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                            contentColor = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .defaultMinSize(minHeight = 48.dp)
+                                .testTag("location_routes_badge_${item.id}")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_favorite_route),
+                                    contentDescription = stringResource(R.string.known_locations_view_routes),
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = pluralStringResource(R.plurals.known_locations_routes, linkedClusters.size, linkedClusters.size),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }

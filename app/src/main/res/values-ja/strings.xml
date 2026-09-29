@@ -1228,6 +1228,9 @@
     <plurals name="known_locations_starts">
         <item quantity="other">%1$d 回開始</item>
     </plurals>
+    <plurals name="known_locations_routes">
+        <item quantity="other">%1$d件のルート</item>
+    </plurals>
     <string name="source_internet_dem">インターネット (DEM)</string>
     <string name="source_manual_user">手動</string>
     <string name="source_auto_learned">自動学習</string>
@@ -1264,6 +1267,7 @@
     <string name="workout_start_and_destination">スタート＆ゴール: %s</string>
     <string name="filter_start_location">開始地点</string>
     <string name="known_locations_view_workouts">ワークアウトを表示</string>
+    <string name="known_locations_view_routes">ルートを表示</string>
     <string name="cluster_start_location">開始: %s</string>
     <string name="known_location_routes_header">ここからのルート (%d):</string>
     <string name="filter_by_start_location">開始地点で絞り込む</string>

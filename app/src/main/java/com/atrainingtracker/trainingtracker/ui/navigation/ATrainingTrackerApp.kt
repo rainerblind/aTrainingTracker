@@ -75,6 +75,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewM
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModel
+import com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersScreen
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModel
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentTabsScreen
@@ -327,6 +328,7 @@ fun ATrainingTrackerApp(
                 composable(NavRoutes.START_LOCATIONS) {
                     val knownLocationsViewModel: KnownLocationsViewModel = viewModel(activity)
                     val summariesViewModel: WorkoutSummariesViewModel = viewModel(activity)
+                    val clustersViewModel: WorkoutClustersViewModel = viewModel(activity)
                     KnownLocationsScreen(
                         viewModel = knownLocationsViewModel,
                         onMenuClick = { drawerController.openDrawer() },
@@ -345,6 +347,16 @@ fun ATrainingTrackerApp(
                         },
                         onSelectCluster = { clusterId ->
                             navController.navigate(NavRoutes.locations(clusterId))
+                        },
+                        onShowRoutes = { locationItem ->
+                            val criteria = ClusterFilterCriteria(
+                                startLocationName = locationItem.name,
+                                startLocationLat = locationItem.latLng.latitude,
+                                startLocationLng = locationItem.latLng.longitude,
+                                startLocationRadiusM = locationItem.radius.toDouble().takeIf { it > 0.0 } ?: 200.0
+                            )
+                            clustersViewModel.setFilterCriteria(criteria)
+                            navController.navigate(NavRoutes.LOCATIONS)
                         }
                     )
                 }

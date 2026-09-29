@@ -1274,4 +1274,11 @@
     <string name="cluster_start_location">Start: %s</string>
     <string name="known_location_routes_header">Trasy stąd (%d):</string>
     <string name="filter_by_start_location">Filtruj wg miejsca startu</string>
+    <plurals name="known_locations_routes">
+        <item quantity="one">%1$d trasa</item>
+        <item quantity="few">%1$d trasy</item>
+        <item quantity="many">%1$d tras</item>
+        <item quantity="other">%1$d trasy</item>
+    </plurals>
+    <string name="known_locations_view_routes">Pokaż trasy</string>
 </resources>
