@@ -220,6 +220,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 maxAltLng = updatedMaxAltLng
             )
             dbManager.updateCluster(updatedCluster)
+            ensureStartingLocationAnchor(start)
             updatedCluster.id
         } else {
             val uniqueName = findUniqueClusterName(stripHitCount(userSpecifiedName))
@@ -243,7 +244,25 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 maxAltLat = maxAltPos?.latitude,
                 maxAltLng = maxAltPos?.longitude
             )
-            dbManager.insertCluster(newCluster)
+            val insertedId = dbManager.insertCluster(newCluster)
+            ensureStartingLocationAnchor(start)
+            insertedId
+        }
+    }
+
+    /**
+     * Mandatory starting location invariant (REQ-UI-186, ATT-1402):
+     * Guarantees that every route cluster originates at a recognized KnownLocation in StartLocation2Altitude.db.
+     * If no location exists within the geofence radius of [start], automatically seeds a new location.
+     */
+    fun ensureStartingLocationAnchor(start: LatLng) {
+        try {
+            val knownLocManager = KnownLocationsDatabaseManager.getInstance(appContext)
+            if (knownLocManager.getMyLocation(start) == null) {
+                knownLocManager.recordWorkoutStart(start, null)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to seed starting location anchor: ${e.message}")
         }
     }
 

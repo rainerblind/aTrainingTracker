@@ -1280,4 +1280,7 @@
     <string name="workout_start_and_destination">Départ et arrivée : %s</string>
     <string name="filter_start_location">Lieu de départ</string>
     <string name="known_locations_view_workouts">Voir les entraînements</string>
+    <string name="cluster_start_location">Départ : %s</string>
+    <string name="known_location_routes_header">Itinéraires au départ d\'ici (%d) :</string>
+    <string name="filter_by_start_location">Filtrer par lieu de départ</string>
 </resources>

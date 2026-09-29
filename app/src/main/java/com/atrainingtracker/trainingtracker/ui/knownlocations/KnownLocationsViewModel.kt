@@ -29,6 +29,9 @@ import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,11 +40,12 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Unified UI State for Known Start Locations management (REQ-UI-165, REQ-UI-180).
+ * Unified UI State for Known Start Locations management (REQ-UI-165, REQ-UI-180, REQ-UI-186).
  */
 data class KnownLocationsUiState(
     val locations: List<KnownLocationItem> = emptyList(),
     val filteredLocations: List<KnownLocationItem> = emptyList(),
+    val clustersByLocationId: Map<Long, List<WorkoutCluster>> = emptyMap(),
     val sortOrder: KnownLocationSortOrder = KnownLocationSortOrder.STARTS,
     val isLocationAvailable: Boolean = false,
     val userLocation: LatLng? = null,
@@ -54,13 +58,14 @@ data class KnownLocationsUiState(
 
 /**
  * ViewModel orchestrating Known Start Locations screen state, search filtering,
- * and editing operations (REQ-UI-165, REQ-UI-180).
+ * route cluster association, and editing operations (REQ-UI-165, REQ-UI-180, REQ-UI-186).
  */
 class KnownLocationsViewModel @JvmOverloads constructor(
     application: Application,
     private val repository: KnownLocationsRepository = KnownLocationsRepository.getInstance(application),
     initialIsMetric: Boolean? = null,
-    banalServiceRepository: BANALServiceRepository? = null
+    banalServiceRepository: BANALServiceRepository? = null,
+    private val clusterRepository: WorkoutClusterRepository = WorkoutClusterRepository.getInstance(application)
 ) : AndroidViewModel(application) {
 
     private val banalRepo: BANALServiceRepository? = banalServiceRepository ?: try {
@@ -89,12 +94,23 @@ class KnownLocationsViewModel @JvmOverloads constructor(
                 _uiState.update { state ->
                     val sorted = applySort(items, state.sortOrder, state.userLocation)
                     val filtered = applyFilter(sorted, state.searchQuery)
+                    val mapping = groupClustersByLocation(sorted, clusterRepository.allClusters.value)
                     state.copy(
                         locations = sorted,
                         filteredLocations = filtered,
+                        clustersByLocationId = mapping,
                         isLoading = false,
                         selectedLocationForEdit = items.find { it.id == state.selectedLocationForEdit?.id }
                     )
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            clusterRepository.allClusters.collect { clusters ->
+                _uiState.update { state ->
+                    val mapping = groupClustersByLocation(state.locations, clusters)
+                    state.copy(clustersByLocationId = mapping)
                 }
             }
         }
@@ -271,5 +287,23 @@ class KnownLocationsViewModel @JvmOverloads constructor(
             item.latLng.latitude.toString().contains(trimmed) ||
             item.latLng.longitude.toString().contains(trimmed)
         }
+    }
+
+    private fun groupClustersByLocation(
+        locations: List<KnownLocationItem>,
+        clusters: List<WorkoutCluster>
+    ): Map<Long, List<WorkoutCluster>> {
+        if (locations.isEmpty() || clusters.isEmpty()) return emptyMap()
+        val result = mutableMapOf<Long, MutableList<WorkoutCluster>>()
+        for (cluster in clusters) {
+            val clusterStart = LatLng(cluster.startLat, cluster.startLng)
+            for (location in locations) {
+                val distance = WorkoutClusterEngine.distanceBetween(location.latLng, clusterStart)
+                if (distance <= location.radius) {
+                    result.getOrPut(location.id) { mutableListOf() }.add(cluster)
+                }
+            }
+        }
+        return result
     }
 }
