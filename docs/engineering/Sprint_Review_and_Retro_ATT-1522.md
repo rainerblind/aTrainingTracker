@@ -3,7 +3,7 @@
 * **Ticket**: [ATT-1522](https://atrainingtracker.atlassian.net/browse/ATT-1522) (*Review & Retro*)
 * **Sprint**: `2026-40.3`
 * **Target Release Version**: `V4.9.38`
-* **Branch**: `sprint/2026-40.3` (Ready; pending explicit human approval before merge into `develop`)
+* **Branch**: `sprint/2026-40.3` -> `develop` (Merged with human approval)
 
 ---
 
