@@ -1358,4 +1358,7 @@
     <string name="workout_name_ride_to">Fahrt nach %1$s</string>
     <string name="workout_name_activity_to">Aktivität nach %1$s</string>
     <string name="cluster_seed_name_loop_format">Runde ab %1$s</string>
+    <string name="prefs_lieblingsort_feedback_title">Lieblingsort &amp; Kalibrierungs-Feedback</string>
+    <string name="prefs_lieblingsort_feedback_summary">Bestätigt erkannten Startort und Barometer-Kalibrierung im Cockpit</string>
+    <string name="location_calibrated_format">%1$s (%2$s kalibriert)</string>
 </resources>

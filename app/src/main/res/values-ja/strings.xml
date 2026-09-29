@@ -1256,4 +1256,7 @@
     <string name="workout_name_ride_to">%1$s へのライド</string>
     <string name="workout_name_activity_to">%1$s へのアクティビティ</string>
     <string name="cluster_seed_name_loop_format">%1$s からの周回</string>
+    <string name="prefs_lieblingsort_feedback_title">お気に入りの場所とキャリブレーションフィードバック</string>
+    <string name="prefs_lieblingsort_feedback_summary">コックピットに認識された開始位置と気圧計の校正を確認表示します</string>
+    <string name="location_calibrated_format">%1$s (%2$s 校正済み)</string>
 </resources>

@@ -85,6 +85,7 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlNavigation
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingScreen
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModel
+import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.LocationCalibrationBadge
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorStatus
 import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingTabGridContent
 import kotlinx.coroutines.launch
@@ -442,6 +443,7 @@ fun TrackingTabsScreen(
                                 val sensorSourceMapping by trackingTabsViewModel.sensorSourceMapping.collectAsState()
                                 val allTelemetry by trackingTabsViewModel.allTelemetry.collectAsState()
                                 val allDevices by trackingTabsViewModel.allDevices.collectAsState()
+                                val locationCalibrationStatus by trackingTabsViewModel.locationCalibrationStatus.collectAsState()
 
                                 // Show the available Sensors
                                 Surface(
@@ -459,6 +461,7 @@ fun TrackingTabsScreen(
                                         }
                                     )
                                 }
+                                LocationCalibrationBadge(status = locationCalibrationStatus)
                             }
 
                             ScreenMode.CONFIGURATION -> {

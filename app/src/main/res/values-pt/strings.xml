@@ -1271,4 +1271,7 @@
     <string name="workout_name_ride_to">Pedal até %1$s</string>
     <string name="workout_name_activity_to">Atividade até %1$s</string>
     <string name="cluster_seed_name_loop_format">Circuito a partir de %1$s</string>
+    <string name="prefs_lieblingsort_feedback_title">Local favorito e feedback de calibração</string>
+    <string name="prefs_lieblingsort_feedback_summary">Confirma o local de início reconhecido e a calibração do barômetro no cockpit</string>
+    <string name="location_calibrated_format">%1$s (%2$s calibrado)</string>
 </resources>

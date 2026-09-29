@@ -46,6 +46,9 @@ fun DisplaySettingsDialog(
     var currentCustomBrightness by remember {
         mutableStateOf(TrainingApplication.getCustomDisplayBrightness())
     }
+    var isLieblingsortFeedbackEnabled by remember {
+        mutableStateOf(TrainingApplication.isLieblingsortCockpitFeedbackEnabled())
+    }
     
     AppBottomSheetContent(
         title = stringResource(R.string.Display),
@@ -57,6 +60,7 @@ fun DisplaySettingsDialog(
                     TrainingApplication.setDisplayOptions(currentOptions)
                     TrainingApplication.setCockpitThemeMode(currentThemeMode)
                     TrainingApplication.setDisplayBrightnessSettings(currentBrightnessMode, currentCustomBrightness)
+                    TrainingApplication.setLieblingsortCockpitFeedbackEnabled(isLieblingsortFeedbackEnabled)
                     onSettingsChanged?.invoke()
                     onDismiss()
                 },
@@ -92,6 +96,13 @@ fun DisplaySettingsDialog(
                     isChecked = currentOptions.contains("noUnlocking"),
                     onCheckedChange = { checked ->
                         currentOptions = if (checked) currentOptions + "noUnlocking" else currentOptions - "noUnlocking"
+                    }
+                )
+                DisplayOptionToggle(
+                    label = stringResource(R.string.prefs_lieblingsort_feedback_title),
+                    isChecked = isLieblingsortFeedbackEnabled,
+                    onCheckedChange = { checked ->
+                        isLieblingsortFeedbackEnabled = checked
                     }
                 )
             }

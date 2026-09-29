@@ -1463,4 +1463,7 @@
     <string name="workout_name_ride_to">Ride to %1$s</string>
     <string name="workout_name_activity_to">Activity to %1$s</string>
     <string name="cluster_seed_name_loop_format">Loop from %1$s</string>
+    <string name="prefs_lieblingsort_feedback_title">Favorite Location &amp; Calibration Feedback</string>
+    <string name="prefs_lieblingsort_feedback_summary">Confirms recognized start location and barometer calibration in the cockpit</string>
+    <string name="location_calibrated_format">%1$s (%2$s calibrated)</string>
 </resources>

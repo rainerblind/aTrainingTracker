@@ -1272,4 +1272,7 @@
     <string name="workout_name_ride_to">Sortie vers %1$s</string>
     <string name="workout_name_activity_to">Activité vers %1$s</string>
     <string name="cluster_seed_name_loop_format">Boucle depuis %1$s</string>
+    <string name="prefs_lieblingsort_feedback_title">Lieu favori et retour d\'\u00e9talonnage</string>
+    <string name="prefs_lieblingsort_feedback_summary">Confirme le lieu de d\u00e9part reconnu et l\'\u00e9talonnage du barom\u00e8tre dans le cockpit</string>
+    <string name="location_calibrated_format">%1$s (%2$s \u00e9talonn\u00e9)</string>
 </resources>

@@ -311,6 +311,33 @@ class DisplaySettingsTest {
         TrainingApplication.removeDisplaySettingsChangeListener(listener)
     }
 
+    @Test
+    fun testLieblingsortCockpitFeedbackPreferenceAndListener() {
+        // Defaults to true
+        assertTrue(TrainingApplication.isLieblingsortCockpitFeedbackEnabled())
+
+        var listenerCalled = false
+        val listener = TrainingApplication.OnDisplaySettingsChangeListener {
+            listenerCalled = true
+        }
+        TrainingApplication.addDisplaySettingsChangeListener(listener)
+
+        // Set to false
+        TrainingApplication.setLieblingsortCockpitFeedbackEnabled(false)
+        assertFalse(TrainingApplication.isLieblingsortCockpitFeedbackEnabled())
+        assertEquals(false, prefStorage[TrainingApplication.SP_LIEBLINGSORT_COCKPIT_FEEDBACK])
+        assertTrue(listenerCalled)
+
+        // Set back to true
+        listenerCalled = false
+        TrainingApplication.setLieblingsortCockpitFeedbackEnabled(true)
+        assertTrue(TrainingApplication.isLieblingsortCockpitFeedbackEnabled())
+        assertEquals(true, prefStorage[TrainingApplication.SP_LIEBLINGSORT_COCKPIT_FEEDBACK])
+        assertTrue(listenerCalled)
+
+        TrainingApplication.removeDisplaySettingsChangeListener(listener)
+    }
+
     private fun setStaticField(clazz: Class<*>, fieldName: String, value: Any?) {
         try {
             val field: Field = clazz.getDeclaredField(fieldName)

@@ -1271,4 +1271,7 @@
     <string name="workout_name_ride_to">Uscita verso %1$s</string>
     <string name="workout_name_activity_to">Attività verso %1$s</string>
     <string name="cluster_seed_name_loop_format">Giro da %1$s</string>
+    <string name="prefs_lieblingsort_feedback_title">Luogo preferito e feedback di calibrazione</string>
+    <string name="prefs_lieblingsort_feedback_summary">Conferma il punto di partenza riconosciuto e la calibrazione del barometro nella cabina di pilotaggio</string>
+    <string name="location_calibrated_format">%1$s (%2$s calibrato)</string>
 </resources>
