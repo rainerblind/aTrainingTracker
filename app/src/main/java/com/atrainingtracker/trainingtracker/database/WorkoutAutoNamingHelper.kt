@@ -105,7 +105,8 @@ object WorkoutAutoNamingHelper {
         return context.getString(R.string.cluster_seed_name_loop_format, startName)
     }
 
-    private fun getDisplayName(context: Context, location: MyLocation?): String? {
+    @JvmStatic
+    fun getDisplayName(context: Context, location: MyLocation?): String? {
         if (location == null) return null
         val name = location.name?.trim()
         if (!name.isNullOrEmpty()) {
@@ -114,3 +115,4 @@ object WorkoutAutoNamingHelper {
         return LocationNameResolver.formatFallback(context, location.latLng.latitude, location.latLng.longitude)
     }
 }
+

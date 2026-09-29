@@ -1466,4 +1466,8 @@
     <string name="prefs_lieblingsort_feedback_title">Favorite Location &amp; Calibration Feedback</string>
     <string name="prefs_lieblingsort_feedback_summary">Confirms recognized start location and barometer calibration in the cockpit</string>
     <string name="location_calibrated_format">%1$s (%2$s calibrated)</string>
+    <string name="workout_start_location">Start: %s</string>
+    <string name="workout_destination_location">Destination: %s</string>
+    <string name="workout_start_and_destination">Start &amp; Destination: %s</string>
 </resources>
+
