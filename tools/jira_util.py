@@ -571,17 +571,17 @@ def create_subtask(parent_key, summary, description, role="coordinator", add_to_
         if summary.lower().startswith(subtag):
             summary = summary[len(subtag):].strip()
 
-    stage_normalizations = [
-        (r'^\[impl\]\s*', '[Implementation] '),
-        (r'^\[specification\]\s*', '[Test-Spec] '),
-        (r'^\[spec\]\s*', '[Test-Spec] '),
-        (r'^\[design\]\s*', '[Impl-Plan] '),
-        (r'^\[plan\]\s*', '[Impl-Plan] '),
+    stage_prefixes = [
+        (r'^\[analysis\]', '[Analysis]'),
+        (r'^\[(req\s*&\s*test\s*spec|test-spec|test\s*spec|specification|spec)\]', '[Req & Test Spec]'),
+        (r'^\[(impl-plan|impl\s*plan|design|plan)\]', '[Impl-Plan]'),
+        (r'^\[(implementation|impl)\]', '[Implementation]'),
+        (r'^\[(test|verification)\]', '[Test]'),
     ]
-    for pattern, replacement in stage_normalizations:
+    detected_prefix = None
+    for pattern, prefix in stage_prefixes:
         if re.search(pattern, summary, re.IGNORECASE):
-            summary = re.sub(pattern, replacement, summary, count=1, flags=re.IGNORECASE)
-            print(f"Normalized subtask prefix to canonical '{replacement.strip()}' for standardization.")
+            detected_prefix = prefix
             break
 
     config = get_config()
@@ -594,7 +594,9 @@ def create_subtask(parent_key, summary, description, role="coordinator", add_to_
             clean_parent = parent_summary
             for tag in ["[Feature]", "[Bug]", "[Verbesserung]", "[Subtask]", "[Task]"]:
                 clean_parent = clean_parent.replace(tag, "").strip()
-            if clean_parent.lower() not in summary.lower():
+            if detected_prefix:
+                summary = f"{detected_prefix} {clean_parent}"
+            elif clean_parent.lower() not in summary.lower():
                 summary = f"{summary} ({clean_parent})"
                 if len(summary) > 250:
                     summary = summary[:247] + "..."

@@ -42,54 +42,56 @@ During the Joint Review of ATT-1401 and ATT-1402, two significant user experienc
 * **Observation**:
   Sub-tasks across tickets occasionally varied in prefix formatting (e.g. `[Analysis]` vs `Stage 1 - Analysis` vs `Analysis:`), and some lacked the parent ticket title.
 * **Human Feedback**:
+### 2.1 Observation 1: Sub-Task Canonical Naming Scheme & Summary Standardization
+* **Observation**:
+  Sub-tasks across tickets occasionally varied in prefix formatting (e.g. `[Analysis]` vs `Stage 1 - Analysis` vs `[Test-Spec]`), and some included verbose stage descriptions that disrupted automation.
+* **Human Feedback**:
+  > *"Please use [Req & Test Spec] here. Furthermore, we don't need the stage description in the title."*  
   > *"Sub-Tasks must have the name of the main ticket in the summary."*  
   > *"The first part of the name of the sub-tasks must be identical over all main tickets. I.e, the creation of the sub-tickets must always get the same standard name scheme."*
 * **Root Cause**:
-  Manual subtask creation strings or varying prompt formulations in stage skills produced inconsistent naming syntax across subtasks.
+  Inconsistent subtask creation prompts produced verbose or varying stage descriptions instead of the concise standard naming scheme.
 * **Countermeasure & Permanent Rule**:
-  Sub-tasks MUST follow the exact standardized prefix syntax:
-  - `[Analysis] Problem Domain & Root Cause Analysis (<Parent Summary>)`
-  - `[Test-Spec] Requirement & Test Specification (<Parent Summary>)`
-  - `[Impl-Plan] Architecture & Implementation Plan (<Parent Summary>)`
-  - `[Implementation] Software Construction & Unit Tests (<Parent Summary>)`
-  - `[Test] Verification, Clean-Room Regression & Release Verification (<Parent Summary>)`
-  Enforced directly in `tools/jira_util.py` via automated summary prefix normalization.
+  Sub-tasks MUST follow the exact concise format `[Prefix] <Parent Summary>` without extra stage descriptions in the title:
+  - `[Analysis] <Parent Summary>`
+  - `[Req & Test Spec] <Parent Summary>`
+  - `[Impl-Plan] <Parent Summary>`
+  - `[Implementation] <Parent Summary>`
+  - `[Test] <Parent Summary>`
+  Enforced directly in `tools/jira_util.py` via automated prefix normalization and clean parent summary formatting.
 
 ---
 
-### 2.2 Observation 2: Active Parent Ticket Lifecycle Stage Advancement
+### 2.2 Observation 2: Jira Backend Automation for Main Ticket State Transitions
 * **Observation**:
-  Parent tickets remained in earlier stages despite child subtasks advancing and completing.
-* **Human Feedback**:
-  > *"Jira Automation failes to move the main ticket forward. → should also be done by the agent."*
-* **Root Cause**:
-  Reliance on Jira Cloud backend automation rules that were either unconfigured or failed due to permission constraints.
+  Automatic Jira transitions of the main ticket appeared to stall during the sprint.
+* **Human Clarification & Root Cause**:
+  > *"The automatic transitions did not work due to the different namings of the sub-tickets. When the sub-tickets are named correctly, the automation will work again. There is no need for the agents to change the state of the main tickets."*  
+  Jira backend automation rules trigger based on the exact standardized sub-task titles (`[Analysis]`, `[Req & Test Spec]`, etc.). When subtasks had non-standard names, the automation rules could not match them.
 * **Countermeasure & Permanent Rule**:
-  AI agents MUST explicitly advance the parent ticket in lockstep with the ASPICE lifecycle stages (`Analysis` -> `Test Spec` -> `Impl Plan` -> `Implementation` -> `Final Review (Human)`). Do not rely on external Jira server-side automation.
+  Strict adherence to the standardized sub-task naming scheme ensures Jira backend automation advances the parent tickets reliably. Agents do NOT manually transition parent tickets between lifecycle stages.
 
 ---
 
-### 2.3 Observation 3: Joint Review Revision Intent & Timing Clarity
+### 2.3 Observation 3: Joint Review Revision Default to Next Sprint
 * **Observation**:
-  During the review of ATT-1399, the user intended to defer a layout revision to the next sprint, but the agent assumed immediate in-sprint execution and started refactoring right away.
+  During the review of ATT-1399, user intent was to address feedback in the next sprint, but the agent jumped into immediate in-sprint refactoring.
 * **Human Feedback**:
-  > *"ATT-1399: During the Sprint Review, the human wanted to move this ticket back to Analysis to fix an issue within the next sprint but the agent(s) started to fix this immediately. From the question the human had to answer, it was not clear that the fix will be immediately."*
+  > *"The default should be the fix within the next Sprint."*
 * **Root Cause**:
-  The interactive choice presented during rejection was ambiguous regarding timing (*now in this sprint* vs. *deferred to next sprint*).
+  Agent bias towards immediate remediation rather than scoping changes into future iterations.
 * **Countermeasure & Permanent Rule**:
-  When the user expresses feedback or dissatisfaction during Ceremony 2 (Joint Review), the agent MUST explicitly ask for clarification with clear, mutually exclusive options:
-  - **Option A (Immediate Revision)**: Fix and verify immediately on a feature branch within the current sprint before release.
-  - **Option B (Defer to Next Sprint)**: Accept the current ticket as-is, keep the release on schedule, and file a separate backlog ticket for the next sprint.
+  During Ceremony 2 (Joint Review), the **default behavior** for any user feedback, revision, or newly requested enhancement is to accept the current ticket as-is and file a dedicated backlog ticket for the **next sprint**. An immediate in-sprint fix is only executed if the user explicitly instructs to fix it right now.
 
 ---
 
 ### 2.4 Observation 4: Strict Separation of Ticket Creation vs. Implementation
 * **Observation**:
-  When asked to create a follow-up ticket in the backlog, agents have a tendency to immediately begin implementing it.
+  When asked to create or update backlog tickets, agents have a tendency to immediately begin implementing them.
 * **Human Feedback**:
   > *"Again: Do not start any implementation. Please create and update the jira tickets."*
 * **Root Cause**:
-  Agent bias towards proactive action conflates backlog recording with an execution directive.
+  Agent bias towards action conflates backlog ticket operations with an execution command.
 * **Countermeasure & Permanent Rule**:
   When instructed to create or update a ticket, the agent MUST ONLY create/update the Jira ticket, report the issue key, and **STOP**. Autonomous branching, subtask creation, or stage execution is strictly forbidden.
 
@@ -108,8 +110,8 @@ During the Joint Review of ATT-1401 and ATT-1402, two significant user experienc
 ## 3. Protocol Hardening & Permanent Enforcements
 
 The following permanent updates are established across `.agents/rules/aspice_governance.md`, `sprint-planner` skill, and `docs/project_protocol.md`:
-1. **Canonical Sub-Task Prefixes**: Strictly enforce `[Analysis]`, `[Test-Spec]`, `[Impl-Plan]`, `[Implementation]`, `[Test]` with parent ticket summary in parentheses.
-2. **Explicit Parent Ticket Progression**: Agents actively transition parent tickets across all ASPICE stages.
-3. **Unambiguous Review Revision Questions**: Always distinguish immediate in-sprint fixes from deferred next-sprint backlog tickets.
-4. **Immediate Stop on Ticket Creation**: Never begin implementation after creating or updating a Jira ticket.
+1. **Concise Canonical Sub-Task Format**: Strictly enforce `[Prefix] <Parent Summary>` using canonical prefixes `[Analysis]`, `[Req & Test Spec]`, `[Impl-Plan]`, `[Implementation]`, `[Test]` without stage descriptions in titles.
+2. **Reliance on Jira Automation for Parent States**: Keep sub-task names standardized so backend Jira automation advances main tickets; agents do not manually move main tickets between stages.
+3. **Next-Sprint Default for Review Feedback**: Revisions and new requirements identified during Joint Review default to new backlog tickets for the next sprint.
+4. **Immediate Stop on Ticket Operations**: Never begin implementation after creating or updating a Jira ticket.
 5. **Egress Sandbox Bypass**: Explicitly use `BypassSandbox: true` for Jira network commands.
