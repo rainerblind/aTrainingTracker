@@ -342,14 +342,25 @@ class WorkoutRepository private constructor(private val application: Application
 
         // 1. Primary spatial markers (Fast, from WorkoutData)
         workoutData.startLatLng?.let {
-            markerList.add(LocationMarker(it, R.drawable.control_start, application.getString(R.string.Start)))
+            val startTitle = if (!workoutData.startLocationName.isNullOrBlank()) {
+                "${application.getString(R.string.Start)}: ${workoutData.startLocationName}"
+            } else {
+                application.getString(R.string.Start)
+            }
+            markerList.add(LocationMarker(it, R.drawable.control_start, startTitle))
         }
         workoutData.endLatLng?.let {
-            markerList.add(LocationMarker(it, R.drawable.control_stop, application.getString(R.string.Stop)))
+            val stopTitle = if (!workoutData.endLocationName.isNullOrBlank()) {
+                "${application.getString(R.string.Stop)}: ${workoutData.endLocationName}"
+            } else {
+                application.getString(R.string.Stop)
+            }
+            markerList.add(LocationMarker(it, R.drawable.control_stop, stopTitle))
         }
         workoutData.maxDisplacementLatLng?.let {
             markerList.add(LocationMarker(it, R.drawable.ic_distance, application.getString(R.string.max_line_distance)))
         }
+
 
         // 2. Sensor Max/Min Markers (from Extremum table)
         extremaSensorTypes.forEach { sensor ->

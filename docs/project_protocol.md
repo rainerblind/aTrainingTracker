@@ -88,10 +88,16 @@ Under NO circumstances may any AI agent transition a parent Jira ticket to `Erle
 * **Sub-Task Self-Sufficiency**: Every sub-task Description MUST be self-contained. Empty descriptions or redirection stubs (e.g. "see parent") are strictly forbidden.
 * **Documentation-Before-Transition Sequencing**: Agents MUST update the sub-task Description and post any audit comments **BEFORE** calling `move` to transition to `In Überprüfung`.
 * **Mandatory Lösungsversion (Fix Version/s)**: Parent tickets MUST have an active unreleased `Lösungsversion` assigned (e.g. `V4.9.38`). Sub-tasks MUST NOT have a `Lösungsversion` assigned ("Sub-Tasks must not get a solution").
+* **Sub-Task Canonical Naming & Standardization**: Sub-task summaries MUST begin with the standardized canonical prefix `[Analysis]`, `[Req & Test Spec]`, `[Impl-Plan]`, `[Implementation]`, `[Test]` followed directly by the parent ticket summary (e.g. `[Req & Test Spec] <Parent Summary>`). Stage descriptions in titles are strictly omitted.
+* **Jira Backend Automation for Parent Ticket States**: Strict adherence to the standardized sub-task naming scheme triggers Jira backend automation to transition parent tickets automatically. Agents do NOT manually change the state of main tickets between lifecycle stages.
+* **Next-Sprint Default for Review Revisions**: During Ceremony 2 (Joint Review), any user feedback, revisions, or enhancements default to a new backlog ticket for the **next sprint** (keeping release on schedule). Immediate in-sprint fixes are only executed upon explicit user instruction.
+* **Strict Separation of Creation vs. Implementation**: When instructed to create or update a Jira ticket, create/update it, stop immediately, and do not start autonomous implementation.
 * **Bug Ticket Creation vs. Deferred Analysis (ATT-1250)**: Filing a bug ticket (`create-issue`) MUST be fast and lightweight. Creating a ticket never triggers autonomous execution.
 * **Prohibition on Agent Sprint Manipulation**: Agents MUST NEVER move tickets into sprints or pull tickets from the backlog autonomously. Only the human user assigns tickets to sprints.
 * **Single-Ticket Review Rule**: During sprint reviews, tickets must be reviewed strictly one-by-one. Never present multiple tickets for joint review simultaneously.
 * **Continuous Retro Logging**: Any process anomalies, tool failures, or user corrections must be logged immediately as comments in the active sprint's `Review & Retro` ticket.
+* **Egress Sandbox Bypass for Cloud APIs**: Tool commands communicating with external cloud APIs (e.g. Jira REST API via `tools/jira_util.py`) must use `BypassSandbox: true` so requests reach external hosts cleanly.
+* **Human Decision Gate on Sprint Closure & Develop Merge**: The sprint branch (`sprint/<sprint_id>`) MUST NEVER be merged into `develop` autonomously by any agent. Sprint closure and merging into `develop` is an inviolable Human Decision Gate, executed strictly after explicit human review and agreement.
 * **Branch Cleanup**: Merged feature/bugfix branches must be immediately deleted upon integration into `develop`.
 
 ---

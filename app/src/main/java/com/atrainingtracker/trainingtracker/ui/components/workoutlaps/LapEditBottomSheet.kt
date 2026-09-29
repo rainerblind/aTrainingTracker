@@ -64,6 +64,7 @@ import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.components.MetricLayout
 import com.atrainingtracker.trainingtracker.ui.map.LapSegmentUtils
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
+import com.atrainingtracker.trainingtracker.ui.map.DarkMapAntiFlashOverlay
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
@@ -567,55 +568,58 @@ fun LapEditBottomSheet(
                                         }
                                     }
 
-                                    GoogleMap(
-                                        modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White),
-                                        cameraPositionState = cameraPositionState,
-                                        uiSettings = MapUiSettings(
-                                            zoomControlsEnabled = false,
-                                            compassEnabled = false,
-                                            mapToolbarEnabled = false,
-                                            myLocationButtonEnabled = false,
-                                            scrollGesturesEnabled = true,
-                                            zoomGesturesEnabled = true,
-                                            rotationGesturesEnabled = false,
-                                            tiltGesturesEnabled = false
-                                        ),
-                                        properties = mapProperties,
-                                        onMapLoaded = { isMapLoaded = true }
-                                    ) {
-                                        // Full workout polyline in subtle muted color
-                                        Polyline(
-                                            points = allPoints,
-                                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                            width = 5f,
-                                            zIndex = 1f
-                                        )
-
-                                        // Highlighted active lap segment in vibrant primary color
-                                        if (lapSegment.isNotEmpty()) {
+                                    Box(modifier = Modifier.fillMaxSize()) {
+                                        GoogleMap(
+                                            modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White),
+                                            cameraPositionState = cameraPositionState,
+                                            uiSettings = MapUiSettings(
+                                                zoomControlsEnabled = false,
+                                                compassEnabled = false,
+                                                mapToolbarEnabled = false,
+                                                myLocationButtonEnabled = false,
+                                                scrollGesturesEnabled = true,
+                                                zoomGesturesEnabled = true,
+                                                rotationGesturesEnabled = false,
+                                                tiltGesturesEnabled = false
+                                            ),
+                                            properties = mapProperties,
+                                            onMapLoaded = { isMapLoaded = true }
+                                        ) {
+                                            // Full workout polyline in subtle muted color
                                             Polyline(
-                                                points = lapSegment,
-                                                color = MaterialTheme.colorScheme.primary,
-                                                width = 10f,
-                                                zIndex = 2f
+                                                points = allPoints,
+                                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                                width = 5f,
+                                                zIndex = 1f
                                             )
 
-                                            lapSegment.firstOrNull()?.let { startPoint ->
-                                                Marker(
-                                                    state = remember(startPoint) { MarkerState(position = startPoint) },
-                                                    icon = remember { createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint) },
-                                                    zIndex = 3f
+                                            // Highlighted active lap segment in vibrant primary color
+                                            if (lapSegment.isNotEmpty()) {
+                                                Polyline(
+                                                    points = lapSegment,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    width = 10f,
+                                                    zIndex = 2f
                                                 )
-                                            }
 
-                                            lapSegment.lastOrNull()?.let { stopPoint ->
-                                                Marker(
-                                                    state = remember(stopPoint) { MarkerState(position = stopPoint) },
-                                                    icon = remember { createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint) },
-                                                    zIndex = 3f
-                                                )
+                                                lapSegment.firstOrNull()?.let { startPoint ->
+                                                    Marker(
+                                                        state = remember(startPoint) { MarkerState(position = startPoint) },
+                                                        icon = remember { createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint) },
+                                                        zIndex = 3f
+                                                    )
+                                                }
+
+                                                lapSegment.lastOrNull()?.let { stopPoint ->
+                                                    Marker(
+                                                        state = remember(stopPoint) { MarkerState(position = stopPoint) },
+                                                        icon = remember { createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint) },
+                                                        zIndex = 3f
+                                                    )
+                                                }
                                             }
                                         }
+                                        DarkMapAntiFlashOverlay(isMapLoaded = isMapLoaded, isDark = isDark)
                                     }
                                 }
                             } else {

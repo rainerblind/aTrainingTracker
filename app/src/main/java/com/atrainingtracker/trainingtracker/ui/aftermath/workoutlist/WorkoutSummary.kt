@@ -40,9 +40,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
+
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.LapData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
@@ -216,6 +219,13 @@ private fun WorkoutMediaSection(
             .fillMaxWidth()
             .height(300.dp) // Total height for map + profile area
     ) {
+        val startTitle = if (!workoutData.startLocationName.isNullOrBlank()) {
+            "${stringResource(R.string.Start)}: ${workoutData.startLocationName}"
+        } else null
+        val endTitle = if (!workoutData.endLocationName.isNullOrBlank()) {
+            "${stringResource(R.string.Stop)}: ${workoutData.endLocationName}"
+        } else null
+
         // 1. The Map (Weight 1 lets it take remaining space above profile)
         PathPreviewMap(
             path = workoutData.toMapTrack(),
@@ -225,8 +235,11 @@ private fun WorkoutMediaSection(
             start = workoutData.startLatLng,
             end = workoutData.endLatLng,
             apex = workoutData.maxDisplacementLatLng,
+            startTitle = startTitle,
+            endTitle = endTitle,
             onMapClick = { onMapClick() }
         )
+
 
         // 2. The Elevation Profile
         ElevationProfile(

@@ -479,6 +479,18 @@ public class TrainingApplication extends Application {
         notifyDisplaySettingsChanged();
     }
 
+    public static final String SP_LIEBLINGSORT_COCKPIT_FEEDBACK = "lieblingsortCockpitFeedback";
+    public static final boolean DEFAULT_LIEBLINGSORT_COCKPIT_FEEDBACK = true;
+
+    public static boolean isLieblingsortCockpitFeedbackEnabled() {
+        return cSharedPreferences.getBoolean(SP_LIEBLINGSORT_COCKPIT_FEEDBACK, DEFAULT_LIEBLINGSORT_COCKPIT_FEEDBACK);
+    }
+
+    public static void setLieblingsortCockpitFeedbackEnabled(boolean enabled) {
+        cSharedPreferences.edit().putBoolean(SP_LIEBLINGSORT_COCKPIT_FEEDBACK, enabled).apply();
+        notifyDisplaySettingsChanged();
+    }
+
     public interface OnDisplaySettingsChangeListener {
         void onDisplaySettingsChanged();
     }

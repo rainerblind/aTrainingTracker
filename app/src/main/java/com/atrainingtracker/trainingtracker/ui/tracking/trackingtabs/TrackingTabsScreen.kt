@@ -165,6 +165,7 @@ fun TrackingTabsScreen(
     val activeSensors by controlViewModel.activeSensors.collectAsState()
     val bSportType by controlViewModel.bSportType.collectAsState()
     val selectingProtocol by controlViewModel.selectingProtocol.collectAsState()
+    val locationCalibrationStatus by trackingTabsViewModel.locationCalibrationStatus.collectAsState()
 
     // Battery Saver Telemetry & Event Subscriptions
     val filteredSensorData by trackingTabsViewModel.allFilteredSensorData.collectAsState()
@@ -593,7 +594,8 @@ fun TrackingTabsScreen(
                             onPairingClicked = { controlViewModel.onPairingClicked(it) },
                             selectingProtocol = selectingProtocol,
                             onDeviceTypeSelected = { controlViewModel.onDeviceTypeSelected(it) },
-                            onCancelDeviceTypeSelection = { controlViewModel.onCancelDeviceTypeSelection() }
+                            onCancelDeviceTypeSelection = { controlViewModel.onCancelDeviceTypeSelection() },
+                            locationCalibrationStatus = locationCalibrationStatus
                         )
                     } else {
                         val viewIndex =

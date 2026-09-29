@@ -21,11 +21,13 @@ package com.atrainingtracker.trainingtracker.ui.knownlocations
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,12 +40,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -51,6 +51,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -71,6 +72,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
@@ -90,6 +92,8 @@ fun KnownLocationsScreen(
     viewModel: KnownLocationsViewModel,
     onMenuClick: () -> Unit = { },
     onShowOnMap: (Long) -> Unit = { },
+    onShowWorkouts: (KnownLocationItem) -> Unit = { },
+    onSelectCluster: (Long) -> Unit = { },
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -184,6 +188,8 @@ fun KnownLocationsScreen(
             uiState = uiState,
             onEdit = { viewModel.openEditDialog(it, showMap = true) },
             onShowOnMap = { item -> onShowOnMap(item.id) },
+            onShowWorkouts = onShowWorkouts,
+            onSelectCluster = onSelectCluster,
             onDelete = { locationPendingDeletion = it },
             modifier = Modifier.fillMaxSize()
         )
@@ -224,6 +230,8 @@ private fun KnownLocationsListContent(
     uiState: KnownLocationsUiState,
     onEdit: (KnownLocationItem) -> Unit,
     onShowOnMap: (KnownLocationItem) -> Unit,
+    onShowWorkouts: (KnownLocationItem) -> Unit = { },
+    onSelectCluster: (Long) -> Unit = { },
     onDelete: (KnownLocationItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -278,8 +286,11 @@ private fun KnownLocationsListContent(
                 KnownLocationCard(
                     item = item,
                     isMetric = uiState.isMetric,
+                    linkedClusters = uiState.clustersByLocationId[item.id] ?: emptyList(),
                     onEdit = { onEdit(item) },
                     onShowOnMap = { onShowOnMap(item) },
+                    onShowWorkouts = { onShowWorkouts(item) },
+                    onSelectCluster = onSelectCluster,
                     onDelete = { onDelete(item) }
                 )
             }
@@ -288,14 +299,17 @@ private fun KnownLocationsListContent(
 }
 
 /**
- * Modern location card with icon badge, inline metrics, and overflow/context menu.
+ * Modern location card with icon badge, inline metrics, and universal delete-only long-press context menu.
  */
 @Composable
 private fun KnownLocationCard(
     item: KnownLocationItem,
     isMetric: Boolean,
+    linkedClusters: List<WorkoutCluster> = emptyList(),
     onEdit: () -> Unit,
     onShowOnMap: () -> Unit = {},
+    onShowWorkouts: () -> Unit = {},
+    onSelectCluster: (Long) -> Unit = {},
     onDelete: () -> Unit,
     initialShowContextMenu: Boolean = false
 ) {
@@ -317,8 +331,7 @@ private fun KnownLocationCard(
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = item.name,
@@ -327,21 +340,8 @@ private fun KnownLocationCard(
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth()
                     )
-
-                    IconButton(
-                        onClick = { showContextMenu = true },
-                        modifier = Modifier
-                            .size(24.dp)
-                            .testTag("location_overflow_button_${item.id}")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
 
                 Row(
@@ -367,55 +367,84 @@ private fun KnownLocationCard(
                         )
                     }
 
-                    // Number of Starts
+                    // Number of Starts (Interactive Drill-Down Touch Target)
+                    Surface(
+                        onClick = onShowWorkouts,
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .defaultMinSize(minHeight = 48.dp)
+                            .testTag("location_starts_badge_${item.id}")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Place,
+                                contentDescription = stringResource(R.string.known_locations_view_workouts),
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = pluralStringResource(R.plurals.known_locations_starts, item.hitCount, item.hitCount),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+
+                // Linked Route Clusters (REQ-UI-186, ATT-1402)
+                if (linkedClusters.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = pluralStringResource(R.plurals.known_locations_starts, item.hitCount, item.hitCount),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        text = stringResource(R.string.known_location_routes_header, linkedClusters.size),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        linkedClusters.forEach { cluster ->
+                            SuggestionChip(
+                                onClick = { onSelectCluster(cluster.id) },
+                                label = {
+                                    Text(
+                                        text = cluster.name,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                },
+                                modifier = Modifier.testTag("location_cluster_chip_${cluster.id}")
+                            )
+                        }
+                    }
                 }
             }
         }
 
-        // Context Menu for Actions (Show on map, Edit, Delete)
+        // Universal Long-Press Context Menu (Delete-only, Top-Left aligned per REQ-UI-061)
         Box(
             modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(end = 12.dp, top = 8.dp)
+                .align(Alignment.TopStart)
+                .padding(start = 12.dp, top = 8.dp)
         ) {
             DropdownMenu(
                 expanded = showContextMenu,
                 onDismissRequest = { showContextMenu = false }
             ) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.known_location_show_map)) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Map,
-                            contentDescription = null
-                        )
-                    },
-                    onClick = {
-                        showContextMenu = false
-                        onShowOnMap()
-                    },
-                    modifier = Modifier.testTag("location_show_on_map_action_${item.id}")
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.Edit)) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = null
-                        )
-                    },
-                    onClick = {
-                        showContextMenu = false
-                        onEdit()
-                    },
-                    modifier = Modifier.testTag("location_edit_action_${item.id}")
-                )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.delete)) },
                     leadingIcon = {
@@ -507,6 +536,7 @@ fun PreviewKnownLocationCardLight() {
                 isMetric = true,
                 onEdit = {},
                 onShowOnMap = {},
+                onShowWorkouts = {},
                 onDelete = {}
             )
         }
@@ -523,6 +553,7 @@ fun PreviewKnownLocationCardDark() {
                 isMetric = true,
                 onEdit = {},
                 onShowOnMap = {},
+                onShowWorkouts = {},
                 onDelete = {}
             )
         }
@@ -539,6 +570,7 @@ fun PreviewKnownLocationCardContextMenu() {
                 isMetric = true,
                 onEdit = {},
                 onShowOnMap = {},
+                onShowWorkouts = {},
                 onDelete = {},
                 initialShowContextMenu = true
             )

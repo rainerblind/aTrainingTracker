@@ -61,7 +61,8 @@ class TrackingTabsViewModel(
     private val trackingViewsRepository: TrackingViewsRepository,
     private val banalServiceRepository: BANALServiceRepository,
     private val devicesRepository: DeviceDataRepository,
-    liveSegmentsRepository: com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository? = null
+    liveSegmentsRepository: com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository? = null,
+    knownLocationsRepository: com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository? = null
 ) : AndroidViewModel(application) {
 
     // State to hold the explicitly selected ActivityType
@@ -103,6 +104,50 @@ class TrackingTabsViewModel(
     // Screen mode is now local to the ViewModel to prevent background state leakage (ATT-245)
     private val _screenMode = MutableStateFlow(ScreenMode.TRACKING)
     val screenMode: StateFlow<ScreenMode> = _screenMode.asStateFlow()
+
+    private val knownLocationsRepo: com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository? = knownLocationsRepository
+
+    val locationCalibrationStatus: StateFlow<LocationCalibrationStatus?> = if (knownLocationsRepo == null) {
+        MutableStateFlow(null)
+    } else {
+        kotlinx.coroutines.flow.combine(
+            banalServiceRepository.currentLocation,
+            knownLocationsRepo.locationsFlow
+        ) { location, knownLocations ->
+            if (location == null) {
+                null
+            } else {
+                var closestItem: com.atrainingtracker.trainingtracker.repositories.KnownLocationItem? = null
+                var minDistance = Float.MAX_VALUE
+                val results = FloatArray(1)
+                for (item in knownLocations) {
+                    android.location.Location.distanceBetween(
+                        location.latitude, location.longitude,
+                        item.latLng.latitude, item.latLng.longitude,
+                        results
+                    )
+                    val dist = results[0]
+                    if (dist < item.radius && dist < minDistance) {
+                        minDistance = dist
+                        closestItem = item
+                    }
+                }
+                closestItem?.let {
+                    LocationCalibrationStatus(
+                        locationId = it.id,
+                        locationName = it.name,
+                        referenceAltitude = it.altitude,
+                        isCalibrated = true,
+                        source = it.source
+                    )
+                }
+            }
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
+    }
 
     fun onResume() {
         viewModelScope.launch {
@@ -263,13 +308,15 @@ class TrackingTabsViewModelFactory(private val application: Application) : ViewM
             val trackingViewsRepository = TrackingViewsRepository.getInstance(application)
             val banalServiceRepository = BANALServiceRepository.Companion.getInstance(application)
             val devicesRepository = DeviceDataRepository.getInstance(application)
+            val knownLocationsRepository = com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository.getInstance(application)
 
             @Suppress("UNCHECKED_CAST")
             return TrackingTabsViewModel(
                 application,
                 trackingViewsRepository,
                 banalServiceRepository,
-                devicesRepository
+                devicesRepository,
+                knownLocationsRepository = knownLocationsRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

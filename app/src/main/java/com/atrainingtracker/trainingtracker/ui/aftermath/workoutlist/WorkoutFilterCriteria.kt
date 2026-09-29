@@ -19,14 +19,17 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import androidx.compose.runtime.Immutable
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.google.android.gms.maps.model.LatLng
 import org.json.JSONObject
 
 /**
  * Immutable domain model representing multi-dimensional filter criteria for workout lists.
  *
  * Holds filter values for free-text search, temporal ranges, sport subtypes, gear assignments,
- * workout flags (commute, trainer, GPS presence), and numerical distance/duration thresholds.
+ * workout flags (commute, trainer, GPS presence), numerical distance/duration thresholds,
+ * and spatial geofence starting location filters.
  * Provides high-performance predicate evaluation via [matches] and lightweight JSON serialization
  * for asynchronous preference persistence.
  */
@@ -45,7 +48,11 @@ data class WorkoutFilterCriteria(
     val minDistanceMeters: Double? = null,
     val maxDistanceMeters: Double? = null,
     val minDurationSec: Long? = null,
-    val maxDurationSec: Long? = null
+    val maxDurationSec: Long? = null,
+    val startLocationName: String? = null,
+    val startLocationLat: Double? = null,
+    val startLocationLng: Double? = null,
+    val startLocationRadiusM: Double? = null
 ) {
     /**
      * Total count of distinct active filter dimensions.
@@ -62,6 +69,7 @@ data class WorkoutFilterCriteria(
             if (hasGpsTrack == true) count++
             if (minDistanceMeters != null || maxDistanceMeters != null) count++
             if (minDurationSec != null || maxDurationSec != null) count++
+            if (startLocationLat != null && startLocationLng != null) count++
             return count
         }
 
@@ -160,6 +168,16 @@ data class WorkoutFilterCriteria(
             return false
         }
 
+        // Start Location geofence filter
+        if (startLocationLat != null && startLocationLng != null) {
+            val start = workout.startLatLng ?: return false
+            val radius = startLocationRadiusM ?: 200.0
+            val dist = WorkoutClusterEngine.distanceBetween(start, LatLng(startLocationLat, startLocationLng))
+            if (dist > radius) {
+                return false
+            }
+        }
+
         return true
     }
 
@@ -184,6 +202,10 @@ data class WorkoutFilterCriteria(
         maxDistanceMeters?.let { json.put("maxDistanceMeters", it) }
         minDurationSec?.let { json.put("minDurationSec", it) }
         maxDurationSec?.let { json.put("maxDurationSec", it) }
+        startLocationName?.let { json.put("startLocationName", it) }
+        startLocationLat?.let { json.put("startLocationLat", it) }
+        startLocationLng?.let { json.put("startLocationLng", it) }
+        startLocationRadiusM?.let { json.put("startLocationRadiusM", it) }
         return json.toString()
     }
 
@@ -212,7 +234,11 @@ data class WorkoutFilterCriteria(
                     minDistanceMeters = if (json.has("minDistanceMeters")) json.optDouble("minDistanceMeters") else null,
                     maxDistanceMeters = if (json.has("maxDistanceMeters")) json.optDouble("maxDistanceMeters") else null,
                     minDurationSec = if (json.has("minDurationSec")) json.optLong("minDurationSec") else null,
-                    maxDurationSec = if (json.has("maxDurationSec")) json.optLong("maxDurationSec") else null
+                    maxDurationSec = if (json.has("maxDurationSec")) json.optLong("maxDurationSec") else null,
+                    startLocationName = if (json.has("startLocationName")) json.optString("startLocationName") else null,
+                    startLocationLat = if (json.has("startLocationLat")) json.optDouble("startLocationLat") else null,
+                    startLocationLng = if (json.has("startLocationLng")) json.optDouble("startLocationLng") else null,
+                    startLocationRadiusM = if (json.has("startLocationRadiusM")) json.optDouble("startLocationRadiusM") else null
                 )
             } catch (e: Exception) {
                 WorkoutFilterCriteria()

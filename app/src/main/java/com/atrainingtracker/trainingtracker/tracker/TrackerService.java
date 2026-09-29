@@ -49,6 +49,7 @@ import android.app.PendingIntent;
 import android.content.pm.PackageManager;
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
+import com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelper;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
@@ -1313,6 +1314,27 @@ public class TrackerService extends Service {
             } else {
                 // No cluster match -> use hardware identity
                 summariesManager.applyInferredIdentity(mWorkoutID, identity);
+
+                // ATT-1398: Intelligent Workout Auto-Naming based on recognized start/destination Lieblingsorte
+                KnownLocationsDatabaseManager knownLocationsManager = KnownLocationsDatabaseManager.getInstance(this);
+                KnownLocationsDatabaseManager.MyLocation startLoc = knownLocationsManager.getMyLocation(startPosRaw);
+                KnownLocationsDatabaseManager.MyLocation endLoc = knownLocationsManager.getMyLocation(endPosRaw);
+                float endpointDist = engine.distanceBetween(startPosRaw, endPosRaw);
+                BSportType resolvedSport = (identity != null && identity.getBSportType() != null && identity.getBSportType() != BSportType.UNKNOWN)
+                    ? identity.getBSportType()
+                    : mBanalService.getBSportType();
+                String autoName = WorkoutAutoNamingHelper.generateWorkoutName(
+                    this,
+                    resolvedSport,
+                    startLoc,
+                    endLoc,
+                    endpointDist
+                );
+                if (autoName != null && !autoName.trim().isEmpty()) {
+                    ContentValues nameValues = new ContentValues();
+                    nameValues.put(WorkoutSummaries.WORKOUT_NAME, autoName);
+                    summariesManager.getDatabase().update(WorkoutSummaries.TABLE, nameValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(mWorkoutID)});
+                }
             }
         } else {
             // No spatial data -> use hardware identity

@@ -83,6 +83,7 @@ public class DeviceManager {
     protected static MyRemoteDevice cMyRemoteDeviceCurrentlySearchingFor = null;
     protected Context mContext;
     protected ClockDevice mClockDevice;
+    protected BatteryDevice mBatteryDevice;
     protected SpeedAndLocationDevice mSpeedAndLocationDevice_GPS, mSpeedAndLocationDevice_GoogleFused, mSpeedAndLocationDevice_Network;
     protected AltitudeFromPressureDevice mAltitudeFromPressureDevice;
     protected VerticalSpeedAndSlopeDevice mVerticalSpeedAndSlopeDevice;
@@ -269,6 +270,7 @@ public class DeviceManager {
         mSensorManager = mySensorManager;
 
         mClockDevice = new ClockDevice(mContext, mSensorManager);
+        mBatteryDevice = new BatteryDevice(mContext, mSensorManager);
         
         long altitudePressureId = mDevicesDatabaseManager.getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_PRESSURE);
         if (mHavePressureSensor && mDevicesDatabaseManager.isPaired(altitudePressureId)) {
@@ -655,6 +657,9 @@ public class DeviceManager {
         List<MyDevice> myDeviceList = new ArrayList<MyDevice>();
 
         myDeviceList.add(mClockDevice);
+        if (mBatteryDevice != null) {
+            myDeviceList.add(mBatteryDevice);
+        }
         if (mSpeedAndLocationDevice_GPS != null) {
             myDeviceList.add(mSpeedAndLocationDevice_GPS);
         }

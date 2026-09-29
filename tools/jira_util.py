@@ -565,11 +565,44 @@ def create_subtask(parent_key, summary, description, role="coordinator", add_to_
         print("Error: Sub-tasks must not get a solution ('Lösungsversion') assigned! (Governance mandate)", file=sys.stderr)
         sys.exit(1)
 
-    if summary.startswith("[Impl] "):
-        summary = "[Implementation] " + summary[7:]
-        print("Normalized subtask prefix '[Impl]' -> '[Implementation]' to ensure Jira automation compatibility.")
+    # Normalize summary prefixes to ensure identical standardized prefix across all tickets
+    # Mandate: "The first part of the name of the sub-tasks must be identical over all main tickets."
+    for subtag in ["[subtask]", "[sub-task]", "[sub task]"]:
+        if summary.lower().startswith(subtag):
+            summary = summary[len(subtag):].strip()
+
+    stage_prefixes = [
+        (r'^\[analysis\]', '[Analysis]'),
+        (r'^\[(req\s*&\s*test\s*spec|test-spec|test\s*spec|specification|spec)\]', '[Req & Test Spec]'),
+        (r'^\[(impl-plan|impl\s*plan|design|plan)\]', '[Impl-Plan]'),
+        (r'^\[(implementation|impl)\]', '[Implementation]'),
+        (r'^\[(test|verification)\]', '[Test]'),
+    ]
+    detected_prefix = None
+    for pattern, prefix in stage_prefixes:
+        if re.search(pattern, summary, re.IGNORECASE):
+            detected_prefix = prefix
+            break
 
     config = get_config()
+
+    # Mandate: Sub-tasks must have the name of the main ticket in the summary.
+    try:
+        parent_data = jira_request(f"{config['JIRA_URL']}/rest/api/2/issue/{parent_key}?fields=summary", role=role)
+        parent_summary = parent_data.get("fields", {}).get("summary", "")
+        if parent_summary:
+            clean_parent = parent_summary
+            for tag in ["[Feature]", "[Bug]", "[Verbesserung]", "[Subtask]", "[Task]"]:
+                clean_parent = clean_parent.replace(tag, "").strip()
+            if detected_prefix:
+                summary = f"{detected_prefix} {clean_parent}"
+            elif clean_parent.lower() not in summary.lower():
+                summary = f"{summary} ({clean_parent})"
+                if len(summary) > 250:
+                    summary = summary[:247] + "..."
+    except Exception as e:
+        print(f"Notice: Could not retrieve parent summary for subtask naming: {e}", file=sys.stderr)
+
     url = f"{config['JIRA_URL']}/rest/api/2/issue"
     fields = {
         "project": {"key": "ATT"},
@@ -650,7 +683,7 @@ if __name__ == "__main__":
     elif cmd == "show" and len(remaining_argv) == 2:
         show_issue(remaining_argv[1], role=active_role)
     elif cmd == "status" and len(remaining_argv) == 2:
-        check_status(remaining_argv[1], role=active_role)
+        print_status(remaining_argv[1], role=active_role)
     elif cmd == "check-gate" and len(remaining_argv) == 2:
         check_gate(remaining_argv[1], role=active_role)
     elif cmd == "versions":

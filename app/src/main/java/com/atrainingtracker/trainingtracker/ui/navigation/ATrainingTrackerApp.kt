@@ -72,6 +72,7 @@ import com.atrainingtracker.trainingtracker.migration.ImportBackupTabsScreen
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModel
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModel
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersScreen
@@ -325,11 +326,25 @@ fun ATrainingTrackerApp(
 
                 composable(NavRoutes.START_LOCATIONS) {
                     val knownLocationsViewModel: KnownLocationsViewModel = viewModel(activity)
+                    val summariesViewModel: WorkoutSummariesViewModel = viewModel(activity)
                     KnownLocationsScreen(
                         viewModel = knownLocationsViewModel,
                         onMenuClick = { drawerController.openDrawer() },
                         onShowOnMap = { locationId ->
                             navController.navigate(NavRoutes.map(locationId))
+                        },
+                        onShowWorkouts = { locationItem ->
+                            val criteria = WorkoutFilterCriteria(
+                                startLocationName = locationItem.name,
+                                startLocationLat = locationItem.latLng.latitude,
+                                startLocationLng = locationItem.latLng.longitude,
+                                startLocationRadiusM = locationItem.radius.toDouble().takeIf { it > 0.0 } ?: 200.0
+                            )
+                            summariesViewModel.setFilterCriteria(criteria)
+                            navController.navigate(NavRoutes.WORKOUTS)
+                        },
+                        onSelectCluster = { clusterId ->
+                            navController.navigate(NavRoutes.locations(clusterId))
                         }
                     )
                 }
