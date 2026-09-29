@@ -1240,4 +1240,9 @@
     <string name="sort_altitude">標高</string>
     <string name="known_location_radius_label">検知半径</string>
     <string name="known_location_radius_format">%1$s: %2$s</string>
+    <string name="phone_battery">スマホのバッテリー</string>
+    <string name="phone_battery_short">バッテリー</string>
+    <string name="battery_remaining_time">バッテリー残量時間</string>
+    <string name="battery_remaining_time_short">残量時間</string>
+    <string name="battery_charging">充電中</string>
 </resources>
