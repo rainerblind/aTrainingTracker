@@ -1274,4 +1274,7 @@
     <string name="prefs_lieblingsort_feedback_title">Luogo preferito e feedback di calibrazione</string>
     <string name="prefs_lieblingsort_feedback_summary">Conferma il punto di partenza riconosciuto e la calibrazione del barometro nella cabina di pilotaggio</string>
     <string name="location_calibrated_format">%1$s (%2$s calibrato)</string>
+    <string name="workout_start_location">Partenza: %s</string>
+    <string name="workout_destination_location">Arrivo: %s</string>
+    <string name="workout_start_and_destination">Partenza e arrivo: %s</string>
 </resources>

@@ -55,6 +55,8 @@ fun PathPreviewMap(
     start: LatLng? = null,
     end: LatLng? = null,
     apex: LatLng? = null,
+    startTitle: String? = null,
+    endTitle: String? = null,
     onMapClick: () -> Unit = {}
 ) {
     val cameraPositionState = rememberCameraPositionState()
@@ -100,15 +102,18 @@ fun PathPreviewMap(
                 actualStart?.let {
                     Marker(
                         state = remember(it) { MarkerState(position = it) },
+                        title = startTitle,
                         icon = remember { createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint) }
                     )
                 }
                 actualEnd?.let {
                     Marker(
                         state = remember(it) { MarkerState(position = it) },
+                        title = endTitle,
                         icon = remember { createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint) }
                     )
                 }
+
                 actualApex?.let {
                     Marker(
                         state = remember(it) { MarkerState(position = it) },

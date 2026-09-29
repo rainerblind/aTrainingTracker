@@ -52,5 +52,7 @@ data class WorkoutHeaderData(
     val stravaSportName: String? = null,
     val clusterId: Long = -1L,
     val clusterName: String? = null,
-    val finished: Boolean
+    val finished: Boolean,
+    val startLocationName: String? = null,
+    val endLocationName: String? = null
 )
