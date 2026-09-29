@@ -71,6 +71,7 @@ fun ControlTrackingScreen(
     selectingProtocol: Protocol?,
     onDeviceTypeSelected: (DeviceType) -> Unit,
     onCancelDeviceTypeSelection: () -> Unit,
+    locationCalibrationStatus: com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.LocationCalibrationStatus? = null,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -79,6 +80,11 @@ fun ControlTrackingScreen(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        LocationCalibrationBadge(
+            status = locationCalibrationStatus,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
         Box(modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 8.dp)

@@ -205,7 +205,7 @@ class TrackingTabsViewModelLocationTest {
     }
 
     @Test
-    fun testPreferenceDisabledSuppressesFeedbackEvenInsideGeofence() = runTest {
+    fun testMovingFromInsideToOutsideGeofenceUpdatesStatus() = runTest {
         val locationItem = KnownLocationItem(
             id = 3L,
             name = "Trainingsstrecke",
@@ -226,20 +226,19 @@ class TrackingTabsViewModelLocationTest {
 
         testScheduler.advanceUntilIdle()
         assertNotNull(viewModel.locationCalibrationStatus.value)
+        assertEquals("Trainingsstrecke", viewModel.locationCalibrationStatus.value?.locationName)
 
-        // Disable preference and notify listener
-        isFeedbackEnabledPreference = false
-        registeredDisplaySettingsListener?.onDisplaySettingsChanged()
+        // Move athlete far outside geofence (1000m away)
+        currentLocationFlow.value = LatLng(48.146000, 11.576130)
         testScheduler.advanceUntilIdle()
 
-        assertNull("Status must be null when cockpit feedback preference is disabled", viewModel.locationCalibrationStatus.value)
+        assertNull("Status must be null when moving outside geofence", viewModel.locationCalibrationStatus.value)
 
-        // Re-enable preference and notify listener
-        isFeedbackEnabledPreference = true
-        registeredDisplaySettingsListener?.onDisplaySettingsChanged()
+        // Move athlete back inside geofence
+        currentLocationFlow.value = LatLng(48.137160, 11.576130)
         testScheduler.advanceUntilIdle()
 
-        assertNotNull("Status must be restored when cockpit feedback preference is re-enabled", viewModel.locationCalibrationStatus.value)
+        assertNotNull("Status must be restored when moving back inside geofence", viewModel.locationCalibrationStatus.value)
 
         job.cancel()
     }

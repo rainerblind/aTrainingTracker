@@ -107,31 +107,14 @@ class TrackingTabsViewModel(
 
     private val knownLocationsRepo: com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository? = knownLocationsRepository
 
-    private val _isFeedbackEnabled = MutableStateFlow(
-        try {
-            com.atrainingtracker.trainingtracker.TrainingApplication.isLieblingsortCockpitFeedbackEnabled()
-        } catch (_: Throwable) {
-            true
-        }
-    )
-
-    private val displaySettingsListener = com.atrainingtracker.trainingtracker.TrainingApplication.OnDisplaySettingsChangeListener {
-        _isFeedbackEnabled.value = try {
-            com.atrainingtracker.trainingtracker.TrainingApplication.isLieblingsortCockpitFeedbackEnabled()
-        } catch (_: Throwable) {
-            true
-        }
-    }
-
     val locationCalibrationStatus: StateFlow<LocationCalibrationStatus?> = if (knownLocationsRepo == null) {
         MutableStateFlow(null)
     } else {
         kotlinx.coroutines.flow.combine(
             banalServiceRepository.currentLocation,
-            knownLocationsRepo.locationsFlow,
-            _isFeedbackEnabled
-        ) { location, knownLocations, isEnabled ->
-            if (!isEnabled || location == null) {
+            knownLocationsRepo.locationsFlow
+        ) { location, knownLocations ->
+            if (location == null) {
                 null
             } else {
                 var closestItem: com.atrainingtracker.trainingtracker.repositories.KnownLocationItem? = null
@@ -167,11 +150,6 @@ class TrackingTabsViewModel(
     }
 
     fun onResume() {
-        _isFeedbackEnabled.value = try {
-            com.atrainingtracker.trainingtracker.TrainingApplication.isLieblingsortCockpitFeedbackEnabled()
-        } catch (_: Throwable) {
-            true
-        }
         viewModelScope.launch {
             devicesRepository.loadAllDevices()
         }
@@ -202,11 +180,6 @@ class TrackingTabsViewModel(
         // ensure the repository is bound to the BANALService
         banalServiceRepository.bindToBANALService()
 
-        try {
-            com.atrainingtracker.trainingtracker.TrainingApplication.addDisplaySettingsChangeListener(displaySettingsListener)
-        } catch (_: Throwable) {
-        }
-
         // Observe the tracking mode from the repository
         viewModelScope.launch {
             var previousMode: TrackingMode? = null
@@ -225,10 +198,6 @@ class TrackingTabsViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        try {
-            com.atrainingtracker.trainingtracker.TrainingApplication.removeDisplaySettingsChangeListener(displaySettingsListener)
-        } catch (_: Throwable) {
-        }
         // unbind from the BANALService
         banalServiceRepository.unbindFromBANALService()
     }
