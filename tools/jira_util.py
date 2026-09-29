@@ -565,9 +565,24 @@ def create_subtask(parent_key, summary, description, role="coordinator", add_to_
         print("Error: Sub-tasks must not get a solution ('Lösungsversion') assigned! (Governance mandate)", file=sys.stderr)
         sys.exit(1)
 
-    if summary.startswith("[Impl] "):
-        summary = "[Implementation] " + summary[7:]
-        print("Normalized subtask prefix '[Impl]' -> '[Implementation]' to ensure Jira automation compatibility.")
+    # Normalize summary prefixes to ensure identical standardized prefix across all tickets
+    # Mandate: "The first part of the name of the sub-tasks must be identical over all main tickets."
+    for subtag in ["[subtask]", "[sub-task]", "[sub task]"]:
+        if summary.lower().startswith(subtag):
+            summary = summary[len(subtag):].strip()
+
+    stage_normalizations = [
+        (r'^\[impl\]\s*', '[Implementation] '),
+        (r'^\[specification\]\s*', '[Test-Spec] '),
+        (r'^\[spec\]\s*', '[Test-Spec] '),
+        (r'^\[design\]\s*', '[Impl-Plan] '),
+        (r'^\[plan\]\s*', '[Impl-Plan] '),
+    ]
+    for pattern, replacement in stage_normalizations:
+        if re.search(pattern, summary, re.IGNORECASE):
+            summary = re.sub(pattern, replacement, summary, count=1, flags=re.IGNORECASE)
+            print(f"Normalized subtask prefix to canonical '{replacement.strip()}' for standardization.")
+            break
 
     config = get_config()
 

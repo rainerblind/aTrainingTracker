@@ -51,7 +51,11 @@ These rules are strictly binding on all AI assistants and agent instances operat
 * **Rule**: During Ceremony 2 (Joint Review) and across sprint reviews, tickets must be reviewed strictly **one-by-one** (`"Please make one ticket after the other. Please also keep this in mind for the retro."`).
 * Never batch or present multiple tickets simultaneously. Complete verification and human sign-off for the current ticket before proceeding to the next.
 
-## 9. Sub-Task Summary Standard (Parent Ticket Name Inclusion)
-* **Rule**: Every sub-task summary MUST include the name/summary of the parent ticket (`"Sub-Tasks must have the name of the main ticket in the summary."`).
-* Format: `[<Stage>] <Stage Detail> (<Parent Ticket Summary>)` or `[<Stage>] <Parent Ticket Summary> - <Stage Detail>`.
-* Tools (`tools/jira_util.py create-subtask`) automatically append the parent summary if not already present. This ensures full traceability and instant recognition on Jira boards, sprint backlogs, and global subtask lists.
+## 9. Sub-Task Summary Standard (Identical Prefix & Parent Ticket Name Inclusion)
+* **Rule**: Every sub-task summary MUST use an identical, standardized stage prefix and name format, and MUST include the name/summary of the parent ticket (`"The first part of the name of the sub-tasks must be identical over all main tickets. I.e, the creation of the sub-tickets must always get the same standard name scheme."`):
+  * **Stage 1**: `[Analysis] Problem Domain & Root Cause Analysis (<Parent Ticket Summary>)`
+  * **Stage 2**: `[Test-Spec] Requirement & Test Specification (<Parent Ticket Summary>)`
+  * **Stage 3**: `[Impl-Plan] Architecture & Implementation Plan (<Parent Ticket Summary>)`
+  * **Stage 4**: `[Implementation] Software Construction & Unit Tests (<Parent Ticket Summary>)`
+  * **Stage 5**: `[Test] Verification, Clean-Room Regression & Release Verification (<Parent Ticket Summary>)`
+* Tools (`tools/jira_util.py create-subtask`) automatically normalize variant prefixes (e.g. `[Specification]`, `[Design]`, `[Impl]`, `[Subtask]`) to these canonical prefixes and append the parent summary if not already present. This ensures 100% uniformity across Jira boards, sprint backlogs, and automated gate audits.
