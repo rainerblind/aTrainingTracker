@@ -1281,4 +1281,34 @@
         <item quantity="other">%1$d trasy</item>
     </plurals>
     <string name="known_locations_view_routes">Pokaż trasy</string>
+
+    <!-- Advanced Tuning Preferences (ATT-1304 / REQ-SET-073) -->
+    <string name="advanced_tuning_title">Zaawansowane dostrajanie</string>
+    <string name="advanced_tuning_open">Zaawansowane dostrajanie…</string>
+    <string name="advanced_tuning_warning_title">Ustawienia eksperckie</string>
+    <string name="advanced_tuning_warning_desc">Zmiana tych parametrów wpływa na heurystykę śledzenia, filtrowanie czujników i oszczędzanie baterii. W każdej chwili możesz przywrócić ustawienia fabryczne.</string>
+    <string name="tuning_cat_battery_saver">Oszczędzanie baterii AMOLED</string>
+    <string name="tuning_cat_gps">Filtrowanie GPS i lokalizacji</string>
+    <string name="tuning_cat_elevation">Dynamika wysokości i nachylenia</string>
+    <string name="tuning_full_dim_factor_title">Jasność pełnego przyciemnienia</string>
+    <string name="tuning_full_dim_factor_desc">Docelowa jasność ekranu na płaskim terenie i przy niskim wysiłku (ograniczona &gt;= 5%).</string>
+    <string name="tuning_medium_dim_factor_title">Jasność średniego przyciemnienia</string>
+    <string name="tuning_medium_dim_factor_desc">Docelowa jasność ekranu przy umiarkowanych nachyleniach lub w strefie tempa.</string>
+    <string name="tuning_slope_flat_title">Próg płaskiego terenu</string>
+    <string name="tuning_slope_flat_desc">Nachylenie w procentach, poniżej którego włącza się pełne przyciemnienie.</string>
+    <string name="tuning_slope_steep_title">Próg stromego podjazdu</string>
+    <string name="tuning_slope_steep_desc">Nachylenie w procentach, powyżej którego wymuszana jest pełna jasność.</string>
+    <string name="tuning_wakeup_duration_title">Czas wybudzenia</string>
+    <string name="tuning_wakeup_duration_desc">Czas, przez jaki ekran pozostaje rozjaśniony po dotknięciu lub geście zbliżeniowym.</string>
+    <string name="tuning_downward_delay_title">Opóźnienie tłumienia przyciemniania</string>
+    <string name="tuning_downward_delay_desc">Opóźnienie histerezy przed przyciemnieniem, zapobiegające migotaniu przy nagłych zmianach nachylenia.</string>
+    <string name="tuning_gps_accuracy_title">Próg dokładności GPS</string>
+    <string name="tuning_gps_accuracy_desc">Maksymalny akceptowalny błąd poziomy; mniej dokładne punkty zostaną odrzucone.</string>
+    <string name="tuning_altitude_window_title">Okno wygładzania wysokości</string>
+    <string name="tuning_altitude_window_desc">Okno czasowe średniej kroczącej dla chwilowej wysokości i prędkości pionowej.</string>
+    <string name="tuning_slope_min_speed_title">Minimalna prędkość dla nachylenia</string>
+    <string name="tuning_slope_min_speed_desc">Minimalna prędkość wymagana do obliczania nachylenia w czasie rzeczywistym.</string>
+    <string name="tuning_default_format">Domyślnie: %1$s</string>
+    <string name="reset_to_defaults">Przywróć domyślne</string>
+    <string name="reset_to_defaults_success">Przywrócono domyślne ustawienia dostrajania.</string>
 </resources>

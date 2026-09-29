@@ -88,6 +88,18 @@ class BatterySaverController(
         }
     }
 
+    var tuningConfig: BatterySaverTuningConfig = stateMachine.tuningConfig
+        private set
+
+    fun updateTuningConfig(config: BatterySaverTuningConfig) {
+        tuningConfig = config
+        stateMachine.tuningConfig = config
+        if (brightnessMode == DisplayBrightnessMode.AUTO && !isWakeupActive) {
+            val level = stateMachine.currentLevel
+            applyBrightness(stateMachine.getBrightnessForLevel(level))
+        }
+    }
+
     fun setEnabled(enabled: Boolean) {
         setMode(if (enabled) DisplayBrightnessMode.AUTO else DisplayBrightnessMode.SYSTEM)
     }
@@ -102,11 +114,11 @@ class BatterySaverController(
         applyBrightness(1.0f)
 
         wakeupTimerJob = scope.launch {
-            delay(DimmingLevel.WAKEUP_DURATION_MS)
+            delay(tuningConfig.wakeupDurationMs)
             isWakeupActive = false
             val targetLevel = stateMachine.evaluateRawLevel(lastSnapshot)
             stateMachine.forceLevel(targetLevel)
-            applyBrightness(targetLevel.brightness)
+            applyBrightness(stateMachine.getBrightnessForLevel(targetLevel))
         }
     }
 
@@ -115,22 +127,25 @@ class BatterySaverController(
         if (brightnessMode != DisplayBrightnessMode.AUTO) return
 
         val raw = stateMachine.evaluateRawLevel(snapshot)
-        if (raw.brightness > stateMachine.currentLevel.brightness) {
+        val rawBrightness = stateMachine.getBrightnessForLevel(raw)
+        val currentBrightness = stateMachine.getBrightnessForLevel(stateMachine.currentLevel)
+
+        if (rawBrightness > currentBrightness) {
             // Immediate upward transition (e.g. hill climb or high effort)
             hysteresisJob?.cancel()
             hysteresisJob = null
             stateMachine.forceLevel(raw)
             if (!isWakeupActive) {
-                applyBrightness(raw.brightness)
+                applyBrightness(rawBrightness)
             }
-        } else if (raw.brightness < stateMachine.currentLevel.brightness) {
-            // Downward transition with 3-second damping hysteresis
+        } else if (rawBrightness < currentBrightness) {
+            // Downward transition with damping hysteresis
             if (hysteresisJob == null || !hysteresisJob!!.isActive) {
                 hysteresisJob = scope.launch {
-                    delay(DimmingLevel.DOWNWARD_HYSTERESIS_MS)
+                    delay(tuningConfig.downwardHysteresisMs)
                     stateMachine.forceLevel(raw)
                     if (!isWakeupActive) {
-                        applyBrightness(raw.brightness)
+                        applyBrightness(stateMachine.getBrightnessForLevel(raw))
                     }
                 }
             }

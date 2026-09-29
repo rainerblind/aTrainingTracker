@@ -141,7 +141,8 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
             Log.i(TAG, "calculateMetrics(): no filtered speed");
         } else {
             double speed_mps = speedFilteredSensorData.getValue();
-            if (abs(speed_mps) > MIN_SPEED) {
+            double minSpeed = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getSlopeMinSpeed(mContext);
+            if (abs(speed_mps) > minSpeed) {
                 double slopePercentage = deltaAltitude_mps / speed_mps * 100;
                 if (DEBUG) Log.i(TAG, "calculateMetrics(): slopePercentage=" + slopePercentage);
                 mSlopeSensor.newValue((int) Math.round(slopePercentage));

@@ -92,6 +92,7 @@ import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegme
 import com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialog
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialog
 import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ActivityTypeSelectionDialog
@@ -465,7 +466,13 @@ fun ATrainingTrackerApp(
                 )
                 SettingsBottomSheetType.DISPLAY -> DisplaySettingsDialog(
                     onDismiss = { drawerController.activeBottomSheet = null },
-                    onSettingsChanged = { activity.applyDisplaySettings() }
+                    onSettingsChanged = { activity.applyDisplaySettings() },
+                    onNavigateToTuning = {
+                        drawerController.activeBottomSheet = SettingsBottomSheetType.ADVANCED_TUNING
+                    }
+                )
+                SettingsBottomSheetType.ADVANCED_TUNING -> AdvancedTuningDialog(
+                    onDismiss = { drawerController.activeBottomSheet = null }
                 )
                 SettingsBottomSheetType.SEARCH -> SearchSettingsDialog(
                     onDismiss = { drawerController.activeBottomSheet = null }
