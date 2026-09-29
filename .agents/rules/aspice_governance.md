@@ -50,3 +50,8 @@ These rules are strictly binding on all AI assistants and agent instances operat
 ## 8. Strict Single-Ticket Focus During Joint Review and Retrospective
 * **Rule**: During Ceremony 2 (Joint Review) and across sprint reviews, tickets must be reviewed strictly **one-by-one** (`"Please make one ticket after the other. Please also keep this in mind for the retro."`).
 * Never batch or present multiple tickets simultaneously. Complete verification and human sign-off for the current ticket before proceeding to the next.
+
+## 9. Sub-Task Summary Standard (Parent Ticket Name Inclusion)
+* **Rule**: Every sub-task summary MUST include the name/summary of the parent ticket (`"Sub-Tasks must have the name of the main ticket in the summary."`).
+* Format: `[<Stage>] <Stage Detail> (<Parent Ticket Summary>)` or `[<Stage>] <Parent Ticket Summary> - <Stage Detail>`.
+* Tools (`tools/jira_util.py create-subtask`) automatically append the parent summary if not already present. This ensures full traceability and instant recognition on Jira boards, sprint backlogs, and global subtask lists.
