@@ -105,15 +105,7 @@ class TrackingTabsViewModel(
     private val _screenMode = MutableStateFlow(ScreenMode.TRACKING)
     val screenMode: StateFlow<ScreenMode> = _screenMode.asStateFlow()
 
-    private val knownLocationsRepo: com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository = knownLocationsRepository
-        ?: try {
-            com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository.getInstance(application)
-        } catch (_: Throwable) {
-            com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository(
-                application,
-                com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.getInstance(application)
-            )
-        }
+    private val knownLocationsRepo: com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository? = knownLocationsRepository
 
     private val _isFeedbackEnabled = MutableStateFlow(
         try {
@@ -131,44 +123,48 @@ class TrackingTabsViewModel(
         }
     }
 
-    val locationCalibrationStatus: StateFlow<LocationCalibrationStatus?> = kotlinx.coroutines.flow.combine(
-        banalServiceRepository.currentLocation,
-        knownLocationsRepo.locationsFlow,
-        _isFeedbackEnabled
-    ) { location, knownLocations, isEnabled ->
-        if (!isEnabled || location == null) {
-            null
-        } else {
-            var closestItem: com.atrainingtracker.trainingtracker.repositories.KnownLocationItem? = null
-            var minDistance = Float.MAX_VALUE
-            val results = FloatArray(1)
-            for (item in knownLocations) {
-                android.location.Location.distanceBetween(
-                    location.latitude, location.longitude,
-                    item.latLng.latitude, item.latLng.longitude,
-                    results
-                )
-                val dist = results[0]
-                if (dist < item.radius && dist < minDistance) {
-                    minDistance = dist
-                    closestItem = item
+    val locationCalibrationStatus: StateFlow<LocationCalibrationStatus?> = if (knownLocationsRepo == null) {
+        MutableStateFlow(null)
+    } else {
+        kotlinx.coroutines.flow.combine(
+            banalServiceRepository.currentLocation,
+            knownLocationsRepo.locationsFlow,
+            _isFeedbackEnabled
+        ) { location, knownLocations, isEnabled ->
+            if (!isEnabled || location == null) {
+                null
+            } else {
+                var closestItem: com.atrainingtracker.trainingtracker.repositories.KnownLocationItem? = null
+                var minDistance = Float.MAX_VALUE
+                val results = FloatArray(1)
+                for (item in knownLocations) {
+                    android.location.Location.distanceBetween(
+                        location.latitude, location.longitude,
+                        item.latLng.latitude, item.latLng.longitude,
+                        results
+                    )
+                    val dist = results[0]
+                    if (dist < item.radius && dist < minDistance) {
+                        minDistance = dist
+                        closestItem = item
+                    }
+                }
+                closestItem?.let {
+                    LocationCalibrationStatus(
+                        locationId = it.id,
+                        locationName = it.name,
+                        referenceAltitude = it.altitude,
+                        isCalibrated = true,
+                        source = it.source
+                    )
                 }
             }
-            closestItem?.let {
-                LocationCalibrationStatus(
-                    locationId = it.id,
-                    locationName = it.name,
-                    referenceAltitude = it.altitude,
-                    isCalibrated = true,
-                    source = it.source
-                )
-            }
-        }
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = null
-    )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
+    }
 
     fun onResume() {
         _isFeedbackEnabled.value = try {
@@ -343,13 +339,15 @@ class TrackingTabsViewModelFactory(private val application: Application) : ViewM
             val trackingViewsRepository = TrackingViewsRepository.getInstance(application)
             val banalServiceRepository = BANALServiceRepository.Companion.getInstance(application)
             val devicesRepository = DeviceDataRepository.getInstance(application)
+            val knownLocationsRepository = com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository.getInstance(application)
 
             @Suppress("UNCHECKED_CAST")
             return TrackingTabsViewModel(
                 application,
                 trackingViewsRepository,
                 banalServiceRepository,
-                devicesRepository
+                devicesRepository,
+                knownLocationsRepository = knownLocationsRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
