@@ -58,7 +58,9 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
@@ -96,7 +98,9 @@ fun WorkoutTabsScreen(
     onClearAllFilters: () -> Unit = {},
     onUpdateFilterCriteria: ((WorkoutFilterCriteria) -> WorkoutFilterCriteria) -> Unit = {},
     onClusterClick: ((Long) -> Unit)? = null,
-    onMarkFinished: (Long) -> Unit = {}
+    onMarkFinished: (Long) -> Unit = {},
+    knownLocations: List<KnownLocationItem> = emptyList(),
+    availableClusters: List<WorkoutCluster> = emptyList()
 ) {
     val tabs = listOf(
         stringResource(R.string.workout_summaries_tab_all),
@@ -132,7 +136,9 @@ fun WorkoutTabsScreen(
             onApplyCriteria = onApplyFilterCriteria,
             onClearAll = onClearAllFilters,
             onDismissRequest = { showFilterBottomSheet = false },
-            activeBSportType = activeBSportType
+            activeBSportType = activeBSportType,
+            knownLocations = knownLocations,
+            availableClusters = availableClusters
         )
     }
 
@@ -316,6 +322,14 @@ fun WorkoutTabsScreen(
                                             startLocationLat = null,
                                             startLocationLng = null,
                                             startLocationRadiusM = null
+                                        )
+                                    }
+                                },
+                                onRemoveCluster = {
+                                    onUpdateFilterCriteria {
+                                        it.copy(
+                                            clusterId = null,
+                                            clusterName = null
                                         )
                                     }
                                 },

@@ -47,6 +47,7 @@ fun ActiveClusterFilterChipsRow(
     onRemoveEquipment: () -> Unit,
     onRemoveMinDistance: () -> Unit,
     onRemoveMinHitCount: () -> Unit,
+    onRemoveStartLocation: () -> Unit = {},
     onClearAll: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -66,6 +67,21 @@ fun ActiveClusterFilterChipsRow(
                 RemovableFilterChip(
                     label = "\"${criteria.query}\"",
                     onRemove = onRemoveQuery
+                )
+            }
+        }
+
+        // Start Location Chip
+        if ((criteria.startLocationLat != null && criteria.startLocationLng != null) || !criteria.startLocationName.isNullOrBlank()) {
+            item(key = "startLocation") {
+                val label = if (!criteria.startLocationName.isNullOrBlank()) {
+                    "📍 ${criteria.startLocationName}"
+                } else {
+                    "📍 ${stringResource(R.string.filter_start_location)}"
+                }
+                RemovableFilterChip(
+                    label = label,
+                    onRemove = onRemoveStartLocation
                 )
             }
         }

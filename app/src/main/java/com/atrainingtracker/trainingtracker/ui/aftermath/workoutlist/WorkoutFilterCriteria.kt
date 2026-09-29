@@ -52,7 +52,9 @@ data class WorkoutFilterCriteria(
     val startLocationName: String? = null,
     val startLocationLat: Double? = null,
     val startLocationLng: Double? = null,
-    val startLocationRadiusM: Double? = null
+    val startLocationRadiusM: Double? = null,
+    val clusterId: Long? = null,
+    val clusterName: String? = null
 ) {
     /**
      * Total count of distinct active filter dimensions.
@@ -70,6 +72,7 @@ data class WorkoutFilterCriteria(
             if (minDistanceMeters != null || maxDistanceMeters != null) count++
             if (minDurationSec != null || maxDurationSec != null) count++
             if (startLocationLat != null && startLocationLng != null) count++
+            if (clusterId != null) count++
             return count
         }
 
@@ -178,6 +181,11 @@ data class WorkoutFilterCriteria(
             }
         }
 
+        // Cluster filter
+        if (clusterId != null && workout.clusterId != clusterId) {
+            return false
+        }
+
         return true
     }
 
@@ -206,6 +214,8 @@ data class WorkoutFilterCriteria(
         startLocationLat?.let { json.put("startLocationLat", it) }
         startLocationLng?.let { json.put("startLocationLng", it) }
         startLocationRadiusM?.let { json.put("startLocationRadiusM", it) }
+        clusterId?.let { json.put("clusterId", it) }
+        clusterName?.let { json.put("clusterName", it) }
         return json.toString()
     }
 
@@ -238,7 +248,9 @@ data class WorkoutFilterCriteria(
                     startLocationName = if (json.has("startLocationName")) json.optString("startLocationName") else null,
                     startLocationLat = if (json.has("startLocationLat")) json.optDouble("startLocationLat") else null,
                     startLocationLng = if (json.has("startLocationLng")) json.optDouble("startLocationLng") else null,
-                    startLocationRadiusM = if (json.has("startLocationRadiusM")) json.optDouble("startLocationRadiusM") else null
+                    startLocationRadiusM = if (json.has("startLocationRadiusM")) json.optDouble("startLocationRadiusM") else null,
+                    clusterId = if (json.has("clusterId")) json.optLong("clusterId") else null,
+                    clusterName = if (json.has("clusterName")) json.optString("clusterName") else null
                 )
             } catch (e: Exception) {
                 WorkoutFilterCriteria()

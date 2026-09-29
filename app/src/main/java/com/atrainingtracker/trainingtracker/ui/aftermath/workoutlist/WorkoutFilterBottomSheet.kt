@@ -57,6 +57,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterBottomSheetScaffold
 import java.text.SimpleDateFormat
@@ -65,11 +67,11 @@ import java.util.Locale
 import java.util.TimeZone
 
 /**
- * Material 3 modal bottom sheet for multi-dimensional workout filtering (REQ-UI-132, REQ-UI-157).
+ * Material 3 modal bottom sheet for multi-dimensional workout filtering (REQ-UI-132, REQ-UI-157, REQ-UI-187).
  *
  * Allows users to search by keyword, filter by year and date intervals via date pickers,
  * select tab-contextualized sport sub-types, equipment, workout flags (commute, trainer, GPS presence),
- * and custom distance/duration intervals (REQ-UI-157).
+ * custom distance/duration intervals (REQ-UI-157), and favorite locations / clusters (REQ-UI-187).
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -79,7 +81,9 @@ fun WorkoutFilterBottomSheet(
     onApplyCriteria: (WorkoutFilterCriteria) -> Unit,
     onClearAll: () -> Unit,
     onDismissRequest: () -> Unit,
-    activeBSportType: BSportType? = null
+    activeBSportType: BSportType? = null,
+    knownLocations: List<KnownLocationItem> = emptyList(),
+    availableClusters: List<WorkoutCluster> = emptyList()
 ) {
     var localQuery by remember(criteria.query) { mutableStateOf(criteria.query) }
     var localYear by remember(criteria.year) { mutableStateOf(criteria.year) }
@@ -90,6 +94,14 @@ fun WorkoutFilterBottomSheet(
     var localCommute by remember(criteria.isCommute) { mutableStateOf(criteria.isCommute) }
     var localTrainer by remember(criteria.isTrainer) { mutableStateOf(criteria.isTrainer) }
     var localHasGps by remember(criteria.hasGpsTrack) { mutableStateOf(criteria.hasGpsTrack) }
+
+    var localStartLocationName by remember(criteria.startLocationName) { mutableStateOf(criteria.startLocationName) }
+    var localStartLocationLat by remember(criteria.startLocationLat) { mutableStateOf(criteria.startLocationLat) }
+    var localStartLocationLng by remember(criteria.startLocationLng) { mutableStateOf(criteria.startLocationLng) }
+    var localStartLocationRadiusM by remember(criteria.startLocationRadiusM) { mutableStateOf(criteria.startLocationRadiusM) }
+
+    var localClusterId by remember(criteria.clusterId) { mutableStateOf(criteria.clusterId) }
+    var localClusterName by remember(criteria.clusterName) { mutableStateOf(criteria.clusterName) }
 
     var localMinDistanceMeters by remember(criteria.minDistanceMeters) { mutableStateOf(criteria.minDistanceMeters) }
     var localMaxDistanceMeters by remember(criteria.maxDistanceMeters) { mutableStateOf(criteria.maxDistanceMeters) }
@@ -229,6 +241,12 @@ fun WorkoutFilterBottomSheet(
             localMaxDurationSec = null
             minDurationText = ""
             maxDurationText = ""
+            localStartLocationName = null
+            localStartLocationLat = null
+            localStartLocationLng = null
+            localStartLocationRadiusM = null
+            localClusterId = null
+            localClusterName = null
             onClearAll()
         },
         onApply = {
@@ -245,7 +263,13 @@ fun WorkoutFilterBottomSheet(
                 minDistanceMeters = localMinDistanceMeters,
                 maxDistanceMeters = localMaxDistanceMeters,
                 minDurationSec = localMinDurationSec,
-                maxDurationSec = localMaxDurationSec
+                maxDurationSec = localMaxDurationSec,
+                startLocationName = localStartLocationName,
+                startLocationLat = localStartLocationLat,
+                startLocationLng = localStartLocationLng,
+                startLocationRadiusM = localStartLocationRadiusM,
+                clusterId = localClusterId,
+                clusterName = localClusterName
             )
             onApplyCriteria(updated)
             onDismissRequest()
@@ -446,7 +470,78 @@ fun WorkoutFilterBottomSheet(
             }
         }
 
-        // 6. Distance Interval (REQ-UI-157)
+        // 6. Favorite Locations (Lieblingsorte, REQ-UI-187)
+        if (knownLocations.isNotEmpty()) {
+            Column {
+                Text(
+                    text = stringResource(R.string.known_locations_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    knownLocations.forEach { loc ->
+                        val isSelected = localStartLocationLat == loc.latLng.latitude &&
+                                localStartLocationLng == loc.latLng.longitude
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = {
+                                if (isSelected) {
+                                    localStartLocationName = null
+                                    localStartLocationLat = null
+                                    localStartLocationLng = null
+                                    localStartLocationRadiusM = null
+                                } else {
+                                    localStartLocationName = loc.name
+                                    localStartLocationLat = loc.latLng.latitude
+                                    localStartLocationLng = loc.latLng.longitude
+                                    localStartLocationRadiusM = loc.radius.toDouble()
+                                }
+                            },
+                            label = { Text("📍 ${loc.name}") }
+                        )
+                    }
+                }
+            }
+        }
+
+        // 7. Favorite Tracks / Route Clusters (Lieblingsstrecken, REQ-UI-187)
+        if (availableClusters.isNotEmpty()) {
+            Column {
+                Text(
+                    text = stringResource(R.string.my_locations),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    availableClusters.forEach { cluster ->
+                        val isSelected = localClusterId == cluster.id
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = {
+                                if (isSelected) {
+                                    localClusterId = null
+                                    localClusterName = null
+                                } else {
+                                    localClusterId = cluster.id
+                                    localClusterName = cluster.name
+                                }
+                            },
+                            label = { Text("🗺️ ${cluster.name}") }
+                        )
+                    }
+                }
+            }
+        }
+
+        // 8. Distance Interval (REQ-UI-157)
         Column {
             Text(
                 text = stringResource(R.string.filter_section_distance),
