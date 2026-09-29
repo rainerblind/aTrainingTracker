@@ -3,7 +3,7 @@
 * **Ticket**: [ATT-1522](https://atrainingtracker.atlassian.net/browse/ATT-1522) (*Review & Retro*)
 * **Sprint**: `2026-40.3`
 * **Target Release Version**: `V4.9.38`
-* **Branch**: `sprint/2026-40.3` -> `develop`
+* **Branch**: `sprint/2026-40.3` (Ready; pending explicit human approval before merge into `develop`)
 
 ---
 
@@ -115,3 +115,4 @@ The following permanent updates are established across `.agents/rules/aspice_gov
 3. **Next-Sprint Default for Review Feedback**: Revisions and new requirements identified during Joint Review default to new backlog tickets for the next sprint.
 4. **Immediate Stop on Ticket Operations**: Never begin implementation after creating or updating a Jira ticket.
 5. **Egress Sandbox Bypass**: Explicitly use `BypassSandbox: true` for Jira network commands.
+6. **Inviolable Human Gate on Sprint Closure & Develop Merge**: The sprint branch (`sprint/<sprint_id>`) MUST NEVER be merged into `develop` autonomously by any agent. Sprint closure and merging into `develop` is strictly a Human Decision Gate and only executed upon explicit human agreement.
