@@ -39,6 +39,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
+import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import com.atrainingtracker.trainingtracker.ui.components.core.MinimumDragHandle
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
@@ -93,7 +94,7 @@ fun MapDetailLayout(
         Surface(
             color = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface,
-            shape = RectangleShape,
+            shape = if (useStatusBarsPadding) RectangleShape else BottomSheetDesign.SheetShape,
             modifier = if (useStatusBarsPadding) Modifier.statusBarsPadding() else Modifier
         ) {
             Box(modifier = Modifier.drawWithContent {

@@ -43,6 +43,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
@@ -151,6 +152,9 @@ fun MapScreenWithTrack(
 
         BottomSheetScaffold(
             scaffoldState = scaffoldState,
+            sheetShape = BottomSheetDesign.SheetShape,
+            sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
+            sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
             sheetPeekHeight = when {
                 selectedSegmentId != null -> 185.dp + navBarHeight
                 selectedRouteId != null -> 100.dp + navBarHeight
