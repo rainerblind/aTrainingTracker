@@ -58,6 +58,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberBottomSheetScaffoldState
+import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -253,6 +254,9 @@ fun PeriodMapScreen(
 
         BottomSheetScaffold(
             scaffoldState = scaffoldState,
+            sheetShape = BottomSheetDesign.SheetShape,
+            sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
+            sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
             sheetPeekHeight = if (peekedWorkoutDataWithTrack != null) 120.dp + navBarHeight else 0.dp,
             sheetDragHandle = null,
             sheetContent = {

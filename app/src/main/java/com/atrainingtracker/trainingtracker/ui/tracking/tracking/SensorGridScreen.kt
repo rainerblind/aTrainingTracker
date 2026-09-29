@@ -58,6 +58,8 @@ import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheet
+import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
+import com.atrainingtracker.trainingtracker.ui.components.core.sheetContour
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
@@ -105,14 +107,19 @@ fun SensorGridScreen(
 
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
+        sheetShape = BottomSheetDesign.SheetShape,
+        sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
+        sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
         sheetDragHandle = null,
         sheetPeekHeight = if (showLiveSegments && screenMode == ScreenMode.TRACKING) 140.dp + navBarHeight else 0.dp,
         sheetSwipeEnabled = showLiveSegments,
         sheetContent = {
             if (showLiveSegments) {
-                LiveSegmentSheet(
-                    liveSegment = activeSegment
-                )
+                Box(modifier = Modifier.fillMaxWidth().sheetContour()) {
+                    LiveSegmentSheet(
+                        liveSegment = activeSegment
+                    )
+                }
             } else {
                 Box(Modifier
                     .fillMaxWidth()
