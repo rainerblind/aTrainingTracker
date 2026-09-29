@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.navigation
 
+import android.content.res.Resources
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -362,8 +363,20 @@ fun DrawerItemView(
         verticalAlignment = Alignment.CenterVertically
     ) {
         val context = LocalContext.current
-        val drawable = remember(item.iconRes) {
-            ContextCompat.getDrawable(context, item.iconRes)
+        val drawable = remember(item.iconRes, context) {
+            try {
+                if (item.iconRes != 0) {
+                    ContextCompat.getDrawable(context, item.iconRes)
+                } else {
+                    null
+                }
+            } catch (e: Resources.NotFoundException) {
+                Log.w("AppNavigationDrawer", "Resource not found for drawer icon 0x${Integer.toHexString(item.iconRes)}", e)
+                null
+            } catch (e: Throwable) {
+                Log.w("AppNavigationDrawer", "Failed to load drawer icon 0x${Integer.toHexString(item.iconRes)}", e)
+                null
+            }
         }
         if (drawable != null) {
             Image(
