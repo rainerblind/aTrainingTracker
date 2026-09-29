@@ -85,7 +85,6 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlNavigation
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingScreen
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModel
-import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.LocationCalibrationBadge
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorStatus
 import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingTabGridContent
 import kotlinx.coroutines.launch
@@ -166,6 +165,7 @@ fun TrackingTabsScreen(
     val activeSensors by controlViewModel.activeSensors.collectAsState()
     val bSportType by controlViewModel.bSportType.collectAsState()
     val selectingProtocol by controlViewModel.selectingProtocol.collectAsState()
+    val locationCalibrationStatus by trackingTabsViewModel.locationCalibrationStatus.collectAsState()
 
     // Battery Saver Telemetry & Event Subscriptions
     val filteredSensorData by trackingTabsViewModel.allFilteredSensorData.collectAsState()
@@ -443,7 +443,6 @@ fun TrackingTabsScreen(
                                 val sensorSourceMapping by trackingTabsViewModel.sensorSourceMapping.collectAsState()
                                 val allTelemetry by trackingTabsViewModel.allTelemetry.collectAsState()
                                 val allDevices by trackingTabsViewModel.allDevices.collectAsState()
-                                val locationCalibrationStatus by trackingTabsViewModel.locationCalibrationStatus.collectAsState()
 
                                 // Show the available Sensors
                                 Surface(
@@ -461,7 +460,6 @@ fun TrackingTabsScreen(
                                         }
                                     )
                                 }
-                                LocationCalibrationBadge(status = locationCalibrationStatus)
                             }
 
                             ScreenMode.CONFIGURATION -> {
@@ -596,7 +594,8 @@ fun TrackingTabsScreen(
                             onPairingClicked = { controlViewModel.onPairingClicked(it) },
                             selectingProtocol = selectingProtocol,
                             onDeviceTypeSelected = { controlViewModel.onDeviceTypeSelected(it) },
-                            onCancelDeviceTypeSelection = { controlViewModel.onCancelDeviceTypeSelection() }
+                            onCancelDeviceTypeSelection = { controlViewModel.onCancelDeviceTypeSelection() },
+                            locationCalibrationStatus = locationCalibrationStatus
                         )
                     } else {
                         val viewIndex =
