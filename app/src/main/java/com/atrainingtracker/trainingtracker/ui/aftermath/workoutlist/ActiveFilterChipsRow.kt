@@ -67,6 +67,7 @@ fun ActiveFilterChipsRow(
     onRemoveDurationRange: () -> Unit = {},
     onRemoveMinDistance: () -> Unit = onRemoveDistanceRange,
     onRemoveMinDuration: () -> Unit = onRemoveDurationRange,
+    onRemoveStartLocation: () -> Unit = {},
     onClearAll: () -> Unit,
     sportName: String? = null,
     equipmentName: String? = null,
@@ -88,6 +89,21 @@ fun ActiveFilterChipsRow(
                 RemovableFilterChip(
                     label = "\"${criteria.query}\"",
                     onRemove = onRemoveQuery
+                )
+            }
+        }
+
+        // Start Location Chip
+        if ((criteria.startLocationLat != null && criteria.startLocationLng != null) || !criteria.startLocationName.isNullOrBlank()) {
+            item("startLocation") {
+                val label = if (!criteria.startLocationName.isNullOrBlank()) {
+                    "📍 ${criteria.startLocationName}"
+                } else {
+                    "📍 ${stringResource(R.string.filter_start_location)}"
+                }
+                RemovableFilterChip(
+                    label = label,
+                    onRemove = onRemoveStartLocation
                 )
             }
         }
