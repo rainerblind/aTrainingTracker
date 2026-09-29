@@ -180,6 +180,79 @@ class KnownLocationsScreenTest {
         assertEquals("Map", enMap["known_locations_tab_map"])
     }
 
+    /**
+     * TST-UI-070.2: Verify KnownLocationCard context menu layout and purity:
+     * - No 3-dots overflow icon button (MoreVert).
+     * - Context menu anchored to TopStart.
+     * - No secondary actions ("Show on Map", "Edit").
+     * - Only Delete action is present.
+     */
+    @Test
+    fun testKnownLocationCardContextMenuStructure() {
+        val candidates = listOf(
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/knownlocations/KnownLocationsScreen.kt"),
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/knownlocations/KnownLocationsScreen.kt"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/knownlocations/KnownLocationsScreen.kt")
+        )
+        val file = candidates.firstOrNull { it.exists() }
+            ?: error("KnownLocationsScreen.kt not found in candidates: $candidates")
+        val content = file.readText()
+
+        // 1. MoreVert overflow button must not exist
+        assertFalse(
+            "KnownLocationCard must not contain MoreVert overflow button",
+            content.contains("Icons.Default.MoreVert") || content.contains("location_overflow_button_")
+        )
+
+        // 2. Alignment must be TopStart
+        assertTrue(
+            "KnownLocationCard context menu must align to TopStart",
+            content.contains(".align(Alignment.TopStart)")
+        )
+
+        // 3. Secondary actions must not exist
+        assertFalse(
+            "KnownLocationCard context menu must not contain 'Show on Map' action",
+            content.contains("location_show_on_map_action_")
+        )
+        assertFalse(
+            "KnownLocationCard context menu must not contain 'Edit' action",
+            content.contains("location_edit_action_")
+        )
+
+        // 4. Delete action must be present
+        assertTrue(
+            "KnownLocationCard context menu must contain 'location_delete_action_' test tag",
+            content.contains("location_delete_action_")
+        )
+    }
+
+    /**
+     * TST-UI-070.3: Verify localization parity for delete and really_delete_format across all 9 locales.
+     */
+    @Test
+    fun testDeleteStringResourcesAcrossAll9Locales() {
+        val locales = listOf("", "de", "es", "fr", "it", "ja", "nl", "pl", "pt")
+        val resDir = findResDirectory()
+
+        for (locale in locales) {
+            val dirName = if (locale.isEmpty()) "values" else "values-$locale"
+            val file = File(resDir, "$dirName/strings.xml")
+            assertTrue("strings.xml must exist for locale $dirName", file.exists())
+
+            val stringMap = parseStringsFile(file)
+            assertTrue("Key 'delete' must exist in $dirName/strings.xml", stringMap.containsKey("delete"))
+            assertFalse("Value for 'delete' in $dirName/strings.xml must not be blank", stringMap["delete"].isNullOrBlank())
+
+            assertTrue("Key 'really_delete_format' must exist in $dirName/strings.xml", stringMap.containsKey("really_delete_format"))
+            val formatStr = stringMap["really_delete_format"] ?: ""
+            assertTrue(
+                "Value for 'really_delete_format' in $dirName/strings.xml must contain '%1\$s'",
+                formatStr.contains("%1\$s") || formatStr.contains("%s")
+            )
+        }
+    }
+
     private fun findResDirectory(): File {
         val candidates = listOf(
             File("src/main/res"),
