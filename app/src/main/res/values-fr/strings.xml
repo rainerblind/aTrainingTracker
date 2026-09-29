@@ -1261,4 +1261,15 @@
     <string name="battery_remaining_time">Autonomie restante</string>
     <string name="battery_remaining_time_short">Restant</string>
     <string name="battery_charging">En charge</string>
+    <string name="workout_name_run_from">Course depuis %1$s</string>
+    <string name="workout_name_ride_from">Sortie depuis %1$s</string>
+    <string name="workout_name_activity_from">Activité depuis %1$s</string>
+    <string name="workout_name_round_trip">Boucle depuis %1$s</string>
+    <string name="workout_name_run_from_to">Course de %1$s à %2$s</string>
+    <string name="workout_name_ride_from_to">Sortie de %1$s à %2$s</string>
+    <string name="workout_name_activity_from_to">Activité de %1$s à %2$s</string>
+    <string name="workout_name_run_to">Course vers %1$s</string>
+    <string name="workout_name_ride_to">Sortie vers %1$s</string>
+    <string name="workout_name_activity_to">Activité vers %1$s</string>
+    <string name="cluster_seed_name_loop_format">Boucle depuis %1$s</string>
 </resources>

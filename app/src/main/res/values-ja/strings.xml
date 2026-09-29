@@ -1245,4 +1245,15 @@
     <string name="battery_remaining_time">バッテリー残量時間</string>
     <string name="battery_remaining_time_short">残量時間</string>
     <string name="battery_charging">充電中</string>
+    <string name="workout_name_run_from">%1$s からのラン</string>
+    <string name="workout_name_ride_from">%1$s からのライド</string>
+    <string name="workout_name_activity_from">%1$s からのアクティビティ</string>
+    <string name="workout_name_round_trip">%1$s からの周回</string>
+    <string name="workout_name_run_from_to">%1$s から %2$s へのラン</string>
+    <string name="workout_name_ride_from_to">%1$s から %2$s へのライド</string>
+    <string name="workout_name_activity_from_to">%1$s から %2$s へのアクティビティ</string>
+    <string name="workout_name_run_to">%1$s へのラン</string>
+    <string name="workout_name_ride_to">%1$s へのライド</string>
+    <string name="workout_name_activity_to">%1$s へのアクティビティ</string>
+    <string name="cluster_seed_name_loop_format">%1$s からの周回</string>
 </resources>

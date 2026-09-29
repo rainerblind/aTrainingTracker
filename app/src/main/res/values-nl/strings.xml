@@ -1260,4 +1260,15 @@
     <string name="battery_remaining_time">Resterende batterijtijd</string>
     <string name="battery_remaining_time_short">Resterend</string>
     <string name="battery_charging">Opladen</string>
+    <string name="workout_name_run_from">Hardlopen vanaf %1$s</string>
+    <string name="workout_name_ride_from">Rit vanaf %1$s</string>
+    <string name="workout_name_activity_from">Activiteit vanaf %1$s</string>
+    <string name="workout_name_round_trip">Ronde vanaf %1$s</string>
+    <string name="workout_name_run_from_to">Hardlopen van %1$s naar %2$s</string>
+    <string name="workout_name_ride_from_to">Rit van %1$s naar %2$s</string>
+    <string name="workout_name_activity_from_to">Activiteit van %1$s naar %2$s</string>
+    <string name="workout_name_run_to">Hardlopen naar %1$s</string>
+    <string name="workout_name_ride_to">Rit naar %1$s</string>
+    <string name="workout_name_activity_to">Activiteit naar %1$s</string>
+    <string name="cluster_seed_name_loop_format">Ronde vanaf %1$s</string>
 </resources>

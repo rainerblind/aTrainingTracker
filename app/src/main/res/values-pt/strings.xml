@@ -1260,4 +1260,15 @@
     <string name="battery_remaining_time">Tempo restante da bateria</string>
     <string name="battery_remaining_time_short">Restante</string>
     <string name="battery_charging">Carregando</string>
+    <string name="workout_name_run_from">Corrida a partir de %1$s</string>
+    <string name="workout_name_ride_from">Pedal a partir de %1$s</string>
+    <string name="workout_name_activity_from">Atividade a partir de %1$s</string>
+    <string name="workout_name_round_trip">Circuito a partir de %1$s</string>
+    <string name="workout_name_run_from_to">Corrida de %1$s a %2$s</string>
+    <string name="workout_name_ride_from_to">Pedal de %1$s a %2$s</string>
+    <string name="workout_name_activity_from_to">Atividade de %1$s a %2$s</string>
+    <string name="workout_name_run_to">Corrida até %1$s</string>
+    <string name="workout_name_ride_to">Pedal até %1$s</string>
+    <string name="workout_name_activity_to">Atividade até %1$s</string>
+    <string name="cluster_seed_name_loop_format">Circuito a partir de %1$s</string>
 </resources>

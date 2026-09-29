@@ -1452,4 +1452,15 @@
     <string name="battery_remaining_time">Remaining Battery Time</string>
     <string name="battery_remaining_time_short">Battery Left</string>
     <string name="battery_charging">Charging</string>
+    <string name="workout_name_run_from">Run from %1$s</string>
+    <string name="workout_name_ride_from">Ride from %1$s</string>
+    <string name="workout_name_activity_from">Activity from %1$s</string>
+    <string name="workout_name_round_trip">Loop from %1$s</string>
+    <string name="workout_name_run_from_to">Run from %1$s to %2$s</string>
+    <string name="workout_name_ride_from_to">Ride from %1$s to %2$s</string>
+    <string name="workout_name_activity_from_to">Activity from %1$s to %2$s</string>
+    <string name="workout_name_run_to">Run to %1$s</string>
+    <string name="workout_name_ride_to">Ride to %1$s</string>
+    <string name="workout_name_activity_to">Activity to %1$s</string>
+    <string name="cluster_seed_name_loop_format">Loop from %1$s</string>
 </resources>
