@@ -570,6 +570,22 @@ def create_subtask(parent_key, summary, description, role="coordinator", add_to_
         print("Normalized subtask prefix '[Impl]' -> '[Implementation]' to ensure Jira automation compatibility.")
 
     config = get_config()
+
+    # Mandate: Sub-tasks must have the name of the main ticket in the summary.
+    try:
+        parent_data = jira_request(f"{config['JIRA_URL']}/rest/api/2/issue/{parent_key}?fields=summary", role=role)
+        parent_summary = parent_data.get("fields", {}).get("summary", "")
+        if parent_summary:
+            clean_parent = parent_summary
+            for tag in ["[Feature]", "[Bug]", "[Verbesserung]", "[Subtask]", "[Task]"]:
+                clean_parent = clean_parent.replace(tag, "").strip()
+            if clean_parent.lower() not in summary.lower():
+                summary = f"{summary} ({clean_parent})"
+                if len(summary) > 250:
+                    summary = summary[:247] + "..."
+    except Exception as e:
+        print(f"Notice: Could not retrieve parent summary for subtask naming: {e}", file=sys.stderr)
+
     url = f"{config['JIRA_URL']}/rest/api/2/issue"
     fields = {
         "project": {"key": "ATT"},
