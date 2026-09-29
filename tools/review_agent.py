@@ -334,6 +334,7 @@ def build_audit_prompt(gate_key, gate_info, subtask, parent_issue):
     subtask_desc = subtask.get("fields", {}).get("description") or "None"
     parent_key = parent_issue.get("key") if parent_issue else "None"
     parent_summary = parent_issue.get("fields", {}).get("summary", "") if parent_issue else "None"
+    parent_desc = parent_issue.get("fields", {}).get("description") or "None"
     raw_fix_versions = [v.get("name", "") for v in parent_issue.get("fields", {}).get("fixVersions", [])] if parent_issue else []
     parent_fix_version = ", ".join(raw_fix_versions) if raw_fix_versions else "None"
     if parent_fix_version != "None":
