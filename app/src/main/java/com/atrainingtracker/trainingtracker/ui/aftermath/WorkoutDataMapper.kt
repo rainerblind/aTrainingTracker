@@ -584,8 +584,12 @@ class WorkoutDataMapper(
     private fun resolveLocationName(latLng: LatLng?): String? {
         if (latLng == null) return null
         val mgr = knownLocationsDatabaseManager ?: return null
-        val myLoc = mgr.getMyLocation(latLng) ?: return null
-        return WorkoutAutoNamingHelper.getDisplayName(context, myLoc)
+        return try {
+            val myLoc = mgr.getMyLocation(latLng) ?: return null
+            WorkoutAutoNamingHelper.getDisplayName(context, myLoc)
+        } catch (_: Throwable) {
+            null
+        }
     }
 
 }
