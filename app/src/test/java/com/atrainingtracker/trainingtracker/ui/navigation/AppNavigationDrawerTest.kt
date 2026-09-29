@@ -206,4 +206,69 @@ class AppNavigationDrawerTest {
             lightContrast >= 4.5
         )
     }
+
+    // --- TST-UI-140: Defensive Resource Resolution & Crash Prevention Verification (ATT-1592 / REQ-UI-123) ---
+
+    @Test
+    fun testDrawerItemView_defensiveExceptionHandling_sourceCodeInspection() {
+        val relativePath = "app/src/main/java/com/atrainingtracker/trainingtracker/ui/navigation/AppNavigationDrawer.kt"
+        val candidates = listOf(
+            java.io.File(relativePath),
+            java.io.File("../$relativePath"),
+            java.io.File("../../$relativePath")
+        )
+        val sourceFile = candidates.firstOrNull { it.exists() }
+        assertTrue("AppNavigationDrawer.kt source file must exist", sourceFile != null && sourceFile.exists())
+
+        val sourceContent = sourceFile!!.readText()
+        assertTrue(
+            "AppNavigationDrawer.kt must import android.content.res.Resources",
+            sourceContent.contains("import android.content.res.Resources")
+        )
+        assertTrue(
+            "DrawerItemView must catch Resources.NotFoundException to prevent density crashes",
+            sourceContent.contains("catch (e: Resources.NotFoundException)")
+        )
+        assertTrue(
+            "DrawerItemView must catch general Throwable as an ultimate safety net",
+            sourceContent.contains("catch (e: Throwable)")
+        )
+    }
+
+    @Test
+    fun testRootFallbackAssets_stravaAndDropbox_exist() {
+        val stravaRelative = "app/src/main/res/drawable/logo_square_strava.png"
+        val dropboxRelative = "app/src/main/res/drawable/dropbox_logo_blue.png"
+
+        val stravaFile = listOf(
+            java.io.File(stravaRelative),
+            java.io.File("../$stravaRelative"),
+            java.io.File("../../$stravaRelative")
+        ).firstOrNull { it.exists() }
+
+        val dropboxFile = listOf(
+            java.io.File(dropboxRelative),
+            java.io.File("../$dropboxRelative"),
+            java.io.File("../../$dropboxRelative")
+        ).firstOrNull { it.exists() }
+
+        assertTrue("Root fallback logo_square_strava.png must exist in res/drawable/", stravaFile != null && stravaFile.length() > 0)
+        assertTrue("Root fallback dropbox_logo_blue.png must exist in res/drawable/", dropboxFile != null && dropboxFile.length() > 0)
+    }
+
+    @Test
+    fun testDrawerGroups_allDrawerItems_haveNonZeroResourceIds() {
+        val groups = createDrawerGroups(R.string.tab_start)
+        assertTrue("Drawer must define groups", groups.isNotEmpty())
+
+        val allItems = groups.flatMap { it.items }
+        assertTrue("Drawer must define at least 20 items", allItems.size >= 20)
+
+        allItems.forEach { item ->
+            assertTrue("Item ID must be non-zero", item.id != 0)
+            assertTrue("Item iconRes must be non-zero (id=${item.id})", item.iconRes != 0)
+            assertTrue("Item titleRes must be non-zero (id=${item.id})", item.titleRes != 0)
+        }
+    }
 }
+
