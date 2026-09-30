@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -349,97 +348,94 @@ private fun KnownLocationCard(
                     )
                 }
 
+                // Prominent Altitude Metric
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_ascent),
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = KnownLocationsUnitConversions.formatAltitude(item.altitude, isMetric),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                // Dedicated Badges Row (Starts and Routes, REQ-UI-195)
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    // Prominent Altitude Metric
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_ascent),
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = KnownLocationsUnitConversions.formatAltitude(item.altitude, isMetric),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-
                     // Number of Starts (Interactive Drill-Down Touch Target)
                     Surface(
                         onClick = onShowWorkouts,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(8.dp),
                         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                         contentColor = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .defaultMinSize(minHeight = 48.dp)
-                            .testTag("location_starts_badge_${item.id}")
+                        modifier = Modifier.testTag("location_starts_badge_${item.id}")
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Place,
                                 contentDescription = stringResource(R.string.known_locations_view_workouts),
-                                modifier = Modifier.size(16.dp),
+                                modifier = Modifier.size(14.dp),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                             Text(
                                 text = pluralStringResource(R.plurals.known_locations_starts, item.hitCount, item.hitCount),
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                 contentDescription = null,
-                                modifier = Modifier.size(14.dp),
+                                modifier = Modifier.size(12.dp),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
 
-                    // Number of Routes (Interactive Drill-Down Touch Target per REQ-UI-188)
+                    // Number of Routes (Interactive Drill-Down Touch Target per REQ-UI-188, REQ-UI-195)
                     if (linkedClusters.isNotEmpty()) {
                         Surface(
                             onClick = onShowRoutes,
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(8.dp),
                             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                             contentColor = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .defaultMinSize(minHeight = 48.dp)
-                                .testTag("location_routes_badge_${item.id}")
+                            modifier = Modifier.testTag("location_routes_badge_${item.id}")
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_favorite_route),
                                     contentDescription = stringResource(R.string.known_locations_view_routes),
-                                    modifier = Modifier.size(16.dp),
+                                    modifier = Modifier.size(14.dp),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                                 Text(
                                     text = pluralStringResource(R.plurals.known_locations_routes, linkedClusters.size, linkedClusters.size),
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                     contentDescription = null,
-                                    modifier = Modifier.size(14.dp),
+                                    modifier = Modifier.size(12.dp),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
