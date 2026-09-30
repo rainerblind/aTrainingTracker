@@ -203,6 +203,7 @@ fun WorkoutSummariesTabbedScreen(
                     onClusterClick = { clusterId -> WorkoutNavigationEvents.triggerCluster(clusterId) },
                     onEditWorkout = { id -> selectedWorkoutIdForEdit = id },
                     hrZoneDistribution = aftermathUIState.hrZoneDistribution,
+                    powerZoneDistribution = aftermathUIState.powerZoneDistribution,
                     modifier = Modifier
                 )
 

@@ -67,6 +67,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionCalculator
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneSample
@@ -401,6 +402,56 @@ class WorkoutRepository private constructor(private val application: Application
         }
 
         ZoneDistributionCalculator.calculateHeartRateDistribution(samples, thresholds)
+    }
+
+    /**
+     * Extracts power samples from the workout's samples table and calculates
+     * a 5-zone time distribution based on athlete cycling power thresholds.
+     *
+     * @param workoutId The session identifier.
+     * @return [ZoneDistributionData] or null if no power telemetry is available.
+     */
+    suspend fun getPowerZoneDistribution(
+        workoutId: Long
+    ): ZoneDistributionData? = withContext(Dispatchers.IO) {
+        val baseFileName = summariesManager.getBaseFileName(workoutId) ?: return@withContext null
+        if (!samplesManager.existsTable(baseFileName)) return@withContext null
+
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        val zoneType = SettingsDataStore.ZoneType.PWR_BIKE
+
+        val z1 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
+        val z2 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2)
+        val z3 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3)
+        val z4 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
+        val thresholds = PowerZoneThresholds(z1, z2, z3, z4)
+
+        val samples = mutableListOf<ZoneSample>()
+        val db = samplesManager.database
+
+        db.query(tableName, null, null, null, null, null, null).use { cursor ->
+            val pwrIdx = cursor.getColumnIndex(SensorType.POWER.name)
+            if (pwrIdx == -1) return@withContext null
+
+            val timeActiveIdx = cursor.getColumnIndex(SensorType.TIME_ACTIVE.name)
+            val timeTotalIdx = cursor.getColumnIndex(SensorType.TIME_TOTAL.name)
+
+            while (cursor.moveToNext()) {
+                if (!cursor.isNull(pwrIdx)) {
+                    val pwr = cursor.getInt(pwrIdx)
+                    if (pwr > 0) {
+                        val timeSec = when {
+                            timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx) -> cursor.getLong(timeActiveIdx)
+                            timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx) -> cursor.getLong(timeTotalIdx)
+                            else -> 0L
+                        }
+                        samples.add(ZoneSample(timeActiveSec = timeSec, value = pwr))
+                    }
+                }
+            }
+        }
+
+        ZoneDistributionCalculator.calculatePowerDistribution(samples, thresholds)
     }
 
     private val extremaSensorTypes = arrayOf(

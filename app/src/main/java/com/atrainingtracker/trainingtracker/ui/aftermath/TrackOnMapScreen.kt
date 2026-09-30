@@ -35,6 +35,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
 import com.atrainingtracker.trainingtracker.ui.map.*
 
@@ -56,6 +57,7 @@ fun TrackOnMapScreen(
     onEditWorkout: ((Long) -> Unit)? = null,
     headerActions: @Composable RowScope.() -> Unit = {},
     hrZoneDistribution: ZoneDistributionData? = null,
+    powerZoneDistribution: ZoneDistributionData? = null,
     analyticsContent: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     // PERFORMANCE: Memoize the filtered tracks list
@@ -178,7 +180,15 @@ fun TrackOnMapScreen(
                         distribution = distribution,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
+                powerZoneDistribution?.let { distribution ->
+                    PowerZoneDistributionCard(
+                        distribution = distribution,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                 }
             }

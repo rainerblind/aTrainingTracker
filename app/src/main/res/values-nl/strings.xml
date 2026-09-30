@@ -1331,4 +1331,7 @@
 
     <!-- Heart Rate 5-Zone Distribution Bar (ATT-1389 / REQ-UI-202) -->
     <string name="aftermath_hr_zones_title">Hartslagzones</string>
+
+    <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
+    <string name="aftermath_power_zones_title">Vermogenszones</string>
 </resources>

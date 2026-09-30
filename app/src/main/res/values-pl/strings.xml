@@ -1325,4 +1325,7 @@
 
     <!-- Heart Rate 5-Zone Distribution Bar (ATT-1389 / REQ-UI-202) -->
     <string name="aftermath_hr_zones_title">Strefy tętna</string>
+
+    <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
+    <string name="aftermath_power_zones_title">Strefy mocy</string>
 </resources>
