@@ -289,6 +289,7 @@ private fun KnownLocationsListContent(
                     item = item,
                     isMetric = uiState.isMetric,
                     linkedClusters = uiState.clustersByLocationId[item.id] ?: emptyList(),
+                    startsCount = uiState.startsByLocationId[item.id] ?: item.hitCount,
                     onEdit = { onEdit(item) },
                     onShowOnMap = { onShowOnMap(item) },
                     onShowWorkouts = { onShowWorkouts(item) },
@@ -309,6 +310,7 @@ private fun KnownLocationCard(
     item: KnownLocationItem,
     isMetric: Boolean,
     linkedClusters: List<WorkoutCluster> = emptyList(),
+    startsCount: Int = item.hitCount,
     onEdit: () -> Unit,
     onShowOnMap: () -> Unit = {},
     onShowWorkouts: () -> Unit = {},
@@ -392,7 +394,7 @@ private fun KnownLocationCard(
                                 tint = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = pluralStringResource(R.plurals.known_locations_starts, item.hitCount, item.hitCount),
+                                text = pluralStringResource(R.plurals.known_locations_starts, startsCount, startsCount),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary

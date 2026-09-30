@@ -25,10 +25,13 @@ import com.atrainingtracker.trainingtracker.elevation.ElevationResult
 import com.atrainingtracker.trainingtracker.elevation.ElevationService
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.google.android.gms.maps.model.LatLng
+import android.util.Log
 import io.mockk.clearAllMocks
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -64,6 +67,12 @@ class KnownLocationsRepositoryTest {
 
     @Before
     fun setUp() {
+        mockkStatic(Log::class)
+        every { Log.d(any<String>(), any<String>()) } returns 0
+        every { Log.i(any<String>(), any<String>()) } returns 0
+        every { Log.w(any<String>(), any<String>()) } returns 0
+        every { Log.e(any<String>(), any<String>()) } returns 0
+
         mockContext = mockk(relaxed = true)
         mockDbManager = mockk(relaxed = true)
         mockElevationService = mockk(relaxed = true)
@@ -83,6 +92,7 @@ class KnownLocationsRepositoryTest {
     @After
     fun tearDown() {
         clearAllMocks()
+        unmockkStatic(Log::class)
         KnownLocationsRepository.resetForTesting(null)
     }
 

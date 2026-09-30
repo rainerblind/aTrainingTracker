@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.repositories
 import android.content.Context
 import androidx.annotation.VisibleForTesting
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.elevation.ElevationResult
 import com.atrainingtracker.trainingtracker.elevation.ElevationService
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
@@ -80,8 +81,15 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
     private val elevationService: ElevationService = ElevationService.getInstance(),
     private val dbDispatcher: CoroutineDispatcher = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "KnownLocationsDB-Thread").apply { isDaemon = true }
-    }.asCoroutineDispatcher()
+    }.asCoroutineDispatcher(),
+    workoutSummariesDatabaseManager: WorkoutSummariesDatabaseManager? = null
 ) {
+    private val summariesDbManager: WorkoutSummariesDatabaseManager? = workoutSummariesDatabaseManager ?: try {
+        WorkoutSummariesDatabaseManager.getInstance(context)
+    } catch (_: Throwable) {
+        null
+    }
+
     private val repositoryScope = CoroutineScope(SupervisorJob() + dbDispatcher)
 
     private val _locations = MutableStateFlow<List<KnownLocationItem>>(emptyList())
@@ -89,9 +97,27 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
 
     init {
         repositoryScope.launch {
+            reconcileHitCounts()
             loadLocations()
             healLegacyNames()
         }
+    }
+
+    /**
+     * ATT-1734 / REQ-DAT-016: Reconciles hitCount for all known locations against authoritative
+     * workout start records in SQLite. Self-heals historical bloated start counts.
+     */
+    open suspend fun reconcileHitCounts(): Int = withContext(dbDispatcher) {
+        val startLocations = try {
+            summariesDbManager?.allWorkoutStartLocations ?: emptyList()
+        } catch (_: Throwable) {
+            emptyList()
+        }
+        val reconciled = databaseManager.reconcileHitCountsWithWorkoutSummaries(startLocations)
+        if (reconciled > 0) {
+            loadLocations()
+        }
+        reconciled
     }
 
     /**
