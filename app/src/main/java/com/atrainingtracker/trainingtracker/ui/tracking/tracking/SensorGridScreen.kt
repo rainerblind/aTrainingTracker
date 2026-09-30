@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
 import android.app.Application
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -119,6 +120,7 @@ fun SensorGridScreen(
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
         sheetShape = BottomSheetDesign.SheetShape,
+        sheetContainerColor = MaterialTheme.colorScheme.surface,
         sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
         sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
         sheetDragHandle = null,
@@ -126,7 +128,12 @@ fun SensorGridScreen(
         sheetSwipeEnabled = showLiveSegments,
         sheetContent = {
             if (showLiveSegments) {
-                Box(modifier = Modifier.fillMaxWidth().sheetContour()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .sheetContour()
+                        .background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)
+                ) {
                     LiveSegmentSheet(
                         liveSegment = activeSegment
                     )

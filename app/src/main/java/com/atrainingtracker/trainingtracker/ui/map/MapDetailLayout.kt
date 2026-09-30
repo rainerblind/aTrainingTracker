@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import android.graphics.Bitmap
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -91,9 +92,13 @@ fun MapDetailLayout(
     val noLocation = remember { MutableStateFlow<LatLng?>(null) }
 
     Column(
-        modifier = modifier.then(
-            if (showMap) Modifier.fillMaxSize() else Modifier.wrapContentHeight()
-        )
+        modifier = modifier
+            .then(
+                if (showMap) Modifier.fillMaxSize() else Modifier.wrapContentHeight()
+            )
+            .then(
+                if (!useStatusBarsPadding) Modifier.background(MaterialTheme.colorScheme.surface) else Modifier
+            )
     ) {
         // DRAG HANDLE (For sheets - REQ-UI-148, REQ-UI-189, REQ-UI-196, ATT-1644)
         if (!useStatusBarsPadding) {
