@@ -59,3 +59,13 @@ These rules are strictly binding on all AI assistants and agent instances operat
   * **Stage 4**: `[Implementation] Software Construction & Unit Tests (<Parent Ticket Summary>)`
   * **Stage 5**: `[Test] Verification, Clean-Room Regression & Release Verification (<Parent Ticket Summary>)`
 * Tools (`tools/jira_util.py create-subtask`) automatically normalize variant prefixes (e.g. `[Specification]`, `[Design]`, `[Impl]`, `[Subtask]`) to these canonical prefixes and append the parent summary if not already present. This ensures 100% uniformity across Jira boards, sprint backlogs, and automated gate audits.
+
+## 10. Absolute Prohibition on Code Modifications During Sprint Review
+* **Rule**: Under NO circumstances may production code, test code, or resource files be modified during Ceremony 2 (Sprint-End Joint Review) (`"Please stop this. No code changes during the Sprint Review! As already stated: Please create a ticket to fix this in the next sprint."`).
+* Any user change requests, design refinements, or feedback identified during the review of integrated tickets MUST be recorded exclusively as new backlog tickets for the next sprint, ranked at the top of the backlog.
+* The sprint integration branch `sprint/<SPRINT_NAME>` must remain strictly stable and clean throughout the review ceremony.
+
+## 11. Retrospective & Governance Documentation Before Merge ("Retro Before Merge")
+* **Rule**: The Sprint Retrospective ceremony and all associated updates to governance rules, skills, and living documentation MUST be committed directly to the sprint integration branch `sprint/<SPRINT_NAME>` BEFORE merging into `develop` (`"During the last sprint, we learned that we should do the retro before the merge. During the retro, we probably change some files. :)"`).
+* Merging `sprint/<SPRINT_NAME>` into `develop` occurs strictly after the retrospective document is authored and all process improvements are committed.
+

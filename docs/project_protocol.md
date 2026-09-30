@@ -75,12 +75,12 @@ Under NO circumstances may any AI agent transition a parent Jira ticket to `Erle
 │     * Ticket-Commit auf sprint/<sprint_id> revertieren oder fixen,     │
 │       Ticket mit Revisionskommentar zurück nach 'Analysis'             │
 │     * Oder ein neues Bug-Ticket wird für den Folgesprint angelegt      │
+│ • Sprint Review & Retro (z. B. ATT-1595): Dokumentation von Learnings │
+│   und Prozessverbesserungen in docs/engineering/ auf dem sprint-Branch!│
 │ • Sprint-Abschluss:                                                    │
 │   - Gesamten geprüften sprint/<sprint_id>-Branch in develop mergen     │
 │     (git checkout develop && git merge --no-ff sprint/<sprint_id>)     │
 │   - sprint/<sprint_id>-Branch löschen. develop bleibt 100% sauber!     │
-│ • Sprint Review & Retro (z. B. ATT-1511): Dokumentation von Learnings │
-│   und Prozessverbesserungen in docs/engineering/                       │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -90,12 +90,13 @@ Under NO circumstances may any AI agent transition a parent Jira ticket to `Erle
 * **Mandatory Lösungsversion (Fix Version/s)**: Parent tickets MUST have an active unreleased `Lösungsversion` assigned (e.g. `V4.9.38`). Sub-tasks MUST NOT have a `Lösungsversion` assigned ("Sub-Tasks must not get a solution").
 * **Sub-Task Canonical Naming & Standardization**: Sub-task summaries MUST begin with the standardized canonical prefix `[Analysis]`, `[Req & Test Spec]`, `[Impl-Plan]`, `[Implementation]`, `[Test]` followed directly by the parent ticket summary (e.g. `[Req & Test Spec] <Parent Summary>`). Stage descriptions in titles are strictly omitted.
 * **Jira Backend Automation for Parent Ticket States**: Strict adherence to the standardized sub-task naming scheme triggers Jira backend automation to transition parent tickets automatically. Agents do NOT manually change the state of main tickets between lifecycle stages.
-* **Next-Sprint Default for Review Revisions**: During Ceremony 2 (Joint Review), any user feedback, revisions, or enhancements default to a new backlog ticket for the **next sprint** (keeping release on schedule). Immediate in-sprint fixes are only executed upon explicit user instruction.
+* **Next-Sprint Default for Review Revisions & Zero Code Changes During Review**: During Ceremony 2 (Joint Review), under NO circumstances may code be modified. Any user feedback, revisions, or enhancements default strictly to a new backlog ticket for the **next sprint** (keeping release on schedule and master/develop stable).
 * **Strict Separation of Creation vs. Implementation**: When instructed to create or update a Jira ticket, create/update it, stop immediately, and do not start autonomous implementation.
 * **Bug Ticket Creation vs. Deferred Analysis (ATT-1250)**: Filing a bug ticket (`create-issue`) MUST be fast and lightweight. Creating a ticket never triggers autonomous execution.
 * **Prohibition on Agent Sprint Manipulation**: Agents MUST NEVER move tickets into sprints or pull tickets from the backlog autonomously. Only the human user assigns tickets to sprints.
 * **Single-Ticket Review Rule**: During sprint reviews, tickets must be reviewed strictly one-by-one. Never present multiple tickets for joint review simultaneously.
 * **Continuous Retro Logging**: Any process anomalies, tool failures, or user corrections must be logged immediately as comments in the active sprint's `Review & Retro` ticket.
+* **Retro Before Merge**: The Sprint Retrospective and all process/rule updates MUST be finalized and committed to the sprint branch BEFORE merging into `develop`.
 * **Egress Sandbox Bypass for Cloud APIs**: Tool commands communicating with external cloud APIs (e.g. Jira REST API via `tools/jira_util.py`) must use `BypassSandbox: true` so requests reach external hosts cleanly.
 * **Human Decision Gate on Sprint Closure & Develop Merge**: The sprint branch (`sprint/<sprint_id>`) MUST NEVER be merged into `develop` autonomously by any agent. Sprint closure and merging into `develop` is an inviolable Human Decision Gate, executed strictly after explicit human review and agreement.
 * **Branch Cleanup**: Merged feature/bugfix branches must be immediately deleted upon integration into `develop`.
