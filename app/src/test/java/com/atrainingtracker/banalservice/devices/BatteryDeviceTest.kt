@@ -151,4 +151,120 @@ class BatteryDeviceTest {
         assertEquals(0, device.activeRecordingSeconds)
         assertEquals(BatteryRemainingTimeFormatter.STABILIZING_STATUS_CODE, device.getSensor(SensorType.BATTERY_REMAINING_TIME).value)
     }
+
+    @Test
+    fun testRemainingDuration_constantPercentage_countsDownMonotonicallyWithoutDrift() {
+        val device = BatteryDevice(mockContext, mockSensorManager)
+
+        // Baseline at t = 0: 85%
+        device.onTimeTickExplicit(0, 85, false)
+
+        // At t = 3600: battery drops 5% to 80% (drain rate = 5.0%/h, base remaining = 57600s = 16:00 h)
+        device.onTimeTickExplicit(3600, 80, false)
+        val remainingSensor = device.getSensor(SensorType.BATTERY_REMAINING_TIME)
+        assertEquals(57600, remainingSensor.value)
+        assertEquals("16:00 h", remainingSensor.stringValue)
+
+        // At t = 3660 (1 min later, still 80%): remaining time MUST count down to 57540s
+        device.onTimeTickExplicit(3660, 80, false)
+        assertEquals(57540, remainingSensor.value)
+        assertTrue((remainingSensor.value as Int) < 57600)
+
+        // At t = 3900 (5 min later, still 80%): remaining time counts down to 57300s
+        device.onTimeTickExplicit(3900, 80, false)
+        assertEquals(57300, remainingSensor.value)
+        assertTrue((remainingSensor.value as Int) < 57540)
+    }
+
+    @Test
+    fun testRemainingDuration_stepDrop_recalibratesSmoothly() {
+        val device = BatteryDevice(mockContext, mockSensorManager)
+
+        // Baseline at t = 0: 85%
+        device.onTimeTickExplicit(0, 85, false)
+
+        // At t = 3600: battery drops to 80% (rate = 5.0%/h, remaining = 57600s)
+        device.onTimeTickExplicit(3600, 80, false)
+        val remainingSensor = device.getSensor(SensorType.BATTERY_REMAINING_TIME)
+        assertEquals(57600, remainingSensor.value)
+
+        // At t = 4320 (12 min after 3600s, total 4320s = 1.2h): drops 1% to 79% (total drop = 6%, rate = 6/1.2 = 5.0%/h)
+        // Base remaining at 79% = 79 / 5.0 * 3600 = 56880s (15:48 h)
+        device.onTimeTickExplicit(4320, 79, false)
+        assertEquals(56880, remainingSensor.value)
+        assertEquals("15:48 h", remainingSensor.stringValue)
+
+        // Countdown continues from 56880 at t = 4350 (30s later) -> 56850s
+        device.onTimeTickExplicit(4350, 79, false)
+        assertEquals(56850, remainingSensor.value)
+    }
+
+    @Test
+    fun testRemainingDuration_floorClamping_preventsPrematureDepletion() {
+        val device = BatteryDevice(mockContext, mockSensorManager)
+
+        // Baseline at t = 0: 85%
+        device.onTimeTickExplicit(0, 85, false)
+
+        // At t = 3600: drops to 80% (rate = 5.0%/h, base remaining = 57600s)
+        // Floor for 80% is (79 / 5.0) * 3600 = 56880s
+        device.onTimeTickExplicit(3600, 80, false)
+        val remainingSensor = device.getSensor(SensorType.BATTERY_REMAINING_TIME)
+        assertEquals(57600, remainingSensor.value)
+
+        // At t = 4320 (elapsed 720s): countdown reaches floor exactly (57600 - 720 = 56880)
+        device.onTimeTickExplicit(4320, 80, false)
+        assertEquals(56880, remainingSensor.value)
+
+        // At t = 4500 (elapsed 900s, battery still 80%): remaining time clamped to floor 56880s
+        device.onTimeTickExplicit(4500, 80, false)
+        assertEquals(56880, remainingSensor.value)
+
+        // At t = 5000 (elapsed 1400s, battery still 80%): remaining time remains clamped to floor 56880s
+        device.onTimeTickExplicit(5000, 80, false)
+        assertEquals(56880, remainingSensor.value)
+    }
+
+    @Test
+    fun testRemainingDuration_earlyDropBeforeStabilization_stabilizesAtWarmupThreshold() {
+        val device = BatteryDevice(mockContext, mockSensorManager)
+
+        // Baseline at t = 0: 85%
+        device.onTimeTickExplicit(0, 85, false)
+
+        // At t = 200: drops 1% to 84% (< 300s warmup threshold)
+        device.onTimeTickExplicit(200, 84, false)
+        val remainingSensor = device.getSensor(SensorType.BATTERY_REMAINING_TIME)
+        assertEquals(BatteryRemainingTimeFormatter.STABILIZING_STATUS_CODE, remainingSensor.value)
+        assertEquals("--:--", remainingSensor.stringValue)
+
+        // At t = 300: reaches MIN_STABILIZATION_SECONDS threshold!
+        // Effective elapsed time = 300 - 0 = 300s, drop = 1% -> rate = 1.0 / (300 / 3600) = 12.0%/h
+        // Base remaining = (84 / 12.0) * 3600 = 25200s (7:00 h)
+        device.onTimeTickExplicit(300, 84, false)
+        assertEquals(25200, remainingSensor.value)
+        assertEquals("7:00 h", remainingSensor.stringValue)
+
+        // At t = 310: counts down monotonically to 25190s
+        device.onTimeTickExplicit(310, 84, false)
+        assertEquals(25190, remainingSensor.value)
+    }
+
+    @Test
+    fun testRemainingDuration_pauseNeutrality_preservesCountdownWithoutDrift() {
+        val device = BatteryDevice(mockContext, mockSensorManager)
+
+        // Baseline at t = 0: 85%
+        device.onTimeTickExplicit(0, 85, false)
+        // At t = 3600: drops to 80% (57600s remaining)
+        device.onTimeTickExplicit(3600, 80, false)
+        val remainingSensor = device.getSensor(SensorType.BATTERY_REMAINING_TIME)
+        assertEquals(57600, remainingSensor.value)
+
+        // While tracking is paused, time ticks do not advance active recording seconds
+        device.onTimeTick(true, true)
+        device.onTimeTick(true, true)
+        assertEquals(3600, device.activeRecordingSeconds)
+        assertEquals(57600, remainingSensor.value)
+    }
 }
