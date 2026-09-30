@@ -83,6 +83,7 @@ fun MapDetailLayout(
 
     val headerLayer = rememberGraphicsLayer()
     val elevationLayer = rememberGraphicsLayer()
+    val analyticsLayer = rememberGraphicsLayer()
 
     var isSharing by remember { mutableStateOf(false) }
     var selectedDistance by remember { mutableStateOf<Double?>(null) }
@@ -142,7 +143,13 @@ fun MapDetailLayout(
                                 }
                             } else null
 
-                            combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp)
+                            val aBmp = if (analyticsLayer.size.width > 0 && analyticsLayer.size.height > 0) {
+                                withContext(Dispatchers.Default) {
+                                    analyticsLayer.toImageBitmap().asAndroidBitmap()
+                                }
+                            } else null
+
+                            combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp, aBmp)
                             isSharing = false
                         }
                     },
@@ -216,13 +223,20 @@ fun MapDetailLayout(
             }
         }
 
-        // 4. ANALYTICS (Slotted)
+        // 4. ANALYTICS (Slotted - REQ-UI-205 / ATT-1393)
         Surface(
             color = MaterialTheme.colorScheme.surface,
             modifier = Modifier.fillMaxWidth().navigationBarsPadding()
         ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                analyticsContent()
+            Box(modifier = Modifier.drawWithContent {
+                analyticsLayer.record {
+                    this@drawWithContent.drawContent()
+                }
+                drawLayer(analyticsLayer)
+            }) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    analyticsContent()
+                }
             }
         }
     }
