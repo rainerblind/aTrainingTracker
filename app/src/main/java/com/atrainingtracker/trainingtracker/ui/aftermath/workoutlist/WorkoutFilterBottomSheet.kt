@@ -67,10 +67,67 @@ import java.util.Locale
 import java.util.TimeZone
 
 /**
- * Material 3 modal bottom sheet for multi-dimensional workout filtering (REQ-UI-132, REQ-UI-157, REQ-UI-187).
+ * Data class encapsulating partitioned equipment categories (REQ-UI-193).
+ */
+data class CategorizedEquipment(
+    val bikes: List<Pair<Long, String>>,
+    val shoes: List<Pair<Long, String>>,
+    val other: List<Pair<Long, String>>
+) {
+    val all: List<Pair<Long, String>>
+        get() = bikes + shoes + other
+}
+
+/**
+ * Partitions available equipment items from workouts into sport-specific categories
+ * respecting tab context and sub-sport filters (REQ-UI-193).
+ */
+fun partitionAvailableEquipment(
+    allWorkouts: List<WorkoutData>,
+    activeBSportType: BSportType?,
+    localSportId: Long?
+): CategorizedEquipment {
+    val bikes = if (activeBSportType != null && activeBSportType != BSportType.BIKE) {
+        emptyList()
+    } else {
+        allWorkouts
+            .filter { it.equipmentId > 0 && !it.equipmentName.isNullOrBlank() && it.bSportType == BSportType.BIKE }
+            .filter { localSportId == null || it.sportId == localSportId }
+            .map { it.equipmentId to it.equipmentName!! }
+            .distinctBy { it.first }
+            .sortedBy { it.second }
+    }
+
+    val shoes = if (activeBSportType != null && activeBSportType != BSportType.RUN) {
+        emptyList()
+    } else {
+        allWorkouts
+            .filter { it.equipmentId > 0 && !it.equipmentName.isNullOrBlank() && it.bSportType == BSportType.RUN }
+            .filter { localSportId == null || it.sportId == localSportId }
+            .map { it.equipmentId to it.equipmentName!! }
+            .distinctBy { it.first }
+            .sortedBy { it.second }
+    }
+
+    val other = if (activeBSportType == BSportType.BIKE || activeBSportType == BSportType.RUN) {
+        emptyList()
+    } else {
+        allWorkouts
+            .filter { it.equipmentId > 0 && !it.equipmentName.isNullOrBlank() && it.bSportType != BSportType.BIKE && it.bSportType != BSportType.RUN }
+            .filter { localSportId == null || it.sportId == localSportId }
+            .map { it.equipmentId to it.equipmentName!! }
+            .distinctBy { it.first }
+            .sortedBy { it.second }
+    }
+
+    return CategorizedEquipment(bikes = bikes, shoes = shoes, other = other)
+}
+
+/**
+ * Material 3 modal bottom sheet for multi-dimensional workout filtering (REQ-UI-132, REQ-UI-157, REQ-UI-187, REQ-UI-193).
  *
  * Allows users to search by keyword, filter by year and date intervals via date pickers,
- * select tab-contextualized sport sub-types, equipment, workout flags (commute, trainer, GPS presence),
+ * select tab-contextualized sport sub-types, categorized equipment (bikes/shoes), workout flags (commute, trainer, GPS presence),
  * custom distance/duration intervals (REQ-UI-157), and favorite locations / clusters (REQ-UI-187).
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -143,26 +200,13 @@ fun WorkoutFilterBottomSheet(
             .sortedBy { it.second }
     }
 
-    // Sport-Aware Equipment Selection (REQ-UI-157)
-    val availableEquipment = remember(allWorkouts, activeBSportType, localSportId) {
-        allWorkouts
-            .filter { it.equipmentId > 0 && !it.equipmentName.isNullOrBlank() }
-            .filter { workout ->
-                if (localSportId != null) {
-                    workout.sportId == localSportId
-                } else if (activeBSportType != null) {
-                    workout.bSportType == activeBSportType
-                } else {
-                    true
-                }
-            }
-            .map { it.equipmentId to it.equipmentName!! }
-            .distinctBy { it.first }
-            .sortedBy { it.second }
+    // Categorized Sport-Aware Equipment Selection (REQ-UI-193)
+    val categorizedEquipment = remember(allWorkouts, activeBSportType, localSportId) {
+        partitionAvailableEquipment(allWorkouts, activeBSportType, localSportId)
     }
 
-    LaunchedEffect(availableEquipment) {
-        if (localEquipId != null && availableEquipment.none { it.first == localEquipId }) {
+    LaunchedEffect(categorizedEquipment.all) {
+        if (localEquipId != null && categorizedEquipment.all.none { it.first == localEquipId }) {
             localEquipId = null
         }
     }
@@ -414,28 +458,32 @@ fun WorkoutFilterBottomSheet(
             }
         }
 
-        // 4. Equipment Selection
-        if (availableEquipment.isNotEmpty()) {
-            Column {
-                Text(
-                    text = stringResource(R.string.filter_section_equipment),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    availableEquipment.forEach { (eId, eName) ->
-                        FilterChip(
-                            selected = (localEquipId == eId),
-                            onClick = { localEquipId = if (localEquipId == eId) null else eId },
-                            label = { Text(eName) }
-                        )
-                    }
-                }
-            }
+        // 4. Categorized Equipment Selection (REQ-UI-193)
+        if (categorizedEquipment.bikes.isNotEmpty()) {
+            EquipmentSection(
+                title = stringResource(R.string.equipment_type_bike),
+                items = categorizedEquipment.bikes,
+                selectedEquipId = localEquipId,
+                onSelectEquipId = { localEquipId = it }
+            )
+        }
+
+        if (categorizedEquipment.shoes.isNotEmpty()) {
+            EquipmentSection(
+                title = stringResource(R.string.equipment_type_shoe),
+                items = categorizedEquipment.shoes,
+                selectedEquipId = localEquipId,
+                onSelectEquipId = { localEquipId = it }
+            )
+        }
+
+        if (categorizedEquipment.other.isNotEmpty()) {
+            EquipmentSection(
+                title = stringResource(R.string.filter_section_equipment),
+                items = categorizedEquipment.other,
+                selectedEquipId = localEquipId,
+                onSelectEquipId = { localEquipId = it }
+            )
         }
 
         // 5. Workout Attributes
@@ -679,6 +727,35 @@ fun WorkoutFilterBottomSheet(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EquipmentSection(
+    title: String,
+    items: List<Pair<Long, String>>,
+    selectedEquipId: Long?,
+    onSelectEquipId: (Long?) -> Unit
+) {
+    Column {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            items.forEach { (eId, eName) ->
+                FilterChip(
+                    selected = (selectedEquipId == eId),
+                    onClick = { onSelectEquipId(if (selectedEquipId == eId) null else eId) },
+                    label = { Text(eName) }
                 )
             }
         }
