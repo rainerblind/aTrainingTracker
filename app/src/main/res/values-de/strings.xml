@@ -1415,4 +1415,7 @@
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
     <string name="move_tile_banner_instruction">Kachel ausgewählt: Tippe auf eine andere Kachel zum Tauschen oder auf \'+\' zum Verschieben.</string>
     <string name="move_tile_cancel">Abbrechen</string>
+
+    <!-- Heart Rate 5-Zone Distribution Bar (ATT-1389 / REQ-UI-202) -->
+    <string name="aftermath_hr_zones_title">Herzfrequenz-Zonen</string>
 </resources>

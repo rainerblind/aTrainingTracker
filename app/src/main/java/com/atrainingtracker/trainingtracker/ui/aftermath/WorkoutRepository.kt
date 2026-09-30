@@ -63,6 +63,13 @@ import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionCalculator
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneSample
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CoroutineScope
@@ -343,6 +350,57 @@ class WorkoutRepository private constructor(private val application: Application
             }
         }
         points
+    }
+
+    /**
+     * Calculates the 5-zone heart rate distribution for a workout from stored samples.
+     *
+     * @param workoutId The database ID of the workout summary.
+     * @param bSportType The sport type of the workout (used to determine bike vs run HR zones).
+     * @return [ZoneDistributionData] or null if no heart rate telemetry is available.
+     */
+    suspend fun getHeartRateZoneDistribution(
+        workoutId: Long,
+        bSportType: BSportType?
+    ): ZoneDistributionData? = withContext(Dispatchers.IO) {
+        val baseFileName = summariesManager.getBaseFileName(workoutId) ?: return@withContext null
+        if (!samplesManager.existsTable(baseFileName)) return@withContext null
+
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        val zoneType = if (bSportType == BSportType.BIKE) SettingsDataStore.ZoneType.HR_BIKE else SettingsDataStore.ZoneType.HR_RUN
+
+        val z1 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
+        val z2 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2)
+        val z3 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3)
+        val z4 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
+        val thresholds = HeartRateZoneThresholds(z1, z2, z3, z4)
+
+        val samples = mutableListOf<ZoneSample>()
+        val db = samplesManager.database
+
+        db.query(tableName, null, null, null, null, null, null).use { cursor ->
+            val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
+            if (hrIdx == -1) return@withContext null
+
+            val timeActiveIdx = cursor.getColumnIndex(SensorType.TIME_ACTIVE.name)
+            val timeTotalIdx = cursor.getColumnIndex(SensorType.TIME_TOTAL.name)
+
+            while (cursor.moveToNext()) {
+                if (!cursor.isNull(hrIdx)) {
+                    val hr = cursor.getInt(hrIdx)
+                    if (hr > 0) {
+                        val timeSec = when {
+                            timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx) -> cursor.getLong(timeActiveIdx)
+                            timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx) -> cursor.getLong(timeTotalIdx)
+                            else -> 0L
+                        }
+                        samples.add(ZoneSample(timeActiveSec = timeSec, value = hr))
+                    }
+                }
+            }
+        }
+
+        ZoneDistributionCalculator.calculateHeartRateDistribution(samples, thresholds)
     }
 
     private val extremaSensorTypes = arrayOf(

@@ -1329,4 +1329,7 @@
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
     <string name="move_tile_banner_instruction">Tuile sélectionnée : Touchez une autre tuile pour échanger ou \'+\' pour déplacer.</string>
     <string name="move_tile_cancel">Annuler</string>
+
+    <!-- Heart Rate 5-Zone Distribution Bar (ATT-1389 / REQ-UI-202) -->
+    <string name="aftermath_hr_zones_title">Zones de fréquence cardiaque</string>
 </resources>

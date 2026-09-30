@@ -32,6 +32,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -48,7 +49,8 @@ data class AftermathMapUIState(
     val routes: List<MapRoute> = emptyList(),
     val markers: List<LocationMarker> = emptyList(),
     val bSportType: BSportType = BSportType.UNKNOWN,
-    val zoomFocus: MapZoomFocus = MapZoomFocus.FIT_PRIMARY
+    val zoomFocus: MapZoomFocus = MapZoomFocus.FIT_PRIMARY,
+    val hrZoneDistribution: ZoneDistributionData? = null
 )
 
 class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(application) {
@@ -223,6 +225,14 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
             withContext(Dispatchers.Main) {
                 _uiState.value = _uiState.value.copy(
                     routes = mapRoutes
+                )
+            }
+
+            // --- PHASE 7: Zone Analytics (Heart Rate 5-Zone Distribution) ---
+            val hrDistribution = workoutRepository.getHeartRateZoneDistribution(workoutId, bSportType)
+            withContext(Dispatchers.Main) {
+                _uiState.value = _uiState.value.copy(
+                    hrZoneDistribution = hrDistribution
                 )
             }
         }

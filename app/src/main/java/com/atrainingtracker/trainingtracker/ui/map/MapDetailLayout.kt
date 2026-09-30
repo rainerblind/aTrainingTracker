@@ -70,7 +70,8 @@ fun MapDetailLayout(
     useStatusBarsPadding: Boolean = true,
     showMap: Boolean = true,
     showElevationProfile: Boolean = true,
-    onMapClick: ((LatLng) -> Unit)? = null
+    onMapClick: ((LatLng) -> Unit)? = null,
+    analyticsContent: @Composable ColumnScope.() -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -191,7 +192,7 @@ fun MapDetailLayout(
             activeScrubPath?.let { path ->
                 Surface(
                     color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.navigationBarsPadding()
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Box(modifier = Modifier.drawWithContent {
                         elevationLayer.record {
@@ -212,6 +213,16 @@ fun MapDetailLayout(
                         )
                     }
                 }
+            }
+        }
+
+        // 4. ANALYTICS (Slotted)
+        Surface(
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.fillMaxWidth().navigationBarsPadding()
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                analyticsContent()
             }
         }
     }

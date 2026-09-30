@@ -1328,4 +1328,7 @@
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
     <string name="move_tile_banner_instruction">Tegel geselecteerd: Tik op een andere tegel om te ruilen of op \'+\' om te verplaatsen.</string>
     <string name="move_tile_cancel">Annuleren</string>
+
+    <!-- Heart Rate 5-Zone Distribution Bar (ATT-1389 / REQ-UI-202) -->
+    <string name="aftermath_hr_zones_title">Hartslagzones</string>
 </resources>

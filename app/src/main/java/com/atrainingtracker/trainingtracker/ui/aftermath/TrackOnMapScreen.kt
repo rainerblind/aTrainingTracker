@@ -34,6 +34,8 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
 import com.atrainingtracker.trainingtracker.ui.map.*
 
 @Composable
@@ -52,7 +54,9 @@ fun TrackOnMapScreen(
     showMap: Boolean = true,
     onClusterClick: ((Long) -> Unit)? = null,
     onEditWorkout: ((Long) -> Unit)? = null,
-    headerActions: @Composable RowScope.() -> Unit = {}
+    headerActions: @Composable RowScope.() -> Unit = {},
+    hrZoneDistribution: ZoneDistributionData? = null,
+    analyticsContent: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     // PERFORMANCE: Memoize the filtered tracks list
     val filteredTracks = remember(tracks, enabledTrackTypes) {
@@ -162,6 +166,20 @@ fun TrackOnMapScreen(
                             )
                         }
                     }
+                }
+            }
+        },
+        analyticsContent = {
+            if (analyticsContent != null) {
+                analyticsContent()
+            } else {
+                hrZoneDistribution?.let { distribution ->
+                    HeartRateZoneDistributionCard(
+                        distribution = distribution,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
                 }
             }
         }
