@@ -1317,6 +1317,11 @@
     <string name="tuning_altitude_window_desc">Fenêtre temporelle de moyenne mobile pour l\'altitude instantanée et la vitesse verticale.</string>
     <string name="tuning_slope_min_speed_title">Vitesse minimale pour la pente</string>
     <string name="tuning_slope_min_speed_desc">Vitesse minimale requise pour calculer la pente en temps réel.</string>
+    <string name="tuning_cat_aftermath">Aftermath et analyse de profil</string>
+    <string name="tuning_profile_x_axis_title">Axe X du profil d\'altitude</string>
+    <string name="tuning_profile_x_axis_desc">Sélectionner la métrique de l\'axe horizontal pour les graphiques d\'altitude.</string>
+    <string name="tuning_profile_x_axis_distance">Distance</string>
+    <string name="tuning_profile_x_axis_time">Temps</string>
     <string name="tuning_default_format">Par défaut : %1$s</string>
     <string name="reset_to_defaults">Rétablir les paramètres par défaut</string>
     <string name="reset_to_defaults_success">Paramètres de réglage rétablis aux valeurs d\'usine par défaut.</string>

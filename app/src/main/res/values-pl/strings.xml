@@ -1310,6 +1310,11 @@
     <string name="tuning_altitude_window_desc">Okno czasowe średniej kroczącej dla chwilowej wysokości i prędkości pionowej.</string>
     <string name="tuning_slope_min_speed_title">Minimalna prędkość dla nachylenia</string>
     <string name="tuning_slope_min_speed_desc">Minimalna prędkość wymagana do obliczania nachylenia w czasie rzeczywistym.</string>
+    <string name="tuning_cat_aftermath">Aftermath i analiza profilu</string>
+    <string name="tuning_profile_x_axis_title">Oś X profilu wysokości</string>
+    <string name="tuning_profile_x_axis_desc">Wybierz metrykę osi poziomej dla wykresów profilu wysokości.</string>
+    <string name="tuning_profile_x_axis_distance">Dystans</string>
+    <string name="tuning_profile_x_axis_time">Czas</string>
     <string name="tuning_default_format">Domyślnie: %1$s</string>
     <string name="reset_to_defaults">Przywróć domyślne</string>
     <string name="reset_to_defaults_success">Przywrócono domyślne ustawienia dostrajania.</string>

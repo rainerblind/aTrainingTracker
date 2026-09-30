@@ -33,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
@@ -52,6 +53,7 @@ fun AdvancedTuningDialog(
     val tuningDataStore = remember { TuningPreferencesDataStore(context) }
     val persistedConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
 
+    var profileXAxisDomain by remember { mutableStateOf(TuningPreferencesDefaults.PROFILE_X_AXIS_DOMAIN) }
     var fullDimFactor by remember { mutableFloatStateOf(TuningPreferencesDefaults.FULL_DIM_FACTOR) }
     var mediumDimFactor by remember { mutableFloatStateOf(TuningPreferencesDefaults.MEDIUM_DIM_FACTOR) }
     var slopeFlat by remember { mutableFloatStateOf(TuningPreferencesDefaults.SLOPE_FLAT_THRESHOLD) }
@@ -63,6 +65,7 @@ fun AdvancedTuningDialog(
     var slopeMinSpeed by remember { mutableFloatStateOf(TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS) }
 
     LaunchedEffect(persistedConfig) {
+        profileXAxisDomain = persistedConfig.profileXAxisDomain
         fullDimFactor = persistedConfig.fullDimFactor
         mediumDimFactor = persistedConfig.mediumDimFactor
         slopeFlat = persistedConfig.slopeFlatThreshold
@@ -82,6 +85,7 @@ fun AdvancedTuningDialog(
             AppDialogActions.SaveCancel(
                 onSave = {
                     val newConfig = TuningConfig(
+                        profileXAxisDomain = profileXAxisDomain,
                         fullDimFactor = fullDimFactor,
                         mediumDimFactor = mediumDimFactor,
                         slopeFlatThreshold = slopeFlat,
@@ -275,6 +279,47 @@ fun AdvancedTuningDialog(
                 steps = 18 // 0.2 to 2.0 in 0.1 steps
             )
 
+            HorizontalDivider()
+
+            // Category 4: Aftermath & Profil-Analytik
+            TuningCategoryHeader(stringResource(R.string.tuning_cat_aftermath))
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.tuning_profile_x_axis_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = stringResource(R.string.tuning_profile_x_axis_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = profileXAxisDomain == ProfileXAxisDomain.DISTANCE,
+                        onClick = { profileXAxisDomain = ProfileXAxisDomain.DISTANCE },
+                        label = { Text(stringResource(R.string.tuning_profile_x_axis_distance)) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FilterChip(
+                        selected = profileXAxisDomain == ProfileXAxisDomain.TIME,
+                        onClick = { profileXAxisDomain = ProfileXAxisDomain.TIME },
+                        label = { Text(stringResource(R.string.tuning_profile_x_axis_time)) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
 
             // Prominent Reset to Factory Defaults Action Button
@@ -282,6 +327,7 @@ fun AdvancedTuningDialog(
                 onClick = {
                     scope.launch {
                         tuningDataStore.resetToDefaults()
+                        profileXAxisDomain = TuningPreferencesDefaults.PROFILE_X_AXIS_DOMAIN
                         fullDimFactor = TuningPreferencesDefaults.FULL_DIM_FACTOR
                         mediumDimFactor = TuningPreferencesDefaults.MEDIUM_DIM_FACTOR
                         slopeFlat = TuningPreferencesDefaults.SLOPE_FLAT_THRESHOLD

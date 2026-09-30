@@ -1508,6 +1508,11 @@
     <string name="tuning_altitude_window_desc">Moving average time window for instantaneous altitude and vertical speed.</string>
     <string name="tuning_slope_min_speed_title">Slope Minimum Speed</string>
     <string name="tuning_slope_min_speed_desc">Minimum moving speed required to calculate real-time gradient.</string>
+    <string name="tuning_cat_aftermath">Aftermath &amp; Profile Analytics</string>
+    <string name="tuning_profile_x_axis_title">Elevation Profile X-Axis</string>
+    <string name="tuning_profile_x_axis_desc">Select horizontal axis domain for elevation profile graphs.</string>
+    <string name="tuning_profile_x_axis_distance">Distance</string>
+    <string name="tuning_profile_x_axis_time">Time</string>
     <string name="tuning_default_format">Default: %1$s</string>
     <string name="reset_to_defaults">Reset to Defaults</string>
     <string name="reset_to_defaults_success">Tuning preferences restored to factory defaults.</string>
