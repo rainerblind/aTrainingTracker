@@ -1278,6 +1278,7 @@
     <string name="prefs_lieblingsort_feedback_title">Favoriete locatie &amp; kalibratiefeedback</string>
     <string name="prefs_lieblingsort_feedback_summary">Bevestigt herkende startlocatie en barometerkalibratie in de cockpit</string>
     <string name="location_calibrated_format">%1$s (%2$s gekalibreerd)</string>
+    <string name="location_detected_format">%1$s gedetecteerd</string>
     <string name="workout_start_location">Start: %s</string>
     <string name="workout_destination_location">Bestemming: %s</string>
     <string name="workout_start_and_destination">Start &amp; bestemming: %s</string>
@@ -1288,9 +1289,10 @@
     <string name="known_location_routes_header">Routes vanaf hier (%d):</string>
     <string name="filter_by_start_location">Filteren op startlocatie</string>
 
-    <!-- Advanced Tuning Preferences (ATT-1304 / REQ-SET-073) -->
-    <string name="advanced_tuning_title">Geavanceerde afstemming</string>
-    <string name="advanced_tuning_open">Geavanceerde afstemming…</string>
+    <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
+    <string name="drawer__expert_settings">Expertinstellingen</string>
+    <string name="advanced_tuning_title">Expertinstellingen</string>
+    <string name="advanced_tuning_open">Expertinstellingen…</string>
     <string name="advanced_tuning_warning_title">Expertinstellingen</string>
     <string name="advanced_tuning_warning_desc">Het wijzigen van deze parameters beïnvloedt trackingheuristieken, sensorfiltering en batterijbesparing. U kunt te allen tijde de fabrieksinstellingen herstellen.</string>
     <string name="tuning_cat_battery_saver">AMOLED-batterijbesparing</string>
@@ -1314,7 +1316,23 @@
     <string name="tuning_altitude_window_desc">Voortschrijdend gemiddelde tijdsvenster voor momentane hoogte en verticale snelheid.</string>
     <string name="tuning_slope_min_speed_title">Minimale snelheid voor helling</string>
     <string name="tuning_slope_min_speed_desc">Minimale snelheid vereist om realtime helling te berekenen.</string>
+    <string name="tuning_cat_aftermath">Aftermath &amp; profielanalyse</string>
+    <string name="tuning_profile_x_axis_title">Hoogteprofiel X-as</string>
+    <string name="tuning_profile_x_axis_desc">Selecteer de horizontale as-metriek voor hoogteprofielen.</string>
+    <string name="tuning_profile_x_axis_distance">Afstand</string>
+    <string name="tuning_profile_x_axis_time">Tijd</string>
     <string name="tuning_default_format">Standaard: %1$s</string>
     <string name="reset_to_defaults">Fabrieksinstellingen herstellen</string>
     <string name="reset_to_defaults_success">Afstemmingsinstellingen hersteld naar fabrieksinstellingen.</string>
+
+    <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
+    <string name="move_tile_banner_instruction">Tegel geselecteerd: Tik op een andere tegel om te ruilen of op \'+\' om te verplaatsen.</string>
+    <string name="move_tile_cancel">Annuleren</string>
+
+    <!-- Heart Rate 5-Zone Distribution Bar (ATT-1389 / REQ-UI-202) -->
+    <string name="aftermath_hr_zones_title">Hartslagzones</string>
+
+    <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
+    <string name="aftermath_power_zones_title">Vermogenszones</string>
+    <string name="aftermath_laps_splits_title">Ronden en tussentijden</string>
 </resources>

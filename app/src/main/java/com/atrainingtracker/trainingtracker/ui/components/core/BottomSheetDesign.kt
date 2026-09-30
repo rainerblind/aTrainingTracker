@@ -52,11 +52,11 @@ object BottomSheetDesign {
     /** Standardized border outline stroke width (1dp). */
     val BorderWidth: Dp = 1.dp
 
-    /** Standardized drag handle pill width (36dp). */
-    val DragHandleWidth: Dp = 36.dp
+    /** Standardized drag handle pill width (32dp). */
+    val DragHandleWidth: Dp = 32.dp
 
-    /** Standardized drag handle pill height (4dp). */
-    val DragHandleHeight: Dp = 4.dp
+    /** Standardized drag handle pill height (3dp). */
+    val DragHandleHeight: Dp = 3.dp
 }
 
 /**

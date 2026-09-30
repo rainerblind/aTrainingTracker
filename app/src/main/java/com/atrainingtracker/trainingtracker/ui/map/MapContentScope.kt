@@ -27,6 +27,8 @@ import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.rememberUpdatedMarkerState
 import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.MaterialTheme
+import com.google.maps.android.compose.Polyline
 import com.google.maps.android.heatmaps.HeatmapTileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -89,6 +91,14 @@ interface MapContentScope {
     fun knownLocations(
         locations: List<KnownLocationItem>,
         onLocationClick: (Long) -> Unit = {}
+    )
+
+    /**
+     * Renders a prominent highlighted polyline for a selected lap segment. (REQ-UI-204 / ATT-1392)
+     */
+    fun lapHighlight(
+        path: List<LatLng>,
+        color: Color? = null
     )
 
     /**
@@ -161,6 +171,9 @@ internal class MapContentScopeImpl(
     private data class LocationData(val location: KnownLocationItem, val onClick: (Long) -> Unit)
     private val locationData = mutableStateListOf<LocationData>()
 
+    private data class LapHighlightData(val path: List<LatLng>, val color: Color?)
+    private val lapHighlights = mutableStateListOf<LapHighlightData>()
+
     fun collect(block: MapContentScope.() -> Unit) {
         trackData.clear()
         segmentData.clear()
@@ -170,6 +183,7 @@ internal class MapContentScopeImpl(
         heatmaps.clear()
         contextualPaths.clear()
         locationData.clear()
+        lapHighlights.clear()
         this.apply(block)
     }
 
@@ -321,6 +335,16 @@ internal class MapContentScopeImpl(
             LiveTrackLayer(path)
         }
 
+        // 6b. Lap Segment Highlights (REQ-UI-204 / ATT-1392)
+        lapHighlights.forEach { highlight ->
+            Polyline(
+                points = highlight.path,
+                color = highlight.color ?: MaterialTheme.colorScheme.primary,
+                width = 10f,
+                zIndex = 25f
+            )
+        }
+
         // 7. Heatmaps
         providers.forEach { provider ->
             provider?.let {
@@ -414,6 +438,12 @@ internal class MapContentScopeImpl(
     override fun knownLocations(locations: List<KnownLocationItem>, onLocationClick: (Long) -> Unit) {
         locations.forEach { location ->
             this.locationData.add(LocationData(location, onLocationClick))
+        }
+    }
+
+    override fun lapHighlight(path: List<LatLng>, color: Color?) {
+        if (path.isNotEmpty()) {
+            this.lapHighlights.add(LapHighlightData(path, color))
         }
     }
 }

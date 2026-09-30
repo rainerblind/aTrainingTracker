@@ -1262,6 +1262,7 @@
     <string name="prefs_lieblingsort_feedback_title">お気に入りの場所とキャリブレーションフィードバック</string>
     <string name="prefs_lieblingsort_feedback_summary">コックピットに認識された開始位置と気圧計の校正を確認表示します</string>
     <string name="location_calibrated_format">%1$s (%2$s 校正済み)</string>
+    <string name="location_detected_format">%1$s を検出</string>
     <string name="workout_start_location">スタート: %s</string>
     <string name="workout_destination_location">ゴール: %s</string>
     <string name="workout_start_and_destination">スタート＆ゴール: %s</string>
@@ -1272,9 +1273,10 @@
     <string name="known_location_routes_header">ここからのルート (%d):</string>
     <string name="filter_by_start_location">開始地点で絞り込む</string>
 
-    <!-- Advanced Tuning Preferences (ATT-1304 / REQ-SET-073) -->
-    <string name="advanced_tuning_title">詳細チューニング</string>
-    <string name="advanced_tuning_open">詳細チューニング…</string>
+    <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
+    <string name="drawer__expert_settings">エキスパート設定</string>
+    <string name="advanced_tuning_title">エキスパート設定</string>
+    <string name="advanced_tuning_open">エキスパート設定…</string>
     <string name="advanced_tuning_warning_title">エキスパート設定</string>
     <string name="advanced_tuning_warning_desc">これらのパラメータを変更すると、トラッキングのヒューリスティック、センサーフィルタリング、およびバッテリー節約動作が変更されます。いつでも工場出荷時のデフォルトに戻すことができます。</string>
     <string name="tuning_cat_battery_saver">AMOLEDバッテリーセーバー</string>
@@ -1298,7 +1300,23 @@
     <string name="tuning_altitude_window_desc">瞬間高度および垂直速度の移動平均時間枠。</string>
     <string name="tuning_slope_min_speed_title">勾配計算の最低速度</string>
     <string name="tuning_slope_min_speed_desc">リアルタイム勾配を計算するために必要な最低移動速度。</string>
+    <string name="tuning_cat_aftermath">アフターマス＆プロファイル分析</string>
+    <string name="tuning_profile_x_axis_title">高度プロファイルX軸</string>
+    <string name="tuning_profile_x_axis_desc">高度プロファイルグラフの横軸メトリクスを選択します。</string>
+    <string name="tuning_profile_x_axis_distance">距離</string>
+    <string name="tuning_profile_x_axis_time">時間</string>
     <string name="tuning_default_format">デフォルト: %1$s</string>
     <string name="reset_to_defaults">デフォルトに戻す</string>
     <string name="reset_to_defaults_success">チューニング設定が工場出荷時のデフォルトに戻りました。</string>
+
+    <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
+    <string name="move_tile_banner_instruction">タイルを選択中: 別のタイルをタップして入れ替え、または「+」をタップして移動します。</string>
+    <string name="move_tile_cancel">キャンセル</string>
+
+    <!-- Heart Rate 5-Zone Distribution Bar (ATT-1389 / REQ-UI-202) -->
+    <string name="aftermath_hr_zones_title">心拍ゾーン</string>
+
+    <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
+    <string name="aftermath_power_zones_title">パワーゾーン</string>
+    <string name="aftermath_laps_splits_title">ラップとスプリット</string>
 </resources>

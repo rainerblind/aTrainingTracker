@@ -66,6 +66,7 @@ class TrackingTabsViewModelLocationTest {
     private val activityTypeFlow = MutableStateFlow(ActivityType.getDefaultActivityType())
     private val currentLocationFlow = MutableStateFlow<LatLng?>(null)
     private val knownLocationsFlow = MutableStateFlow<List<KnownLocationItem>>(emptyList())
+    private val isAltimeterCalibratedFlow = MutableStateFlow(true)
 
     private var registeredDisplaySettingsListener: TrainingApplication.OnDisplaySettingsChangeListener? = null
     private var isFeedbackEnabledPreference = true
@@ -105,9 +106,12 @@ class TrackingTabsViewModelLocationTest {
             results[0] = calculateHaversineDistance(lat1, lon1, lat2, lon2)
         }
 
+        isAltimeterCalibratedFlow.value = true
         every { mockBanalRepo.trackingMode } returns trackingModeLiveData
         every { mockBanalRepo.activityType } returns activityTypeFlow
         every { mockBanalRepo.currentLocation } returns currentLocationFlow
+        every { mockBanalRepo.isAltimeterCalibrated } returns isAltimeterCalibratedFlow
+        every { mockBanalRepo.calibrateAltimeter(any()) } returns true
         every { mockBanalRepo.bindToBANALService() } just Runs
         every { mockBanalRepo.unbindFromBANALService() } just Runs
         every { mockTrackingViewsRepo.getTrackingViewsFlow(any()) } returns flowOf(emptyList())
@@ -171,6 +175,50 @@ class TrackingTabsViewModelLocationTest {
         assertEquals(520.0, status?.referenceAltitude ?: 0.0, 0.01)
         assertTrue(status?.isCalibrated == true)
         assertEquals(ElevationSource.MANUAL_USER, status?.source)
+
+        job.cancel()
+    }
+
+    /**
+     * TST-UI-153.3: Verifies that entering a known location geofence dispatches altimeter calibration,
+     * reflects standby uncalibrated status while sensor warms up, and transitions to calibrated status.
+     */
+    @Test
+    fun testInsideGeofenceDispatchesAltimeterCalibrationAndReflectsCalibratedState() = runTest {
+        val locationItem = KnownLocationItem(
+            id = 1L,
+            name = "Haus",
+            altitude = 520.0,
+            radius = 200,
+            latLng = LatLng(48.137154, 11.576124),
+            hitCount = 10,
+            isLocked = true,
+            source = ElevationSource.MANUAL_USER
+        )
+        knownLocationsFlow.value = listOf(locationItem)
+        isAltimeterCalibratedFlow.value = false
+        currentLocationFlow.value = LatLng(48.137300, 11.576500)
+
+        val viewModel = createViewModel()
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.locationCalibrationStatus.collect {}
+        }
+
+        testScheduler.advanceUntilIdle()
+
+        val statusBefore = viewModel.locationCalibrationStatus.value
+        assertNotNull(statusBefore)
+        assertEquals("Haus", statusBefore?.locationName)
+        assertEquals(520.0, statusBefore?.referenceAltitude ?: 0.0, 0.01)
+        assertFalse("Initially altimeter is uncalibrated", statusBefore?.isCalibrated ?: true)
+        verify { mockBanalRepo.calibrateAltimeter(520.0) }
+
+        // When altimeter warms up / completes calibration
+        isAltimeterCalibratedFlow.value = true
+        testScheduler.advanceUntilIdle()
+
+        val statusAfter = viewModel.locationCalibrationStatus.value
+        assertTrue("Reflects calibrated state once altimeter confirms calibration", statusAfter?.isCalibrated == true)
 
         job.cancel()
     }

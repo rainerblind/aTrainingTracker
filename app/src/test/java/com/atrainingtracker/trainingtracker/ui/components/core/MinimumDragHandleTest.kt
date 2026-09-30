@@ -25,7 +25,7 @@ import org.junit.Test
 import java.lang.reflect.Modifier
 
 /**
- * Unit tests verifying [MinimumDragHandle] contract and proportions (REQ-UI-189, TST-UI-143.3, ATT-1588).
+ * Unit tests verifying [MinimumDragHandle] contract and proportions (REQ-UI-189, REQ-UI-196, TST-UI-143.3, TST-UI-150, ATT-1588, ATT-1644).
  */
 class MinimumDragHandleTest {
 
@@ -42,7 +42,7 @@ class MinimumDragHandleTest {
 
     @Test
     fun testMinimumDragHandle_dimensionsConformToDesignTokens() {
-        assertEquals(36, BottomSheetDesign.DragHandleWidth.value.toInt())
-        assertEquals(4, BottomSheetDesign.DragHandleHeight.value.toInt())
+        assertEquals(32, BottomSheetDesign.DragHandleWidth.value.toInt())
+        assertEquals(3, BottomSheetDesign.DragHandleHeight.value.toInt())
     }
 }

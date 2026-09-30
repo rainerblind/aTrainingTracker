@@ -1266,6 +1266,7 @@
     <string name="prefs_lieblingsort_feedback_title">Ulubiona lokalizacja i informacja zwrotna o kalibracji</string>
     <string name="prefs_lieblingsort_feedback_summary">Potwierdza rozpoznane miejsce startu i kalibrację barometru w kokpicie</string>
     <string name="location_calibrated_format">%1$s (%2$s skalibrowany)</string>
+    <string name="location_detected_format">%1$s wykryty</string>
     <string name="workout_start_location">Start: %s</string>
     <string name="workout_destination_location">Cel: %s</string>
     <string name="workout_start_and_destination">Start i meta: %s</string>
@@ -1282,9 +1283,10 @@
     </plurals>
     <string name="known_locations_view_routes">Pokaż trasy</string>
 
-    <!-- Advanced Tuning Preferences (ATT-1304 / REQ-SET-073) -->
-    <string name="advanced_tuning_title">Zaawansowane dostrajanie</string>
-    <string name="advanced_tuning_open">Zaawansowane dostrajanie…</string>
+    <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
+    <string name="drawer__expert_settings">Ustawienia eksperckie</string>
+    <string name="advanced_tuning_title">Ustawienia eksperckie</string>
+    <string name="advanced_tuning_open">Ustawienia eksperckie…</string>
     <string name="advanced_tuning_warning_title">Ustawienia eksperckie</string>
     <string name="advanced_tuning_warning_desc">Zmiana tych parametrów wpływa na heurystykę śledzenia, filtrowanie czujników i oszczędzanie baterii. W każdej chwili możesz przywrócić ustawienia fabryczne.</string>
     <string name="tuning_cat_battery_saver">Oszczędzanie baterii AMOLED</string>
@@ -1308,7 +1310,23 @@
     <string name="tuning_altitude_window_desc">Okno czasowe średniej kroczącej dla chwilowej wysokości i prędkości pionowej.</string>
     <string name="tuning_slope_min_speed_title">Minimalna prędkość dla nachylenia</string>
     <string name="tuning_slope_min_speed_desc">Minimalna prędkość wymagana do obliczania nachylenia w czasie rzeczywistym.</string>
+    <string name="tuning_cat_aftermath">Aftermath i analiza profilu</string>
+    <string name="tuning_profile_x_axis_title">Oś X profilu wysokości</string>
+    <string name="tuning_profile_x_axis_desc">Wybierz metrykę osi poziomej dla wykresów profilu wysokości.</string>
+    <string name="tuning_profile_x_axis_distance">Dystans</string>
+    <string name="tuning_profile_x_axis_time">Czas</string>
     <string name="tuning_default_format">Domyślnie: %1$s</string>
     <string name="reset_to_defaults">Przywróć domyślne</string>
     <string name="reset_to_defaults_success">Przywrócono domyślne ustawienia dostrajania.</string>
+
+    <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
+    <string name="move_tile_banner_instruction">Wybrano kafel: Dotknij innego kafla, aby zamienić, lub \'+\' aby przenieść.</string>
+    <string name="move_tile_cancel">Anuluj</string>
+
+    <!-- Heart Rate 5-Zone Distribution Bar (ATT-1389 / REQ-UI-202) -->
+    <string name="aftermath_hr_zones_title">Strefy tętna</string>
+
+    <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
+    <string name="aftermath_power_zones_title">Strefy mocy</string>
+    <string name="aftermath_laps_splits_title">Okrążenia i międzyczasy</string>
 </resources>

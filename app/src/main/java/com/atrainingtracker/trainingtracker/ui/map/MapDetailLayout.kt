@@ -37,6 +37,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
@@ -68,13 +70,20 @@ fun MapDetailLayout(
     useStatusBarsPadding: Boolean = true,
     showMap: Boolean = true,
     showElevationProfile: Boolean = true,
-    onMapClick: ((LatLng) -> Unit)? = null
+    onMapClick: ((LatLng) -> Unit)? = null,
+    analyticsContent: @Composable ColumnScope.() -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    val tuningDataStore = remember { TuningPreferencesDataStore(context) }
+    val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(
+        initial = TuningConfig()
+    )
+
     val headerLayer = rememberGraphicsLayer()
     val elevationLayer = rememberGraphicsLayer()
+    val analyticsLayer = rememberGraphicsLayer()
 
     var isSharing by remember { mutableStateOf(false) }
     var selectedDistance by remember { mutableStateOf<Double?>(null) }
@@ -85,7 +94,7 @@ fun MapDetailLayout(
             if (showMap) Modifier.fillMaxSize() else Modifier.wrapContentHeight()
         )
     ) {
-        // DRAG HANDLE (For sheets)
+        // DRAG HANDLE (For sheets - REQ-UI-148, REQ-UI-189, REQ-UI-196, ATT-1644)
         if (!useStatusBarsPadding) {
             MinimumDragHandle()
         }
@@ -134,7 +143,13 @@ fun MapDetailLayout(
                                 }
                             } else null
 
-                            combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp)
+                            val aBmp = if (analyticsLayer.size.width > 0 && analyticsLayer.size.height > 0) {
+                                withContext(Dispatchers.Default) {
+                                    analyticsLayer.toImageBitmap().asAndroidBitmap()
+                                }
+                            } else null
+
+                            combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp, aBmp)
                             isSharing = false
                         }
                     },
@@ -184,7 +199,7 @@ fun MapDetailLayout(
             activeScrubPath?.let { path ->
                 Surface(
                     color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.navigationBarsPadding()
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Box(modifier = Modifier.drawWithContent {
                         elevationLayer.record {
@@ -198,9 +213,29 @@ fun MapDetailLayout(
                             minAltitudeOverride = minAltitudeOverride,
                             maxAltitudeOverride = maxAltitudeOverride,
                             onDistanceSelected = { selectedDistance = it },
+                            showZoomControls = true,
+                            xAxisDomain = tuningConfig.profileXAxisDomain,
+                            bSportType = bSportType,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
+                }
+            }
+        }
+
+        // 4. ANALYTICS (Slotted - REQ-UI-205 / ATT-1393)
+        Surface(
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.fillMaxWidth().navigationBarsPadding()
+        ) {
+            Box(modifier = Modifier.drawWithContent {
+                analyticsLayer.record {
+                    this@drawWithContent.drawContent()
+                }
+                drawLayer(analyticsLayer)
+            }) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    analyticsContent()
                 }
             }
         }

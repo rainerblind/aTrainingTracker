@@ -1470,6 +1470,7 @@
     <string name="prefs_lieblingsort_feedback_title">Favorite Location &amp; Calibration Feedback</string>
     <string name="prefs_lieblingsort_feedback_summary">Confirms recognized start location and barometer calibration in the cockpit</string>
     <string name="location_calibrated_format">%1$s (%2$s calibrated)</string>
+    <string name="location_detected_format">%1$s detected</string>
     <string name="workout_start_location">Start: %s</string>
     <string name="workout_destination_location">Destination: %s</string>
     <string name="workout_start_and_destination">Start &amp; Destination: %s</string>
@@ -1480,9 +1481,10 @@
     <string name="known_location_routes_header">Routes starting here (%d):</string>
     <string name="filter_by_start_location">Filter by Start Location</string>
 
-    <!-- Advanced Tuning Preferences (ATT-1304 / REQ-SET-073) -->
-    <string name="advanced_tuning_title">Advanced Tuning</string>
-    <string name="advanced_tuning_open">Advanced Tuning…</string>
+    <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
+    <string name="drawer__expert_settings">Expert Settings</string>
+    <string name="advanced_tuning_title">Expert Settings</string>
+    <string name="advanced_tuning_open">Expert Settings…</string>
     <string name="advanced_tuning_warning_title">Expert Settings</string>
     <string name="advanced_tuning_warning_desc">Modifying these parameters alters core tracking heuristics, sensor filtering, and battery saving behavior. You can restore factory defaults at any time.</string>
     <string name="tuning_cat_battery_saver">AMOLED Battery Saver</string>
@@ -1506,8 +1508,24 @@
     <string name="tuning_altitude_window_desc">Moving average time window for instantaneous altitude and vertical speed.</string>
     <string name="tuning_slope_min_speed_title">Slope Minimum Speed</string>
     <string name="tuning_slope_min_speed_desc">Minimum moving speed required to calculate real-time gradient.</string>
+    <string name="tuning_cat_aftermath">Aftermath &amp; Profile Analytics</string>
+    <string name="tuning_profile_x_axis_title">Elevation Profile X-Axis</string>
+    <string name="tuning_profile_x_axis_desc">Select horizontal axis domain for elevation profile graphs.</string>
+    <string name="tuning_profile_x_axis_distance">Distance</string>
+    <string name="tuning_profile_x_axis_time">Time</string>
     <string name="tuning_default_format">Default: %1$s</string>
     <string name="reset_to_defaults">Reset to Defaults</string>
     <string name="reset_to_defaults_success">Tuning preferences restored to factory defaults.</string>
+
+    <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
+    <string name="move_tile_banner_instruction">Tile selected: Tap another tile to swap, or tap \'+\' to move.</string>
+    <string name="move_tile_cancel">Cancel</string>
+
+    <!-- Heart Rate 5-Zone Distribution Bar (ATT-1389 / REQ-UI-202) -->
+    <string name="aftermath_hr_zones_title">Heart Rate Zones</string>
+
+    <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
+    <string name="aftermath_power_zones_title">Power Zones</string>
+    <string name="aftermath_laps_splits_title">Laps &amp; Splits</string>
 </resources>
 

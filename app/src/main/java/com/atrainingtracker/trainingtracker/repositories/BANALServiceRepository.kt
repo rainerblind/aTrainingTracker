@@ -159,6 +159,10 @@ class BANALServiceRepository private constructor(context: Context) {
     private val _currentPathPoints = MutableStateFlow<List<com.atrainingtracker.trainingtracker.ui.map.PathPoint>>(emptyList())
     val currentPathPoints: StateFlow<List<com.atrainingtracker.trainingtracker.ui.map.PathPoint>> = _currentPathPoints.asStateFlow()
 
+    // Altimeter calibration status (REQ-UI-199)
+    private val _isAltimeterCalibrated = MutableStateFlow(false)
+    val isAltimeterCalibrated: StateFlow<Boolean> = _isAltimeterCalibrated.asStateFlow()
+
     // --- Tracking Mode and Lifecycle Events ---
     
     private val _trackingMode = MutableLiveData<TrackingMode>()
@@ -348,6 +352,7 @@ class BANALServiceRepository private constructor(context: Context) {
                         _currentSpeed.value = currentSpeed
                         _currentBearing.value = binder.getBestSensorData(SensorType.BEARING)?.value as Double?
                         _currentDistance.value = currentDistance
+                        _isAltimeterCalibrated.value = binder.isAltimeterCalibrated()
 
                         if (TrainingApplication.getTrackingMode() == TrackingMode.TRACKING) {
                             val newPathPoint = com.atrainingtracker.trainingtracker.ui.map.PathPoint(
@@ -400,6 +405,19 @@ class BANALServiceRepository private constructor(context: Context) {
 
     fun stopSearchingForNewDevices() {
         sendBroadcast(BANALService.STOP_SEARCHING_FOR_NEW_DEVICES_INTENT)
+    }
+
+    /**
+     * Dispatches altimeter calibration with the specified reference altitude (REQ-UI-199).
+     *
+     * @param altitude Target reference altitude in meters.
+     * @return true if calibration was accepted/applied, false if service is unbound.
+     */
+    fun calibrateAltimeter(altitude: Double): Boolean {
+        val binder = _serviceBinder.value ?: return false
+        val success = binder.calibrateAltimeter(altitude)
+        _isAltimeterCalibrated.value = binder.isAltimeterCalibrated()
+        return success
     }
 
     /**

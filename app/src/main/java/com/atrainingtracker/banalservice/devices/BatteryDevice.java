@@ -37,6 +37,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Iterator;
 
 /**
  * Internal device for monitoring host smartphone battery percentage (PHONE_BATTERY)
@@ -55,6 +56,11 @@ public class BatteryDevice extends MyDevice {
     private int mBatteryLevel = -1;
     private boolean mIsCharging = false;
     private int mActiveRecordingSeconds = 0;
+
+    private double mEstablishedDrainRatePerHour = -1.0;
+    private int mBaseRemainingSeconds = -1;
+    private int mLastStepActiveSeconds = 0;
+    private int mLastRecordedLevel = -1;
 
     static class BatterySample {
         final int activeSeconds;
@@ -152,6 +158,10 @@ public class BatteryDevice extends MyDevice {
     public synchronized void resetDrainHistory() {
         mActiveRecordingSeconds = 0;
         mSampleHistory.clear();
+        mEstablishedDrainRatePerHour = -1.0;
+        mBaseRemainingSeconds = -1;
+        mLastStepActiveSeconds = 0;
+        mLastRecordedLevel = mBatteryLevel;
         if (mBatteryLevel >= 0) {
             mSampleHistory.add(new BatterySample(0, mBatteryLevel));
         }
@@ -164,25 +174,104 @@ public class BatteryDevice extends MyDevice {
             mBatteryLevel = Math.max(0, Math.min(100, percent));
             mPhoneBatterySensor.newValue(mBatteryLevel);
             setBatteryPercentage(mBatteryLevel);
+
+            if (mLastRecordedLevel < 0) {
+                mLastRecordedLevel = mBatteryLevel;
+                mLastStepActiveSeconds = mActiveRecordingSeconds;
+                if (mSampleHistory.isEmpty()) {
+                    mSampleHistory.addLast(new BatterySample(mActiveRecordingSeconds, mBatteryLevel));
+                }
+            } else if (mBatteryLevel < mLastRecordedLevel) {
+                recordBatteryStep(mActiveRecordingSeconds, mBatteryLevel);
+            } else if (mBatteryLevel > mLastRecordedLevel && !mIsCharging) {
+                mSampleHistory.clear();
+                mEstablishedDrainRatePerHour = -1.0;
+                mBaseRemainingSeconds = -1;
+                mLastRecordedLevel = mBatteryLevel;
+                mLastStepActiveSeconds = mActiveRecordingSeconds;
+                mSampleHistory.addLast(new BatterySample(mActiveRecordingSeconds, mBatteryLevel));
+            }
         }
         mIsCharging = (status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL);
+        if (mIsCharging) {
+            mEstablishedDrainRatePerHour = -1.0;
+            mBaseRemainingSeconds = -1;
+        }
         updateRemainingTime();
+    }
+
+    private synchronized void recordBatteryStep(int activeSeconds, int percent) {
+        mLastRecordedLevel = percent;
+        mLastStepActiveSeconds = activeSeconds;
+
+        if (mSampleHistory.isEmpty()) {
+            mSampleHistory.addLast(new BatterySample(activeSeconds, percent));
+            return;
+        }
+
+        if (mSampleHistory.getLast().activeSeconds == activeSeconds) {
+            mSampleHistory.removeLast();
+        }
+        mSampleHistory.addLast(new BatterySample(activeSeconds, percent));
+
+        int cutoff = activeSeconds - ROLLING_WINDOW_SECONDS;
+        BatterySample latest = mSampleHistory.getLast();
+        while (mSampleHistory.size() > 2 && mSampleHistory.getFirst().activeSeconds < cutoff) {
+            Iterator<BatterySample> it = mSampleHistory.iterator();
+            it.next(); // first
+            BatterySample second = it.next();
+            if (latest.activeSeconds - second.activeSeconds >= MIN_STABILIZATION_SECONDS) {
+                mSampleHistory.removeFirst();
+            } else {
+                break;
+            }
+        }
+
+        computeEstablishedDrainRate(activeSeconds, percent);
+    }
+
+    private void computeEstablishedDrainRate(int activeSeconds, int percent) {
+        if (mSampleHistory.size() < 2) {
+            return;
+        }
+
+        BatterySample oldest = mSampleHistory.getFirst();
+        BatterySample latest = mSampleHistory.getLast();
+        int deltaSeconds = latest.activeSeconds - oldest.activeSeconds;
+        int deltaPercent = oldest.percent - latest.percent;
+
+        if (deltaSeconds >= MIN_STABILIZATION_SECONDS && deltaPercent >= 1) {
+            double drainRatePerHour = ((double) deltaPercent) / (deltaSeconds / 3600.0);
+            if (drainRatePerHour > 0.0) {
+                mEstablishedDrainRatePerHour = drainRatePerHour;
+                mBaseRemainingSeconds = (int) Math.round((percent / drainRatePerHour) * 3600.0);
+                mLastStepActiveSeconds = latest.activeSeconds;
+            }
+        }
+    }
+
+    private void checkPendingStabilization() {
+        if (mEstablishedDrainRatePerHour <= 0.0 && mActiveRecordingSeconds >= MIN_STABILIZATION_SECONDS && mSampleHistory.size() >= 2) {
+            BatterySample oldest = mSampleHistory.getFirst();
+            BatterySample latest = mSampleHistory.getLast();
+            int deltaPercent = oldest.percent - latest.percent;
+            int effectiveDeltaSeconds = mActiveRecordingSeconds - oldest.activeSeconds;
+
+            if (deltaPercent >= 1 && effectiveDeltaSeconds >= MIN_STABILIZATION_SECONDS) {
+                double drainRatePerHour = ((double) deltaPercent) / (effectiveDeltaSeconds / 3600.0);
+                if (drainRatePerHour > 0.0) {
+                    mEstablishedDrainRatePerHour = drainRatePerHour;
+                    mBaseRemainingSeconds = (int) Math.round((mBatteryLevel / drainRatePerHour) * 3600.0);
+                    mLastStepActiveSeconds = mActiveRecordingSeconds;
+                }
+            }
+        }
     }
 
     public synchronized void onTimeTick(boolean isTracking, boolean isPaused) {
         if (isTracking && !isPaused) {
             mActiveRecordingSeconds++;
-            if (mBatteryLevel >= 0) {
-                if (mSampleHistory.isEmpty()
-                        || (mActiveRecordingSeconds - mSampleHistory.getLast().activeSeconds >= 30)
-                        || (mSampleHistory.getLast().percent != mBatteryLevel)) {
-                    mSampleHistory.addLast(new BatterySample(mActiveRecordingSeconds, mBatteryLevel));
-                }
-                int cutoff = mActiveRecordingSeconds - ROLLING_WINDOW_SECONDS;
-                while (mSampleHistory.size() > 2 && mSampleHistory.getFirst().activeSeconds < cutoff) {
-                    mSampleHistory.removeFirst();
-                }
-            }
+            checkPendingStabilization();
         }
         updateRemainingTime();
     }
@@ -192,16 +281,29 @@ public class BatteryDevice extends MyDevice {
         mBatteryLevel = batteryLevel;
         mIsCharging = isCharging;
         mPhoneBatterySensor.newValue(batteryLevel);
-        if (mSampleHistory.isEmpty()) {
-            mSampleHistory.addLast(new BatterySample(0, batteryLevel));
+
+        if (mLastRecordedLevel < 0 || mSampleHistory.isEmpty()) {
+            mLastRecordedLevel = batteryLevel;
+            mLastStepActiveSeconds = activeSeconds;
+            mSampleHistory.clear();
+            mSampleHistory.addLast(new BatterySample(activeSeconds, batteryLevel));
+        } else if (batteryLevel < mLastRecordedLevel) {
+            recordBatteryStep(activeSeconds, batteryLevel);
+        } else if (batteryLevel > mLastRecordedLevel && !isCharging) {
+            mSampleHistory.clear();
+            mEstablishedDrainRatePerHour = -1.0;
+            mBaseRemainingSeconds = -1;
+            mLastRecordedLevel = batteryLevel;
+            mLastStepActiveSeconds = activeSeconds;
+            mSampleHistory.addLast(new BatterySample(activeSeconds, batteryLevel));
         }
-        if (mActiveRecordingSeconds > mSampleHistory.getLast().activeSeconds) {
-            mSampleHistory.addLast(new BatterySample(mActiveRecordingSeconds, batteryLevel));
+
+        if (isCharging) {
+            mEstablishedDrainRatePerHour = -1.0;
+            mBaseRemainingSeconds = -1;
         }
-        int cutoff = mActiveRecordingSeconds - ROLLING_WINDOW_SECONDS;
-        while (mSampleHistory.size() > 2 && mSampleHistory.getFirst().activeSeconds < cutoff) {
-            mSampleHistory.removeFirst();
-        }
+
+        checkPendingStabilization();
         updateRemainingTime();
     }
 
@@ -211,30 +313,23 @@ public class BatteryDevice extends MyDevice {
             return;
         }
 
-        if (mBatteryLevel < 0 || mActiveRecordingSeconds < MIN_STABILIZATION_SECONDS || mSampleHistory.size() < 2) {
+        if (mBatteryLevel < 0 || mEstablishedDrainRatePerHour <= 0.0 || mBaseRemainingSeconds < 0) {
             mBatteryRemainingTimeSensor.newValue(BatteryRemainingTimeFormatter.STABILIZING_STATUS_CODE);
             return;
         }
 
-        BatterySample oldest = mSampleHistory.getFirst();
-        BatterySample latest = mSampleHistory.getLast();
-        int deltaSeconds = latest.activeSeconds - oldest.activeSeconds;
-        int deltaPercent = oldest.percent - latest.percent;
+        int elapsedSinceStep = mActiveRecordingSeconds - mLastStepActiveSeconds;
+        int remainingSeconds = mBaseRemainingSeconds - elapsedSinceStep;
 
-        if (deltaSeconds < MIN_STABILIZATION_SECONDS || deltaPercent < 1) {
-            mBatteryRemainingTimeSensor.newValue(BatteryRemainingTimeFormatter.STABILIZING_STATUS_CODE);
-            return;
-        }
+        int floorSeconds = (int) Math.round(((mBatteryLevel - 1) / mEstablishedDrainRatePerHour) * 3600.0);
+        remainingSeconds = Math.max(floorSeconds, remainingSeconds);
+        remainingSeconds = Math.max(0, remainingSeconds);
 
-        double drainRatePerHour = ((double) deltaPercent) / (deltaSeconds / 3600.0);
-        if (drainRatePerHour <= 0.0) {
-            mBatteryRemainingTimeSensor.newValue(BatteryRemainingTimeFormatter.STABILIZING_STATUS_CODE);
-            return;
-        }
-
-        double remainingHours = mBatteryLevel / drainRatePerHour;
-        int remainingSeconds = (int) Math.round(remainingHours * 3600.0);
         mBatteryRemainingTimeSensor.newValue(remainingSeconds);
+    }
+
+    public double getEstablishedDrainRatePerHour() {
+        return mEstablishedDrainRatePerHour;
     }
 
     public int getBatteryLevel() {

@@ -43,6 +43,8 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppTableHeader
 import com.atrainingtracker.trainingtracker.ui.components.core.AppTableHeaderCell
 import com.atrainingtracker.trainingtracker.ui.components.core.BadgeBox
 import com.atrainingtracker.trainingtracker.ui.components.core.BadgeSpacer
+import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitCalculator
+import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitChart
 import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
 
 @Composable
@@ -76,6 +78,15 @@ fun WorkoutLaps(
 
     val displayedLaps = if (isExpanded || laps.size <= 3) laps else laps.take(3)
 
+    val splitChartData = remember(laps, bSportType, formatters) {
+        LapSplitCalculator.calculateSplitData(
+            laps = laps,
+            bSportType = bSportType,
+            paceFormatter = { formatters.pace.format(it) },
+            speedFormatter = { formatters.speed.format(it) }
+        )
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -95,6 +106,22 @@ fun WorkoutLaps(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
+        }
+
+        // Compact Lap & Interval Split Chart (REQ-UI-204 / ATT-1392)
+        if (splitChartData != null) {
+            LapSplitChart(
+                splitData = splitChartData,
+                onLapClick = onLapClick?.let { callback ->
+                    { lapNr ->
+                        laps.find { it.lapNr == lapNr }?.let { callback(it) }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
         }
 
         Spacer(modifier = Modifier.height(4.dp))

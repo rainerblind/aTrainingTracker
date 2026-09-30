@@ -54,6 +54,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.res.stringResource
+import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
@@ -74,6 +80,10 @@ interface GridActions {
     fun onDeleteField(fieldState: SensorFieldState)
     fun onAddRow(beforeRow: Int)
     fun onAddCol(atRow: Int, beforeCol: Int)
+    fun onSelectFieldForMove(fieldState: SensorFieldState) {}
+    fun onCancelMove() {}
+    fun onSwapFields(sourceFieldId: Long, targetFieldId: Long) {}
+    fun onMoveField(sourceFieldId: Long, targetRow: Int, targetCol: Int) {}
 }
 
 /**
@@ -88,6 +98,7 @@ fun SensorGridScreen(
     gridActions: GridActions,
     currentLocationFlow: StateFlow<LatLng?>,
     liveSegments: StateFlow<List<LiveSegment>>,
+    selectedFieldForMove: SensorFieldState? = null,
 ) {
 
     val activeSegments by liveSegments.collectAsState()
@@ -135,6 +146,39 @@ fun SensorGridScreen(
                 .fillMaxSize()
                 .padding(top = paddingValues.calculateTopPadding()) // Only pad the top
         ) {
+            // Pick & Place Guidance Banner (REQ-UI-200)
+            if (screenMode == ScreenMode.CONFIGURATION && selectedFieldForMove != null) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(8.dp),
+                    tonalElevation = 2.dp
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = stringResource(R.string.move_tile_banner_instruction),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = { gridActions.onCancelMove() }) {
+                            Text(
+                                text = stringResource(R.string.move_tile_cancel),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            }
+
             // 1. The Sensor Grid (Scrollable)
             // This Column will only take as much space as the sensors need.
             Column(
@@ -150,7 +194,13 @@ fun SensorGridScreen(
                 sortedRows.forEach { rowNr ->
                     maxRowNr = rowNr
                     if (screenMode == ScreenMode.CONFIGURATION) {
-                        RowAdder(onClick = { gridActions.onAddRow(rowNr) })
+                        RowAdder(onClick = {
+                            if (selectedFieldForMove != null) {
+                                gridActions.onMoveField(selectedFieldForMove.sensorFieldId, rowNr, -1)
+                            } else {
+                                gridActions.onAddRow(rowNr)
+                            }
+                        })
                     }
 
                     val fieldsInThisRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
@@ -161,25 +211,56 @@ fun SensorGridScreen(
                         var maxColNr = 0
                         fieldsInThisRow.forEach { fieldState ->
                             if (screenMode == ScreenMode.CONFIGURATION) {
-                                ColAdder(onClick = { gridActions.onAddCol(rowNr, fieldState.colNr) })
+                                ColAdder(onClick = {
+                                    if (selectedFieldForMove != null) {
+                                        gridActions.onMoveField(selectedFieldForMove.sensorFieldId, rowNr, fieldState.colNr)
+                                    } else {
+                                        gridActions.onAddCol(rowNr, fieldState.colNr)
+                                    }
+                                })
                             }
                             maxColNr = fieldState.colNr
                             Box(modifier = Modifier.weight(1f)) {
+                                val isSelected = selectedFieldForMove?.sensorFieldId == fieldState.sensorFieldId
                                 SensorFieldView(
                                     fieldState = fieldState,
                                     screenMode = screenMode,
-                                    onEdit = { gridActions.onEditField(fieldState) },
+                                    isSelectedForMove = isSelected,
+                                    onStartMove = { gridActions.onSelectFieldForMove(fieldState) },
+                                    onEdit = {
+                                        if (screenMode == ScreenMode.CONFIGURATION && selectedFieldForMove != null) {
+                                            if (isSelected) {
+                                                gridActions.onCancelMove()
+                                            } else {
+                                                gridActions.onSwapFields(selectedFieldForMove.sensorFieldId, fieldState.sensorFieldId)
+                                            }
+                                        } else {
+                                            gridActions.onEditField(fieldState)
+                                        }
+                                    },
                                     onDelete = { gridActions.onDeleteField(fieldState) }
                                 )
                             }
                         }
                         if (screenMode == ScreenMode.CONFIGURATION) {
-                            ColAdder(onClick = { gridActions.onAddCol(rowNr, maxColNr + 1) })
+                            ColAdder(onClick = {
+                                if (selectedFieldForMove != null) {
+                                    gridActions.onMoveField(selectedFieldForMove.sensorFieldId, rowNr, maxColNr + 1)
+                                } else {
+                                    gridActions.onAddCol(rowNr, maxColNr + 1)
+                                }
+                            })
                         }
                     }
                 }
                 if (screenMode == ScreenMode.CONFIGURATION) {
-                    RowAdder(onClick = { gridActions.onAddRow(maxRowNr + 1) })
+                    RowAdder(onClick = {
+                        if (selectedFieldForMove != null) {
+                            gridActions.onMoveField(selectedFieldForMove.sensorFieldId, maxRowNr + 1, -1)
+                        } else {
+                            gridActions.onAddRow(maxRowNr + 1)
+                        }
+                    })
                 }
             }
 

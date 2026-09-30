@@ -41,11 +41,11 @@ class ActiveFilterChipsRowClusterTest {
 
         assertTrue("Cluster chip must be shown when clusterId exists", hasClusterChip)
         val chipLabel = if (!criteriaWithCluster.clusterName.isNullOrBlank()) {
-            "🗺️ ${criteriaWithCluster.clusterName}"
+            criteriaWithCluster.clusterName
         } else {
-            "🗺️ Favorite Tracks"
+            "Favorite Tracks"
         }
-        assertEquals("🗺️ Isarrunde", chipLabel)
+        assertEquals("Isarrunde", chipLabel)
     }
 
     @Test
@@ -60,11 +60,11 @@ class ActiveFilterChipsRowClusterTest {
         assertTrue("Cluster chip must be shown even without custom name if clusterId is set", hasClusterChip)
         val fallbackLabel = "Favorite Tracks"
         val chipLabel = if (!criteriaIdOnly.clusterName.isNullOrBlank()) {
-            "🗺️ ${criteriaIdOnly.clusterName}"
+            criteriaIdOnly.clusterName
         } else {
-            "🗺️ $fallbackLabel"
+            fallbackLabel
         }
-        assertEquals("🗺️ Favorite Tracks", chipLabel)
+        assertEquals("Favorite Tracks", chipLabel)
     }
 
     @Test

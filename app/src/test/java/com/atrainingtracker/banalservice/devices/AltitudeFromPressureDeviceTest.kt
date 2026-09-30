@@ -40,6 +40,7 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -294,5 +295,81 @@ class AltitudeFromPressureDeviceTest {
         assertEquals(500.0, (device.altitudeSensor.value as Number).toDouble(), 0.001)
         verify(exactly = 0) { mockContext.sendBroadcast(any()) }
         verify(exactly = 0) { mockKnownLocationsDbManager.learnLocation(any<LatLng>(), any(), any()) }
+    }
+
+    /**
+     * TST-UI-153.1: Explicit calibration via calibrate(referenceAltitude) when raw altitude is ready.
+     * Updates correction, marks calibrated, and broadcasts ALTITUDE_CORRECTION_INTENT.
+     */
+    @Test
+    fun testCalibrate_whenRawAltitudeAvailable_setsCorrectionAndMarksCalibrated() {
+        val device = AltitudeFromPressureDevice(mockContext, mockSensorManager)
+        device.lastRawAltitude = 366.0
+        assertFalse("Initially not calibrated", device.isCalibrated)
+
+        val broadcastSlot = slot<Intent>()
+        every { mockContext.sendBroadcast(capture(broadcastSlot)) } returns Unit
+
+        // Act: calibrate to 436.0m
+        val result = device.calibrate(436.0)
+
+        // Assert
+        assertTrue("Calibration accepted immediately", result)
+        assertTrue("Device reports calibrated", device.isCalibrated)
+        assertEquals(70.0, device.altitudeCorrection, 0.001) // 436.0 - 366.0
+
+        verify(exactly = 1) { mockContext.sendBroadcast(any()) }
+        assertEquals(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_INTENT, broadcastSlot.captured.action)
+        assertEquals(70.0, broadcastSlot.captured.getDoubleExtra(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE, 0.0), 0.001)
+    }
+
+    /**
+     * TST-UI-153.2: Deferred calibration via calibrate(referenceAltitude) during sensor warmup.
+     * When lastRawAltitude is NaN, pending reference altitude is saved and applied on the first pressure reading.
+     */
+    @Test
+    fun testCalibrate_whenRawAltitudeUnavailable_defersCalibrationUntilFirstPressureMeasurement() {
+        val device = AltitudeFromPressureDevice(mockContext, mockSensorManager)
+        assertTrue(device.lastRawAltitude.isNaN())
+        assertFalse(device.isCalibrated)
+
+        // Act 1: calibrate requested before sensor has emitted any pressure reading
+        val result = device.calibrate(436.0)
+        assertFalse("Calibration returned false indicating queued for sensor warmup", result)
+        assertFalse("Device is NOT yet calibrated until raw reading arrives", device.isCalibrated)
+        assertEquals(0.0, device.altitudeCorrection, 0.001)
+
+        val broadcastSlot = slot<Intent>()
+        every { mockContext.sendBroadcast(capture(broadcastSlot)) } returns Unit
+
+        // Act 2: first pressure reading arrives (raw altitude = 366.0m)
+        val testPressure = 970.0f
+        every { SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, testPressure) } returns 366.0f
+        device.handlePressureMeasurement(testPressure)
+
+        // Assert: pending calibration applied
+        assertTrue("Device is now calibrated", device.isCalibrated)
+        assertEquals(70.0, device.altitudeCorrection, 0.001) // 436 - 366
+        assertEquals(436.0, (device.altitudeSensor.value as Number).toDouble(), 0.001)
+
+        verify(exactly = 1) { mockContext.sendBroadcast(any()) }
+        assertEquals(70.0, broadcastSlot.captured.getDoubleExtra(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE, 0.0), 0.001)
+    }
+
+    /**
+     * TST-UI-153.3: Calibration state resets cleanly on device shutDown().
+     */
+    @Test
+    fun testShutDown_resetsCalibrationState() {
+        val device = AltitudeFromPressureDevice(mockContext, mockSensorManager)
+        device.lastRawAltitude = 366.0
+        device.calibrate(436.0)
+        assertTrue(device.isCalibrated)
+
+        // Act
+        device.shutDown()
+
+        // Assert
+        assertFalse("isCalibrated must be reset on shutdown", device.isCalibrated)
     }
 }

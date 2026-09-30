@@ -122,6 +122,38 @@ object ElevationProfileZoomMath {
     }
 
     /**
+     * Determines an adaptive time tick interval in seconds based on visible time span in seconds.
+     * (REQ-UI-201 / ATT-1391)
+     */
+    fun calculateAdaptiveTimeStep(visibleTimeSec: Double): Long {
+        return when {
+            visibleTimeSec > 14400 -> 3600L // > 4h: 1h ticks
+            visibleTimeSec > 7200 -> 1800L  // > 2h: 30m ticks
+            visibleTimeSec > 3600 -> 900L   // > 1h: 15m ticks
+            visibleTimeSec > 1800 -> 300L   // > 30m: 5m ticks
+            visibleTimeSec > 600 -> 120L    // > 10m: 2m ticks
+            visibleTimeSec > 240 -> 60L     // > 4m: 1m ticks
+            else -> 30L                     // <= 4m: 30s ticks
+        }
+    }
+
+    /**
+     * Formats elapsed seconds into an adaptive readable time label (m:ss or h:mm:ss).
+     * (REQ-UI-201 / ATT-1391)
+     */
+    fun formatTimeTick(seconds: Long): String {
+        val s = seconds.coerceAtLeast(0L)
+        val hours = s / 3600
+        val minutes = (s % 3600) / 60
+        val secs = s % 60
+        return if (hours > 0) {
+            String.format(java.util.Locale.US, "%d:%02d:%02d", hours, minutes, secs)
+        } else {
+            String.format(java.util.Locale.US, "%d:%02d", minutes, secs)
+        }
+    }
+
+    /**
      * Checks whether an absolute distance point is within the visible window.
      */
     fun isDistanceVisible(dist: Double, startDist: Double, visibleDist: Double): Boolean {
