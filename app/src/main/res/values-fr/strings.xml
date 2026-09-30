@@ -1279,6 +1279,7 @@
     <string name="prefs_lieblingsort_feedback_title">Lieu favori et retour d\'\u00e9talonnage</string>
     <string name="prefs_lieblingsort_feedback_summary">Confirme le lieu de d\u00e9part reconnu et l\'\u00e9talonnage du barom\u00e8tre dans le cockpit</string>
     <string name="location_calibrated_format">%1$s (%2$s étalonné)</string>
+    <string name="location_detected_format">%1$s détecté</string>
     <string name="workout_start_location">Départ : %s</string>
     <string name="workout_destination_location">Arrivée : %s</string>
     <string name="workout_start_and_destination">Départ et arrivée : %s</string>

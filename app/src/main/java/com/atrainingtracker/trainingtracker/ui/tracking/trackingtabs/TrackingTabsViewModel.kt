@@ -112,8 +112,9 @@ class TrackingTabsViewModel(
     } else {
         kotlinx.coroutines.flow.combine(
             banalServiceRepository.currentLocation,
-            knownLocationsRepo.locationsFlow
-        ) { location, knownLocations ->
+            knownLocationsRepo.locationsFlow,
+            banalServiceRepository.isAltimeterCalibrated
+        ) { location, knownLocations, isCalibrated ->
             if (location == null) {
                 null
             } else {
@@ -133,11 +134,14 @@ class TrackingTabsViewModel(
                     }
                 }
                 closestItem?.let {
+                    // Trigger altimeter calibration with reference altitude (REQ-UI-199)
+                    banalServiceRepository.calibrateAltimeter(it.altitude)
+
                     LocationCalibrationStatus(
                         locationId = it.id,
                         locationName = it.name,
                         referenceAltitude = it.altitude,
-                        isCalibrated = true,
+                        isCalibrated = isCalibrated,
                         source = it.source
                     )
                 }

@@ -1262,6 +1262,7 @@
     <string name="prefs_lieblingsort_feedback_title">お気に入りの場所とキャリブレーションフィードバック</string>
     <string name="prefs_lieblingsort_feedback_summary">コックピットに認識された開始位置と気圧計の校正を確認表示します</string>
     <string name="location_calibrated_format">%1$s (%2$s 校正済み)</string>
+    <string name="location_detected_format">%1$s を検出</string>
     <string name="workout_start_location">スタート: %s</string>
     <string name="workout_destination_location">ゴール: %s</string>
     <string name="workout_start_and_destination">スタート＆ゴール: %s</string>

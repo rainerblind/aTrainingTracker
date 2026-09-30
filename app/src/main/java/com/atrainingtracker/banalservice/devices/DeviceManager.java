@@ -623,6 +623,17 @@ public class DeviceManager {
         return result;
     }
 
+    public boolean calibrateAltimeter(double referenceAltitude) {
+        if (mAltitudeFromPressureDevice != null) {
+            return mAltitudeFromPressureDevice.calibrate(referenceAltitude);
+        }
+        return false;
+    }
+
+    public boolean isAltimeterCalibrated() {
+        return mAltitudeFromPressureDevice != null && mAltitudeFromPressureDevice.isCalibrated();
+    }
+
     public List<Long> getIdsOfNewlyFoundDevices() {
         if (DEBUG) Log.i(TAG, "getIdsOfNewlyFoundDevices: " + mNewlyFoundDevices.size() + " devices found");
         return mNewlyFoundDevices;
