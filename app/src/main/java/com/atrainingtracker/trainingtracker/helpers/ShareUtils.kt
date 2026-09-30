@@ -28,6 +28,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.graphics.Matrix
 import androidx.core.content.FileProvider
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
@@ -107,13 +108,13 @@ suspend fun combineAndShare(
 }
 
 /**
- * Composes a detailed workout snapshot consisting of a Header, Map, and Elevation profile.
+ * Composes a detailed workout snapshot consisting of a Header, Map, Elevation profile, and optional Analytics.
  *
  * Implementation Logic:
  * 1. **Thread Safety**: Offloads heavy bitmap composition to [Dispatchers.Default] to
  *    prevent UI freezing.
  * 2. **Dynamic Assembly**: Calculates the total height based on which UI components
- *    (Header/Elevation) are currently visible.
+ *    (Header/Elevation/Analytics) are currently visible.
  * 3. **Branding**: Automatically appends the official application footer and logo.
  * 4. **Persistence**: Saves the final image to a secure cache directory and triggers
  *    the system sharing intent via a [FileProvider].
@@ -123,16 +124,30 @@ suspend fun combineWorkoutAndShare(
     header: Bitmap?,
     map: Bitmap,
     elevation: Bitmap?,
+    analytics: Bitmap? = null,
     isDark: Boolean = ShareThemeResolver.isNightMode(context)
 ) = withContext(Dispatchers.Default) {
     val colors = ShareThemeResolver.resolveColors(isDark)
     val sHeader = header?.let { ensureSoftwareBitmap(it) }
     val sMap = ensureSoftwareBitmap(map)
     val sElevation = elevation?.let { ensureSoftwareBitmap(it) }
+    val sAnalytics = analytics?.let { ensureSoftwareBitmap(it) }
 
-    val footerHeight = 125
+    val footerHeight = WorkoutSnapshotLayoutCalculator.DEFAULT_FOOTER_HEIGHT
     val totalWidth = sMap.width // Use map width as the base
-    val totalHeight = (sHeader?.height ?: 0) + sMap.height + (sElevation?.height ?: 0) + footerHeight
+
+    val analyticsScale = if (sAnalytics != null && sAnalytics.width > 0) {
+        WorkoutSnapshotLayoutCalculator.calculateScaleFactor(totalWidth, sAnalytics.width)
+    } else 1.0f
+    val scaledAnalyticsHeight = if (sAnalytics != null) (sAnalytics.height * analyticsScale).toInt() else 0
+
+    val totalHeight = WorkoutSnapshotLayoutCalculator.calculateTotalHeight(
+        headerHeight = sHeader?.height ?: 0,
+        mapHeight = sMap.height,
+        elevationHeight = sElevation?.height ?: 0,
+        analyticsHeight = scaledAnalyticsHeight,
+        footerHeight = footerHeight
+    )
 
     val combined = createBitmap(totalWidth, totalHeight)
     val canvas = Canvas(combined)
@@ -156,7 +171,21 @@ suspend fun combineWorkoutAndShare(
         currentY += it.height
     }
 
-    // 4. Branding
+    // 4. Analytics (REQ-UI-205 / ATT-1393)
+    sAnalytics?.let {
+        if (analyticsScale != 1.0f) {
+            val matrix = Matrix().apply {
+                postScale(analyticsScale, analyticsScale)
+                postTranslate(0f, currentY)
+            }
+            canvas.drawBitmap(it, matrix, null)
+        } else {
+            canvas.drawBitmap(it, 0f, currentY, null)
+        }
+        currentY += scaledAnalyticsHeight
+    }
+
+    // 5. Branding
     drawFooter(context, canvas, totalWidth, currentY, footerHeight, colors)
 
     saveAndShare(context, combined, "workout_summary.png")
