@@ -168,4 +168,59 @@ class VerticalSpeedAndSlopeDeviceTest {
         val vam = VerticalSpeedAndSlopeDevice.calculateVam(history, windowSize, head, 6.0, 0.5)
         assertEquals(900, vam)
     }
+
+    @Test
+    fun testCalculateVam_degradedGpsAccuracy_suppressesVamToZero() {
+        val history = DoubleArray(windowSize)
+        val rateMps = 0.5 // 1800 m/h climb ramp
+        for (i in 0 until windowSize) {
+            history[i] = 100.0 + (i * rateMps)
+        }
+
+        // Horizontal speed is 2.0 m/s (moving), but GPS accuracy is degraded (28.0m > 20.0m)
+        val vam = VerticalSpeedAndSlopeDevice.calculateVam(history, windowSize, 0, 2.0, 0.5, 28.0)
+        assertEquals("Degraded GPS accuracy (> 20.0m) must suppress VAM to 0", 0, vam)
+    }
+
+    @Test
+    fun testCalculateVam_lowSpeedIndoorWander_suppressedByElevatedDeadband() {
+        val history = DoubleArray(windowSize)
+        // Simulated multipath wander: 110 m/h altitude drift (< 150 m/h deadband)
+        val driftMps = 110.0 / 3600.0
+        for (i in 0 until windowSize) {
+            history[i] = 100.0 + (i * driftMps)
+        }
+
+        // Phantom horizontal speed from wander is 0.8 m/s (0.5 <= speed < 1.2 m/s), accuracy is 12.0m (<= 20m)
+        val vam = VerticalSpeedAndSlopeDevice.calculateVam(history, windowSize, 0, 0.8, 0.5, 12.0)
+        assertEquals("Low-speed indoor GPS wander with raw VAM < 150 m/h must be clamped to 0", 0, vam)
+    }
+
+    @Test
+    fun testCalculateVam_lowSpeedGenuineClimb_preserved() {
+        val history = DoubleArray(windowSize)
+        // Genuine steep climb or elevator: 600 m/h (> 150 m/h)
+        val climbMps = 600.0 / 3600.0
+        for (i in 0 until windowSize) {
+            history[i] = 100.0 + (i * climbMps)
+        }
+
+        // Low speed 0.8 m/s (e.g. steep mountain hiking or walking up stairs), accuracy 8.0m
+        val vam = VerticalSpeedAndSlopeDevice.calculateVam(history, windowSize, 0, 0.8, 0.5, 8.0)
+        assertEquals("Genuine vertical rate >= 150 m/h at low speed must be preserved", 600, vam)
+    }
+
+    @Test
+    fun testCalculateVam_backwardCompatibleFiveParamOverload_worksIdentically() {
+        val history = DoubleArray(windowSize)
+        val targetVam = 800.0
+        val mps = targetVam / 3600.0
+        for (i in 0 until windowSize) {
+            history[i] = 250.0 + (i * mps)
+        }
+
+        // Calling 5-param overload delegates to accuracy = 0.0m
+        val vam = VerticalSpeedAndSlopeDevice.calculateVam(history, windowSize, 0, 5.0, 0.5)
+        assertEquals(800, vam)
+    }
 }
