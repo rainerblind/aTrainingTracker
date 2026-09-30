@@ -85,7 +85,7 @@ fun MapDetailLayout(
             if (showMap) Modifier.fillMaxSize() else Modifier.wrapContentHeight()
         )
     ) {
-        // DRAG HANDLE (For sheets)
+        // DRAG HANDLE (For sheets - REQ-UI-148, REQ-UI-189, REQ-UI-196, ATT-1644)
         if (!useStatusBarsPadding) {
             MinimumDragHandle()
         }
