@@ -80,11 +80,18 @@ fun LocationCalibrationBadge(
                 "$meters m"
             }
 
-            val text = stringResource(
-                R.string.location_calibrated_format,
-                status.locationName,
-                formattedAltitude
-            )
+            val text = if (status.isCalibrated) {
+                stringResource(
+                    R.string.location_calibrated_format,
+                    status.locationName,
+                    formattedAltitude
+                )
+            } else {
+                stringResource(
+                    R.string.location_detected_format,
+                    status.locationName
+                )
+            }
 
             Row(
                 modifier = Modifier

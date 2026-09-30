@@ -603,6 +603,14 @@ public class BANALService
             return getSensorData(sensorType);
         }
 
+        public boolean calibrateAltimeter(double referenceAltitude) {
+            return cDeviceManager != null && cDeviceManager.calibrateAltimeter(referenceAltitude);
+        }
+
+        public boolean isAltimeterCalibrated() {
+            return cDeviceManager != null && cDeviceManager.isAltimeterCalibrated();
+        }
+
         public long getSourceDeviceId(SensorType sensorType) {
             MySensor sensor = cSensorManager.getSensor(sensorType);
             if (sensor instanceof ProxySensor) {

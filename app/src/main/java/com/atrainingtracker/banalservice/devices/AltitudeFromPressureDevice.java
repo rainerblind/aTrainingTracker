@@ -72,7 +72,9 @@ public class AltitudeFromPressureDevice extends MyDevice
     private final String TAG = "AltitudeFromPressureDev";
     private double mAltitudeCorrection = 0;
     private double mLastRawAltitude = Double.NaN;
+    private double mPendingReferenceAltitude = Double.NaN;
     private boolean mPressureSensorInitialized = false;
+    private boolean mIsCalibrated = false;
     private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
     private final BroadcastReceiver mGPSProviderEnabledReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
@@ -116,6 +118,8 @@ public class AltitudeFromPressureDevice extends MyDevice
 
         ContextCompat.registerReceiver(mContext, mGPSProviderEnabledReceiver, mGPSProviderEnabledFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         mContext.unregisterReceiver(mGPSProviderEnabledReceiver);
+        mPendingReferenceAltitude = Double.NaN;
+        mIsCalibrated = false;
     }
 
 
@@ -217,6 +221,7 @@ public class AltitudeFromPressureDevice extends MyDevice
         }
 
         mAltitudeCorrection = correctAltitude - currentAltitude;
+        mIsCalibrated = true;
 
         if (mAltitudeCorrection != 0.0) {
             // 	also send broadcast to inform the others (like a tracker) of this change such that they can update all previous samples accordingly!
@@ -225,6 +230,36 @@ public class AltitudeFromPressureDevice extends MyDevice
                     .putExtra(ALTITUDE_CORRECTION_VALUE, mAltitudeCorrection);
             mContext.sendBroadcast(intent);
         }
+    }
+
+    /**
+     * Calibrate the barometric altimeter to a ground-truth reference elevation (REQ-UI-199).
+     * If the raw barometric pressure reading is ready, computes the correction offset immediately,
+     * updates the sensor value, sets the calibrated state, and broadcasts ALTITUDE_CORRECTION_INTENT.
+     * If the sensor is still in warmup (mLastRawAltitude is NaN), stores the target elevation as pending
+     * and automatically applies it upon receiving the first pressure event.
+     *
+     * @param referenceAltitude Target ground-truth elevation in meters.
+     * @return true if calibration was applied immediately, false if queued for sensor warmup.
+     */
+    public synchronized boolean calibrate(double referenceAltitude) {
+        if (!Double.isNaN(mLastRawAltitude)) {
+            setAltitudeCorrection(referenceAltitude);
+            mPressureSensorInitialized = true;
+            mIsCalibrated = true;
+            mPendingReferenceAltitude = Double.NaN;
+            if (mAltitudeSensor != null) {
+                mAltitudeSensor.newValue(mLastRawAltitude + mAltitudeCorrection);
+            }
+            return true;
+        } else {
+            mPendingReferenceAltitude = referenceAltitude;
+            return false;
+        }
+    }
+
+    public synchronized boolean isCalibrated() {
+        return mIsCalibrated;
     }
 
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
@@ -282,7 +317,9 @@ public class AltitudeFromPressureDevice extends MyDevice
     @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
     void handlePressureMeasurement(float pressureHpa) {
         mLastRawAltitude = SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, pressureHpa);
-        if (!mPressureSensorInitialized) {
+        if (!Double.isNaN(mPendingReferenceAltitude)) {
+            calibrate(mPendingReferenceAltitude);
+        } else if (!mPressureSensorInitialized) {
             initPressureSensor();
         }
         mAltitudeSensor.newValue(mLastRawAltitude + mAltitudeCorrection);
