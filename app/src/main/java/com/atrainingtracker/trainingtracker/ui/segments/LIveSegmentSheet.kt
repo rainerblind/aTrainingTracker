@@ -41,6 +41,7 @@ fun LiveSegmentSheet(
         activeScrubPath = liveSegment.staticData.path,
         useStatusBarsPadding = false,
         showMap = false,
+        showZoomControls = false,
         header = {
             Column(
                 modifier = Modifier

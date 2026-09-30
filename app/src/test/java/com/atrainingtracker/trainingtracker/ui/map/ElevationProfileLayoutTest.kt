@@ -96,10 +96,14 @@ class ElevationProfileLayoutTest {
         assertTrue("MapDetailLayout.kt must exist", mapDetailLayoutFile.exists())
         val content = mapDetailLayoutFile.readText()
 
-        // Verify MapDetailLayout passes showZoomControls = true
+        // Verify MapDetailLayout defines default showZoomControls = true and forwards it
         assertTrue(
-            "MapDetailLayout must explicitly pass showZoomControls = true to ElevationProfile",
-            content.contains("showZoomControls = true")
+            "MapDetailLayout must declare showZoomControls: Boolean = true",
+            content.contains("showZoomControls: Boolean = true")
+        )
+        assertTrue(
+            "MapDetailLayout must forward showZoomControls to ElevationProfile",
+            content.contains("showZoomControls = showZoomControls")
         )
     }
 

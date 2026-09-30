@@ -58,4 +58,19 @@ class LiveSegmentSheetLayoutTest {
         assertNotNull("MapDetailLayout composable function must exist and be public", layoutMethod)
         assertTrue(Modifier.isPublic(layoutMethod!!.modifiers))
     }
+
+    @Test
+    fun testLiveSegmentSheet_suppressesZoomControls() {
+        var dir = java.io.File(System.getProperty("user.dir") ?: ".")
+        while (!java.io.File(dir, "app").exists() && dir.parentFile != null) {
+            dir = dir.parentFile!!
+        }
+        val file = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/LIveSegmentSheet.kt")
+        assertTrue("LIveSegmentSheet.kt must exist", file.exists())
+        val content = file.readText()
+        assertTrue(
+            "LiveSegmentSheet must pass showZoomControls = false to MapDetailLayout (REQ-UI-197, ATT-1736)",
+            content.contains("showZoomControls = false")
+        )
+    }
 }
