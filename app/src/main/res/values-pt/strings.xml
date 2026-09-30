@@ -1335,4 +1335,10 @@
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Zonas de potência</string>
     <string name="aftermath_laps_splits_title">Voltas e tempos parciais</string>
+    <!-- Continuous Metric Graphs & Headings (ATT-1740 / REQ-UI-206) -->
+    <string name="graph_heading_elevation">Perfil de altitude</string>
+    <string name="graph_heading_heart_rate">Frequência cardíaca</string>
+    <string name="graph_heading_speed">Velocidade</string>
+    <string name="graph_heading_pace">Ritmo</string>
+    <string name="graph_heading_power">Potência</string>
 </resources>
