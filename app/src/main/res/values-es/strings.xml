@@ -1336,4 +1336,5 @@
 
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Zonas de potencia</string>
+    <string name="aftermath_laps_splits_title">Vueltas y divisiones</string>
 </resources>

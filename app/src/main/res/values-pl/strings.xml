@@ -1328,4 +1328,5 @@
 
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Strefy mocy</string>
+    <string name="aftermath_laps_splits_title">Okrążenia i międzyczasy</string>
 </resources>
