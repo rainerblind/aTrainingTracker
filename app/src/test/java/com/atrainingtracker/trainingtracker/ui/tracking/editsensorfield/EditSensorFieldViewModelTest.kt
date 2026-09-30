@@ -22,6 +22,7 @@ import android.app.Application
 import android.content.Context
 import android.util.Log
 import com.atrainingtracker.banalservice.ActivityType
+import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
@@ -39,6 +40,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -138,5 +140,103 @@ class EditSensorFieldViewModelTest {
         assertEquals("XXXHUGE", ViewSize.XXXHUGE.name)
         assertEquals(ViewSize.XXHUGE, ViewSize.valueOf("XXHUGE"))
         assertEquals(ViewSize.XXXHUGE, ViewSize.valueOf("XXXHUGE"))
+    }
+
+    @Test
+    fun testOnSensorTypeChanged_power_defaultsToThreeSecondsMovingAverage() = runTest {
+        val viewModel = createViewModel()
+        viewModel.onSensorTypeChanged(SensorType.POWER)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(SensorType.POWER, state.selectedSensorType)
+        assertEquals(FilterType.MOVING_AVERAGE_TIME, state.selectedFilterType)
+        assertEquals(3.0, state.filterConstant, 0.001)
+        assertEquals("sec", state.movingAverageUnit)
+        assertFalse(state.isCustomFilterExpanded)
+        assertEquals(FilterPreset.SMOOTH_3S, state.activePreset)
+    }
+
+    @Test
+    fun testOnSensorTypeChanged_pace_defaultsToFiveSecondsMovingAverage() = runTest {
+        val viewModel = createViewModel()
+        viewModel.onSensorTypeChanged(SensorType.PACE_spm)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(SensorType.PACE_spm, state.selectedSensorType)
+        assertEquals(FilterType.MOVING_AVERAGE_TIME, state.selectedFilterType)
+        assertEquals(5.0, state.filterConstant, 0.001)
+        assertEquals("sec", state.movingAverageUnit)
+        assertTrue(state.isCustomFilterExpanded)
+        assertEquals(FilterPreset.CUSTOM, state.activePreset)
+    }
+
+    @Test
+    fun testOnSensorTypeChanged_verticalSpeed_defaultsToFifteenSecondsMovingAverage() = runTest {
+        val viewModel = createViewModel()
+        viewModel.onSensorTypeChanged(SensorType.VERTICAL_SPEED)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(SensorType.VERTICAL_SPEED, state.selectedSensorType)
+        assertEquals(FilterType.MOVING_AVERAGE_TIME, state.selectedFilterType)
+        assertEquals(15.0, state.filterConstant, 0.001)
+        assertEquals("sec", state.movingAverageUnit)
+        assertTrue(state.isCustomFilterExpanded)
+        assertEquals(FilterPreset.CUSTOM, state.activePreset)
+    }
+
+    @Test
+    fun testOnSensorTypeChanged_slope_defaultsToFiveSecondsMovingAverage() = runTest {
+        val viewModel = createViewModel()
+        viewModel.onSensorTypeChanged(SensorType.SLOPE)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(SensorType.SLOPE, state.selectedSensorType)
+        assertEquals(FilterType.MOVING_AVERAGE_TIME, state.selectedFilterType)
+        assertEquals(5.0, state.filterConstant, 0.001)
+        assertEquals("sec", state.movingAverageUnit)
+        assertTrue(state.isCustomFilterExpanded)
+        assertEquals(FilterPreset.CUSTOM, state.activePreset)
+    }
+
+    @Test
+    fun testOnSensorTypeChanged_accumulator_defaultsToInstantaneous() = runTest {
+        val viewModel = createViewModel()
+        viewModel.onSensorTypeChanged(SensorType.DISTANCE_m)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(SensorType.DISTANCE_m, state.selectedSensorType)
+        assertEquals(FilterType.INSTANTANEOUS, state.selectedFilterType)
+        assertEquals(1.0, state.filterConstant, 0.001)
+        assertEquals("sec", state.movingAverageUnit)
+        assertFalse(state.isCustomFilterExpanded)
+        assertEquals(FilterPreset.DIRECT, state.activePreset)
+    }
+
+    @Test
+    fun testOnFilterConfigDismissed_restoresDomainDefaultWhenSensorTypeChanged() = runTest {
+        val viewModel = createViewModel()
+        // Switch to PACE
+        viewModel.onSensorTypeChanged(SensorType.PACE_spm)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // User temporarily alters filter in dialog
+        viewModel.onPresetSelected(FilterPreset.SMOOTH_30S)
+        assertEquals(FilterType.MOVING_AVERAGE_TIME, viewModel.uiState.value.selectedFilterType)
+        assertEquals(30.0, viewModel.uiState.value.filterConstant, 0.001)
+
+        // Dismiss dialog without saving
+        viewModel.onFilterConfigDismissed()
+
+        val state = viewModel.uiState.value
+        assertEquals(SensorType.PACE_spm, state.selectedSensorType)
+        assertEquals(FilterType.MOVING_AVERAGE_TIME, state.selectedFilterType)
+        assertEquals(5.0, state.filterConstant, 0.001)
+        assertEquals("sec", state.movingAverageUnit)
+        assertTrue(state.isCustomFilterExpanded)
     }
 }

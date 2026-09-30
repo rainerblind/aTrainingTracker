@@ -33,8 +33,10 @@ import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
+import com.atrainingtracker.banalservice.filters.DefaultFilterConfig;
 import com.atrainingtracker.banalservice.filters.FilterData;
 import com.atrainingtracker.banalservice.filters.FilterType;
+import com.atrainingtracker.banalservice.filters.SensorFilterDefaults;
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize;
@@ -573,13 +575,9 @@ public class TrackingViewsDatabaseManager {
                 values.put(COL_NR, rowData.col);
                 values.put(SENSOR_TYPE, rowData.sensorType.name());
                 values.put(TEXT_SIZE, 0);                              // no longer needed in version 8
-                if (rowData.sensorType == SensorType.POWER) {
-                    values.put(FILTER_TYPE, FilterType.MOVING_AVERAGE_TIME.name());
-                    values.put(FILTER_CONSTANT, 3);
-                } else {
-                    values.put(FILTER_TYPE, FilterType.INSTANTANEOUS.name());
-                    values.put(FILTER_CONSTANT, 1);
-                }
+                DefaultFilterConfig filterConfig = SensorFilterDefaults.getDefaultFilterConfig(rowData.sensorType);
+                values.put(FILTER_TYPE, filterConfig.getFilterType().name());
+                values.put(FILTER_CONSTANT, filterConfig.getFilterConstant());
                 db.insert(ROWS_TABLE, null, values);
             }
 

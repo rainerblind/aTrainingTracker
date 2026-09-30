@@ -29,6 +29,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.filters.FilterData
 import com.atrainingtracker.banalservice.filters.FilterType
+import com.atrainingtracker.banalservice.filters.SensorFilterDefaults
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldConfig
@@ -139,8 +140,9 @@ class EditSensorFieldViewModel(
         val context = getApplication<Application>().applicationContext
         // Use a default sensor type (e.g., first available)
         val defaultSensor = SensorType.SPEED_mps
-        val defaultFilterType = if (defaultSensor == SensorType.POWER) FilterType.MOVING_AVERAGE_TIME else FilterType.INSTANTANEOUS
-        val defaultConstant = if (defaultSensor == SensorType.POWER) 3.0 else 1.0
+        val defaultFilterConfig = SensorFilterDefaults.getDefaultFilterConfig(defaultSensor)
+        val defaultFilterType = defaultFilterConfig.filterType
+        val defaultConstant = defaultFilterConfig.filterConstant
 
         // Create a MOCK initialConfig for the "Add" scenario.
         // This ensures that functions like onFilterConfigDismissed don't crash.
@@ -216,8 +218,10 @@ class EditSensorFieldViewModel(
     fun onSensorTypeChanged(newSensorType: SensorType) {
         viewModelScope.launch {
             val context = getApplication<Application>().applicationContext
-            val defaultFilterType = if (newSensorType == SensorType.POWER) FilterType.MOVING_AVERAGE_TIME else FilterType.INSTANTANEOUS
-            val defaultConstant = if (newSensorType == SensorType.POWER) 3.0 else 1.0
+            val defaultFilterConfig = SensorFilterDefaults.getDefaultFilterConfig(newSensorType)
+            val defaultFilterType = defaultFilterConfig.filterType
+            val defaultConstant = defaultFilterConfig.filterConstant
+            val isCustom = resolveFilterPreset(defaultFilterType, defaultConstant, defaultFilterConfig.unit) == FilterPreset.CUSTOM
 
             _uiState.update {
                 it.copy(
@@ -228,12 +232,12 @@ class EditSensorFieldViewModel(
                     selectedDeviceId = -1,
                     selectedDeviceName = context.getString(R.string.bestSensor),
                     availableDevices = getFullDeviceList(newSensorType),
-                    // set filter with smart defaults (3s for power, 1s direct for others)
+                    // set filter with smart defaults (e.g., 3s power, 5s pace/slope, 15s VAM, 1s direct for others)
                     filterSummary = defaultFilterType.getSummary(context, defaultConstant),
                     selectedFilterType = defaultFilterType,
                     filterConstant = defaultConstant,
-                    movingAverageUnit = "sec",
-                    isCustomFilterExpanded = false
+                    movingAverageUnit = defaultFilterConfig.unit,
+                    isCustomFilterExpanded = isCustom
                 )
             }
         }
@@ -419,15 +423,17 @@ class EditSensorFieldViewModel(
             }
             else {
                 // otherwise, set it to the default for this sensor type
-                val defaultFilterType = if (it.selectedSensorType == SensorType.POWER) FilterType.MOVING_AVERAGE_TIME else FilterType.INSTANTANEOUS
-                val defaultConstant = if (it.selectedSensorType == SensorType.POWER) 3.0 else 1.0
+                val defaultFilterConfig = SensorFilterDefaults.getDefaultFilterConfig(it.selectedSensorType)
+                val defaultFilterType = defaultFilterConfig.filterType
+                val defaultConstant = defaultFilterConfig.filterConstant
+                val isCustom = resolveFilterPreset(defaultFilterType, defaultConstant, defaultFilterConfig.unit) == FilterPreset.CUSTOM
                 it.copy(
                     showFilterConfigDialog = false,
                     filterSummary = defaultFilterType.getSummary(context, defaultConstant),
                     selectedFilterType = defaultFilterType,
                     filterConstant = defaultConstant,
-                    movingAverageUnit = "sec",
-                    isCustomFilterExpanded = false
+                    movingAverageUnit = defaultFilterConfig.unit,
+                    isCustomFilterExpanded = isCustom
                 )
             }
         }
