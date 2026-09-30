@@ -69,3 +69,12 @@ These rules are strictly binding on all AI assistants and agent instances operat
 * **Rule**: The Sprint Retrospective ceremony and all associated updates to governance rules, skills, and living documentation MUST be committed directly to the sprint integration branch `sprint/<SPRINT_NAME>` BEFORE merging into `develop` (`"During the last sprint, we learned that we should do the retro before the merge. During the retro, we probably change some files. :)"`).
 * Merging `sprint/<SPRINT_NAME>` into `develop` occurs strictly after the retrospective document is authored and all process improvements are committed.
 
+## 12. Unattended Autonomous In-Sprint Escalation Protocol
+* **Rule**: All tickets of an active sprint must proceed autonomously without stopping the console or waiting for user interaction (`"All tickets of a sprint must be finished without user interaction via the console. When there are questions or decisions that must be answered by the human, assign the corresponding sub-ticket to the Human and raise the question as comment. The human will answer in a comment and assign the ticket to the AI coordinator. In the meantime, please continue with another main ticket."`).
+* When a decision or requirement ambiguity blocks a specific sub-task:
+  1. Assign the blocked sub-task to the Human user (`rainer`).
+  2. Post a precise Jira comment formulating the question or decision needed.
+  3. Immediately switch context to the next unblocked ticket in the sprint.
+  4. Do not block the terminal or wait for interactive console input.
+
+
