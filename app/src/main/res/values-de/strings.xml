@@ -1421,4 +1421,5 @@
 
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Leistungszonen</string>
+    <string name="aftermath_laps_splits_title">Runden &amp; Zwischenzeiten</string>
 </resources>
