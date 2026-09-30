@@ -61,10 +61,16 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
          ```bash
          python3 tools/jira_util.py move <KEY> "analysis"
          ```
-4. **Handoff to Autonomous Execution**:
+4. **Handoff to Autonomous Execution (Phase 2)**:
    Once all sprint tickets are in status `Analysis`, Phase 1 concludes. The implementation agents (`agent1`, `agent2`) take over Phase 2:
+   * **Continuous Unattended Execution**: The sprint pipeline runs continuously and autonomously across all tickets without stopping the console or waiting for interactive user turns.
+   * **In-Sprint Human Escalation Protocol**: If an agent encounters a blocker, design decision, or requirement ambiguity that strictly requires human guidance, the agent MUST NOT halt or prompt the console. Instead:
+     1. Post a clarifying question/decision comment on the subtask: `python3 tools/jira_util.py comment <SUBTASK_KEY> "Question for Human: ..."`
+     2. Reassign the subtask to Human: `python3 tools/jira_util.py assign <SUBTASK_KEY> human`
+     3. Immediately switch context to the next available sprint ticket and continue execution.
+     4. When the human answers in a comment and reassigns to coordinator, the coordinator reassigns to `agent1` to resume the ticket.
    * Each ticket branches from the active `sprint/<SPRINT_NAME>` branch.
-   * Upon completing Stage 5 verification, the ticket is merged back into `sprint/<SPRINT_NAME>` immediately.
+   * Upon completing Stage 5 verification, the ticket is merged back into `sprint/<SPRINT_NAME>` immediately via `--no-ff`.
    * *In-Sprint Anomaly Logging*: Any process hiccups, tool issues, or user corrections during execution are immediately logged as comments in the sprint's `Review & Retro` ticket.
 
 ---
