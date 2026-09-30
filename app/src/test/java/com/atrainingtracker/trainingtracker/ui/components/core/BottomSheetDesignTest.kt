@@ -42,8 +42,8 @@ class BottomSheetDesignTest {
         assertEquals("SheetShadowElevation must be 8.dp", 8.dp, BottomSheetDesign.SheetShadowElevation)
         assertEquals("SheetTonalElevation must be 2.dp", 2.dp, BottomSheetDesign.SheetTonalElevation)
         assertEquals("BorderWidth must be 1.dp", 1.dp, BottomSheetDesign.BorderWidth)
-        assertEquals("DragHandleWidth must be 36.dp", 36.dp, BottomSheetDesign.DragHandleWidth)
-        assertEquals("DragHandleHeight must be 4.dp", 4.dp, BottomSheetDesign.DragHandleHeight)
+        assertEquals("DragHandleWidth must be 32.dp", 32.dp, BottomSheetDesign.DragHandleWidth)
+        assertEquals("DragHandleHeight must be 3.dp", 3.dp, BottomSheetDesign.DragHandleHeight)
     }
 
     @Test

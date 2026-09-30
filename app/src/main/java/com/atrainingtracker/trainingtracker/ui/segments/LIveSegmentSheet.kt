@@ -47,11 +47,11 @@ fun LiveSegmentSheet(
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.surface)
             ) {
-                // --- Header with live data ---
+                // --- Header with live data (REQ-UI-196: harmonized padding with drag handle) ---
                 SegmentHeader(
                     summary = liveSegment.staticData.summary,
                     liveSegmentStatus = liveSegment.liveData.segmentStatus,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 4.dp)
                 )
 
                 HorizontalDivider(
