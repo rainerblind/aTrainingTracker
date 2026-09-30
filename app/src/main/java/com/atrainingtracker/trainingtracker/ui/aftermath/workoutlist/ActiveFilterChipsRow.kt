@@ -98,9 +98,9 @@ fun ActiveFilterChipsRow(
         if ((criteria.startLocationLat != null && criteria.startLocationLng != null) || !criteria.startLocationName.isNullOrBlank()) {
             item("startLocation") {
                 val label = if (!criteria.startLocationName.isNullOrBlank()) {
-                    "📍 ${criteria.startLocationName}"
+                    criteria.startLocationName
                 } else {
-                    "📍 ${stringResource(R.string.filter_start_location)}"
+                    stringResource(R.string.filter_start_location)
                 }
                 RemovableFilterChip(
                     label = label,
@@ -113,9 +113,9 @@ fun ActiveFilterChipsRow(
         if (criteria.clusterId != null || !criteria.clusterName.isNullOrBlank()) {
             item("cluster") {
                 val label = if (!criteria.clusterName.isNullOrBlank()) {
-                    "🗺️ ${criteria.clusterName}"
+                    criteria.clusterName
                 } else {
-                    "🗺️ ${stringResource(R.string.my_locations)}"
+                    stringResource(R.string.my_locations)
                 }
                 RemovableFilterChip(
                     label = label,
