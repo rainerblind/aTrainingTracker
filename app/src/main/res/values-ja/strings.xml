@@ -1300,6 +1300,11 @@
     <string name="tuning_altitude_window_desc">瞬間高度および垂直速度の移動平均時間枠。</string>
     <string name="tuning_slope_min_speed_title">勾配計算の最低速度</string>
     <string name="tuning_slope_min_speed_desc">リアルタイム勾配を計算するために必要な最低移動速度。</string>
+    <string name="tuning_cat_aftermath">アフターマス＆プロファイル分析</string>
+    <string name="tuning_profile_x_axis_title">高度プロファイルX軸</string>
+    <string name="tuning_profile_x_axis_desc">高度プロファイルグラフの横軸メトリクスを選択します。</string>
+    <string name="tuning_profile_x_axis_distance">距離</string>
+    <string name="tuning_profile_x_axis_time">時間</string>
     <string name="tuning_default_format">デフォルト: %1$s</string>
     <string name="reset_to_defaults">デフォルトに戻す</string>
     <string name="reset_to_defaults_success">チューニング設定が工場出荷時のデフォルトに戻りました。</string>

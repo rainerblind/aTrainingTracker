@@ -23,13 +23,24 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+
+/**
+ * Selectable horizontal X-axis domain for Aftermath elevation profile and scrubbing.
+ * (REQ-UI-201 / ATT-1391)
+ */
+enum class ProfileXAxisDomain {
+    DISTANCE,
+    TIME
+}
 
 /**
  * Encapsulates battle-tested factory defaults and safety clamping bounds for advanced tuning.
  */
 object TuningPreferencesDefaults {
+    val PROFILE_X_AXIS_DOMAIN = ProfileXAxisDomain.DISTANCE
     const val FULL_DIM_FACTOR = 0.25f
     const val MEDIUM_DIM_FACTOR = 0.50f
     const val SLOPE_FLAT_THRESHOLD = 2.0f
@@ -64,6 +75,7 @@ object TuningPreferencesDefaults {
  * Immutable snapshot of active tuning preferences.
  */
 data class TuningConfig(
+    val profileXAxisDomain: ProfileXAxisDomain = TuningPreferencesDefaults.PROFILE_X_AXIS_DOMAIN,
     val fullDimFactor: Float = TuningPreferencesDefaults.FULL_DIM_FACTOR,
     val mediumDimFactor: Float = TuningPreferencesDefaults.MEDIUM_DIM_FACTOR,
     val slopeFlatThreshold: Float = TuningPreferencesDefaults.SLOPE_FLAT_THRESHOLD,
@@ -82,6 +94,7 @@ data class TuningConfig(
 class TuningPreferencesDataStore(private val context: Context) {
 
     companion object {
+        val KEY_PROFILE_X_AXIS_DOMAIN: Preferences.Key<String> = stringPreferencesKey("tuning_profile_x_axis_domain")
         val KEY_FULL_DIM_FACTOR: Preferences.Key<Float> = floatPreferencesKey("tuning_battery_saver_full_dim")
         val KEY_MEDIUM_DIM_FACTOR: Preferences.Key<Float> = floatPreferencesKey("tuning_battery_saver_medium_dim")
         val KEY_SLOPE_FLAT: Preferences.Key<Float> = floatPreferencesKey("tuning_battery_saver_slope_flat")
@@ -93,6 +106,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_SLOPE_MIN_SPEED: Preferences.Key<Float> = floatPreferencesKey("tuning_slope_min_speed")
 
         private val ALL_KEYS = listOf(
+            KEY_PROFILE_X_AXIS_DOMAIN,
             KEY_FULL_DIM_FACTOR,
             KEY_MEDIUM_DIM_FACTOR,
             KEY_SLOPE_FLAT,
@@ -106,6 +120,12 @@ class TuningPreferencesDataStore(private val context: Context) {
     }
 
     val tuningConfigFlow: Flow<TuningConfig> = context.dataStore.data.map { prefs ->
+        val rawDomainStr = prefs[KEY_PROFILE_X_AXIS_DOMAIN]
+        val domain = try {
+            if (rawDomainStr != null) ProfileXAxisDomain.valueOf(rawDomainStr) else TuningPreferencesDefaults.PROFILE_X_AXIS_DOMAIN
+        } catch (e: Exception) {
+            TuningPreferencesDefaults.PROFILE_X_AXIS_DOMAIN
+        }
         val rawFullDim = prefs[KEY_FULL_DIM_FACTOR] ?: TuningPreferencesDefaults.FULL_DIM_FACTOR
         val rawMediumDim = prefs[KEY_MEDIUM_DIM_FACTOR] ?: TuningPreferencesDefaults.MEDIUM_DIM_FACTOR
         val clampedFullDim = rawFullDim.coerceIn(
@@ -159,6 +179,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         )
 
         TuningConfig(
+            profileXAxisDomain = domain,
             fullDimFactor = clampedFullDim,
             mediumDimFactor = clampedMediumDim,
             slopeFlatThreshold = clampedSlopeFlat,
@@ -210,6 +231,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         )
 
         context.dataStore.edit { prefs ->
+            prefs[KEY_PROFILE_X_AXIS_DOMAIN] = config.profileXAxisDomain.name
             prefs[KEY_FULL_DIM_FACTOR] = clampedFullDim
             prefs[KEY_MEDIUM_DIM_FACTOR] = clampedMediumDim
             prefs[KEY_SLOPE_FLAT] = clampedSlopeFlat

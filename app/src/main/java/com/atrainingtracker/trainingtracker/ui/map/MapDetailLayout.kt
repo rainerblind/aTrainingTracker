@@ -37,6 +37,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
@@ -72,6 +74,11 @@ fun MapDetailLayout(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    val tuningDataStore = remember { TuningPreferencesDataStore(context) }
+    val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(
+        initial = TuningConfig()
+    )
 
     val headerLayer = rememberGraphicsLayer()
     val elevationLayer = rememberGraphicsLayer()
@@ -199,6 +206,8 @@ fun MapDetailLayout(
                             maxAltitudeOverride = maxAltitudeOverride,
                             onDistanceSelected = { selectedDistance = it },
                             showZoomControls = true,
+                            xAxisDomain = tuningConfig.profileXAxisDomain,
+                            bSportType = bSportType,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }

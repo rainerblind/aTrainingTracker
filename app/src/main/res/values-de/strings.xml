@@ -1403,6 +1403,11 @@
     <string name="tuning_altitude_window_desc">Gleitendes Zeitfenster für Momentanhöhe und Vertikalgeschwindigkeit.</string>
     <string name="tuning_slope_min_speed_title">Mindestgeschwindigkeit für Steigung</string>
     <string name="tuning_slope_min_speed_desc">Erforderliche Mindestgeschwindigkeit zur Berechnung der Echtzeit-Steigung.</string>
+    <string name="tuning_cat_aftermath">Aftermath &amp; Profil-Analytik</string>
+    <string name="tuning_profile_x_axis_title">Höhenprofil X-Achse</string>
+    <string name="tuning_profile_x_axis_desc">Horizontale Achsenmetrik für Höhenprofildiagramme auswählen.</string>
+    <string name="tuning_profile_x_axis_distance">Distanz</string>
+    <string name="tuning_profile_x_axis_time">Zeit</string>
     <string name="tuning_default_format">Standard: %1$s</string>
     <string name="reset_to_defaults">Auf Werkseinstellungen zurücksetzen</string>
     <string name="reset_to_defaults_success">Abstimmungseinstellungen auf Werkseinstellungen zurückgesetzt.</string>

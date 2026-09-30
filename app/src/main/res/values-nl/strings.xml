@@ -1316,6 +1316,11 @@
     <string name="tuning_altitude_window_desc">Voortschrijdend gemiddelde tijdsvenster voor momentane hoogte en verticale snelheid.</string>
     <string name="tuning_slope_min_speed_title">Minimale snelheid voor helling</string>
     <string name="tuning_slope_min_speed_desc">Minimale snelheid vereist om realtime helling te berekenen.</string>
+    <string name="tuning_cat_aftermath">Aftermath &amp; profielanalyse</string>
+    <string name="tuning_profile_x_axis_title">Hoogteprofiel X-as</string>
+    <string name="tuning_profile_x_axis_desc">Selecteer de horizontale as-metriek voor hoogteprofielen.</string>
+    <string name="tuning_profile_x_axis_distance">Afstand</string>
+    <string name="tuning_profile_x_axis_time">Tijd</string>
     <string name="tuning_default_format">Standaard: %1$s</string>
     <string name="reset_to_defaults">Fabrieksinstellingen herstellen</string>
     <string name="reset_to_defaults_success">Afstemmingsinstellingen hersteld naar fabrieksinstellingen.</string>

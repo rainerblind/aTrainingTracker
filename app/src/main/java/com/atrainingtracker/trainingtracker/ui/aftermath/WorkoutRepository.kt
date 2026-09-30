@@ -304,16 +304,39 @@ class WorkoutRepository private constructor(private val application: Application
             val lonIdx = cursor.getColumnIndex(lonName)
             val altIdx = cursor.getColumnIndex(SensorType.ALTITUDE.name)
             val distIdx = cursor.getColumnIndex(SensorType.DISTANCE_m.name)
+            val timeActiveIdx = cursor.getColumnIndex(SensorType.TIME_ACTIVE.name)
+            val timeTotalIdx = cursor.getColumnIndex(SensorType.TIME_TOTAL.name)
+            val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
+            val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
+            val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
+            val slopeIdx = cursor.getColumnIndex(SensorType.SLOPE.name)
 
-            // 3. Replicate the Roughness stepSize logic
+            // 3. Replicate the Roughness stepSize logic and extract full-fidelity telemetry
             while (cursor.moveToNext()) {
 
                 if (latIdx != -1 && lonIdx != -1 && !cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
+                    val dist = if (distIdx != -1 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx) else 0.0
+                    val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else 0.0
+                    val timeSec = when {
+                        timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx) -> cursor.getLong(timeActiveIdx)
+                        timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx) -> cursor.getLong(timeTotalIdx)
+                        else -> 0L
+                    }
+                    val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getInt(hrIdx) else null
+                    val power = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getInt(powerIdx) else null
+                    val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
+                    val slope = if (slopeIdx != -1 && !cursor.isNull(slopeIdx)) cursor.getDouble(slopeIdx) else null
+
                     points.add(
                         PathPoint(
-                            cursor.getDouble(distIdx),
-                            LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx)),
-                            cursor.getDouble(altIdx)
+                            distance = dist,
+                            latLng = LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx)),
+                            altitude = alt,
+                            timeSec = timeSec,
+                            hr = hr,
+                            power = power,
+                            speedMps = speed,
+                            slope = slope
                         )
                     )
                 }
