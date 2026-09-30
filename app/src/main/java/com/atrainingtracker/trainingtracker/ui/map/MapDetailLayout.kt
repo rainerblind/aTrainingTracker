@@ -70,6 +70,7 @@ fun MapDetailLayout(
     useStatusBarsPadding: Boolean = true,
     showMap: Boolean = true,
     showElevationProfile: Boolean = true,
+    showZoomControls: Boolean = true,
     onMapClick: ((LatLng) -> Unit)? = null,
     analyticsContent: @Composable ColumnScope.() -> Unit = {}
 ) {
@@ -213,7 +214,7 @@ fun MapDetailLayout(
                             minAltitudeOverride = minAltitudeOverride,
                             maxAltitudeOverride = maxAltitudeOverride,
                             onDistanceSelected = { selectedDistance = it },
-                            showZoomControls = true,
+                            showZoomControls = showZoomControls,
                             xAxisDomain = tuningConfig.profileXAxisDomain,
                             bSportType = bSportType,
                             modifier = Modifier.fillMaxWidth()
