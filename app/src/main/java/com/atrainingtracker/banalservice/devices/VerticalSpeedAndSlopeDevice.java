@@ -65,7 +65,12 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
     private static final FilterData cAltitudeFilter = new FilterData(null, SensorType.ALTITUDE, FilterType.MOVING_AVERAGE_TIME, 21);
     private static final FilterData cAltitudeSuperFilter = new FilterData(null, SensorType.ALTITUDE, FilterType.MOVING_AVERAGE_TIME, 5*60);
     private static final FilterData cSpeedFilter = new FilterData(null, SensorType.SPEED_mps, FilterType.MOVING_AVERAGE_TIME, 21);
+    private static final FilterData cAccuracyFilter = new FilterData(null, SensorType.ACCURACY, FilterType.INSTANTANEOUS, 1);
     private static final double MIN_SPEED = 0.5;  // min speed to calculate slope
+
+    // GPS Accuracy and Low-Speed Wander Gating Thresholds (REQ-FIL-012, TST-FIL-004, ATT-1738)
+    public static final double VAM_MAX_GPS_ACCURACY_METERS = 20.0;
+    public static final double VAM_LOW_SPEED_DRIFT_THRESHOLD_MPS = 1.2;
 
     public VerticalSpeedAndSlopeDevice(Context context, MySensorManager mySensorManager) {
         super(context, mySensorManager, DeviceType.VERTICAL_SPEED_AND_SLOPE);
@@ -74,6 +79,7 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
         BANALService.createFilter(cAltitudeFilter);
         BANALService.createFilter(cAltitudeSuperFilter);
         BANALService.createFilter(cSpeedFilter);
+        BANALService.createFilter(cAccuracyFilter);
 
         registerSensors();
 
@@ -144,17 +150,31 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
     }
 
     /**
-     * Resolves the filtered, stabilized vertical speed in m/h with stationary suppression,
-     * noise deadband, and outlier boundary clamping (REQ-FIL-012, TST-FIL-004, ATT-1621).
+     * Backward-compatible overload resolving VAM with default acceptable accuracy (0.0m).
+     */
+    public static int calculateVam(double[] history, int count, int headIndex, double speedMps, double minSpeed) {
+        return calculateVam(history, count, headIndex, speedMps, minSpeed, 0.0);
+    }
+
+    /**
+     * Resolves the filtered, stabilized vertical speed in m/h with location accuracy gating,
+     * low-speed drift damping, stationary suppression, noise deadband, and outlier boundary clamping
+     * (REQ-FIL-012, TST-FIL-004, ATT-1621, ATT-1738).
      *
      * @param history Circular buffer of altitude samples.
      * @param count Number of valid samples in buffer.
      * @param headIndex Index of next insertion.
      * @param speedMps Current horizontal speed in m/s.
      * @param minSpeed Minimum horizontal speed threshold in m/s.
+     * @param accuracyMeters Current GPS horizontal accuracy in meters (NaN or <= 20.0m considered acceptable).
      * @return Stabilized vertical speed in m/h.
      */
-    public static int calculateVam(double[] history, int count, int headIndex, double speedMps, double minSpeed) {
+    public static int calculateVam(double[] history, int count, int headIndex, double speedMps, double minSpeed, double accuracyMeters) {
+        // Location Accuracy Gating: if GPS accuracy is degraded (> 20.0m), suppress VAM noise (REQ-FIL-012, ATT-1738)
+        if (!Double.isNaN(accuracyMeters) && accuracyMeters > VAM_MAX_GPS_ACCURACY_METERS) {
+            return 0;
+        }
+
         double slopeMps = calculateLinearRegressionSlope(history, count, headIndex);
         double rawVam = slopeMps * 3600.0;
 
@@ -167,8 +187,16 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
             } else {
                 verticalSpeed = rawVam;
             }
+        } else if (Math.abs(speedMps) < VAM_LOW_SPEED_DRIFT_THRESHOLD_MPS) {
+            // Low-speed GPS drift / indoor wander (0.5 <= speed < 1.2 m/s):
+            // Enforce elevated deadband (< 150 m/h) to reject phantom speed jitter
+            if (Math.abs(rawVam) < 150.0) {
+                verticalSpeed = 0.0;
+            } else {
+                verticalSpeed = rawVam;
+            }
         } else {
-            // Moving athlete: apply flat terrain noise deadband (< 35 m/h)
+            // Moving athlete at athletic speed (>= 1.2 m/s): apply flat terrain noise deadband (< 35 m/h)
             if (Math.abs(rawVam) < 35.0) {
                 verticalSpeed = 0.0;
             } else {
@@ -187,6 +215,7 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
         // get current values
         FilteredSensorData<Double> altitudeFilteredSensorData = BANALService.getFilteredSensorData(cAltitudeFilter);
         FilteredSensorData<Double> speedFilteredSensorData = BANALService.getFilteredSensorData(cSpeedFilter);
+        FilteredSensorData<Double> accuracyFilteredSensorData = BANALService.getFilteredSensorData(cAccuracyFilter);
 
         // check if we have filtered altitude values
         if (altitudeFilteredSensorData == null || altitudeFilteredSensorData.getValue() == null) {
@@ -205,8 +234,10 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
         double speed_mps = (speedFilteredSensorData != null && speedFilteredSensorData.getValue() != null)
                 ? speedFilteredSensorData.getValue() : 0.0;
         double minSpeed = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getSlopeMinSpeed(mContext);
+        double accuracyMeters = (accuracyFilteredSensorData != null && accuracyFilteredSensorData.getValue() != null)
+                ? accuracyFilteredSensorData.getValue() : 0.0;
 
-        int vertical_speed = calculateVam(mAltitudeHistory, mAltitudeHistoryCount, mAltitudeHistoryHead, speed_mps, minSpeed);
+        int vertical_speed = calculateVam(mAltitudeHistory, mAltitudeHistoryCount, mAltitudeHistoryHead, speed_mps, minSpeed, accuracyMeters);
         mVerticalSpeedSensor.newValue(vertical_speed);
 
         // calculate the slope using smoothed linear regression slope (m/s) if moving
