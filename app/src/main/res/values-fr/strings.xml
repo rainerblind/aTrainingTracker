@@ -1289,9 +1289,10 @@
     <string name="known_location_routes_header">Itinéraires au départ d\'ici (%d) :</string>
     <string name="filter_by_start_location">Filtrer par lieu de départ</string>
 
-    <!-- Advanced Tuning Preferences (ATT-1304 / REQ-SET-073) -->
-    <string name="advanced_tuning_title">Réglage avancé</string>
-    <string name="advanced_tuning_open">Réglage avancé…</string>
+    <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
+    <string name="drawer__expert_settings">Paramètres d\'expert</string>
+    <string name="advanced_tuning_title">Paramètres d\'expert</string>
+    <string name="advanced_tuning_open">Paramètres d\'expert…</string>
     <string name="advanced_tuning_warning_title">Paramètres experts</string>
     <string name="advanced_tuning_warning_desc">La modification de ces paramètres altère les heuristiques de suivi, le filtrage des capteurs et l\'économie de batterie. Vous pouvez restaurer les valeurs par défaut à tout moment.</string>
     <string name="tuning_cat_battery_saver">Économiseur de batterie AMOLED</string>

@@ -1288,9 +1288,10 @@
     </plurals>
     <string name="known_locations_view_routes">Ver rotas</string>
 
-    <!-- Advanced Tuning Preferences (ATT-1304 / REQ-SET-073) -->
-    <string name="advanced_tuning_title">Ajuste avançado</string>
-    <string name="advanced_tuning_open">Ajuste avançado…</string>
+    <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
+    <string name="drawer__expert_settings">Configurações de especialista</string>
+    <string name="advanced_tuning_title">Configurações de especialista</string>
+    <string name="advanced_tuning_open">Configurações de especialista…</string>
     <string name="advanced_tuning_warning_title">Configurações avançadas</string>
     <string name="advanced_tuning_warning_desc">A modificação destes parâmetros altera a heurística de rastreamento, a filtragem de sensores e a economia de bateria. Você pode restaurar os padrões de fábrica a qualquer momento.</string>
     <string name="tuning_cat_battery_saver">Economia de bateria AMOLED</string>

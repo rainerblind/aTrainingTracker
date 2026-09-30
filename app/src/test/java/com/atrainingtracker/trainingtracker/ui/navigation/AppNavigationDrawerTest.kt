@@ -270,5 +270,44 @@ class AppNavigationDrawerTest {
             assertTrue("Item titleRes must be non-zero (id=${item.id})", item.titleRes != 0)
         }
     }
+
+    // --- TST-SET-063: Expert Settings Drawer Grouping Verification (ATT-1646 / REQ-SET-074) ---
+
+    @Test
+    fun testDrawerGroups_expertSettings_placedInDedicatedBottomGroup() {
+        val groups = createDrawerGroups(R.string.tab_start)
+        assertTrue("Drawer must define groups", groups.isNotEmpty())
+
+        val lastGroup = groups.last()
+        assertEquals(
+            "Final drawer group must be Expert Settings",
+            R.string.drawer__expert_settings,
+            lastGroup.titleRes
+        )
+
+        val advancedTuningItem = lastGroup.items.firstOrNull { it.id == R.id.drawer_advanced_tuning }
+        assertTrue(
+            "Expert Settings group must contain drawer_advanced_tuning",
+            advancedTuningItem != null
+        )
+        assertEquals(
+            "Advanced tuning item must reference advanced_tuning_title",
+            R.string.advanced_tuning_title,
+            advancedTuningItem?.titleRes
+        )
+    }
+
+    @Test
+    fun testDrawerGroups_generalSettings_doesNotContainAdvancedTuning() {
+        val groups = createDrawerGroups(R.string.tab_start)
+        val settingsGroup = groups.firstOrNull { it.titleRes == R.string.drawer__settings }
+        assertTrue("General settings group must exist", settingsGroup != null)
+
+        val hasAdvancedTuning = settingsGroup!!.items.any { it.id == R.id.drawer_advanced_tuning }
+        assertFalse(
+            "General settings group must not contain drawer_advanced_tuning (relocated to dedicated expert group)",
+            hasAdvancedTuning
+        )
+    }
 }
 

@@ -1288,9 +1288,10 @@
     <string name="known_location_routes_header">Routes vanaf hier (%d):</string>
     <string name="filter_by_start_location">Filteren op startlocatie</string>
 
-    <!-- Advanced Tuning Preferences (ATT-1304 / REQ-SET-073) -->
-    <string name="advanced_tuning_title">Geavanceerde afstemming</string>
-    <string name="advanced_tuning_open">Geavanceerde afstemming…</string>
+    <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
+    <string name="drawer__expert_settings">Expertinstellingen</string>
+    <string name="advanced_tuning_title">Expertinstellingen</string>
+    <string name="advanced_tuning_open">Expertinstellingen…</string>
     <string name="advanced_tuning_warning_title">Expertinstellingen</string>
     <string name="advanced_tuning_warning_desc">Het wijzigen van deze parameters beïnvloedt trackingheuristieken, sensorfiltering en batterijbesparing. U kunt te allen tijde de fabrieksinstellingen herstellen.</string>
     <string name="tuning_cat_battery_saver">AMOLED-batterijbesparing</string>

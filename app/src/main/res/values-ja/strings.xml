@@ -1272,9 +1272,10 @@
     <string name="known_location_routes_header">ここからのルート (%d):</string>
     <string name="filter_by_start_location">開始地点で絞り込む</string>
 
-    <!-- Advanced Tuning Preferences (ATT-1304 / REQ-SET-073) -->
-    <string name="advanced_tuning_title">詳細チューニング</string>
-    <string name="advanced_tuning_open">詳細チューニング…</string>
+    <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
+    <string name="drawer__expert_settings">エキスパート設定</string>
+    <string name="advanced_tuning_title">エキスパート設定</string>
+    <string name="advanced_tuning_open">エキスパート設定…</string>
     <string name="advanced_tuning_warning_title">エキスパート設定</string>
     <string name="advanced_tuning_warning_desc">これらのパラメータを変更すると、トラッキングのヒューリスティック、センサーフィルタリング、およびバッテリー節約動作が変更されます。いつでも工場出荷時のデフォルトに戻すことができます。</string>
     <string name="tuning_cat_battery_saver">AMOLEDバッテリーセーバー</string>

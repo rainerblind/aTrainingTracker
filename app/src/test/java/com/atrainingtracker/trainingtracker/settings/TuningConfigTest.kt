@@ -29,7 +29,8 @@ class TuningConfigTest {
         assertEquals(5.0f, config.slopeSteepThreshold, 0.001f)
         assertEquals(15, config.wakeupDurationSec)
         assertEquals(3, config.downwardDelaySec)
-        assertEquals(200.0f, config.gpsAccuracyThresholdMeters, 0.001f)
+        assertEquals(50.0f, config.gpsAccuracyThresholdMeters, 0.001f)
+        assertEquals(50.0f, TuningPreferencesDefaults.GPS_ACCURACY_THRESHOLD_M, 0.001f)
         assertEquals(21, config.altitudeFilterWindowSec)
         assertEquals(0.5f, config.slopeMinSpeedMps, 0.001f)
     }

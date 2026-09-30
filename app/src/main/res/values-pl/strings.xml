@@ -1282,9 +1282,10 @@
     </plurals>
     <string name="known_locations_view_routes">Pokaż trasy</string>
 
-    <!-- Advanced Tuning Preferences (ATT-1304 / REQ-SET-073) -->
-    <string name="advanced_tuning_title">Zaawansowane dostrajanie</string>
-    <string name="advanced_tuning_open">Zaawansowane dostrajanie…</string>
+    <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
+    <string name="drawer__expert_settings">Ustawienia eksperckie</string>
+    <string name="advanced_tuning_title">Ustawienia eksperckie</string>
+    <string name="advanced_tuning_open">Ustawienia eksperckie…</string>
     <string name="advanced_tuning_warning_title">Ustawienia eksperckie</string>
     <string name="advanced_tuning_warning_desc">Zmiana tych parametrów wpływa na heurystykę śledzenia, filtrowanie czujników i oszczędzanie baterii. W każdej chwili możesz przywrócić ustawienia fabryczne.</string>
     <string name="tuning_cat_battery_saver">Oszczędzanie baterii AMOLED</string>
