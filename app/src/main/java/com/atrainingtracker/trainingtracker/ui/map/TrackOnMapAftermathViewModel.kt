@@ -50,7 +50,8 @@ data class AftermathMapUIState(
     val markers: List<LocationMarker> = emptyList(),
     val bSportType: BSportType = BSportType.UNKNOWN,
     val zoomFocus: MapZoomFocus = MapZoomFocus.FIT_PRIMARY,
-    val hrZoneDistribution: ZoneDistributionData? = null
+    val hrZoneDistribution: ZoneDistributionData? = null,
+    val powerZoneDistribution: ZoneDistributionData? = null
 )
 
 class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(application) {
@@ -228,11 +229,13 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
                 )
             }
 
-            // --- PHASE 7: Zone Analytics (Heart Rate 5-Zone Distribution) ---
+            // --- PHASE 7: Zone Analytics (Heart Rate & Power 5-Zone Distribution) ---
             val hrDistribution = workoutRepository.getHeartRateZoneDistribution(workoutId, bSportType)
+            val powerDistribution = workoutRepository.getPowerZoneDistribution(workoutId)
             withContext(Dispatchers.Main) {
                 _uiState.value = _uiState.value.copy(
-                    hrZoneDistribution = hrDistribution
+                    hrZoneDistribution = hrDistribution,
+                    powerZoneDistribution = powerDistribution
                 )
             }
         }

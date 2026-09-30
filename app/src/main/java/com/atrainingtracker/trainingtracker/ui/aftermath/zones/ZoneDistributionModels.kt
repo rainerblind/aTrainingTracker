@@ -32,6 +32,17 @@ data class HeartRateZoneThresholds(
 )
 
 /**
+ * Upper cycling power bounds in Watts for Zones 1 through 4.
+ * Zone 5 corresponds to Power > z4Max.
+ */
+data class PowerZoneThresholds(
+    val z1Max: Int,
+    val z2Max: Int,
+    val z3Max: Int,
+    val z4Max: Int
+)
+
+/**
  * Timestamped sensor sample used for distribution calculation.
  */
 data class ZoneSample(

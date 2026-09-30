@@ -103,6 +103,62 @@ object ZoneDistributionCalculator {
     }
 
     /**
+     * Calculates 5-zone distribution data from power samples and athlete thresholds.
+     *
+     * @param samples List of active time and power (Watts) samples.
+     * @param thresholds Athlete power thresholds for Zones 1 through 4.
+     * @return [ZoneDistributionData] containing exactly 5 entries, or null if telemetry is insufficient.
+     */
+    fun calculatePowerDistribution(
+        samples: List<ZoneSample>,
+        thresholds: PowerZoneThresholds
+    ): ZoneDistributionData? {
+        val validSamples = samples.filter { it.value > 0 }
+        if (validSamples.isEmpty()) return null
+
+        val zoneDurations = LongArray(5)
+
+        for (i in validSamples.indices) {
+            val sample = validSamples[i]
+            val zoneIdx = determinePowerZone(sample.value, thresholds)
+
+            val dt = if (i < validSamples.size - 1) {
+                val nextSample = validSamples[i + 1]
+                val rawDt = nextSample.timeActiveSec - sample.timeActiveSec
+                when {
+                    rawDt < 0L -> 0L
+                    rawDt > MAX_DELTA_T_SEC -> MAX_DELTA_T_SEC
+                    else -> rawDt
+                }
+            } else {
+                DEFAULT_LAST_SAMPLE_DURATION_SEC
+            }
+
+            zoneDurations[zoneIdx] += dt
+        }
+
+        val totalDuration = zoneDurations.sum()
+        if (totalDuration <= 0L) return null
+
+        val entries = (0..4).map { idx ->
+            val duration = zoneDurations[idx]
+            val pct = if (totalDuration > 0L) (duration.toFloat() / totalDuration) * 100f else 0f
+            ZoneTimeEntry(
+                zoneIndex = idx + 1,
+                zoneLabelResId = ZONE_LABELS[idx],
+                durationSec = duration,
+                percentage = pct,
+                color = ZONE_COLORS[idx]
+            )
+        }
+
+        return ZoneDistributionData(
+            totalActiveTimeSec = totalDuration,
+            entries = entries
+        )
+    }
+
+    /**
      * Maps an instantaneous heart rate value to a 0-indexed zone (0..4).
      */
     private fun determineHeartRateZone(hr: Int, thresholds: HeartRateZoneThresholds): Int {
@@ -111,6 +167,19 @@ object ZoneDistributionCalculator {
             hr <= thresholds.z2Max -> 1
             hr <= thresholds.z3Max -> 2
             hr <= thresholds.z4Max -> 3
+            else -> 4
+        }
+    }
+
+    /**
+     * Maps an instantaneous cycling power value (Watts) to a 0-indexed zone (0..4).
+     */
+    private fun determinePowerZone(pwr: Int, thresholds: PowerZoneThresholds): Int {
+        return when {
+            pwr <= thresholds.z1Max -> 0
+            pwr <= thresholds.z2Max -> 1
+            pwr <= thresholds.z3Max -> 2
+            pwr <= thresholds.z4Max -> 3
             else -> 4
         }
     }
