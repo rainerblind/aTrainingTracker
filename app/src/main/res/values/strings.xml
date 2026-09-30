@@ -1520,5 +1520,8 @@
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
     <string name="move_tile_banner_instruction">Tile selected: Tap another tile to swap, or tap \'+\' to move.</string>
     <string name="move_tile_cancel">Cancel</string>
+
+    <!-- Heart Rate 5-Zone Distribution Bar (ATT-1389 / REQ-UI-202) -->
+    <string name="aftermath_hr_zones_title">Heart Rate Zones</string>
 </resources>
 
