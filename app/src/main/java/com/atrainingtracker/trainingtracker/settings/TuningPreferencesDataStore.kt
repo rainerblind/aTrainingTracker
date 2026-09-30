@@ -36,7 +36,7 @@ object TuningPreferencesDefaults {
     const val SLOPE_STEEP_THRESHOLD = 5.0f
     const val WAKEUP_DURATION_SEC = 15
     const val DOWNWARD_DELAY_SEC = 3
-    const val GPS_ACCURACY_THRESHOLD_M = 200.0f
+    const val GPS_ACCURACY_THRESHOLD_M = 50.0f
     const val ALTITUDE_FILTER_WINDOW_SEC = 21
     const val SLOPE_MIN_SPEED_MPS = 0.5f
 

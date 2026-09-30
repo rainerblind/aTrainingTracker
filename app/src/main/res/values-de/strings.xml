@@ -1375,9 +1375,10 @@
     <string name="known_location_routes_header">Lieblingsstrecken ab hier (%d):</string>
     <string name="filter_by_start_location">Nach Startort filtern</string>
 
-    <!-- Advanced Tuning Preferences (ATT-1304 / REQ-SET-073) -->
-    <string name="advanced_tuning_title">Erweiterte Abstimmung</string>
-    <string name="advanced_tuning_open">Erweiterte Abstimmung…</string>
+    <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
+    <string name="drawer__expert_settings">Experten-Einstellungen</string>
+    <string name="advanced_tuning_title">Experten-Einstellungen</string>
+    <string name="advanced_tuning_open">Experten-Einstellungen…</string>
     <string name="advanced_tuning_warning_title">Experteneinstellungen</string>
     <string name="advanced_tuning_warning_desc">Das Ändern dieser Parameter beeinflusst die Tracking-Heuristik, Sensorfilterung und das Energiesparverhalten. Werkseinstellungen können jederzeit wiederhergestellt werden.</string>
     <string name="tuning_cat_battery_saver">AMOLED-Energiesparmodus</string>

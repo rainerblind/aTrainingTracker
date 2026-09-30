@@ -1480,9 +1480,10 @@
     <string name="known_location_routes_header">Routes starting here (%d):</string>
     <string name="filter_by_start_location">Filter by Start Location</string>
 
-    <!-- Advanced Tuning Preferences (ATT-1304 / REQ-SET-073) -->
-    <string name="advanced_tuning_title">Advanced Tuning</string>
-    <string name="advanced_tuning_open">Advanced Tuning…</string>
+    <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
+    <string name="drawer__expert_settings">Expert Settings</string>
+    <string name="advanced_tuning_title">Expert Settings</string>
+    <string name="advanced_tuning_open">Expert Settings…</string>
     <string name="advanced_tuning_warning_title">Expert Settings</string>
     <string name="advanced_tuning_warning_desc">Modifying these parameters alters core tracking heuristics, sensor filtering, and battery saving behavior. You can restore factory defaults at any time.</string>
     <string name="tuning_cat_battery_saver">AMOLED Battery Saver</string>
