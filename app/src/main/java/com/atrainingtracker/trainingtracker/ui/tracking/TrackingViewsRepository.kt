@@ -401,6 +401,25 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         }
     }
 
+    suspend fun swapSensorFields(fieldIdA: Long, fieldIdB: Long) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.swapSensorFields(fieldIdA, fieldIdB)
+        }
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+    suspend fun moveSensorField(sensorFieldId: Long, targetRow: Int, targetCol: Int) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.moveSensorField(sensorFieldId, targetRow, targetCol)
+        }
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+
     /*******************************************************************
      * Configure Tabs
     **/

@@ -208,9 +208,243 @@ public class TrackingViewsDatabaseManager {
     public void deleteSensorField(long sensorFieldId) {
         if (DEBUG) Log.i(TAG, "deleteSensorField(" + sensorFieldId + ")");
 
-        getDatabase().delete(TrackingViewsDbHelper.ROWS_TABLE,
+        SQLiteDatabase db = getDatabase();
+        Cursor cursor = db.query(TrackingViewsDbHelper.ROWS_TABLE,
+                new String[]{TrackingViewsDbHelper.VIEW_ID},
+                TrackingViewsDbHelper.ROW_ID + "=?",
+                new String[]{String.valueOf(sensorFieldId)}, null, null, null);
+        long tabViewId = -1;
+        if (cursor != null) {
+            if (cursor.moveToFirst()) {
+                tabViewId = cursor.getLong(0);
+            }
+            cursor.close();
+        }
+
+        db.delete(TrackingViewsDbHelper.ROWS_TABLE,
                 TrackingViewsDbHelper.ROW_ID + "=?", // note that due to historic reasons, whe ID of a sensor field is called ROW_ID :(
                 new String[]{sensorFieldId + ""});
+
+        if (tabViewId != -1) {
+            normalizeGrid(tabViewId);
+        }
+    }
+
+    /**
+     * Atomically swaps the grid coordinates (RowNr, ColNr) of two sensor fields (REQ-UI-200).
+     */
+    public void swapSensorFields(long fieldIdA, long fieldIdB) {
+        if (fieldIdA == fieldIdB) {
+            return;
+        }
+        SQLiteDatabase db = getDatabase();
+        db.beginTransaction();
+        Cursor cursorA = null;
+        Cursor cursorB = null;
+        try {
+            cursorA = db.query(TrackingViewsDbHelper.ROWS_TABLE,
+                    new String[]{TrackingViewsDbHelper.ROW_NR, TrackingViewsDbHelper.COL_NR},
+                    TrackingViewsDbHelper.ROW_ID + "=?",
+                    new String[]{String.valueOf(fieldIdA)}, null, null, null);
+            cursorB = db.query(TrackingViewsDbHelper.ROWS_TABLE,
+                    new String[]{TrackingViewsDbHelper.ROW_NR, TrackingViewsDbHelper.COL_NR},
+                    TrackingViewsDbHelper.ROW_ID + "=?",
+                    new String[]{String.valueOf(fieldIdB)}, null, null, null);
+
+            if (cursorA != null && cursorB != null && cursorA.moveToFirst() && cursorB.moveToFirst()) {
+                int rowA = cursorA.getInt(0);
+                int colA = cursorA.getInt(1);
+                int rowB = cursorB.getInt(0);
+                int colB = cursorB.getInt(1);
+
+                ContentValues valA = new ContentValues();
+                valA.put(TrackingViewsDbHelper.ROW_NR, rowB);
+                valA.put(TrackingViewsDbHelper.COL_NR, colB);
+                db.update(TrackingViewsDbHelper.ROWS_TABLE, valA,
+                        TrackingViewsDbHelper.ROW_ID + "=?",
+                        new String[]{String.valueOf(fieldIdA)});
+
+                ContentValues valB = new ContentValues();
+                valB.put(TrackingViewsDbHelper.ROW_NR, rowA);
+                valB.put(TrackingViewsDbHelper.COL_NR, colA);
+                db.update(TrackingViewsDbHelper.ROWS_TABLE, valB,
+                        TrackingViewsDbHelper.ROW_ID + "=?",
+                        new String[]{String.valueOf(fieldIdB)});
+
+                db.setTransactionSuccessful();
+            }
+        } finally {
+            if (cursorA != null) cursorA.close();
+            if (cursorB != null) cursorB.close();
+            db.endTransaction();
+        }
+    }
+
+    /**
+     * Repositions a sensor field to a designated target row and column slot,
+     * compacting the origin row, adjusting row/column indices, and normalizing the grid (REQ-UI-200).
+     *
+     * @param sensorFieldId The ID of the sensor field to move.
+     * @param targetRow The target row number.
+     * @param targetCol The target column number, or -1 to create a new row at targetRow.
+     */
+    public void moveSensorField(long sensorFieldId, int targetRow, int targetCol) {
+        SQLiteDatabase db = getDatabase();
+        db.beginTransaction();
+        Cursor cursor = null;
+        try {
+            cursor = db.query(TrackingViewsDbHelper.ROWS_TABLE,
+                    new String[]{TrackingViewsDbHelper.VIEW_ID, TrackingViewsDbHelper.ROW_NR, TrackingViewsDbHelper.COL_NR},
+                    TrackingViewsDbHelper.ROW_ID + "=?",
+                    new String[]{String.valueOf(sensorFieldId)}, null, null, null);
+            if (cursor == null || !cursor.moveToFirst()) {
+                if (cursor != null) cursor.close();
+                return;
+            }
+            long tabViewId = cursor.getLong(0);
+            int oldRow = cursor.getInt(1);
+            int oldCol = cursor.getInt(2);
+            cursor.close();
+            cursor = null;
+
+            // 1. Temporarily park the field out of the layout
+            ContentValues parkVal = new ContentValues();
+            parkVal.put(TrackingViewsDbHelper.ROW_NR, -999);
+            parkVal.put(TrackingViewsDbHelper.COL_NR, -999);
+            db.update(TrackingViewsDbHelper.ROWS_TABLE, parkVal,
+                    TrackingViewsDbHelper.ROW_ID + "=?",
+                    new String[]{String.valueOf(sensorFieldId)});
+
+            // 2. Compact the remaining fields in the old row (shift columns > oldCol left)
+            db.execSQL("UPDATE " + TrackingViewsDbHelper.ROWS_TABLE +
+                    " SET " + TrackingViewsDbHelper.COL_NR + "=" + TrackingViewsDbHelper.COL_NR + "-1" +
+                    " WHERE " + TrackingViewsDbHelper.VIEW_ID + "=" + tabViewId +
+                    " AND " + TrackingViewsDbHelper.ROW_NR + "=" + oldRow +
+                    " AND " + TrackingViewsDbHelper.COL_NR + " > " + oldCol);
+
+            // 3. Check if oldRow has 0 remaining fields
+            Cursor countCursor = db.query(TrackingViewsDbHelper.ROWS_TABLE,
+                    new String[]{TrackingViewsDbHelper.ROW_ID},
+                    TrackingViewsDbHelper.VIEW_ID + "=? AND " + TrackingViewsDbHelper.ROW_NR + "=?",
+                    new String[]{String.valueOf(tabViewId), String.valueOf(oldRow)},
+                    null, null, null);
+            int remainingInOldRow = countCursor != null ? countCursor.getCount() : 0;
+            if (countCursor != null) countCursor.close();
+
+            if (remainingInOldRow == 0) {
+                // Shift all rows > oldRow down by 1
+                db.execSQL("UPDATE " + TrackingViewsDbHelper.ROWS_TABLE +
+                        " SET " + TrackingViewsDbHelper.ROW_NR + "=" + TrackingViewsDbHelper.ROW_NR + "-1" +
+                        " WHERE " + TrackingViewsDbHelper.VIEW_ID + "=" + tabViewId +
+                        " AND " + TrackingViewsDbHelper.ROW_NR + " > " + oldRow);
+                if (targetRow > oldRow) {
+                    targetRow--;
+                }
+            }
+
+            // 4. Open space at target location
+            if (targetCol == -1) {
+                // New row requested: shift rows >= targetRow up by 1
+                db.execSQL("UPDATE " + TrackingViewsDbHelper.ROWS_TABLE +
+                        " SET " + TrackingViewsDbHelper.ROW_NR + "=" + TrackingViewsDbHelper.ROW_NR + "+1" +
+                        " WHERE " + TrackingViewsDbHelper.VIEW_ID + "=" + tabViewId +
+                        " AND " + TrackingViewsDbHelper.ROW_NR + " >= " + targetRow);
+                targetCol = 1;
+            } else {
+                // Column insertion into existing row: shift cols >= targetCol right by 1
+                db.execSQL("UPDATE " + TrackingViewsDbHelper.ROWS_TABLE +
+                        " SET " + TrackingViewsDbHelper.COL_NR + "=" + TrackingViewsDbHelper.COL_NR + "+1" +
+                        " WHERE " + TrackingViewsDbHelper.VIEW_ID + "=" + tabViewId +
+                        " AND " + TrackingViewsDbHelper.ROW_NR + "=" + targetRow +
+                        " AND " + TrackingViewsDbHelper.COL_NR + " >= " + targetCol);
+            }
+
+            // 5. Assign final coordinates to the moved field
+            ContentValues targetVal = new ContentValues();
+            targetVal.put(TrackingViewsDbHelper.ROW_NR, targetRow);
+            targetVal.put(TrackingViewsDbHelper.COL_NR, targetCol);
+            db.update(TrackingViewsDbHelper.ROWS_TABLE, targetVal,
+                    TrackingViewsDbHelper.ROW_ID + "=?",
+                    new String[]{String.valueOf(sensorFieldId)});
+
+            // 6. Normalize grid coordinates
+            normalizeGrid(db, tabViewId);
+
+            db.setTransactionSuccessful();
+        } finally {
+            if (cursor != null) cursor.close();
+            db.endTransaction();
+        }
+    }
+
+    /**
+     * Normalizes the rows and columns for a given tabViewId to ensure contiguous 1..N indices with zero gaps.
+     */
+    public void normalizeGrid(long tabViewId) {
+        SQLiteDatabase db = getDatabase();
+        db.beginTransaction();
+        try {
+            normalizeGrid(db, tabViewId);
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    private void normalizeGrid(SQLiteDatabase db, long tabViewId) {
+        // Query distinct row numbers ordered ascending
+        Cursor rowCursor = db.query(true, TrackingViewsDbHelper.ROWS_TABLE,
+                new String[]{TrackingViewsDbHelper.ROW_NR},
+                TrackingViewsDbHelper.VIEW_ID + "=? AND " + TrackingViewsDbHelper.ROW_NR + " > 0",
+                new String[]{String.valueOf(tabViewId)},
+                null, null, TrackingViewsDbHelper.ROW_NR + " ASC", null);
+
+        java.util.List<Integer> distinctRows = new java.util.ArrayList<>();
+        if (rowCursor != null) {
+            while (rowCursor.moveToNext()) {
+                distinctRows.add(rowCursor.getInt(0));
+            }
+            rowCursor.close();
+        }
+
+        // 1. Assign temporary negative row indices to avoid collisions
+        for (int r = 0; r < distinctRows.size(); r++) {
+            int originalRow = distinctRows.get(r);
+            int tempRow = -(r + 1);
+            ContentValues val = new ContentValues();
+            val.put(TrackingViewsDbHelper.ROW_NR, tempRow);
+            db.update(TrackingViewsDbHelper.ROWS_TABLE, val,
+                    TrackingViewsDbHelper.VIEW_ID + "=? AND " + TrackingViewsDbHelper.ROW_NR + "=?",
+                    new String[]{String.valueOf(tabViewId), String.valueOf(originalRow)});
+        }
+
+        // Invert back to positive 1..R
+        db.execSQL("UPDATE " + TrackingViewsDbHelper.ROWS_TABLE +
+                " SET " + TrackingViewsDbHelper.ROW_NR + "=-" + TrackingViewsDbHelper.ROW_NR +
+                " WHERE " + TrackingViewsDbHelper.VIEW_ID + "=" + tabViewId +
+                " AND " + TrackingViewsDbHelper.ROW_NR + " < 0");
+
+        // 2. Re-index columns in each row to 1..C
+        for (int r = 1; r <= distinctRows.size(); r++) {
+            Cursor colCursor = db.query(TrackingViewsDbHelper.ROWS_TABLE,
+                    new String[]{TrackingViewsDbHelper.ROW_ID},
+                    TrackingViewsDbHelper.VIEW_ID + "=? AND " + TrackingViewsDbHelper.ROW_NR + "=?",
+                    new String[]{String.valueOf(tabViewId), String.valueOf(r)},
+                    null, null, TrackingViewsDbHelper.COL_NR + " ASC, " + TrackingViewsDbHelper.ROW_ID + " ASC");
+
+            if (colCursor != null) {
+                int colIndex = 1;
+                while (colCursor.moveToNext()) {
+                    long fieldId = colCursor.getLong(0);
+                    ContentValues colVal = new ContentValues();
+                    colVal.put(TrackingViewsDbHelper.COL_NR, colIndex++);
+                    db.update(TrackingViewsDbHelper.ROWS_TABLE, colVal,
+                            TrackingViewsDbHelper.ROW_ID + "=?",
+                            new String[]{String.valueOf(fieldId)});
+                }
+                colCursor.close();
+            }
+        }
     }
 
     @NonNull

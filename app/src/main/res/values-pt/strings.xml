@@ -1319,4 +1319,8 @@
     <string name="tuning_default_format">Padrão: %1$s</string>
     <string name="reset_to_defaults">Restaurar padrões</string>
     <string name="reset_to_defaults_success">Configurações de ajuste restauradas para os padrões de fábrica.</string>
+
+    <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
+    <string name="move_tile_banner_instruction">Mosaico selecionado: Toque em outro mosaico para trocar ou em \'+\' para mover.</string>
+    <string name="move_tile_cancel">Cancelar</string>
 </resources>

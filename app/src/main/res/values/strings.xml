@@ -1511,5 +1511,9 @@
     <string name="tuning_default_format">Default: %1$s</string>
     <string name="reset_to_defaults">Reset to Defaults</string>
     <string name="reset_to_defaults_success">Tuning preferences restored to factory defaults.</string>
+
+    <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
+    <string name="move_tile_banner_instruction">Tile selected: Tap another tile to swap, or tap \'+\' to move.</string>
+    <string name="move_tile_cancel">Cancel</string>
 </resources>
 

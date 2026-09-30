@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -48,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -129,6 +131,8 @@ fun SensorFieldView(
     fieldState: SensorFieldState,
     modifier: Modifier = Modifier,
     screenMode: ScreenMode,
+    isSelectedForMove: Boolean = false,
+    onStartMove: () -> Unit = {},
     onEdit: () -> Unit = {},
     onDelete: () -> Unit = {}
 ) {
@@ -169,7 +173,9 @@ fun SensorFieldView(
                     }
                 },
                 onLongClick = {
-                    if (screenMode == ScreenMode.TRACKING) {
+                    if (screenMode == ScreenMode.CONFIGURATION) {
+                        onStartMove()
+                    } else if (screenMode == ScreenMode.TRACKING) {
                         onEdit()
                     }
                 }
@@ -182,7 +188,11 @@ fun SensorFieldView(
                 MaterialTheme.colorScheme.surface
             }
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        border = if (isSelectedForMove) {
+            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+        } else {
+            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        }
     ) {
         Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             // 1. Left Indicator Strip
@@ -244,13 +254,24 @@ fun SensorFieldView(
                     )
                 }
 
-                // Conditionally add the delete button at the bottom in configuration mode
+                // Conditionally add the action buttons at the bottom in configuration mode
                 if (screenMode == ScreenMode.CONFIGURATION) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End
                     ) {
+                        IconButton(
+                            onClick = onStartMove,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SwapHoriz,
+                                contentDescription = "Move Field",
+                                tint = if (isSelectedForMove) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
                         IconButton(
                             onClick = onDelete,
                             modifier = Modifier.size(24.dp) // Make the button compact

@@ -1319,4 +1319,8 @@
     <string name="tuning_default_format">Predefinito: %1$s</string>
     <string name="reset_to_defaults">Ripristina impostazioni predefinite</string>
     <string name="reset_to_defaults_success">Impostazioni di regolazione ripristinate ai valori di fabbrica.</string>
+
+    <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
+    <string name="move_tile_banner_instruction">Riquadro selezionato: Tocca un altro riquadro per scambiare o \'+\' per spostare.</string>
+    <string name="move_tile_cancel">Annulla</string>
 </resources>

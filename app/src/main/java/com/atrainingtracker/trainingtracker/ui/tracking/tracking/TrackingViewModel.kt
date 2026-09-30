@@ -109,6 +109,10 @@ class TrackingViewModel(
     private val _editingFieldId = MutableStateFlow<Long?>(null)
     val editingFieldId: StateFlow<Long?> = _editingFieldId.asStateFlow()
 
+    // Holds the field currently selected for Pick & Place move/swap (REQ-UI-200)
+    private val _selectedFieldForMove = MutableStateFlow<SensorFieldState?>(null)
+    val selectedFieldForMove: StateFlow<SensorFieldState?> = _selectedFieldForMove.asStateFlow()
+
     data class AdditionParams(val row: Int, val col: Int)
     private val _pendingAddition = MutableStateFlow<AdditionParams?>(null)
     val pendingAddition = _pendingAddition.asStateFlow()
@@ -118,6 +122,9 @@ class TrackingViewModel(
     val screenMode: StateFlow<ScreenMode> = _screenMode.asStateFlow()
 
     fun updateScreenMode(mode: ScreenMode) {
+        if (mode != ScreenMode.CONFIGURATION) {
+            _selectedFieldForMove.value = null
+        }
         _screenMode.value = mode
     }
 
@@ -422,7 +429,32 @@ class TrackingViewModel(
         _pendingAddition.value = null
     }
 
+    fun onSelectFieldForMove(fieldState: SensorFieldState) {
+        _selectedFieldForMove.value = fieldState
+    }
+
+    fun onCancelMove() {
+        _selectedFieldForMove.value = null
+    }
+
+    fun onSwapFields(sourceFieldId: Long, targetFieldId: Long) {
+        _selectedFieldForMove.value = null
+        viewModelScope.launch {
+            trackingViewsRepository.swapSensorFields(sourceFieldId, targetFieldId)
+        }
+    }
+
+    fun onMoveField(sourceFieldId: Long, targetRow: Int, targetCol: Int) {
+        _selectedFieldForMove.value = null
+        viewModelScope.launch {
+            trackingViewsRepository.moveSensorField(sourceFieldId, targetRow, targetCol)
+        }
+    }
+
     fun onDeleteSensorField(sensorFieldId: Long) {
+        if (_selectedFieldForMove.value?.sensorFieldId == sensorFieldId) {
+            _selectedFieldForMove.value = null
+        }
         viewModelScope.launch {
             trackingViewsRepository.deleteSensorField(sensorFieldId)
         }
