@@ -23,6 +23,8 @@ import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
 import com.google.android.gms.maps.model.LatLng
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import io.mockk.clearAllMocks
 import io.mockk.coVerify
 import io.mockk.every
@@ -51,6 +53,7 @@ import org.junit.Test
  * - TST-UI-117.3: updateLocation atomically persists name, altitude, source=MANUAL_USER, is_locked=1.
  * - TST-UI-131.3: updateLocation with radius propagates radius to repository and dismisses edit dialog.
  * - TST-UI-132.4: Streamlined ViewModel retains list sorting, search filtering, and editing.
+ * - TST-DAT-011.3: Reactive starts count synchronization and dynamic sorting by actual workout starts.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class KnownLocationsViewModelTest {
@@ -58,7 +61,9 @@ class KnownLocationsViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var mockApplication: Application
     private lateinit var mockRepository: KnownLocationsRepository
+    private lateinit var mockWorkoutRepository: WorkoutRepository
     private val fakeLocationsFlow = MutableStateFlow<List<KnownLocationItem>>(emptyList())
+    private val fakeWorkoutsFlow = MutableStateFlow<List<WorkoutData>>(emptyList())
 
     private lateinit var viewModel: KnownLocationsViewModel
 
@@ -67,13 +72,17 @@ class KnownLocationsViewModelTest {
         Dispatchers.setMain(testDispatcher)
         mockApplication = mockk(relaxed = true)
         mockRepository = mockk(relaxed = true)
+        mockWorkoutRepository = mockk(relaxed = true)
 
         every { mockRepository.locationsFlow } returns fakeLocationsFlow
+        every { mockWorkoutRepository.allWorkouts } returns fakeWorkoutsFlow
 
         viewModel = KnownLocationsViewModel(
             application = mockApplication,
             repository = mockRepository,
-            initialIsMetric = true
+            initialIsMetric = true,
+            workoutRepository = mockWorkoutRepository,
+            defaultDispatcher = testDispatcher
         )
     }
 
@@ -198,6 +207,65 @@ class KnownLocationsViewModelTest {
 
         viewModel.dismissEditDialog()
         assertNull(viewModel.uiState.value.selectedLocationForEdit)
+    }
+
+    /**
+     * TST-DAT-011.3: Verifies that startsByLocationId dynamically computes start occurrences
+     * by evaluating workout start coordinates against location radius.
+     */
+    @Test
+    fun testStartsByLocationId_computesExactCountsFromWorkoutsFlow() = runTest {
+        val loc1 = KnownLocationItem(1L, "Olympiazentrum", 515.0, 200, LatLng(48.175, 11.554), 0, true, ElevationSource.MANUAL_USER)
+        val loc2 = KnownLocationItem(2L, "Englischer Garten", 505.0, 200, LatLng(48.155, 11.590), 0, false, ElevationSource.INTERNET_DEM)
+
+        val w1 = mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns LatLng(48.1751, 11.5541) } // Inside loc1 (<20m)
+        val w2 = mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns LatLng(48.1752, 11.5542) } // Inside loc1 (<30m)
+        val w3 = mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns LatLng(48.1551, 11.5901) } // Inside loc2 (<20m)
+        val w4 = mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns LatLng(48.2000, 11.6000) } // Far away
+        val w5 = mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns null } // No GPS
+
+        fakeLocationsFlow.value = listOf(loc1, loc2)
+        fakeWorkoutsFlow.value = listOf(w1, w2, w3, w4, w5)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(2, state.startsByLocationId[1L])
+        assertEquals(1, state.startsByLocationId[2L])
+        assertNull(state.startsByLocationId[999L])
+    }
+
+    /**
+     * TST-DAT-011.3: Verifies that applySort with STARTS orders by dynamic startsByLocationId
+     * rather than obsolete/bloated hitCount.
+     */
+    @Test
+    fun testSortByStarts_ordersByDynamicStartsCountRatherThanBloatedHitCount() = runTest {
+        // Bloated spot has hitCount=999 in DB, but only 1 real workout
+        val bloatedSpot = KnownLocationItem(10L, "Bloated Spot", 520.0, 200, LatLng(48.175, 11.554), 999, false, ElevationSource.INTERNET_DEM)
+        // Active spot has hitCount=1 in DB, but 5 real workouts
+        val activeSpot = KnownLocationItem(20L, "Active Spot", 510.0, 200, LatLng(48.155, 11.590), 1, false, ElevationSource.INTERNET_DEM)
+
+        val workouts = listOf(
+            mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns LatLng(48.1751, 11.5541) }, // 1 near bloatedSpot
+            mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns LatLng(48.1551, 11.5901) }, // 5 near activeSpot
+            mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns LatLng(48.1552, 11.5902) },
+            mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns LatLng(48.1553, 11.5903) },
+            mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns LatLng(48.1554, 11.5904) },
+            mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns LatLng(48.1550, 11.5900) }
+        )
+
+        fakeLocationsFlow.value = listOf(bloatedSpot, activeSpot)
+        fakeWorkoutsFlow.value = workouts
+        viewModel.setSortOrder(KnownLocationSortOrder.STARTS)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(2, state.filteredLocations.size)
+        // Active Spot should be first because startsCount is 5 > 1
+        assertEquals(20L, state.filteredLocations[0].id)
+        assertEquals("Active Spot", state.filteredLocations[0].name)
+        assertEquals(10L, state.filteredLocations[1].id)
+        assertEquals("Bloated Spot", state.filteredLocations[1].name)
     }
 
     @Test

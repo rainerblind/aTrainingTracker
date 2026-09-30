@@ -383,6 +383,63 @@ public class KnownLocationsDatabaseManager {
     }
 
     /**
+     * ATT-1734 / REQ-DAT-016: Reconciles hitCount for all known locations against authoritative
+     * workout start locations extracted from WorkoutSummaries.TABLE_EXTREMA_VALUES.
+     * Counts starts within each location's radius (d <= r) and updates my_locations.hitCount in SQLite.
+     *
+     * @param startLocations List of all recorded workout starting coordinates.
+     * @return Number of locations whose hitCount was updated/reconciled.
+     */
+    public int reconcileHitCountsWithWorkoutSummaries(@Nullable List<LatLng> startLocations) {
+        if (startLocations == null) return 0;
+        int reconciledCount = 0;
+
+        synchronized (this) {
+            SQLiteDatabase db = getDatabase();
+            db.beginTransaction();
+            try {
+                List<MyLocation> locations = getAllLocations();
+                for (MyLocation loc : locations) {
+                    if (loc == null || loc.latLng == null) continue;
+                    double latDelta = loc.radius / 111139.0;
+                    double cosLat = Math.cos(Math.toRadians(loc.latLng.latitude));
+                    double lngDelta = loc.radius / (111139.0 * Math.max(0.01, Math.abs(cosLat)));
+                    double minLat = loc.latLng.latitude - latDelta;
+                    double maxLat = loc.latLng.latitude + latDelta;
+                    double minLng = loc.latLng.longitude - lngDelta;
+                    double maxLng = loc.latLng.longitude + lngDelta;
+
+                    int count = 0;
+                    for (LatLng startPos : startLocations) {
+                        if (startPos == null) continue;
+                        if (startPos.latitude < minLat || startPos.latitude > maxLat ||
+                                startPos.longitude < minLng || startPos.longitude > maxLng) {
+                            continue;
+                        }
+                        float dist = com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.Companion.distanceBetween(loc.latLng, startPos);
+                        if (dist <= loc.radius) {
+                            count++;
+                        }
+                    }
+                    if (loc.hitCount != count) {
+                        ContentValues values = new ContentValues();
+                        values.put(KnownLocationsDbHelper.HIT_COUNT, count);
+                        updateId(loc.id, values);
+                        reconciledCount++;
+                        if (DEBUG) {
+                            Log.i(TAG, "Reconciled hitCount for '" + loc.name + "': " + loc.hitCount + " -> " + count);
+                        }
+                    }
+                }
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+        }
+        return reconciledCount;
+    }
+
+    /**
      * ATT-1366 / REQ-DAT-007: Atomically upserts a location within the spatial geofence radius.
      * Prevents TOCTOU race conditions between concurrent sensor starts and asynchronous DEM resolution.
      */
@@ -400,7 +457,6 @@ public class KnownLocationsDatabaseManager {
                         values.put(KnownLocationsDbHelper.ALTITUDE, altitude);
                         values.put(KnownLocationsDbHelper.SOURCE, source.name());
                         values.put(KnownLocationsDbHelper.IS_LOCKED, isLocked ? 1 : 0);
-                        values.put(KnownLocationsDbHelper.HIT_COUNT, existing.hitCount + 1);
                         if (com.atrainingtracker.trainingtracker.location.LocationNameResolver.isPlaceholderName(existing.name)
                                 && !com.atrainingtracker.trainingtracker.location.LocationNameResolver.isPlaceholderName(name)) {
                             values.put(KnownLocationsDbHelper.NAME, name);

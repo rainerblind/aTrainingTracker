@@ -92,7 +92,8 @@ class KnownLocationsViewModelRoutesTest {
             application = mockApplication,
             repository = mockRepository,
             initialIsMetric = true,
-            clusterRepository = mockClusterRepository
+            clusterRepository = mockClusterRepository,
+            defaultDispatcher = testDispatcher
         )
     }
 
