@@ -184,6 +184,7 @@ fun ElevationProfile(
     minAltitudeOverride: Double? = null,
     maxAltitudeOverride: Double? = null,
     onDistanceSelected: (Double?) -> Unit = {},
+    showZoomControls: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val decodedData = remember(encodedAltitudes, encodedDistances) {
@@ -200,6 +201,7 @@ fun ElevationProfile(
         minAltitudeOverride = minAltitudeOverride,
         maxAltitudeOverride = maxAltitudeOverride,
         onDistanceSelected = onDistanceSelected,
+        showZoomControls = showZoomControls,
         modifier = modifier
     )
 }
@@ -211,6 +213,7 @@ fun ElevationProfile(
     minAltitudeOverride: Double? = null,
     maxAltitudeOverride: Double? = null,
     onDistanceSelected: (Double?) -> Unit = {},
+    showZoomControls: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     if (pathPoints.isEmpty()) return
@@ -331,114 +334,85 @@ fun ElevationProfile(
         }
     }
 
+    val topPadding = if (showZoomControls) 44.dp else 16.dp
+    val totalCanvasHeight = if (showZoomControls) cachedData.adaptiveHeight + 20.dp else cachedData.adaptiveHeight
+
     Box(modifier = modifier.fillMaxWidth()) {
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(cachedData.adaptiveHeight)
-                .pointerInput(cachedData.totalDist, isPanMode, zoomScale, startDist) {
-                    val startPaddingPx = 50.dp.toPx()
-                    val endPaddingPx = 25.dp.toPx()
-                    val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
+        val baseCanvasModifier = Modifier
+            .fillMaxWidth()
+            .height(totalCanvasHeight)
 
-                    awaitEachGesture {
-                        val down = awaitFirstDown(requireUnconsumed = false)
-                        var prevCentroid = down.position
-                        var prevSpan = 0f
-                        var isTransforming = false
-                        var isDragging = false
+        val canvasModifier = if (showZoomControls) {
+            baseCanvasModifier.pointerInput(cachedData.totalDist, isPanMode, zoomScale, startDist) {
+                val startPaddingPx = 50.dp.toPx()
+                val endPaddingPx = 25.dp.toPx()
+                val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
 
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val pressed = event.changes.filter { it.pressed }
-                            if (pressed.isEmpty()) break
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    var prevCentroid = down.position
+                    var prevSpan = 0f
+                    var isTransforming = false
+                    var isDragging = false
 
-                            if (pressed.size >= 2 && cachedData.totalDist > 10.0) {
-                                isTransforming = true
-                                val p1 = pressed[0].position
-                                val p2 = pressed[1].position
-                                val centroid = Offset((p1.x + p2.x) / 2f, (p1.y + p2.y) / 2f)
-                                val span = (p1 - p2).getDistance()
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val pressed = event.changes.filter { it.pressed }
+                        if (pressed.isEmpty()) break
 
-                                if (prevSpan > 0f && span > 0f) {
-                                    val zoomFactor = span / prevSpan
-                                    val panDeltaX = centroid.x - prevCentroid.x
-                                    val adjustedCentroidX = (centroid.x - startPaddingPx).coerceIn(0f, chartWidthPx)
+                        if (pressed.size >= 2 && cachedData.totalDist > 10.0) {
+                            isTransforming = true
+                            val p1 = pressed[0].position
+                            val p2 = pressed[1].position
+                            val centroid = Offset((p1.x + p2.x) / 2f, (p1.y + p2.y) / 2f)
+                            val span = (p1 - p2).getDistance()
 
-                                    val (newZoom, newStart) = ElevationProfileZoomMath.applyZoomAtCentroid(
-                                        totalDist = cachedData.totalDist,
-                                        currentZoom = zoomScale,
-                                        targetZoom = zoomScale * zoomFactor,
-                                        centroidX = adjustedCentroidX,
-                                        canvasWidth = chartWidthPx,
-                                        currentStartDist = startDist
-                                    )
-                                    zoomScale = newZoom
+                            if (prevSpan > 0f && span > 0f) {
+                                val zoomFactor = span / prevSpan
+                                val panDeltaX = centroid.x - prevCentroid.x
+                                val adjustedCentroidX = (centroid.x - startPaddingPx).coerceIn(0f, chartWidthPx)
+
+                                val (newZoom, newStart) = ElevationProfileZoomMath.applyZoomAtCentroid(
+                                    totalDist = cachedData.totalDist,
+                                    currentZoom = zoomScale,
+                                    targetZoom = zoomScale * zoomFactor,
+                                    centroidX = adjustedCentroidX,
+                                    canvasWidth = chartWidthPx,
+                                    currentStartDist = startDist
+                                )
+                                zoomScale = newZoom
+                                startDist = ElevationProfileZoomMath.applyPan(
+                                    currentStartDist = newStart,
+                                    visibleDist = ElevationProfileZoomMath.calculateVisibleDistance(cachedData.totalDist, newZoom),
+                                    panDeltaX = panDeltaX,
+                                    canvasWidth = chartWidthPx,
+                                    totalDist = cachedData.totalDist
+                                )
+                            }
+                            prevSpan = span
+                            prevCentroid = centroid
+                            pressed.forEach { it.consume() }
+                        } else if (pressed.size == 1 && !isTransforming) {
+                            val pointer = pressed[0]
+                            val diffX = pointer.position.x - down.position.x
+                            val diffY = pointer.position.y - down.position.y
+                            if (!isDragging && (diffX * diffX + diffY * diffY > 64f)) {
+                                isDragging = true
+                            }
+
+                            if (isDragging) {
+                                val dragDeltaX = pointer.position.x - prevCentroid.x
+                                pointer.consume()
+                                if (isPanMode && cachedData.totalDist > 10.0) {
                                     startDist = ElevationProfileZoomMath.applyPan(
-                                        currentStartDist = newStart,
-                                        visibleDist = ElevationProfileZoomMath.calculateVisibleDistance(cachedData.totalDist, newZoom),
-                                        panDeltaX = panDeltaX,
+                                        currentStartDist = startDist,
+                                        visibleDist = visibleDist,
+                                        panDeltaX = dragDeltaX,
                                         canvasWidth = chartWidthPx,
                                         totalDist = cachedData.totalDist
                                     )
-                                }
-                                prevSpan = span
-                                prevCentroid = centroid
-                                pressed.forEach { it.consume() }
-                            } else if (pressed.size == 1 && !isTransforming) {
-                                val pointer = pressed[0]
-                                val diffX = pointer.position.x - down.position.x
-                                val diffY = pointer.position.y - down.position.y
-                                if (!isDragging && (diffX * diffX + diffY * diffY > 64f)) {
-                                    isDragging = true
-                                }
-
-                                if (isDragging) {
-                                    val dragDeltaX = pointer.position.x - prevCentroid.x
-                                    pointer.consume()
-                                    if (isPanMode && cachedData.totalDist > 10.0) {
-                                        startDist = ElevationProfileZoomMath.applyPan(
-                                            currentStartDist = startDist,
-                                            visibleDist = visibleDist,
-                                            panDeltaX = dragDeltaX,
-                                            canvasWidth = chartWidthPx,
-                                            totalDist = cachedData.totalDist
-                                        )
-                                    } else {
-                                        val adjustedX = (pointer.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
-                                        val dist = ElevationProfileZoomMath.canvasXToDistance(
-                                            canvasX = adjustedX,
-                                            startDist = startDist,
-                                            visibleDist = visibleDist,
-                                            canvasWidth = chartWidthPx,
-                                            totalDist = cachedData.totalDist
-                                        )
-                                        onDistanceSelected(dist)
-                                    }
-                                }
-                                prevCentroid = pointer.position
-                            }
-                        }
-
-                        // On gesture completion
-                        if (!isTransforming) {
-                            if (isDragging) {
-                                if (!isPanMode) {
-                                    onDistanceSelected(null)
-                                }
-                            } else {
-                                // Tap detection
-                                val currentTime = System.currentTimeMillis()
-                                if (currentTime - lastTapTime < 350L && cachedData.totalDist > 10.0) {
-                                    // Double tap reset
-                                    zoomScale = 1.0f
-                                    startDist = 0.0
-                                    lastTapTime = 0L
-                                    onDistanceSelected(null)
                                 } else {
-                                    // Single tap inspection
-                                    lastTapTime = currentTime
-                                    val adjustedX = (down.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
+                                    val adjustedX = (pointer.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
                                     val dist = ElevationProfileZoomMath.canvasXToDistance(
                                         canvasX = adjustedX,
                                         startDist = startDist,
@@ -449,10 +423,49 @@ fun ElevationProfile(
                                     onDistanceSelected(dist)
                                 }
                             }
+                            prevCentroid = pointer.position
+                        }
+                    }
+
+                    // On gesture completion
+                    if (!isTransforming) {
+                        if (isDragging) {
+                            if (!isPanMode) {
+                                onDistanceSelected(null)
+                            }
+                        } else {
+                            // Tap detection
+                            val currentTime = System.currentTimeMillis()
+                            if (currentTime - lastTapTime < 350L && cachedData.totalDist > 10.0) {
+                                // Double tap reset
+                                zoomScale = 1.0f
+                                startDist = 0.0
+                                lastTapTime = 0L
+                                onDistanceSelected(null)
+                            } else {
+                                // Single tap inspection
+                                lastTapTime = currentTime
+                                val adjustedX = (down.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
+                                val dist = ElevationProfileZoomMath.canvasXToDistance(
+                                    canvasX = adjustedX,
+                                    startDist = startDist,
+                                    visibleDist = visibleDist,
+                                    canvasWidth = chartWidthPx,
+                                    totalDist = cachedData.totalDist
+                                )
+                                onDistanceSelected(dist)
+                            }
                         }
                     }
                 }
-                .padding(bottom = 24.dp, start = 50.dp, end = 25.dp, top = 24.dp)
+            }
+        } else {
+            baseCanvasModifier
+        }
+
+        Canvas(
+            modifier = canvasModifier
+                .padding(bottom = 24.dp, start = 50.dp, end = 25.dp, top = topPadding)
         ) {
             val width = size.width
             val height = size.height
@@ -561,7 +574,7 @@ fun ElevationProfile(
                         canvas.nativeCanvas.drawText(
                             combinedLabel,
                             (markerX - lWidth / 2f).coerceIn(0f, (width - lWidth).coerceAtLeast(0f)),
-                            -15f,
+                            -4.dp.toPx(),
                             highlightPaint
                         )
                     }
@@ -571,7 +584,7 @@ fun ElevationProfile(
             }
         }
 
-        if (cachedData.totalDist > 10.0) {
+        if (showZoomControls && cachedData.totalDist > 10.0) {
             Row(
                 modifier = Modifier
                     .align(Alignment.TopStart)
@@ -670,15 +683,17 @@ fun ElevationProfile(
             }
         }
 
-        IconButton(
-            onClick = { showLegend = !showLegend },
-            modifier = Modifier.align(Alignment.TopEnd).padding(end = 4.dp).size(24.dp)
-        ) {
-            Icon(Icons.Default.Info, contentDescription = "Legend", modifier = Modifier.size(16.dp), tint = colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium))
-        }
+        if (showZoomControls) {
+            IconButton(
+                onClick = { showLegend = !showLegend },
+                modifier = Modifier.align(Alignment.TopEnd).padding(end = 4.dp).size(24.dp)
+            ) {
+                Icon(Icons.Default.Info, contentDescription = "Legend", modifier = Modifier.size(16.dp), tint = colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium))
+            }
 
-        if (showLegend) {
-            GradeLegend(modifier = Modifier.align(Alignment.TopEnd).padding(top = 28.dp, end = 4.dp))
+            if (showLegend) {
+                GradeLegend(modifier = Modifier.align(Alignment.TopEnd).padding(top = 28.dp, end = 4.dp))
+            }
         }
     }
 }

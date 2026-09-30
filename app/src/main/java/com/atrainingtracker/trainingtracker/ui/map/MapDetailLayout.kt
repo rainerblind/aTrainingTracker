@@ -198,6 +198,7 @@ fun MapDetailLayout(
                             minAltitudeOverride = minAltitudeOverride,
                             maxAltitudeOverride = maxAltitudeOverride,
                             onDistanceSelected = { selectedDistance = it },
+                            showZoomControls = true,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
