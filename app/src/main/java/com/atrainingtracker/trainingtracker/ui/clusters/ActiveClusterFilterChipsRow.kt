@@ -75,9 +75,9 @@ fun ActiveClusterFilterChipsRow(
         if ((criteria.startLocationLat != null && criteria.startLocationLng != null) || !criteria.startLocationName.isNullOrBlank()) {
             item(key = "startLocation") {
                 val label = if (!criteria.startLocationName.isNullOrBlank()) {
-                    "📍 ${criteria.startLocationName}"
+                    criteria.startLocationName
                 } else {
-                    "📍 ${stringResource(R.string.filter_start_location)}"
+                    stringResource(R.string.filter_start_location)
                 }
                 RemovableFilterChip(
                     label = label,

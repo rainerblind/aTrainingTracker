@@ -135,44 +135,6 @@ fun ClusterFilterBottomSheet(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // 2. Favorite Locations Selection (Lieblingsorte, REQ-UI-187)
-        if (knownLocations.isNotEmpty()) {
-            Column {
-                Text(
-                    text = stringResource(R.string.known_locations_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    knownLocations.forEach { loc ->
-                        val isSelected = localStartLocationLat == loc.latLng.latitude &&
-                                localStartLocationLng == loc.latLng.longitude
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = {
-                                if (isSelected) {
-                                    localStartLocationName = null
-                                    localStartLocationLat = null
-                                    localStartLocationLng = null
-                                    localStartLocationRadiusM = null
-                                } else {
-                                    localStartLocationName = loc.name
-                                    localStartLocationLat = loc.latLng.latitude
-                                    localStartLocationLng = loc.latLng.longitude
-                                    localStartLocationRadiusM = loc.radius.toDouble()
-                                }
-                            },
-                            label = { Text("📍 ${loc.name}") }
-                        )
-                    }
-                }
-            }
-        }
-
         // 2. Equipment Selection
         if (availableEquipment.isNotEmpty()) {
             Column {
@@ -246,6 +208,44 @@ fun ClusterFilterBottomSheet(
                         },
                         label = { Text(stringResource(R.string.filter_min_recordings_chip_format, count)) }
                     )
+                }
+            }
+        }
+
+        // 5. Favorite Locations Selection (Lieblingsorte, REQ-UI-187, REQ-UI-194)
+        if (knownLocations.isNotEmpty()) {
+            Column {
+                Text(
+                    text = stringResource(R.string.known_locations_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    knownLocations.forEach { loc ->
+                        val isSelected = localStartLocationLat == loc.latLng.latitude &&
+                                localStartLocationLng == loc.latLng.longitude
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = {
+                                if (isSelected) {
+                                    localStartLocationName = null
+                                    localStartLocationLat = null
+                                    localStartLocationLng = null
+                                    localStartLocationRadiusM = null
+                                } else {
+                                    localStartLocationName = loc.name
+                                    localStartLocationLat = loc.latLng.latitude
+                                    localStartLocationLng = loc.latLng.longitude
+                                    localStartLocationRadiusM = loc.radius.toDouble()
+                                }
+                            },
+                            label = { Text(loc.name) }
+                        )
+                    }
                 }
             }
         }

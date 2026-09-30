@@ -518,78 +518,7 @@ fun WorkoutFilterBottomSheet(
             }
         }
 
-        // 6. Favorite Locations (Lieblingsorte, REQ-UI-187)
-        if (knownLocations.isNotEmpty()) {
-            Column {
-                Text(
-                    text = stringResource(R.string.known_locations_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    knownLocations.forEach { loc ->
-                        val isSelected = localStartLocationLat == loc.latLng.latitude &&
-                                localStartLocationLng == loc.latLng.longitude
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = {
-                                if (isSelected) {
-                                    localStartLocationName = null
-                                    localStartLocationLat = null
-                                    localStartLocationLng = null
-                                    localStartLocationRadiusM = null
-                                } else {
-                                    localStartLocationName = loc.name
-                                    localStartLocationLat = loc.latLng.latitude
-                                    localStartLocationLng = loc.latLng.longitude
-                                    localStartLocationRadiusM = loc.radius.toDouble()
-                                }
-                            },
-                            label = { Text("📍 ${loc.name}") }
-                        )
-                    }
-                }
-            }
-        }
-
-        // 7. Favorite Tracks / Route Clusters (Lieblingsstrecken, REQ-UI-187)
-        if (availableClusters.isNotEmpty()) {
-            Column {
-                Text(
-                    text = stringResource(R.string.my_locations),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    availableClusters.forEach { cluster ->
-                        val isSelected = localClusterId == cluster.id
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = {
-                                if (isSelected) {
-                                    localClusterId = null
-                                    localClusterName = null
-                                } else {
-                                    localClusterId = cluster.id
-                                    localClusterName = cluster.name
-                                }
-                            },
-                            label = { Text("🗺️ ${cluster.name}") }
-                        )
-                    }
-                }
-            }
-        }
-
-        // 8. Distance Interval (REQ-UI-157)
+        // 6. Distance Interval (REQ-UI-157)
         Column {
             Text(
                 text = stringResource(R.string.filter_section_distance),
@@ -728,6 +657,77 @@ fun WorkoutFilterBottomSheet(
                     singleLine = true,
                     modifier = Modifier.weight(1f)
                 )
+            }
+        }
+
+        // 8. Favorite Locations (Lieblingsorte, REQ-UI-187, REQ-UI-194)
+        if (knownLocations.isNotEmpty()) {
+            Column {
+                Text(
+                    text = stringResource(R.string.known_locations_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    knownLocations.forEach { loc ->
+                        val isSelected = localStartLocationLat == loc.latLng.latitude &&
+                                localStartLocationLng == loc.latLng.longitude
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = {
+                                if (isSelected) {
+                                    localStartLocationName = null
+                                    localStartLocationLat = null
+                                    localStartLocationLng = null
+                                    localStartLocationRadiusM = null
+                                } else {
+                                    localStartLocationName = loc.name
+                                    localStartLocationLat = loc.latLng.latitude
+                                    localStartLocationLng = loc.latLng.longitude
+                                    localStartLocationRadiusM = loc.radius.toDouble()
+                                }
+                            },
+                            label = { Text(loc.name) }
+                        )
+                    }
+                }
+            }
+        }
+
+        // 9. Favorite Tracks / Route Clusters (Lieblingsstrecken, REQ-UI-187, REQ-UI-194)
+        if (availableClusters.isNotEmpty()) {
+            Column {
+                Text(
+                    text = stringResource(R.string.my_locations),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    availableClusters.forEach { cluster ->
+                        val isSelected = localClusterId == cluster.id
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = {
+                                if (isSelected) {
+                                    localClusterId = null
+                                    localClusterName = null
+                                } else {
+                                    localClusterId = cluster.id
+                                    localClusterName = cluster.name
+                                }
+                            },
+                            label = { Text(cluster.name) }
+                        )
+                    }
+                }
             }
         }
     }

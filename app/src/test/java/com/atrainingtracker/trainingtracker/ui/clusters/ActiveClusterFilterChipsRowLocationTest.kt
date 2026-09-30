@@ -43,11 +43,11 @@ class ActiveClusterFilterChipsRowLocationTest {
 
         assertTrue("Start location chip must be shown when location coordinates and name exist", hasStartLocationChip)
         val chipLabel = if (!criteriaWithName.startLocationName.isNullOrBlank()) {
-            "📍 ${criteriaWithName.startLocationName}"
+            criteriaWithName.startLocationName
         } else {
-            "📍 Start Location"
+            "Start Location"
         }
-        assertEquals("📍 Büro", chipLabel)
+        assertEquals("Büro", chipLabel)
     }
 
     @Test
@@ -64,11 +64,11 @@ class ActiveClusterFilterChipsRowLocationTest {
         assertTrue("Start location chip must be shown even without custom name if coordinates are set", hasStartLocationChip)
         val fallbackLabel = "Start Location"
         val chipLabel = if (!criteriaCoordsOnly.startLocationName.isNullOrBlank()) {
-            "📍 ${criteriaCoordsOnly.startLocationName}"
+            criteriaCoordsOnly.startLocationName
         } else {
-            "📍 $fallbackLabel"
+            fallbackLabel
         }
-        assertEquals("📍 Start Location", chipLabel)
+        assertEquals("Start Location", chipLabel)
     }
 
     @Test
