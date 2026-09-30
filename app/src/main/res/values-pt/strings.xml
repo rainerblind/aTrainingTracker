@@ -1282,4 +1282,39 @@
     <string name="cluster_start_location">Início: %s</string>
     <string name="known_location_routes_header">Rotas a partir daqui (%d):</string>
     <string name="filter_by_start_location">Filtrar por local de início</string>
+    <plurals name="known_locations_routes">
+        <item quantity="one">%1$d rota</item>
+        <item quantity="other">%1$d rotas</item>
+    </plurals>
+    <string name="known_locations_view_routes">Ver rotas</string>
+
+    <!-- Advanced Tuning Preferences (ATT-1304 / REQ-SET-073) -->
+    <string name="advanced_tuning_title">Ajuste avançado</string>
+    <string name="advanced_tuning_open">Ajuste avançado…</string>
+    <string name="advanced_tuning_warning_title">Configurações avançadas</string>
+    <string name="advanced_tuning_warning_desc">A modificação destes parâmetros altera a heurística de rastreamento, a filtragem de sensores e a economia de bateria. Você pode restaurar os padrões de fábrica a qualquer momento.</string>
+    <string name="tuning_cat_battery_saver">Economia de bateria AMOLED</string>
+    <string name="tuning_cat_gps">Filtragem de GPS e localização</string>
+    <string name="tuning_cat_elevation">Dinâmica de altitude e inclinação</string>
+    <string name="tuning_full_dim_factor_title">Brilho de redução total</string>
+    <string name="tuning_full_dim_factor_desc">Brilho alvo da tela em terreno plano e intervalos de baixo esforço (limitado &gt;= 5%).</string>
+    <string name="tuning_medium_dim_factor_title">Brilho de redução média</string>
+    <string name="tuning_medium_dim_factor_desc">Brilho alvo da tela em declives moderados ou zonas de ritmo.</string>
+    <string name="tuning_slope_flat_title">Limite de terreno plano</string>
+    <string name="tuning_slope_flat_desc">Percentual de inclinação abaixo do qual a redução total é permitida.</string>
+    <string name="tuning_slope_steep_title">Limite de subida íngreme</string>
+    <string name="tuning_slope_steep_desc">Percentual de inclinação acima do qual o brilho máximo é forçado.</string>
+    <string name="tuning_wakeup_duration_title">Duração de ativação</string>
+    <string name="tuning_wakeup_duration_desc">Tempo que a tela permanece com brilho máximo após um toque ou gesto de aproximação.</string>
+    <string name="tuning_downward_delay_title">Atraso de amortecimento da redução</string>
+    <string name="tuning_downward_delay_desc">Atraso de histerese antes de escurecer a tela para evitar oscilações durante mudanças transitórias de inclinação.</string>
+    <string name="tuning_gps_accuracy_title">Limite de precisão GPS</string>
+    <string name="tuning_gps_accuracy_desc">Erro horizontal máximo aceitável; dados de localização menos precisos serão rejeitados.</string>
+    <string name="tuning_altitude_window_title">Janela de suavização de altitude</string>
+    <string name="tuning_altitude_window_desc">Janela de tempo de média móvel para altitude instantânea e velocidade vertical.</string>
+    <string name="tuning_slope_min_speed_title">Velocidade mínima para inclinação</string>
+    <string name="tuning_slope_min_speed_desc">Velocidade mínima necessária para calcular a inclinação em tempo real.</string>
+    <string name="tuning_default_format">Padrão: %1$s</string>
+    <string name="reset_to_defaults">Restaurar padrões</string>
+    <string name="reset_to_defaults_success">Configurações de ajuste restauradas para os padrões de fábrica.</string>
 </resources>

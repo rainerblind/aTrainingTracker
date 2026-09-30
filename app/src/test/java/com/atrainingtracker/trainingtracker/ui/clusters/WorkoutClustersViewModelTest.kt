@@ -30,6 +30,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
@@ -70,6 +71,7 @@ class WorkoutClustersViewModelTest {
     private val mockBanalRepo = mockk<BANALServiceRepository>(relaxed = true)
     private val mockDiscovery = mockk<EquipmentAndSportTypeDiscoveryManager>(relaxed = true)
     private val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+    private val mockKnownLocationsRepo = mockk<KnownLocationsRepository>(relaxed = true)
 
     private val allClustersFlow = MutableStateFlow<List<WorkoutCluster>>(emptyList())
     private val currentLocationFlow = MutableStateFlow<LatLng?>(null)
@@ -175,6 +177,10 @@ class WorkoutClustersViewModelTest {
 
         mockkObject(WorkoutRepository.Companion)
         every { WorkoutRepository.getInstance(any()) } returns mockWorkoutRepo
+
+        mockkObject(KnownLocationsRepository.Companion)
+        every { KnownLocationsRepository.getInstance(any()) } returns mockKnownLocationsRepo
+        every { mockKnownLocationsRepo.locationsFlow } returns MutableStateFlow(emptyList())
 
         mockkConstructor(MyPreferenceManager::class)
         every { anyConstructed<MyPreferenceManager>().enabledClusterMarkerTypesFlow } returns MutableStateFlow(emptySet())

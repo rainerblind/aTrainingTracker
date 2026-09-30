@@ -11,13 +11,28 @@
 package com.atrainingtracker.trainingtracker.batterysaver
 
 class BatterySaverStateMachine(
-    private val hysteresisMs: Long = DimmingLevel.DOWNWARD_HYSTERESIS_MS
+    var tuningConfig: BatterySaverTuningConfig = BatterySaverTuningConfig()
 ) {
+    constructor(hysteresisMs: Long) : this(
+        tuningConfig = BatterySaverTuningConfig(downwardHysteresisMs = hysteresisMs)
+    )
+
+    val hysteresisMs: Long
+        get() = tuningConfig.downwardHysteresisMs
+
     var currentLevel: DimmingLevel = DimmingLevel.NO_DIM
         private set
 
     private var pendingCandidate: DimmingLevel? = null
     private var pendingTimestamp: Long = 0L
+
+    fun getBrightnessForLevel(level: DimmingLevel): Float {
+        return when (level) {
+            DimmingLevel.FULL_DIM -> tuningConfig.fullDimFactor
+            DimmingLevel.MEDIUM_DIM -> tuningConfig.mediumDimFactor
+            DimmingLevel.NO_DIM -> 1.0f
+        }
+    }
 
     fun evaluateRawLevel(snapshot: TelemetrySnapshot): DimmingLevel {
         val slope = snapshot.slopePercent ?: 0.0f
@@ -25,8 +40,8 @@ class BatterySaverStateMachine(
         val pwr = if (snapshot.isCycling) snapshot.powerZone else null
 
         // Rule 3: No Dimming (Full Illumination)
-        // Slope > 5.0% OR HR >= Zone 4 OR Power >= Zone 4
-        val isSteepClimb = slope > 5.0f
+        // Slope > slopeSteepThreshold OR HR >= Zone 4 OR Power >= Zone 4
+        val isSteepClimb = slope > tuningConfig.slopeSteepThreshold
         val isHighHr = hr != null && hr >= 4
         val isHighPower = pwr != null && pwr >= 4
 
@@ -35,8 +50,8 @@ class BatterySaverStateMachine(
         }
 
         // Rule 2: Medium Dimming
-        // Slope between 2.0% and 5.0% OR HR == Zone 3 OR Power == Zone 3
-        val isModerateSlope = slope in 2.0f..5.0f
+        // Slope between slopeFlatThreshold and slopeSteepThreshold OR HR == Zone 3 OR Power == Zone 3
+        val isModerateSlope = slope in tuningConfig.slopeFlatThreshold..tuningConfig.slopeSteepThreshold
         val isTempoHr = hr != null && hr == 3
         val isTempoPower = pwr != null && pwr == 3
 
@@ -45,8 +60,8 @@ class BatterySaverStateMachine(
         }
 
         // Rule 1: Full Dimming
-        // Slope < 2.0% AND HR <= Zone 2 AND Power <= Zone 2
-        val isFlatOrDownhill = slope < 2.0f
+        // Slope < slopeFlatThreshold AND HR <= Zone 2 AND Power <= Zone 2
+        val isFlatOrDownhill = slope < tuningConfig.slopeFlatThreshold
         val isLowHr = hr == null || hr <= 2
         val isLowPower = pwr == null || pwr <= 2
 
@@ -59,12 +74,14 @@ class BatterySaverStateMachine(
 
     fun update(snapshot: TelemetrySnapshot, currentTimeMs: Long = System.currentTimeMillis()): DimmingLevel {
         val raw = evaluateRawLevel(snapshot)
+        val rawBrightness = getBrightnessForLevel(raw)
+        val currentBrightness = getBrightnessForLevel(currentLevel)
 
-        if (raw.brightness > currentLevel.brightness) {
+        if (rawBrightness > currentBrightness) {
             // Immediate upward transition (brighter)
             currentLevel = raw
             pendingCandidate = null
-        } else if (raw.brightness < currentLevel.brightness) {
+        } else if (rawBrightness < currentBrightness) {
             // Downward transition requires damping hysteresis
             if (pendingCandidate != raw) {
                 pendingCandidate = raw

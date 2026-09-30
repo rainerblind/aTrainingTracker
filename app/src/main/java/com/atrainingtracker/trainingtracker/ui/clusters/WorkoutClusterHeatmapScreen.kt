@@ -36,6 +36,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
+import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -340,6 +341,9 @@ fun WorkoutClusterHeatmapScreen(
 
         BottomSheetScaffold(
             scaffoldState = scaffoldState,
+            sheetShape = BottomSheetDesign.SheetShape,
+            sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
+            sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
             sheetPeekHeight = if (peekedWorkoutDataWithTrack != null && !isEditingFingerprint) 120.dp + navBarHeight else 0.dp,
             sheetDragHandle = null,
             sheetContent = {

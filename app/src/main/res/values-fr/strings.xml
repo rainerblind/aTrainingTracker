@@ -1244,6 +1244,10 @@
         <item quantity="one">%1$d départ</item>
         <item quantity="other">%1$d départs</item>
     </plurals>
+    <plurals name="known_locations_routes">
+        <item quantity="one">%1$d itinéraire</item>
+        <item quantity="other">%1$d itinéraires</item>
+    </plurals>
     <string name="source_internet_dem">Internet (MNT)</string>
     <string name="source_manual_user">Manuel</string>
     <string name="source_auto_learned">Automatique</string>
@@ -1280,7 +1284,38 @@
     <string name="workout_start_and_destination">Départ et arrivée : %s</string>
     <string name="filter_start_location">Lieu de départ</string>
     <string name="known_locations_view_workouts">Voir les entraînements</string>
+    <string name="known_locations_view_routes">Voir les itinéraires</string>
     <string name="cluster_start_location">Départ : %s</string>
     <string name="known_location_routes_header">Itinéraires au départ d\'ici (%d) :</string>
     <string name="filter_by_start_location">Filtrer par lieu de départ</string>
+
+    <!-- Advanced Tuning Preferences (ATT-1304 / REQ-SET-073) -->
+    <string name="advanced_tuning_title">Réglage avancé</string>
+    <string name="advanced_tuning_open">Réglage avancé…</string>
+    <string name="advanced_tuning_warning_title">Paramètres experts</string>
+    <string name="advanced_tuning_warning_desc">La modification de ces paramètres altère les heuristiques de suivi, le filtrage des capteurs et l\'économie de batterie. Vous pouvez restaurer les valeurs par défaut à tout moment.</string>
+    <string name="tuning_cat_battery_saver">Économiseur de batterie AMOLED</string>
+    <string name="tuning_cat_gps">Filtrage GPS et localisation</string>
+    <string name="tuning_cat_elevation">Dynamique d\'altitude et de pente</string>
+    <string name="tuning_full_dim_factor_title">Luminosité d\'atténuation totale</string>
+    <string name="tuning_full_dim_factor_desc">Luminosité cible de l\'écran sur terrain plat et efforts légers (limité &gt;= 5%).</string>
+    <string name="tuning_medium_dim_factor_title">Luminosité d\'atténuation moyenne</string>
+    <string name="tuning_medium_dim_factor_desc">Luminosité cible de l\'écran sur pentes modérées ou zones tempo.</string>
+    <string name="tuning_slope_flat_title">Seuil de terrain plat</string>
+    <string name="tuning_slope_flat_desc">Pourcentage de pente en dessous duquel l\'atténuation totale est active.</string>
+    <string name="tuning_slope_steep_title">Seuil de montée raide</string>
+    <string name="tuning_slope_steep_desc">Pourcentage de pente au-dessus duquel la luminosité maximale est forcée.</string>
+    <string name="tuning_wakeup_duration_title">Durée de réveil</string>
+    <string name="tuning_wakeup_duration_desc">Temps pendant lequel l\'écran reste allumé après un toucher ou geste de proximité.</string>
+    <string name="tuning_downward_delay_title">Délai d\'amortissement à la baisse</string>
+    <string name="tuning_downward_delay_desc">Délai d\'hystérésis avant l\'atténuation pour éviter les clignotements lors des variations de pente.</string>
+    <string name="tuning_gps_accuracy_title">Seuil de précision GPS</string>
+    <string name="tuning_gps_accuracy_desc">Erreur horizontale maximale acceptable ; les points moins précis seront rejetés.</string>
+    <string name="tuning_altitude_window_title">Fenêtre de lissage d\'altitude</string>
+    <string name="tuning_altitude_window_desc">Fenêtre temporelle de moyenne mobile pour l\'altitude instantanée et la vitesse verticale.</string>
+    <string name="tuning_slope_min_speed_title">Vitesse minimale pour la pente</string>
+    <string name="tuning_slope_min_speed_desc">Vitesse minimale requise pour calculer la pente en temps réel.</string>
+    <string name="tuning_default_format">Par défaut : %1$s</string>
+    <string name="reset_to_defaults">Rétablir les paramètres par défaut</string>
+    <string name="reset_to_defaults_success">Paramètres de réglage rétablis aux valeurs d\'usine par défaut.</string>
 </resources>

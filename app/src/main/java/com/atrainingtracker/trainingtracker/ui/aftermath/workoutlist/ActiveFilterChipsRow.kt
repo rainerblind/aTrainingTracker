@@ -68,6 +68,7 @@ fun ActiveFilterChipsRow(
     onRemoveMinDistance: () -> Unit = onRemoveDistanceRange,
     onRemoveMinDuration: () -> Unit = onRemoveDurationRange,
     onRemoveStartLocation: () -> Unit = {},
+    onRemoveCluster: () -> Unit = {},
     onClearAll: () -> Unit,
     sportName: String? = null,
     equipmentName: String? = null,
@@ -104,6 +105,21 @@ fun ActiveFilterChipsRow(
                 RemovableFilterChip(
                     label = label,
                     onRemove = onRemoveStartLocation
+                )
+            }
+        }
+
+        // Route Cluster Chip
+        if (criteria.clusterId != null || !criteria.clusterName.isNullOrBlank()) {
+            item("cluster") {
+                val label = if (!criteria.clusterName.isNullOrBlank()) {
+                    "🗺️ ${criteria.clusterName}"
+                } else {
+                    "🗺️ ${stringResource(R.string.my_locations)}"
+                }
+                RemovableFilterChip(
+                    label = label,
+                    onRemove = onRemoveCluster
                 )
             }
         }

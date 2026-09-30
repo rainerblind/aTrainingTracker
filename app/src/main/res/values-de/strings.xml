@@ -1330,6 +1330,10 @@
         <item quantity="one">%1$d Start</item>
         <item quantity="other">%1$d Starts</item>
     </plurals>
+    <plurals name="known_locations_routes">
+        <item quantity="one">%1$d Strecke</item>
+        <item quantity="other">%1$d Strecken</item>
+    </plurals>
     <string name="source_internet_dem">Internet (DEM)</string>
     <string name="source_manual_user">Manuell</string>
     <string name="source_auto_learned">Automatisch</string>
@@ -1366,7 +1370,38 @@
     <string name="workout_start_and_destination">Start &amp; Ziel: %s</string>
     <string name="filter_start_location">Startort</string>
     <string name="known_locations_view_workouts">Workouts anzeigen</string>
+    <string name="known_locations_view_routes">Strecken anzeigen</string>
     <string name="cluster_start_location">Start: %s</string>
     <string name="known_location_routes_header">Lieblingsstrecken ab hier (%d):</string>
     <string name="filter_by_start_location">Nach Startort filtern</string>
+
+    <!-- Advanced Tuning Preferences (ATT-1304 / REQ-SET-073) -->
+    <string name="advanced_tuning_title">Erweiterte Abstimmung</string>
+    <string name="advanced_tuning_open">Erweiterte Abstimmung…</string>
+    <string name="advanced_tuning_warning_title">Experteneinstellungen</string>
+    <string name="advanced_tuning_warning_desc">Das Ändern dieser Parameter beeinflusst die Tracking-Heuristik, Sensorfilterung und das Energiesparverhalten. Werkseinstellungen können jederzeit wiederhergestellt werden.</string>
+    <string name="tuning_cat_battery_saver">AMOLED-Energiesparmodus</string>
+    <string name="tuning_cat_gps">GPS- &amp; Standortfilterung</string>
+    <string name="tuning_cat_elevation">Höhen- &amp; Steigungsdynamik</string>
+    <string name="tuning_full_dim_factor_title">Helligkeit bei voller Dimmung</string>
+    <string name="tuning_full_dim_factor_desc">Ziel-Displayhelligkeit auf flachem Gelände und in Erholungsphasen (begrenzt &gt;= 5%).</string>
+    <string name="tuning_medium_dim_factor_title">Helligkeit bei mittlerer Dimmung</string>
+    <string name="tuning_medium_dim_factor_desc">Ziel-Displayhelligkeit bei moderaten Steigungen oder im Tempobereich.</string>
+    <string name="tuning_slope_flat_title">Schwelle für flaches Gelände</string>
+    <string name="tuning_slope_flat_desc">Steigung in Prozent, unterhalb derer volle Displaydimmung greift.</string>
+    <string name="tuning_slope_steep_title">Schwelle für steile Anstiege</string>
+    <string name="tuning_slope_steep_desc">Steigung in Prozent, ab der volle Displayhelligkeit erzwungen wird.</string>
+    <string name="tuning_wakeup_duration_title">Aufwachdauer</string>
+    <string name="tuning_wakeup_duration_desc">Zeitspanne, für die das Display nach Berührung oder Näherungsgeste voll hell bleibt.</string>
+    <string name="tuning_downward_delay_title">Dämpfungsverzögerung beim Abdimmen</string>
+    <string name="tuning_downward_delay_desc">Hystereseverzögerung vor dem Abdimmen, um Flackern bei schnellen Steigungswechseln zu verhindern.</string>
+    <string name="tuning_gps_accuracy_title">GPS-Genauigkeitsschwelle</string>
+    <string name="tuning_gps_accuracy_desc">Maximal akzeptabler horizontaler Fehler; ungenauere Positionsdaten werden verworfen.</string>
+    <string name="tuning_altitude_window_title">Glättungsfenster für Höhe</string>
+    <string name="tuning_altitude_window_desc">Gleitendes Zeitfenster für Momentanhöhe und Vertikalgeschwindigkeit.</string>
+    <string name="tuning_slope_min_speed_title">Mindestgeschwindigkeit für Steigung</string>
+    <string name="tuning_slope_min_speed_desc">Erforderliche Mindestgeschwindigkeit zur Berechnung der Echtzeit-Steigung.</string>
+    <string name="tuning_default_format">Standard: %1$s</string>
+    <string name="reset_to_defaults">Auf Werkseinstellungen zurücksetzen</string>
+    <string name="reset_to_defaults_success">Abstimmungseinstellungen auf Werkseinstellungen zurückgesetzt.</string>
 </resources>

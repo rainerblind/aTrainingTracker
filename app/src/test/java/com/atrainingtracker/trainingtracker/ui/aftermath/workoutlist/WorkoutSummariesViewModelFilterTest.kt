@@ -25,6 +25,8 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.every
@@ -62,6 +64,8 @@ class WorkoutSummariesViewModelFilterTest {
     private val testDispatcher = StandardTestDispatcher()
     private val mockApplication = mockk<Application>(relaxed = true)
     private val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+    private val mockKnownLocationsRepo = mockk<KnownLocationsRepository>(relaxed = true)
+    private val mockClusterRepo = mockk<WorkoutClusterRepository>(relaxed = true)
 
     private val allWorkoutsFlow = MutableStateFlow<List<WorkoutData>>(emptyList())
 
@@ -129,7 +133,11 @@ class WorkoutSummariesViewModelFilterTest {
         every { anyConstructed<MyPreferenceManager>().isCompactViewFlow } returns flowOf(false)
 
         every { mockWorkoutRepo.allWorkouts } returns allWorkoutsFlow
+        every { mockKnownLocationsRepo.locationsFlow } returns MutableStateFlow(emptyList())
+        every { mockClusterRepo.allClusters } returns MutableStateFlow(emptyList())
         WorkoutRepository.resetForTesting(mockWorkoutRepo)
+        KnownLocationsRepository.resetForTesting(mockKnownLocationsRepo)
+        WorkoutClusterRepository.resetForTesting(mockClusterRepo)
     }
 
     @After
@@ -137,6 +145,8 @@ class WorkoutSummariesViewModelFilterTest {
         Dispatchers.resetMain()
         ArchTaskExecutor.getInstance().setDelegate(null)
         WorkoutRepository.resetForTesting(null)
+        KnownLocationsRepository.resetForTesting(null)
+        WorkoutClusterRepository.resetForTesting(null)
         unmockkAll()
     }
 

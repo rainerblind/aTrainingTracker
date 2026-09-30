@@ -31,10 +31,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 /**
- * A unified, minimal drag handle for modal and scaffold bottom sheets (REQ-UI-148, ATT-939).
+ * A unified, minimal drag handle for modal and scaffold bottom sheets (REQ-UI-148, REQ-UI-189, ATT-939, ATT-1588).
  *
- * Provides a standardized drag pill (32dp x 4dp) with 16dp top padding,
- * eliminating status bar padding overrides and excessive vertical footprint.
+ * Provides a standardized drag pill (36dp x 4dp) with 12dp top and 6dp bottom padding,
+ * ensuring clear touch affordance without excessive vertical footprint.
  *
  * @param modifier Optional modifier applied to the outer container.
  */
@@ -43,12 +43,12 @@ fun MinimumDragHandle(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 16.dp, bottom = 4.dp),
+            .padding(top = 12.dp, bottom = 6.dp),
         contentAlignment = Alignment.Center
     ) {
         Surface(
-            modifier = Modifier.size(width = 32.dp, height = 4.dp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+            modifier = Modifier.size(width = BottomSheetDesign.DragHandleWidth, height = BottomSheetDesign.DragHandleHeight),
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
             shape = CircleShape
         ) {
             Box(Modifier.matchParentSize())

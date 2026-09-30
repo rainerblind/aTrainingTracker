@@ -29,6 +29,19 @@ enum class DimmingLevel(val factor: Float) {
     }
 }
 
+/**
+ * Dynamic configuration for AMOLED Battery Saver thresholds and brightness factors.
+ * Configured via Advanced Tuning Preferences (REQ-SET-073).
+ */
+data class BatterySaverTuningConfig(
+    val fullDimFactor: Float = DimmingLevel.FULL_DIM.factor,
+    val mediumDimFactor: Float = DimmingLevel.MEDIUM_DIM.factor,
+    val slopeFlatThreshold: Float = 2.0f,
+    val slopeSteepThreshold: Float = 5.0f,
+    val wakeupDurationMs: Long = DimmingLevel.WAKEUP_DURATION_MS,
+    val downwardHysteresisMs: Long = DimmingLevel.DOWNWARD_HYSTERESIS_MS
+)
+
 data class TelemetrySnapshot(
     val slopePercent: Float? = null,
     val hrZone: Int? = null,

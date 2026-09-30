@@ -1228,6 +1228,9 @@
     <plurals name="known_locations_starts">
         <item quantity="other">%1$d 回開始</item>
     </plurals>
+    <plurals name="known_locations_routes">
+        <item quantity="other">%1$d件のルート</item>
+    </plurals>
     <string name="source_internet_dem">インターネット (DEM)</string>
     <string name="source_manual_user">手動</string>
     <string name="source_auto_learned">自動学習</string>
@@ -1264,7 +1267,38 @@
     <string name="workout_start_and_destination">スタート＆ゴール: %s</string>
     <string name="filter_start_location">開始地点</string>
     <string name="known_locations_view_workouts">ワークアウトを表示</string>
+    <string name="known_locations_view_routes">ルートを表示</string>
     <string name="cluster_start_location">開始: %s</string>
     <string name="known_location_routes_header">ここからのルート (%d):</string>
     <string name="filter_by_start_location">開始地点で絞り込む</string>
+
+    <!-- Advanced Tuning Preferences (ATT-1304 / REQ-SET-073) -->
+    <string name="advanced_tuning_title">詳細チューニング</string>
+    <string name="advanced_tuning_open">詳細チューニング…</string>
+    <string name="advanced_tuning_warning_title">エキスパート設定</string>
+    <string name="advanced_tuning_warning_desc">これらのパラメータを変更すると、トラッキングのヒューリスティック、センサーフィルタリング、およびバッテリー節約動作が変更されます。いつでも工場出荷時のデフォルトに戻すことができます。</string>
+    <string name="tuning_cat_battery_saver">AMOLEDバッテリーセーバー</string>
+    <string name="tuning_cat_gps">GPS・位置フィルタリング</string>
+    <string name="tuning_cat_elevation">高度・勾配ダイナミクス</string>
+    <string name="tuning_full_dim_factor_title">完全減光時の明るさ</string>
+    <string name="tuning_full_dim_factor_desc">平坦な地形および低負荷時の目標画面輝度（5%以上に制限）。</string>
+    <string name="tuning_medium_dim_factor_title">中間減光時の明るさ</string>
+    <string name="tuning_medium_dim_factor_desc">中程度の勾配またはテンポゾーンでの目標画面輝度。</string>
+    <string name="tuning_slope_flat_title">平坦地形のしきい値</string>
+    <string name="tuning_slope_flat_desc">完全減光が有効になる勾配割合。</string>
+    <string name="tuning_slope_steep_title">急坂のしきい値</string>
+    <string name="tuning_slope_steep_desc">画面が最大輝度で点灯する勾配割合。</string>
+    <string name="tuning_wakeup_duration_title">点灯保持時間</string>
+    <string name="tuning_wakeup_duration_desc">タッチまたは近接ジェスチャー後に画面が最大輝度を維持する時間。</string>
+    <string name="tuning_downward_delay_title">減光遅延ダンピング</string>
+    <string name="tuning_downward_delay_desc">急激な勾配変化による画面のチラつきを防ぐための減光遅延時間。</string>
+    <string name="tuning_gps_accuracy_title">GPS精度しきい値</string>
+    <string name="tuning_gps_accuracy_desc">許容される最大水平誤差。これより粗い位置情報は除外されます。</string>
+    <string name="tuning_altitude_window_title">高度スムージングウィンドウ</string>
+    <string name="tuning_altitude_window_desc">瞬間高度および垂直速度の移動平均時間枠。</string>
+    <string name="tuning_slope_min_speed_title">勾配計算の最低速度</string>
+    <string name="tuning_slope_min_speed_desc">リアルタイム勾配を計算するために必要な最低移動速度。</string>
+    <string name="tuning_default_format">デフォルト: %1$s</string>
+    <string name="reset_to_defaults">デフォルトに戻す</string>
+    <string name="reset_to_defaults_success">チューニング設定が工場出荷時のデフォルトに戻りました。</string>
 </resources>

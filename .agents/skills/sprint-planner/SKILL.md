@@ -89,24 +89,31 @@ Jointly review all completed sprint tickets with the human user against expectat
    * **Evaluation Decision**:
      * **In Ordnung (i.O. / Accepted)**:
        1. Human user transitions ticket from `Final Review (Human)` to `Erledigt` in Jira.
-     * **Nicht in Ordnung (n.i.O. / Rejected)**:
-       * *Minor defect or scope gap*: Revert the ticket commit on `sprint/<SPRINT_NAME>` (or apply immediate fix), and move ticket back to `Analysis` with explicit human feedback:
+     * **User Feedback / Refinements ("No Code Changes During Review")**:
+       * **Mandate**: Under NO circumstances may code be modified during Ceremony 2 (`"No code changes during the Sprint Review!"`).
+       * Immediately create a dedicated backlog ticket for the next sprint via `tools/jira_util.py create-issue`.
+       * Rank the new ticket at the top of the backlog via Jira Agile API.
+       * Transition the current sprint ticket to `Erledigt`.
+       * Proceed strictly to the next ticket.
+     * **Nicht in Ordnung (n.i.O. / Rejection of Core Scope)**:
+       * Move ticket back to `Analysis` with explicit human feedback:
          ```bash
          python3 tools/jira_util.py comment <KEY> "Revision needed: [Human feedback]"
          python3 tools/jira_util.py move <KEY> "analysis"
          ```
-       * *Separate follow-up issue*: Keep parent ticket approved and file a dedicated Bug ticket for the next sprint backlog via `tools/jira_util.py create-issue`. (Remember: creating the ticket stops immediately and does not trigger realization).
-3. **Sprint Closure & Merge to `develop`**:
-   Once all accepted sprint tickets are signed off:
+3. **Sprint Retrospective & Process Hardening ("Retro Before Merge")**:
+   * **Mandate**: Conduct the Retrospective and update governance documents on `sprint/<SPRINT_NAME>` **BEFORE** merging into `develop` (`"During the last sprint, we learned that we should do the retro before the merge. During the retro, we probably change some files. :)"`).
+   * Synthesize real-time comments logged during the sprint in the `Review & Retro` ticket into actionable root cause analyses.
+   * Document insights in `docs/engineering/Sprint_Review_and_Retro_<KEY>.md`.
+   * Update `.agents/rules/aspice_governance.md`, relevant skills, and `docs/project_protocol.md` with permanent countermeasures.
+   * Commit retrospective deliverables to `sprint/<SPRINT_NAME>`.
+4. **Sprint Closure & Merge to `develop`**:
+   * Once all tickets and the Retrospective are signed off:
    ```bash
    git checkout develop
    git pull origin develop
    git merge --no-ff sprint/<SPRINT_NAME> -m "Merge branch 'sprint/<SPRINT_NAME>' into develop"
    git branch -d sprint/<SPRINT_NAME>
    ```
-   Post final integration notice to Jira.
-4. **Sprint Retrospective**:
-   * Review sprint metrics, velocity, and process findings in the sprint's `Review & Retro` ticket (e.g. `ATT-1511`).
-   * Synthesize real-time comments logged during the sprint into actionable root cause analyses.
-   * Document insights in `docs/engineering/Sprint_Review_and_Retro_<KEY>.md`.
-   * Update `.agents/rules/aspice_governance.md`, relevant skills, and `docs/project_protocol.md` with permanent countermeasures.
+   * Transition the sprint's `Review & Retro` ticket to `Erledigt` with the human user.
+   * Post final integration notice to Jira.

@@ -75,6 +75,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewM
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModel
+import com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersScreen
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModel
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentTabsScreen
@@ -91,6 +92,7 @@ import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegme
 import com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialog
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialog
 import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ActivityTypeSelectionDialog
@@ -327,6 +329,7 @@ fun ATrainingTrackerApp(
                 composable(NavRoutes.START_LOCATIONS) {
                     val knownLocationsViewModel: KnownLocationsViewModel = viewModel(activity)
                     val summariesViewModel: WorkoutSummariesViewModel = viewModel(activity)
+                    val clustersViewModel: WorkoutClustersViewModel = viewModel(activity)
                     KnownLocationsScreen(
                         viewModel = knownLocationsViewModel,
                         onMenuClick = { drawerController.openDrawer() },
@@ -345,6 +348,16 @@ fun ATrainingTrackerApp(
                         },
                         onSelectCluster = { clusterId ->
                             navController.navigate(NavRoutes.locations(clusterId))
+                        },
+                        onShowRoutes = { locationItem ->
+                            val criteria = ClusterFilterCriteria(
+                                startLocationName = locationItem.name,
+                                startLocationLat = locationItem.latLng.latitude,
+                                startLocationLng = locationItem.latLng.longitude,
+                                startLocationRadiusM = locationItem.radius.toDouble().takeIf { it > 0.0 } ?: 200.0
+                            )
+                            clustersViewModel.setFilterCriteria(criteria)
+                            navController.navigate(NavRoutes.LOCATIONS)
                         }
                     )
                 }
@@ -453,7 +466,13 @@ fun ATrainingTrackerApp(
                 )
                 SettingsBottomSheetType.DISPLAY -> DisplaySettingsDialog(
                     onDismiss = { drawerController.activeBottomSheet = null },
-                    onSettingsChanged = { activity.applyDisplaySettings() }
+                    onSettingsChanged = { activity.applyDisplaySettings() },
+                    onNavigateToTuning = {
+                        drawerController.activeBottomSheet = SettingsBottomSheetType.ADVANCED_TUNING
+                    }
+                )
+                SettingsBottomSheetType.ADVANCED_TUNING -> AdvancedTuningDialog(
+                    onDismiss = { drawerController.activeBottomSheet = null }
                 )
                 SettingsBottomSheetType.SEARCH -> SearchSettingsDialog(
                     onDismiss = { drawerController.activeBottomSheet = null }

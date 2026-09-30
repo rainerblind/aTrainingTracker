@@ -18,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
@@ -32,7 +33,8 @@ import kotlin.math.roundToInt
 @Composable
 fun DisplaySettingsDialog(
     onDismiss: () -> Unit,
-    onSettingsChanged: (() -> Unit)? = null
+    onSettingsChanged: (() -> Unit)? = null,
+    onNavigateToTuning: (() -> Unit)? = null
 ) {
     var currentOptions by remember { 
         mutableStateOf(TrainingApplication.getDisplayOptions().toSet())
@@ -223,6 +225,22 @@ fun DisplaySettingsDialog(
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
+                    }
+                }
+
+                if (onNavigateToTuning != null) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    OutlinedButton(
+                        onClick = onNavigateToTuning,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_tune),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = stringResource(R.string.advanced_tuning_title))
                     }
                 }
             }

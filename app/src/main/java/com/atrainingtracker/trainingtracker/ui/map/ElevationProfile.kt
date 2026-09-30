@@ -20,17 +20,24 @@ package com.atrainingtracker.trainingtracker.ui.map
 
 import android.graphics.Paint
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PanTool
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
@@ -162,8 +169,10 @@ fun calculateElevationProfileHeight(range: Double): androidx.compose.ui.unit.Dp 
 }
 
 private data class ElevationSegment(
-    val p1: Offset, // Normalized 0..1
-    val p2: Offset, // Normalized 0..1
+    val dist1: Double,
+    val altNorm1: Float,
+    val dist2: Double,
+    val altNorm2: Float,
     val color: Color
 )
 
@@ -210,6 +219,11 @@ fun ElevationProfile(
     val unit = TrainingApplication.getUnit()
     var showLegend by remember { mutableStateOf(false) }
 
+    var zoomScale by remember(pathPoints) { mutableFloatStateOf(1.0f) }
+    var startDist by remember(pathPoints) { mutableDoubleStateOf(0.0) }
+    var isPanMode by remember { mutableStateOf(false) }
+    var lastTapTime by remember { mutableLongStateOf(0L) }
+
     val cachedData = remember(pathPoints, unit, minAltitudeOverride, maxAltitudeOverride) {
         val maxPoints = 500
         val pathPointsDownsampled = if (pathPoints.size > maxPoints) {
@@ -248,27 +262,7 @@ fun ElevationProfile(
         val max = bounds.max
         val range = bounds.range
 
-        val distStep = if (unit == MyUnits.METRIC) {
-            when {
-                totalDist > 100_000 -> 20_000f
-                totalDist > 50_000 -> 10_000f
-                totalDist > 20_000 -> 5_000f
-                totalDist > 5_000 -> 1_000f
-                totalDist > 1_500 -> 500f
-                else -> 200f
-            }
-        } else {
-            val totalDistMiles = totalDist / BANALService.METER_PER_MILE
-            val mileStep = when {
-                totalDistMiles > 60 -> 10f
-                totalDistMiles > 30 -> 5f
-                totalDistMiles > 10 -> 2f
-                totalDistMiles > 3 -> 1f
-                totalDistMiles > 1 -> 0.5f
-                else -> 0.2f
-            }
-            (mileStep * BANALService.METER_PER_MILE).toFloat()
-        }
+        val distStep = ElevationProfileZoomMath.calculateAdaptiveDistanceStep(totalDist, unit)
 
         val altStep = if (unit == MyUnits.METRIC) {
             when {
@@ -297,10 +291,8 @@ fun ElevationProfile(
             val p2 = pathPointsDownsampled[i + 1]
             val sAlt1 = smoothedAltitudes[i]
             val sAlt2 = smoothedAltitudes[i + 1]
-            val d1 = p1.distance / totalDist
-            val a1 = (sAlt1 - min) / range
-            val d2 = p2.distance / totalDist
-            val a2 = (sAlt2 - min) / range
+            val a1 = ((sAlt1 - min) / range).toFloat()
+            val a2 = ((sAlt2 - min) / range).toFloat()
             val distDiff = p2.distance - p1.distance
             val grade = if (distDiff > 1.0) ((sAlt2 - sAlt1) / distDiff) * 100 else 0.0
 
@@ -312,13 +304,14 @@ fun ElevationProfile(
                 grade < 20.0 -> TTColor.Zone5
                 else -> Color.Black
             }
-            segments.add(ElevationSegment(Offset(d1.toFloat(), a1.toFloat()), Offset(d2.toFloat(), a2.toFloat()), color))
+            segments.add(ElevationSegment(p1.distance, a1, p2.distance, a2, color))
         }
 
         val adaptiveHeight = calculateElevationProfileHeight(range)
         CachedProfileData(segments, min, max, totalDist, range, distStep, altStep, adaptiveHeight)
     }
 
+    val visibleDist = ElevationProfileZoomMath.calculateVisibleDistance(cachedData.totalDist, zoomScale)
     val altitudeFormatter = remember(unit) { AltitudeFormatter() }
     val distanceFormatter = remember(unit) { DistanceFormatter() }
 
@@ -343,25 +336,121 @@ fun ElevationProfile(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(cachedData.adaptiveHeight)
-                .pointerInput(pathPoints) {
+                .pointerInput(cachedData.totalDist, isPanMode, zoomScale, startDist) {
                     val startPaddingPx = 50.dp.toPx()
                     val endPaddingPx = 25.dp.toPx()
-                    detectDragGestures(
-                        onDragStart = { offset ->
-                            val chartWidthPx = size.width - startPaddingPx - endPaddingPx
-                            val adjustedX = (offset.x - startPaddingPx).coerceIn(0f, chartWidthPx)
-                            val dist = (adjustedX / chartWidthPx) * cachedData.totalDist
-                            onDistanceSelected(dist)
-                        },
-                        onDrag = { change, _ ->
-                            val chartWidthPx = size.width - startPaddingPx - endPaddingPx
-                            val adjustedX = (change.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
-                            val dist = (adjustedX / chartWidthPx) * cachedData.totalDist
-                            onDistanceSelected(dist)
-                        },
-                        onDragEnd = { onDistanceSelected(null) },
-                        onDragCancel = { onDistanceSelected(null) }
-                    )
+                    val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
+
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        var prevCentroid = down.position
+                        var prevSpan = 0f
+                        var isTransforming = false
+                        var isDragging = false
+
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val pressed = event.changes.filter { it.pressed }
+                            if (pressed.isEmpty()) break
+
+                            if (pressed.size >= 2 && cachedData.totalDist > 10.0) {
+                                isTransforming = true
+                                val p1 = pressed[0].position
+                                val p2 = pressed[1].position
+                                val centroid = Offset((p1.x + p2.x) / 2f, (p1.y + p2.y) / 2f)
+                                val span = (p1 - p2).getDistance()
+
+                                if (prevSpan > 0f && span > 0f) {
+                                    val zoomFactor = span / prevSpan
+                                    val panDeltaX = centroid.x - prevCentroid.x
+                                    val adjustedCentroidX = (centroid.x - startPaddingPx).coerceIn(0f, chartWidthPx)
+
+                                    val (newZoom, newStart) = ElevationProfileZoomMath.applyZoomAtCentroid(
+                                        totalDist = cachedData.totalDist,
+                                        currentZoom = zoomScale,
+                                        targetZoom = zoomScale * zoomFactor,
+                                        centroidX = adjustedCentroidX,
+                                        canvasWidth = chartWidthPx,
+                                        currentStartDist = startDist
+                                    )
+                                    zoomScale = newZoom
+                                    startDist = ElevationProfileZoomMath.applyPan(
+                                        currentStartDist = newStart,
+                                        visibleDist = ElevationProfileZoomMath.calculateVisibleDistance(cachedData.totalDist, newZoom),
+                                        panDeltaX = panDeltaX,
+                                        canvasWidth = chartWidthPx,
+                                        totalDist = cachedData.totalDist
+                                    )
+                                }
+                                prevSpan = span
+                                prevCentroid = centroid
+                                pressed.forEach { it.consume() }
+                            } else if (pressed.size == 1 && !isTransforming) {
+                                val pointer = pressed[0]
+                                val diffX = pointer.position.x - down.position.x
+                                val diffY = pointer.position.y - down.position.y
+                                if (!isDragging && (diffX * diffX + diffY * diffY > 64f)) {
+                                    isDragging = true
+                                }
+
+                                if (isDragging) {
+                                    val dragDeltaX = pointer.position.x - prevCentroid.x
+                                    pointer.consume()
+                                    if (isPanMode && cachedData.totalDist > 10.0) {
+                                        startDist = ElevationProfileZoomMath.applyPan(
+                                            currentStartDist = startDist,
+                                            visibleDist = visibleDist,
+                                            panDeltaX = dragDeltaX,
+                                            canvasWidth = chartWidthPx,
+                                            totalDist = cachedData.totalDist
+                                        )
+                                    } else {
+                                        val adjustedX = (pointer.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
+                                        val dist = ElevationProfileZoomMath.canvasXToDistance(
+                                            canvasX = adjustedX,
+                                            startDist = startDist,
+                                            visibleDist = visibleDist,
+                                            canvasWidth = chartWidthPx,
+                                            totalDist = cachedData.totalDist
+                                        )
+                                        onDistanceSelected(dist)
+                                    }
+                                }
+                                prevCentroid = pointer.position
+                            }
+                        }
+
+                        // On gesture completion
+                        if (!isTransforming) {
+                            if (isDragging) {
+                                if (!isPanMode) {
+                                    onDistanceSelected(null)
+                                }
+                            } else {
+                                // Tap detection
+                                val currentTime = System.currentTimeMillis()
+                                if (currentTime - lastTapTime < 350L && cachedData.totalDist > 10.0) {
+                                    // Double tap reset
+                                    zoomScale = 1.0f
+                                    startDist = 0.0
+                                    lastTapTime = 0L
+                                    onDistanceSelected(null)
+                                } else {
+                                    // Single tap inspection
+                                    lastTapTime = currentTime
+                                    val adjustedX = (down.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
+                                    val dist = ElevationProfileZoomMath.canvasXToDistance(
+                                        canvasX = adjustedX,
+                                        startDist = startDist,
+                                        visibleDist = visibleDist,
+                                        canvasWidth = chartWidthPx,
+                                        totalDist = cachedData.totalDist
+                                    )
+                                    onDistanceSelected(dist)
+                                }
+                            }
+                        }
+                    }
                 }
                 .padding(bottom = 24.dp, start = 50.dp, end = 25.dp, top = 24.dp)
         ) {
@@ -376,17 +465,26 @@ fun ElevationProfile(
                 canvas.nativeCanvas.drawText(minAltLabel, -minAltWidth - 10f, height, highlightPaint)
                 canvas.nativeCanvas.drawText(maxAltLabel, -maxAltWidth - 10f, highlightPaint.textSize, highlightPaint)
 
-                val endLabel = distanceFormatter.format_with_units(cachedData.totalDist)
+                val endLabel = distanceFormatter.format_with_units(startDist + visibleDist)
                 val endLabelWidth = highlightPaint.measureText(endLabel)
                 canvas.nativeCanvas.drawText(endLabel, width - endLabelWidth, height + 45f, highlightPaint)
 
-                var currentD = cachedData.distStep.toDouble()
-                while (currentD < cachedData.totalDist) {
-                    val x = (currentD / cachedData.totalDist) * width
+                if (zoomScale > 1.01f) {
+                    val startLabel = distanceFormatter.format_with_units(startDist)
+                    canvas.nativeCanvas.drawText(startLabel, 0f, height + 45f, highlightPaint)
+                }
+
+                val adaptiveDistStep = ElevationProfileZoomMath.calculateAdaptiveDistanceStep(visibleDist, unit).toDouble()
+                var currentD = (ceil(startDist / adaptiveDistStep) * adaptiveDistStep)
+                if (currentD <= startDist) {
+                    currentD += adaptiveDistStep
+                }
+                while (currentD < startDist + visibleDist) {
+                    val x = ElevationProfileZoomMath.distanceToCanvasX(currentD, startDist, visibleDist, width)
                     if (x > 60f && (width - x) > (endLabelWidth + 50f)) {
-                        canvas.nativeCanvas.drawLine(x.toFloat(), height, x.toFloat(), height - 10f, textPaint)
+                        canvas.nativeCanvas.drawLine(x, height, x, height - 10f, textPaint)
                         val label = if (unit == MyUnits.METRIC) {
-                            if (cachedData.totalDist < 1500) "${currentD.toInt()}m"
+                            if (visibleDist < 1500) "${currentD.toInt()}m"
                             else if (currentD % 1000.0 != 0.0) String.format(Locale.getDefault(), "%.1f", currentD / 1000.0)
                             else "${(currentD / 1000.0).toInt()}"
                         } else {
@@ -395,9 +493,9 @@ fun ElevationProfile(
                             else "${miles.toInt()}"
                         }
                         val lWidth = textPaint.measureText(label)
-                        canvas.nativeCanvas.drawText(label, x.toFloat() - (lWidth / 2), height + 45f, textPaint)
+                        canvas.nativeCanvas.drawText(label, x - (lWidth / 2), height + 45f, textPaint)
                     }
-                    currentD += cachedData.distStep
+                    currentD += adaptiveDistStep
                 }
 
                 var currentA = (ceil(cachedData.minAlt / cachedData.altStep) * cachedData.altStep).toFloat()
@@ -414,38 +512,161 @@ fun ElevationProfile(
                 }
             }
 
-            cachedData.segments.forEach { seg ->
-                val x1 = seg.p1.x * width
-                val y1 = height - (seg.p1.y * height)
-                val x2 = seg.p2.x * width
-                val y2 = height - (seg.p2.y * height)
-                drawPath(Path().apply { moveTo(x1, y1); lineTo(x2, y2); lineTo(x2, height); lineTo(x1, height); close() }, seg.color.copy(alpha = TTAlpha.Disabled))
-                drawLine(seg.color, Offset(x1, y1), Offset(x2, y2), 2.dp.toPx())
+            clipRect(left = 0f, top = 0f, right = width, bottom = height) {
+                cachedData.segments.forEach { seg ->
+                    if (seg.dist2 < startDist) return@forEach
+                    if (seg.dist1 > startDist + visibleDist) return@forEach
+
+                    val x1 = ElevationProfileZoomMath.distanceToCanvasX(seg.dist1, startDist, visibleDist, width)
+                    val y1 = height - (seg.altNorm1 * height)
+                    val x2 = ElevationProfileZoomMath.distanceToCanvasX(seg.dist2, startDist, visibleDist, width)
+                    val y2 = height - (seg.altNorm2 * height)
+                    drawPath(
+                        Path().apply {
+                            moveTo(x1, y1)
+                            lineTo(x2, y2)
+                            lineTo(x2, height)
+                            lineTo(x1, height)
+                            close()
+                        },
+                        seg.color.copy(alpha = TTAlpha.Disabled)
+                    )
+                    drawLine(seg.color, Offset(x1, y1), Offset(x2, y2), 2.dp.toPx())
+                }
             }
 
             currentDistance?.let { dist ->
-                val clampedDist = dist.coerceIn(0.0, cachedData.totalDist)
-                val markerX = (clampedDist / cachedData.totalDist) * width
-                val activeIndex = pathPoints.indexOfLast { it.distance <= clampedDist }.coerceAtLeast(0)
-                val pLeft = pathPoints[activeIndex]
-                val pRight = pathPoints.getOrNull(activeIndex + 1)
-                val interAlt = if (pRight != null) pLeft.altitude + ((clampedDist - pLeft.distance) / (pRight.distance - pLeft.distance)) * (pRight.altitude - pLeft.altitude) else pLeft.altitude
-                val markerY = height - ((interAlt - cachedData.minAlt) / cachedData.altRange) * height
+                if (dist in startDist..(startDist + visibleDist)) {
+                    val markerX = ElevationProfileZoomMath.distanceToCanvasX(dist, startDist, visibleDist, width)
+                    val activeIndex = pathPoints.indexOfLast { it.distance <= dist }.coerceAtLeast(0)
+                    val pLeft = pathPoints[activeIndex]
+                    val pRight = pathPoints.getOrNull(activeIndex + 1)
+                    val interAlt = if (pRight != null && pRight.distance > pLeft.distance) {
+                        pLeft.altitude + ((dist - pLeft.distance) / (pRight.distance - pLeft.distance)) * (pRight.altitude - pLeft.altitude)
+                    } else {
+                        pLeft.altitude
+                    }
+                    val markerY = height - (((interAlt - cachedData.minAlt) / cachedData.altRange).toFloat() * height)
 
-                drawLine(
-                    color = colorScheme.primary,
-                    start = Offset(markerX.toFloat(), 0f),
-                    end = Offset(markerX.toFloat(), height),
-                    strokeWidth = 1.dp.toPx(),
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
-                )
-                drawIntoCanvas { canvas ->
-                    val combinedLabel = "${distanceFormatter.format_with_units(clampedDist)} | ${altitudeFormatter.format_with_units(interAlt)}"
-                    val lWidth = highlightPaint.measureText(combinedLabel)
-                    canvas.nativeCanvas.drawText(combinedLabel, (markerX.toFloat() - lWidth / 2).coerceIn(0f, width - lWidth), -15f, highlightPaint)
+                    drawLine(
+                        color = colorScheme.primary,
+                        start = Offset(markerX, 0f),
+                        end = Offset(markerX, height),
+                        strokeWidth = 1.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
+                    )
+                    drawIntoCanvas { canvas ->
+                        val combinedLabel = "${distanceFormatter.format_with_units(dist)} | ${altitudeFormatter.format_with_units(interAlt)}"
+                        val lWidth = highlightPaint.measureText(combinedLabel)
+                        canvas.nativeCanvas.drawText(
+                            combinedLabel,
+                            (markerX - lWidth / 2f).coerceIn(0f, (width - lWidth).coerceAtLeast(0f)),
+                            -15f,
+                            highlightPaint
+                        )
+                    }
+                    drawCircle(colorScheme.onSurface, 5.dp.toPx(), Offset(markerX, markerY))
+                    drawCircle(colorScheme.primary, 3.dp.toPx(), Offset(markerX, markerY))
                 }
-                drawCircle(colorScheme.onSurface, 5.dp.toPx(), Offset(markerX.toFloat(), markerY.toFloat()))
-                drawCircle(colorScheme.primary, 3.dp.toPx(), Offset(markerX.toFloat(), markerY.toFloat()))
+            }
+        }
+
+        if (cachedData.totalDist > 10.0) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 50.dp, top = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        val (newZoom, newStart) = ElevationProfileZoomMath.applyZoomAtCentroid(
+                            totalDist = cachedData.totalDist,
+                            currentZoom = zoomScale,
+                            targetZoom = zoomScale * 1.5f,
+                            centroidX = 0.5f,
+                            canvasWidth = 1.0f,
+                            currentStartDist = startDist
+                        )
+                        zoomScale = newZoom
+                        startDist = newStart
+                    },
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Zoom In",
+                        modifier = Modifier.size(16.dp),
+                        tint = colorScheme.onSurfaceVariant
+                    )
+                }
+
+                IconButton(
+                    onClick = {
+                        val (newZoom, newStart) = ElevationProfileZoomMath.applyZoomAtCentroid(
+                            totalDist = cachedData.totalDist,
+                            currentZoom = zoomScale,
+                            targetZoom = zoomScale / 1.5f,
+                            centroidX = 0.5f,
+                            canvasWidth = 1.0f,
+                            currentStartDist = startDist
+                        )
+                        zoomScale = newZoom
+                        startDist = newStart
+                    },
+                    enabled = zoomScale > 1.01f,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Remove,
+                        contentDescription = "Zoom Out",
+                        modifier = Modifier.size(16.dp),
+                        tint = if (zoomScale > 1.01f) colorScheme.onSurfaceVariant else colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Disabled)
+                    )
+                }
+
+                IconButton(
+                    onClick = { isPanMode = !isPanMode },
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isPanMode) Icons.Default.PanTool else Icons.Default.TouchApp,
+                        contentDescription = if (isPanMode) "Pan Mode" else "Scrub Mode",
+                        modifier = Modifier.size(16.dp),
+                        tint = if (isPanMode) colorScheme.primary else colorScheme.onSurfaceVariant
+                    )
+                }
+
+                if (zoomScale > 1.01f) {
+                    Surface(
+                        onClick = {
+                            zoomScale = 1.0f
+                            startDist = 0.0
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        color = colorScheme.primaryContainer,
+                        modifier = Modifier.height(22.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = String.format(Locale.US, "%.1fx", zoomScale),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = colorScheme.onPrimaryContainer
+                            )
+                            Icon(
+                                imageVector = Icons.Default.RestartAlt,
+                                contentDescription = "Reset Zoom",
+                                modifier = Modifier.size(12.dp),
+                                tint = colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                }
             }
         }
 
