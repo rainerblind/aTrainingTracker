@@ -1406,4 +1406,8 @@
     <string name="tuning_default_format">Standard: %1$s</string>
     <string name="reset_to_defaults">Auf Werkseinstellungen zurücksetzen</string>
     <string name="reset_to_defaults_success">Abstimmungseinstellungen auf Werkseinstellungen zurückgesetzt.</string>
+
+    <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
+    <string name="move_tile_banner_instruction">Kachel ausgewählt: Tippe auf eine andere Kachel zum Tauschen oder auf \'+\' zum Verschieben.</string>
+    <string name="move_tile_cancel">Abbrechen</string>
 </resources>

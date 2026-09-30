@@ -57,6 +57,7 @@ fun TrackingTabGridContent(
     val uiState by viewModel.uiState.collectAsState()
     val editingFieldId by viewModel.editingFieldId.collectAsState()
     val pendingAddition by viewModel.pendingAddition.collectAsState()
+    val selectedFieldForMove by viewModel.selectedFieldForMove.collectAsState()
     val gridActions = object : GridActions {
         override fun onEditField(fieldState: SensorFieldState) {
             viewModel.onEditField(fieldState)
@@ -73,6 +74,22 @@ fun TrackingTabGridContent(
         override fun onAddCol(atRow: Int, beforeCol: Int) {
             viewModel.onAddCol(atRow, beforeCol)
         }
+
+        override fun onSelectFieldForMove(fieldState: SensorFieldState) {
+            viewModel.onSelectFieldForMove(fieldState)
+        }
+
+        override fun onCancelMove() {
+            viewModel.onCancelMove()
+        }
+
+        override fun onSwapFields(sourceFieldId: Long, targetFieldId: Long) {
+            viewModel.onSwapFields(sourceFieldId, targetFieldId)
+        }
+
+        override fun onMoveField(sourceFieldId: Long, targetRow: Int, targetCol: Int) {
+            viewModel.onMoveField(sourceFieldId, targetRow, targetCol)
+        }
     }
 
     // Map the UI state and interactions to the SensorGridScreen
@@ -82,6 +99,7 @@ fun TrackingTabGridContent(
         gridActions = gridActions,
         currentLocationFlow = viewModel.banalServiceRepository.currentLocation,
         liveSegments = viewModel.activeLiveSegments,
+        selectedFieldForMove = selectedFieldForMove,
     )
 
     val currentActivityType by viewModel.activityType.collectAsState()
