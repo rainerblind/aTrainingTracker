@@ -10,6 +10,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
+import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
@@ -387,6 +388,119 @@ class TelemetryMetricGraphTest {
         assertFalse(
             "TelemetryMetricGraph must not use raw decimal String.format(Locale.US, \"%.1f\", dataMin) for PACE",
             content.contains("String.format(Locale.US, \"%.1f\", dataMin)")
+        )
+    }
+
+    @Test
+    fun testMilestoneLabelFormatting_omitsRedundantUnit() {
+        // Metric formatting for visibleSpan >= 1500m (REQ-UI-220 / TST-UI-174.2)
+        assertEquals("2", TelemetryMetricUtils.formatMilestoneLabel(2000.0, 17820.0, MyUnits.METRIC))
+        assertEquals("4", TelemetryMetricUtils.formatMilestoneLabel(4000.0, 17820.0, MyUnits.METRIC))
+        assertEquals("10", TelemetryMetricUtils.formatMilestoneLabel(10000.0, 17820.0, MyUnits.METRIC))
+        assertEquals("2.5", TelemetryMetricUtils.formatMilestoneLabel(2500.0, 17820.0, MyUnits.METRIC))
+
+        // Short track < 1500m retains meters
+        assertEquals("500m", TelemetryMetricUtils.formatMilestoneLabel(500.0, 1200.0, MyUnits.METRIC))
+
+        // Imperial formatting
+        val twoMilesMeters = 2.0 * BANALService.METER_PER_MILE
+        val twoPointFiveMilesMeters = 2.5 * BANALService.METER_PER_MILE
+        assertEquals("2", TelemetryMetricUtils.formatMilestoneLabel(twoMilesMeters, 17820.0, MyUnits.IMPERIAL))
+        assertEquals("2.5", TelemetryMetricUtils.formatMilestoneLabel(twoPointFiveMilesMeters, 17820.0, MyUnits.IMPERIAL))
+    }
+
+    @Test
+    fun testBoundaryLabels_rendersStartAndEnd() {
+        assertTrue("TelemetryMetricGraph.kt must exist", telemetryGraphFile.exists())
+        val content = telemetryGraphFile.readText()
+
+        // 1. Must instantiate DistanceFormatter (REQ-UI-220 / TST-UI-174.3)
+        assertTrue(
+            "TelemetryMetricGraph must instantiate DistanceFormatter",
+            content.contains("val distanceFormatter = remember(unit) { DistanceFormatter() }")
+        )
+
+        // 2. Must draw endLabel
+        assertTrue(
+            "TelemetryMetricGraph must format endLabel via distanceFormatter",
+            content.contains("distanceFormatter.format_with_units(startDist + visibleSpan)")
+        )
+        assertTrue(
+            "TelemetryMetricGraph must draw endLabel",
+            content.contains("nativeCanvas.drawText(\n                endLabel,") ||
+                    content.contains("nativeCanvas.drawText(\n                endLabel")
+        )
+
+        // 3. Must draw startLabel when zoomed
+        assertTrue(
+            "TelemetryMetricGraph must support startLabel when zoomed",
+            content.contains("if (zoomScale > 1.01f)") && content.contains("startLabel")
+        )
+    }
+
+    @Test
+    fun testXAxisMilestoneDecimation_preventsLabelCollisions() {
+        // 1. Start boundary suppression: labelLeft within 100px when threshold is 120px (REQ-UI-220 / TST-UI-174.4)
+        assertFalse(
+            "Label within start boundary margin must be suppressed",
+            TelemetryMetricUtils.shouldRenderMilestoneLabel(
+                labelLeft = 80f,
+                labelRight = 110f,
+                lastDrawnRightX = 0f,
+                startBoundaryThreshold = 120f,
+                endBoundaryThreshold = 800f,
+                minSpacing = 36f
+            )
+        )
+
+        // 2. End boundary suppression: labelRight exceeds end threshold
+        assertFalse(
+            "Label within end boundary margin must be suppressed",
+            TelemetryMetricUtils.shouldRenderMilestoneLabel(
+                labelLeft = 780f,
+                labelRight = 810f,
+                lastDrawnRightX = 600f,
+                startBoundaryThreshold = 120f,
+                endBoundaryThreshold = 800f,
+                minSpacing = 36f
+            )
+        )
+
+        // 3. Spacing collision: labelLeft too close to lastDrawnRightX
+        assertFalse(
+            "Label colliding with previous label must be decimated",
+            TelemetryMetricUtils.shouldRenderMilestoneLabel(
+                labelLeft = 210f,
+                labelRight = 240f,
+                lastDrawnRightX = 200f,
+                startBoundaryThreshold = 120f,
+                endBoundaryThreshold = 800f,
+                minSpacing = 36f
+            )
+        )
+
+        // 4. Well-spaced label satisfies all clearances
+        assertTrue(
+            "Well-spaced label must be rendered",
+            TelemetryMetricUtils.shouldRenderMilestoneLabel(
+                labelLeft = 250f,
+                labelRight = 280f,
+                lastDrawnRightX = 200f,
+                startBoundaryThreshold = 120f,
+                endBoundaryThreshold = 800f,
+                minSpacing = 36f
+            )
+        )
+
+        // 5. Code inspection: TelemetryMetricGraph must invoke shouldRenderMilestoneLabel and not use uncentered tickX - 20f
+        val content = telemetryGraphFile.readText()
+        assertTrue(
+            "TelemetryMetricGraph must invoke shouldRenderMilestoneLabel",
+            content.contains("TelemetryMetricUtils.shouldRenderMilestoneLabel")
+        )
+        assertFalse(
+            "TelemetryMetricGraph must eliminate uncentered fixed tickX - 20f offset",
+            content.contains("tickX - 20f")
         )
     }
 }
