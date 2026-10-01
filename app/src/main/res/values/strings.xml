@@ -1544,6 +1544,7 @@
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Power Zones</string>
     <string name="aftermath_laps_splits_title">Laps &amp; Splits</string>
+    <string name="split_badge_best">Best</string>
     <!-- Continuous Metric Graphs & Headings (ATT-1740 / REQ-UI-206) -->
     <string name="graph_heading_elevation">Elevation Profile</string>
     <string name="graph_heading_heart_rate">Heart Rate</string>

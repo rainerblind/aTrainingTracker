@@ -35,7 +35,9 @@ class LapSplitLocalizationTest {
     private val locales = listOf("", "-de", "-es", "-fr", "-it", "-ja", "-nl", "-pl", "-pt")
 
     private val requiredKeys = listOf(
-        "aftermath_laps_splits_title"
+        "aftermath_laps_splits_title",
+        "split_badge_best",
+        "laps_header"
     )
 
     private fun findResDir(): File {
