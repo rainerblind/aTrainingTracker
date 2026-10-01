@@ -1442,6 +1442,9 @@
     <string name="tuning_default_format">Standard: %1$s</string>
     <string name="reset_to_defaults">Auf Werkseinstellungen zurücksetzen</string>
     <string name="reset_to_defaults_success">Abstimmungseinstellungen auf Werkseinstellungen zurückgesetzt.</string>
+    <string name="tuning_cat_sensors_gps">Sensoren, GPS &amp; Filter</string>
+    <string name="tuning_cat_workout_masks_cards">Workout-Karten &amp; Eingabemasken</string>
+    <string name="tuning_summary_masks_cards_format">%1$d/8 Karten, %2$d/6 Felder</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
     <string name="move_tile_banner_instruction">Kachel ausgewählt: Tippe auf eine andere Kachel zum Tauschen oder auf \'+\' zum Verschieben.</string>
