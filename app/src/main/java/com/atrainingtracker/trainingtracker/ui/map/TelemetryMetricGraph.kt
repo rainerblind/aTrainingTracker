@@ -175,7 +175,9 @@ fun TelemetryMetricGraph(
     onDistanceSelected: (Double?) -> Unit,
     modifier: Modifier = Modifier,
     xAxisDomain: ProfileXAxisDomain = ProfileXAxisDomain.DISTANCE,
-    bSportType: BSportType = BSportType.UNKNOWN
+    bSportType: BSportType = BSportType.UNKNOWN,
+    zoomScale: Float = 1.0f,
+    startDist: Double = 0.0
 ) {
     if (pathPoints.isEmpty()) return
 
@@ -207,6 +209,9 @@ fun TelemetryMetricGraph(
         } else {
             (pathPoints.lastOrNull()?.distance ?: 0.0).coerceAtLeast(1.0)
         }
+    }
+    val visibleSpan = remember(totalSpan, zoomScale) {
+        ElevationProfileZoomMath.calculateVisibleDistance(totalSpan, zoomScale)
     }
 
     // Extract scalar values
@@ -258,7 +263,7 @@ fun TelemetryMetricGraph(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(110.dp)
-                .pointerInput(totalSpan, isTimeDomain) {
+                .pointerInput(totalSpan, isTimeDomain, zoomScale, startDist) {
                     val startPaddingPx = 50.dp.toPx()
                     val endPaddingPx = 25.dp.toPx()
                     val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
@@ -266,18 +271,24 @@ fun TelemetryMetricGraph(
                     detectTapGestures(
                         onPress = { offset ->
                             val localX = (offset.x - startPaddingPx).coerceIn(0f, chartWidthPx)
-                            val selectedRatio = localX / chartWidthPx
+                            val selectedVal = ElevationProfileZoomMath.canvasXToDistance(
+                                canvasX = localX,
+                                startDist = startDist,
+                                visibleDist = visibleSpan,
+                                canvasWidth = chartWidthPx,
+                                totalDist = totalSpan
+                            )
                             if (isTimeDomain) {
-                                val targetTimeSec = (selectedRatio * totalSpan).toLong()
+                                val targetTimeSec = selectedVal.toLong()
                                 val nearest = pathPoints.minByOrNull { abs(it.timeSec - targetTimeSec) }
                                 onDistanceSelected(nearest?.distance)
                             } else {
-                                onDistanceSelected(selectedRatio * totalSpan)
+                                onDistanceSelected(selectedVal)
                             }
                         }
                     )
                 }
-                .pointerInput(totalSpan, isTimeDomain) {
+                .pointerInput(totalSpan, isTimeDomain, zoomScale, startDist) {
                     val startPaddingPx = 50.dp.toPx()
                     val endPaddingPx = 25.dp.toPx()
                     val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
@@ -286,13 +297,19 @@ fun TelemetryMetricGraph(
                         onDrag = { change, _ ->
                             change.consume()
                             val localX = (change.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
-                            val selectedRatio = localX / chartWidthPx
+                            val selectedVal = ElevationProfileZoomMath.canvasXToDistance(
+                                canvasX = localX,
+                                startDist = startDist,
+                                visibleDist = visibleSpan,
+                                canvasWidth = chartWidthPx,
+                                totalDist = totalSpan
+                            )
                             if (isTimeDomain) {
-                                val targetTimeSec = (selectedRatio * totalSpan).toLong()
+                                val targetTimeSec = selectedVal.toLong()
                                 val nearest = pathPoints.minByOrNull { abs(it.timeSec - targetTimeSec) }
                                 onDistanceSelected(nearest?.distance)
                             } else {
-                                onDistanceSelected(selectedRatio * totalSpan)
+                                onDistanceSelected(selectedVal)
                             }
                         }
                     )
@@ -353,10 +370,13 @@ fun TelemetryMetricGraph(
 
             // Draw X-axis ticks along bottom
             if (isTimeDomain) {
-                val timeStep = ElevationProfileZoomMath.calculateAdaptiveTimeStep(totalSpan)
-                var currentSec = 0L
-                while (currentSec <= totalSpan) {
-                    val tickX = startPaddingPx + ((currentSec.toDouble() / totalSpan) * chartWidthPx).toFloat()
+                val timeStep = ElevationProfileZoomMath.calculateAdaptiveTimeStep(visibleSpan).toDouble()
+                var currentSec = (kotlin.math.ceil(startDist / timeStep) * timeStep)
+                if (currentSec <= startDist) {
+                    currentSec += timeStep
+                }
+                while (currentSec < startDist + visibleSpan) {
+                    val tickX = startPaddingPx + ElevationProfileZoomMath.distanceToCanvasX(currentSec, startDist, visibleSpan, chartWidthPx)
                     if (tickX in startPaddingPx..(startPaddingPx + chartWidthPx)) {
                         drawLine(
                             color = colorScheme.outlineVariant.copy(alpha = 0.3f),
@@ -364,16 +384,19 @@ fun TelemetryMetricGraph(
                             end = Offset(tickX, topPaddingPx + chartHeightPx),
                             strokeWidth = 1f
                         )
-                        val tickLabel = ElevationProfileZoomMath.formatTimeTick(currentSec)
+                        val tickLabel = ElevationProfileZoomMath.formatTimeTick(currentSec.toLong())
                         nativeCanvas.drawText(tickLabel, tickX - 20f, size.height - 4.dp.toPx(), axisTextPaint)
                     }
                     currentSec += timeStep
                 }
             } else {
-                val distStep = ElevationProfileZoomMath.calculateAdaptiveDistanceStep(totalSpan, unit)
-                var currentDist = 0.0
-                while (currentDist <= totalSpan) {
-                    val tickX = startPaddingPx + ((currentDist / totalSpan) * chartWidthPx).toFloat()
+                val distStep = ElevationProfileZoomMath.calculateAdaptiveDistanceStep(visibleSpan, unit).toDouble()
+                var currentDist = (kotlin.math.ceil(startDist / distStep) * distStep)
+                if (currentDist <= startDist) {
+                    currentDist += distStep
+                }
+                while (currentDist < startDist + visibleSpan) {
+                    val tickX = startPaddingPx + ElevationProfileZoomMath.distanceToCanvasX(currentDist, startDist, visibleSpan, chartWidthPx)
                     if (tickX in startPaddingPx..(startPaddingPx + chartWidthPx)) {
                         drawLine(
                             color = colorScheme.outlineVariant.copy(alpha = 0.3f),
@@ -382,7 +405,13 @@ fun TelemetryMetricGraph(
                             strokeWidth = 1f
                         )
                         val label = if (unit == MyUnits.METRIC) {
-                            "${(currentDist / 1000).toInt()} km"
+                            if (visibleSpan < 1500) {
+                                "${currentDist.toInt()} m"
+                            } else if (currentDist % 1000.0 != 0.0) {
+                                String.format(Locale.US, "%.1f km", currentDist / 1000.0)
+                            } else {
+                                "${(currentDist / 1000.0).toInt()} km"
+                            }
                         } else {
                             val miles = currentDist / BANALService.METER_PER_MILE
                             String.format(Locale.US, "%.1f mi", miles)
@@ -413,7 +442,7 @@ fun TelemetryMetricGraph(
                     val v = rawValues[i] ?: continue
 
                     val xSpan = if (isTimeDomain) pt.timeSec.toDouble() else pt.distance
-                    val x = startPaddingPx + ((xSpan / totalSpan) * chartWidthPx).toFloat()
+                    val x = startPaddingPx + ElevationProfileZoomMath.distanceToCanvasX(xSpan, startDist, visibleSpan, chartWidthPx)
                     val y = valueToY(v)
 
                     if (isFirst) {
@@ -468,37 +497,39 @@ fun TelemetryMetricGraph(
                     currentDistance
                 }
 
-                val cursorX = (startPaddingPx + ((cursorDistSpan / totalSpan) * chartWidthPx).toFloat())
-                    .coerceIn(startPaddingPx, startPaddingPx + chartWidthPx)
+                if (cursorDistSpan in startDist..(startDist + visibleSpan)) {
+                    val cursorX = (startPaddingPx + ElevationProfileZoomMath.distanceToCanvasX(cursorDistSpan, startDist, visibleSpan, chartWidthPx))
+                        .coerceIn(startPaddingPx, startPaddingPx + chartWidthPx)
 
-                // 1. Vertical dashed cursor line
-                drawLine(
-                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
-                    start = Offset(cursorX, topPaddingPx),
-                    end = Offset(cursorX, topPaddingPx + chartHeightPx),
-                    strokeWidth = 1.5.dp.toPx(),
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
-                )
+                    // 1. Vertical dashed cursor line
+                    drawLine(
+                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                        start = Offset(cursorX, topPaddingPx),
+                        end = Offset(cursorX, topPaddingPx + chartHeightPx),
+                        strokeWidth = 1.5.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                    )
 
-                // 2. Highlight circle on the curve
-                val nearestPoint = pathPoints.minByOrNull { abs(it.distance - currentDistance) }
-                if (nearestPoint != null) {
-                    val metricVal = TelemetryMetricUtils.extractMetricValue(nearestPoint, metricType, unit)
-                    if (metricVal != null) {
-                        val cursorY = valueToY(metricVal)
+                    // 2. Highlight circle on the curve
+                    val nearestPoint = pathPoints.minByOrNull { abs(it.distance - currentDistance) }
+                    if (nearestPoint != null) {
+                        val metricVal = TelemetryMetricUtils.extractMetricValue(nearestPoint, metricType, unit)
+                        if (metricVal != null) {
+                            val cursorY = valueToY(metricVal)
 
-                        // Outer halo
-                        drawCircle(
-                            color = accentColor.copy(alpha = 0.35f),
-                            radius = 6.dp.toPx(),
-                            center = Offset(cursorX, cursorY)
-                        )
-                        // Inner dot
-                        drawCircle(
-                            color = accentColor,
-                            radius = 3.5.dp.toPx(),
-                            center = Offset(cursorX, cursorY)
-                        )
+                            // Outer halo
+                            drawCircle(
+                                color = accentColor.copy(alpha = 0.35f),
+                                radius = 6.dp.toPx(),
+                                center = Offset(cursorX, cursorY)
+                            )
+                            // Inner dot
+                            drawCircle(
+                                color = accentColor,
+                                radius = 3.5.dp.toPx(),
+                                center = Offset(cursorX, cursorY)
+                            )
+                        }
                     }
                 }
             }

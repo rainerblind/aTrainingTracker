@@ -129,4 +129,45 @@ class MapDetailLayoutTest {
             hrIndex < powerIndex
         )
     }
+
+    @Test
+    fun testMapDetailLayout_wiresGlobalZoomState() {
+        assertTrue("MapDetailLayout.kt must exist", mapDetailLayoutFile.exists())
+        val content = mapDetailLayoutFile.readText()
+
+        // 1. Zoom state hoisting with remember(activeScrubPath)
+        assertTrue(
+            "MapDetailLayout must hoist profileZoomScale remembering across activeScrubPath (REQ-UI-215)",
+            content.contains("var profileZoomScale by remember(activeScrubPath) { mutableFloatStateOf(1.0f) }")
+        )
+        assertTrue(
+            "MapDetailLayout must hoist profileStartDist remembering across activeScrubPath (REQ-UI-215)",
+            content.contains("var profileStartDist by remember(activeScrubPath) { mutableDoubleStateOf(0.0) }")
+        )
+
+        // 2. Wired to ElevationProfile
+        assertTrue(
+            "MapDetailLayout must pass zoomScale and startDist to ElevationProfile",
+            content.contains("zoomScale = profileZoomScale") && content.contains("startDist = profileStartDist")
+        )
+        assertTrue(
+            "MapDetailLayout must provide onZoomChanged callback to ElevationProfile",
+            content.contains("onZoomChanged = { z, s ->") &&
+                    content.contains("profileZoomScale = z") &&
+                    content.contains("profileStartDist = s")
+        )
+
+        // 3. Forwarded to TelemetryMetricGraphs
+        val occurrencesZoomScale = Regex("""zoomScale\s*=\s*profileZoomScale""").findAll(content).count()
+        assertTrue(
+            "MapDetailLayout must forward zoomScale = profileZoomScale to ElevationProfile and 3 TelemetryMetricGraphs (count >= 4)",
+            occurrencesZoomScale >= 4
+        )
+
+        val occurrencesStartDist = Regex("""startDist\s*=\s*profileStartDist""").findAll(content).count()
+        assertTrue(
+            "MapDetailLayout must forward startDist = profileStartDist to ElevationProfile and 3 TelemetryMetricGraphs (count >= 4)",
+            occurrencesStartDist >= 4
+        )
+    }
 }

@@ -91,6 +91,8 @@ fun MapDetailLayout(
 
     var isSharing by remember { mutableStateOf(false) }
     var selectedDistance by remember { mutableStateOf<Double?>(null) }
+    var profileZoomScale by remember(activeScrubPath) { mutableFloatStateOf(1.0f) }
+    var profileStartDist by remember(activeScrubPath) { mutableDoubleStateOf(0.0) }
     val noLocation = remember { MutableStateFlow<LatLng?>(null) }
 
     val hasTelemetryGraphs = showZoomControls && activeScrubPath != null && (
@@ -263,6 +265,12 @@ fun MapDetailLayout(
                                     showZoomControls = showZoomControls,
                                     xAxisDomain = tuningConfig.profileXAxisDomain,
                                     bSportType = bSportType,
+                                    zoomScale = profileZoomScale,
+                                    startDist = profileStartDist,
+                                    onZoomChanged = { z, s ->
+                                        profileZoomScale = z
+                                        profileStartDist = s
+                                    },
                                     modifier = Modifier.fillMaxWidth()
                                 )
 
@@ -286,6 +294,8 @@ fun MapDetailLayout(
                                             onDistanceSelected = { selectedDistance = it },
                                             xAxisDomain = tuningConfig.profileXAxisDomain,
                                             bSportType = bSportType,
+                                            zoomScale = profileZoomScale,
+                                            startDist = profileStartDist,
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     }
@@ -307,6 +317,8 @@ fun MapDetailLayout(
                                             onDistanceSelected = { selectedDistance = it },
                                             xAxisDomain = tuningConfig.profileXAxisDomain,
                                             bSportType = bSportType,
+                                            zoomScale = profileZoomScale,
+                                            startDist = profileStartDist,
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     }
@@ -328,6 +340,8 @@ fun MapDetailLayout(
                                             onDistanceSelected = { selectedDistance = it },
                                             xAxisDomain = tuningConfig.profileXAxisDomain,
                                             bSportType = bSportType,
+                                            zoomScale = profileZoomScale,
+                                            startDist = profileStartDist,
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     }
