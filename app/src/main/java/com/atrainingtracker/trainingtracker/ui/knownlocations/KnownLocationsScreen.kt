@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.knownlocations
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -78,6 +79,7 @@ import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDial
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.google.android.gms.maps.model.LatLng
 
 /**
@@ -378,8 +380,9 @@ private fun KnownLocationCard(
                     Surface(
                         onClick = onShowWorkouts,
                         shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                        contentColor = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
                         modifier = Modifier.testTag("location_starts_badge_${item.id}")
                     ) {
                         Row(
@@ -390,31 +393,32 @@ private fun KnownLocationCard(
                             Icon(
                                 imageVector = Icons.Default.Place,
                                 contentDescription = stringResource(R.string.known_locations_view_workouts),
-                                modifier = Modifier.size(14.dp),
-                                tint = MaterialTheme.colorScheme.primary
+                                modifier = Modifier.size(13.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = pluralStringResource(R.plurals.known_locations_starts, startsCount, startsCount),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                 contentDescription = null,
-                                modifier = Modifier.size(12.dp),
-                                tint = MaterialTheme.colorScheme.primary
+                                modifier = Modifier.size(11.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
                             )
                         }
                     }
 
-                    // Number of Routes (Interactive Drill-Down Touch Target per REQ-UI-188, REQ-UI-195)
+                    // Number of Routes (Interactive Drill-Down Touch Target per REQ-UI-188, REQ-UI-195, REQ-UI-207)
                     if (linkedClusters.isNotEmpty()) {
                         Surface(
                             onClick = onShowRoutes,
                             shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                            contentColor = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
                             modifier = Modifier.testTag("location_routes_badge_${item.id}")
                         ) {
                             Row(
@@ -425,20 +429,20 @@ private fun KnownLocationCard(
                                 Icon(
                                     painter = painterResource(R.drawable.ic_favorite_route),
                                     contentDescription = stringResource(R.string.known_locations_view_routes),
-                                    modifier = Modifier.size(14.dp),
-                                    tint = MaterialTheme.colorScheme.primary
+                                    modifier = Modifier.size(13.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     text = pluralStringResource(R.plurals.known_locations_routes, linkedClusters.size, linkedClusters.size),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                     contentDescription = null,
-                                    modifier = Modifier.size(12.dp),
-                                    tint = MaterialTheme.colorScheme.primary
+                                    modifier = Modifier.size(11.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
                                 )
                             }
                         }
@@ -538,6 +542,20 @@ private val previewMockLocation = KnownLocationItem(
     source = ElevationSource.MANUAL_USER
 )
 
+private val previewMockCluster = WorkoutCluster(
+    id = 101L,
+    name = "Hausrunde",
+    probableSportId = 1L,
+    startLat = 48.137,
+    startLng = 11.576,
+    endLat = 48.137,
+    endLng = 11.576,
+    maxDispLat = 48.140,
+    maxDispLng = 11.580,
+    refDistance = 10200.0,
+    hitCount = 5
+)
+
 @Preview(name = "List Item - Light", showBackground = true)
 @Composable
 fun PreviewKnownLocationCardLight() {
@@ -546,6 +564,7 @@ fun PreviewKnownLocationCardLight() {
             KnownLocationCard(
                 item = previewMockLocation,
                 isMetric = true,
+                linkedClusters = listOf(previewMockCluster),
                 onEdit = {},
                 onShowOnMap = {},
                 onShowWorkouts = {},
@@ -563,6 +582,7 @@ fun PreviewKnownLocationCardDark() {
             KnownLocationCard(
                 item = previewMockLocation,
                 isMetric = true,
+                linkedClusters = listOf(previewMockCluster),
                 onEdit = {},
                 onShowOnMap = {},
                 onShowWorkouts = {},

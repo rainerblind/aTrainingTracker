@@ -97,4 +97,43 @@ class KnownLocationCardLayoutTest {
             content.contains("location_routes_badge_\${item.id}")
         )
     }
+
+    @Test
+    fun testSubtleGhostBadgeStylingAndTokens() {
+        val content = loadScreenSource()
+
+        // Saturated primaryContainer pill background must be eliminated (REQ-UI-207)
+        assertFalse(
+            "Badges must not use saturated primaryContainer background",
+            content.contains("primaryContainer.copy(alpha = 0.5f)")
+        )
+
+        // Badges must use subtle ghost container background
+        assertTrue(
+            "Badges must use subtle surfaceVariant background",
+            content.contains("color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)")
+        )
+
+        // Badges must use onSurfaceVariant for contentColor
+        assertTrue(
+            "Badges must use onSurfaceVariant for contentColor",
+            content.contains("contentColor = MaterialTheme.colorScheme.onSurfaceVariant")
+        )
+
+        // Badges must use subtle outline border
+        assertTrue(
+            "Badges must use subtle outlineVariant border stroke",
+            content.contains("border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))")
+        )
+
+        // Badges must use labelMedium typography and medium font weight
+        assertTrue(
+            "Badges must use labelMedium typography",
+            content.contains("style = MaterialTheme.typography.labelMedium")
+        )
+        assertTrue(
+            "Badges must use FontWeight.Medium",
+            content.contains("fontWeight = FontWeight.Medium")
+        )
+    }
 }
