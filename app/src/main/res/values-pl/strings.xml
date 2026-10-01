@@ -1118,6 +1118,7 @@
     <string name="filter_section_equipment">Sprzęt</string>
     <string name="filter_section_attributes">Atrybuty</string>
     <string name="filter_section_thresholds">Dystans i czas trwania</string>
+    <string name="filter_section_start_at">Start w</string>
     <string name="filter_commute">Dojazd</string>
     <string name="filter_trainer">Trenażer / Wewnątrz</string>
     <string name="filter_has_gps">Z trasą GPS</string>

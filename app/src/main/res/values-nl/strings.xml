@@ -1128,6 +1128,7 @@
     <string name="filter_section_equipment">Uitrusting</string>
     <string name="filter_section_attributes">Kenmerken</string>
     <string name="filter_section_thresholds">Afstand &amp; tijdsduur</string>
+    <string name="filter_section_start_at">Start bij</string>
     <string name="filter_commute">Woon-werkverkeer</string>
     <string name="filter_trainer">Binnen / Fietstrainer</string>
     <string name="filter_has_gps">Met GPS-route</string>

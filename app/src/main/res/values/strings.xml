@@ -1320,6 +1320,7 @@
     <string name="filter_section_equipment">Equipment</string>
     <string name="filter_section_attributes">Attributes</string>
     <string name="filter_section_thresholds">Distance &amp; Duration</string>
+    <string name="filter_section_start_at">Start at</string>
     <string name="filter_commute">Commute</string>
     <string name="filter_trainer">Indoor / Trainer</string>
     <string name="filter_has_gps">Has GPS Track</string>
