@@ -388,14 +388,17 @@ private fun KnownLocationThumbnailMap(
                 heartColor = Color.White
             )
         }
+        val targetZoom = remember(item.radius, item.latLng.latitude) {
+            KnownLocationZoomMath.calculateThumbnailZoom(item.radius, item.latLng.latitude)
+        }
         val cameraPositionState = rememberCameraPositionState {
-            position = CameraPosition.fromLatLngZoom(item.latLng, 14.5f)
+            position = CameraPosition.fromLatLngZoom(item.latLng, targetZoom)
         }
         var isMapLoaded by remember { mutableStateOf(false) }
 
-        LaunchedEffect(item.latLng, isMapLoaded) {
+        LaunchedEffect(item.latLng, targetZoom, isMapLoaded) {
             if (isMapLoaded) {
-                cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(item.latLng, 14.5f))
+                cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(item.latLng, targetZoom))
             }
         }
 

@@ -216,5 +216,43 @@ class KnownLocationCardLayoutTest {
             content.contains("LocalInspectionMode.current")
         )
     }
+
+    /**
+     * REQ-UI-224 (TST-UI-178.2): Verify that KnownLocationThumbnailMap integrates calibrated
+     * zoom calculation from KnownLocationZoomMath and eliminates the hardcoded 14.5f zoom literal.
+     */
+    @Test
+    fun testMapPreviewThumbnail_usesCalibratedZoomMath() {
+        val content = loadScreenSource()
+
+        // Must compute targetZoom via KnownLocationZoomMath.calculateThumbnailZoom
+        assertTrue(
+            "KnownLocationsScreen must calculate targetZoom via KnownLocationZoomMath.calculateThumbnailZoom (REQ-UI-224)",
+            content.contains("KnownLocationZoomMath.calculateThumbnailZoom(item.radius, item.latLng.latitude)")
+        )
+
+        // Must wire targetZoom into CameraPosition.fromLatLngZoom
+        assertTrue(
+            "KnownLocationsScreen must wire targetZoom into CameraPosition.fromLatLngZoom",
+            content.contains("CameraPosition.fromLatLngZoom(item.latLng, targetZoom)")
+        )
+
+        // Must wire targetZoom into cameraPositionState.move
+        assertTrue(
+            "KnownLocationsScreen must wire targetZoom into cameraPositionState.move",
+            content.contains("CameraUpdateFactory.newLatLngZoom(item.latLng, targetZoom)")
+        )
+    }
+
+    @Test
+    fun testMapPreviewThumbnail_eliminatesHardcoded14_5Literal() {
+        val content = loadScreenSource()
+
+        // Hardcoded 14.5f zoom literal must be eliminated
+        assertFalse(
+            "KnownLocationsScreen must eliminate hardcoded 14.5f zoom literal (REQ-UI-224)",
+            content.contains("14.5f")
+        )
+    }
 }
 
