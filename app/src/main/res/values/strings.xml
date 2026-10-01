@@ -1321,6 +1321,15 @@
     <string name="filter_section_attributes">Attributes</string>
     <string name="filter_section_thresholds">Distance &amp; Duration</string>
     <string name="filter_section_start_at">Start at</string>
+    <string name="settings_workout_card_title">Workout List (Detailed Cards)</string>
+    <string name="settings_workout_card_map">Map Preview</string>
+    <string name="settings_workout_card_elevation">Elevation Profile</string>
+    <string name="settings_workout_card_extrema">Extrema Values</string>
+    <string name="settings_workout_card_laps">Laps Overview</string>
+    <string name="settings_workout_card_strava">Strava Activity</string>
+    <string name="settings_workout_card_description">Description &amp; Notes</string>
+    <string name="settings_workout_card_charts">Telemetry Charts</string>
+    <string name="settings_workout_card_zones">Zone Analysis (HR &amp; Power)</string>
     <string name="filter_commute">Commute</string>
     <string name="filter_trainer">Indoor / Trainer</string>
     <string name="filter_has_gps">Has GPS Track</string>

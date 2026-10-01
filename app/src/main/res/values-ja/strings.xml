@@ -1115,6 +1115,15 @@
     <string name="filter_section_attributes">属性</string>
     <string name="filter_section_thresholds">距離と時間</string>
     <string name="filter_section_start_at">開始地点</string>
+    <string name="settings_workout_card_title">ワークアウト一覧（詳細カード）</string>
+    <string name="settings_workout_card_map">マッププレビュー</string>
+    <string name="settings_workout_card_elevation">高度プロファイル</string>
+    <string name="settings_workout_card_extrema">極値データ</string>
+    <string name="settings_workout_card_laps">ラップ概要</string>
+    <string name="settings_workout_card_strava">Stravaアクティビティ</string>
+    <string name="settings_workout_card_description">説明とメモ</string>
+    <string name="settings_workout_card_charts">テレメトリグラフ</string>
+    <string name="settings_workout_card_zones">ゾーン分析（心拍数＆パワー）</string>
     <string name="filter_commute">通勤・通学</string>
     <string name="filter_trainer">インドア / ローラー台</string>
     <string name="filter_has_gps">GPSログあり</string>
