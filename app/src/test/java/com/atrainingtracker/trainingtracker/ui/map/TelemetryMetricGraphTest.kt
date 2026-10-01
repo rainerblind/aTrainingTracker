@@ -244,4 +244,64 @@ class TelemetryMetricGraphTest {
             hrIndex < powerIndex
         )
     }
+
+    @Test
+    fun testTelemetryMetricGraph_zoomedCoordinateMappingAndScrubbing() {
+        assertTrue("TelemetryMetricGraph.kt must exist", telemetryGraphFile.exists())
+        val content = telemetryGraphFile.readText()
+
+        // 1. Signature declaration check
+        assertTrue(
+            "TelemetryMetricGraph must declare zoomScale: Float = 1.0f (REQ-UI-215)",
+            content.contains("zoomScale: Float = 1.0f")
+        )
+        assertTrue(
+            "TelemetryMetricGraph must declare startDist: Double = 0.0 (REQ-UI-215)",
+            content.contains("startDist: Double = 0.0")
+        )
+
+        // 2. Visible span calculation tests
+        val totalDist = 10_000.0
+        val visibleSpan1x = ElevationProfileZoomMath.calculateVisibleDistance(totalDist, 1.0f)
+        assertEquals(10_000.0, visibleSpan1x, 0.001)
+
+        val visibleSpan2x = ElevationProfileZoomMath.calculateVisibleDistance(totalDist, 2.0f)
+        assertEquals(5_000.0, visibleSpan2x, 0.001)
+
+        val visibleSpan5x = ElevationProfileZoomMath.calculateVisibleDistance(totalDist, 5.0f)
+        assertEquals(2_000.0, visibleSpan5x, 0.001)
+
+        // 3. Coordinate mapping and round-trip touch scrubbing tests at 2.0x zoom (startDist = 2,500m)
+        val canvasWidth = 1000f
+        val startDist = 2500.0
+        val visibleSpan = visibleSpan2x // 5,000m -> window [2,500m .. 7,500m]
+
+        val xAtStart = ElevationProfileZoomMath.distanceToCanvasX(2500.0, startDist, visibleSpan, canvasWidth)
+        assertEquals(0f, xAtStart, 0.001f)
+
+        val xAtMid = ElevationProfileZoomMath.distanceToCanvasX(5000.0, startDist, visibleSpan, canvasWidth)
+        assertEquals(500f, xAtMid, 0.001f)
+
+        val xAtEnd = ElevationProfileZoomMath.distanceToCanvasX(7500.0, startDist, visibleSpan, canvasWidth)
+        assertEquals(1000f, xAtEnd, 0.001f)
+
+        // Round-trip canvasX to distance
+        val distFromMidX = ElevationProfileZoomMath.canvasXToDistance(500f, startDist, visibleSpan, canvasWidth, totalDist)
+        assertEquals(5000.0, distFromMidX, 0.001)
+
+        val distFromStartX = ElevationProfileZoomMath.canvasXToDistance(0f, startDist, visibleSpan, canvasWidth, totalDist)
+        assertEquals(2500.0, distFromStartX, 0.001)
+
+        val distFromEndX = ElevationProfileZoomMath.canvasXToDistance(1000f, startDist, visibleSpan, canvasWidth, totalDist)
+        assertEquals(7500.0, distFromEndX, 0.001)
+
+        // 4. Time domain mapping at 2.0x zoom (total 3600s, start 600s, visible 1800s -> window [600s .. 2400s])
+        val totalTime = 3600.0
+        val visibleTime = ElevationProfileZoomMath.calculateVisibleDistance(totalTime, 2.0f)
+        val timeMidX = ElevationProfileZoomMath.distanceToCanvasX(1500.0, 600.0, visibleTime, canvasWidth)
+        assertEquals(500f, timeMidX, 0.001f)
+
+        val timeFromMidX = ElevationProfileZoomMath.canvasXToDistance(500f, 600.0, visibleTime, canvasWidth, totalTime)
+        assertEquals(1500.0, timeFromMidX, 0.001)
+    }
 }
