@@ -1377,4 +1377,11 @@
     <string name="graph_heading_speed">Snelheid</string>
     <string name="graph_heading_pace">Tempo</string>
     <string name="graph_heading_power">Vermogen</string>
+
+    <!-- Persistent Sticky Global Zoom Toolbar (ATT-1876 / REQ-UI-225) -->
+    <string name="zoom_in">Inzoomen</string>
+    <string name="zoom_out">Uitzoomen</string>
+    <string name="zoom_reset">Zoom resetten</string>
+    <string name="zoom_pan_mode">Verschuifmodus</string>
+    <string name="zoom_scrub_mode">Scrubmodus</string>
 </resources>

@@ -169,4 +169,45 @@ class MapDetailLayoutTest {
             occurrencesStartDist >= 4
         )
     }
+
+    @Test
+    fun testMapDetailLayout_integratesGlobalTelemetryZoomToolbar() {
+        assertTrue("MapDetailLayout.kt must exist", mapDetailLayoutFile.exists())
+        val content = mapDetailLayoutFile.readText()
+
+        // 1. Zoom toolbar height definition and subtraction in SplitPaneMath
+        assertTrue(
+            "MapDetailLayout must query GlobalTelemetryZoomToolbarDefaults.TOOLBAR_HEIGHT",
+            content.contains("val toolbarHeightPx = if (hasZoomToolbar) with(density) { GlobalTelemetryZoomToolbarDefaults.TOOLBAR_HEIGHT.toPx() } else 0f")
+        )
+        assertTrue(
+            "MapDetailLayout must subtract dividerHeightPx + toolbarHeightPx in SplitPaneMath.calculateAvailableHeight",
+            content.contains("SplitPaneMath.calculateAvailableHeight(totalHeightPx, dividerHeightPx + toolbarHeightPx)")
+        )
+
+        // 2. Toolbar placement directly below SplitPaneDivider and outside scrollable lower container
+        val dividerIndex = content.indexOf("SplitPaneDivider(")
+        val toolbarIndex = content.indexOf("GlobalTelemetryZoomToolbar(")
+        val lowerColIndex = content.indexOf("lowerColumn(")
+
+        assertTrue("SplitPaneDivider must be present", dividerIndex != -1)
+        assertTrue("GlobalTelemetryZoomToolbar must be present", toolbarIndex != -1)
+        assertTrue("lowerColumn must be present", lowerColIndex != -1)
+
+        assertTrue(
+            "GlobalTelemetryZoomToolbar must be placed between SplitPaneDivider and lowerColumn (sticky outside vertical scroll)",
+            dividerIndex < toolbarIndex && toolbarIndex < lowerColIndex
+        )
+
+        // 3. Pan mode hoisting and passing to ElevationProfile
+        assertTrue(
+            "MapDetailLayout must hoist isPanMode",
+            content.contains("var isPanMode by remember(activeScrubPath) { mutableStateOf(false) }")
+        )
+        assertTrue(
+            "MapDetailLayout must pass isPanMode to ElevationProfile",
+            content.contains("isPanMode = isPanMode")
+        )
+    }
 }
+

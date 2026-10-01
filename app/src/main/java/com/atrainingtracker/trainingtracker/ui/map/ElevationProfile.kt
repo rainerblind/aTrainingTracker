@@ -26,12 +26,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.PanTool
-import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.RestartAlt
-import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -213,6 +208,7 @@ fun ElevationProfile(
     zoomScale: Float = 1.0f,
     startDist: Double = 0.0,
     onZoomChanged: ((zoomScale: Float, startDist: Double) -> Unit)? = null,
+    isPanMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val decodedData = remember(encodedAltitudes, encodedDistances) {
@@ -236,6 +232,7 @@ fun ElevationProfile(
         zoomScale = zoomScale,
         startDist = startDist,
         onZoomChanged = onZoomChanged,
+        isPanMode = isPanMode,
         modifier = modifier
     )
 }
@@ -254,6 +251,7 @@ fun ElevationProfile(
     zoomScale: Float = 1.0f,
     startDist: Double = 0.0,
     onZoomChanged: ((zoomScale: Float, startDist: Double) -> Unit)? = null,
+    isPanMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     if (pathPoints.isEmpty()) return
@@ -276,7 +274,6 @@ fun ElevationProfile(
         }
     }
 
-    var isPanMode by remember { mutableStateOf(false) }
     var lastTapTime by remember { mutableLongStateOf(0L) }
 
     val cachedData = remember(pathPoints, unit, minAltitudeOverride, maxAltitudeOverride) {
@@ -390,8 +387,8 @@ fun ElevationProfile(
         }
     }
 
-    val topPadding = if (showZoomControls) 72.dp else 16.dp
-    val totalCanvasHeight = if (showZoomControls) cachedData.adaptiveHeight + 48.dp else cachedData.adaptiveHeight
+    val topPadding = if (showZoomControls) 44.dp else 16.dp
+    val totalCanvasHeight = if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight
 
     Box(modifier = modifier.fillMaxWidth()) {
         val baseCanvasModifier = Modifier
@@ -710,104 +707,8 @@ fun ElevationProfile(
                     xAxisDomain = xAxisDomain,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
-                        .padding(top = 28.dp)
+                        .padding(top = 4.dp)
                 )
-            }
-        }
-
-        if (showZoomControls && cachedData.totalDist > 10.0) {
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(start = 50.dp, top = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                IconButton(
-                    onClick = {
-                        val (newZoom, newStart) = ElevationProfileZoomMath.applyZoomAtCentroid(
-                            totalDist = totalSpan,
-                            currentZoom = currentZoomScale,
-                            targetZoom = currentZoomScale * 1.5f,
-                            centroidX = 0.5f,
-                            canvasWidth = 1.0f,
-                            currentStartDist = currentStartDist
-                        )
-                        updateZoom(newZoom, newStart)
-                    },
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Zoom In",
-                        modifier = Modifier.size(16.dp),
-                        tint = colorScheme.onSurfaceVariant
-                    )
-                }
-
-                IconButton(
-                    onClick = {
-                        val (newZoom, newStart) = ElevationProfileZoomMath.applyZoomAtCentroid(
-                            totalDist = totalSpan,
-                            currentZoom = currentZoomScale,
-                            targetZoom = currentZoomScale / 1.5f,
-                            centroidX = 0.5f,
-                            canvasWidth = 1.0f,
-                            currentStartDist = currentStartDist
-                        )
-                        updateZoom(newZoom, newStart)
-                    },
-                    enabled = currentZoomScale > 1.01f,
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Remove,
-                        contentDescription = "Zoom Out",
-                        modifier = Modifier.size(16.dp),
-                        tint = if (currentZoomScale > 1.01f) colorScheme.onSurfaceVariant else colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Disabled)
-                    )
-                }
-
-                IconButton(
-                    onClick = { isPanMode = !isPanMode },
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        imageVector = if (isPanMode) Icons.Default.PanTool else Icons.Default.TouchApp,
-                        contentDescription = if (isPanMode) "Pan Mode" else "Scrub Mode",
-                        modifier = Modifier.size(16.dp),
-                        tint = if (isPanMode) colorScheme.primary else colorScheme.onSurfaceVariant
-                    )
-                }
-
-                if (currentZoomScale > 1.01f) {
-                    Surface(
-                        onClick = {
-                            updateZoom(1.0f, 0.0)
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        color = colorScheme.primaryContainer,
-                        modifier = Modifier.height(22.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = String.format(Locale.US, "%.1fx", currentZoomScale),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = colorScheme.onPrimaryContainer
-                            )
-                            Icon(
-                                imageVector = Icons.Default.RestartAlt,
-                                contentDescription = "Reset Zoom",
-                                modifier = Modifier.size(12.dp),
-                                tint = colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
-                }
             }
         }
 

@@ -53,23 +53,23 @@ class ElevationProfileLayoutTest {
     fun testElevationProfile_sourceCodeInspection_layoutSeparation() {
         val content = elevationProfileFile.readText()
 
-        // 1. Dynamic topPadding: 72.dp for detail views (to accommodate badge layer), 16.dp for compact list previews
+        // 1. Dynamic topPadding: 44.dp for detail views (to accommodate badge layer), 16.dp for compact list previews (REQ-UI-225)
         assertTrue(
-            "ElevationProfile must set topPadding = 72.dp when showZoomControls == true, else 16.dp",
-            content.contains("val topPadding = if (showZoomControls) 72.dp else 16.dp")
+            "ElevationProfile must set topPadding = 44.dp when showZoomControls == true, else 16.dp",
+            content.contains("val topPadding = if (showZoomControls) 44.dp else 16.dp")
         )
 
         // 2. Dynamic canvas height preserving exact drawable chart plotting area
         assertTrue(
-            "ElevationProfile must expand totalCanvasHeight by 48.dp when showZoomControls == true",
-            content.contains("val totalCanvasHeight = if (showZoomControls) cachedData.adaptiveHeight + 48.dp else cachedData.adaptiveHeight")
+            "ElevationProfile must expand totalCanvasHeight by 28.dp when showZoomControls == true",
+            content.contains("val totalCanvasHeight = if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight")
         )
 
-        // 3. ScrubbingTelemetryBadge anchored at top = 28.dp to clear zoom controls row
+        // 3. ScrubbingTelemetryBadge anchored at top = 4.dp now that zoom buttons are decoupled (REQ-UI-225)
         assertTrue(
-            "ScrubbingTelemetryBadge must be padded at top = 28.dp to clear 24dp zoom controls",
-            content.contains(".align(Alignment.TopCenter)\n                        .padding(top = 28.dp)") ||
-                    content.contains(".align(Alignment.TopCenter).padding(top = 28.dp)")
+            "ScrubbingTelemetryBadge must be padded at top = 4.dp",
+            content.contains(".align(Alignment.TopCenter)\n                        .padding(top = 4.dp)") ||
+                    content.contains(".align(Alignment.TopCenter).padding(top = 4.dp)")
         )
 
         // 4. Conditional pointerInput attachment (omitted in list previews to allow smooth scrolling and instant card clicks)
@@ -80,14 +80,14 @@ class ElevationProfileLayoutTest {
 
         // 5. Scrubber text baseline anchored at -4.dp.toPx()
         assertTrue(
-            "Scrubber text baseline must be anchored at -4.dp.toPx() to clear controls row",
+            "Scrubber text baseline must be anchored at -4.dp.toPx()",
             content.contains("-4.dp.toPx()")
         )
 
-        // 6. Zoom controls row guarded by showZoomControls
-        assertTrue(
-            "Zoom controls row must be guarded by showZoomControls",
-            content.contains("if (showZoomControls && cachedData.totalDist > 10.0)")
+        // 6. Decoupled zoom controls row: buttons row is removed from ElevationProfile (REQ-UI-225)
+        assertFalse(
+            "Embedded zoom controls row must be removed from ElevationProfile (moved to GlobalTelemetryZoomToolbar)",
+            content.contains("Icons.Default.ZoomIn") || content.contains("Icons.Default.ZoomOut")
         )
 
         // 7. Legend button guarded by showZoomControls
@@ -135,36 +135,26 @@ class ElevationProfileLayoutTest {
 
     @Test
     fun testVerticalLayoutGeometry_guaranteesNonOverlappingBounds() {
-        // Layer 1: Controls row layout geometry in detailed view
-        val controlsTopDp = 2.0
-        val controlsHeightDp = 24.0
-        val controlsBottomDp = controlsTopDp + controlsHeightDp // 26.0 dp
+        // Multi-metric telemetry badge layout geometry (decoupled layout REQ-UI-225)
+        val badgeTopDp = 4.0
+        val badgeHeightDp = 36.0 // compact badge height
+        val badgeBottomDp = badgeTopDp + badgeHeightDp // 40.0 dp
 
-        // Layer 2: Multi-metric telemetry badge layout geometry
-        val badgeTopDp = 28.0
-        val badgeHeightDp = 42.0 // maximum two-row badge height
-        val badgeBottomDp = badgeTopDp + badgeHeightDp // 70.0 dp
-
-        // Layer 3: Canvas chart curve plotting geometry
-        val canvasTopPaddingDp = 72.0
+        // Canvas chart curve plotting geometry
+        val canvasTopPaddingDp = 44.0
         val bottomPaddingDp = 24.0
-        val heightExpansionDp = 48.0
+        val heightExpansionDp = 28.0
 
-        // Clearance 1: Between bottom of controls and top of telemetry badge
-        val clearanceControlsToBadgeDp = badgeTopDp - controlsBottomDp
-        assertTrue("Clearance between control buttons and telemetry badge must be at least 2.0 dp", clearanceControlsToBadgeDp >= 2.0)
-        assertEquals(2.0, clearanceControlsToBadgeDp, 0.001)
-
-        // Clearance 2: Between bottom of telemetry badge and start of canvas chart plotting
+        // Clearance: Between bottom of telemetry badge and start of canvas chart plotting
         val clearanceBadgeToCanvasDp = canvasTopPaddingDp - badgeBottomDp
         assertTrue("Clearance between telemetry badge and canvas chart curve must be at least 2.0 dp", clearanceBadgeToCanvasDp >= 2.0)
-        assertEquals(2.0, clearanceBadgeToCanvasDp, 0.001)
+        assertEquals(4.0, clearanceBadgeToCanvasDp, 0.001)
 
         // Plotting height invariant check:
-        // Prior drawable plotting height: (adaptiveHeight + 20.dp) - 44.dp - 24.dp = adaptiveHeight - 48.dp
-        // New drawable plotting height: (adaptiveHeight + 48.dp) - 72.dp - 24.dp = adaptiveHeight - 48.dp
-        val netDrawableHeightDelta = heightExpansionDp - canvasTopPaddingDp - bottomPaddingDp // 48 - 72 - 24 = -48
-        assertEquals(-48.0, netDrawableHeightDelta, 0.001)
+        // Prior drawable plotting height: (adaptiveHeight + 48.dp) - 72.dp - 24.dp = adaptiveHeight - 48.dp
+        // New decoupled plotting height: (adaptiveHeight + 28.dp) - 44.dp - 24.dp = adaptiveHeight - 40.dp
+        val netDrawableHeightDelta = heightExpansionDp - canvasTopPaddingDp - bottomPaddingDp // 28 - 44 - 24 = -40
+        assertEquals(-40.0, netDrawableHeightDelta, 0.001)
     }
 
     @Test
@@ -181,5 +171,9 @@ class ElevationProfileLayoutTest {
 
         val onZoomChangedCount = Regex("""onZoomChanged:\s*\(\(zoomScale:\s*Float,\s*startDist:\s*Double\)\s*->\s*Unit\)\?\s*=\s*null""").findAll(content).count()
         assertEquals("Both ElevationProfile composable overloads must declare onZoomChanged callback", 2, onZoomChangedCount)
+
+        // Verify both overloads declare isPanMode: Boolean = false (REQ-UI-225)
+        val isPanModeCount = Regex("""isPanMode:\s*Boolean\s*=\s*false""").findAll(content).count()
+        assertEquals("Both ElevationProfile composable overloads must declare isPanMode: Boolean = false", 2, isPanModeCount)
     }
 }

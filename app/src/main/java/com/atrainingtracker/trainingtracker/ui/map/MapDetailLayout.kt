@@ -40,11 +40,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
+import com.atrainingtracker.trainingtracker.ui.components.core.GlobalTelemetryZoomToolbar
+import com.atrainingtracker.trainingtracker.ui.components.core.GlobalTelemetryZoomToolbarDefaults
 import com.atrainingtracker.trainingtracker.ui.components.core.MinimumDragHandle
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalDensity
@@ -97,9 +100,14 @@ fun MapDetailLayout(
     var selectedDistance by remember { mutableStateOf<Double?>(null) }
     var profileZoomScale by remember(activeScrubPath) { mutableFloatStateOf(1.0f) }
     var profileStartDist by remember(activeScrubPath) { mutableDoubleStateOf(0.0) }
+    var isPanMode by remember(activeScrubPath) { mutableStateOf(false) }
     var splitFraction by rememberSaveable { mutableFloatStateOf(SplitPaneMath.DEFAULT_SPLIT_FRACTION) }
     val noLocation = remember { MutableStateFlow<LatLng?>(null) }
 
+    val isTimeDomain = tuningConfig.profileXAxisDomain == ProfileXAxisDomain.TIME && (activeScrubPath?.lastOrNull()?.timeSec ?: 0) > 0
+    val totalSpan = if (isTimeDomain) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
+
+    val hasZoomToolbar = showZoomControls && activeScrubPath != null && activeScrubPath.isNotEmpty()
     val hasTelemetryGraphs = showZoomControls && activeScrubPath != null && (
         TelemetryMetricUtils.hasHeartRateData(activeScrubPath) ||
         TelemetryMetricUtils.hasSpeedData(activeScrubPath) ||
@@ -223,6 +231,7 @@ fun MapDetailLayout(
                                         profileZoomScale = z
                                         profileStartDist = s
                                     },
+                                    isPanMode = isPanMode,
                                     modifier = Modifier.fillMaxWidth()
                                 )
 
@@ -366,10 +375,11 @@ fun MapDetailLayout(
                 val density = LocalDensity.current
                 val totalHeightPx = constraints.maxHeight.toFloat()
                 val dividerHeightPx = with(density) { SplitPaneMath.DIVIDER_TOUCH_HEIGHT.toPx() }
+                val toolbarHeightPx = if (hasZoomToolbar) with(density) { GlobalTelemetryZoomToolbarDefaults.TOOLBAR_HEIGHT.toPx() } else 0f
                 val minMapHeightPx = with(density) { SplitPaneMath.MIN_MAP_HEIGHT.toPx() }
                 val minLowerHeightPx = with(density) { SplitPaneMath.MIN_LOWER_HEIGHT.toPx() }
 
-                val availableHeightPx = SplitPaneMath.calculateAvailableHeight(totalHeightPx, dividerHeightPx)
+                val availableHeightPx = SplitPaneMath.calculateAvailableHeight(totalHeightPx, dividerHeightPx + toolbarHeightPx)
                 val minFraction = SplitPaneMath.calculateMinFraction(minMapHeightPx, availableHeightPx)
                 val maxFraction = SplitPaneMath.calculateMaxFraction(minLowerHeightPx, availableHeightPx, minFraction)
 
@@ -397,6 +407,22 @@ fun MapDetailLayout(
                         }
                     )
 
+                    // PERSISTENT STICKY GLOBAL ZOOM TOOLBAR (REQ-UI-225 / ATT-1876)
+                    if (hasZoomToolbar) {
+                        GlobalTelemetryZoomToolbar(
+                            zoomScale = profileZoomScale,
+                            startDist = profileStartDist,
+                            totalSpan = totalSpan,
+                            onZoomChanged = { z, s ->
+                                profileZoomScale = z
+                                profileStartDist = s
+                            },
+                            isPanMode = isPanMode,
+                            onPanModeToggle = { isPanMode = !isPanMode },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
                     lowerColumn(
                         Modifier
                             .weight(1f - splitFraction)
@@ -412,6 +438,21 @@ fun MapDetailLayout(
                     Modifier
                         .weight(1f)
                         .fillMaxWidth()
+                )
+            }
+
+            if (hasZoomToolbar) {
+                GlobalTelemetryZoomToolbar(
+                    zoomScale = profileZoomScale,
+                    startDist = profileStartDist,
+                    totalSpan = totalSpan,
+                    onZoomChanged = { z, s ->
+                        profileZoomScale = z
+                        profileStartDist = s
+                    },
+                    isPanMode = isPanMode,
+                    onPanModeToggle = { isPanMode = !isPanMode },
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 
