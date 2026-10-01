@@ -27,7 +27,7 @@ These rules are strictly binding on all AI assistants and agent instances operat
      python3 tools/jira_util.py check-gate <Impl-Plan-Subtask-Key>
      ```
   2. The agent MUST confirm that the command exits with code `0` (`GATE_PASSED: <KEY> is Erledigt`).
-  3. If the command exits with code `1` or the sub-task is in any status other than `Erledigt`, code modification is **strictly blocked**. The agent must immediately halt and prompt the user for approval.
+  3. If the command exits with code `1` or the sub-task is in any status other than `Erledigt`, code modification is **strictly blocked**. The agent must ensure the Stage 3 implementation plan deliverable is completed and passes Gate 3 audit (`freigabe` to `Erledigt`) before touching production code.
 
 ## 4. Strict Prohibition on Autonomous Sprint Scope Alterations
 * **Rule**: AI agents must NEVER move tickets into active sprints or pull tickets from the backlog autonomously (`"Agents must not move tickets to sprints!"`).
