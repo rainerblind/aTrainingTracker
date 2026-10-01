@@ -1349,6 +1349,9 @@
     <string name="tuning_default_format">Domyślnie: %1$s</string>
     <string name="reset_to_defaults">Przywróć domyślne</string>
     <string name="reset_to_defaults_success">Przywrócono domyślne ustawienia dostrajania.</string>
+    <string name="tuning_cat_sensors_gps">Czujniki, GPS i filtrowanie</string>
+    <string name="tuning_cat_workout_masks_cards">Karty i pola treningu</string>
+    <string name="tuning_summary_masks_cards_format">%1$d/8 kart, %2$d/6 pól</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
     <string name="move_tile_banner_instruction">Wybrano kafel: Dotknij innego kafla, aby zamienić, lub \'+\' aby przenieść.</string>

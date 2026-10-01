@@ -1356,6 +1356,9 @@
     <string name="tuning_default_format">Par défaut : %1$s</string>
     <string name="reset_to_defaults">Rétablir les paramètres par défaut</string>
     <string name="reset_to_defaults_success">Paramètres de réglage rétablis aux valeurs d\'usine par défaut.</string>
+    <string name="tuning_cat_sensors_gps">Capteurs, GPS et filtrage</string>
+    <string name="tuning_cat_workout_masks_cards">Cartes et champs d\'entraînement</string>
+    <string name="tuning_summary_masks_cards_format">%1$d/8 cartes, %2$d/6 champs</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
     <string name="move_tile_banner_instruction">Tuile sélectionnée : Touchez une autre tuile pour échanger ou \'+\' pour déplacer.</string>
