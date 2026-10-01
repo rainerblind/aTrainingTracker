@@ -43,6 +43,8 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppTableHeader
 import com.atrainingtracker.trainingtracker.ui.components.core.AppTableHeaderCell
 import com.atrainingtracker.trainingtracker.ui.components.core.BadgeBox
 import com.atrainingtracker.trainingtracker.ui.components.core.BadgeSpacer
+import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitCalculator
+import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitVisualizer
 import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
 
 @Composable
@@ -56,6 +58,15 @@ fun WorkoutLaps(
 
     val formatters = LocalMetricFormatter.current
     var isExpanded by rememberSaveable { mutableStateOf(false) }
+
+    val splitChartData = remember(laps, bSportType, formatters) {
+        LapSplitCalculator.calculateSplitData(
+            laps = laps,
+            bSportType = bSportType,
+            paceFormatter = { formatters.pace.format(it) },
+            speedFormatter = { formatters.speed.format(it) }
+        )
+    }
 
     // Performance highlight badges: Rabbit (fastest) and Hedgehog (slowest)
     // Only applied when >= 2 laps exist and speeds differ.
@@ -95,6 +106,22 @@ fun WorkoutLaps(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
+        }
+
+        // High-Aesthetic Lap & Interval Split Visualizer (REQ-UI-204 / ATT-1742)
+        if (splitChartData != null) {
+            LapSplitVisualizer(
+                splitData = splitChartData,
+                onLapClick = onLapClick?.let { callback ->
+                    { lapNr ->
+                        laps.find { it.lapNr == lapNr }?.let { callback(it) }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
         }
 
         Spacer(modifier = Modifier.height(4.dp))

@@ -1352,6 +1352,7 @@
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Zone di potenza</string>
     <string name="aftermath_laps_splits_title">Giri e tempi parziali</string>
+    <string name="split_badge_best">Migliore</string>
     <!-- Continuous Metric Graphs & Headings (ATT-1740 / REQ-UI-206) -->
     <string name="graph_heading_elevation">Profilo altimetrico</string>
     <string name="graph_heading_heart_rate">Frequenza cardiaca</string>
