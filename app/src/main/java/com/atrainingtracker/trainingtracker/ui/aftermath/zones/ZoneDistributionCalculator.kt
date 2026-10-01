@@ -62,11 +62,15 @@ object ZoneDistributionCalculator {
 
         val zoneDurations = LongArray(5)
 
+        val isDegenerate = validSamples.size > 1 && validSamples.first().timeActiveSec == validSamples.last().timeActiveSec
+
         for (i in validSamples.indices) {
             val sample = validSamples[i]
             val zoneIdx = determineHeartRateZone(sample.value, thresholds)
 
-            val dt = if (i < validSamples.size - 1) {
+            val dt = if (isDegenerate) {
+                1L
+            } else if (i < validSamples.size - 1) {
                 val nextSample = validSamples[i + 1]
                 val rawDt = nextSample.timeActiveSec - sample.timeActiveSec
                 when {
@@ -116,13 +120,16 @@ object ZoneDistributionCalculator {
         val validSamples = samples.filter { it.value > 0 }
         if (validSamples.isEmpty()) return null
 
+        val isDegenerate = validSamples.size > 1 && validSamples.first().timeActiveSec == validSamples.last().timeActiveSec
         val zoneDurations = LongArray(5)
 
         for (i in validSamples.indices) {
             val sample = validSamples[i]
             val zoneIdx = determinePowerZone(sample.value, thresholds)
 
-            val dt = if (i < validSamples.size - 1) {
+            val dt = if (isDegenerate) {
+                1L
+            } else if (i < validSamples.size - 1) {
                 val nextSample = validSamples[i + 1]
                 val rawDt = nextSample.timeActiveSec - sample.timeActiveSec
                 when {
