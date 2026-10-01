@@ -77,4 +77,12 @@ These rules are strictly binding on all AI assistants and agent instances operat
   3. Immediately switch context to the next unblocked ticket in the sprint.
   4. Do not block the terminal or wait for interactive console input.
 
+## 13. Strict Ticket Rank Ordering Enforcement During Ceremonies
+* **Rule**: During Sprint Planning (Ceremony 1) and Sprint Review (Ceremony 2), tickets MUST be queried, presented, and evaluated strictly in JIRA backlog rank order (`ORDER BY rank ASC`) (`"During the sprint planning and the sprint review, always respect the rank of the tickets."`).
+* No ticket may jump ahead of a higher-ranked ticket. When displaying tickets for review or processing tickets during planning, always fetch using `ORDER BY rank ASC` and evaluate sequentially from top to bottom.
+
+## 14. Autonomous Full-Sprint Execution Mandate
+* **Rule**: AI agents must execute the entire sprint backlog autonomously from ticket to ticket without intermediate pauses or asking the user whether to continue (`"Again, I was asked if we should continue. → Agents should do the entire Sprint."`).
+* Agents must not stop after completing an individual ticket to ask if they should continue with the next ticket. Execution must flow seamlessly across all sprint tickets until all reach `Final Review (Human)`, utilizing Rule 12 for any blocked subtasks requiring human decisions.
+
 

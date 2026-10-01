@@ -63,7 +63,7 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
          ```
 4. **Handoff to Autonomous Execution (Phase 2)**:
    Once all sprint tickets are in status `Analysis`, Phase 1 concludes. The implementation agents (`agent1`, `agent2`) take over Phase 2:
-   * **Continuous Unattended Execution**: The sprint pipeline runs continuously and autonomously across all tickets without stopping the console or waiting for interactive user turns.
+   * **Continuous Unattended Execution & Full-Sprint Mandate**: The sprint pipeline runs continuously and autonomously across the entire sprint backlog without stopping the console, pausing between tickets, or asking whether to continue (`"Again, I was asked if we should continue. → Agents should do the entire Sprint."`).
    * **In-Sprint Human Escalation Protocol**: If an agent encounters a blocker, design decision, or requirement ambiguity that strictly requires human guidance, the agent MUST NOT halt or prompt the console. Instead:
      1. Post a clarifying question/decision comment on the subtask: `python3 tools/jira_util.py comment <SUBTASK_KEY> "Question for Human: ..."`
      2. Reassign the subtask to Human: `python3 tools/jira_util.py assign <SUBTASK_KEY> human`
@@ -81,14 +81,15 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
 Jointly review all completed sprint tickets with the human user against expectations on the integrated sprint build, authorize release, handle rejected items, and cleanly close the sprint into `develop`.
 
 ### Step-by-Step Procedure
-1. **Query Tickets Ready for Review**:
-   Find all sprint tickets in status `Final Review (Human)`:
+1. **Query Tickets Ready for Review in Rank Order**:
+   Find all sprint tickets in status `Final Review (Human)` sorted strictly by backlog rank:
    ```bash
-   python3 tools/jira_util.py search "project = ATT AND sprint in openSprints() AND status = 'Final Review (Human)'"
+   python3 tools/jira_util.py search "project = ATT AND sprint in openSprints() AND status = 'Final Review (Human)' ORDER BY rank ASC"
    ```
 2. **Collaborative Ticket Inspection**:
    Ensure git is checked out on `sprint/<SPRINT_NAME>` (which contains all integrated sprint changes).
-   **Rule (Single-Ticket Focus)**: Evaluate tickets **strictly one-by-one** (`"Please make one ticket after the other. Please also keep this in mind for the retro."`). Never batch or present multiple tickets simultaneously. Complete verification and human acceptance for the current ticket before proceeding to the next.
+   * **Rule (Strict Rank Order)**: Review tickets strictly in backlog rank order (`ORDER BY rank ASC`) (`"During the sprint planning and the sprint review, always respect the rank of the tickets."`). No ticket may jump ahead of a higher-ranked ticket.
+   * **Rule (Single-Ticket Focus)**: Evaluate tickets **strictly one-by-one** (`"Please make one ticket after the other. Please also keep this in mind for the retro."`). Never batch or present multiple tickets simultaneously. Complete verification and human acceptance for the current ticket before proceeding to the next.
    For each ticket in `Final Review (Human)`:
    * Present the walkthrough deliverable (`docs/engineering/walkthroughs/<KEY>_walkthrough.md`) and summary of changes.
    * User verifies on-device behavior (Pixel 10 APK built from `sprint/<SPRINT_NAME>`) and inspects code diffs.
