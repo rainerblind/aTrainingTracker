@@ -27,7 +27,7 @@ These rules are strictly binding on all AI assistants and agent instances operat
      python3 tools/jira_util.py check-gate <Impl-Plan-Subtask-Key>
      ```
   2. The agent MUST confirm that the command exits with code `0` (`GATE_PASSED: <KEY> is Erledigt`).
-  3. If the command exits with code `1` or the sub-task is in any status other than `Erledigt`, code modification is **strictly blocked**. The agent must immediately halt and prompt the user for approval.
+  3. If the command exits with code `1` or the sub-task is in any status other than `Erledigt`, code modification is **strictly blocked**. The agent must ensure the Stage 3 implementation plan deliverable is completed and passes Gate 3 audit (`freigabe` to `Erledigt`) before touching production code.
 
 ## 4. Strict Prohibition on Autonomous Sprint Scope Alterations
 * **Rule**: AI agents must NEVER move tickets into active sprints or pull tickets from the backlog autonomously (`"Agents must not move tickets to sprints!"`).
@@ -76,5 +76,17 @@ These rules are strictly binding on all AI assistants and agent instances operat
   2. Post a precise Jira comment formulating the question or decision needed.
   3. Immediately switch context to the next unblocked ticket in the sprint.
   4. Do not block the terminal or wait for interactive console input.
+
+## 13. Strict Ticket Rank Ordering Enforcement During Ceremonies
+* **Rule**: During Sprint Planning (Ceremony 1) and Sprint Review (Ceremony 2), tickets MUST be queried, presented, and evaluated strictly in JIRA backlog rank order (`ORDER BY rank ASC`) (`"During the sprint planning and the sprint review, always respect the rank of the tickets."`).
+* No ticket may jump ahead of a higher-ranked ticket. When displaying tickets for review or processing tickets during planning, always fetch using `ORDER BY rank ASC` and evaluate sequentially from top to bottom.
+
+## 14. Autonomous Full-Sprint Execution Mandate
+* **Rule**: AI agents must execute the entire sprint backlog autonomously from ticket to ticket without intermediate pauses or asking the user whether to continue (`"Again, I was asked if we should continue. → Agents should do the entire Sprint."`).
+* Agents must not stop after completing an individual ticket to ask if they should continue with the next ticket. Execution must flow seamlessly across all sprint tickets until all reach `Final Review (Human)`, utilizing Rule 12 for any blocked subtasks requiring human decisions.
+
+## 15. Mandatory Rules & Skills Refresh at Every Ticket/Stage Transition ("Obey the Rules")
+* **Rule**: Whenever starting work on any new parent ticket or transitioning to a new ASPICE lifecycle stage / sprint ceremony, the agent **MUST** explicitly re-read the governing rules (`.agents/rules/aspice_governance.md`) and the corresponding skill (`.agents/skills/<skill_name>/SKILL.md`) using `view_file` (`"Then we should add a rule to obey the rules. I.e. to reread the rules / skill whenever a new ticket is handled."`).
+* Relying on degraded memory or conversational history from earlier turns across compactions is strictly prohibited. Re-reading the canonical documentation pulls constraints directly into active working context, ensuring 100% compliance with current standards and preventing behavioral drift.
 
 

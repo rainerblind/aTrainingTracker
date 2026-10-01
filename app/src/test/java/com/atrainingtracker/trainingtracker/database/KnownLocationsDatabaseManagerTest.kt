@@ -770,5 +770,120 @@ class KnownLocationsDatabaseManagerTest {
             anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.IS_LOCKED, 1)
         }
     }
+
+    /**
+     * TST-DAT-011.1: Verifies that reconcileHitCountsWithWorkoutSummaries() reconciles bloated
+     * historical hitCounts in SQLite against actual workout start coordinates.
+     */
+    @Test
+    fun testReconcileHitCountsWithWorkoutSummaries_updatesBloatedCounts() {
+        resetSingleton()
+        val manager = KnownLocationsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        setupMockCursorColumns(mockCursor)
+
+        // Location: id=42, Home, radius=200m, lat=48.0, lng=11.0, bloated hitCount=625
+        every { mockCursor.moveToNext() } returns true andThen false
+        every { mockCursor.getLong(0) } returns 42L
+        every { mockCursor.getString(1) } returns "Home"
+        every { mockCursor.getDouble(3) } returns 520.0
+        every { mockCursor.getDouble(4) } returns 11.0
+        every { mockCursor.getDouble(5) } returns 48.0
+        every { mockCursor.getInt(6) } returns 200
+        every { mockCursor.getInt(7) } returns 625 // Bloated!
+        every { mockCursor.getInt(8) } returns 0
+        every { mockCursor.getString(9) } returns "INTERNET_DEM"
+
+        every { mockDb.query(KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE, null, null, null, null, null, any()) } returns mockCursor
+        every {
+            mockDb.update(
+                KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE,
+                any(),
+                match { it.contains("_id=?") },
+                arrayOf("42")
+            )
+        } returns 1
+
+        // Provide 5 start locations: 3 inside 200m, 2 far away (>10km)
+        val startLocations = listOf(
+            LatLng(48.0001, 11.0001), // inside
+            LatLng(48.0002, 11.0002), // inside
+            LatLng(48.0000, 11.0000), // inside
+            LatLng(49.0000, 11.0000), // outside
+            LatLng(50.0000, 12.0000)  // outside
+        )
+
+        val reconciled = manager.reconcileHitCountsWithWorkoutSummaries(startLocations)
+        assertEquals(1, reconciled)
+
+        verify(exactly = 1) {
+            anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.HIT_COUNT, 3)
+        }
+        verify(exactly = 1) {
+            mockDb.update(
+                KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE,
+                any(),
+                match { it.contains("_id=?") },
+                arrayOf("42")
+            )
+        }
+    }
+
+    /**
+     * TST-DAT-011.2: Verifies that upsertLocationByGeofence() does NOT increment hitCount
+     * when updating elevation or source for an existing location.
+     */
+    @Test
+    fun testUpsertLocationByGeofence_doesNotIncrementHitCount() {
+        resetSingleton()
+        val manager = KnownLocationsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        setupMockCursorColumns(mockCursor)
+
+        every { mockCursor.moveToNext() } returns true andThen false
+        every { mockCursor.getLong(0) } returns 42L
+        every { mockCursor.getString(1) } returns "Home"
+        every { mockCursor.getDouble(3) } returns 500.0 // old alt
+        every { mockCursor.getDouble(4) } returns 11.0
+        every { mockCursor.getDouble(5) } returns 48.0
+        every { mockCursor.getInt(6) } returns 200
+        every { mockCursor.getInt(7) } returns 10 // hitCount = 10
+        every { mockCursor.getInt(8) } returns 0
+        every { mockCursor.getString(9) } returns "LEGACY_RAW"
+
+        every { mockDb.query(KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE, null, null, null, null, null, null) } returns mockCursor
+        every { anyConstructed<Location>().distanceTo(any()) } returns 20.0f
+        every {
+            mockDb.query(
+                KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE,
+                null,
+                match { it.contains("_id=?") },
+                arrayOf("42"),
+                null, null, null, null
+            )
+        } returns mockCursor
+
+        manager.upsertLocationByGeofence(
+            LatLng(48.0, 11.0),
+            520.0,
+            "Home",
+            ExtremaType.START,
+            ElevationSource.INTERNET_DEM,
+            false
+        )
+
+        // Verify hitCount is NOT updated in ContentValues
+        verify(exactly = 0) {
+            anyConstructed<ContentValues>().put(eq(KnownLocationsDatabaseManager.KnownLocationsDbHelper.HIT_COUNT), any<Int>())
+        }
+        verify(exactly = 1) {
+            anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.ALTITUDE, 520.0)
+            anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.SOURCE, "INTERNET_DEM")
+        }
+    }
 }
 

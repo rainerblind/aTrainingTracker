@@ -1130,6 +1130,23 @@
     <string name="filter_section_equipment">Equipamiento</string>
     <string name="filter_section_attributes">Atributos</string>
     <string name="filter_section_thresholds">Distancia y duración</string>
+    <string name="filter_section_start_at">Comienza en</string>
+    <string name="settings_workout_card_title">Lista de entrenamientos (tarjetas detalladas)</string>
+    <string name="settings_workout_card_map">Vista previa del mapa</string>
+    <string name="settings_workout_card_elevation">Perfil de altitud</string>
+    <string name="settings_workout_card_extrema">Valores extremos</string>
+    <string name="settings_workout_card_laps">Resumen de vueltas</string>
+    <string name="settings_workout_card_strava">Actividad de Strava</string>
+    <string name="settings_workout_card_description">Descripción y notas</string>
+    <string name="settings_workout_card_charts">Gráficos de telemetría</string>
+    <string name="settings_workout_card_zones">Análisis de zonas (FC y potencia)</string>
+    <string name="settings_edit_workout_title">Editar entrenamiento</string>
+    <string name="settings_edit_workout_cluster">Ruta / Recorrido</string>
+    <string name="settings_edit_workout_commute_trainer">Desplazamiento y rodillo</string>
+    <string name="settings_edit_workout_strava">Subida a Strava</string>
+    <string name="settings_edit_workout_description">Descripción y notas</string>
+    <string name="settings_edit_workout_goal">Objetivo</string>
+    <string name="settings_edit_workout_method">Método</string>
     <string name="filter_commute">Desplazamiento</string>
     <string name="filter_trainer">Interior / Rodillo</string>
     <string name="filter_has_gps">Con ruta GPS</string>
@@ -1337,4 +1354,10 @@
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Zonas de potencia</string>
     <string name="aftermath_laps_splits_title">Vueltas y divisiones</string>
+    <!-- Continuous Metric Graphs & Headings (ATT-1740 / REQ-UI-206) -->
+    <string name="graph_heading_elevation">Perfil de altitud</string>
+    <string name="graph_heading_heart_rate">Frecuencia cardíaca</string>
+    <string name="graph_heading_speed">Velocidad</string>
+    <string name="graph_heading_pace">Ritmo</string>
+    <string name="graph_heading_power">Potencia</string>
 </resources>

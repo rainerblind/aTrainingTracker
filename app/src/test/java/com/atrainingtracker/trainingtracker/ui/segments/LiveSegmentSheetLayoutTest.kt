@@ -58,4 +58,58 @@ class LiveSegmentSheetLayoutTest {
         assertNotNull("MapDetailLayout composable function must exist and be public", layoutMethod)
         assertTrue(Modifier.isPublic(layoutMethod!!.modifiers))
     }
+
+    @Test
+    fun testLiveSegmentSheet_suppressesZoomControls() {
+        var dir = java.io.File(System.getProperty("user.dir") ?: ".")
+        while (!java.io.File(dir, "app").exists() && dir.parentFile != null) {
+            dir = dir.parentFile!!
+        }
+        val file = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/LIveSegmentSheet.kt")
+        assertTrue("LIveSegmentSheet.kt must exist", file.exists())
+        val content = file.readText()
+        assertTrue(
+            "LiveSegmentSheet must pass showZoomControls = false to MapDetailLayout (REQ-UI-197, ATT-1736)",
+            content.contains("showZoomControls = false")
+        )
+    }
+
+    @Test
+    fun testLiveSegmentSheet_unifiedSurfaceBackgroundContract() {
+        var dir = java.io.File(System.getProperty("user.dir") ?: ".")
+        while (!java.io.File(dir, "app").exists() && dir.parentFile != null) {
+            dir = dir.parentFile!!
+        }
+
+        // 1. Verify SensorGridScreen.kt configures sheetContainerColor and Box background
+        val sensorGridFile = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        assertTrue("SensorGridScreen.kt must exist", sensorGridFile.exists())
+        val sensorGridContent = sensorGridFile.readText()
+        assertTrue(
+            "SensorGridScreen must configure sheetContainerColor = MaterialTheme.colorScheme.surface (REQ-UI-196, ATT-1735)",
+            sensorGridContent.contains("sheetContainerColor = MaterialTheme.colorScheme.surface")
+        )
+        assertTrue(
+            "SensorGridScreen sheet content Box must apply background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape) (REQ-UI-196, ATT-1735)",
+            sensorGridContent.contains(".background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)")
+        )
+
+        // 2. Verify MapDetailLayout.kt applies background(surface) in sheet mode (!useStatusBarsPadding)
+        val mapDetailFile = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapDetailLayout.kt")
+        assertTrue("MapDetailLayout.kt must exist", mapDetailFile.exists())
+        val mapDetailContent = mapDetailFile.readText()
+        assertTrue(
+            "MapDetailLayout must apply background(surface) when !useStatusBarsPadding (REQ-UI-196, ATT-1735)",
+            mapDetailContent.contains("if (!useStatusBarsPadding) Modifier.background(MaterialTheme.colorScheme.surface) else Modifier")
+        )
+
+        // 3. Verify LIveSegmentSheet.kt header applies background(surface)
+        val liveSheetFile = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/LIveSegmentSheet.kt")
+        assertTrue("LIveSegmentSheet.kt must exist", liveSheetFile.exists())
+        val liveSheetContent = liveSheetFile.readText()
+        assertTrue(
+            "LIveSegmentSheet header must apply background(MaterialTheme.colorScheme.surface) (REQ-UI-196, ATT-1735)",
+            liveSheetContent.contains(".background(MaterialTheme.colorScheme.surface)")
+        )
+    }
 }

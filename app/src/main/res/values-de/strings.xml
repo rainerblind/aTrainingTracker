@@ -1215,6 +1215,23 @@
     <string name="filter_section_equipment">Ausrüstung</string>
     <string name="filter_section_attributes">Eigenschaften</string>
     <string name="filter_section_thresholds">Distanz &amp; Dauer</string>
+    <string name="filter_section_start_at">Startet bei</string>
+    <string name="settings_workout_card_title">Trainingsliste (Detail-Karten)</string>
+    <string name="settings_workout_card_map">Karten-Vorschau</string>
+    <string name="settings_workout_card_elevation">Höhenprofil</string>
+    <string name="settings_workout_card_extrema">Extremwerte</string>
+    <string name="settings_workout_card_laps">Runden-Übersicht</string>
+    <string name="settings_workout_card_strava">Strava-Aktivitätsdaten</string>
+    <string name="settings_workout_card_description">Beschreibung &amp; Notizen</string>
+    <string name="settings_workout_card_charts">Telemetrie-Diagramme</string>
+    <string name="settings_workout_card_zones">Zonenauswertung (HF &amp; Power)</string>
+    <string name="settings_edit_workout_title">Training bearbeiten</string>
+    <string name="settings_edit_workout_cluster">Strecke / Route</string>
+    <string name="settings_edit_workout_commute_trainer">Pendeln &amp; Trainer</string>
+    <string name="settings_edit_workout_strava">Strava-Upload</string>
+    <string name="settings_edit_workout_description">Beschreibung &amp; Notizen</string>
+    <string name="settings_edit_workout_goal">Ziel</string>
+    <string name="settings_edit_workout_method">Methode</string>
     <string name="filter_commute">Pendeln</string>
     <string name="filter_trainer">Indoor / Rollentrainer</string>
     <string name="filter_has_gps">Mit GPS-Strecke</string>
@@ -1422,4 +1439,10 @@
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Leistungszonen</string>
     <string name="aftermath_laps_splits_title">Runden &amp; Zwischenzeiten</string>
+    <!-- Continuous Metric Graphs & Headings (ATT-1740 / REQ-UI-206) -->
+    <string name="graph_heading_elevation">Höhenprofil</string>
+    <string name="graph_heading_heart_rate">Herzfrequenz</string>
+    <string name="graph_heading_speed">Geschwindigkeit</string>
+    <string name="graph_heading_pace">Tempo</string>
+    <string name="graph_heading_power">Leistung</string>
 </resources>

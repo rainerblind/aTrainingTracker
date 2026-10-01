@@ -18,24 +18,23 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.zones
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
-import java.util.Locale
 
 /**
- * Compact card displaying a 5-zone Cycling Power distribution stacked bar and time-in-zone breakdown.
+ * Compact card displaying a 5-zone Cycling Power vertical column histogram and time-in-zone breakdown.
+ *
+ * X-Axis: 5 discrete vertical columns for Zone 1 through Zone 5.
+ * Y-Axis: Height of each column reflects duration spent in that zone.
  */
 @Composable
 fun PowerZoneDistributionCard(
@@ -53,7 +52,7 @@ fun PowerZoneDistributionCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // Header Row: Power Icon + Localized Title + Total Active Time
             Row(
@@ -75,97 +74,17 @@ fun PowerZoneDistributionCard(
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = formatZoneDuration(distribution.totalActiveTimeSec),
+                    text = ZoneDistributionChartMath.formatZoneDuration(distribution.totalActiveTimeSec),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            // Proportional Stacked Bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(14.dp)
-                    .clip(RoundedCornerShape(7.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                val nonZeroEntries = distribution.entries.filter { it.percentage > 0f }
-                if (nonZeroEntries.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant))
-                } else {
-                    distribution.entries.forEach { entry ->
-                        if (entry.percentage > 0f) {
-                            Box(
-                                modifier = Modifier
-                                    .weight(entry.percentage)
-                                    .fillMaxHeight()
-                                    .background(entry.color)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 5-Zone Legend Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                distribution.entries.forEach { entry ->
-                    ZoneLegendItem(entry = entry)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ZoneLegendItem(
-    entry: ZoneTimeEntry,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .clip(CircleShape)
-                    .background(entry.color)
-            )
-            Text(
-                text = "Z${entry.zoneIndex}",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+            // 5-Column Vertical Histogram
+            ZoneDistributionColumnChart(
+                distribution = distribution,
+                modifier = Modifier.fillMaxWidth()
             )
         }
-        Text(
-            text = formatZoneDuration(entry.durationSec),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = String.format(Locale.getDefault(), "%.0f%%", entry.percentage),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-private fun formatZoneDuration(seconds: Long): String {
-    val hours = seconds / 3600
-    val minutes = (seconds % 3600) / 60
-    val secs = seconds % 60
-    return if (hours > 0) {
-        String.format(Locale.getDefault(), "%d:%02d:%02d", hours, minutes, secs)
-    } else {
-        String.format(Locale.getDefault(), "%d:%02d", minutes, secs)
     }
 }

@@ -1,0 +1,507 @@
+/*
+ * aTrainingTracker (ANT+ BTLE)
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+ */
+
+package com.atrainingtracker.trainingtracker.ui.map
+
+import android.graphics.Paint
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.dp
+import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter
+import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
+import com.atrainingtracker.trainingtracker.MyUnits
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import java.util.Locale
+import kotlin.math.abs
+
+/**
+ * Metric types supported by [TelemetryMetricGraph].
+ * (REQ-UI-206 / ATT-1740)
+ */
+enum class TelemetryMetricType {
+    HEART_RATE,
+    SPEED,
+    PACE,
+    POWER
+}
+
+/**
+ * Helper object providing metric availability verification and data processing.
+ * (REQ-UI-206 / ATT-1740)
+ */
+object TelemetryMetricUtils {
+    /**
+     * Checks whether valid heart rate samples exist in [path].
+     */
+    fun hasHeartRateData(path: List<PathPoint>?): Boolean {
+        if (path.isNullOrEmpty()) return false
+        return path.any { it.hr != null && it.hr > 0 }
+    }
+
+    /**
+     * Checks whether valid speed samples exist in [path].
+     */
+    fun hasSpeedData(path: List<PathPoint>?): Boolean {
+        if (path.isNullOrEmpty()) return false
+        return path.any { it.speedMps != null && it.speedMps > 0.0 }
+    }
+
+    /**
+     * Checks whether valid cycling power samples exist in [path].
+     */
+    fun hasPowerData(path: List<PathPoint>?): Boolean {
+        if (path.isNullOrEmpty()) return false
+        return path.any { it.power != null && it.power > 0 }
+    }
+
+    /**
+     * Extracts scalar value for a given [PathPoint] according to [metricType] and [unit].
+     * Returns null if sample is invalid or unrecorded.
+     */
+    fun extractMetricValue(
+        point: PathPoint,
+        metricType: TelemetryMetricType,
+        unit: MyUnits
+    ): Double? {
+        return when (metricType) {
+            TelemetryMetricType.HEART_RATE -> {
+                point.hr?.takeIf { it > 0 }?.toDouble()
+            }
+            TelemetryMetricType.SPEED -> {
+                point.speedMps?.takeIf { it > 0.0 }?.let { mps ->
+                    if (unit == MyUnits.METRIC) mps * 3.6 else mps * 2.236936
+                }
+            }
+            TelemetryMetricType.PACE -> {
+                point.speedMps?.takeIf { it > 0.1 }?.let { mps ->
+                    val secPerKm = 1000.0 / mps
+                    val secPerUnit = if (unit == MyUnits.METRIC) {
+                        secPerKm
+                    } else {
+                        secPerKm * (BANALService.METER_PER_MILE / 1000.0)
+                    }
+                    (secPerUnit / 60.0).coerceIn(1.0, 30.0)
+                }
+            }
+            TelemetryMetricType.POWER -> {
+                point.power?.takeIf { it >= 0 }?.toDouble()
+            }
+        }
+    }
+
+    /**
+     * Formats instantaneous or extreme metric value for display.
+     */
+    fun formatValue(
+        value: Double?,
+        metricType: TelemetryMetricType,
+        unit: MyUnits,
+        speedFormatter: SpeedFormatter,
+        paceFormatter: PaceFormatter
+    ): String {
+        if (value == null) return "--"
+        return when (metricType) {
+            TelemetryMetricType.HEART_RATE -> "${value.toInt()} bpm"
+            TelemetryMetricType.SPEED -> {
+                val mps = if (unit == MyUnits.METRIC) value / 3.6 else value / 2.236936
+                speedFormatter.format_with_units(mps)
+            }
+            TelemetryMetricType.PACE -> {
+                val secPerUnit = value * 60.0
+                val mps = if (unit == MyUnits.METRIC) {
+                    1000.0 / secPerUnit
+                } else {
+                    BANALService.METER_PER_MILE / secPerUnit
+                }
+                paceFormatter.format_with_units(mps)
+            }
+            TelemetryMetricType.POWER -> "${value.toInt()} W"
+        }
+    }
+}
+
+/**
+ * High-performance, aesthetic continuous telemetry graph composable for Heart Rate,
+ * Speed/Pace, and Cycling Power curves in Aftermath detailed inspection.
+ * (REQ-UI-206 / ATT-1740)
+ *
+ * Invariant: Horizontal paddings strictly match [ElevationProfile] (start = 50.dp, end = 25.dp, bottom = 24.dp),
+ * guaranteeing pixel-perfect vertical alignment of the horizontal axes and synchronized scrubbing markers across all charts.
+ */
+@Composable
+fun TelemetryMetricGraph(
+    pathPoints: List<PathPoint>,
+    metricType: TelemetryMetricType,
+    currentDistance: Double?,
+    onDistanceSelected: (Double?) -> Unit,
+    modifier: Modifier = Modifier,
+    xAxisDomain: ProfileXAxisDomain = ProfileXAxisDomain.DISTANCE,
+    bSportType: BSportType = BSportType.UNKNOWN
+) {
+    if (pathPoints.isEmpty()) return
+
+    val unit = remember {
+        try {
+            TrainingApplication.getUnit()
+        } catch (_: Exception) {
+            MyUnits.METRIC
+        }
+    }
+
+    val speedFormatter = remember(unit) { SpeedFormatter() }
+    val paceFormatter = remember(unit) { PaceFormatter() }
+
+    val colorScheme = MaterialTheme.colorScheme
+
+    val accentColor = remember(metricType, colorScheme) {
+        when (metricType) {
+            TelemetryMetricType.HEART_RATE -> TTColor.Zone4
+            TelemetryMetricType.SPEED, TelemetryMetricType.PACE -> colorScheme.primary
+            TelemetryMetricType.POWER -> TTColor.Zone5
+        }
+    }
+
+    val isTimeDomain = xAxisDomain == ProfileXAxisDomain.TIME
+    val totalSpan = remember(pathPoints, isTimeDomain) {
+        if (isTimeDomain) {
+            (pathPoints.lastOrNull()?.timeSec ?: 0L).toDouble().coerceAtLeast(1.0)
+        } else {
+            (pathPoints.lastOrNull()?.distance ?: 0.0).coerceAtLeast(1.0)
+        }
+    }
+
+    // Extract scalar values
+    val rawValues = remember(pathPoints, metricType, unit) {
+        pathPoints.map { TelemetryMetricUtils.extractMetricValue(it, metricType, unit) }
+    }
+
+    val validValues = remember(rawValues) { rawValues.filterNotNull() }
+    if (validValues.isEmpty()) return
+
+    val (dataMin, dataMax) = remember(validValues, metricType) {
+        val min = validValues.minOrNull() ?: 0.0
+        val max = validValues.maxOrNull() ?: 1.0
+        when (metricType) {
+            TelemetryMetricType.POWER -> {
+                0.0 to (max * 1.1).coerceAtLeast(50.0)
+            }
+            TelemetryMetricType.HEART_RATE -> {
+                (min - 5.0).coerceAtLeast(30.0) to (max + 5.0).coerceAtLeast(100.0)
+            }
+            TelemetryMetricType.SPEED -> {
+                0.0 to (max * 1.1).coerceAtLeast(5.0)
+            }
+            TelemetryMetricType.PACE -> {
+                // For Pace: min is fastest, max is slowest
+                (min * 0.9).coerceAtLeast(1.0) to (max * 1.1).coerceAtLeast(5.0)
+            }
+        }
+    }
+
+    val axisTextPaint = remember(colorScheme) {
+        Paint().apply {
+            color = colorScheme.onSurfaceVariant.toArgb()
+            textSize = 28f
+            isAntiAlias = true
+        }
+    }
+
+    val axisGridPaint = remember(colorScheme) {
+        Paint().apply {
+            color = colorScheme.outlineVariant.copy(alpha = 0.35f).toArgb()
+            strokeWidth = 1f
+            isAntiAlias = true
+        }
+    }
+
+    Box(modifier = modifier.fillMaxWidth()) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(110.dp)
+                .pointerInput(totalSpan, isTimeDomain) {
+                    val startPaddingPx = 50.dp.toPx()
+                    val endPaddingPx = 25.dp.toPx()
+                    val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
+
+                    detectTapGestures(
+                        onPress = { offset ->
+                            val localX = (offset.x - startPaddingPx).coerceIn(0f, chartWidthPx)
+                            val selectedRatio = localX / chartWidthPx
+                            if (isTimeDomain) {
+                                val targetTimeSec = (selectedRatio * totalSpan).toLong()
+                                val nearest = pathPoints.minByOrNull { abs(it.timeSec - targetTimeSec) }
+                                onDistanceSelected(nearest?.distance)
+                            } else {
+                                onDistanceSelected(selectedRatio * totalSpan)
+                            }
+                        }
+                    )
+                }
+                .pointerInput(totalSpan, isTimeDomain) {
+                    val startPaddingPx = 50.dp.toPx()
+                    val endPaddingPx = 25.dp.toPx()
+                    val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
+
+                    detectDragGestures(
+                        onDrag = { change, _ ->
+                            change.consume()
+                            val localX = (change.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
+                            val selectedRatio = localX / chartWidthPx
+                            if (isTimeDomain) {
+                                val targetTimeSec = (selectedRatio * totalSpan).toLong()
+                                val nearest = pathPoints.minByOrNull { abs(it.timeSec - targetTimeSec) }
+                                onDistanceSelected(nearest?.distance)
+                            } else {
+                                onDistanceSelected(selectedRatio * totalSpan)
+                            }
+                        }
+                    )
+                }
+        ) {
+            val startPaddingPx = 50.dp.toPx()
+            val endPaddingPx = 25.dp.toPx()
+            val bottomPaddingPx = 24.dp.toPx()
+            val topPaddingPx = 10.dp.toPx()
+
+            val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
+            val chartHeightPx = (size.height - topPaddingPx - bottomPaddingPx).coerceAtLeast(1f)
+
+            val valRange = (dataMax - dataMin).coerceAtLeast(1.0)
+
+            // Function to map metric value to Y coordinate
+            fun valueToY(v: Double): Float {
+                return if (metricType == TelemetryMetricType.PACE) {
+                    // For pace: faster (smaller value) is plotted higher (near top)
+                    val ratio = ((v - dataMin) / valRange).coerceIn(0.0, 1.0)
+                    (topPaddingPx + ratio * chartHeightPx).toFloat()
+                } else {
+                    // Standard: higher value is plotted higher
+                    val ratio = ((v - dataMin) / valRange).coerceIn(0.0, 1.0)
+                    (topPaddingPx + (1.0 - ratio) * chartHeightPx).toFloat()
+                }
+            }
+
+            // Draw Y-axis labels (min and max)
+            val nativeCanvas = drawContext.canvas.nativeCanvas
+            val maxLabel = if (metricType == TelemetryMetricType.PACE) {
+                String.format(Locale.US, "%.1f", dataMin)
+            } else {
+                "${dataMax.toInt()}"
+            }
+            val minLabel = if (metricType == TelemetryMetricType.PACE) {
+                String.format(Locale.US, "%.1f", dataMax)
+            } else {
+                "${dataMin.toInt()}"
+            }
+
+            nativeCanvas.drawText(maxLabel, 6.dp.toPx(), topPaddingPx + 10f, axisTextPaint)
+            nativeCanvas.drawText(minLabel, 6.dp.toPx(), topPaddingPx + chartHeightPx, axisTextPaint)
+
+            // Draw horizontal boundary grid lines
+            drawLine(
+                color = colorScheme.outlineVariant.copy(alpha = 0.35f),
+                start = Offset(startPaddingPx, topPaddingPx),
+                end = Offset(startPaddingPx + chartWidthPx, topPaddingPx),
+                strokeWidth = 1f
+            )
+            drawLine(
+                color = colorScheme.outlineVariant.copy(alpha = 0.35f),
+                start = Offset(startPaddingPx, topPaddingPx + chartHeightPx),
+                end = Offset(startPaddingPx + chartWidthPx, topPaddingPx + chartHeightPx),
+                strokeWidth = 1f
+            )
+
+            // Draw X-axis ticks along bottom
+            if (isTimeDomain) {
+                val timeStep = ElevationProfileZoomMath.calculateAdaptiveTimeStep(totalSpan)
+                var currentSec = 0L
+                while (currentSec <= totalSpan) {
+                    val tickX = startPaddingPx + ((currentSec.toDouble() / totalSpan) * chartWidthPx).toFloat()
+                    if (tickX in startPaddingPx..(startPaddingPx + chartWidthPx)) {
+                        drawLine(
+                            color = colorScheme.outlineVariant.copy(alpha = 0.3f),
+                            start = Offset(tickX, topPaddingPx),
+                            end = Offset(tickX, topPaddingPx + chartHeightPx),
+                            strokeWidth = 1f
+                        )
+                        val tickLabel = ElevationProfileZoomMath.formatTimeTick(currentSec)
+                        nativeCanvas.drawText(tickLabel, tickX - 20f, size.height - 4.dp.toPx(), axisTextPaint)
+                    }
+                    currentSec += timeStep
+                }
+            } else {
+                val distStep = ElevationProfileZoomMath.calculateAdaptiveDistanceStep(totalSpan, unit)
+                var currentDist = 0.0
+                while (currentDist <= totalSpan) {
+                    val tickX = startPaddingPx + ((currentDist / totalSpan) * chartWidthPx).toFloat()
+                    if (tickX in startPaddingPx..(startPaddingPx + chartWidthPx)) {
+                        drawLine(
+                            color = colorScheme.outlineVariant.copy(alpha = 0.3f),
+                            start = Offset(tickX, topPaddingPx),
+                            end = Offset(tickX, topPaddingPx + chartHeightPx),
+                            strokeWidth = 1f
+                        )
+                        val label = if (unit == MyUnits.METRIC) {
+                            "${(currentDist / 1000).toInt()} km"
+                        } else {
+                            val miles = currentDist / BANALService.METER_PER_MILE
+                            String.format(Locale.US, "%.1f mi", miles)
+                        }
+                        nativeCanvas.drawText(label, tickX - 20f, size.height - 4.dp.toPx(), axisTextPaint)
+                    }
+                    currentDist += distStep
+                }
+            }
+
+            // Construct and render curve path
+            clipRect(
+                left = startPaddingPx,
+                top = topPaddingPx,
+                right = startPaddingPx + chartWidthPx,
+                bottom = topPaddingPx + chartHeightPx
+            ) {
+                val strokePath = Path()
+                val fillPath = Path()
+
+                var isFirst = true
+                var firstX = startPaddingPx
+                var lastX = startPaddingPx
+                val baselineY = topPaddingPx + chartHeightPx
+
+                for (i in pathPoints.indices) {
+                    val pt = pathPoints[i]
+                    val v = rawValues[i] ?: continue
+
+                    val xSpan = if (isTimeDomain) pt.timeSec.toDouble() else pt.distance
+                    val x = startPaddingPx + ((xSpan / totalSpan) * chartWidthPx).toFloat()
+                    val y = valueToY(v)
+
+                    if (isFirst) {
+                        strokePath.moveTo(x, y)
+                        fillPath.moveTo(x, baselineY)
+                        fillPath.lineTo(x, y)
+                        firstX = x
+                        isFirst = false
+                    } else {
+                        strokePath.lineTo(x, y)
+                        fillPath.lineTo(x, y)
+                    }
+                    lastX = x
+                }
+
+                if (!isFirst) {
+                    fillPath.lineTo(lastX, baselineY)
+                    fillPath.lineTo(firstX, baselineY)
+                    fillPath.close()
+
+                    // Fill subtle gradient area under curve
+                    drawPath(
+                        path = fillPath,
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                accentColor.copy(alpha = 0.20f),
+                                accentColor.copy(alpha = 0.02f)
+                            ),
+                            startY = topPaddingPx,
+                            endY = baselineY
+                        )
+                    )
+
+                    // Draw stroke line
+                    drawPath(
+                        path = strokePath,
+                        color = accentColor,
+                        style = Stroke(
+                            width = 2.dp.toPx(),
+                            cap = StrokeCap.Round
+                        )
+                    )
+                }
+            }
+
+            // Synchronized Scrubbing Cursor & Marker Dot
+            if (currentDistance != null && currentDistance in 0.0..totalSpan) {
+                val cursorDistSpan = if (isTimeDomain) {
+                    val nearestPt = pathPoints.minByOrNull { abs(it.distance - currentDistance) }
+                    (nearestPt?.timeSec ?: 0L).toDouble()
+                } else {
+                    currentDistance
+                }
+
+                val cursorX = (startPaddingPx + ((cursorDistSpan / totalSpan) * chartWidthPx).toFloat())
+                    .coerceIn(startPaddingPx, startPaddingPx + chartWidthPx)
+
+                // 1. Vertical dashed cursor line
+                drawLine(
+                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                    start = Offset(cursorX, topPaddingPx),
+                    end = Offset(cursorX, topPaddingPx + chartHeightPx),
+                    strokeWidth = 1.5.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                )
+
+                // 2. Highlight circle on the curve
+                val nearestPoint = pathPoints.minByOrNull { abs(it.distance - currentDistance) }
+                if (nearestPoint != null) {
+                    val metricVal = TelemetryMetricUtils.extractMetricValue(nearestPoint, metricType, unit)
+                    if (metricVal != null) {
+                        val cursorY = valueToY(metricVal)
+
+                        // Outer halo
+                        drawCircle(
+                            color = accentColor.copy(alpha = 0.35f),
+                            radius = 6.dp.toPx(),
+                            center = Offset(cursorX, cursorY)
+                        )
+                        // Inner dot
+                        drawCircle(
+                            color = accentColor,
+                            radius = 3.5.dp.toPx(),
+                            center = Offset(cursorX, cursorY)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}

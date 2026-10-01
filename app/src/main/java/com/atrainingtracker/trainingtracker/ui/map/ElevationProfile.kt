@@ -356,8 +356,8 @@ fun ElevationProfile(
         }
     }
 
-    val topPadding = if (showZoomControls) 44.dp else 16.dp
-    val totalCanvasHeight = if (showZoomControls) cachedData.adaptiveHeight + 20.dp else cachedData.adaptiveHeight
+    val topPadding = if (showZoomControls) 72.dp else 16.dp
+    val totalCanvasHeight = if (showZoomControls) cachedData.adaptiveHeight + 48.dp else cachedData.adaptiveHeight
 
     Box(modifier = modifier.fillMaxWidth()) {
         val baseCanvasModifier = Modifier
@@ -676,7 +676,7 @@ fun ElevationProfile(
                     xAxisDomain = xAxisDomain,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
-                        .padding(top = 2.dp)
+                        .padding(top = 28.dp)
                 )
             }
         }

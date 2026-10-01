@@ -53,37 +53,44 @@ class ElevationProfileLayoutTest {
     fun testElevationProfile_sourceCodeInspection_layoutSeparation() {
         val content = elevationProfileFile.readText()
 
-        // 1. Dynamic topPadding: 44.dp for detail views, 16.dp for compact list previews
+        // 1. Dynamic topPadding: 72.dp for detail views (to accommodate badge layer), 16.dp for compact list previews
         assertTrue(
-            "ElevationProfile must set topPadding = 44.dp when showZoomControls == true, else 16.dp",
-            content.contains("val topPadding = if (showZoomControls) 44.dp else 16.dp")
+            "ElevationProfile must set topPadding = 72.dp when showZoomControls == true, else 16.dp",
+            content.contains("val topPadding = if (showZoomControls) 72.dp else 16.dp")
         )
 
         // 2. Dynamic canvas height preserving exact drawable chart plotting area
         assertTrue(
-            "ElevationProfile must expand totalCanvasHeight by 20.dp when showZoomControls == true",
-            content.contains("val totalCanvasHeight = if (showZoomControls) cachedData.adaptiveHeight + 20.dp else cachedData.adaptiveHeight")
+            "ElevationProfile must expand totalCanvasHeight by 48.dp when showZoomControls == true",
+            content.contains("val totalCanvasHeight = if (showZoomControls) cachedData.adaptiveHeight + 48.dp else cachedData.adaptiveHeight")
         )
 
-        // 3. Conditional pointerInput attachment (omitted in list previews to allow smooth scrolling and instant card clicks)
+        // 3. ScrubbingTelemetryBadge anchored at top = 28.dp to clear zoom controls row
+        assertTrue(
+            "ScrubbingTelemetryBadge must be padded at top = 28.dp to clear 24dp zoom controls",
+            content.contains(".align(Alignment.TopCenter)\n                        .padding(top = 28.dp)") ||
+                    content.contains(".align(Alignment.TopCenter).padding(top = 28.dp)")
+        )
+
+        // 4. Conditional pointerInput attachment (omitted in list previews to allow smooth scrolling and instant card clicks)
         assertTrue(
             "ElevationProfile must conditionally attach pointerInput only when showZoomControls == true",
             content.contains("val canvasModifier = if (showZoomControls) {")
         )
 
-        // 4. Scrubber text baseline anchored at -4.dp.toPx()
+        // 5. Scrubber text baseline anchored at -4.dp.toPx()
         assertTrue(
             "Scrubber text baseline must be anchored at -4.dp.toPx() to clear controls row",
             content.contains("-4.dp.toPx()")
         )
 
-        // 5. Zoom controls row guarded by showZoomControls
+        // 6. Zoom controls row guarded by showZoomControls
         assertTrue(
             "Zoom controls row must be guarded by showZoomControls",
             content.contains("if (showZoomControls && cachedData.totalDist > 10.0)")
         )
 
-        // 6. Legend button guarded by showZoomControls
+        // 7. Legend button guarded by showZoomControls
         assertTrue(
             "Legend button must be guarded by showZoomControls",
             content.contains("if (showZoomControls) {\n            IconButton(") ||
@@ -96,10 +103,14 @@ class ElevationProfileLayoutTest {
         assertTrue("MapDetailLayout.kt must exist", mapDetailLayoutFile.exists())
         val content = mapDetailLayoutFile.readText()
 
-        // Verify MapDetailLayout passes showZoomControls = true
+        // Verify MapDetailLayout defines default showZoomControls = true and forwards it
         assertTrue(
-            "MapDetailLayout must explicitly pass showZoomControls = true to ElevationProfile",
-            content.contains("showZoomControls = true")
+            "MapDetailLayout must declare showZoomControls: Boolean = true",
+            content.contains("showZoomControls: Boolean = true")
+        )
+        assertTrue(
+            "MapDetailLayout must forward showZoomControls to ElevationProfile",
+            content.contains("showZoomControls = showZoomControls")
         )
     }
 
@@ -124,22 +135,35 @@ class ElevationProfileLayoutTest {
 
     @Test
     fun testVerticalLayoutGeometry_guaranteesNonOverlappingBounds() {
-        // Controls row layout geometry in detailed view
+        // Layer 1: Controls row layout geometry in detailed view
         val controlsTopDp = 2.0
         val controlsHeightDp = 24.0
         val controlsBottomDp = controlsTopDp + controlsHeightDp // 26.0 dp
 
-        // Canvas and scrubber text layout geometry
-        val canvasTopPaddingDp = 44.0
-        val textBaselineAnchorOffsetDp = -4.0
-        val textBaselineAbsoluteDp = canvasTopPaddingDp + textBaselineAnchorOffsetDp // 40.0 dp
-        val estimatedTextHeightDp = 12.0 // ~32px textSize at typical density
-        val textTopAbsoluteDp = textBaselineAbsoluteDp - estimatedTextHeightDp // 28.0 dp
+        // Layer 2: Multi-metric telemetry badge layout geometry
+        val badgeTopDp = 28.0
+        val badgeHeightDp = 42.0 // maximum two-row badge height
+        val badgeBottomDp = badgeTopDp + badgeHeightDp // 70.0 dp
 
-        // Clearance between bottom of controls and top of scrubber text
-        val clearanceDp = textTopAbsoluteDp - controlsBottomDp
+        // Layer 3: Canvas chart curve plotting geometry
+        val canvasTopPaddingDp = 72.0
+        val bottomPaddingDp = 24.0
+        val heightExpansionDp = 48.0
 
-        assertTrue("Clearance between control buttons and scrubber text must be at least 2.0 dp", clearanceDp >= 2.0)
-        assertEquals(2.0, clearanceDp, 0.001)
+        // Clearance 1: Between bottom of controls and top of telemetry badge
+        val clearanceControlsToBadgeDp = badgeTopDp - controlsBottomDp
+        assertTrue("Clearance between control buttons and telemetry badge must be at least 2.0 dp", clearanceControlsToBadgeDp >= 2.0)
+        assertEquals(2.0, clearanceControlsToBadgeDp, 0.001)
+
+        // Clearance 2: Between bottom of telemetry badge and start of canvas chart plotting
+        val clearanceBadgeToCanvasDp = canvasTopPaddingDp - badgeBottomDp
+        assertTrue("Clearance between telemetry badge and canvas chart curve must be at least 2.0 dp", clearanceBadgeToCanvasDp >= 2.0)
+        assertEquals(2.0, clearanceBadgeToCanvasDp, 0.001)
+
+        // Plotting height invariant check:
+        // Prior drawable plotting height: (adaptiveHeight + 20.dp) - 44.dp - 24.dp = adaptiveHeight - 48.dp
+        // New drawable plotting height: (adaptiveHeight + 48.dp) - 72.dp - 24.dp = adaptiveHeight - 48.dp
+        val netDrawableHeightDelta = heightExpansionDp - canvasTopPaddingDp - bottomPaddingDp // 48 - 72 - 24 = -48
+        assertEquals(-48.0, netDrawableHeightDelta, 0.001)
     }
 }

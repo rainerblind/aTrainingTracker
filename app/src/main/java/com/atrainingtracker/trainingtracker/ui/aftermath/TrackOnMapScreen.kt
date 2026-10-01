@@ -37,10 +37,6 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutH
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
-import androidx.compose.runtime.saveable.rememberSaveable
-import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitCalculator
-import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitChartCard
-import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
 import com.atrainingtracker.trainingtracker.ui.map.*
 
 @Composable
@@ -67,44 +63,6 @@ fun TrackOnMapScreen(
     // PERFORMANCE: Memoize the filtered tracks list
     val filteredTracks = remember(tracks, enabledTrackTypes) {
         tracks.filter { it.type in enabledTrackTypes }
-    }
-
-    var selectedLapNr by rememberSaveable { mutableStateOf<Long?>(null) }
-
-    val formatters = LocalMetricFormatter.current
-    val splitChartData = remember(workoutData.laps, workoutData.bSportType, formatters) {
-        LapSplitCalculator.calculateSplitData(
-            laps = workoutData.laps,
-            bSportType = workoutData.bSportType,
-            paceFormatter = { formatters.pace.format(it) },
-            speedFormatter = { formatters.speed.format(it) }
-        )
-    }
-
-    val bestTrack = remember(tracks) {
-        tracks.find { it.type == TrackType.BEST } ?: tracks.firstOrNull()
-    }
-    val allPoints = remember(bestTrack) {
-        bestTrack?.latLngs ?: emptyList()
-    }
-    val allDistances = remember(bestTrack) {
-        bestTrack?.path?.map { it.distance } ?: emptyList()
-    }
-
-    val (startDistM, endDistM) = remember(workoutData.laps, selectedLapNr) {
-        if (selectedLapNr != null) {
-            LapSegmentUtils.calculateLapDistanceRange(workoutData.laps, selectedLapNr!!)
-        } else {
-            0.0 to 0.0
-        }
-    }
-
-    val lapSegment = remember(allPoints, allDistances, startDistM, endDistM, selectedLapNr) {
-        if (selectedLapNr != null && allPoints.isNotEmpty() && allDistances.isNotEmpty()) {
-            LapSegmentUtils.sliceLapSegment(allPoints, allDistances, startDistM, endDistM)
-        } else {
-            emptyList()
-        }
     }
 
     MapDetailLayout(
@@ -136,19 +94,7 @@ fun TrackOnMapScreen(
             tracks(filteredTracks)
             contextualPaths(segments)
             contextualPaths(routes)
-            if (lapSegment.isNotEmpty()) {
-                val lapMarkers = mutableListOf<LocationMarker>()
-                lapSegment.firstOrNull()?.let { startPoint ->
-                    lapMarkers.add(LocationMarker(position = startPoint, iconResId = R.drawable.control_start, title = "Lap Start"))
-                }
-                lapSegment.lastOrNull()?.let { endPoint ->
-                    lapMarkers.add(LocationMarker(position = endPoint, iconResId = R.drawable.control_stop, title = "Lap End"))
-                }
-                markers(markers + lapMarkers)
-                lapHighlight(lapSegment)
-            } else {
-                markers(markers)
-            }
+            markers(markers)
         },
         modifier = modifier,
         overlay = {
@@ -240,18 +186,6 @@ fun TrackOnMapScreen(
                 powerZoneDistribution?.let { distribution ->
                     PowerZoneDistributionCard(
                         distribution = distribution,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
-                }
-                splitChartData?.let { splits ->
-                    LapSplitChartCard(
-                        splitData = splits,
-                        selectedLapNr = selectedLapNr,
-                        onLapClick = { tappedLapNr ->
-                            selectedLapNr = if (selectedLapNr == tappedLapNr) null else tappedLapNr
-                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)

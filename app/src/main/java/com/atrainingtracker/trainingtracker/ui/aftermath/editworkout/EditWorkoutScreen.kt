@@ -87,6 +87,7 @@ fun EditWorkoutDialog(
     val workoutData by viewModel.workoutData.collectAsState()
     val sportTypes by viewModel.sportTypeNames.observeAsState(emptyList())
     val equipmentNames by viewModel.equipmentNames.observeAsState(emptyList())
+    val fieldPrefs by viewModel.fieldPreferences.collectAsState()
 
     AppModalBottomSheet(
         title = stringResource(R.string.edit_workout),
@@ -108,7 +109,7 @@ fun EditWorkoutDialog(
                 .padding(horizontal = 4.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Workout Name
+            // 1. Workout Name (Mandatory Core Anchor)
             OutlinedTextField(
                 value = workoutData?.workoutName ?: "",
                 onValueChange = { viewModel.updateWorkoutName(it) },
@@ -116,73 +117,75 @@ fun EditWorkoutDialog(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // 2. Route / Cluster Assignment (ATT-318)
-            val suggestions by viewModel.clusterSuggestions.collectAsState()
-            val currentClusterId = workoutData?.clusterId ?: -1L
-            val currentClusterName = workoutData?.clusterName
-            var showClusterDialog by remember { mutableStateOf(false) }
+            // 2. Route / Cluster Assignment (ATT-318, Configurable)
+            if (fieldPrefs.showCluster) {
+                val suggestions by viewModel.clusterSuggestions.collectAsState()
+                val currentClusterId = workoutData?.clusterId ?: -1L
+                val currentClusterName = workoutData?.clusterName
+                var showClusterDialog by remember { mutableStateOf(false) }
 
-            Box(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    value = currentClusterName ?: stringResource(R.string.unclustered),
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text(stringResource(R.string.cluster_naming__selected_route_label)) },
-                    leadingIcon = {
-                        Icon(
-                            painter = painterResource(id = R.drawable.my_locations),
-                            contentDescription = null,
-                            tint = if (currentClusterId > 0) MaterialTheme.colorScheme.primary 
-                                   else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-                    trailingIcon = if (currentClusterId > 0) {
-                        {
-                            IconButton(onClick = { viewModel.unassignCluster() }) {
-                                Icon(
-                                    imageVector = Icons.Default.Clear,
-                                    contentDescription = stringResource(R.string.cluster_naming__leave_unclustered),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = currentClusterName ?: stringResource(R.string.unclustered),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.cluster_naming__selected_route_label)) },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(id = R.drawable.my_locations),
+                                contentDescription = null,
+                                tint = if (currentClusterId > 0) MaterialTheme.colorScheme.primary 
+                                       else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        trailingIcon = if (currentClusterId > 0) {
+                            {
+                                IconButton(onClick = { viewModel.unassignCluster() }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Clear,
+                                        contentDescription = stringResource(R.string.cluster_naming__leave_unclustered),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
-                        }
-                    } else null,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                        } else null,
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
-                // Clickable overlay over text area to open cluster dialog on tap
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .padding(end = if (currentClusterId > 0) 48.dp else 0.dp)
-                        .clickable { showClusterDialog = true }
-                )
+                    // Clickable overlay over text area to open cluster dialog on tap
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .padding(end = if (currentClusterId > 0) 48.dp else 0.dp)
+                            .clickable { showClusterDialog = true }
+                    )
+                }
+
+                if (showClusterDialog) {
+                    EditWorkoutClusterDialog(
+                        currentClusterId = currentClusterId,
+                        candidates = suggestions,
+                        initialWorkoutName = workoutData?.workoutName ?: "",
+                        onSelectCluster = { cluster ->
+                            viewModel.applyClusterIdentity(cluster)
+                            showClusterDialog = false
+                        },
+                        onUnassignCluster = {
+                            viewModel.unassignCluster()
+                            showClusterDialog = false
+                        },
+                        onCreateNewCluster = { newName, hasCounter ->
+                            viewModel.createNewCluster(newName, hasCounter)
+                            showClusterDialog = false
+                        },
+                        onDismiss = { showClusterDialog = false },
+                        sportNameResolver = { viewModel.getSportName(it) },
+                        bSportTypeResolver = { viewModel.getBSportType(it) }
+                    )
+                }
             }
 
-            if (showClusterDialog) {
-                EditWorkoutClusterDialog(
-                    currentClusterId = currentClusterId,
-                    candidates = suggestions,
-                    initialWorkoutName = workoutData?.workoutName ?: "",
-                    onSelectCluster = { cluster ->
-                        viewModel.applyClusterIdentity(cluster)
-                        showClusterDialog = false
-                    },
-                    onUnassignCluster = {
-                        viewModel.unassignCluster()
-                        showClusterDialog = false
-                    },
-                    onCreateNewCluster = { newName, hasCounter ->
-                        viewModel.createNewCluster(newName, hasCounter)
-                        showClusterDialog = false
-                    },
-                    onDismiss = { showClusterDialog = false },
-                    sportNameResolver = { viewModel.getSportName(it) },
-                    bSportTypeResolver = { viewModel.getBSportType(it) }
-                )
-            }
-
-            // 2. Spinners (Sport & Equipment)
+            // 3. Spinners (Sport & Equipment) (Mandatory Core Anchors)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 DropdownSelector(
                     label = stringResource(R.string.Sport),
@@ -202,23 +205,25 @@ fun EditWorkoutDialog(
                 )
             }
 
-            // 3. Checkboxes (Commute / Trainer)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = workoutData?.commute ?: false,
-                    onCheckedChange = { viewModel.updateIsCommute(it) }
-                )
-                Text(stringResource(R.string.commute))
-                Spacer(Modifier.width(16.dp))
-                Checkbox(
-                    checked = workoutData?.trainer ?: false,
-                    onCheckedChange = { viewModel.updateIsTrainer(it) }
-                )
-                Text(stringResource(R.string.trainer_general))
+            // 4. Checkboxes (Commute / Trainer, Configurable)
+            if (fieldPrefs.showCommuteTrainer) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = workoutData?.commute ?: false,
+                        onCheckedChange = { viewModel.updateIsCommute(it) }
+                    )
+                    Text(stringResource(R.string.commute))
+                    Spacer(Modifier.width(16.dp))
+                    Checkbox(
+                        checked = workoutData?.trainer ?: false,
+                        onCheckedChange = { viewModel.updateIsTrainer(it) }
+                    )
+                    Text(stringResource(R.string.trainer_general))
+                }
             }
 
-            // 3.5 Workout individual upload to Strava
-            if (TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
+            // 5. Workout individual upload to Strava (Configurable)
+            if (fieldPrefs.showStravaUpload && TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     val uploadStatus = workoutData?.uploadToStrava ?: -1
                     val stravaMappingAvailable = workoutData?.stravaSportName != null
@@ -250,32 +255,38 @@ fun EditWorkoutDialog(
                 }
             }
 
-            // 4. Description
-            OutlinedTextField(
-                value = workoutData?.description ?: "",
-                onValueChange = { newValue -> viewModel.updateDescription(newDescription = newValue) },
-                label = { Text(stringResource(R.string.hint_workout_description)) },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3
-            )
+            // 6. Description (Configurable)
+            if (fieldPrefs.showDescription) {
+                OutlinedTextField(
+                    value = workoutData?.description ?: "",
+                    onValueChange = { newValue -> viewModel.updateDescription(newDescription = newValue) },
+                    label = { Text(stringResource(R.string.hint_workout_description)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3
+                )
+            }
 
-            // 5. Goal
-            OutlinedTextField(
-                value = workoutData?.goal ?: "",
-                onValueChange = { newValue -> viewModel.updateGoal(newGoal = newValue) },
-                label = { Text(stringResource(R.string.hint_workout_goal)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+            // 7. Goal (Configurable)
+            if (fieldPrefs.showGoal) {
+                OutlinedTextField(
+                    value = workoutData?.goal ?: "",
+                    onValueChange = { newValue -> viewModel.updateGoal(newGoal = newValue) },
+                    label = { Text(stringResource(R.string.hint_workout_goal)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
 
-            // 6. Method
-            OutlinedTextField(
-                value = workoutData?.method ?: "",
-                onValueChange = { newValue -> viewModel.updateMethod(newMethod = newValue) },
-                label = { Text(stringResource(R.string.hint_workout_method)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+            // 8. Method (Configurable)
+            if (fieldPrefs.showMethod) {
+                OutlinedTextField(
+                    value = workoutData?.method ?: "",
+                    onValueChange = { newValue -> viewModel.updateMethod(newMethod = newValue) },
+                    label = { Text(stringResource(R.string.hint_workout_method)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
         }
     }
 }

@@ -1128,6 +1128,23 @@
     <string name="filter_section_equipment">Uitrusting</string>
     <string name="filter_section_attributes">Kenmerken</string>
     <string name="filter_section_thresholds">Afstand &amp; tijdsduur</string>
+    <string name="filter_section_start_at">Start bij</string>
+    <string name="settings_workout_card_title">Trainingslijst (gedetailleerde kaarten)</string>
+    <string name="settings_workout_card_map">Kaartvoorbeeld</string>
+    <string name="settings_workout_card_elevation">Hoogteprofiel</string>
+    <string name="settings_workout_card_extrema">Extreemwaarden</string>
+    <string name="settings_workout_card_laps">Rondenoverzicht</string>
+    <string name="settings_workout_card_strava">Strava-activiteit</string>
+    <string name="settings_workout_card_description">Beschrijving en notities</string>
+    <string name="settings_workout_card_charts">Telemetriegrafieken</string>
+    <string name="settings_workout_card_zones">Zone-analyse (HF &amp; vermogen)</string>
+    <string name="settings_edit_workout_title">Training bewerken</string>
+    <string name="settings_edit_workout_cluster">Route / Cluster</string>
+    <string name="settings_edit_workout_commute_trainer">Woon-werk &amp; fietstrainer</string>
+    <string name="settings_edit_workout_strava">Strava-upload</string>
+    <string name="settings_edit_workout_description">Beschrijving &amp; notities</string>
+    <string name="settings_edit_workout_goal">Doel</string>
+    <string name="settings_edit_workout_method">Methode</string>
     <string name="filter_commute">Woon-werkverkeer</string>
     <string name="filter_trainer">Binnen / Fietstrainer</string>
     <string name="filter_has_gps">Met GPS-route</string>
@@ -1335,4 +1352,10 @@
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Vermogenszones</string>
     <string name="aftermath_laps_splits_title">Ronden en tussentijden</string>
+    <!-- Continuous Metric Graphs & Headings (ATT-1740 / REQ-UI-206) -->
+    <string name="graph_heading_elevation">Hoogteprofiel</string>
+    <string name="graph_heading_heart_rate">Hartslag</string>
+    <string name="graph_heading_speed">Snelheid</string>
+    <string name="graph_heading_pace">Tempo</string>
+    <string name="graph_heading_power">Vermogen</string>
 </resources>

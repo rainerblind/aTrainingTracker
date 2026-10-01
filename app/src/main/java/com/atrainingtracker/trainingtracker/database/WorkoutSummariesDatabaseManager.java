@@ -698,6 +698,37 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * ATT-1734 / REQ-DAT-016: Retrieves all valid starting coordinates across all recorded workouts.
+     * Queries TABLE_EXTREMA_VALUES where SENSOR_TYPE is LATITUDE, EXTREMA_TYPE is START,
+     * and both LATITUDE and LONGITUDE are non-null.
+     */
+    @NonNull
+    public List<LatLng> getAllWorkoutStartLocations() {
+        List<LatLng> locations = new LinkedList<>();
+        String selection = WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMA_TYPE + "=? AND "
+                + WorkoutSummaries.LATITUDE + " IS NOT NULL AND " + WorkoutSummaries.LONGITUDE + " IS NOT NULL";
+        String[] selectionArgs = new String[]{SensorType.LATITUDE.name(), ExtremaType.START.name()};
+
+        try (Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE_EXTREMA_VALUES,
+                new String[]{WorkoutSummaries.LATITUDE, WorkoutSummaries.LONGITUDE},
+                selection, selectionArgs, null, null, null)) {
+
+            if (cursor != null) {
+                int latIdx = cursor.getColumnIndex(WorkoutSummaries.LATITUDE);
+                int lonIdx = cursor.getColumnIndex(WorkoutSummaries.LONGITUDE);
+                while (cursor.moveToNext()) {
+                    if (!cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
+                        locations.add(new LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx)));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying workout start locations: " + e.getMessage(), e);
+        }
+        return locations;
+    }
+
+    /**
      * DTO for batch extrema lookups (ATT-359).
      */
     public static class ExtremaRecord {
@@ -1270,8 +1301,8 @@ public class WorkoutSummariesDatabaseManager {
         // public static final int DB_VERSION = 15; // upgrade to Version 15 at 06.05.2026: Unique step size for encoding map polyline, distance, and elevation: ENCODIN_STEP_SIZE
         // public static final int DB_VERSION = 16; // upgrade to Version 16 at 08.05.2026: Added uploadToStrava
         // public static final int DB_VERSION = 17; // 08.05.2026: Bugfix: add eventually missing columns (altitude and distance stream)
-        // public static final int DB_VERSION = 18; // 10.06.2026 Added lat/long to the extrema values
-        public static final int DB_VERSION = 21; // 25.07.2026 Added bounding box for performance (ATT-352)
+        // public static final int DB_VERSION = 21; // 25.07.2026 Added bounding box for performance (ATT-352)
+        public static final int DB_VERSION = 22; // 01.10.2026 Added composite index on extrema table for start location queries (ATT-1734)
         
 
 
@@ -1352,6 +1383,10 @@ public class WorkoutSummariesDatabaseManager {
 
             db.execSQL(CREATE_TABLE_ACCUMULATED_SENSORS);
             if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_ACCUMULATED_SENSORS);
+
+            // index for start location queries (ATT-1734)
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_extrema_sensor_extrema ON " + WorkoutSummaries.TABLE_EXTREMA_VALUES
+                    + " (" + WorkoutSummaries.SENSOR_TYPE + ", " + WorkoutSummaries.EXTREMA_TYPE + ")");
 
         }
 
@@ -1529,6 +1564,12 @@ public class WorkoutSummariesDatabaseManager {
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.BOUND_MAX_LNG, "real", null);
 
                 migrateSpatialBounds(db);
+            }
+
+            if (oldVersion < 22) {
+                Log.i(TAG, "upgrading to DB version 22 (Adding composite index on extrema table for start locations)");
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_extrema_sensor_extrema ON " + WorkoutSummaries.TABLE_EXTREMA_VALUES
+                        + " (" + WorkoutSummaries.SENSOR_TYPE + ", " + WorkoutSummaries.EXTREMA_TYPE + ")");
             }
         }
 
