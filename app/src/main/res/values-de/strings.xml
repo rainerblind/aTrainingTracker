@@ -1215,6 +1215,7 @@
     <string name="filter_section_equipment">Ausrüstung</string>
     <string name="filter_section_attributes">Eigenschaften</string>
     <string name="filter_section_thresholds">Distanz &amp; Dauer</string>
+    <string name="filter_section_start_at">Startet bei</string>
     <string name="filter_commute">Pendeln</string>
     <string name="filter_trainer">Indoor / Rollentrainer</string>
     <string name="filter_has_gps">Mit GPS-Strecke</string>

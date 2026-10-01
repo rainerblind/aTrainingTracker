@@ -212,11 +212,11 @@ fun ClusterFilterBottomSheet(
             }
         }
 
-        // 5. Favorite Locations Selection (Lieblingsorte, REQ-UI-187, REQ-UI-194)
+        // 5. Favorite Locations Selection (Start at / Lieblingsorte, REQ-UI-187, REQ-UI-194, REQ-UI-208)
         if (knownLocations.isNotEmpty()) {
             Column {
                 Text(
-                    text = stringResource(R.string.known_locations_title),
+                    text = stringResource(R.string.filter_section_start_at),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary
                 )

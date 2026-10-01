@@ -1128,6 +1128,7 @@
     <string name="filter_section_equipment">Attrezzatura</string>
     <string name="filter_section_attributes">Attributi</string>
     <string name="filter_section_thresholds">Distanza e durata</string>
+    <string name="filter_section_start_at">Partenza da</string>
     <string name="filter_commute">Spostamento</string>
     <string name="filter_trainer">Indoor / Rulli</string>
     <string name="filter_has_gps">Con traccia GPS</string>

@@ -1128,6 +1128,7 @@
     <string name="filter_section_equipment">Equipamento</string>
     <string name="filter_section_attributes">Atributos</string>
     <string name="filter_section_thresholds">Distância e duração</string>
+    <string name="filter_section_start_at">Início em</string>
     <string name="filter_commute">Deslocamento</string>
     <string name="filter_trainer">Interior / Rolo</string>
     <string name="filter_has_gps">Com rota GPS</string>
