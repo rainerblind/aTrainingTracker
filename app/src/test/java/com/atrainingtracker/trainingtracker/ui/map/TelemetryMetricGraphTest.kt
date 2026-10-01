@@ -11,8 +11,14 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter
+import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
 import com.atrainingtracker.trainingtracker.MyUnits
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.google.android.gms.maps.model.LatLng
+import io.mockk.every
+import io.mockk.mockk
+import android.content.SharedPreferences
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -303,5 +309,84 @@ class TelemetryMetricGraphTest {
 
         val timeFromMidX = ElevationProfileZoomMath.canvasXToDistance(500f, 600.0, visibleTime, canvasWidth, totalTime)
         assertEquals(1500.0, timeFromMidX, 0.001)
+    }
+
+    @Test
+    fun testFormatValue_paceFormattingMetricAndImperial() {
+        val mockPrefs = mockk<SharedPreferences>(relaxed = true)
+        every { mockPrefs.getString(TrainingApplication.SP_UNITS, any()) } returns "METRIC"
+        val field = TrainingApplication::class.java.getDeclaredField("cSharedPreferences")
+        field.isAccessible = true
+        val originalPrefs = field.get(null)
+        field.set(null, mockPrefs)
+
+        try {
+            val paceFormatter = PaceFormatter()
+            val speedFormatter = SpeedFormatter()
+
+            // 4.0 min/km in metric -> "4:00 min/km" (REQ-UI-219 / ATT-1818)
+            val formattedMetric = TelemetryMetricUtils.formatValue(4.0, TelemetryMetricType.PACE, MyUnits.METRIC, speedFormatter, paceFormatter)
+            assertEquals("4:00 min/km", formattedMetric)
+            assertFalse("Must not show 69:27 defect", formattedMetric.contains("69:27"))
+
+            // Null value -> "--"
+            assertEquals("--", TelemetryMetricUtils.formatValue(null, TelemetryMetricType.PACE, MyUnits.METRIC, speedFormatter, paceFormatter))
+
+            // Imperial: 8.5 min/mile -> "8:30 min/mile"
+            every { mockPrefs.getString(TrainingApplication.SP_UNITS, any()) } returns "IMPERIAL"
+            val formattedImperial = TelemetryMetricUtils.formatValue(8.5, TelemetryMetricType.PACE, MyUnits.IMPERIAL, speedFormatter, paceFormatter)
+            assertEquals("8:30 min/mile", formattedImperial)
+        } finally {
+            field.set(null, originalPrefs)
+        }
+    }
+
+    @Test
+    fun testFormatPaceMinutes_standardAndEdgeCases() {
+        assertEquals("4:00", TelemetryMetricUtils.formatPaceMinutes(4.0))
+        assertEquals("4:30", TelemetryMetricUtils.formatPaceMinutes(4.5))
+        assertEquals("6:15", TelemetryMetricUtils.formatPaceMinutes(6.25))
+        assertEquals("5:45", TelemetryMetricUtils.formatPaceMinutes(5.75))
+        assertEquals("12:00", TelemetryMetricUtils.formatPaceMinutes(12.0))
+        assertEquals("0:00", TelemetryMetricUtils.formatPaceMinutes(0.0))
+    }
+
+    @Test
+    fun testExtractMetricValue_paceStoppedThreshold() {
+        val dummyLatLng = LatLng(48.0, 11.0)
+        // 4.1667 m/s (15.0 km/h) -> 4.0 min/km
+        val fastPt = PathPoint(distance = 500.0, latLng = dummyLatLng, altitude = 500.0, speedMps = 4.166666666666667)
+        val fastPace = TelemetryMetricUtils.extractMetricValue(fastPt, TelemetryMetricType.PACE, MyUnits.METRIC)
+        assertNotNull(fastPace)
+        assertEquals(4.0, fastPace!!, 0.01)
+
+        // Stopped speeds (< 0.55 m/s) -> null (REQ-UI-219)
+        val stoppedPt = PathPoint(distance = 500.0, latLng = dummyLatLng, altitude = 500.0, speedMps = 0.50)
+        assertNull(TelemetryMetricUtils.extractMetricValue(stoppedPt, TelemetryMetricType.PACE, MyUnits.METRIC))
+
+        val standingPt = PathPoint(distance = 500.0, latLng = dummyLatLng, altitude = 500.0, speedMps = 0.1)
+        assertNull(TelemetryMetricUtils.extractMetricValue(standingPt, TelemetryMetricType.PACE, MyUnits.METRIC))
+
+        val zeroPt = PathPoint(distance = 500.0, latLng = dummyLatLng, altitude = 500.0, speedMps = 0.0)
+        assertNull(TelemetryMetricUtils.extractMetricValue(zeroPt, TelemetryMetricType.PACE, MyUnits.METRIC))
+    }
+
+    @Test
+    fun testTelemetryMetricGraph_paceYAxisLabelsAreMmSs() {
+        assertTrue("TelemetryMetricGraph.kt must exist", telemetryGraphFile.exists())
+        val content = telemetryGraphFile.readText()
+
+        assertTrue(
+            "TelemetryMetricGraph must format maxLabel with formatPaceMinutes for PACE (REQ-UI-219)",
+            content.contains("TelemetryMetricUtils.formatPaceMinutes(dataMin)")
+        )
+        assertTrue(
+            "TelemetryMetricGraph must format minLabel with formatPaceMinutes for PACE (REQ-UI-219)",
+            content.contains("TelemetryMetricUtils.formatPaceMinutes(dataMax)")
+        )
+        assertFalse(
+            "TelemetryMetricGraph must not use raw decimal String.format(Locale.US, \"%.1f\", dataMin) for PACE",
+            content.contains("String.format(Locale.US, \"%.1f\", dataMin)")
+        )
     }
 }
