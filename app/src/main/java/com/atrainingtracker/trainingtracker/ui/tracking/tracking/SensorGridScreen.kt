@@ -47,8 +47,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -62,6 +64,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.ui.res.stringResource
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheet
@@ -73,6 +77,8 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
+import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitTypography
+import com.atrainingtracker.trainingtracker.ui.tracking.typography.LocalCockpitTypography
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.StateFlow
 
@@ -101,6 +107,17 @@ fun SensorGridScreen(
     liveSegments: StateFlow<List<LiveSegment>>,
     selectedFieldForMove: SensorFieldState? = null,
 ) {
+    val context = LocalContext.current
+    val tuningDataStore = remember { TuningPreferencesDataStore(context) }
+    val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(
+        initial = TuningConfig()
+    )
+    val cockpitTypography = remember(tuningConfig.cockpitFontFamily, tuningConfig.cockpitFontWeight) {
+        CockpitTypography.resolveConfig(
+            family = tuningConfig.cockpitFontFamily,
+            weight = tuningConfig.cockpitFontWeight
+        )
+    }
 
     val activeSegments by liveSegments.collectAsState()
     val activeSegment = activeSegments.firstOrNull()
@@ -117,12 +134,13 @@ fun SensorGridScreen(
 
     val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-    BottomSheetScaffold(
-        scaffoldState = scaffoldState,
-        sheetShape = BottomSheetDesign.SheetShape,
-        sheetContainerColor = MaterialTheme.colorScheme.surface,
-        sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
-        sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
+    CompositionLocalProvider(LocalCockpitTypography provides cockpitTypography) {
+        BottomSheetScaffold(
+            scaffoldState = scaffoldState,
+            sheetShape = BottomSheetDesign.SheetShape,
+            sheetContainerColor = MaterialTheme.colorScheme.surface,
+            sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
+            sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
         sheetDragHandle = null,
         sheetPeekHeight = if (showLiveSegments && screenMode == ScreenMode.TRACKING) 140.dp + navBarHeight else 0.dp,
         sheetSwipeEnabled = showLiveSegments,
@@ -306,6 +324,7 @@ fun SensorGridScreen(
                 }
             }
         }
+    }
     }
 }
 

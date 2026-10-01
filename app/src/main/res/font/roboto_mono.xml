@@ -17,12 +17,9 @@
   ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
   -->
 
-<resources>
-    <array name="preloaded_fonts" translatable="false">
-        <item>@font/roboto_black_italic</item>
-        <item>@font/orbitron</item>
-        <item>@font/roboto_condensed</item>
-        <item>@font/comic_neue</item>
-        <item>@font/roboto_mono</item>
-    </array>
-</resources>
+<font-family xmlns:app="http://schemas.android.com/apk/res-auto"
+  app:fontProviderAuthority="com.google.android.gms.fonts"
+  app:fontProviderPackage="com.google.android.gms"
+  app:fontProviderQuery="name=Roboto Mono&amp;weight=700"
+  app:fontProviderCerts="@array/com_google_android_gms_fonts_certs">
+</font-family>

@@ -1530,6 +1530,20 @@
     <string name="tuning_profile_x_axis_desc">Select horizontal axis domain for elevation profile graphs.</string>
     <string name="tuning_profile_x_axis_distance">Distance</string>
     <string name="tuning_profile_x_axis_time">Time</string>
+
+    <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
+    <string name="tuning_cat_cockpit_typography">Cockpit Typography</string>
+    <string name="tuning_cockpit_font_family_title">Font Family</string>
+    <string name="tuning_font_system_default">System Default</string>
+    <string name="tuning_font_seven_segment">7-Segment Digital</string>
+    <string name="tuning_font_modern_athletic">Modern Athletic</string>
+    <string name="tuning_font_monospace">Monospace</string>
+    <string name="tuning_font_playful">Playful</string>
+    <string name="tuning_cockpit_font_weight_title">Boldness</string>
+    <string name="tuning_weight_normal">Normal</string>
+    <string name="tuning_weight_semi_bold">Semi-Bold</string>
+    <string name="tuning_weight_bold">Bold</string>
+    <string name="tuning_cockpit_preview_title">Live Preview</string>
     <string name="tuning_default_format">Default: %1$s</string>
     <string name="reset_to_defaults">Reset to Defaults</string>
     <string name="reset_to_defaults_success">Tuning preferences restored to factory defaults.</string>

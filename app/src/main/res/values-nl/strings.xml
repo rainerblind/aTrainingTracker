@@ -1338,6 +1338,20 @@
     <string name="tuning_profile_x_axis_desc">Selecteer de horizontale as-metriek voor hoogteprofielen.</string>
     <string name="tuning_profile_x_axis_distance">Afstand</string>
     <string name="tuning_profile_x_axis_time">Tijd</string>
+
+    <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
+    <string name="tuning_cat_cockpit_typography">Cockpit-typografie</string>
+    <string name="tuning_cockpit_font_family_title">Lettertype</string>
+    <string name="tuning_font_system_default">Systeemstandaard</string>
+    <string name="tuning_font_seven_segment">7-segment digitaal</string>
+    <string name="tuning_font_modern_athletic">Modern sportief</string>
+    <string name="tuning_font_monospace">Monospace</string>
+    <string name="tuning_font_playful">Speels</string>
+    <string name="tuning_cockpit_font_weight_title">Letterdikte</string>
+    <string name="tuning_weight_normal">Normaal</string>
+    <string name="tuning_weight_semi_bold">Halfvet</string>
+    <string name="tuning_weight_bold">Vet</string>
+    <string name="tuning_cockpit_preview_title">Live voorbeeld</string>
     <string name="tuning_default_format">Standaard: %1$s</string>
     <string name="reset_to_defaults">Fabrieksinstellingen herstellen</string>
     <string name="reset_to_defaults_success">Afstemmingsinstellingen hersteld naar fabrieksinstellingen.</string>

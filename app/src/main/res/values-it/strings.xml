@@ -1338,6 +1338,20 @@
     <string name="tuning_profile_x_axis_desc">Seleziona la metrica dell\'asse orizzontale per i grafici altimetrici.</string>
     <string name="tuning_profile_x_axis_distance">Distanza</string>
     <string name="tuning_profile_x_axis_time">Tempo</string>
+
+    <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
+    <string name="tuning_cat_cockpit_typography">Tipografia cockpit</string>
+    <string name="tuning_cockpit_font_family_title">Famiglia di caratteri</string>
+    <string name="tuning_font_system_default">Predefinito di sistema</string>
+    <string name="tuning_font_seven_segment">Digitale a 7 segmenti</string>
+    <string name="tuning_font_modern_athletic">Sportivo moderno</string>
+    <string name="tuning_font_monospace">Monospazio</string>
+    <string name="tuning_font_playful">Giocoso</string>
+    <string name="tuning_cockpit_font_weight_title">Spessore carattere</string>
+    <string name="tuning_weight_normal">Normale</string>
+    <string name="tuning_weight_semi_bold">Semigrassetto</string>
+    <string name="tuning_weight_bold">Grassetto</string>
+    <string name="tuning_cockpit_preview_title">Anteprima dal vivo</string>
     <string name="tuning_default_format">Predefinito: %1$s</string>
     <string name="reset_to_defaults">Ripristina impostazioni predefinite</string>
     <string name="reset_to_defaults_success">Impostazioni di regolazione ripristinate ai valori di fabbrica.</string>
