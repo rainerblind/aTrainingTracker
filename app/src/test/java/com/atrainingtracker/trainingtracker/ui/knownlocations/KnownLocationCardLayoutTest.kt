@@ -136,4 +136,85 @@ class KnownLocationCardLayoutTest {
             content.contains("fontWeight = FontWeight.Medium")
         )
     }
+
+    /**
+     * REQ-UI-217 (Item 1): Verify that KnownLocationCard heading typography is standardized
+     * to MaterialTheme.typography.titleLarge with FontWeight.Bold.
+     */
+    @Test
+    fun testLocationCardStandardizedTitleLargeTypography() {
+        val content = loadScreenSource()
+
+        // Location card heading must use titleLarge
+        assertTrue(
+            "KnownLocationCard heading must use MaterialTheme.typography.titleLarge",
+            content.contains("style = MaterialTheme.typography.titleLarge")
+        )
+
+        // Location card heading must use FontWeight.Bold
+        assertTrue(
+            "KnownLocationCard heading must use FontWeight.Bold",
+            content.contains("fontWeight = FontWeight.Bold")
+        )
+
+        // titleMedium must no longer be used for the heading in KnownLocationCard
+        val cardIndex = content.indexOf("private fun KnownLocationCard(")
+        val cardContent = if (cardIndex != -1) content.substring(cardIndex) else content
+        assertFalse(
+            "KnownLocationCard must no longer use titleMedium for location title",
+            cardContent.contains("style = MaterialTheme.typography.titleMedium")
+        )
+    }
+
+    /**
+     * REQ-UI-217 (Items 2 & 3): Verify that KnownLocationCard contains a compact 80dp map preview
+     * thumbnail in Google Maps lite mode on the right side, wired to onShowOnMap with offline inspection safety.
+     */
+    @Test
+    fun testMapPreviewThumbnailLayoutAndLiteMode() {
+        val content = loadScreenSource()
+
+        // Map preview thumbnail composable must exist
+        assertTrue(
+            "KnownLocationThumbnailMap composable must exist",
+            content.contains("private fun KnownLocationThumbnailMap(")
+        )
+
+        // Map preview thumbnail must define test tag
+        assertTrue(
+            "Map preview thumbnail must define location_map_preview_ test tag",
+            content.contains("location_map_preview_\${item.id}")
+        )
+
+        // Map preview thumbnail must use 80dp square dimensions
+        assertTrue(
+            "Map preview thumbnail must be 80.dp",
+            content.contains(".size(80.dp)")
+        )
+
+        // Map preview thumbnail must use 12dp rounded corner shape
+        assertTrue(
+            "Map preview thumbnail must use RoundedCornerShape(12.dp)",
+            content.contains("RoundedCornerShape(12.dp)")
+        )
+
+        // Map preview must enforce Google Maps lite mode
+        assertTrue(
+            "Map preview must run in liteMode(true)",
+            content.contains("GoogleMapOptions().liteMode(true)")
+        )
+
+        // Map preview must wire onShowOnMap click callback
+        assertTrue(
+            "Map preview must wire onShowOnMap callback",
+            content.contains("onMapClick = { onShowOnMap() }") || content.contains("onShowOnMap = onShowOnMap")
+        )
+
+        // Map preview must handle LocalInspectionMode.current for offline testing and Compose Previews
+        assertTrue(
+            "Map preview must handle LocalInspectionMode.current",
+            content.contains("LocalInspectionMode.current")
+        )
+    }
 }
+
