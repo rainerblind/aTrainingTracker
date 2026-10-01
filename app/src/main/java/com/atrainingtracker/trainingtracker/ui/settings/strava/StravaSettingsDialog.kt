@@ -196,6 +196,8 @@ fun StravaSettingsDialog(
             if (showDisconnectConfirmation) {
                 AlertDialog(
                     onDismissRequest = { showDisconnectConfirmation = false },
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 0.dp,
                     title = {
                         Text(text = stringResource(R.string.strava_disconnect_dialog_title))
                     },

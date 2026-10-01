@@ -153,6 +153,7 @@ fun MapScreenWithTrack(
         BottomSheetScaffold(
             scaffoldState = scaffoldState,
             sheetShape = BottomSheetDesign.SheetShape,
+            sheetContainerColor = MaterialTheme.colorScheme.surface,
             sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
             sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
             sheetPeekHeight = when {
