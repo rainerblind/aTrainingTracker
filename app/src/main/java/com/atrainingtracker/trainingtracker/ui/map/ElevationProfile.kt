@@ -912,7 +912,12 @@ fun ScrubbingTelemetryBadge(
                     }
                     if (hasSpeed) {
                         val speedStr = if (bSportType == BSportType.RUN) {
-                            paceFormatter.format_with_units(point.speedMps)
+                            val spd = point.speedMps
+                            if (spd < 0.55) {
+                                paceFormatter.format_with_units(null)
+                            } else {
+                                paceFormatter.format_with_units(1.0 / spd)
+                            }
                         } else {
                             speedFormatter.format_with_units(point.speedMps)
                         }

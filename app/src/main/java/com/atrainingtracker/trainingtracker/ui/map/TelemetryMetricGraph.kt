@@ -112,20 +112,31 @@ object TelemetryMetricUtils {
                 }
             }
             TelemetryMetricType.PACE -> {
-                point.speedMps?.takeIf { it > 0.1 }?.let { mps ->
+                point.speedMps?.takeIf { it >= 0.55 }?.let { mps ->
                     val secPerKm = 1000.0 / mps
                     val secPerUnit = if (unit == MyUnits.METRIC) {
                         secPerKm
                     } else {
                         secPerKm * (BANALService.METER_PER_MILE / 1000.0)
                     }
-                    (secPerUnit / 60.0).coerceIn(1.0, 30.0)
+                    (secPerUnit / 60.0).coerceIn(1.5, 20.0)
                 }
             }
             TelemetryMetricType.POWER -> {
                 point.power?.takeIf { it >= 0 }?.toDouble()
             }
         }
+    }
+
+    /**
+     * Formats a pace value in decimal minutes (e.g. 4.5) to athletic "mm:ss" format (e.g. "4:30").
+     * (REQ-UI-219 / ATT-1818)
+     */
+    fun formatPaceMinutes(paceMinutes: Double): String {
+        val totalSec = kotlin.math.round(paceMinutes * 60.0).toInt().coerceAtLeast(0)
+        val min = totalSec / 60
+        val sec = totalSec % 60
+        return String.format(Locale.US, "%d:%02d", min, sec)
     }
 
     /**
@@ -147,12 +158,12 @@ object TelemetryMetricUtils {
             }
             TelemetryMetricType.PACE -> {
                 val secPerUnit = value * 60.0
-                val mps = if (unit == MyUnits.METRIC) {
-                    1000.0 / secPerUnit
+                val spm = if (unit == MyUnits.METRIC) {
+                    secPerUnit / 1000.0
                 } else {
-                    BANALService.METER_PER_MILE / secPerUnit
+                    secPerUnit / BANALService.METER_PER_MILE
                 }
-                paceFormatter.format_with_units(mps)
+                paceFormatter.format_with_units(spm)
             }
             TelemetryMetricType.POWER -> "${value.toInt()} W"
         }
@@ -237,7 +248,9 @@ fun TelemetryMetricGraph(
             }
             TelemetryMetricType.PACE -> {
                 // For Pace: min is fastest, max is slowest
-                (min * 0.9).coerceAtLeast(1.0) to (max * 1.1).coerceAtLeast(5.0)
+                val paceMin = (min * 0.95).coerceAtLeast(1.5)
+                val paceMax = (max * 1.05).coerceAtMost(20.0)
+                paceMin to paceMax.coerceAtLeast(paceMin + 1.0)
             }
         }
     }
@@ -341,12 +354,12 @@ fun TelemetryMetricGraph(
             // Draw Y-axis labels (min and max)
             val nativeCanvas = drawContext.canvas.nativeCanvas
             val maxLabel = if (metricType == TelemetryMetricType.PACE) {
-                String.format(Locale.US, "%.1f", dataMin)
+                TelemetryMetricUtils.formatPaceMinutes(dataMin)
             } else {
                 "${dataMax.toInt()}"
             }
             val minLabel = if (metricType == TelemetryMetricType.PACE) {
-                String.format(Locale.US, "%.1f", dataMax)
+                TelemetryMetricUtils.formatPaceMinutes(dataMax)
             } else {
                 "${dataMin.toInt()}"
             }

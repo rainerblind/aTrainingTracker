@@ -120,4 +120,64 @@ class ElevationProfileScrubbingTest {
         assertNull(legacyPoint.slope)
         assertEquals(0L, legacyPoint.timeSec)
     }
+
+    @Test
+    fun testScrubbingPace_decodingAndStoppedThreshold() {
+        val mockPrefs = io.mockk.mockk<android.content.SharedPreferences>(relaxed = true)
+        io.mockk.every { mockPrefs.getString(com.atrainingtracker.trainingtracker.TrainingApplication.SP_UNITS, any()) } returns "METRIC"
+        val field = com.atrainingtracker.trainingtracker.TrainingApplication::class.java.getDeclaredField("cSharedPreferences")
+        field.isAccessible = true
+        val originalPrefs = field.get(null)
+        field.set(null, mockPrefs)
+
+        try {
+            val paceFormatter = com.atrainingtracker.banalservice.sensor.formater.PaceFormatter()
+            val speedFormatter = com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter()
+
+            fun computeScrubbingSpeedStr(point: PathPoint, bSportType: com.atrainingtracker.banalservice.BSportType): String {
+                return if (bSportType == com.atrainingtracker.banalservice.BSportType.RUN) {
+                    val spd = point.speedMps
+                    if (spd == null || spd < 0.55) {
+                        paceFormatter.format_with_units(null)
+                    } else {
+                        paceFormatter.format_with_units(1.0 / spd)
+                    }
+                } else {
+                    speedFormatter.format_with_units(point.speedMps)
+                }
+            }
+
+            // 1. Running at 4.1667 m/s (15.0 km/h) -> 4:00 min/km (REQ-UI-219, ATT-1818)
+            val runPt15kmh = PathPoint(distance = 1000.0, latLng = LatLng(48.0, 11.0), altitude = 500.0, speedMps = 4.166666666666667)
+            val pace15 = computeScrubbingSpeedStr(runPt15kmh, com.atrainingtracker.banalservice.BSportType.RUN)
+            assertEquals("4:00 min/km", pace15)
+            assertFalse("Must not show inverted 69:27 min/km defect", pace15.contains("69:27"))
+
+            // 2. Running at 2.7778 m/s (10.0 km/h) -> 6:00 min/km
+            val runPt10kmh = PathPoint(distance = 1000.0, latLng = LatLng(48.0, 11.0), altitude = 500.0, speedMps = 2.7777777777777777)
+            val pace10 = computeScrubbingSpeedStr(runPt10kmh, com.atrainingtracker.banalservice.BSportType.RUN)
+            assertEquals("6:00 min/km", pace10)
+
+            // 3. Stopped speed (< 0.55 m/s, e.g. 0.2 m/s or 0.0 m/s) -> "-- min/km"
+            val stoppedPt = PathPoint(distance = 1000.0, latLng = LatLng(48.0, 11.0), altitude = 500.0, speedMps = 0.2)
+            val stoppedPace = computeScrubbingSpeedStr(stoppedPt, com.atrainingtracker.banalservice.BSportType.RUN)
+            assertEquals("-- min/km", stoppedPace)
+
+            val zeroPt = PathPoint(distance = 1000.0, latLng = LatLng(48.0, 11.0), altitude = 500.0, speedMps = 0.0)
+            val zeroPace = computeScrubbingSpeedStr(zeroPt, com.atrainingtracker.banalservice.BSportType.RUN)
+            assertEquals("-- min/km", zeroPace)
+
+            val nullSpeedPt = PathPoint(distance = 1000.0, latLng = LatLng(48.0, 11.0), altitude = 500.0, speedMps = null)
+            val nullPace = computeScrubbingSpeedStr(nullSpeedPt, com.atrainingtracker.banalservice.BSportType.RUN)
+            assertEquals("-- min/km", nullPace)
+
+            // 4. Non-running sport (e.g. BIKE) uses speedFormatter in km/h
+            val bikePt = PathPoint(distance = 1000.0, latLng = LatLng(48.0, 11.0), altitude = 500.0, speedMps = 4.166666666666667)
+            val bikeSpeed = computeScrubbingSpeedStr(bikePt, com.atrainingtracker.banalservice.BSportType.BIKE)
+            assertTrue("Bike speed must be 15.0 or 15,0 km/h: $bikeSpeed", bikeSpeed.matches(Regex("15[.,]0 km/h")))
+        } finally {
+            field.set(null, originalPrefs)
+        }
+    }
 }
+
