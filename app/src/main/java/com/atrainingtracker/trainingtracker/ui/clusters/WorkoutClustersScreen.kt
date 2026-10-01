@@ -22,6 +22,7 @@ import android.app.Application
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
@@ -336,6 +337,8 @@ fun WorkoutClustersScreen(
     if (clusterToDelete != null) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { clusterToDelete = null },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
             title = { Text(stringResource(R.string.cluster_delete_title)) },
             text = { Text(stringResource(R.string.cluster_delete_message)) },
             confirmButton = {

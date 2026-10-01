@@ -102,6 +102,7 @@ object ElevationProfileZoomMath {
             when {
                 visibleDist > 50_000 -> 10_000f
                 visibleDist > 20_000 -> 5_000f
+                visibleDist > 10_000 -> 2_000f
                 visibleDist > 5_000 -> 1_000f
                 visibleDist > 1_500 -> 500f
                 visibleDist > 500 -> 100f

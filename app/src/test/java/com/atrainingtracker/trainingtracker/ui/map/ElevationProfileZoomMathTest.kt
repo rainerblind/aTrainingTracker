@@ -148,6 +148,8 @@ class ElevationProfileZoomMathTest {
         // Metric steps
         assertEquals(10_000f, ElevationProfileZoomMath.calculateAdaptiveDistanceStep(80_000.0, MyUnits.METRIC), 0.1f)
         assertEquals(5_000f, ElevationProfileZoomMath.calculateAdaptiveDistanceStep(30_000.0, MyUnits.METRIC), 0.1f)
+        assertEquals(2_000f, ElevationProfileZoomMath.calculateAdaptiveDistanceStep(17_820.0, MyUnits.METRIC), 0.1f)
+        assertEquals(2_000f, ElevationProfileZoomMath.calculateAdaptiveDistanceStep(12_000.0, MyUnits.METRIC), 0.1f)
         assertEquals(1_000f, ElevationProfileZoomMath.calculateAdaptiveDistanceStep(8_000.0, MyUnits.METRIC), 0.1f)
         assertEquals(500f, ElevationProfileZoomMath.calculateAdaptiveDistanceStep(2_500.0, MyUnits.METRIC), 0.1f)
         assertEquals(100f, ElevationProfileZoomMath.calculateAdaptiveDistanceStep(800.0, MyUnits.METRIC), 0.1f)

@@ -27,6 +27,9 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
+import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
+
 /**
  * Selectable horizontal X-axis domain for Aftermath elevation profile and scrubbing.
  * (REQ-UI-201 / ATT-1391)
@@ -41,6 +44,8 @@ enum class ProfileXAxisDomain {
  */
 object TuningPreferencesDefaults {
     val PROFILE_X_AXIS_DOMAIN = ProfileXAxisDomain.DISTANCE
+    val COCKPIT_FONT_FAMILY = CockpitFontFamily.SYSTEM_DEFAULT
+    val COCKPIT_FONT_WEIGHT = CockpitFontWeight.SEMI_BOLD
     const val FULL_DIM_FACTOR = 0.25f
     const val MEDIUM_DIM_FACTOR = 0.50f
     const val SLOPE_FLAT_THRESHOLD = 2.0f
@@ -76,6 +81,8 @@ object TuningPreferencesDefaults {
  */
 data class TuningConfig(
     val profileXAxisDomain: ProfileXAxisDomain = TuningPreferencesDefaults.PROFILE_X_AXIS_DOMAIN,
+    val cockpitFontFamily: CockpitFontFamily = TuningPreferencesDefaults.COCKPIT_FONT_FAMILY,
+    val cockpitFontWeight: CockpitFontWeight = TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT,
     val fullDimFactor: Float = TuningPreferencesDefaults.FULL_DIM_FACTOR,
     val mediumDimFactor: Float = TuningPreferencesDefaults.MEDIUM_DIM_FACTOR,
     val slopeFlatThreshold: Float = TuningPreferencesDefaults.SLOPE_FLAT_THRESHOLD,
@@ -95,6 +102,8 @@ class TuningPreferencesDataStore(private val context: Context) {
 
     companion object {
         val KEY_PROFILE_X_AXIS_DOMAIN: Preferences.Key<String> = stringPreferencesKey("tuning_profile_x_axis_domain")
+        val KEY_COCKPIT_FONT_FAMILY: Preferences.Key<String> = stringPreferencesKey("tuning_cockpit_font_family")
+        val KEY_COCKPIT_FONT_WEIGHT: Preferences.Key<String> = stringPreferencesKey("tuning_cockpit_font_weight")
         val KEY_FULL_DIM_FACTOR: Preferences.Key<Float> = floatPreferencesKey("tuning_battery_saver_full_dim")
         val KEY_MEDIUM_DIM_FACTOR: Preferences.Key<Float> = floatPreferencesKey("tuning_battery_saver_medium_dim")
         val KEY_SLOPE_FLAT: Preferences.Key<Float> = floatPreferencesKey("tuning_battery_saver_slope_flat")
@@ -107,6 +116,8 @@ class TuningPreferencesDataStore(private val context: Context) {
 
         private val ALL_KEYS = listOf(
             KEY_PROFILE_X_AXIS_DOMAIN,
+            KEY_COCKPIT_FONT_FAMILY,
+            KEY_COCKPIT_FONT_WEIGHT,
             KEY_FULL_DIM_FACTOR,
             KEY_MEDIUM_DIM_FACTOR,
             KEY_SLOPE_FLAT,
@@ -125,6 +136,20 @@ class TuningPreferencesDataStore(private val context: Context) {
             if (rawDomainStr != null) ProfileXAxisDomain.valueOf(rawDomainStr) else TuningPreferencesDefaults.PROFILE_X_AXIS_DOMAIN
         } catch (e: Exception) {
             TuningPreferencesDefaults.PROFILE_X_AXIS_DOMAIN
+        }
+
+        val rawFontFamilyStr = prefs[KEY_COCKPIT_FONT_FAMILY]
+        val cockpitFontFamily = try {
+            if (rawFontFamilyStr != null) CockpitFontFamily.valueOf(rawFontFamilyStr) else TuningPreferencesDefaults.COCKPIT_FONT_FAMILY
+        } catch (e: Exception) {
+            TuningPreferencesDefaults.COCKPIT_FONT_FAMILY
+        }
+
+        val rawFontWeightStr = prefs[KEY_COCKPIT_FONT_WEIGHT]
+        val cockpitFontWeight = try {
+            if (rawFontWeightStr != null) CockpitFontWeight.valueOf(rawFontWeightStr) else TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT
+        } catch (e: Exception) {
+            TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT
         }
         val rawFullDim = prefs[KEY_FULL_DIM_FACTOR] ?: TuningPreferencesDefaults.FULL_DIM_FACTOR
         val rawMediumDim = prefs[KEY_MEDIUM_DIM_FACTOR] ?: TuningPreferencesDefaults.MEDIUM_DIM_FACTOR
@@ -180,6 +205,8 @@ class TuningPreferencesDataStore(private val context: Context) {
 
         TuningConfig(
             profileXAxisDomain = domain,
+            cockpitFontFamily = cockpitFontFamily,
+            cockpitFontWeight = cockpitFontWeight,
             fullDimFactor = clampedFullDim,
             mediumDimFactor = clampedMediumDim,
             slopeFlatThreshold = clampedSlopeFlat,
@@ -232,6 +259,8 @@ class TuningPreferencesDataStore(private val context: Context) {
 
         context.dataStore.edit { prefs ->
             prefs[KEY_PROFILE_X_AXIS_DOMAIN] = config.profileXAxisDomain.name
+            prefs[KEY_COCKPIT_FONT_FAMILY] = config.cockpitFontFamily.name
+            prefs[KEY_COCKPIT_FONT_WEIGHT] = config.cockpitFontWeight.name
             prefs[KEY_FULL_DIM_FACTOR] = clampedFullDim
             prefs[KEY_MEDIUM_DIM_FACTOR] = clampedMediumDim
             prefs[KEY_SLOPE_FLAT] = clampedSlopeFlat

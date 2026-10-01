@@ -41,8 +41,18 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetCon
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import kotlinx.coroutines.launch
 import java.util.Locale
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.unit.sp
+import com.atrainingtracker.trainingtracker.MyPreferenceManager
+import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
+import com.atrainingtracker.trainingtracker.EditWorkoutFieldPreferences
+import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
+import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
+import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitTypography
 import kotlin.math.roundToInt
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdvancedTuningDialog(
     onDismiss: () -> Unit,
@@ -52,6 +62,10 @@ fun AdvancedTuningDialog(
     val scope = rememberCoroutineScope()
     val tuningDataStore = remember { TuningPreferencesDataStore(context) }
     val persistedConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
+
+    val preferenceManager = remember { MyPreferenceManager(context.applicationContext) }
+    val persistedWorkoutCardPrefs by preferenceManager.workoutCardPreferencesFlow.collectAsState(initial = WorkoutCardSectionPreferences())
+    val persistedEditWorkoutPrefs by preferenceManager.editWorkoutFieldPreferencesFlow.collectAsState(initial = EditWorkoutFieldPreferences())
 
     var profileXAxisDomain by remember { mutableStateOf(TuningPreferencesDefaults.PROFILE_X_AXIS_DOMAIN) }
     var fullDimFactor by remember { mutableFloatStateOf(TuningPreferencesDefaults.FULL_DIM_FACTOR) }
@@ -63,9 +77,25 @@ fun AdvancedTuningDialog(
     var gpsAccuracy by remember { mutableFloatStateOf(TuningPreferencesDefaults.GPS_ACCURACY_THRESHOLD_M) }
     var altitudeWindowSec by remember { mutableIntStateOf(TuningPreferencesDefaults.ALTITUDE_FILTER_WINDOW_SEC) }
     var slopeMinSpeed by remember { mutableFloatStateOf(TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS) }
+    var cockpitFontFamily by remember { mutableStateOf(TuningPreferencesDefaults.COCKPIT_FONT_FAMILY) }
+    var cockpitFontWeight by remember { mutableStateOf(TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT) }
+
+    var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }
+    var editWorkoutPrefs by remember { mutableStateOf(EditWorkoutFieldPreferences()) }
+    var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
+
+    LaunchedEffect(persistedWorkoutCardPrefs, persistedEditWorkoutPrefs) {
+        if (!isAftermathPrefsInitialized) {
+            workoutCardPrefs = persistedWorkoutCardPrefs
+            editWorkoutPrefs = persistedEditWorkoutPrefs
+            isAftermathPrefsInitialized = true
+        }
+    }
 
     LaunchedEffect(persistedConfig) {
         profileXAxisDomain = persistedConfig.profileXAxisDomain
+        cockpitFontFamily = persistedConfig.cockpitFontFamily
+        cockpitFontWeight = persistedConfig.cockpitFontWeight
         fullDimFactor = persistedConfig.fullDimFactor
         mediumDimFactor = persistedConfig.mediumDimFactor
         slopeFlat = persistedConfig.slopeFlatThreshold
@@ -86,6 +116,8 @@ fun AdvancedTuningDialog(
                 onSave = {
                     val newConfig = TuningConfig(
                         profileXAxisDomain = profileXAxisDomain,
+                        cockpitFontFamily = cockpitFontFamily,
+                        cockpitFontWeight = cockpitFontWeight,
                         fullDimFactor = fullDimFactor,
                         mediumDimFactor = mediumDimFactor,
                         slopeFlatThreshold = slopeFlat,
@@ -98,6 +130,8 @@ fun AdvancedTuningDialog(
                     )
                     scope.launch {
                         tuningDataStore.saveTuningConfig(newConfig)
+                        preferenceManager.setWorkoutCardPreferences(workoutCardPrefs)
+                        preferenceManager.setEditWorkoutFieldPreferences(editWorkoutPrefs)
                         onSettingsChanged?.invoke()
                         onDismiss()
                     }
@@ -318,6 +352,280 @@ fun AdvancedTuningDialog(
                         modifier = Modifier.weight(1f)
                     )
                 }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                // Workout List (Detailed Cards) Sections
+                Text(
+                    text = stringResource(R.string.settings_workout_card_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                TuningToggleItem(
+                    title = stringResource(R.string.settings_workout_card_description),
+                    isChecked = workoutCardPrefs.showDescription,
+                    onCheckedChange = { workoutCardPrefs = workoutCardPrefs.copy(showDescription = it) }
+                )
+                TuningToggleItem(
+                    title = stringResource(R.string.settings_workout_card_extrema),
+                    isChecked = workoutCardPrefs.showExtrema,
+                    onCheckedChange = { workoutCardPrefs = workoutCardPrefs.copy(showExtrema = it) }
+                )
+                TuningToggleItem(
+                    title = stringResource(R.string.settings_workout_card_laps),
+                    isChecked = workoutCardPrefs.showLaps,
+                    onCheckedChange = { workoutCardPrefs = workoutCardPrefs.copy(showLaps = it) }
+                )
+                TuningToggleItem(
+                    title = stringResource(R.string.settings_workout_card_strava),
+                    isChecked = workoutCardPrefs.showStrava,
+                    onCheckedChange = { workoutCardPrefs = workoutCardPrefs.copy(showStrava = it) }
+                )
+                TuningToggleItem(
+                    title = stringResource(R.string.settings_workout_card_map),
+                    isChecked = workoutCardPrefs.showMapPreview,
+                    onCheckedChange = { workoutCardPrefs = workoutCardPrefs.copy(showMapPreview = it) }
+                )
+                TuningToggleItem(
+                    title = stringResource(R.string.settings_workout_card_elevation),
+                    isChecked = workoutCardPrefs.showElevationProfile,
+                    onCheckedChange = { workoutCardPrefs = workoutCardPrefs.copy(showElevationProfile = it) }
+                )
+                TuningToggleItem(
+                    title = stringResource(R.string.settings_workout_card_charts),
+                    isChecked = workoutCardPrefs.showTelemetryCharts,
+                    onCheckedChange = { workoutCardPrefs = workoutCardPrefs.copy(showTelemetryCharts = it) }
+                )
+                TuningToggleItem(
+                    title = stringResource(R.string.settings_workout_card_zones),
+                    isChecked = workoutCardPrefs.showZoneAnalysis,
+                    onCheckedChange = { workoutCardPrefs = workoutCardPrefs.copy(showZoneAnalysis = it) }
+                )
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                // Edit Workout Fields
+                Text(
+                    text = stringResource(R.string.settings_edit_workout_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                TuningToggleItem(
+                    title = stringResource(R.string.settings_edit_workout_description),
+                    isChecked = editWorkoutPrefs.showDescription,
+                    onCheckedChange = { editWorkoutPrefs = editWorkoutPrefs.copy(showDescription = it) }
+                )
+                TuningToggleItem(
+                    title = stringResource(R.string.settings_edit_workout_cluster),
+                    isChecked = editWorkoutPrefs.showCluster,
+                    onCheckedChange = { editWorkoutPrefs = editWorkoutPrefs.copy(showCluster = it) }
+                )
+                TuningToggleItem(
+                    title = stringResource(R.string.settings_edit_workout_commute_trainer),
+                    isChecked = editWorkoutPrefs.showCommuteTrainer,
+                    onCheckedChange = { editWorkoutPrefs = editWorkoutPrefs.copy(showCommuteTrainer = it) }
+                )
+                TuningToggleItem(
+                    title = stringResource(R.string.settings_edit_workout_strava),
+                    isChecked = editWorkoutPrefs.showStravaUpload,
+                    onCheckedChange = { editWorkoutPrefs = editWorkoutPrefs.copy(showStravaUpload = it) }
+                )
+                TuningToggleItem(
+                    title = stringResource(R.string.settings_edit_workout_goal),
+                    isChecked = editWorkoutPrefs.showGoal,
+                    onCheckedChange = { editWorkoutPrefs = editWorkoutPrefs.copy(showGoal = it) }
+                )
+                TuningToggleItem(
+                    title = stringResource(R.string.settings_edit_workout_method),
+                    isChecked = editWorkoutPrefs.showMethod,
+                    onCheckedChange = { editWorkoutPrefs = editWorkoutPrefs.copy(showMethod = it) }
+                )
+            }
+
+            HorizontalDivider()
+
+            // Category 5: Cockpit-Typografie (ATT-1751 / REQ-UI-212)
+            TuningCategoryHeader(stringResource(R.string.tuning_cat_cockpit_typography))
+
+            // Font Family Selector
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.tuning_cockpit_font_family_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                var expanded by remember { mutableStateOf(false) }
+
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
+                ) {
+                    OutlinedTextField(
+                        value = stringResource(cockpitFontFamily.getDisplayNameRes()),
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            fontFamily = CockpitTypography.resolveFontFamily(cockpitFontFamily),
+                            fontWeight = cockpitFontWeight.asFontWeight()
+                        )
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        CockpitFontFamily.values().forEach { family ->
+                            val itemFontFamily = remember(family) {
+                                CockpitTypography.resolveFontFamily(family)
+                            }
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = stringResource(family.getDisplayNameRes()),
+                                        fontFamily = itemFontFamily,
+                                        fontWeight = cockpitFontWeight.asFontWeight()
+                                    )
+                                },
+                                onClick = {
+                                    cockpitFontFamily = family
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Boldness (Font Weight) Selector
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.tuning_cockpit_font_weight_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    CockpitFontWeight.values().forEach { weight ->
+                        FilterChip(
+                            selected = cockpitFontWeight == weight,
+                            onClick = { cockpitFontWeight = weight },
+                            label = {
+                                Text(
+                                    text = stringResource(weight.getDisplayNameRes()),
+                                    fontWeight = weight.asFontWeight(),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
+            // Live Preview Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.tuning_cockpit_preview_title),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    val previewFamily = remember(cockpitFontFamily) {
+                        CockpitTypography.resolveFontFamily(cockpitFontFamily)
+                    }
+                    val previewWeight = cockpitFontWeight.asFontWeight()
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        // Metric 1: HR
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "148",
+                                fontFamily = previewFamily,
+                                fontWeight = previewWeight,
+                                fontSize = 32.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "bpm",
+                                fontFamily = previewFamily,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        // Metric 2: Speed
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "28.5",
+                                fontFamily = previewFamily,
+                                fontWeight = previewWeight,
+                                fontSize = 32.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "km/h",
+                                fontFamily = previewFamily,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        // Metric 3: Time
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "1:24:35",
+                                fontFamily = previewFamily,
+                                fontWeight = previewWeight,
+                                fontSize = 32.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "TIME",
+                                fontFamily = previewFamily,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -327,7 +635,13 @@ fun AdvancedTuningDialog(
                 onClick = {
                     scope.launch {
                         tuningDataStore.resetToDefaults()
+                        preferenceManager.setWorkoutCardPreferences(WorkoutCardSectionPreferences())
+                        preferenceManager.setEditWorkoutFieldPreferences(EditWorkoutFieldPreferences())
+                        workoutCardPrefs = WorkoutCardSectionPreferences()
+                        editWorkoutPrefs = EditWorkoutFieldPreferences()
                         profileXAxisDomain = TuningPreferencesDefaults.PROFILE_X_AXIS_DOMAIN
+                        cockpitFontFamily = TuningPreferencesDefaults.COCKPIT_FONT_FAMILY
+                        cockpitFontWeight = TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT
                         fullDimFactor = TuningPreferencesDefaults.FULL_DIM_FACTOR
                         mediumDimFactor = TuningPreferencesDefaults.MEDIUM_DIM_FACTOR
                         slopeFlat = TuningPreferencesDefaults.SLOPE_FLAT_THRESHOLD
@@ -421,6 +735,33 @@ private fun TuningSliderItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 2.dp)
+        )
+    }
+}
+
+@Composable
+private fun TuningToggleItem(
+    title: String,
+    isChecked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
+        )
+        Switch(
+            checked = isChecked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.scale(0.8f)
         )
     }
 }

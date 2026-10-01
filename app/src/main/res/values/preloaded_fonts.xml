@@ -20,5 +20,9 @@
 <resources>
     <array name="preloaded_fonts" translatable="false">
         <item>@font/roboto_black_italic</item>
+        <item>@font/orbitron</item>
+        <item>@font/roboto_condensed</item>
+        <item>@font/comic_neue</item>
+        <item>@font/roboto_mono</item>
     </array>
 </resources>

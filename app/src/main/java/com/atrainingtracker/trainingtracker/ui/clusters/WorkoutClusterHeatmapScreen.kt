@@ -274,6 +274,8 @@ fun WorkoutClusterHeatmapScreen(
     if (showDeleteConfirmation) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
             title = { Text(stringResource(R.string.cluster_delete_title)) },
             text = { Text(stringResource(R.string.cluster_delete_message)) },
             confirmButton = {
@@ -342,6 +344,7 @@ fun WorkoutClusterHeatmapScreen(
         BottomSheetScaffold(
             scaffoldState = scaffoldState,
             sheetShape = BottomSheetDesign.SheetShape,
+            sheetContainerColor = MaterialTheme.colorScheme.surface,
             sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
             sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
             sheetPeekHeight = if (peekedWorkoutDataWithTrack != null && !isEditingFingerprint) 120.dp + navBarHeight else 0.dp,

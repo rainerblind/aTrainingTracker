@@ -276,28 +276,6 @@ fun WorkoutSummary(
 
         // 8. Telemetry Metric Graphs (Lazy-Loaded HR, Speed/Pace, Power)
         if (preferences.showTelemetryCharts && telemetryPoints.isNotEmpty()) {
-            if (TelemetryMetricUtils.hasHeartRateData(telemetryPoints)) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
-                Text(
-                    text = stringResource(R.string.graph_heading_heart_rate),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
-                )
-                TelemetryMetricGraph(
-                    pathPoints = telemetryPoints,
-                    metricType = TelemetryMetricType.HEART_RATE,
-                    currentDistance = null,
-                    onDistanceSelected = {},
-                    bSportType = workoutData.bSportType,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
             if (TelemetryMetricUtils.hasSpeedData(telemetryPoints)) {
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
@@ -315,6 +293,28 @@ fun WorkoutSummary(
                 TelemetryMetricGraph(
                     pathPoints = telemetryPoints,
                     metricType = if (isRunning) TelemetryMetricType.PACE else TelemetryMetricType.SPEED,
+                    currentDistance = null,
+                    onDistanceSelected = {},
+                    bSportType = workoutData.bSportType,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            if (TelemetryMetricUtils.hasHeartRateData(telemetryPoints)) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+                Text(
+                    text = stringResource(R.string.graph_heading_heart_rate),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                )
+                TelemetryMetricGraph(
+                    pathPoints = telemetryPoints,
+                    metricType = TelemetryMetricType.HEART_RATE,
                     currentDistance = null,
                     onDistanceSelected = {},
                     bSportType = workoutData.bSportType,

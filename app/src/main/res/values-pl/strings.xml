@@ -1332,6 +1332,20 @@
     <string name="tuning_profile_x_axis_desc">Wybierz metrykę osi poziomej dla wykresów profilu wysokości.</string>
     <string name="tuning_profile_x_axis_distance">Dystans</string>
     <string name="tuning_profile_x_axis_time">Czas</string>
+
+    <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
+    <string name="tuning_cat_cockpit_typography">Typografia kokpitu</string>
+    <string name="tuning_cockpit_font_family_title">Krój pisma</string>
+    <string name="tuning_font_system_default">Domyślna systemowa</string>
+    <string name="tuning_font_seven_segment">Cyfrowy 7-segmentowy</string>
+    <string name="tuning_font_modern_athletic">Nowoczesny sportowy</string>
+    <string name="tuning_font_monospace">O stałej szerokości (Monospace)</string>
+    <string name="tuning_font_playful">Zabawny</string>
+    <string name="tuning_cockpit_font_weight_title">Grubość czcionki</string>
+    <string name="tuning_weight_normal">Normalna</string>
+    <string name="tuning_weight_semi_bold">Półgruba</string>
+    <string name="tuning_weight_bold">Pogrubiona</string>
+    <string name="tuning_cockpit_preview_title">Podgląd na żywo</string>
     <string name="tuning_default_format">Domyślnie: %1$s</string>
     <string name="reset_to_defaults">Przywróć domyślne</string>
     <string name="reset_to_defaults_success">Przywrócono domyślne ustawienia dostrajania.</string>
@@ -1346,6 +1360,7 @@
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Strefy mocy</string>
     <string name="aftermath_laps_splits_title">Okrążenia i międzyczasy</string>
+    <string name="split_badge_best">Najlepszy</string>
     <!-- Continuous Metric Graphs & Headings (ATT-1740 / REQ-UI-206) -->
     <string name="graph_heading_elevation">Profil wysokości</string>
     <string name="graph_heading_heart_rate">Tętno</string>

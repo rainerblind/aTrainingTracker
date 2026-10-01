@@ -21,6 +21,8 @@ package com.atrainingtracker.trainingtracker.ui.map
 import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
@@ -73,7 +75,7 @@ fun MapDetailLayout(
     showElevationProfile: Boolean = true,
     showZoomControls: Boolean = true,
     onMapClick: ((LatLng) -> Unit)? = null,
-    analyticsContent: @Composable ColumnScope.() -> Unit = {}
+    analyticsContent: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -89,7 +91,16 @@ fun MapDetailLayout(
 
     var isSharing by remember { mutableStateOf(false) }
     var selectedDistance by remember { mutableStateOf<Double?>(null) }
+    var profileZoomScale by remember(activeScrubPath) { mutableFloatStateOf(1.0f) }
+    var profileStartDist by remember(activeScrubPath) { mutableDoubleStateOf(0.0) }
     val noLocation = remember { MutableStateFlow<LatLng?>(null) }
+
+    val hasTelemetryGraphs = showZoomControls && activeScrubPath != null && (
+        TelemetryMetricUtils.hasHeartRateData(activeScrubPath) ||
+        TelemetryMetricUtils.hasSpeedData(activeScrubPath) ||
+        TelemetryMetricUtils.hasPowerData(activeScrubPath)
+    )
+    val hasScrollableContent = analyticsContent != null || hasTelemetryGraphs
 
     Column(
         modifier = modifier
@@ -124,7 +135,17 @@ fun MapDetailLayout(
 
         // 2. MAP AREA with OVERLAYED SHARE BUTTON
         if (showMap) {
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            val mapModifier = if (hasScrollableContent) {
+                Modifier
+                    .weight(1f)
+                    .heightIn(min = 240.dp)
+                    .fillMaxWidth()
+            } else {
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            }
+            Box(modifier = mapModifier) {
                 ATrainingTrackerMap(
                     zoomFocus = zoomFocus,
                     initialBounds = initialBounds,
@@ -200,126 +221,153 @@ fun MapDetailLayout(
             }
         }
 
-        // 3. ELEVATION PROFILE & CONTINUOUS METRIC GRAPHS (ATT-1740 / REQ-UI-206)
-        if (showElevationProfile) {
-            activeScrubPath?.let { path ->
-                Surface(
-                    color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Box(modifier = Modifier.drawWithContent {
-                        elevationLayer.record {
-                            this@drawWithContent.drawContent()
-                        }
-                        drawLayer(elevationLayer)
-                    }) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            if (showZoomControls) {
-                                Text(
-                                    text = stringResource(R.string.graph_heading_elevation),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
-                                )
+        // 3. ELEVATION PROFILE & CONTINUOUS METRIC GRAPHS AND 4. ANALYTICS (REQ-UI-213 / ATT-1812)
+        val lowerModifier = if (showMap && hasScrollableContent) {
+            Modifier
+                .weight(1.2f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+        } else {
+            Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+        }
+
+        Column(modifier = lowerModifier) {
+            if (showElevationProfile) {
+                activeScrubPath?.let { path ->
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(modifier = Modifier.drawWithContent {
+                            elevationLayer.record {
+                                this@drawWithContent.drawContent()
                             }
-                            ElevationProfile(
-                                pathPoints = path,
-                                currentDistance = selectedDistance,
-                                minAltitudeOverride = minAltitudeOverride,
-                                maxAltitudeOverride = maxAltitudeOverride,
-                                onDistanceSelected = { selectedDistance = it },
-                                showZoomControls = showZoomControls,
-                                xAxisDomain = tuningConfig.profileXAxisDomain,
-                                bSportType = bSportType,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            // Telemetry Metric Graphs in detailed inspection view
-                            if (showZoomControls) {
-                                // HR Graph
-                                if (TelemetryMetricUtils.hasHeartRateData(path)) {
-                                    Spacer(modifier = Modifier.height(8.dp))
+                            drawLayer(elevationLayer)
+                        }) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                if (showZoomControls) {
                                     Text(
-                                        text = stringResource(R.string.graph_heading_heart_rate),
+                                        text = stringResource(R.string.graph_heading_elevation),
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                                         color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
-                                    )
-                                    TelemetryMetricGraph(
-                                        pathPoints = path,
-                                        metricType = TelemetryMetricType.HEART_RATE,
-                                        currentDistance = selectedDistance,
-                                        onDistanceSelected = { selectedDistance = it },
-                                        xAxisDomain = tuningConfig.profileXAxisDomain,
-                                        bSportType = bSportType,
-                                        modifier = Modifier.fillMaxWidth()
+                                        modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
                                     )
                                 }
+                                ElevationProfile(
+                                    pathPoints = path,
+                                    currentDistance = selectedDistance,
+                                    minAltitudeOverride = minAltitudeOverride,
+                                    maxAltitudeOverride = maxAltitudeOverride,
+                                    onDistanceSelected = { selectedDistance = it },
+                                    showZoomControls = showZoomControls,
+                                    xAxisDomain = tuningConfig.profileXAxisDomain,
+                                    bSportType = bSportType,
+                                    zoomScale = profileZoomScale,
+                                    startDist = profileStartDist,
+                                    onZoomChanged = { z, s ->
+                                        profileZoomScale = z
+                                        profileStartDist = s
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
 
-                                // Speed / Pace Graph
-                                if (TelemetryMetricUtils.hasSpeedData(path)) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    val isRunning = bSportType == BSportType.RUN
-                                    Text(
-                                        text = stringResource(if (isRunning) R.string.graph_heading_pace else R.string.graph_heading_speed),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
-                                    )
-                                    TelemetryMetricGraph(
-                                        pathPoints = path,
-                                        metricType = if (isRunning) TelemetryMetricType.PACE else TelemetryMetricType.SPEED,
-                                        currentDistance = selectedDistance,
-                                        onDistanceSelected = { selectedDistance = it },
-                                        xAxisDomain = tuningConfig.profileXAxisDomain,
-                                        bSportType = bSportType,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
+                                // Telemetry Metric Graphs in detailed inspection view
+                                if (showZoomControls) {
+                                    // Speed / Pace Graph
+                                    if (TelemetryMetricUtils.hasSpeedData(path)) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        val isRunning = bSportType == BSportType.RUN
+                                        Text(
+                                            text = stringResource(if (isRunning) R.string.graph_heading_pace else R.string.graph_heading_speed),
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                                        )
+                                        TelemetryMetricGraph(
+                                            pathPoints = path,
+                                            metricType = if (isRunning) TelemetryMetricType.PACE else TelemetryMetricType.SPEED,
+                                            currentDistance = selectedDistance,
+                                            onDistanceSelected = { selectedDistance = it },
+                                            xAxisDomain = tuningConfig.profileXAxisDomain,
+                                            bSportType = bSportType,
+                                            zoomScale = profileZoomScale,
+                                            startDist = profileStartDist,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
 
-                                // Power Graph
-                                if (TelemetryMetricUtils.hasPowerData(path)) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text = stringResource(R.string.graph_heading_power),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
-                                    )
-                                    TelemetryMetricGraph(
-                                        pathPoints = path,
-                                        metricType = TelemetryMetricType.POWER,
-                                        currentDistance = selectedDistance,
-                                        onDistanceSelected = { selectedDistance = it },
-                                        xAxisDomain = tuningConfig.profileXAxisDomain,
-                                        bSportType = bSportType,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
+                                    // HR Graph
+                                    if (TelemetryMetricUtils.hasHeartRateData(path)) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = stringResource(R.string.graph_heading_heart_rate),
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                                        )
+                                        TelemetryMetricGraph(
+                                            pathPoints = path,
+                                            metricType = TelemetryMetricType.HEART_RATE,
+                                            currentDistance = selectedDistance,
+                                            onDistanceSelected = { selectedDistance = it },
+                                            xAxisDomain = tuningConfig.profileXAxisDomain,
+                                            bSportType = bSportType,
+                                            zoomScale = profileZoomScale,
+                                            startDist = profileStartDist,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+
+                                    // Power Graph
+                                    if (TelemetryMetricUtils.hasPowerData(path)) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = stringResource(R.string.graph_heading_power),
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                                        )
+                                        TelemetryMetricGraph(
+                                            pathPoints = path,
+                                            metricType = TelemetryMetricType.POWER,
+                                            currentDistance = selectedDistance,
+                                            onDistanceSelected = { selectedDistance = it },
+                                            xAxisDomain = tuningConfig.profileXAxisDomain,
+                                            bSportType = bSportType,
+                                            zoomScale = profileZoomScale,
+                                            startDist = profileStartDist,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-        }
 
-        // 4. ANALYTICS (Slotted - REQ-UI-205 / ATT-1393)
-        Surface(
-            color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier.fillMaxWidth().navigationBarsPadding()
-        ) {
-            Box(modifier = Modifier.drawWithContent {
-                analyticsLayer.record {
-                    this@drawWithContent.drawContent()
-                }
-                drawLayer(analyticsLayer)
-            }) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    analyticsContent()
+            // 4. ANALYTICS (Slotted - REQ-UI-205 / ATT-1393)
+            analyticsContent?.let { content ->
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.fillMaxWidth().navigationBarsPadding()
+                ) {
+                    Box(modifier = Modifier.drawWithContent {
+                        analyticsLayer.record {
+                            this@drawWithContent.drawContent()
+                        }
+                        drawLayer(analyticsLayer)
+                    }) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            content()
+                        }
+                    }
                 }
             }
         }

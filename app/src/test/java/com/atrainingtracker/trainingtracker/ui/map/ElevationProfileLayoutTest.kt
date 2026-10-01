@@ -166,4 +166,20 @@ class ElevationProfileLayoutTest {
         val netDrawableHeightDelta = heightExpansionDp - canvasTopPaddingDp - bottomPaddingDp // 48 - 72 - 24 = -48
         assertEquals(-48.0, netDrawableHeightDelta, 0.001)
     }
+
+    @Test
+    fun testElevationProfile_declaresHoistedZoomParameters() {
+        assertTrue("ElevationProfile.kt must exist", elevationProfileFile.exists())
+        val content = elevationProfileFile.readText()
+
+        // Verify both overloads have zoomScale: Float = 1.0f, startDist: Double = 0.0, onZoomChanged
+        val zoomScaleCount = Regex("""zoomScale:\s*Float\s*=\s*1\.0f""").findAll(content).count()
+        assertEquals("Both ElevationProfile composable overloads must declare zoomScale: Float = 1.0f", 2, zoomScaleCount)
+
+        val startDistCount = Regex("""startDist:\s*Double\s*=\s*0\.0""").findAll(content).count()
+        assertEquals("Both ElevationProfile composable overloads must declare startDist: Double = 0.0", 2, startDistCount)
+
+        val onZoomChangedCount = Regex("""onZoomChanged:\s*\(\(zoomScale:\s*Float,\s*startDist:\s*Double\)\s*->\s*Unit\)\?\s*=\s*null""").findAll(content).count()
+        assertEquals("Both ElevationProfile composable overloads must declare onZoomChanged callback", 2, onZoomChangedCount)
+    }
 }

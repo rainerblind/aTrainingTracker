@@ -225,6 +225,12 @@ public class TrackerService extends Service {
             double altitudeCorrection = intent.getDoubleExtra(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE, 0.0);
             if (altitudeCorrection == 0.0) return;
 
+            // REQ-CON-017: Reject runaway retroactive shifts exceeding 500m
+            if (Math.abs(altitudeCorrection) > 500.0) {
+                Log.w(TAG, "Rejecting non-physical altitude correction shift: " + altitudeCorrection + " m");
+                return;
+            }
+
             if (DEBUG)
                 Log.i(TAG, "Triggering atomic altitude correction by " + altitudeCorrection);
 
@@ -241,10 +247,17 @@ public class TrackerService extends Service {
                 WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(TrackerService.this);
                 WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(TrackerService.this);
 
-                // 2a. Raw Samples shift
-                String operator = altitudeCorrection >= 0 ? " + " : " - ";
-                samplesManager.getDatabase().execSQL("UPDATE " + samplesTable
-                        + " set " + SensorType.ALTITUDE.name() + " = " + SensorType.ALTITUDE.name() + operator + Math.abs(altitudeCorrection));
+                // 2a. Raw Samples shift in explicit atomic SQLite transaction (REQ-CON-017)
+                android.database.sqlite.SQLiteDatabase db = samplesManager.getDatabase();
+                db.beginTransaction();
+                try {
+                    String operator = altitudeCorrection >= 0 ? " + " : " - ";
+                    db.execSQL("UPDATE " + samplesTable
+                            + " set " + SensorType.ALTITUDE.name() + " = " + SensorType.ALTITUDE.name() + operator + Math.abs(altitudeCorrection));
+                    db.setTransactionSuccessful();
+                } finally {
+                    db.endTransaction();
+                }
 
                 // 2b. Summary Extrema and Elevation Stream shift (ATT-38)
                 summariesManager.shiftAltitudeData(workoutId, altitudeCorrection);

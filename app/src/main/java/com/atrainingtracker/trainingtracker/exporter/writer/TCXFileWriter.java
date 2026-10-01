@@ -227,8 +227,10 @@ public class TCXFileWriter extends BaseFileWriter {
 
             if (haveAltitude && dataValid(cursor, SensorType.ALTITUDE.name())) {
                 altitude = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.ALTITUDE.name()));
-                bufferedWriter.write("            <AltitudeMeters>" +
-                        altitude + "</AltitudeMeters>\n");
+                if (altitude >= -500.0 && altitude <= 9000.0) {
+                    bufferedWriter.write("            <AltitudeMeters>" +
+                            altitude + "</AltitudeMeters>\n");
+                }
             }
 
             if (haveDistance && dataValid(cursor, SensorType.DISTANCE_m.name())) {
