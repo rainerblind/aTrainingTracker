@@ -400,6 +400,7 @@ fun ElevationProfile(
                 val startPaddingPx = 50.dp.toPx()
                 val endPaddingPx = 25.dp.toPx()
                 val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
+                val touchSlop = viewConfiguration.touchSlop
 
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
@@ -407,6 +408,7 @@ fun ElevationProfile(
                     var prevSpan = 0f
                     var isTransforming = false
                     var isDragging = false
+                    var isVerticalScrolling = false
 
                     while (true) {
                         val event = awaitPointerEvent()
@@ -449,8 +451,13 @@ fun ElevationProfile(
                             val pointer = pressed[0]
                             val diffX = pointer.position.x - down.position.x
                             val diffY = pointer.position.y - down.position.y
-                            if (!isDragging && (diffX * diffX + diffY * diffY > 64f)) {
-                                isDragging = true
+
+                            if (!isDragging && !isVerticalScrolling) {
+                                if (ChartGestureDisambiguator.isDominantVertical(diffX, diffY, touchSlop)) {
+                                    isVerticalScrolling = true
+                                } else if (ChartGestureDisambiguator.isDominantHorizontal(diffX, diffY, touchSlop)) {
+                                    isDragging = true
+                                }
                             }
 
                             if (isDragging) {
@@ -483,8 +490,12 @@ fun ElevationProfile(
                                     onDistanceSelected(activePoint?.distance ?: selectedValue)
                                     onPointSelected?.invoke(activePoint)
                                 }
+                                prevCentroid = pointer.position
+                            } else if (isVerticalScrolling) {
+                                if (pointer.isConsumed) {
+                                    break
+                                }
                             }
-                            prevCentroid = pointer.position
                         }
                     }
 
@@ -495,7 +506,7 @@ fun ElevationProfile(
                                 onDistanceSelected(null)
                                 onPointSelected?.invoke(null)
                             }
-                        } else {
+                        } else if (!isVerticalScrolling) {
                             // Tap detection
                             val currentTime = System.currentTimeMillis()
                             if (currentTime - lastTapTime < 350L && totalSpan > 10.0) {
