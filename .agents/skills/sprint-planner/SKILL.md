@@ -70,6 +70,7 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
      3. Immediately switch context to the next available sprint ticket and continue execution.
      4. When the human answers in a comment and reassigns to coordinator, the coordinator reassigns to `agent1` to resume the ticket.
    * Each ticket branches from the active `sprint/<SPRINT_NAME>` branch.
+   * **Mandatory Rules & Skills Refresh ("Obey the Rules")**: At the start of handling each ticket, the agent MUST explicitly re-read `.agents/rules/aspice_governance.md` and the skill for the active stage using `view_file` to reload constraints into active working memory and prevent context drift across compactions.
    * Upon completing Stage 5 verification, the ticket is merged back into `sprint/<SPRINT_NAME>` immediately via `--no-ff`.
    * *In-Sprint Anomaly Logging*: Any process hiccups, tool issues, or user corrections during execution are immediately logged as comments in the sprint's `Review & Retro` ticket.
 

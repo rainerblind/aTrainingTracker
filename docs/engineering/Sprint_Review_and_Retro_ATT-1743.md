@@ -122,3 +122,5 @@ In strict compliance with the **"No code changes during Sprint Review"** invaria
    Retrospective deliverables and governance updates are committed to the sprint branch prior to merging into `develop`.
 7. **Continuous Integration (Strategy A)**:
    Every verified ticket merges immediately into `sprint/<SPRINT_NAME>` via `--no-ff`.
+8. **Mandatory Rules & Skills Refresh at Every Ticket/Stage Transition ("Obey the Rules", Rule 15)**:
+   Whenever starting work on any new parent ticket or transitioning to a new ASPICE lifecycle stage / sprint ceremony, the agent MUST explicitly re-read the governing rules (`.agents/rules/aspice_governance.md`) and the corresponding skill (`.agents/skills/<skill_name>/SKILL.md`) using `view_file` to reload constraints into active working memory and prevent context drift across compactions.

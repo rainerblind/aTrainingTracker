@@ -85,4 +85,8 @@ These rules are strictly binding on all AI assistants and agent instances operat
 * **Rule**: AI agents must execute the entire sprint backlog autonomously from ticket to ticket without intermediate pauses or asking the user whether to continue (`"Again, I was asked if we should continue. → Agents should do the entire Sprint."`).
 * Agents must not stop after completing an individual ticket to ask if they should continue with the next ticket. Execution must flow seamlessly across all sprint tickets until all reach `Final Review (Human)`, utilizing Rule 12 for any blocked subtasks requiring human decisions.
 
+## 15. Mandatory Rules & Skills Refresh at Every Ticket/Stage Transition ("Obey the Rules")
+* **Rule**: Whenever starting work on any new parent ticket or transitioning to a new ASPICE lifecycle stage / sprint ceremony, the agent **MUST** explicitly re-read the governing rules (`.agents/rules/aspice_governance.md`) and the corresponding skill (`.agents/skills/<skill_name>/SKILL.md`) using `view_file` (`"Then we should add a rule to obey the rules. I.e. to reread the rules / skill whenever a new ticket is handled."`).
+* Relying on degraded memory or conversational history from earlier turns across compactions is strictly prohibited. Re-reading the canonical documentation pulls constraints directly into active working context, ensuring 100% compliance with current standards and preventing behavioral drift.
+
 
