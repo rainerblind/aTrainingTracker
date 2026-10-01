@@ -20,8 +20,8 @@ package com.atrainingtracker.trainingtracker.ui.map
 
 import android.graphics.Paint
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -324,10 +324,62 @@ fun TelemetryMetricGraph(
                     val startPaddingPx = 50.dp.toPx()
                     val endPaddingPx = 25.dp.toPx()
                     val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
+                    val touchSlop = viewConfiguration.touchSlop
 
-                    detectTapGestures(
-                        onPress = { offset ->
-                            val localX = (offset.x - startPaddingPx).coerceIn(0f, chartWidthPx)
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        var isDragging = false
+                        var isVerticalScrolling = false
+
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val pressed = event.changes.filter { it.pressed }
+                            if (pressed.isEmpty()) break
+
+                            if (pressed.size == 1) {
+                                val pointer = pressed[0]
+                                val diffX = pointer.position.x - down.position.x
+                                val diffY = pointer.position.y - down.position.y
+
+                                if (!isDragging && !isVerticalScrolling) {
+                                    if (ChartGestureDisambiguator.isDominantVertical(diffX, diffY, touchSlop)) {
+                                        isVerticalScrolling = true
+                                    } else if (ChartGestureDisambiguator.isDominantHorizontal(diffX, diffY, touchSlop)) {
+                                        isDragging = true
+                                    }
+                                }
+
+                                if (isDragging) {
+                                    pointer.consume()
+                                    val localX = (pointer.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
+                                    val selectedVal = ElevationProfileZoomMath.canvasXToDistance(
+                                        canvasX = localX,
+                                        startDist = startDist,
+                                        visibleDist = visibleSpan,
+                                        canvasWidth = chartWidthPx,
+                                        totalDist = totalSpan
+                                    )
+                                    if (isTimeDomain) {
+                                        val targetTimeSec = selectedVal.toLong()
+                                        val nearest = pathPoints.minByOrNull { abs(it.timeSec - targetTimeSec) }
+                                        onDistanceSelected(nearest?.distance)
+                                    } else {
+                                        onDistanceSelected(selectedVal)
+                                    }
+                                } else if (isVerticalScrolling) {
+                                    if (pointer.isConsumed) {
+                                        break
+                                    }
+                                }
+                            }
+                        }
+
+                        // On gesture completion
+                        if (isDragging) {
+                            onDistanceSelected(null)
+                        } else if (!isVerticalScrolling) {
+                            // Tap selection
+                            val localX = (down.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
                             val selectedVal = ElevationProfileZoomMath.canvasXToDistance(
                                 canvasX = localX,
                                 startDist = startDist,
@@ -343,33 +395,7 @@ fun TelemetryMetricGraph(
                                 onDistanceSelected(selectedVal)
                             }
                         }
-                    )
-                }
-                .pointerInput(totalSpan, isTimeDomain, zoomScale, startDist) {
-                    val startPaddingPx = 50.dp.toPx()
-                    val endPaddingPx = 25.dp.toPx()
-                    val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
-
-                    detectDragGestures(
-                        onDrag = { change, _ ->
-                            change.consume()
-                            val localX = (change.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
-                            val selectedVal = ElevationProfileZoomMath.canvasXToDistance(
-                                canvasX = localX,
-                                startDist = startDist,
-                                visibleDist = visibleSpan,
-                                canvasWidth = chartWidthPx,
-                                totalDist = totalSpan
-                            )
-                            if (isTimeDomain) {
-                                val targetTimeSec = selectedVal.toLong()
-                                val nearest = pathPoints.minByOrNull { abs(it.timeSec - targetTimeSec) }
-                                onDistanceSelected(nearest?.distance)
-                            } else {
-                                onDistanceSelected(selectedVal)
-                            }
-                        }
-                    )
+                    }
                 }
         ) {
             val startPaddingPx = 50.dp.toPx()
