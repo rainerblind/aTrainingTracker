@@ -57,7 +57,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterBottomSheetScaffold
@@ -139,8 +138,7 @@ fun WorkoutFilterBottomSheet(
     onClearAll: () -> Unit,
     onDismissRequest: () -> Unit,
     activeBSportType: BSportType? = null,
-    knownLocations: List<KnownLocationItem> = emptyList(),
-    availableClusters: List<WorkoutCluster> = emptyList()
+    knownLocations: List<KnownLocationItem> = emptyList()
 ) {
     var localQuery by remember(criteria.query) { mutableStateOf(criteria.query) }
     var localYear by remember(criteria.year) { mutableStateOf(criteria.year) }
@@ -156,9 +154,6 @@ fun WorkoutFilterBottomSheet(
     var localStartLocationLat by remember(criteria.startLocationLat) { mutableStateOf(criteria.startLocationLat) }
     var localStartLocationLng by remember(criteria.startLocationLng) { mutableStateOf(criteria.startLocationLng) }
     var localStartLocationRadiusM by remember(criteria.startLocationRadiusM) { mutableStateOf(criteria.startLocationRadiusM) }
-
-    var localClusterId by remember(criteria.clusterId) { mutableStateOf(criteria.clusterId) }
-    var localClusterName by remember(criteria.clusterName) { mutableStateOf(criteria.clusterName) }
 
     var localMinDistanceMeters by remember(criteria.minDistanceMeters) { mutableStateOf(criteria.minDistanceMeters) }
     var localMaxDistanceMeters by remember(criteria.maxDistanceMeters) { mutableStateOf(criteria.maxDistanceMeters) }
@@ -289,8 +284,6 @@ fun WorkoutFilterBottomSheet(
             localStartLocationLat = null
             localStartLocationLng = null
             localStartLocationRadiusM = null
-            localClusterId = null
-            localClusterName = null
             onClearAll()
         },
         onApply = {
@@ -312,8 +305,8 @@ fun WorkoutFilterBottomSheet(
                 startLocationLat = localStartLocationLat,
                 startLocationLng = localStartLocationLng,
                 startLocationRadiusM = localStartLocationRadiusM,
-                clusterId = localClusterId,
-                clusterName = localClusterName
+                clusterId = criteria.clusterId,
+                clusterName = criteria.clusterName
             )
             onApplyCriteria(updated)
             onDismissRequest()
@@ -692,39 +685,6 @@ fun WorkoutFilterBottomSheet(
                                 }
                             },
                             label = { Text(loc.name) }
-                        )
-                    }
-                }
-            }
-        }
-
-        // 9. Favorite Tracks / Route Clusters (Lieblingsstrecken, REQ-UI-187, REQ-UI-194)
-        if (availableClusters.isNotEmpty()) {
-            Column {
-                Text(
-                    text = stringResource(R.string.my_locations),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    availableClusters.forEach { cluster ->
-                        val isSelected = localClusterId == cluster.id
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = {
-                                if (isSelected) {
-                                    localClusterId = null
-                                    localClusterName = null
-                                } else {
-                                    localClusterId = cluster.id
-                                    localClusterName = cluster.name
-                                }
-                            },
-                            label = { Text(cluster.name) }
                         )
                     }
                 }
