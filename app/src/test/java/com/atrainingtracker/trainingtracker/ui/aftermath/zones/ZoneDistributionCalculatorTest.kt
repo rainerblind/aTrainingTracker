@@ -122,4 +122,24 @@ class ZoneDistributionCalculatorTest {
         assertEquals(100.0, totalPercentage, 0.5)
         assertEquals(result.totalActiveTimeSec, result.entries.sumOf { it.durationSec })
     }
+
+    @Test
+    fun testCalculateHeartRateDistribution_degenerateIdenticalTimestamps_fallsBackToUnitDuration() {
+        // 100 samples all having timeActiveSec = 0L (e.g. historical workout missing TIME_ACTIVE)
+        // 50 samples in Z2 (140 bpm), 50 samples in Z3 (160 bpm)
+        val samples = (1..50).map { ZoneSample(timeActiveSec = 0L, value = 140) } +
+                (1..50).map { ZoneSample(timeActiveSec = 0L, value = 160) }
+
+        val result = ZoneDistributionCalculator.calculateHeartRateDistribution(samples, thresholds)
+        assertNotNull(result)
+        assertEquals(100L, result!!.totalActiveTimeSec)
+        assertEquals(50L, result.entries[1].durationSec) // Z2
+        assertEquals(50.0f, result.entries[1].percentage, 0.01f)
+        assertEquals(50L, result.entries[2].durationSec) // Z3
+        assertEquals(50.0f, result.entries[2].percentage, 0.01f)
+        assertEquals(0L, result.entries[0].durationSec)  // Z1
+        assertEquals(0L, result.entries[3].durationSec)  // Z4
+        assertEquals(0L, result.entries[4].durationSec)  // Z5
+    }
 }
+

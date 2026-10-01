@@ -130,6 +130,30 @@ class WorkoutRepository private constructor(private val application: Application
         fun resetForTesting(newInstance: WorkoutRepository? = null) {
             INSTANCE = newInstance
         }
+
+        /**
+         * Resolves the elapsed seconds offset of an ISO datetime timestamp relative to [initialEpochSec].
+         *
+         * @param timeStr Timestamp string in "yyyy-MM-dd HH:mm:ss" format.
+         * @param initialEpochSec The anchor timestamp in epoch seconds, or null if this is the first sample.
+         * @return A pair of (relativeElapsedSec, resolvedAnchorEpochSec). If parsing fails, returns (null, initialEpochSec).
+         */
+        @JvmStatic
+        internal fun parseTimestampOffset(timeStr: String?, initialEpochSec: Long?): Pair<Long?, Long?> {
+            if (timeStr.isNullOrBlank()) return Pair(null, initialEpochSec)
+            return try {
+                val formatted = if (timeStr.length == 19 && timeStr[10] == ' ') {
+                    timeStr.replace(' ', 'T')
+                } else {
+                    timeStr
+                }
+                val epoch = java.time.LocalDateTime.parse(formatted).toEpochSecond(java.time.ZoneOffset.UTC)
+                val anchor = initialEpochSec ?: epoch
+                Pair((epoch - anchor).coerceAtLeast(0L), anchor)
+            } catch (e: Exception) {
+                Pair(null, initialEpochSec)
+            }
+        }
     }
 
     private val job = SupervisorJob()
@@ -314,22 +338,31 @@ class WorkoutRepository private constructor(private val application: Application
             val distIdx = cursor.getColumnIndex(SensorType.DISTANCE_m.name)
             val timeActiveIdx = cursor.getColumnIndex(SensorType.TIME_ACTIVE.name)
             val timeTotalIdx = cursor.getColumnIndex(SensorType.TIME_TOTAL.name)
+            val timeIdx = cursor.getColumnIndex(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME)
             val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
             val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
             val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
             val slopeIdx = cursor.getColumnIndex(SensorType.SLOPE.name)
 
+            var initialEpochSec: Long? = null
+            var sampleIndex = 0L
+
             // 3. Replicate the Roughness stepSize logic and extract full-fidelity telemetry
             while (cursor.moveToNext()) {
+                val timeSec = when {
+                    timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx) -> cursor.getLong(timeActiveIdx)
+                    timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx) -> cursor.getLong(timeTotalIdx)
+                    timeIdx != -1 && !cursor.isNull(timeIdx) -> {
+                        val (offset, anchor) = parseTimestampOffset(cursor.getString(timeIdx), initialEpochSec)
+                        initialEpochSec = anchor
+                        offset ?: sampleIndex
+                    }
+                    else -> sampleIndex
+                }
 
                 if (latIdx != -1 && lonIdx != -1 && !cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
                     val dist = if (distIdx != -1 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx) else 0.0
                     val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else 0.0
-                    val timeSec = when {
-                        timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx) -> cursor.getLong(timeActiveIdx)
-                        timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx) -> cursor.getLong(timeTotalIdx)
-                        else -> 0L
-                    }
                     val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getInt(hrIdx) else null
                     val power = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getInt(powerIdx) else null
                     val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
@@ -348,6 +381,7 @@ class WorkoutRepository private constructor(private val application: Application
                         )
                     )
                 }
+                sampleIndex++
             }
         }
         points
@@ -385,19 +419,30 @@ class WorkoutRepository private constructor(private val application: Application
 
             val timeActiveIdx = cursor.getColumnIndex(SensorType.TIME_ACTIVE.name)
             val timeTotalIdx = cursor.getColumnIndex(SensorType.TIME_TOTAL.name)
+            val timeIdx = cursor.getColumnIndex(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME)
+
+            var initialEpochSec: Long? = null
+            var sampleIndex = 0L
 
             while (cursor.moveToNext()) {
+                val timeSec = when {
+                    timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx) -> cursor.getLong(timeActiveIdx)
+                    timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx) -> cursor.getLong(timeTotalIdx)
+                    timeIdx != -1 && !cursor.isNull(timeIdx) -> {
+                        val (offset, anchor) = parseTimestampOffset(cursor.getString(timeIdx), initialEpochSec)
+                        initialEpochSec = anchor
+                        offset ?: sampleIndex
+                    }
+                    else -> sampleIndex
+                }
+
                 if (!cursor.isNull(hrIdx)) {
                     val hr = cursor.getInt(hrIdx)
                     if (hr > 0) {
-                        val timeSec = when {
-                            timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx) -> cursor.getLong(timeActiveIdx)
-                            timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx) -> cursor.getLong(timeTotalIdx)
-                            else -> 0L
-                        }
                         samples.add(ZoneSample(timeActiveSec = timeSec, value = hr))
                     }
                 }
+                sampleIndex++
             }
         }
 
@@ -435,19 +480,30 @@ class WorkoutRepository private constructor(private val application: Application
 
             val timeActiveIdx = cursor.getColumnIndex(SensorType.TIME_ACTIVE.name)
             val timeTotalIdx = cursor.getColumnIndex(SensorType.TIME_TOTAL.name)
+            val timeIdx = cursor.getColumnIndex(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME)
+
+            var initialEpochSec: Long? = null
+            var sampleIndex = 0L
 
             while (cursor.moveToNext()) {
+                val timeSec = when {
+                    timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx) -> cursor.getLong(timeActiveIdx)
+                    timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx) -> cursor.getLong(timeTotalIdx)
+                    timeIdx != -1 && !cursor.isNull(timeIdx) -> {
+                        val (offset, anchor) = parseTimestampOffset(cursor.getString(timeIdx), initialEpochSec)
+                        initialEpochSec = anchor
+                        offset ?: sampleIndex
+                    }
+                    else -> sampleIndex
+                }
+
                 if (!cursor.isNull(pwrIdx)) {
                     val pwr = cursor.getInt(pwrIdx)
                     if (pwr > 0) {
-                        val timeSec = when {
-                            timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx) -> cursor.getLong(timeActiveIdx)
-                            timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx) -> cursor.getLong(timeTotalIdx)
-                            else -> 0L
-                        }
                         samples.add(ZoneSample(timeActiveSec = timeSec, value = pwr))
                     }
                 }
+                sampleIndex++
             }
         }
 
