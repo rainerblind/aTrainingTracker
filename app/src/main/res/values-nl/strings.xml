@@ -1129,6 +1129,15 @@
     <string name="filter_section_attributes">Kenmerken</string>
     <string name="filter_section_thresholds">Afstand &amp; tijdsduur</string>
     <string name="filter_section_start_at">Start bij</string>
+    <string name="settings_workout_card_title">Trainingslijst (gedetailleerde kaarten)</string>
+    <string name="settings_workout_card_map">Kaartvoorbeeld</string>
+    <string name="settings_workout_card_elevation">Hoogteprofiel</string>
+    <string name="settings_workout_card_extrema">Extreemwaarden</string>
+    <string name="settings_workout_card_laps">Rondenoverzicht</string>
+    <string name="settings_workout_card_strava">Strava-activiteit</string>
+    <string name="settings_workout_card_description">Beschrijving en notities</string>
+    <string name="settings_workout_card_charts">Telemetriegrafieken</string>
+    <string name="settings_workout_card_zones">Zone-analyse (HF &amp; vermogen)</string>
     <string name="filter_commute">Woon-werkverkeer</string>
     <string name="filter_trainer">Binnen / Fietstrainer</string>
     <string name="filter_has_gps">Met GPS-route</string>

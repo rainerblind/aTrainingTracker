@@ -136,6 +136,7 @@ fun WorkoutSummariesTabbedScreen(
 
     val sortOrder by viewModel.sortOrder.collectAsState()
     val isCompactView by viewModel.isCompactView.collectAsState()
+    val workoutCardPreferences by viewModel.workoutCardPreferences.collectAsStateWithLifecycle()
     val filterCriteria by viewModel.filterCriteria.collectAsStateWithLifecycle()
     val allWorkouts by viewModel.allWorkouts.collectAsStateWithLifecycle()
     val knownLocations by viewModel.knownLocations.collectAsStateWithLifecycle()
@@ -254,7 +255,8 @@ fun WorkoutSummariesTabbedScreen(
                     onClusterClick = { clusterId -> WorkoutNavigationEvents.triggerCluster(clusterId) },
                     onMarkFinished = { workoutId -> viewModel.markWorkoutFinished(workoutId) },
                     knownLocations = knownLocations,
-                    availableClusters = availableClusters
+                    availableClusters = availableClusters,
+                    workoutCardPreferences = workoutCardPreferences
                 )
             }
 

@@ -1130,6 +1130,15 @@
     <string name="filter_section_attributes">Attributs</string>
     <string name="filter_section_thresholds">Distance et durée</string>
     <string name="filter_section_start_at">Départ à</string>
+    <string name="settings_workout_card_title">Liste d\'entraînements (cartes détaillées)</string>
+    <string name="settings_workout_card_map">Aperçu de la carte</string>
+    <string name="settings_workout_card_elevation">Profil d\'altitude</string>
+    <string name="settings_workout_card_extrema">Valeurs extrêmes</string>
+    <string name="settings_workout_card_laps">Aperçu des tours</string>
+    <string name="settings_workout_card_strava">Activité Strava</string>
+    <string name="settings_workout_card_description">Description et remarques</string>
+    <string name="settings_workout_card_charts">Graphiques de télémétrie</string>
+    <string name="settings_workout_card_zones">Analyse des zones (FC et puissance)</string>
     <string name="filter_commute">Trajet travail</string>
     <string name="filter_trainer">Intérieur / Home-trainer</string>
     <string name="filter_has_gps">Avec trace GPS</string>

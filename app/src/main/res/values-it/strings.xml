@@ -1129,6 +1129,15 @@
     <string name="filter_section_attributes">Attributi</string>
     <string name="filter_section_thresholds">Distanza e durata</string>
     <string name="filter_section_start_at">Partenza da</string>
+    <string name="settings_workout_card_title">Elenco allenamenti (schede dettagliate)</string>
+    <string name="settings_workout_card_map">Anteprima mappa</string>
+    <string name="settings_workout_card_elevation">Profilo altimetrico</string>
+    <string name="settings_workout_card_extrema">Valori estremi</string>
+    <string name="settings_workout_card_laps">Panoramica giri</string>
+    <string name="settings_workout_card_strava">Attività Strava</string>
+    <string name="settings_workout_card_description">Descrizione e note</string>
+    <string name="settings_workout_card_charts">Grafici di telemetria</string>
+    <string name="settings_workout_card_zones">Analisi zone (FC e potenza)</string>
     <string name="filter_commute">Spostamento</string>
     <string name="filter_trainer">Indoor / Rulli</string>
     <string name="filter_has_gps">Con traccia GPS</string>

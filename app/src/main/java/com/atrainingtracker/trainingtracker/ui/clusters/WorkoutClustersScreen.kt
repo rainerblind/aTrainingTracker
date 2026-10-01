@@ -196,6 +196,7 @@ fun WorkoutClustersScreen(
         viewingWorkoutsForCluster != null -> {
             val cluster = viewingWorkoutsForCluster!!
             val isCompactView by summariesViewModel.isCompactView.collectAsStateWithLifecycle()
+            val workoutCardPreferences by summariesViewModel.workoutCardPreferences.collectAsStateWithLifecycle()
             val sortOrder by summariesViewModel.sortOrder.collectAsStateWithLifecycle()
 
             BackHandler { viewingWorkoutsForCluster = null }
@@ -246,7 +247,8 @@ fun WorkoutClustersScreen(
                         appBarOffsetPx = 0,
                         headerHeightPx = 0f,
                         onClusterClick = { viewingWorkoutsForCluster = null },
-                        onMarkFinished = { workoutId -> summariesViewModel.markWorkoutFinished(workoutId) }
+                        onMarkFinished = { workoutId -> summariesViewModel.markWorkoutFinished(workoutId) },
+                        workoutCardPreferences = workoutCardPreferences
                     )
                 }
             }
