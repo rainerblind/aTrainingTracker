@@ -1139,6 +1139,13 @@
     <string name="settings_workout_card_description">Description et remarques</string>
     <string name="settings_workout_card_charts">Graphiques de télémétrie</string>
     <string name="settings_workout_card_zones">Analyse des zones (FC et puissance)</string>
+    <string name="settings_edit_workout_title">Modifier l\'entraînement</string>
+    <string name="settings_edit_workout_cluster">Itinéraire / Parcours</string>
+    <string name="settings_edit_workout_commute_trainer">Trajet quotidien et home-trainer</string>
+    <string name="settings_edit_workout_strava">Téléversement Strava</string>
+    <string name="settings_edit_workout_description">Description et notes</string>
+    <string name="settings_edit_workout_goal">Objectif</string>
+    <string name="settings_edit_workout_method">Méthode</string>
     <string name="filter_commute">Trajet travail</string>
     <string name="filter_trainer">Intérieur / Home-trainer</string>
     <string name="filter_has_gps">Avec trace GPS</string>

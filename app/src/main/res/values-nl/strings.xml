@@ -1138,6 +1138,13 @@
     <string name="settings_workout_card_description">Beschrijving en notities</string>
     <string name="settings_workout_card_charts">Telemetriegrafieken</string>
     <string name="settings_workout_card_zones">Zone-analyse (HF &amp; vermogen)</string>
+    <string name="settings_edit_workout_title">Training bewerken</string>
+    <string name="settings_edit_workout_cluster">Route / Cluster</string>
+    <string name="settings_edit_workout_commute_trainer">Woon-werk &amp; fietstrainer</string>
+    <string name="settings_edit_workout_strava">Strava-upload</string>
+    <string name="settings_edit_workout_description">Beschrijving &amp; notities</string>
+    <string name="settings_edit_workout_goal">Doel</string>
+    <string name="settings_edit_workout_method">Methode</string>
     <string name="filter_commute">Woon-werkverkeer</string>
     <string name="filter_trainer">Binnen / Fietstrainer</string>
     <string name="filter_has_gps">Met GPS-route</string>

@@ -1138,6 +1138,13 @@
     <string name="settings_workout_card_description">Descrição e notas</string>
     <string name="settings_workout_card_charts">Gráficos de telemetria</string>
     <string name="settings_workout_card_zones">Análise de zonas (FC e potência)</string>
+    <string name="settings_edit_workout_title">Editar treino</string>
+    <string name="settings_edit_workout_cluster">Rota / Percurso</string>
+    <string name="settings_edit_workout_commute_trainer">Deslocamento e rolo de treino</string>
+    <string name="settings_edit_workout_strava">Carregamento para o Strava</string>
+    <string name="settings_edit_workout_description">Descrição e notas</string>
+    <string name="settings_edit_workout_goal">Objetivo</string>
+    <string name="settings_edit_workout_method">Método</string>
     <string name="filter_commute">Deslocamento</string>
     <string name="filter_trainer">Interior / Rolo</string>
     <string name="filter_has_gps">Com rota GPS</string>
