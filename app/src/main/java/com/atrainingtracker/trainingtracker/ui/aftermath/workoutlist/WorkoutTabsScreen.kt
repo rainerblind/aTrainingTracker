@@ -137,8 +137,7 @@ fun WorkoutTabsScreen(
             onClearAll = onClearAllFilters,
             onDismissRequest = { showFilterBottomSheet = false },
             activeBSportType = activeBSportType,
-            knownLocations = knownLocations,
-            availableClusters = availableClusters
+            knownLocations = knownLocations
         )
     }
 
