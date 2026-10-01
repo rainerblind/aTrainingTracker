@@ -1425,6 +1425,20 @@
     <string name="tuning_profile_x_axis_desc">Horizontale Achsenmetrik für Höhenprofildiagramme auswählen.</string>
     <string name="tuning_profile_x_axis_distance">Distanz</string>
     <string name="tuning_profile_x_axis_time">Zeit</string>
+
+    <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
+    <string name="tuning_cat_cockpit_typography">Cockpit-Typografie</string>
+    <string name="tuning_cockpit_font_family_title">Schriftart</string>
+    <string name="tuning_font_system_default">Systemstandard</string>
+    <string name="tuning_font_seven_segment">7-Segment-Digital</string>
+    <string name="tuning_font_modern_athletic">Modern Sportlich</string>
+    <string name="tuning_font_monospace">Nichtproportional (Monospace)</string>
+    <string name="tuning_font_playful">Verspielt</string>
+    <string name="tuning_cockpit_font_weight_title">Schriftstärke</string>
+    <string name="tuning_weight_normal">Normal</string>
+    <string name="tuning_weight_semi_bold">Halbfett</string>
+    <string name="tuning_weight_bold">Fett</string>
+    <string name="tuning_cockpit_preview_title">Live-Vorschau</string>
     <string name="tuning_default_format">Standard: %1$s</string>
     <string name="reset_to_defaults">Auf Werkseinstellungen zurücksetzen</string>
     <string name="reset_to_defaults_success">Abstimmungseinstellungen auf Werkseinstellungen zurückgesetzt.</string>

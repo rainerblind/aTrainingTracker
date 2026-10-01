@@ -1322,6 +1322,20 @@
     <string name="tuning_profile_x_axis_desc">高度プロファイルグラフの横軸メトリクスを選択します。</string>
     <string name="tuning_profile_x_axis_distance">距離</string>
     <string name="tuning_profile_x_axis_time">時間</string>
+
+    <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
+    <string name="tuning_cat_cockpit_typography">コックピットのフォント</string>
+    <string name="tuning_cockpit_font_family_title">フォントファミリー</string>
+    <string name="tuning_font_system_default">システムデフォルト</string>
+    <string name="tuning_font_seven_segment">7セグメントデジタル</string>
+    <string name="tuning_font_modern_athletic">モダンアスレチック</string>
+    <string name="tuning_font_monospace">等幅フォント (Monospace)</string>
+    <string name="tuning_font_playful">カジュアル (Playful)</string>
+    <string name="tuning_cockpit_font_weight_title">太さ</string>
+    <string name="tuning_weight_normal">標準</string>
+    <string name="tuning_weight_semi_bold">中太</string>
+    <string name="tuning_weight_bold">太字</string>
+    <string name="tuning_cockpit_preview_title">ライブプレビュー</string>
     <string name="tuning_default_format">デフォルト: %1$s</string>
     <string name="reset_to_defaults">デフォルトに戻す</string>
     <string name="reset_to_defaults_success">チューニング設定が工場出荷時のデフォルトに戻りました。</string>

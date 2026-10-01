@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -62,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import com.atrainingtracker.trainingtracker.ui.tracking.typography.LocalCockpitTypography
 
 
 enum class ViewSize {
@@ -87,9 +89,14 @@ fun ViewSize.getDisplayName(context: Context): String {
 }
 
 /**
- * Resolves the typography style for the primary sensor metric value, enforcing semibold font weight (ATT-1264 / REQ-UI-171).
+ * Resolves the typography style for the primary sensor metric value, enforcing configured or default font family and weight (ATT-1264, ATT-1751 / REQ-UI-212).
  */
-fun getSensorValueTextStyle(viewSize: ViewSize, typography: Typography): TextStyle {
+fun getSensorValueTextStyle(
+    viewSize: ViewSize,
+    typography: Typography,
+    fontFamily: FontFamily? = null,
+    fontWeight: FontWeight = FontWeight.SemiBold
+): TextStyle {
     val baseStyle = when (viewSize) {
         ViewSize.XSMALL -> typography.headlineSmall.copy(fontSize = 20.sp)
         ViewSize.SMALL -> typography.headlineMedium
@@ -101,14 +108,22 @@ fun getSensorValueTextStyle(viewSize: ViewSize, typography: Typography): TextSty
         ViewSize.XXHUGE -> typography.displayLarge.copy(fontSize = 140.sp)
         ViewSize.XXXHUGE -> typography.displayLarge.copy(fontSize = 180.sp)
     }
-    return baseStyle.copy(fontWeight = FontWeight.SemiBold)
+    return if (fontFamily != null) {
+        baseStyle.copy(fontWeight = fontWeight, fontFamily = fontFamily)
+    } else {
+        baseStyle.copy(fontWeight = fontWeight)
+    }
 }
 
 /**
- * Resolves the typography style for the sensor metric unit annotation (ATT-1264 / REQ-UI-171).
+ * Resolves the typography style for the sensor metric unit annotation (ATT-1264, ATT-1751 / REQ-UI-212).
  */
-fun getSensorUnitTextStyle(viewSize: ViewSize, typography: Typography): TextStyle {
-    return when (viewSize) {
+fun getSensorUnitTextStyle(
+    viewSize: ViewSize,
+    typography: Typography,
+    fontFamily: FontFamily? = null
+): TextStyle {
+    val baseStyle = when (viewSize) {
         ViewSize.XSMALL -> typography.bodySmall.copy(fontSize = 10.sp)
         ViewSize.SMALL -> typography.bodySmall
         ViewSize.NORMAL -> typography.bodyLarge
@@ -119,6 +134,7 @@ fun getSensorUnitTextStyle(viewSize: ViewSize, typography: Typography): TextStyl
         ViewSize.XXHUGE -> typography.headlineLarge.copy(fontSize = 56.sp)
         ViewSize.XXXHUGE -> typography.headlineLarge.copy(fontSize = 64.sp)
     }
+    return if (fontFamily != null) baseStyle.copy(fontFamily = fontFamily) else baseStyle
 }
 
 /**
@@ -136,9 +152,19 @@ fun SensorFieldView(
     onEdit: () -> Unit = {},
     onDelete: () -> Unit = {}
 ) {
-    // Determine text styles based on the size parameter.
-    val valueStyle = getSensorValueTextStyle(fieldState.viewSize, MaterialTheme.typography)
-    val unitStyle = getSensorUnitTextStyle(fieldState.viewSize, MaterialTheme.typography)
+    val cockpitTypography = LocalCockpitTypography.current
+    // Determine text styles based on the size parameter and configured cockpit typography.
+    val valueStyle = getSensorValueTextStyle(
+        viewSize = fieldState.viewSize,
+        typography = MaterialTheme.typography,
+        fontFamily = cockpitTypography.resolvedFontFamily,
+        fontWeight = cockpitTypography.weight.asFontWeight()
+    )
+    val unitStyle = getSensorUnitTextStyle(
+        viewSize = fieldState.viewSize,
+        typography = MaterialTheme.typography,
+        fontFamily = cockpitTypography.resolvedFontFamily
+    )
     val labelStyle = when (fieldState.viewSize) {
         ViewSize.XSMALL -> MaterialTheme.typography.bodySmall
         ViewSize.SMALL -> MaterialTheme.typography.bodyMedium
