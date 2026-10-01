@@ -106,6 +106,7 @@ class TrackingTabsViewModel(
     val screenMode: StateFlow<ScreenMode> = _screenMode.asStateFlow()
 
     private val knownLocationsRepo: com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository? = knownLocationsRepository
+    private var lastCalibratedLocationId: Long? = null
 
     val locationCalibrationStatus: StateFlow<LocationCalibrationStatus?> = if (knownLocationsRepo == null) {
         MutableStateFlow(null)
@@ -116,6 +117,7 @@ class TrackingTabsViewModel(
             banalServiceRepository.isAltimeterCalibrated
         ) { location, knownLocations, isCalibrated ->
             if (location == null) {
+                lastCalibratedLocationId = null
                 null
             } else {
                 var closestItem: com.atrainingtracker.trainingtracker.repositories.KnownLocationItem? = null
@@ -133,17 +135,23 @@ class TrackingTabsViewModel(
                         closestItem = item
                     }
                 }
-                closestItem?.let {
-                    // Trigger altimeter calibration with reference altitude (REQ-UI-199)
-                    banalServiceRepository.calibrateAltimeter(it.altitude)
+                if (closestItem != null) {
+                    // Trigger altimeter calibration with reference altitude on geofence transition or when uncalibrated (REQ-UI-199, REQ-CON-017)
+                    if (closestItem.id != lastCalibratedLocationId || !isCalibrated) {
+                        banalServiceRepository.calibrateAltimeter(closestItem.altitude)
+                        lastCalibratedLocationId = closestItem.id
+                    }
 
                     LocationCalibrationStatus(
-                        locationId = it.id,
-                        locationName = it.name,
-                        referenceAltitude = it.altitude,
+                        locationId = closestItem.id,
+                        locationName = closestItem.name,
+                        referenceAltitude = closestItem.altitude,
                         isCalibrated = isCalibrated,
-                        source = it.source
+                        source = closestItem.source
                     )
+                } else {
+                    lastCalibratedLocationId = null
+                    null
                 }
             }
         }.stateIn(

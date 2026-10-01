@@ -64,6 +64,12 @@ public class LiveWorkoutSession {
     }
 
     public int addSample(SensorType type, double value, LatLng position) {
+        if (type == SensorType.ALTITUDE) {
+            // REQ-CON-017: Suppress non-physical altitude readings from running extrema
+            if (value < -500.0 || value > 9000.0) {
+                return 0;
+            }
+        }
 
         if (position != null) {
             if (startLatLng == null) startLatLng = position;
@@ -103,8 +109,21 @@ public class LiveWorkoutSession {
                 lastLngE5 = Math.round(latLng.longitude * 1e5);
             }
             if (altitude != null) {
-                sampledAltitudes.add(altitude);
-                long currentAltE2 = Math.round(altitude * 100);
+                // REQ-CON-017: Enforce physical sanity bounds (-500m to 9000m) and climb rate limits (30 m/s)
+                double sanitizedAlt = altitude;
+                if (sanitizedAlt < -500.0 || sanitizedAlt > 9000.0) {
+                    if (!sampledAltitudes.isEmpty()) {
+                        sanitizedAlt = sampledAltitudes.get(sampledAltitudes.size() - 1);
+                    }
+                } else if (!sampledAltitudes.isEmpty()) {
+                    double prev = sampledAltitudes.get(sampledAltitudes.size() - 1);
+                    double maxStepDelta = 30.0 * WorkoutSummaries.ENCODING_STEP_SIZE;
+                    if (Math.abs(sanitizedAlt - prev) > maxStepDelta) {
+                        sanitizedAlt = prev + Math.signum(sanitizedAlt - prev) * maxStepDelta;
+                    }
+                }
+                sampledAltitudes.add(sanitizedAlt);
+                long currentAltE2 = Math.round(sanitizedAlt * 100);
                 StringBuilder sb = new StringBuilder();
                 NumericalEncodingUtils.INSTANCE.encodeSingle(currentAltE2 - lastAltE2, sb);
                 increment.altitudeIncrement = sb.toString();
@@ -158,6 +177,11 @@ public class LiveWorkoutSession {
      * This is used when a barometric altitude correction is triggered mid-workout.
      */
     public void applyAltitudeCorrection(double offset) {
+        // REQ-CON-017: Reject runaway retroactive shifts exceeding 500m
+        if (Math.abs(offset) > 500.0) {
+            return;
+        }
+
         // 1. Shift RunningStats
         RunningStats altStats = sensorStats.get(SensorType.ALTITUDE);
         if (altStats != null) {

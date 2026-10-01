@@ -204,45 +204,69 @@ public class AltitudeFromPressureDevice extends MyDevice
 
 
     /**
-     * set the field mAltitudeCorrection
+     * Set the barometric altitude correction offset (REQ-CON-017).
+     * Calculates new correction strictly relative to raw barometric pressure (mLastRawAltitude),
+     * updates the sensor reading to correctAltitude, and broadcasts the incremental deltaOffset
+     * to ongoing sessions if and only if |deltaOffset| >= 0.1m.
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     void setAltitudeCorrection(double correctAltitude) {
-        if (DEBUG) Log.d(TAG, "setAltitudeCorrection");
+        if (DEBUG) Log.d(TAG, "setAltitudeCorrection: target=" + correctAltitude + ", raw=" + mLastRawAltitude + ", currentCorr=" + mAltitudeCorrection);
 
-        double currentAltitude;
-        if (mAltitudeSensor != null && mAltitudeSensor.getValue() != null) {
-            currentAltitude = mAltitudeSensor.getValue().doubleValue();
-        } else if (!Double.isNaN(mLastRawAltitude)) {
-            currentAltitude = mLastRawAltitude;
-        } else {
-            Log.w(TAG, "Cannot set altitude correction: neither current sensor value nor last raw altitude is available.");
+        if (Double.isNaN(mLastRawAltitude)) {
+            Log.w(TAG, "Cannot set altitude correction: last raw altitude is NaN, caching pending target.");
+            mPendingReferenceAltitude = correctAltitude;
             return;
         }
 
-        mAltitudeCorrection = correctAltitude - currentAltitude;
+        // 1. Calculate new absolute correction strictly relative to raw barometric pressure
+        double newCorrection = correctAltitude - mLastRawAltitude;
+
+        // 2. Calculate delta shift to broadcast to ongoing session
+        double deltaOffset = newCorrection - mAltitudeCorrection;
+
+        // 3. Commit absolute correction state
+        mAltitudeCorrection = newCorrection;
         mIsCalibrated = true;
 
-        if (mAltitudeCorrection != 0.0) {
-            // 	also send broadcast to inform the others (like a tracker) of this change such that they can update all previous samples accordingly!
+        // 4. Update published sensor reading
+        if (mAltitudeSensor != null) {
+            mAltitudeSensor.newValue(mLastRawAltitude + mAltitudeCorrection);
+        }
+
+        // 5. Broadcast delta shift only if significant (>= 0.1m)
+        if (Math.abs(deltaOffset) >= 0.1) {
             Intent intent = new Intent(ALTITUDE_CORRECTION_INTENT)
                     .setPackage(mContext.getPackageName())
-                    .putExtra(ALTITUDE_CORRECTION_VALUE, mAltitudeCorrection);
+                    .putExtra(ALTITUDE_CORRECTION_VALUE, deltaOffset);
             mContext.sendBroadcast(intent);
         }
     }
 
     /**
-     * Calibrate the barometric altimeter to a ground-truth reference elevation (REQ-UI-199).
+     * Calibrate the barometric altimeter to a ground-truth reference elevation (REQ-UI-199, REQ-CON-017).
      * If the raw barometric pressure reading is ready, computes the correction offset immediately,
      * updates the sensor value, sets the calibrated state, and broadcasts ALTITUDE_CORRECTION_INTENT.
+     * If the sensor is already calibrated within 0.5m of referenceAltitude, returns true immediately (idempotent).
      * If the sensor is still in warmup (mLastRawAltitude is NaN), stores the target elevation as pending
      * and automatically applies it upon receiving the first pressure event.
      *
      * @param referenceAltitude Target ground-truth elevation in meters.
-     * @return true if calibration was applied immediately, false if queued for sensor warmup.
+     * @return true if calibration was applied immediately or already valid, false if queued for sensor warmup.
      */
     public synchronized boolean calibrate(double referenceAltitude) {
+        if (Double.isNaN(referenceAltitude) || referenceAltitude <= -500.0 || referenceAltitude >= 9000.0) {
+            return false;
+        }
+
+        if (isCalibrated() && !Double.isNaN(mLastRawAltitude)) {
+            double currentAltitude = mLastRawAltitude + mAltitudeCorrection;
+            if (Math.abs(currentAltitude - referenceAltitude) < 0.5) {
+                if (DEBUG) Log.d(TAG, "calibrate: already calibrated to " + currentAltitude + " m (target: " + referenceAltitude + " m), skipping redundant work.");
+                return true;
+            }
+        }
+
         if (!Double.isNaN(mLastRawAltitude)) {
             setAltitudeCorrection(referenceAltitude);
             mPressureSensorInitialized = true;
