@@ -1358,6 +1358,7 @@
     <string name="tuning_cat_sensors_gps">Sensoren, gps en filtering</string>
     <string name="tuning_cat_workout_masks_cards">Workout-kaarten en invoervelden</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 kaarten, %2$d/6 velden</string>
+    <string name="map_splitter_content_description">Verdeellijn voor kaart en telemetrie. Sleep verticaal om het formaat te wijzigen, dubbeltik om te herstellen.</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
     <string name="move_tile_banner_instruction">Tegel geselecteerd: Tik op een andere tegel om te ruilen of op \'+\' om te verplaatsen.</string>

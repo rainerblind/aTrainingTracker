@@ -76,10 +76,10 @@ class MapDetailLayoutTest {
         assertTrue("MapDetailLayout.kt must exist", mapDetailLayoutFile.exists())
         val content = mapDetailLayoutFile.readText()
 
-        // 1. Minimum height on Map Box when scrollable content is present
+        // 1. Minimum height on Map Box when scrollable content is present (REQ-UI-213 evolved by REQ-UI-223)
         assertTrue(
-            "MapDetailLayout must apply heightIn(min = 240.dp) to Map Box to prevent 0dp collapse (REQ-UI-213)",
-            content.contains(".heightIn(min = 240.dp)")
+            "MapDetailLayout must apply heightIn(min = SplitPaneMath.MIN_MAP_HEIGHT) to Map Box to prevent 0dp collapse (REQ-UI-213, REQ-UI-223)",
+            content.contains(".heightIn(min = SplitPaneMath.MIN_MAP_HEIGHT)")
         )
 
         // 2. Vertical scroll on lower charts and analytics container
@@ -89,9 +89,9 @@ class MapDetailLayoutTest {
         )
 
         assertTrue(
-            "MapDetailLayout lower container must use flexible weight (1.2f) when scrollable",
+            "MapDetailLayout lower container must use dynamic weight (1f - splitFraction) when scrollable (REQ-UI-223)",
             content.contains("if (showMap && hasScrollableContent)") &&
-                    content.contains(".weight(1.2f)")
+                    content.contains(".weight(1f - splitFraction)")
         )
     }
 
@@ -102,8 +102,7 @@ class MapDetailLayoutTest {
 
         assertTrue(
             "MapDetailLayout must retain wrapContentHeight on lower container when hasScrollableContent is false",
-            content.contains("Modifier\n                .fillMaxWidth()\n                .wrapContentHeight()") ||
-                    content.contains(".fillMaxWidth().wrapContentHeight()")
+            Regex("""Modifier\s*\.fillMaxWidth\(\)\s*\.wrapContentHeight\(\)""").containsMatchIn(content)
         )
     }
 

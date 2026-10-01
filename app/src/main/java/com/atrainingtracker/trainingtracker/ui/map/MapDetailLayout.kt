@@ -46,6 +46,10 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import com.atrainingtracker.trainingtracker.ui.components.core.MinimumDragHandle
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalDensity
+import com.atrainingtracker.trainingtracker.ui.components.core.SplitPaneDivider
+import com.atrainingtracker.trainingtracker.ui.components.core.SplitPaneMath
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import kotlinx.coroutines.Dispatchers
@@ -56,7 +60,7 @@ import kotlinx.coroutines.withContext
 /**
  * A unified layout for screen-level map details (Aftermath, Routes, Segments).
  * It manages the standard layout (Header + Map + Profile), shared interaction state,
- * and the snapshot generation logic.
+ * dynamic draggable viewport resizing (REQ-UI-223 / ATT-1890), and snapshot generation logic.
  */
 @Composable
 fun MapDetailLayout(
@@ -93,6 +97,7 @@ fun MapDetailLayout(
     var selectedDistance by remember { mutableStateOf<Double?>(null) }
     var profileZoomScale by remember(activeScrubPath) { mutableFloatStateOf(1.0f) }
     var profileStartDist by remember(activeScrubPath) { mutableDoubleStateOf(0.0) }
+    var splitFraction by rememberSaveable { mutableFloatStateOf(SplitPaneMath.DEFAULT_SPLIT_FRACTION) }
     val noLocation = remember { MutableStateFlow<LatLng?>(null) }
 
     val hasTelemetryGraphs = showZoomControls && activeScrubPath != null && (
@@ -102,138 +107,85 @@ fun MapDetailLayout(
     )
     val hasScrollableContent = analyticsContent != null || hasTelemetryGraphs
 
-    Column(
-        modifier = modifier
-            .then(
-                if (showMap) Modifier.fillMaxSize() else Modifier.wrapContentHeight()
-            )
-            .then(
-                if (!useStatusBarsPadding) Modifier.background(MaterialTheme.colorScheme.surface) else Modifier
-            )
-    ) {
-        // DRAG HANDLE (For sheets - REQ-UI-148, REQ-UI-189, REQ-UI-196, ATT-1644)
-        if (!useStatusBarsPadding) {
-            MinimumDragHandle()
-        }
+    val mapBox: @Composable (Modifier) -> Unit = { boxModifier ->
+        Box(modifier = boxModifier) {
+            ATrainingTrackerMap(
+                zoomFocus = zoomFocus,
+                initialBounds = initialBounds,
+                bSportType = bSportType,
+                currentLocationFlow = noLocation,
+                selectedDistance = selectedDistance,
+                activeScrubPath = activeScrubPath,
+                modifier = Modifier.fillMaxSize(),
+                shouldTakeSnapshot = isSharing,
+                onMapClick = onMapClick,
+                onSnapshotReady = { mapBitmap ->
+                    scope.launch {
+                        val hBmp = if (headerLayer.size.width > 0 && headerLayer.size.height > 0) {
+                            withContext(Dispatchers.Default) {
+                                headerLayer.toImageBitmap().asAndroidBitmap()
+                            }
+                        } else null
 
-        // 1. HEADER (Slotted)
-        Surface(
-            color = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            shape = if (useStatusBarsPadding) RectangleShape else BottomSheetDesign.SheetShape,
-            modifier = if (useStatusBarsPadding) Modifier.statusBarsPadding() else Modifier
-        ) {
-            Box(modifier = Modifier.drawWithContent {
-                headerLayer.record {
-                    this@drawWithContent.drawContent()
-                }
-                drawLayer(headerLayer)
-            }) {
-                header()
-            }
-        }
+                        val eBmp = if (elevationLayer.size.width > 0 && elevationLayer.size.height > 0) {
+                            withContext(Dispatchers.Default) {
+                                elevationLayer.toImageBitmap().asAndroidBitmap()
+                            }
+                        } else null
 
-        // 2. MAP AREA with OVERLAYED SHARE BUTTON
-        if (showMap) {
-            val mapModifier = if (hasScrollableContent) {
-                Modifier
-                    .weight(1f)
-                    .heightIn(min = 240.dp)
-                    .fillMaxWidth()
-            } else {
-                Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            }
-            Box(modifier = mapModifier) {
-                ATrainingTrackerMap(
-                    zoomFocus = zoomFocus,
-                    initialBounds = initialBounds,
-                    bSportType = bSportType,
-                    currentLocationFlow = noLocation,
-                    selectedDistance = selectedDistance,
-                    activeScrubPath = activeScrubPath,
-                    modifier = Modifier.fillMaxSize(),
-                    shouldTakeSnapshot = isSharing,
-                    onMapClick = onMapClick,
-                    onSnapshotReady = { mapBitmap ->
-                        scope.launch {
-                            val hBmp = if (headerLayer.size.width > 0 && headerLayer.size.height > 0) {
-                                withContext(Dispatchers.Default) {
-                                    headerLayer.toImageBitmap().asAndroidBitmap()
-                                }
-                            } else null
-                            
-                            val eBmp = if (elevationLayer.size.width > 0 && elevationLayer.size.height > 0) {
-                                withContext(Dispatchers.Default) {
-                                    elevationLayer.toImageBitmap().asAndroidBitmap()
-                                }
-                            } else null
+                        val aBmp = if (analyticsLayer.size.width > 0 && analyticsLayer.size.height > 0) {
+                            withContext(Dispatchers.Default) {
+                                analyticsLayer.toImageBitmap().asAndroidBitmap()
+                            }
+                        } else null
 
-                            val aBmp = if (analyticsLayer.size.width > 0 && analyticsLayer.size.height > 0) {
-                                withContext(Dispatchers.Default) {
-                                    analyticsLayer.toImageBitmap().asAndroidBitmap()
-                                }
-                            } else null
-
-                            combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp, aBmp)
-                            isSharing = false
-                        }
-                    },
-                    onSnapshotError = {
+                        combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp, aBmp)
                         isSharing = false
-                        android.widget.Toast.makeText(context, R.string.error_sharing_failed, android.widget.Toast.LENGTH_SHORT).show()
-                    },
-                    content = mapContent
-                )
+                    }
+                },
+                onSnapshotError = {
+                    isSharing = false
+                    android.widget.Toast.makeText(context, R.string.error_sharing_failed, android.widget.Toast.LENGTH_SHORT).show()
+                },
+                content = mapContent
+            )
 
-                overlay()
+            overlay()
 
-                // SHARE BUTTON
-                Surface(
-                    onClick = { if (!isSharing) isSharing = true },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(16.dp)
-                        .size(44.dp),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
-                    shadowElevation = 6.dp,
-                    tonalElevation = 2.dp
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        if (isSharing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = stringResource(R.string.share),
-                                modifier = Modifier.size(22.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
+            // SHARE BUTTON
+            Surface(
+                onClick = { if (!isSharing) isSharing = true },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+                    .size(44.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
+                shadowElevation = 6.dp,
+                tonalElevation = 2.dp
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    if (isSharing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = stringResource(R.string.share),
+                            modifier = Modifier.size(22.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }
         }
+    }
 
-        // 3. ELEVATION PROFILE & CONTINUOUS METRIC GRAPHS AND 4. ANALYTICS (REQ-UI-213 / ATT-1812)
-        val lowerModifier = if (showMap && hasScrollableContent) {
-            Modifier
-                .weight(1.2f)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-        } else {
-            Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-        }
-
-        Column(modifier = lowerModifier) {
+    val lowerColumn: @Composable (Modifier) -> Unit = { colModifier ->
+        Column(modifier = colModifier) {
             if (showElevationProfile) {
                 activeScrubPath?.let { path ->
                     Surface(
@@ -370,6 +322,104 @@ fun MapDetailLayout(
                     }
                 }
             }
+        }
+    }
+
+    Column(
+        modifier = modifier
+            .then(
+                if (showMap) Modifier.fillMaxSize() else Modifier.wrapContentHeight()
+            )
+            .then(
+                if (!useStatusBarsPadding) Modifier.background(MaterialTheme.colorScheme.surface) else Modifier
+            )
+    ) {
+        // DRAG HANDLE (For sheets - REQ-UI-148, REQ-UI-189, REQ-UI-196, ATT-1644)
+        if (!useStatusBarsPadding) {
+            MinimumDragHandle()
+        }
+
+        // 1. HEADER (Slotted)
+        Surface(
+            color = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            shape = if (useStatusBarsPadding) RectangleShape else BottomSheetDesign.SheetShape,
+            modifier = if (useStatusBarsPadding) Modifier.statusBarsPadding() else Modifier
+        ) {
+            Box(modifier = Modifier.drawWithContent {
+                headerLayer.record {
+                    this@drawWithContent.drawContent()
+                }
+                drawLayer(headerLayer)
+            }) {
+                header()
+            }
+        }
+
+        // 2. RESIZABLE VIEWPORT (Map + SplitPaneDivider + Scrollable Lower Section)
+        if (showMap && hasScrollableContent) {
+            BoxWithConstraints(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                val density = LocalDensity.current
+                val totalHeightPx = constraints.maxHeight.toFloat()
+                val dividerHeightPx = with(density) { SplitPaneMath.DIVIDER_TOUCH_HEIGHT.toPx() }
+                val minMapHeightPx = with(density) { SplitPaneMath.MIN_MAP_HEIGHT.toPx() }
+                val minLowerHeightPx = with(density) { SplitPaneMath.MIN_LOWER_HEIGHT.toPx() }
+
+                val availableHeightPx = SplitPaneMath.calculateAvailableHeight(totalHeightPx, dividerHeightPx)
+                val minFraction = SplitPaneMath.calculateMinFraction(minMapHeightPx, availableHeightPx)
+                val maxFraction = SplitPaneMath.calculateMaxFraction(minLowerHeightPx, availableHeightPx, minFraction)
+
+                Column(modifier = Modifier.fillMaxSize()) {
+                    mapBox(
+                        Modifier
+                            .weight(splitFraction)
+                            .heightIn(min = SplitPaneMath.MIN_MAP_HEIGHT)
+                            .fillMaxWidth()
+                    )
+
+                    // INTERACTIVE DRAGGABLE SPLITTER (REQ-UI-223 / ATT-1890)
+                    SplitPaneDivider(
+                        onDelta = { delta ->
+                            splitFraction = SplitPaneMath.updateFraction(
+                                currentFraction = splitFraction,
+                                deltaPx = delta,
+                                availableHeightPx = availableHeightPx,
+                                minFraction = minFraction,
+                                maxFraction = maxFraction
+                            )
+                        },
+                        onReset = {
+                            splitFraction = SplitPaneMath.DEFAULT_SPLIT_FRACTION
+                        }
+                    )
+
+                    lowerColumn(
+                        Modifier
+                            .weight(1f - splitFraction)
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                    )
+                }
+            }
+        } else {
+            // When hasScrollableContent is false (Routes & Segments), or when showMap is false (LiveSegmentSheet)
+            if (showMap) {
+                mapBox(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                )
+            }
+
+            lowerColumn(
+                Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+            )
         }
     }
 }

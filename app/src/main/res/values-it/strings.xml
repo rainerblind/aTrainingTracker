@@ -1358,6 +1358,7 @@
     <string name="tuning_cat_sensors_gps">Sensori, GPS e filtri</string>
     <string name="tuning_cat_workout_masks_cards">Schede e campi allenamento</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 schede, %2$d/6 campi</string>
+    <string name="map_splitter_content_description">Barra di divisione mappa e telemetria. Trascina verticalmente per ridimensionare, tocca due volte per ripristinare.</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
     <string name="move_tile_banner_instruction">Riquadro selezionato: Tocca un altro riquadro per scambiare o \'+\' per spostare.</string>

@@ -1358,6 +1358,7 @@
     <string name="tuning_cat_sensors_gps">Sensores, GPS e filtragem</string>
     <string name="tuning_cat_workout_masks_cards">Cartões e campos de treino</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 cartões, %2$d/6 campos</string>
+    <string name="map_splitter_content_description">Barra divisora do mapa e telemetria. Arraste verticalmente para redimensionar, toque duas vezes para redefinir.</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
     <string name="move_tile_banner_instruction">Mosaico selecionado: Toque em outro mosaico para trocar ou em \'+\' para mover.</string>

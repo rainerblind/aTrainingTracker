@@ -1352,6 +1352,7 @@
     <string name="tuning_cat_sensors_gps">Czujniki, GPS i filtrowanie</string>
     <string name="tuning_cat_workout_masks_cards">Karty i pola treningu</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 kart, %2$d/6 pól</string>
+    <string name="map_splitter_content_description">Pasek podziału mapy i telemetrii. Przeciągnij pionowo, aby zmienić rozmiar, dotknij dwukrotnie, aby zresetować.</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
     <string name="move_tile_banner_instruction">Wybrano kafel: Dotknij innego kafla, aby zamienić, lub \'+\' aby przenieść.</string>
