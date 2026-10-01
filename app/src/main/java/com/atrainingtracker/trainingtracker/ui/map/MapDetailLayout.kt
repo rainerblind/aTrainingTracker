@@ -268,27 +268,6 @@ fun MapDetailLayout(
 
                                 // Telemetry Metric Graphs in detailed inspection view
                                 if (showZoomControls) {
-                                    // HR Graph
-                                    if (TelemetryMetricUtils.hasHeartRateData(path)) {
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text(
-                                            text = stringResource(R.string.graph_heading_heart_rate),
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
-                                        )
-                                        TelemetryMetricGraph(
-                                            pathPoints = path,
-                                            metricType = TelemetryMetricType.HEART_RATE,
-                                            currentDistance = selectedDistance,
-                                            onDistanceSelected = { selectedDistance = it },
-                                            xAxisDomain = tuningConfig.profileXAxisDomain,
-                                            bSportType = bSportType,
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                    }
-
                                     // Speed / Pace Graph
                                     if (TelemetryMetricUtils.hasSpeedData(path)) {
                                         Spacer(modifier = Modifier.height(8.dp))
@@ -303,6 +282,27 @@ fun MapDetailLayout(
                                         TelemetryMetricGraph(
                                             pathPoints = path,
                                             metricType = if (isRunning) TelemetryMetricType.PACE else TelemetryMetricType.SPEED,
+                                            currentDistance = selectedDistance,
+                                            onDistanceSelected = { selectedDistance = it },
+                                            xAxisDomain = tuningConfig.profileXAxisDomain,
+                                            bSportType = bSportType,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+
+                                    // HR Graph
+                                    if (TelemetryMetricUtils.hasHeartRateData(path)) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = stringResource(R.string.graph_heading_heart_rate),
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                                        )
+                                        TelemetryMetricGraph(
+                                            pathPoints = path,
+                                            metricType = TelemetryMetricType.HEART_RATE,
                                             currentDistance = selectedDistance,
                                             onDistanceSelected = { selectedDistance = it },
                                             xAxisDomain = tuningConfig.profileXAxisDomain,
