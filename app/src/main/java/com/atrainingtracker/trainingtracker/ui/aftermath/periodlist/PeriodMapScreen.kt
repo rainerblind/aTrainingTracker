@@ -258,7 +258,7 @@ fun PeriodMapScreen(
             sheetContainerColor = MaterialTheme.colorScheme.surface,
             sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
             sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
-            sheetPeekHeight = if (peekedWorkoutDataWithTrack != null) 120.dp + navBarHeight else 0.dp,
+            sheetPeekHeight = if (peekedWorkoutDataWithTrack != null) BottomSheetDesign.PeekHeightWorkout + navBarHeight else 0.dp,
             sheetDragHandle = null,
             sheetContent = {
                 if (peekedWorkoutDataWithTrack != null) {

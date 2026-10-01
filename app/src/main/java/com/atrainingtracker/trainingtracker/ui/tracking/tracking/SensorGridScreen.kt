@@ -142,7 +142,7 @@ fun SensorGridScreen(
             sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
             sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
         sheetDragHandle = null,
-        sheetPeekHeight = if (showLiveSegments && screenMode == ScreenMode.TRACKING) 140.dp + navBarHeight else 0.dp,
+        sheetPeekHeight = if (showLiveSegments && screenMode == ScreenMode.TRACKING) BottomSheetDesign.PeekHeightLiveSegment + navBarHeight else 0.dp,
         sheetSwipeEnabled = showLiveSegments,
         sheetContent = {
             if (showLiveSegments) {
