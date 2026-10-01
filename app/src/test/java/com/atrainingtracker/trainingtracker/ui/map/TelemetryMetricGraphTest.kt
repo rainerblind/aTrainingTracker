@@ -43,6 +43,10 @@ class TelemetryMetricGraphTest {
         File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapDetailLayout.kt")
     }
 
+    private val workoutSummaryFile: File by lazy {
+        File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummary.kt")
+    }
+
     @Test
     fun testHasHeartRateData_validation() {
         val dummyLatLng = LatLng(48.0, 11.0)
@@ -215,6 +219,29 @@ class TelemetryMetricGraphTest {
         assertTrue(
             "MapDetailLayout must synchronize touch events back to selectedDistance",
             content.contains("onDistanceSelected = { selectedDistance = it }")
+        )
+    }
+
+    @Test
+    fun testWorkoutSummary_telemetryGraphOrdering_speedPrecedesHeartRate() {
+        assertTrue("WorkoutSummary.kt must exist", workoutSummaryFile.exists())
+        val content = workoutSummaryFile.readText()
+
+        val speedIndex = content.indexOf("TelemetryMetricUtils.hasSpeedData(telemetryPoints)")
+        val hrIndex = content.indexOf("TelemetryMetricUtils.hasHeartRateData(telemetryPoints)")
+        val powerIndex = content.indexOf("TelemetryMetricUtils.hasPowerData(telemetryPoints)")
+
+        assertTrue("hasSpeedData check must exist in WorkoutSummary", speedIndex != -1)
+        assertTrue("hasHeartRateData check must exist in WorkoutSummary", hrIndex != -1)
+        assertTrue("hasPowerData check must exist in WorkoutSummary", powerIndex != -1)
+
+        assertTrue(
+            "Speed/Pace graph must precede Heart Rate graph in WorkoutSummary (REQ-UI-214, TST-UI-168.2)",
+            speedIndex < hrIndex
+        )
+        assertTrue(
+            "Heart Rate graph must precede Power graph in WorkoutSummary (REQ-UI-214, TST-UI-168.2)",
+            hrIndex < powerIndex
         )
     }
 }

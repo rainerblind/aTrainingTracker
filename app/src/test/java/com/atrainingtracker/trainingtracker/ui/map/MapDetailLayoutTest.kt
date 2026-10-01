@@ -106,4 +106,27 @@ class MapDetailLayoutTest {
                     content.contains(".fillMaxWidth().wrapContentHeight()")
         )
     }
+
+    @Test
+    fun testMapDetailLayout_telemetryGraphOrdering_speedPrecedesHeartRate() {
+        assertTrue("MapDetailLayout.kt must exist", mapDetailLayoutFile.exists())
+        val content = mapDetailLayoutFile.readText()
+
+        val speedIndex = content.indexOf("TelemetryMetricUtils.hasSpeedData(path)")
+        val hrIndex = content.indexOf("TelemetryMetricUtils.hasHeartRateData(path)")
+        val powerIndex = content.indexOf("TelemetryMetricUtils.hasPowerData(path)")
+
+        assertTrue("hasSpeedData check must exist in MapDetailLayout", speedIndex != -1)
+        assertTrue("hasHeartRateData check must exist in MapDetailLayout", hrIndex != -1)
+        assertTrue("hasPowerData check must exist in MapDetailLayout", powerIndex != -1)
+
+        assertTrue(
+            "Speed/Pace graph must precede Heart Rate graph under showZoomControls (REQ-UI-214, TST-UI-168.1)",
+            speedIndex < hrIndex
+        )
+        assertTrue(
+            "Heart Rate graph must precede Power graph under showZoomControls (REQ-UI-214, TST-UI-168.1)",
+            hrIndex < powerIndex
+        )
+    }
 }
