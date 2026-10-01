@@ -48,6 +48,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executors;
 
 /**
  * Orchestrates all persistent storage operations for high-level workout session metadata.
@@ -66,6 +67,7 @@ public class WorkoutSummariesDatabaseManager {
     private static WorkoutSummariesDbHelper cWorkoutSummariesDbHelper;
     private static volatile WorkoutSummariesDatabaseManager cInstance;
     private SQLiteDatabase mDatabase = null;
+    private Context mContext = null;
 
     /**
      * Protected constructor to allow subclassing in unit tests.
@@ -73,7 +75,8 @@ public class WorkoutSummariesDatabaseManager {
     protected WorkoutSummariesDatabaseManager(Context context) {
         if (context != null) {
             Context appContext = context.getApplicationContext();
-            cWorkoutSummariesDbHelper = new WorkoutSummariesDbHelper(appContext != null ? appContext : context);
+            this.mContext = appContext != null ? appContext : context;
+            cWorkoutSummariesDbHelper = new WorkoutSummariesDbHelper(this.mContext);
         }
     }
 
@@ -966,6 +969,111 @@ public class WorkoutSummariesDatabaseManager {
         }
     }
 
+    /**
+     * Sanitizes historical workouts contaminated with runaway altitude shifts (REQ-CON-017).
+     * Identifies workouts where maximum recorded altitude exceeds 4000m while minimum is below 1000m,
+     * clamps non-physical leading staircase points in ALTITUDE_STREAM to the valid ground baseline,
+     * recalculates EXTREMUM values (MIN, MAX, AVG), and updates database tables atomically.
+     *
+     * @return count of sanitized workouts
+     */
+    public int sanitizeCorruptedAltitudeWorkouts() {
+        SQLiteDatabase db = getDatabase();
+        int repairedCount = 0;
+
+        // 1. Identify corrupted workout IDs
+        List<Long> corruptedWorkoutIds = new ArrayList<>();
+        String query = "SELECT max_t." + WorkoutSummaries.WORKOUT_ID + " FROM " + WorkoutSummaries.TABLE_EXTREMA_VALUES + " max_t "
+                + " JOIN " + WorkoutSummaries.TABLE_EXTREMA_VALUES + " min_t ON max_t." + WorkoutSummaries.WORKOUT_ID + " = min_t." + WorkoutSummaries.WORKOUT_ID
+                + " WHERE max_t." + WorkoutSummaries.SENSOR_TYPE + " = 'ALTITUDE' AND max_t." + WorkoutSummaries.EXTREMA_TYPE + " = 'MAX' AND max_t." + WorkoutSummaries.VALUE + " > 4000.0 "
+                + " AND min_t." + WorkoutSummaries.SENSOR_TYPE + " = 'ALTITUDE' AND min_t." + WorkoutSummaries.EXTREMA_TYPE + " = 'MIN' AND min_t." + WorkoutSummaries.VALUE + " < 1000.0";
+
+        try (Cursor cursor = db.rawQuery(query, null)) {
+            while (cursor.moveToNext()) {
+                corruptedWorkoutIds.add(cursor.getLong(0));
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to query corrupted altitude workouts: " + e.getMessage());
+            return 0;
+        }
+
+        if (corruptedWorkoutIds.isEmpty()) {
+            return 0;
+        }
+
+        db.beginTransaction();
+        try {
+            for (long workoutId : corruptedWorkoutIds) {
+                String stream = getString(workoutId, WorkoutSummaries.ALTITUDE_STREAM);
+                if (stream == null || stream.isEmpty()) continue;
+
+                List<Double> alts = NumericalEncodingUtils.INSTANCE.decodeDoubles(stream);
+                if (alts.isEmpty()) continue;
+
+                // Find valid baseline from first point < 1500m
+                double validBaseline = -1.0;
+                for (double alt : alts) {
+                    if (alt >= -500.0 && alt < 1500.0) {
+                        validBaseline = alt;
+                        break;
+                    }
+                }
+                if (validBaseline < 0) {
+                    validBaseline = 500.0;
+                }
+
+                // Replace corrupted leading points (> 2000m) with validBaseline
+                List<Double> sanitizedAlts = new ArrayList<>(alts.size());
+                double minAlt = Double.MAX_VALUE;
+                double maxAlt = -Double.MAX_VALUE;
+                double sumAlt = 0.0;
+
+                for (double alt : alts) {
+                    double sanitized = (alt > 2000.0) ? validBaseline : alt;
+                    sanitizedAlts.add(sanitized);
+                    if (sanitized < minAlt) minAlt = sanitized;
+                    if (sanitized > maxAlt) maxAlt = sanitized;
+                    sumAlt += sanitized;
+                }
+
+                if (sanitizedAlts.isEmpty()) continue;
+                double avgAlt = sumAlt / sanitizedAlts.size();
+
+                // Update stream
+                ContentValues streamValues = new ContentValues();
+                streamValues.put(WorkoutSummaries.ALTITUDE_STREAM, NumericalEncodingUtils.INSTANCE.encodeDoubles(sanitizedAlts));
+                db.update(WorkoutSummaries.TABLE, streamValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
+
+                // Update Extrema
+                updateExtremaValue(db, workoutId, SensorType.ALTITUDE, ExtremaType.MIN, minAlt, null);
+                updateExtremaValue(db, workoutId, SensorType.ALTITUDE, ExtremaType.MAX, maxAlt, null);
+                updateExtremaValue(db, workoutId, SensorType.ALTITUDE, ExtremaType.AVG, avgAlt, null);
+
+                // Sanitize raw samples table if available
+                String baseFileName = getString(workoutId, WorkoutSummaries.FILE_BASE_NAME);
+                if (baseFileName != null && !baseFileName.isEmpty() && mContext != null) {
+                    try {
+                        String samplesTable = WorkoutSamplesDatabaseManager.getTableName(baseFileName);
+                        WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(mContext);
+                        SQLiteDatabase samplesDb = samplesManager.getDatabase();
+                        samplesDb.execSQL("UPDATE " + samplesTable + " SET " + SensorType.ALTITUDE.name()
+                                + " = " + validBaseline + " WHERE " + SensorType.ALTITUDE.name() + " > 2000.0");
+                    } catch (Exception ex) {
+                        Log.w(TAG, "Could not sanitize raw samples table for workout " + workoutId + ": " + ex.getMessage());
+                    }
+                }
+
+                repairedCount++;
+                Log.i(TAG, "Sanitized corrupted altitude workout " + workoutId + ": max updated to " + maxAlt + "m");
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+
+        return repairedCount;
+    }
+
 
     /**
      * Persists the list of sensor types that were active during a workout.
@@ -1369,6 +1477,19 @@ public class WorkoutSummariesDatabaseManager {
             this.mContext = context.getApplicationContext();
         }
         // TODO: add location (latitude and longitude) and add them when needed
+
+        @Override
+        public void onOpen(@NonNull SQLiteDatabase db) {
+            super.onOpen(db);
+            // Asynchronously sanitize any historical workouts corrupted with runaway altitude shifts (REQ-CON-017)
+            Executors.newSingleThreadExecutor().execute(() -> {
+                try {
+                    WorkoutSummariesDatabaseManager.getInstance(mContext).sanitizeCorruptedAltitudeWorkouts();
+                } catch (Exception e) {
+                    Log.w(TAG, "Error during automatic altitude sanitization: " + e.getMessage());
+                }
+            });
+        }
 
         // Called only once, first time the DB is created
         @Override

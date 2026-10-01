@@ -188,4 +188,35 @@ class ElevationProfileBoundsTest {
         assertEquals(100.0, bounds.max, 0.001)
         assertEquals(50.0, bounds.range, 0.001)
     }
+
+    /**
+     * TST-CON-008.5: Verifies that when a workout contains extreme non-physical calibration staircase artifacts
+     * (e.g. starting at 7300m and dropping to 507m), the calculation filters the outliers
+     * and auto-scales cleanly to the true terrain (~480m - 530m).
+     */
+    @Test
+    fun testStaircaseOutlierProfile_FiltersLeadingArtifactAndAutoScalesToRealTerrain() {
+        val pathPoints = listOf(
+            createPoint(0.0, 7300.0),
+            createPoint(50.0, 7300.0),
+            createPoint(100.0, 7250.0),
+            createPoint(200.0, 6000.0),
+            createPoint(300.0, 507.0),
+            createPoint(500.0, 515.0),
+            createPoint(1000.0, 528.0),
+            createPoint(1500.0, 510.0),
+            createPoint(2050.0, 507.0)
+        )
+
+        val bounds = calculateElevationBounds(
+            pathPoints = pathPoints,
+            minAltitudeOverride = 507.0,
+            maxAltitudeOverride = 7300.0
+        )
+
+        // The 7300m outlier must be filtered; bounds should auto-scale to real terrain (507m - 528m)
+        assertEquals(507.0, bounds.min, 0.001)
+        assertEquals(528.0, bounds.max, 0.001)
+        assertEquals(21.0, bounds.range, 0.001)
+    }
 }

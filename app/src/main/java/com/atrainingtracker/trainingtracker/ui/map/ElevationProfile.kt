@@ -115,8 +115,21 @@ fun calculateElevationBounds(
         return ElevationBounds(fallbackMin, fallbackMax, range)
     }
 
-    val streamMin = pathPoints.minOf { it.altitude }
-    val streamMax = pathPoints.maxOf { it.altitude }
+    // REQ-CON-017: Filter extreme non-physical altitude outliers (e.g. 7300m calibration staircase)
+    val validPoints = if (pathPoints.size >= 5) {
+        val sortedAlts = pathPoints.map { it.altitude }.sorted()
+        val medianAlt = sortedAlts[sortedAlts.size / 2]
+        if (medianAlt < 1500.0 && pathPoints.any { it.altitude > 3000.0 }) {
+            pathPoints.filter { it.altitude in -500.0..3000.0 }.ifEmpty { pathPoints }
+        } else {
+            pathPoints
+        }
+    } else {
+        pathPoints
+    }
+
+    val streamMin = validPoints.minOf { it.altitude }
+    val streamMax = validPoints.maxOf { it.altitude }
 
     // Sanitize min override:
     // If override is an outlier (< streamMin - 15) OR higher than stream points (> streamMin),

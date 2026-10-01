@@ -31,6 +31,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager
 import com.google.android.gms.maps.model.LatLng
+import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
@@ -156,28 +157,94 @@ class AltitudeFromPressureDeviceTest {
     }
 
     /**
-     * TST-CON-004.2: Post-warmup calibration when sensor value is non-null.
+     * TST-CON-008.1: Post-warmup calibration calculates absolute offset from raw pressure and emits delta.
      */
     @Test
     fun testSetAltitudeCorrection_whenSensorValuePresent_calculatesDeltaFromCurrentValue() {
         val device = AltitudeFromPressureDevice(mockContext, mockSensorManager)
-        val altitudeSensor = device.altitudeSensor
-
-        // Simulate sensor already emitted readings
-        altitudeSensor.newValue(505.0)
         device.lastRawAltitude = 500.0
+        // Set initial correction of +10.0m (target was 510.0m)
+        device.setAltitudeCorrection(510.0)
+        assertEquals(10.0, device.altitudeCorrection, 0.001)
 
         val broadcastSlot = slot<Intent>()
         every { mockContext.sendBroadcast(capture(broadcastSlot)) } returns Unit
+        clearMocks(mockContext, answers = false)
 
-        // Act: correct altitude is 520.0m
+        // Act: update target altitude to 520.0m
         device.setAltitudeCorrection(520.0)
 
-        // Assert: correction is 520.0 - 505.0 = +15.0m
-        assertEquals(15.0, device.altitudeCorrection, 0.001)
+        // Assert: new absolute correction is 520.0 - 500.0 = +20.0m
+        assertEquals(20.0, device.altitudeCorrection, 0.001)
 
+        // Verify broadcast was dispatched with the delta offset (20.0 - 10.0 = +10.0m)
         verify(exactly = 1) { mockContext.sendBroadcast(any()) }
-        assertEquals(15.0, broadcastSlot.captured.getDoubleExtra(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE, 0.0), 0.001)
+        assertEquals(10.0, broadcastSlot.captured.getDoubleExtra(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE, 0.0), 0.001)
+        assertEquals(520.0, (device.altitudeSensor.value as Number).toDouble(), 0.001)
+    }
+
+    /**
+     * TST-CON-008.2: Oscillation immunity under repeated calibration calls (The "Kurz zum Bäcker #14" feedback defect reproduction).
+     * Simulates 10 interleaved cycles of handlePressureMeasurement and setAltitudeCorrection(507.0).
+     */
+    @Test
+    fun testSetAltitudeCorrection_repeatedCalls_doesNotOscillate() {
+        val device = AltitudeFromPressureDevice(mockContext, mockSensorManager)
+        device.lastRawAltitude = 450.0
+
+        val broadcastList = mutableListOf<Double>()
+        every { mockContext.sendBroadcast(any()) } answers {
+            val intent = firstArg<Intent>()
+            broadcastList.add(intent.getDoubleExtra(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE, 0.0))
+        }
+
+        // First calibration to 507.0m
+        device.setAltitudeCorrection(507.0)
+        assertEquals(57.0, device.altitudeCorrection, 0.001)
+        assertEquals(507.0, (device.altitudeSensor.value as Number).toDouble(), 0.001)
+        assertEquals(1, broadcastList.size)
+        assertEquals(57.0, broadcastList[0], 0.001)
+
+        // Simulate 10 sequential iterations of pressure events and re-calibration
+        val testPressure = 960.0f
+        every { SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, testPressure) } returns 450.0f
+
+        for (i in 1..10) {
+            device.handlePressureMeasurement(testPressure)
+            assertEquals("Sensor value must stay locked at 507.0 after pressure measurement", 507.0, (device.altitudeSensor.value as Number).toDouble(), 0.001)
+            assertEquals("Correction must not oscillate to 0.0", 57.0, device.altitudeCorrection, 0.001)
+
+            // Re-invoke setAltitudeCorrection with same target altitude (507.0m)
+            device.setAltitudeCorrection(507.0)
+            assertEquals("Correction must remain strictly 57.0m", 57.0, device.altitudeCorrection, 0.001)
+            assertEquals("Sensor reading must remain 507.0m", 507.0, (device.altitudeSensor.value as Number).toDouble(), 0.001)
+        }
+
+        // Zero additional broadcasts must have been emitted across all 10 re-calibrations!
+        assertEquals("No additional broadcasts during redundant calibration loop", 1, broadcastList.size)
+    }
+
+    /**
+     * TST-CON-008.3: Calibrate idempotency skips redundant work.
+     */
+    @Test
+    fun testCalibrate_idempotency_skipsRedundantWork() {
+        val device = AltitudeFromPressureDevice(mockContext, mockSensorManager)
+        device.lastRawAltitude = 450.0
+
+        var broadcastCount = 0
+        every { mockContext.sendBroadcast(any()) } answers { broadcastCount++ }
+
+        // Initial calibration
+        val firstResult = device.calibrate(507.0)
+        assertTrue(firstResult)
+        assertTrue(device.isCalibrated)
+        assertEquals(1, broadcastCount)
+
+        // Second calibration with same reference altitude
+        val secondResult = device.calibrate(507.0)
+        assertTrue("Idempotent calibrate returns true immediately", secondResult)
+        assertEquals("Zero additional broadcasts on idempotent call", 1, broadcastCount)
     }
 
     /**
@@ -205,9 +272,9 @@ class AltitudeFromPressureDeviceTest {
     @Test
     fun testSetAltitudeCorrection_whenCorrectionIsZero_suppressesBroadcast() {
         val device = AltitudeFromPressureDevice(mockContext, mockSensorManager)
-        device.altitudeSensor.newValue(520.0)
+        device.lastRawAltitude = 520.0
 
-        // Act: target altitude matches current value
+        // Act: target altitude matches current raw value
         device.setAltitudeCorrection(520.0)
 
         // Assert

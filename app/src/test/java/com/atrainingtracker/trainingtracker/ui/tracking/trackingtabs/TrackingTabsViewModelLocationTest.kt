@@ -362,4 +362,57 @@ class TrackingTabsViewModelLocationTest {
 
         job.cancel()
     }
+
+    /**
+     * TST-CON-008.4: Altimeter calibration dispatch is gated to geofence transitions.
+     * Emitting repeated location updates inside the same geofence must not flood calibrateAltimeter.
+     */
+    @Test
+    fun testCalibrationGating_dispatchesOnlyOnGeofenceTransition() = runTest {
+        val homeLocation = KnownLocationItem(
+            id = 100L,
+            name = "Zu Hause",
+            altitude = 507.0,
+            radius = 100,
+            latLng = LatLng(48.137154, 11.576124),
+            hitCount = 10,
+            isLocked = true,
+            source = ElevationSource.INTERNET_DEM
+        )
+        knownLocationsFlow.value = listOf(homeLocation)
+        isAltimeterCalibratedFlow.value = true
+        currentLocationFlow.value = LatLng(48.137154, 11.576124) // Inside geofence
+
+        val viewModel = createViewModel()
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.locationCalibrationStatus.collect {}
+        }
+        testScheduler.advanceUntilIdle()
+
+        // Verify calibrateAltimeter called once on initial entry
+        verify(exactly = 1) { mockBanalRepo.calibrateAltimeter(507.0) }
+
+        // Emit 5 sequential GPS location updates while remaining inside the same geofence
+        for (i in 1..5) {
+            currentLocationFlow.value = LatLng(48.137154 + (i * 0.00001), 11.576124)
+            testScheduler.advanceUntilIdle()
+        }
+
+        // calibrateAltimeter must STILL have been called exactly 1 time (not 6 times!)
+        verify(exactly = 1) { mockBanalRepo.calibrateAltimeter(507.0) }
+
+        // Move outside geofence
+        currentLocationFlow.value = LatLng(48.150000, 11.576124)
+        testScheduler.advanceUntilIdle()
+        assertNull(viewModel.locationCalibrationStatus.value)
+
+        // Move back inside geofence (geofence transition)
+        currentLocationFlow.value = LatLng(48.137154, 11.576124)
+        testScheduler.advanceUntilIdle()
+
+        // calibrateAltimeter must now have been called a 2nd time (on re-entry transition)
+        verify(exactly = 2) { mockBanalRepo.calibrateAltimeter(507.0) }
+
+        job.cancel()
+    }
 }
