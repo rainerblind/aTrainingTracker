@@ -57,6 +57,23 @@ object BottomSheetDesign {
 
     /** Standardized drag handle pill height (3dp). */
     val DragHandleHeight: Dp = 3.dp
+
+    // --- Standardized Peek Height Baselines (REQ-UI-221, ATT-1645) ---
+
+    /** Calibrated baseline for single workout detail peeks in analytical map screens (Heatmap & Period Map) cleanly framing WorkoutHeader. */
+    val PeekHeightWorkout: Dp = 140.dp
+
+    /** Calibrated baseline for route detail peeks framing RouteSummaryHeader and visibility switch. */
+    val PeekHeightRoute: Dp = 112.dp
+
+    /** Calibrated baseline for segment detail peeks framing SegmentHeader and SegmentDetails without empty container gaps. */
+    val PeekHeightSegment: Dp = 156.dp
+
+    /** Calibrated baseline for favorite location (Lieblingsort) peeks framing KnownLocationOnMapSheet. */
+    val PeekHeightKnownLocation: Dp = 108.dp
+
+    /** Calibrated baseline for active live segment tracking peek framing live delta and target metrics. */
+    val PeekHeightLiveSegment: Dp = 140.dp
 }
 
 /**

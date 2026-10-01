@@ -157,9 +157,9 @@ fun MapScreenWithTrack(
             sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
             sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
             sheetPeekHeight = when {
-                selectedSegmentId != null -> 185.dp + navBarHeight
-                selectedRouteId != null -> 100.dp + navBarHeight
-                selectedLocationId != null -> 100.dp + navBarHeight
+                selectedSegmentId != null -> BottomSheetDesign.PeekHeightSegment + navBarHeight
+                selectedRouteId != null -> BottomSheetDesign.PeekHeightRoute + navBarHeight
+                selectedLocationId != null -> BottomSheetDesign.PeekHeightKnownLocation + navBarHeight
                 else -> 0.dp
             },
             sheetDragHandle = null,

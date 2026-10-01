@@ -70,4 +70,13 @@ class BottomSheetDesignTest {
         val modifier = Modifier.sheetContour()
         assertNotNull("sheetContour extension must return a non-null modifier", modifier)
     }
+
+    @Test
+    fun testBottomSheetDesign_peekHeightBaselineConstants() {
+        assertEquals("PeekHeightWorkout must be 140.dp", 140.dp, BottomSheetDesign.PeekHeightWorkout)
+        assertEquals("PeekHeightRoute must be 112.dp", 112.dp, BottomSheetDesign.PeekHeightRoute)
+        assertEquals("PeekHeightSegment must be 156.dp", 156.dp, BottomSheetDesign.PeekHeightSegment)
+        assertEquals("PeekHeightKnownLocation must be 108.dp", 108.dp, BottomSheetDesign.PeekHeightKnownLocation)
+        assertEquals("PeekHeightLiveSegment must be 140.dp", 140.dp, BottomSheetDesign.PeekHeightLiveSegment)
+    }
 }
