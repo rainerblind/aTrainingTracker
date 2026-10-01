@@ -256,6 +256,8 @@ fun ImportBackupTabsScreen(
     if (showRestoreConfirm) {
         AlertDialog(
             onDismissRequest = { showRestoreConfirm = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
             title = { Text(stringResource(R.string.restore_warning_title)) },
             text = { Text(stringResource(R.string.restore_warning_message)) },
             confirmButton = {
@@ -280,6 +282,8 @@ fun ImportBackupTabsScreen(
     if (showDropboxRestoreConfirm) {
         AlertDialog(
             onDismissRequest = { showDropboxRestoreConfirm = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
             title = { Text(stringResource(R.string.restore_warning_title)) },
             text = { Text(stringResource(R.string.restore_warning_message)) },
             confirmButton = {
@@ -304,6 +308,8 @@ fun ImportBackupTabsScreen(
     if (showDropboxDisconnectedDialog) {
         AlertDialog(
             onDismissRequest = { showDropboxDisconnectedDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
             title = { Text(stringResource(R.string.Dropbox)) },
             text = { Text(stringResource(R.string.dropbox_disconnected_status)) },
             confirmButton = {
@@ -560,6 +566,8 @@ fun ClusterNamingDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
         title = { 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.cluster_naming__title))
@@ -733,6 +741,8 @@ fun ImportMappingDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
         title = { Text("Map Data for Import") },
         text = {
             Column(

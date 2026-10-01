@@ -239,6 +239,8 @@ fun DevicesTabbedScreen(
     showDeleteConfirmFor?.let { device ->
         AlertDialog(
             onDismissRequest = { showDeleteConfirmFor = null },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
             title = { Text(stringResource(R.string.devices_dialog_delete_device_title)) },
             text = { Text(stringResource(R.string.devices_dialog_delete_device_message, device.deviceName)) },
             confirmButton = {

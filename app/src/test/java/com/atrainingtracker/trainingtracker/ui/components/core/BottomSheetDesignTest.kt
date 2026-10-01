@@ -40,7 +40,7 @@ class BottomSheetDesignTest {
     fun testBottomSheetDesign_tokenConstants() {
         assertEquals("SheetCornerRadius must be 20.dp", 20.dp, BottomSheetDesign.SheetCornerRadius)
         assertEquals("SheetShadowElevation must be 8.dp", 8.dp, BottomSheetDesign.SheetShadowElevation)
-        assertEquals("SheetTonalElevation must be 2.dp", 2.dp, BottomSheetDesign.SheetTonalElevation)
+        assertEquals("SheetTonalElevation must be 0.dp", 0.dp, BottomSheetDesign.SheetTonalElevation)
         assertEquals("BorderWidth must be 1.dp", 1.dp, BottomSheetDesign.BorderWidth)
         assertEquals("DragHandleWidth must be 32.dp", 32.dp, BottomSheetDesign.DragHandleWidth)
         assertEquals("DragHandleHeight must be 3.dp", 3.dp, BottomSheetDesign.DragHandleHeight)

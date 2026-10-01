@@ -46,8 +46,8 @@ object BottomSheetDesign {
     /** Standardized drop shadow elevation for persistent scaffold sheets (8dp). */
     val SheetShadowElevation: Dp = 8.dp
 
-    /** Standardized subtle tonal elevation for bottom sheets (2dp). */
-    val SheetTonalElevation: Dp = 2.dp
+    /** Standardized zero tonal elevation for bottom sheets to eliminate grey tinting (0dp, REQ-UI-218, ATT-1817). */
+    val SheetTonalElevation: Dp = 0.dp
 
     /** Standardized border outline stroke width (1dp). */
     val BorderWidth: Dp = 1.dp

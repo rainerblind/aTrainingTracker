@@ -84,6 +84,7 @@ fun FilterBottomSheetScaffold(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
         shape = BottomSheetDesign.SheetShape,
+        containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = BottomSheetDesign.SheetTonalElevation,
         dragHandle = { MinimumDragHandle() },
         modifier = modifier
