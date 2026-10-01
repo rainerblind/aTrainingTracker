@@ -44,6 +44,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
 import com.atrainingtracker.trainingtracker.MyUnits
@@ -168,6 +169,48 @@ object TelemetryMetricUtils {
             TelemetryMetricType.POWER -> "${value.toInt()} W"
         }
     }
+
+    /**
+     * Formats an intermediate milestone distance label without repeating units.
+     * (REQ-UI-220 / ATT-1819)
+     */
+    fun formatMilestoneLabel(dist: Double, visibleSpan: Double, unit: MyUnits): String {
+        return if (unit == MyUnits.METRIC) {
+            if (visibleSpan < 1500) {
+                "${dist.toInt()}m"
+            } else if (dist % 1000.0 != 0.0) {
+                String.format(Locale.US, "%.1f", dist / 1000.0)
+            } else {
+                "${(dist / 1000.0).toInt()}"
+            }
+        } else {
+            val miles = dist / BANALService.METER_PER_MILE
+            if (miles % 1.0 != 0.0) {
+                String.format(Locale.US, "%.1f", miles)
+            } else {
+                "${miles.toInt()}"
+            }
+        }
+    }
+
+    /**
+     * Determines whether an intermediate milestone label satisfies boundary clearance
+     * and minimum spacing clearance from the previously rendered label.
+     * (REQ-UI-220 / ATT-1819)
+     */
+    fun shouldRenderMilestoneLabel(
+        labelLeft: Float,
+        labelRight: Float,
+        lastDrawnRightX: Float,
+        startBoundaryThreshold: Float,
+        endBoundaryThreshold: Float,
+        minSpacing: Float = 36f
+    ): Boolean {
+        val startClearance = labelLeft >= startBoundaryThreshold
+        val endClearance = labelRight <= endBoundaryThreshold
+        val spacingClearance = labelLeft >= lastDrawnRightX + minSpacing
+        return startClearance && endClearance && spacingClearance
+    }
 }
 
 /**
@@ -202,6 +245,7 @@ fun TelemetryMetricGraph(
 
     val speedFormatter = remember(unit) { SpeedFormatter() }
     val paceFormatter = remember(unit) { PaceFormatter() }
+    val distanceFormatter = remember(unit) { DistanceFormatter() }
 
     val colorScheme = MaterialTheme.colorScheme
 
@@ -381,6 +425,45 @@ fun TelemetryMetricGraph(
                 strokeWidth = 1f
             )
 
+            // Draw X-axis boundary labels (start and end) (REQ-UI-220 / ATT-1819)
+            val labelY = size.height - 4.dp.toPx()
+            val endLabel = if (isTimeDomain) {
+                ElevationProfileZoomMath.formatTimeTick((startDist + visibleSpan).toLong())
+            } else {
+                distanceFormatter.format_with_units(startDist + visibleSpan)
+            }
+            val endLabelWidth = axisTextPaint.measureText(endLabel)
+            nativeCanvas.drawText(
+                endLabel,
+                startPaddingPx + chartWidthPx - endLabelWidth,
+                labelY,
+                axisTextPaint
+            )
+
+            if (zoomScale > 1.01f) {
+                val startLabel = if (isTimeDomain) {
+                    ElevationProfileZoomMath.formatTimeTick(startDist.toLong())
+                } else {
+                    distanceFormatter.format_with_units(startDist)
+                }
+                nativeCanvas.drawText(startLabel, startPaddingPx, labelY, axisTextPaint)
+            }
+
+            var lastDrawnRightX = if (zoomScale > 1.01f) {
+                val startLabel = if (isTimeDomain) {
+                    ElevationProfileZoomMath.formatTimeTick(startDist.toLong())
+                } else {
+                    distanceFormatter.format_with_units(startDist)
+                }
+                startPaddingPx + axisTextPaint.measureText(startLabel)
+            } else {
+                startPaddingPx
+            }
+
+            val startBoundaryThreshold = startPaddingPx + 40.dp.toPx()
+            val endBoundaryThreshold = startPaddingPx + chartWidthPx - (endLabelWidth + 16.dp.toPx())
+            val minMilestoneSpacing = 12.dp.toPx()
+
             // Draw X-axis ticks along bottom
             if (isTimeDomain) {
                 val timeStep = ElevationProfileZoomMath.calculateAdaptiveTimeStep(visibleSpan).toDouble()
@@ -398,7 +481,22 @@ fun TelemetryMetricGraph(
                             strokeWidth = 1f
                         )
                         val tickLabel = ElevationProfileZoomMath.formatTimeTick(currentSec.toLong())
-                        nativeCanvas.drawText(tickLabel, tickX - 20f, size.height - 4.dp.toPx(), axisTextPaint)
+                        val labelWidth = axisTextPaint.measureText(tickLabel)
+                        val labelLeft = tickX - (labelWidth / 2f)
+                        val labelRight = tickX + (labelWidth / 2f)
+
+                        if (TelemetryMetricUtils.shouldRenderMilestoneLabel(
+                                labelLeft = labelLeft,
+                                labelRight = labelRight,
+                                lastDrawnRightX = lastDrawnRightX,
+                                startBoundaryThreshold = startBoundaryThreshold,
+                                endBoundaryThreshold = endBoundaryThreshold,
+                                minSpacing = minMilestoneSpacing
+                            )
+                        ) {
+                            nativeCanvas.drawText(tickLabel, labelLeft, labelY, axisTextPaint)
+                            lastDrawnRightX = labelRight
+                        }
                     }
                     currentSec += timeStep
                 }
@@ -417,19 +515,23 @@ fun TelemetryMetricGraph(
                             end = Offset(tickX, topPaddingPx + chartHeightPx),
                             strokeWidth = 1f
                         )
-                        val label = if (unit == MyUnits.METRIC) {
-                            if (visibleSpan < 1500) {
-                                "${currentDist.toInt()} m"
-                            } else if (currentDist % 1000.0 != 0.0) {
-                                String.format(Locale.US, "%.1f km", currentDist / 1000.0)
-                            } else {
-                                "${(currentDist / 1000.0).toInt()} km"
-                            }
-                        } else {
-                            val miles = currentDist / BANALService.METER_PER_MILE
-                            String.format(Locale.US, "%.1f mi", miles)
+                        val label = TelemetryMetricUtils.formatMilestoneLabel(currentDist, visibleSpan, unit)
+                        val labelWidth = axisTextPaint.measureText(label)
+                        val labelLeft = tickX - (labelWidth / 2f)
+                        val labelRight = tickX + (labelWidth / 2f)
+
+                        if (TelemetryMetricUtils.shouldRenderMilestoneLabel(
+                                labelLeft = labelLeft,
+                                labelRight = labelRight,
+                                lastDrawnRightX = lastDrawnRightX,
+                                startBoundaryThreshold = startBoundaryThreshold,
+                                endBoundaryThreshold = endBoundaryThreshold,
+                                minSpacing = minMilestoneSpacing
+                            )
+                        ) {
+                            nativeCanvas.drawText(label, labelLeft, labelY, axisTextPaint)
+                            lastDrawnRightX = labelRight
                         }
-                        nativeCanvas.drawText(label, tickX - 20f, size.height - 4.dp.toPx(), axisTextPaint)
                     }
                     currentDist += distStep
                 }
