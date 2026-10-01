@@ -1128,6 +1128,13 @@
     <string name="settings_workout_card_description">Opis i notatki</string>
     <string name="settings_workout_card_charts">Wykresy telemetryczne</string>
     <string name="settings_workout_card_zones">Analiza stref (tętno i moc)</string>
+    <string name="settings_edit_workout_title">Edytuj trening</string>
+    <string name="settings_edit_workout_cluster">Trasa / Segment</string>
+    <string name="settings_edit_workout_commute_trainer">Dojazd do pracy i trenażer</string>
+    <string name="settings_edit_workout_strava">Przesyłanie do Strava</string>
+    <string name="settings_edit_workout_description">Opis i notatki</string>
+    <string name="settings_edit_workout_goal">Cel</string>
+    <string name="settings_edit_workout_method">Metoda</string>
     <string name="filter_commute">Dojazd</string>
     <string name="filter_trainer">Trenażer / Wewnątrz</string>
     <string name="filter_has_gps">Z trasą GPS</string>

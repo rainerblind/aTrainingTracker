@@ -53,6 +53,18 @@ data class WorkoutCardSectionPreferences(
     val showZoneAnalysis: Boolean = false
 )
 
+/**
+ * Configurable field visibility preferences for the Edit Workout dialog (REQ-UI-211 / ATT-1713).
+ */
+data class EditWorkoutFieldPreferences(
+    val showCluster: Boolean = true,
+    val showCommuteTrainer: Boolean = true,
+    val showStravaUpload: Boolean = true,
+    val showDescription: Boolean = true,
+    val showGoal: Boolean = true,
+    val showMethod: Boolean = true
+)
+
 class MyPreferenceManager(context: Context) {
     private val dataStore = context.dataStore
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -75,6 +87,13 @@ class MyPreferenceManager(context: Context) {
         val WORKOUT_CARD_SHOW_ELEVATION = booleanPreferencesKey("workout_card_show_elevation")
         val WORKOUT_CARD_SHOW_CHARTS = booleanPreferencesKey("workout_card_show_charts")
         val WORKOUT_CARD_SHOW_ZONES = booleanPreferencesKey("workout_card_show_zones")
+
+        val EDIT_WORKOUT_SHOW_CLUSTER = booleanPreferencesKey("edit_workout_show_cluster")
+        val EDIT_WORKOUT_SHOW_COMMUTE_TRAINER = booleanPreferencesKey("edit_workout_show_commute_trainer")
+        val EDIT_WORKOUT_SHOW_STRAVA_UPLOAD = booleanPreferencesKey("edit_workout_show_strava_upload")
+        val EDIT_WORKOUT_SHOW_DESCRIPTION = booleanPreferencesKey("edit_workout_show_description")
+        val EDIT_WORKOUT_SHOW_GOAL = booleanPreferencesKey("edit_workout_show_goal")
+        val EDIT_WORKOUT_SHOW_METHOD = booleanPreferencesKey("edit_workout_show_method")
     }
 
     val workoutCardPreferencesFlow: Flow<WorkoutCardSectionPreferences> = dataStore.data.map { preferences ->
@@ -100,6 +119,28 @@ class MyPreferenceManager(context: Context) {
             preferences[WORKOUT_CARD_SHOW_ELEVATION] = prefs.showElevationProfile
             preferences[WORKOUT_CARD_SHOW_CHARTS] = prefs.showTelemetryCharts
             preferences[WORKOUT_CARD_SHOW_ZONES] = prefs.showZoneAnalysis
+        }
+    }
+
+    val editWorkoutFieldPreferencesFlow: Flow<EditWorkoutFieldPreferences> = dataStore.data.map { preferences ->
+        EditWorkoutFieldPreferences(
+            showCluster = preferences[EDIT_WORKOUT_SHOW_CLUSTER] ?: true,
+            showCommuteTrainer = preferences[EDIT_WORKOUT_SHOW_COMMUTE_TRAINER] ?: true,
+            showStravaUpload = preferences[EDIT_WORKOUT_SHOW_STRAVA_UPLOAD] ?: true,
+            showDescription = preferences[EDIT_WORKOUT_SHOW_DESCRIPTION] ?: true,
+            showGoal = preferences[EDIT_WORKOUT_SHOW_GOAL] ?: true,
+            showMethod = preferences[EDIT_WORKOUT_SHOW_METHOD] ?: true
+        )
+    }
+
+    suspend fun setEditWorkoutFieldPreferences(prefs: EditWorkoutFieldPreferences) {
+        dataStore.edit { preferences ->
+            preferences[EDIT_WORKOUT_SHOW_CLUSTER] = prefs.showCluster
+            preferences[EDIT_WORKOUT_SHOW_COMMUTE_TRAINER] = prefs.showCommuteTrainer
+            preferences[EDIT_WORKOUT_SHOW_STRAVA_UPLOAD] = prefs.showStravaUpload
+            preferences[EDIT_WORKOUT_SHOW_DESCRIPTION] = prefs.showDescription
+            preferences[EDIT_WORKOUT_SHOW_GOAL] = prefs.showGoal
+            preferences[EDIT_WORKOUT_SHOW_METHOD] = prefs.showMethod
         }
     }
 

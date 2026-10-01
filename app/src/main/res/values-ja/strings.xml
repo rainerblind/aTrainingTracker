@@ -1124,6 +1124,13 @@
     <string name="settings_workout_card_description">説明とメモ</string>
     <string name="settings_workout_card_charts">テレメトリグラフ</string>
     <string name="settings_workout_card_zones">ゾーン分析（心拍数＆パワー）</string>
+    <string name="settings_edit_workout_title">ワークアウトの編集</string>
+    <string name="settings_edit_workout_cluster">ルート / クラスター</string>
+    <string name="settings_edit_workout_commute_trainer">通勤・通学＆ローラートレーナー</string>
+    <string name="settings_edit_workout_strava">Stravaアップロード</string>
+    <string name="settings_edit_workout_description">説明とメモ</string>
+    <string name="settings_edit_workout_goal">目標</string>
+    <string name="settings_edit_workout_method">方法</string>
     <string name="filter_commute">通勤・通学</string>
     <string name="filter_trainer">インドア / ローラー台</string>
     <string name="filter_has_gps">GPSログあり</string>

@@ -31,6 +31,7 @@ import com.atrainingtracker.trainingtracker.batterysaver.DisplayBrightnessMode
 import androidx.compose.ui.platform.LocalContext
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
+import com.atrainingtracker.trainingtracker.EditWorkoutFieldPreferences
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -61,11 +62,25 @@ fun DisplaySettingsDialog(
     }
     var isWorkoutCardPrefsLoaded by remember { mutableStateOf(false) }
 
+    var currentEditWorkoutPrefs by remember {
+        mutableStateOf(EditWorkoutFieldPreferences())
+    }
+    var isEditWorkoutPrefsLoaded by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         preferenceManager.workoutCardPreferencesFlow.collect { prefs ->
             if (!isWorkoutCardPrefsLoaded) {
                 currentWorkoutCardPrefs = prefs
                 isWorkoutCardPrefsLoaded = true
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        preferenceManager.editWorkoutFieldPreferencesFlow.collect { prefs ->
+            if (!isEditWorkoutPrefsLoaded) {
+                currentEditWorkoutPrefs = prefs
+                isEditWorkoutPrefsLoaded = true
             }
         }
     }
@@ -82,6 +97,7 @@ fun DisplaySettingsDialog(
                     TrainingApplication.setDisplayBrightnessSettings(currentBrightnessMode, currentCustomBrightness)
                     coroutineScope.launch {
                         preferenceManager.setWorkoutCardPreferences(currentWorkoutCardPrefs)
+                        preferenceManager.setEditWorkoutFieldPreferences(currentEditWorkoutPrefs)
                     }
                     onSettingsChanged?.invoke()
                     onDismiss()
@@ -174,6 +190,51 @@ fun DisplaySettingsDialog(
                     label = stringResource(R.string.settings_workout_card_zones),
                     isChecked = currentWorkoutCardPrefs.showZoneAnalysis,
                     onCheckedChange = { currentWorkoutCardPrefs = currentWorkoutCardPrefs.copy(showZoneAnalysis = it) }
+                )
+            }
+
+            HorizontalDivider()
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_edit_workout_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+
+                DisplayOptionToggle(
+                    label = stringResource(R.string.settings_edit_workout_description),
+                    isChecked = currentEditWorkoutPrefs.showDescription,
+                    onCheckedChange = { currentEditWorkoutPrefs = currentEditWorkoutPrefs.copy(showDescription = it) }
+                )
+                DisplayOptionToggle(
+                    label = stringResource(R.string.settings_edit_workout_cluster),
+                    isChecked = currentEditWorkoutPrefs.showCluster,
+                    onCheckedChange = { currentEditWorkoutPrefs = currentEditWorkoutPrefs.copy(showCluster = it) }
+                )
+                DisplayOptionToggle(
+                    label = stringResource(R.string.settings_edit_workout_commute_trainer),
+                    isChecked = currentEditWorkoutPrefs.showCommuteTrainer,
+                    onCheckedChange = { currentEditWorkoutPrefs = currentEditWorkoutPrefs.copy(showCommuteTrainer = it) }
+                )
+                DisplayOptionToggle(
+                    label = stringResource(R.string.settings_edit_workout_strava),
+                    isChecked = currentEditWorkoutPrefs.showStravaUpload,
+                    onCheckedChange = { currentEditWorkoutPrefs = currentEditWorkoutPrefs.copy(showStravaUpload = it) }
+                )
+                DisplayOptionToggle(
+                    label = stringResource(R.string.settings_edit_workout_goal),
+                    isChecked = currentEditWorkoutPrefs.showGoal,
+                    onCheckedChange = { currentEditWorkoutPrefs = currentEditWorkoutPrefs.copy(showGoal = it) }
+                )
+                DisplayOptionToggle(
+                    label = stringResource(R.string.settings_edit_workout_method),
+                    isChecked = currentEditWorkoutPrefs.showMethod,
+                    onCheckedChange = { currentEditWorkoutPrefs = currentEditWorkoutPrefs.copy(showMethod = it) }
                 )
             }
 
