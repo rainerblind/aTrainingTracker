@@ -214,6 +214,7 @@ fun ElevationProfile(
     startDist: Double = 0.0,
     onZoomChanged: ((zoomScale: Float, startDist: Double) -> Unit)? = null,
     isPanMode: Boolean = false,
+    showScrubbingBadge: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val decodedData = remember(encodedAltitudes, encodedDistances) {
@@ -238,6 +239,7 @@ fun ElevationProfile(
         startDist = startDist,
         onZoomChanged = onZoomChanged,
         isPanMode = isPanMode,
+        showScrubbingBadge = showScrubbingBadge,
         modifier = modifier
     )
 }
@@ -257,6 +259,7 @@ fun ElevationProfile(
     startDist: Double = 0.0,
     onZoomChanged: ((zoomScale: Float, startDist: Double) -> Unit)? = null,
     isPanMode: Boolean = false,
+    showScrubbingBadge: Boolean = true,
     modifier: Modifier = Modifier,
     hrZoneThresholds: HeartRateZoneThresholds? = null,
     powerZoneThresholds: PowerZoneThresholds? = null
@@ -719,7 +722,7 @@ fun ElevationProfile(
         }
 
         // Multi-metric telemetry floating badge in detailed view (REQ-UI-201 / ATT-1391)
-        if (showZoomControls && currentDistance != null) {
+        if (showZoomControls && showScrubbingBadge && currentDistance != null) {
             val activeIndex = pathPoints.indexOfLast { it.distance <= currentDistance }.coerceAtLeast(0)
             val activePoint = pathPoints.getOrNull(activeIndex) ?: pathPoints.firstOrNull()
             if (activePoint != null) {
