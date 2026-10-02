@@ -69,7 +69,6 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
-import com.atrainingtracker.trainingtracker.ui.components.core.MinimumDragHandle
 import com.atrainingtracker.trainingtracker.ui.knownlocations.EditKnownLocationDialog
 import com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationsUnitConversions
 import com.atrainingtracker.trainingtracker.ui.routes.RouteOnMapScreen
@@ -112,7 +111,16 @@ fun MapScreenWithTrack(
     }
 
     val scaffoldState = rememberBottomSheetScaffoldState(
-        bottomSheetState = rememberStandardBottomSheetState(skipHiddenState = false)
+        bottomSheetState = rememberStandardBottomSheetState(
+            skipHiddenState = false,
+            confirmValueChange = { targetValue ->
+                if (selectedLocationId != null && targetValue == SheetValue.Expanded) {
+                    false
+                } else {
+                    true
+                }
+            }
+        )
     )
 
     // Effect: When a user clicks a new segment/route/location, ensure the sheet is at least "Partially Expanded" (Peeked)
@@ -167,6 +175,7 @@ fun MapScreenWithTrack(
 
         BottomSheetScaffold(
             scaffoldState = scaffoldState,
+            sheetSwipeEnabled = selectedLocationId == null,
             sheetShape = BottomSheetDesign.SheetShape,
             sheetContainerColor = MaterialTheme.colorScheme.surface,
             sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
@@ -322,12 +331,10 @@ fun KnownLocationOnMapSheet(
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
     ) {
-        MinimumDragHandle()
-
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Row(
