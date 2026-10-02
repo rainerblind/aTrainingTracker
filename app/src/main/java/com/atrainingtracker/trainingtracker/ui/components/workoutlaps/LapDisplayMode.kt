@@ -19,15 +19,13 @@
 package com.atrainingtracker.trainingtracker.ui.components.workoutlaps
 
 /**
- * Configurable display modes for the workout lap overview section in detailed workout cards (REQ-UI-229 / ATT-1870).
+ * Configurable display modes for the workout lap overview section in detailed workout cards (REQ-UI-229 / ATT-1870 / ATT-1988).
  */
 enum class LapDisplayMode {
     /** Only classic numeric table rows and header are displayed. */
     TABLE_ONLY,
 
     /** Only the high-aesthetic LapSplitVisualizer with proportional pace bars is displayed. */
-    VISUALIZER_ONLY,
-
-    /** Both the LapSplitVisualizer and classic table rows are displayed stacked. */
-    BOTH
+    VISUALIZER_ONLY
 }
+

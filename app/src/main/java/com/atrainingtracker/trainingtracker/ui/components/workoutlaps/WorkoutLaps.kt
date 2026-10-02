@@ -51,7 +51,7 @@ import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
 fun WorkoutLaps(
     laps: List<LapData>,
     bSportType: BSportType = BSportType.UNKNOWN,
-    lapDisplayMode: LapDisplayMode = LapDisplayMode.BOTH,
+    lapDisplayMode: LapDisplayMode = LapDisplayMode.VISUALIZER_ONLY,
     modifier: Modifier = Modifier,
     onLapClick: ((LapData) -> Unit)? = null
 ) {
@@ -387,9 +387,9 @@ object WorkoutLapsHelper {
     }
 
     fun shouldShowVisualizer(mode: LapDisplayMode): Boolean =
-        mode == LapDisplayMode.BOTH || mode == LapDisplayMode.VISUALIZER_ONLY
+        mode == LapDisplayMode.VISUALIZER_ONLY
 
     fun shouldShowTable(mode: LapDisplayMode): Boolean =
-        mode == LapDisplayMode.BOTH || mode == LapDisplayMode.TABLE_ONLY
+        mode == LapDisplayMode.TABLE_ONLY
 }
 
