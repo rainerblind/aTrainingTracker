@@ -42,6 +42,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import androidx.compose.material3.rememberBottomSheetScaffoldState
@@ -120,6 +121,16 @@ fun MapScreenWithTrack(
             scaffoldState.bottomSheetState.partialExpand()
         } else {
             scaffoldState.bottomSheetState.hide()
+        }
+    }
+
+    // Effect: When dynamic measurement completes for the active sheet, re-align the resting offset flush to the navigation bar (REQ-UI-221, ATT-1645)
+    LaunchedEffect(measuredSegmentHeaderHeight, measuredRouteHeaderHeight) {
+        if (selectedSegmentId != null || selectedRouteId != null) {
+            if (scaffoldState.bottomSheetState.currentValue == SheetValue.PartiallyExpanded ||
+                scaffoldState.bottomSheetState.targetValue == SheetValue.PartiallyExpanded) {
+                scaffoldState.bottomSheetState.partialExpand()
+            }
         }
     }
 
