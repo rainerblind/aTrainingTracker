@@ -105,4 +105,27 @@ class ElevationProfileGestureTest {
                     content.contains("pressed.forEach { it.consume() }")
         )
     }
+
+    @Test
+    fun testElevationProfile_decouplesMutableZoomKeysFromPointerInput() {
+        assertTrue("ElevationProfile.kt must exist", elevationProfileFile.exists())
+        val content = elevationProfileFile.readText()
+
+        assertTrue(
+            "ElevationProfile must key pointerInput only on structural parameters (REQ-UI-232, ATT-1987)",
+            content.contains("baseCanvasModifier.pointerInput(totalSpan, isTimeDomain, isPanMode)")
+        )
+        assertFalse(
+            "ElevationProfile must NOT key pointerInput on currentStartDist or currentZoomScale",
+            content.contains("baseCanvasModifier.pointerInput(totalSpan, isTimeDomain, isPanMode, currentZoomScale, currentStartDist)")
+        )
+        assertTrue(
+            "ElevationProfile must track currentStartDist via rememberUpdatedState",
+            content.contains("val currentStartDistState by rememberUpdatedState(currentStartDist)")
+        )
+        assertTrue(
+            "ElevationProfile must track localStartDist across pan events",
+            content.contains("localStartDist = panStart")
+        )
+    }
 }
