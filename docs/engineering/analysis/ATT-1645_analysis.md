@@ -1,10 +1,10 @@
-# Stage 1 Analysis: ATT-1645 - Calibrate and Optimize Initial Height & Peek Baselines for Popups and Bottom Sheets
+# Stage 1 Analysis: ATT-1645 - Calibrate and Optimize Initial Height & Peek Baselines for Popups and Bottom Sheets (Dynamic Self-Measuring Baselines)
 
 **Ticket**: [ATT-1645](https://atrainingtracker.atlassian.net/browse/ATT-1645)  
-**Sub-task**: [ATT-1961](https://atrainingtracker.atlassian.net/browse/ATT-1961) (`[Analysis]`)  
+**Sub-task**: [ATT-2009](https://atrainingtracker.atlassian.net/browse/ATT-2009) (`[Analysis]`)  
 **Parent Epic**: [ATT-355](https://atrainingtracker.atlassian.net/browse/ATT-355) (*Good and consistent UI*)  
 **Target Release**: `V4.9.38`  
-**Active Sprint**: `2026-40.9`  
+**Active Sprint**: `2026-40.11`  
 **Branch**: `feature/ATT-1645`  
 **Author**: AI Agent 1 (Implementer)  
 **Date**: 2026-10-02  
@@ -15,147 +15,131 @@
 
 Across `aTrainingTracker`, modal and persistent bottom sheets provide athletes with instant peek digests of domain entities (Locations, Routes, Segments, Live Segments, and Workouts) before the sheet is dragged upward to reveal elevation profiles, telemetry charts, or deeper analytical tables.
 
-During physical device review on Google Pixel 10 (Android 15 / gesture navigation bar) in Sprint `2026-40.8`, the initial baseline tokens established in `ATT-1645` revealed three concrete calibration discrepancies:
-1. **Segments Bottom Sheet (`SegmentOnMapScreen.kt`)**: The third metrics row of the `SegmentDetails` card (altitude icon, elevation gain, min altitude, max altitude) was obscured behind the system navigation bar.
-2. **Routes Bottom Sheet (`RouteOnMapScreen.kt`)**: When a route contained an optional description (`summary.description.isNotEmpty()`), the description text was obscured behind the system navigation bar.
-3. **Live Segment Bottom Sheet (`SensorGridScreen.kt` / `LiveSegmentSheet.kt`)**: The baseline height was set higher than the live header footprint, causing the top slice of the underlying elevation profile graph to awkwardly peek out above the navigation bar before the user initiated a swipe gesture.
+During physical device review on Google Pixel 10 hardware in Sprint `2026-40.10`, static peek height constants (e.g. `192.dp` for Segments, `112.dp`/`152.dp` for Routes) repeatedly exhibited edge-case clipping:
+1. **Segments Bottom Sheet (`SegmentOnMapScreen.kt`)**: The third metrics row of `SegmentDetails` (altitude icon, elevation gain, min altitude, max altitude) was occluded behind the system navigation bar when font scale, display zoom, or segment title wrapping varied.
+2. **Routes Bottom Sheet (`RouteOnMapScreen.kt`)**: Route descriptions with differing line counts or lengths still suffered partial cut-offs behind the system navigation bar.
+3. **Live Segment Bottom Sheet (`SensorGridScreen.kt` / `LIveSegmentSheet.kt`)**: User verified during Sprint 2026-40.10 testing that the live segment peek baseline ($126\text{dp}$) now looks correct on Pixel 10 hardware, confirming that precise framing is achievable.
 
-The objective of this revision cycle in Sprint `2026-40.9` is to recalibrate the `BottomSheetDesign` peek baseline tokens and screen-level peek formulas so that all header rows sit cleanly above the system navigation bar across all device configurations, while secondary charts remain strictly below the fold.
+Because static hardcoded Dp constants are fundamentally brittle in the face of user-customized font sizes, dynamic text wrapping, and device navigation bar heights, the solution formulated and approved in Ceremony 1 is **Dynamic Self-Measuring Header Peek Baselines**.
 
 ---
 
 ## 2. Root Cause Analysis (Forensic Investigation)
 
-### Forensic Inspection of Candidate Sheets & Header Footprints
+### Forensic Inspection of Static Peek Limitations
 
-1. **Segments Peek (`SegmentHeader` + `SegmentDetails` via `SegmentOnMapScreen.kt` / `MapDetailLayout.kt`)**:
-   * *Observed Defect*: Altitude gain and min/max elevation row is obscured behind the navigation bar.
-   * *Content Structure Breakdown*:
-     * `MinimumDragHandle()`: $15\text{dp}$ ($8\text{dp}$ top + $3\text{dp}$ pill + $4\text{dp}$ bottom).
-     * `SegmentHeader`: $8\text{dp}$ top padding + Sport Icon ($32\text{dp}$) & Title (`titleLarge`, ~$28\text{dp}$) + Category/City row ($20\text{dp}$) + $4\text{dp}$ bottom padding = ~$64\text{dp}$.
-     * `HorizontalDivider`: $0.5\text{dp}$.
-     * `SegmentDetails`:
-       * Top padding: $4\text{dp}$.
-       * Row 1 (Distance & Strava logo): ~$28\text{dp}$.
-       * Spacing: $4\text{dp}$.
-       * Row 2 (Grades: average & maximum): ~$24\text{dp}$.
-       * Spacing: $4\text{dp}$.
-       * Row 3 (Altitude icon, Ascent, Min, Max): ~$28\text{dp}$.
-       * Bottom padding: $8\text{dp}$.
-       * Total `SegmentDetails`: $4 + 28 + 4 + 24 + 4 + 28 + 8 = 96\text{dp}$.
-   * *Actual Footprint*: $15\text{dp} (\text{handle}) + 64\text{dp} (\text{header}) + 1\text{dp} (\text{divider}) + 96\text{dp} (\text{details}) = 176\text{dp}$ (up to $184\text{dp}$ with multi-line titles).
-   * *Root Cause*: `BottomSheetDesign.PeekHeightSegment` was set to $156\text{dp}$. At $156\text{dp}$, the sheet is $20\text{dp}$ to $28\text{dp}$ too short, truncating Row 3 (the altitude row) directly behind the navigation bar.
-   * *Countermeasure*: Increase `BottomSheetDesign.PeekHeightSegment` from $156\text{dp}$ to **`192.dp`** ($188\text{dp}$ content + $4\text{dp}$ breathing room).
+1. **Font Scale & Line Wrap Variability**:
+   - `SegmentHeader` displays `summary.name` in `titleLarge` (~$28\text{dp}$) and `summary.climbCategory`. On standard display settings with short names, this requires one line. On larger display zooms or localized strings with longer segment names, the title wraps to two lines, adding $24\text{dp}$ to $32\text{dp}$ of unbudgeted vertical space.
+   - `SegmentDetails` contains 3 distinct rows:
+     - Row 1: Distance & Strava logo (~$28\text{dp}$)
+     - Row 2: Grades average & maximum (~$24\text{dp}$)
+     - Row 3: Altitude icon, Ascent, Min, Max (~$28\text{dp}$)
+   - When any static constant is used, any variation in system font scale directly pushes Row 3 below the navigation bar boundary.
 
-2. **Routes Peek (`RouteSummaryHeader` via `RouteOnMapScreen.kt` / `MapDetailLayout.kt`)**:
-   * *Observed Defect*: Route description is obscured behind the navigation bar when present.
-   * *Content Structure Breakdown*:
-     * `MinimumDragHandle()`: $15\text{dp}$.
-     * Base Header Box (Sport Icon $32\text{dp}$, Name `titleLarge`, Source label, Distance, Elevation Gain, Visibility Switch): ~$88\text{dp}$.
-     * Base Footprint (No Description): $15 + 88 = 103\text{dp}$ (fits inside $112\text{dp}$).
-     * Optional Description Block:
-       * `HorizontalDivider`: $4.5\text{dp}$ ($4\text{dp}$ top padding + $0.5\text{dp}$ line).
-       * Description `Text` (`bodyMedium`, line height $20\text{dp}$, $8\text{dp}$ bottom padding): ~$28\text{dp}$ (single line) or ~$48\text{dp}$ (two lines).
-       * Additional height: ~$32.5\text{dp}$ to $48\text{dp}$.
-   * *Footprint With Description*: $103\text{dp} + 36\text{dp} \approx 139\text{dp}$ to $148\text{dp}$.
-   * *Root Cause*: `BottomSheetDesign.PeekHeightRoute` was set statically to $112\text{dp}$. This baseline cleanly accommodates routes without description, but truncates the description row whenever a description is present.
-   * *Countermeasure*:
-     * Define `BottomSheetDesign.PeekHeightRouteWithDescription = 152.dp`.
-     * In `MapScreenWithTrack.kt`, conditionally evaluate whether the selected route has a non-empty description:
-       `val basePeek = if (routeSummary?.description.isNullOrEmpty()) BottomSheetDesign.PeekHeightRoute else BottomSheetDesign.PeekHeightRouteWithDescription`
-       `sheetPeekHeight = basePeek + navBarHeight`.
+2. **Route Description Variability**:
+   - Routes can have descriptions ranging from zero characters to long multi-sentence descriptions. Even with a binary distinction (`PeekHeightRoute` vs `PeekHeightRouteWithDescription`), a 3-line description will overflow a static $152\text{dp}$ baseline.
 
-3. **Live Segment Peek (`LiveSegmentSheet.kt` / `SensorGridScreen.kt`)**:
-   * *Observed Defect*: Elevation profile graph is slightly visible above the navigation bar in the resting peek state.
-   * *Content Structure Breakdown*:
-     * `MinimumDragHandle()`: $15\text{dp}$.
-     * `SegmentHeader`: $2\text{dp}$ top padding + Icon ($32\text{dp}$) & Title ($24\text{dp}$) + Live status label ($16\text{dp}$) + $4\text{dp}$ bottom padding = ~$46\text{dp}$.
-     * `HorizontalDivider`: $0.5\text{dp}$.
-     * `SegmentLiveDetails`: $4\text{dp}$ top padding + Left Column (Distance, Remaining, Offset: ~$60\text{dp}$) + $4\text{dp}$ bottom padding = ~$68\text{dp}$.
-   * *Actual Footprint*: $15\text{dp} + 46\text{dp} + 0.5\text{dp} + 68\text{dp} \approx 129.5\text{dp}$ (or $115\text{dp}$ without drag handle).
-   * *Root Cause*: `BottomSheetDesign.PeekHeightLiveSegment` was set to $140\text{dp}$. Because the live header layout requires only ~$124\text{dp}$ to $128\text{dp}$, setting peek height to $140\text{dp} + \text{navBarHeight}$ created an excess margin of ~$12\text{dp}$ to $16\text{dp}$, causing the top of the subsequent `ElevationProfile` graph in `MapDetailLayout` to spill over into the visible peek viewport.
-   * *Countermeasure*: Recalibrate `BottomSheetDesign.PeekHeightLiveSegment` from $140\text{dp}$ to **`126.dp`**, cleanly framing the live progress indicators without revealing the underlying elevation profile until swiped upward.
-
-4. **Workouts Peek & Favorite Locations Peek**:
-   * `PeekHeightWorkout` ($140\text{dp}$) and `PeekHeightKnownLocation` ($108\text{dp}$) were verified as optimal during the physical review on Pixel 10 and require no changes.
+3. **Decoupled Architecture Between Scaffolding and Slotted Header**:
+   - `BottomSheetScaffold` in `MapScreenWithTrack.kt` requires `sheetPeekHeight` as a parameter.
+   - However, the actual header layout (`MinimumDragHandle() + Surface(header)`) is rendered deep inside `MapDetailLayout.kt`.
+   - Without an upward measurement feedback loop from `MapDetailLayout` to `MapScreenWithTrack`, the scaffold has zero insight into the real rendered height of its child header.
 
 ---
 
-## 3. User Scope Grounding (ATT-1250)
+## 3. Architectural Solution: Dynamic Self-Measuring Header Peek Baselines
+
+### Architectural Design
+
+```
++-----------------------------------------------------------------------------------+
+| MapScreenWithTrack.kt                                                             |
+|   var measuredSegmentHeaderHeight: Dp? by remember(selectedSegmentId)             |
+|   var measuredRouteHeaderHeight: Dp? by remember(selectedRouteId)                 |
+|                                                                                   |
+|   sheetPeekHeight = (measuredHeaderHeight ?: fallbackBaseline) + navBarHeight     |
+|                                                                                   |
+|   BottomSheetScaffold(sheetPeekHeight = sheetPeekHeight) {                        |
+|     sheetContent = {                                                              |
+|       SegmentOnMapScreen(                                                         |
+|         onHeaderHeightMeasured = { measuredSegmentHeaderHeight = it }             |
+|       )                                                                           |
+|     }                                                                             |
+|   }                                                                               |
++-----------------------------------------------------------------------------------+
+                                         ^
+                                         | onHeaderHeightMeasured(heightDp)
++----------------------------------------+------------------------------------------+
+| MapDetailLayout.kt                                                                |
+|   Column(                                                                         |
+|     modifier = Modifier.onGloballyPositioned { coordinates ->                     |
+|       val heightDp = with(density) { coordinates.size.height.toDp() }             |
+|       onHeaderHeightMeasured?.invoke(heightDp)                                    |
+|     }                                                                             |
+|   ) {                                                                             |
+|     if (!useStatusBarsPadding) MinimumDragHandle()                                |
+|     Surface(header) { header() }                                                  |
+|   }                                                                               |
++-----------------------------------------------------------------------------------+
+```
+
+1. **Self-Measuring Container in `MapDetailLayout.kt`**:
+   - Wrap `MinimumDragHandle()` and `Surface(header)` in a Column with `Modifier.fillMaxWidth().onGloballyPositioned { coordinates -> ... }`.
+   - Convert pixel height to Dp via `LocalDensity.current`.
+   - Pass measured Dp to optional callback `onHeaderHeightMeasured: ((Dp) -> Unit)? = null`.
+
+2. **Screen-Level Forwarding**:
+   - `SegmentOnMapScreen`: Accept `onHeaderHeightMeasured: ((Dp) -> Unit)? = null` and forward to `MapDetailLayout`.
+   - `RouteOnMapScreen`: Accept `onHeaderHeightMeasured: ((Dp) -> Unit)? = null` and forward to `MapDetailLayout`.
+   - `LIveSegmentSheet`: Retain `BottomSheetDesign.PeekHeightLiveSegment` ($126\text{dp}$), with optional measurement hook.
+
+3. **Parent Scaffolding Integration (`MapScreenWithTrack.kt`)**:
+   - Maintain `measuredSegmentHeaderHeight` and `measuredRouteHeaderHeight` remembered per entity ID.
+   - Compute `sheetPeekHeight` as:
+     - `selectedSegmentId != null -> (measuredSegmentHeaderHeight ?: BottomSheetDesign.PeekHeightSegment) + navBarHeight`
+     - `selectedRouteId != null -> (measuredRouteHeaderHeight ?: defaultRoutePeek) + navBarHeight`
+     - `selectedLocationId != null -> BottomSheetDesign.PeekHeightKnownLocation + navBarHeight`
+   - Initial frame uses established fallback baselines; as soon as layout completes (first frame), the exact measured height locks the peek baseline cleanly above the navigation bar.
+
+---
+
+## 4. User Scope Grounding (ATT-1250)
 
 * **In-Scope Goals**:
-  1. Recalibrate `BottomSheetDesign.PeekHeightSegment` to `192.dp` to ensure the altitude metrics row is 100% visible above the navigation bar.
-  2. Introduce `BottomSheetDesign.PeekHeightRouteWithDescription = 152.dp` and integrate dynamic description-aware peek calculation in `MapScreenWithTrack.kt`.
-  3. Recalibrate `BottomSheetDesign.PeekHeightLiveSegment` to `126.dp` in `BottomSheetDesign.kt` to prevent the elevation profile from peeking out before upward swipe.
-  4. Ensure `WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()` remains strictly added to every non-zero peek baseline.
-  5. Update unit tests in `BottomSheetDesignTest.kt` and contract tests in `BottomSheetVisualContractTest.kt`.
+  1. Add `onHeaderHeightMeasured: ((Dp) -> Unit)? = null` to `MapDetailLayout.kt`.
+  2. Implement `Modifier.onGloballyPositioned` measurement around `MinimumDragHandle() + Surface(header)` in `MapDetailLayout.kt`.
+  3. Propagate `onHeaderHeightMeasured` through `SegmentOnMapScreen.kt` and `RouteOnMapScreen.kt`.
+  4. Integrate measured peek heights in `MapScreenWithTrack.kt` with defensive fallback to `BottomSheetDesign` constants.
+  5. Preserve calibrated `BottomSheetDesign.PeekHeightLiveSegment = 126.dp` for `LIveSegmentSheet.kt` / `SensorGridScreen.kt`.
+  6. Unit and visual contract tests verifying fallback constants and measurement callbacks.
 
 * **Out-of-Scope Non-Goals (Scope Bounding)**:
-  * No redesign of `MapDetailLayout` internals or gesture handling.
-  * No alteration to workout cluster heatmaps or historical period maps (`PeekHeightWorkout = 140.dp` remains unchanged).
-  * No modification to favorite location sheets (`PeekHeightKnownLocation = 108.dp` remains unchanged).
-  * No modifications to database schemas, tracking services, or GPS logic.
+  * No modification to map rendering or GPS tracking pipelines.
+  * No changes to workout heatmap peek baselines (`PeekHeightWorkout = 140.dp`).
+  * No changes to favorite location sheets (`PeekHeightKnownLocation = 108.dp`).
+  * Upward travel / expanded height constraint fixes belong to `ATT-2008`.
 
 ---
 
-## 4. Requirement Archaeology & Chesterton's Fence Audit
+## 5. Chesterton's Fence Archaeology (`REQ-PRO-022`)
 
-### Audit of Existing Requirements (`REQ-PRO-022`)
-
-1. **`REQ-UI-221` (*UI/Sheets: Standardized Bottom Sheet Peek Height Baselines and Information Footprint Framing*)**:
-   * *Original Requirement Target*: `BottomSheetDesign.kt`, `MapScreenWithTrack.kt`, `SensorGridScreen.kt`, `WorkoutClusterHeatmapScreen.kt`, `PeriodMapScreen.kt`.
-   * *Historical Origin & Commit Trace*: Sprint `2026-40.8` (Commit `9c3dd09e`, ATT-1645).
-   * *Root Reason for Existing Formulation*: Centralized disparate magic numbers into `BottomSheetDesign` constants (`140.dp`, `112.dp`, `156.dp`, `108.dp`, `140.dp`).
-   * *Preservation of Core Invariants*: Invariant that every persistent sheet incorporates `navBarHeight` and adheres to `REQ-SET-069` status bar constraints is 100% preserved. The token values are updated to reflect physical device geometry findings (`PeekHeightSegment = 192.dp`, `PeekHeightRouteWithDescription = 152.dp`, `PeekHeightLiveSegment = 126.dp`).
+* **Target Requirement**: `REQ-UI-221` (Standardized Bottom Sheet Peek Baselines)
+* **Original Form**: Established static Dp tokens in `BottomSheetDesign.kt` for each sheet type.
+* **Historical Trace**: Commit `5e37030c` / Sprint 2026-40.8 & 2026-40.9.
+* **Root Reason for Existing Formulation**: Providing clean, un-crowded peeks without hardcoding scattered magic numbers in individual screens.
+* **Preservation of Core Invariants**: The standardized tokens in `BottomSheetDesign.kt` are preserved as immediate initial-render fallbacks and unit test baselines. The dynamic measurement enhances and supersedes static values at runtime to eliminate device font/density discrepancies.
 
 ---
 
-## 5. Architectural Strategy & High-Level Solution
+## 6. System Invariants & Caller Stability
 
-### Step 1: Update Tokens in `BottomSheetDesign.kt`
-```kotlin
-object BottomSheetDesign {
-    // Existing tokens...
-    val PeekHeightWorkout: Dp = 140.dp
-    val PeekHeightRoute: Dp = 112.dp
-    val PeekHeightRouteWithDescription: Dp = 152.dp
-    val PeekHeightSegment: Dp = 192.dp
-    val PeekHeightKnownLocation: Dp = 108.dp
-    val PeekHeightLiveSegment: Dp = 126.dp
-}
-```
-
-### Step 2: Screen-Level Calibration in `MapScreenWithTrack.kt`
-```kotlin
-sheetPeekHeight = when {
-    selectedSegmentId != null -> BottomSheetDesign.PeekHeightSegment + navBarHeight
-    selectedRouteId != null -> {
-        val summary = allRoutes.find { it.summary.id == selectedRouteId }?.summary
-        val basePeek = if (summary?.description.isNullOrEmpty()) {
-            BottomSheetDesign.PeekHeightRoute
-        } else {
-            BottomSheetDesign.PeekHeightRouteWithDescription
-        }
-        basePeek + navBarHeight
-    }
-    selectedLocationId != null -> BottomSheetDesign.PeekHeightKnownLocation + navBarHeight
-    else -> 0.dp
-}
-```
-
-### Step 3: Verification & Unit Testing
-* Update `BottomSheetDesignTest.kt` to assert the updated peek baseline tokens.
-* Update `BottomSheetVisualContractTest.kt` to verify that `MapScreenWithTrack.kt` and `SensorGridScreen.kt` consume the calibrated tokens without hardcoded values.
+1. **Navigation Bar Inset Integrity**: `WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()` is strictly added to every non-zero sheet peek height.
+2. **Defensive Fallback**: If measurement is delayed or unavailable, `sheetPeekHeight` safely falls back to `BottomSheetDesign` constants, preventing layout jumps or zero-height sheets.
+3. **9-Language Localization Parity**: No user-facing text strings are added or altered.
+4. **Touch & Gesture Stability**: Sheet dragging, swiping, and expansion behavior remain identical.
 
 ---
 
-## 6. System Invariants & Risk Assessment
+## 7. Risk Rating & Mitigation
 
-* **Core Invariants**:
-  1. `WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()` is strictly added to every non-zero peek baseline.
-  2. Maximum sheet expansion remains constrained by status bar insets (`REQ-SET-069`).
-  3. Minimum drag handle dimensions (`32dp x 3dp`) and vertical touch padding remain unchanged.
-  4. Zero changes to GPS tracking, sensor pipeline, or database schema.
-
-* **Risk Rating**: **LOW**  
-  * Justification: Clean UI token recalibration directly addressing physical device feedback from Sprint `2026-40.8` review. Zero regression risk for business logic or data pipelines.
+* **Risk Level**: **LOW**
+* **Technical Justification**: Non-invasive addition of an optional callback on `MapDetailLayout` with `Modifier.onGloballyPositioned`. When callback is null (existing callers like Workout Map, Live Segment, etc.), behavior is completely unchanged. Defensive fallback ensures robust rendering even in preview or testing environments.
