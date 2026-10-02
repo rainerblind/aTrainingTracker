@@ -1386,4 +1386,10 @@
     <string name="zoom_reset">Resetuj powiększenie</string>
     <string name="zoom_pan_mode">Tryb przesuwania</string>
     <string name="zoom_scrub_mode">Tryb przewijania</string>
+
+    <!-- Configurable Lap Display Mode (ATT-1870 / REQ-UI-229) -->
+    <string name="settings_lap_display_mode_title">Tryb wyświetlania okrążeń</string>
+    <string name="settings_lap_display_mode_table">Tabela</string>
+    <string name="settings_lap_display_mode_visualizer">Wizualizator</string>
+    <string name="settings_lap_display_mode_both">Oba</string>
 </resources>

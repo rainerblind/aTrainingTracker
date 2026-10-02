@@ -1392,4 +1392,10 @@
     <string name="zoom_reset">Redefinir zoom</string>
     <string name="zoom_pan_mode">Modo de deslocamento</string>
     <string name="zoom_scrub_mode">Modo de navegação</string>
+
+    <!-- Configurable Lap Display Mode (ATT-1870 / REQ-UI-229) -->
+    <string name="settings_lap_display_mode_title">Modo de exibição de voltas</string>
+    <string name="settings_lap_display_mode_table">Tabela</string>
+    <string name="settings_lap_display_mode_visualizer">Visualizador</string>
+    <string name="settings_lap_display_mode_both">Ambos</string>
 </resources>

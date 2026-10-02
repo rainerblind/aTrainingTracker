@@ -51,6 +51,7 @@ import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
 fun WorkoutLaps(
     laps: List<LapData>,
     bSportType: BSportType = BSportType.UNKNOWN,
+    lapDisplayMode: LapDisplayMode = LapDisplayMode.BOTH,
     modifier: Modifier = Modifier,
     onLapClick: ((LapData) -> Unit)? = null
 ) {
@@ -108,8 +109,8 @@ fun WorkoutLaps(
             )
         }
 
-        // High-Aesthetic Lap & Interval Split Visualizer (REQ-UI-204 / ATT-1742)
-        if (splitChartData != null) {
+        // High-Aesthetic Lap & Interval Split Visualizer (REQ-UI-204 / ATT-1742 / REQ-UI-229 / ATT-1870)
+        if (splitChartData != null && WorkoutLapsHelper.shouldShowVisualizer(lapDisplayMode)) {
             LapSplitVisualizer(
                 splitData = splitChartData,
                 onLapClick = onLapClick?.let { callback ->
@@ -124,91 +125,93 @@ fun WorkoutLaps(
             Spacer(modifier = Modifier.height(4.dp))
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        if (WorkoutLapsHelper.shouldShowTable(lapDisplayMode)) {
+            Spacer(modifier = Modifier.height(4.dp))
 
-        // Table Header
-        LapTableHeader(
-            isRunningSport = isRunningSport,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
-        )
+            // Table Header
+            LapTableHeader(
+                isRunningSport = isRunningSport,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+            )
 
-        // Split Table Rows
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp)
-        ) {
-            displayedLaps.forEachIndexed { index, lap ->
-                val lapIndex = laps.indexOf(lap) + 1
-                val displayName = lap.getDisplayName(lapIndex)
+            // Split Table Rows
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp)
+            ) {
+                displayedLaps.forEachIndexed { index, lap ->
+                    val lapIndex = laps.indexOf(lap) + 1
+                    val displayName = lap.getDisplayName(lapIndex)
 
-                val isFastest = hasDifferentSpeeds && fastestSpeed != null &&
-                        kotlin.math.abs(lap.speedAverageMps - fastestSpeed) < 1e-5
-                val isSlowest = hasDifferentSpeeds && slowestSpeed != null &&
-                        kotlin.math.abs(lap.speedAverageMps - slowestSpeed) < 1e-5
+                    val isFastest = hasDifferentSpeeds && fastestSpeed != null &&
+                            kotlin.math.abs(lap.speedAverageMps - fastestSpeed) < 1e-5
+                    val isSlowest = hasDifferentSpeeds && slowestSpeed != null &&
+                            kotlin.math.abs(lap.speedAverageMps - slowestSpeed) < 1e-5
 
-                val badgeEmoji = when {
-                    isFastest -> "🐇"
-                    isSlowest -> "🦔"
-                    else -> null
-                }
-                val badgeDescription = when {
-                    isFastest -> stringResource(R.string.fastest_lap)
-                    isSlowest -> stringResource(R.string.slowest_lap)
-                    else -> null
-                }
-
-                // Speed / Pace formatted string (pure numbers, units are in the table header)
-                val speedPaceFormatted = if (isRunningSport) {
-                    if (lap.speedAverageMps > 0.001) {
-                        formatters.pace.format(1.0 / lap.speedAverageMps)
-                    } else {
-                        "--"
+                    val badgeEmoji = when {
+                        isFastest -> "🐇"
+                        isSlowest -> "🦔"
+                        else -> null
                     }
-                } else {
-                    formatters.speed.format(lap.speedAverageMps)
-                }
+                    val badgeDescription = when {
+                        isFastest -> stringResource(R.string.fastest_lap)
+                        isSlowest -> stringResource(R.string.slowest_lap)
+                        else -> null
+                    }
 
-                LapRow(
-                    displayName = displayName,
-                    description = lap.description,
-                    timeFormatted = formatters.time.format(lap.timeTotalS.toLong()),
-                    distanceFormatted = formatters.distance.format_with_units(lap.distanceTotalM),
-                    speedPaceFormatted = speedPaceFormatted,
-                    badgeEmoji = badgeEmoji,
-                    badgeDescription = badgeDescription,
-                    onClick = if (onLapClick != null) { { onLapClick(lap) } } else null,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
+                    // Speed / Pace formatted string (pure numbers, units are in the table header)
+                    val speedPaceFormatted = if (isRunningSport) {
+                        if (lap.speedAverageMps > 0.001) {
+                            formatters.pace.format(1.0 / lap.speedAverageMps)
+                        } else {
+                            "--"
+                        }
+                    } else {
+                        formatters.speed.format(lap.speedAverageMps)
+                    }
 
-                if (index < displayedLaps.size - 1) {
-                    HorizontalDivider(
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                        modifier = Modifier.padding(vertical = 2.dp)
+                    LapRow(
+                        displayName = displayName,
+                        description = lap.description,
+                        timeFormatted = formatters.time.format(lap.timeTotalS.toLong()),
+                        distanceFormatted = formatters.distance.format_with_units(lap.distanceTotalM),
+                        speedPaceFormatted = speedPaceFormatted,
+                        badgeEmoji = badgeEmoji,
+                        badgeDescription = badgeDescription,
+                        onClick = if (onLapClick != null) { { onLapClick(lap) } } else null,
+                        modifier = Modifier.padding(vertical = 4.dp)
                     )
+
+                    if (index < displayedLaps.size - 1) {
+                        HorizontalDivider(
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                    }
                 }
             }
-        }
 
-        // Expandable toggle button if > 3 laps
-        if (laps.size > 3) {
-            Spacer(modifier = Modifier.height(4.dp))
-            TextButton(
-                onClick = { isExpanded = !isExpanded },
-                modifier = Modifier
-                    .padding(horizontal = 12.dp)
-                    .align(Alignment.Start)
-            ) {
-                Text(
-                    text = if (!isExpanded) {
-                        stringResource(R.string.show_all_laps, laps.size)
-                    } else {
-                        stringResource(R.string.show_fewer_laps)
-                    },
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
+            // Expandable toggle button if > 3 laps
+            if (laps.size > 3) {
+                Spacer(modifier = Modifier.height(4.dp))
+                TextButton(
+                    onClick = { isExpanded = !isExpanded },
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .align(Alignment.Start)
+                ) {
+                    Text(
+                        text = if (!isExpanded) {
+                            stringResource(R.string.show_all_laps, laps.size)
+                        } else {
+                            stringResource(R.string.show_fewer_laps)
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     }
@@ -382,5 +385,11 @@ object WorkoutLapsHelper {
     fun getDisplayedLaps(laps: List<LapData>, isExpanded: Boolean): List<LapData> {
         return if (isExpanded || laps.size <= 3) laps else laps.take(3)
     }
+
+    fun shouldShowVisualizer(mode: LapDisplayMode): Boolean =
+        mode == LapDisplayMode.BOTH || mode == LapDisplayMode.VISUALIZER_ONLY
+
+    fun shouldShowTable(mode: LapDisplayMode): Boolean =
+        mode == LapDisplayMode.BOTH || mode == LapDisplayMode.TABLE_ONLY
 }
 

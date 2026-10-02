@@ -1479,4 +1479,10 @@
     <string name="zoom_reset">Zoom zurücksetzen</string>
     <string name="zoom_pan_mode">Verschiebemodus</string>
     <string name="zoom_scrub_mode">Scrub-Modus</string>
+
+    <!-- Configurable Lap Display Mode (ATT-1870 / REQ-UI-229) -->
+    <string name="settings_lap_display_mode_title">Runden-Anzeigemodus</string>
+    <string name="settings_lap_display_mode_table">Tabelle</string>
+    <string name="settings_lap_display_mode_visualizer">Visualizer</string>
+    <string name="settings_lap_display_mode_both">Beide</string>
 </resources>

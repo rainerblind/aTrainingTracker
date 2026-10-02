@@ -215,6 +215,7 @@ fun WorkoutSummary(
             WorkoutLaps(
                 laps = workoutData.laps,
                 bSportType = workoutData.bSportType,
+                lapDisplayMode = preferences.lapDisplayMode,
                 onLapClick = { lap -> activeEditingLap = lap }
             )
         }

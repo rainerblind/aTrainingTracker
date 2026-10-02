@@ -51,6 +51,7 @@ import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitTypography
@@ -751,6 +752,43 @@ fun WorkoutMasksAndCardsSection(
             isChecked = workoutCardPrefs.showLaps,
             onCheckedChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showLaps = it)) }
         )
+        if (workoutCardPrefs.showLaps) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, bottom = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_lap_display_mode_title),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = workoutCardPrefs.lapDisplayMode == LapDisplayMode.TABLE_ONLY,
+                        onClick = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(lapDisplayMode = LapDisplayMode.TABLE_ONLY)) },
+                        label = { Text(stringResource(R.string.settings_lap_display_mode_table)) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FilterChip(
+                        selected = workoutCardPrefs.lapDisplayMode == LapDisplayMode.VISUALIZER_ONLY,
+                        onClick = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(lapDisplayMode = LapDisplayMode.VISUALIZER_ONLY)) },
+                        label = { Text(stringResource(R.string.settings_lap_display_mode_visualizer)) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FilterChip(
+                        selected = workoutCardPrefs.lapDisplayMode == LapDisplayMode.BOTH,
+                        onClick = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(lapDisplayMode = LapDisplayMode.BOTH)) },
+                        label = { Text(stringResource(R.string.settings_lap_display_mode_both)) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
         TuningToggleItem(
             title = stringResource(R.string.settings_workout_card_strava),
             isChecked = workoutCardPrefs.showStrava,
