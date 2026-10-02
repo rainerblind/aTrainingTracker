@@ -255,6 +255,8 @@ fun TelemetryMetricGraph(
     bSportType: BSportType = BSportType.UNKNOWN,
     zoomScale: Float = 1.0f,
     startDist: Double = 0.0,
+    isPanMode: Boolean = false,
+    onZoomChanged: ((Float, Double) -> Unit)? = null,
     hrZoneThresholds: HeartRateZoneThresholds? = null,
     powerZoneThresholds: PowerZoneThresholds? = null
 ) {
@@ -405,7 +407,7 @@ fun TelemetryMetricGraph(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(110.dp)
-                .pointerInput(totalSpan, isTimeDomain, zoomScale, startDist) {
+                .pointerInput(totalSpan, isTimeDomain, zoomScale, startDist, isPanMode) {
                     val startPaddingPx = 50.dp.toPx()
                     val endPaddingPx = 25.dp.toPx()
                     val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
@@ -413,6 +415,7 @@ fun TelemetryMetricGraph(
 
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
+                        var prevX = down.position.x
                         var isDragging = false
                         var isVerticalScrolling = false
 
@@ -435,22 +438,35 @@ fun TelemetryMetricGraph(
                                 }
 
                                 if (isDragging) {
+                                    val dragDeltaX = pointer.position.x - prevX
                                     pointer.consume()
-                                    val localX = (pointer.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
-                                    val selectedVal = ElevationProfileZoomMath.canvasXToDistance(
-                                        canvasX = localX,
-                                        startDist = startDist,
-                                        visibleDist = visibleSpan,
-                                        canvasWidth = chartWidthPx,
-                                        totalDist = totalSpan
-                                    )
-                                    if (isTimeDomain) {
-                                        val targetTimeSec = selectedVal.toLong()
-                                        val nearest = pathPoints.minByOrNull { abs(it.timeSec - targetTimeSec) }
-                                        onDistanceSelected(nearest?.distance)
+                                    if (isPanMode && totalSpan > 10.0 && onZoomChanged != null) {
+                                        val panStart = ElevationProfileZoomMath.applyPan(
+                                            currentStartDist = startDist,
+                                            visibleDist = visibleSpan,
+                                            panDeltaX = dragDeltaX,
+                                            canvasWidth = chartWidthPx,
+                                            totalDist = totalSpan
+                                        )
+                                        onZoomChanged(zoomScale, panStart)
                                     } else {
-                                        onDistanceSelected(selectedVal)
+                                        val localX = (pointer.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
+                                        val selectedVal = ElevationProfileZoomMath.canvasXToDistance(
+                                            canvasX = localX,
+                                            startDist = startDist,
+                                            visibleDist = visibleSpan,
+                                            canvasWidth = chartWidthPx,
+                                            totalDist = totalSpan
+                                        )
+                                        if (isTimeDomain) {
+                                            val targetTimeSec = selectedVal.toLong()
+                                            val nearest = pathPoints.minByOrNull { abs(it.timeSec - targetTimeSec) }
+                                            onDistanceSelected(nearest?.distance)
+                                        } else {
+                                            onDistanceSelected(selectedVal)
+                                        }
                                     }
+                                    prevX = pointer.position.x
                                 } else if (isVerticalScrolling) {
                                     if (pointer.isConsumed) {
                                         break
@@ -461,23 +477,27 @@ fun TelemetryMetricGraph(
 
                         // On gesture completion
                         if (isDragging) {
-                            onDistanceSelected(null)
+                            if (!isPanMode) {
+                                onDistanceSelected(null)
+                            }
                         } else if (!isVerticalScrolling) {
-                            // Tap selection
-                            val localX = (down.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
-                            val selectedVal = ElevationProfileZoomMath.canvasXToDistance(
-                                canvasX = localX,
-                                startDist = startDist,
-                                visibleDist = visibleSpan,
-                                canvasWidth = chartWidthPx,
-                                totalDist = totalSpan
-                            )
-                            if (isTimeDomain) {
-                                val targetTimeSec = selectedVal.toLong()
-                                val nearest = pathPoints.minByOrNull { abs(it.timeSec - targetTimeSec) }
-                                onDistanceSelected(nearest?.distance)
-                            } else {
-                                onDistanceSelected(selectedVal)
+                            if (!isPanMode) {
+                                // Tap selection
+                                val localX = (down.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
+                                val selectedVal = ElevationProfileZoomMath.canvasXToDistance(
+                                    canvasX = localX,
+                                    startDist = startDist,
+                                    visibleDist = visibleSpan,
+                                    canvasWidth = chartWidthPx,
+                                    totalDist = totalSpan
+                                )
+                                if (isTimeDomain) {
+                                    val targetTimeSec = selectedVal.toLong()
+                                    val nearest = pathPoints.minByOrNull { abs(it.timeSec - targetTimeSec) }
+                                    onDistanceSelected(nearest?.distance)
+                                } else {
+                                    onDistanceSelected(selectedVal)
+                                }
                             }
                         }
                     }

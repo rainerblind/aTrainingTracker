@@ -199,14 +199,21 @@ class MapDetailLayoutTest {
             dividerIndex < toolbarIndex && toolbarIndex < lowerColIndex
         )
 
-        // 3. Pan mode hoisting and passing to ElevationProfile
+        // 3. Pan mode hoisting and passing to ElevationProfile and TelemetryMetricGraphs
         assertTrue(
             "MapDetailLayout must hoist isPanMode",
             content.contains("var isPanMode by remember(activeScrubPath) { mutableStateOf(false) }")
         )
+        val occurrencesPanMode = Regex("""isPanMode\s*=\s*isPanMode""").findAll(content).count()
         assertTrue(
-            "MapDetailLayout must pass isPanMode to ElevationProfile",
-            content.contains("isPanMode = isPanMode")
+            "MapDetailLayout must forward isPanMode = isPanMode to ElevationProfile and 3 TelemetryMetricGraphs (count >= 4) (REQ-UI-232)",
+            occurrencesPanMode >= 4
+        )
+
+        val occurrencesOnZoomChanged = Regex("""onZoomChanged\s*=\s*\{\s*z,\s*s\s*->""").findAll(content).count()
+        assertTrue(
+            "MapDetailLayout must wire onZoomChanged callback to ElevationProfile and 3 TelemetryMetricGraphs (count >= 4) (REQ-UI-232)",
+            occurrencesOnZoomChanged >= 4
         )
     }
 }

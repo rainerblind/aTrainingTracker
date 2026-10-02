@@ -257,6 +257,11 @@ fun MapDetailLayout(
                                             bSportType = bSportType,
                                             zoomScale = profileZoomScale,
                                             startDist = profileStartDist,
+                                            isPanMode = isPanMode,
+                                            onZoomChanged = { z, s ->
+                                                profileZoomScale = z
+                                                profileStartDist = s
+                                            },
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     }
@@ -280,6 +285,11 @@ fun MapDetailLayout(
                                             bSportType = bSportType,
                                             zoomScale = profileZoomScale,
                                             startDist = profileStartDist,
+                                            isPanMode = isPanMode,
+                                            onZoomChanged = { z, s ->
+                                                profileZoomScale = z
+                                                profileStartDist = s
+                                            },
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     }
@@ -303,6 +313,11 @@ fun MapDetailLayout(
                                             bSportType = bSportType,
                                             zoomScale = profileZoomScale,
                                             startDist = profileStartDist,
+                                            isPanMode = isPanMode,
+                                            onZoomChanged = { z, s ->
+                                                profileZoomScale = z
+                                                profileStartDist = s
+                                            },
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     }
