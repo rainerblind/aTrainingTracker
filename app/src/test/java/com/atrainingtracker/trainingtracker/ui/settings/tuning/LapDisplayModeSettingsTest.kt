@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.settings.tuning
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -102,5 +103,49 @@ class LapDisplayModeSettingsTest {
                 )
             }
         }
+    }
+
+    @Test
+    fun testAdvancedTuningDialog_lapDisplayModeUsesSegmentedButton() {
+        val candidates = listOf(
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt"),
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
+        )
+        val dialogFile = candidates.firstOrNull { it.exists() }
+            ?: error("AdvancedTuningDialog.kt not found in candidates: $candidates")
+        val content = dialogFile.readText()
+
+        // 1. Verify SingleChoiceSegmentedButtonRow is present for lap display mode
+        assertTrue(
+            "AdvancedTuningDialog must use SingleChoiceSegmentedButtonRow for lap display mode (REQ-UI-229, REQ-UI-234, ATT-1988)",
+            content.contains("SingleChoiceSegmentedButtonRow(")
+        )
+
+        // 2. Extract WorkoutMasksAndCardsSection
+        val sectionStartIndex = content.indexOf("fun WorkoutMasksAndCardsSection(")
+        assertTrue("WorkoutMasksAndCardsSection must exist", sectionStartIndex >= 0)
+        val sectionContent = content.substring(sectionStartIndex)
+
+        // 3. Verify SegmentedButton for TABLE_ONLY and VISUALIZER_ONLY
+        assertTrue(
+            "WorkoutMasksAndCardsSection must host SegmentedButton for TABLE_ONLY",
+            sectionContent.contains("LapDisplayMode.TABLE_ONLY") && sectionContent.contains("SegmentedButton(")
+        )
+        assertTrue(
+            "WorkoutMasksAndCardsSection must host SegmentedButton for VISUALIZER_ONLY",
+            sectionContent.contains("LapDisplayMode.VISUALIZER_ONLY")
+        )
+        assertTrue(
+            "SegmentedButton must use SegmentedButtonDefaults.itemShape(..., count = 2)",
+            sectionContent.contains("SegmentedButtonDefaults.itemShape(index = 0, count = 2)") &&
+                    sectionContent.contains("SegmentedButtonDefaults.itemShape(index = 1, count = 2)")
+        )
+
+        // 4. Verify FilterChip is NOT used in WorkoutMasksAndCardsSection
+        assertFalse(
+            "WorkoutMasksAndCardsSection must NOT use FilterChip for lap display mode (REQ-UI-234, ATT-1988)",
+            sectionContent.contains("FilterChip(")
+        )
     }
 }
