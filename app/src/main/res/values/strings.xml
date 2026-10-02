@@ -1530,6 +1530,8 @@
     <string name="tuning_profile_x_axis_desc">Select horizontal axis domain for elevation profile graphs.</string>
     <string name="tuning_profile_x_axis_distance">Distance</string>
     <string name="tuning_profile_x_axis_time">Time</string>
+    <string name="tuning_telemetry_x_axis_title">Telemetry Graphs X-Axis</string>
+    <string name="tuning_telemetry_x_axis_desc">Select horizontal axis domain for telemetry graphs (Heart Rate, Speed/Pace, Power).</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">Cockpit Typography</string>

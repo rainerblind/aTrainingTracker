@@ -144,6 +144,22 @@ class AdvancedTuningAccordionTest {
     }
 
     @Test
+    fun testAftermathAnalysisSubtitle_reflectsIndependentDomains() {
+        val mockContext = mockk<Context>()
+        every { mockContext.getString(R.string.tuning_profile_x_axis_title) } returns "Elevation"
+        every { mockContext.getString(R.string.tuning_telemetry_x_axis_title) } returns "Telemetry"
+        every { mockContext.getString(R.string.tuning_profile_x_axis_distance) } returns "Distance"
+        every { mockContext.getString(R.string.tuning_profile_x_axis_time) } returns "Time"
+
+        val subtitle = TuningSubtitleFormatter.formatAftermathSubtitle(
+            ProfileXAxisDomain.DISTANCE,
+            ProfileXAxisDomain.TIME,
+            mockContext
+        )
+        assertEquals("Elevation: Distance | Telemetry: Time", subtitle)
+    }
+
+    @Test
     fun testWorkoutMasksAndCardsSubtitle_reflectsActiveCounts() {
         val mockContext = mockk<Context>()
         every {

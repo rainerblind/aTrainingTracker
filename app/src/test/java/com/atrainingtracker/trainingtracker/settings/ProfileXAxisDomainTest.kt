@@ -22,21 +22,47 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * Unit test for ProfileXAxisDomain preference, default constants, and deserialization safety (REQ-UI-201, TST-UI-155.2).
+ * Unit test for independent ProfileXAxisDomain preferences, default constants,
+ * and deserialization safety (REQ-UI-201, REQ-UI-233, TST-UI-155.2, TST-UI-192).
  */
 class ProfileXAxisDomainTest {
 
     @Test
     fun testDefaultProfileXAxisDomain() {
         val config = TuningConfig()
+        // Primary decoupled domains (REQ-UI-233)
+        assertEquals(ProfileXAxisDomain.DISTANCE, config.elevationXAxisDomain)
+        assertEquals(ProfileXAxisDomain.TIME, config.telemetryXAxisDomain)
+        assertEquals(ProfileXAxisDomain.DISTANCE, TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN)
+        assertEquals(ProfileXAxisDomain.TIME, TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN)
+
+        // Deprecated backward-compatibility bridge
         assertEquals(ProfileXAxisDomain.DISTANCE, config.profileXAxisDomain)
         assertEquals(ProfileXAxisDomain.DISTANCE, TuningPreferencesDefaults.PROFILE_X_AXIS_DOMAIN)
     }
 
     @Test
     fun testProfileXAxisDomainCustomConfiguration() {
-        val config = TuningConfig(profileXAxisDomain = ProfileXAxisDomain.TIME)
-        assertEquals(ProfileXAxisDomain.TIME, config.profileXAxisDomain)
+        // Independent custom configuration
+        val config1 = TuningConfig(
+            elevationXAxisDomain = ProfileXAxisDomain.TIME,
+            telemetryXAxisDomain = ProfileXAxisDomain.DISTANCE
+        )
+        assertEquals(ProfileXAxisDomain.TIME, config1.elevationXAxisDomain)
+        assertEquals(ProfileXAxisDomain.DISTANCE, config1.telemetryXAxisDomain)
+
+        // Legacy single-property constructor compatibility
+        val legacyConfig = TuningConfig(profileXAxisDomain = ProfileXAxisDomain.TIME)
+        assertEquals(ProfileXAxisDomain.TIME, legacyConfig.elevationXAxisDomain)
+        assertEquals(ProfileXAxisDomain.TIME, legacyConfig.telemetryXAxisDomain)
+        assertEquals(ProfileXAxisDomain.TIME, legacyConfig.profileXAxisDomain)
+    }
+
+    @Test
+    fun testDataStoreKeyDefinitions() {
+        assertEquals("tuning_elevation_x_axis_domain", TuningPreferencesDataStore.KEY_ELEVATION_X_AXIS_DOMAIN.name)
+        assertEquals("tuning_telemetry_x_axis_domain", TuningPreferencesDataStore.KEY_TELEMETRY_X_AXIS_DOMAIN.name)
+        assertEquals("tuning_profile_x_axis_domain", TuningPreferencesDataStore.KEY_PROFILE_X_AXIS_DOMAIN.name)
     }
 
     @Test
