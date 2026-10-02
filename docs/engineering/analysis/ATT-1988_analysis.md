@@ -1,10 +1,10 @@
-# Stage 1 Analysis: ATT-1988 - [Settings/Aftermath] Remove 'Both' Option from Lap Display Mode in Expert Settings
+# Stage 1 Analysis: ATT-1988 - [Verbesserung] [Settings/Aftermath] Remove 'Both' Option from Lap Display Mode in Expert Settings (SegmentedButton)
 
 **Ticket**: [ATT-1988](https://rainerblind.atlassian.net/browse/ATT-1988)  
-**Sub-task**: [ATT-1995](https://rainerblind.atlassian.net/browse/ATT-1995) (`[Analysis]`)  
-**Parent Epic**: [ATT-111](https://rainerblind.atlassian.net/browse/ATT-111) (*Compact Post-Workout Visual Analytics & Graphs*)  
+**Sub-task**: [ATT-2039](https://rainerblind.atlassian.net/browse/ATT-2039) (`[Analysis]`)  
+**Parent Epic**: [ATT-111](https://rainerblind.atlassian.net/browse/ATT-111) (*Aftermath: Compact Post-Workout Visual Analytics & Graphs*)  
 **Target Release**: `V4.9.38`  
-**Active Sprint**: `2026-40.10`  
+**Active Sprint**: `2026-40.11`  
 **Branch**: `feature/ATT-1988`  
 **Author**: AI Agent 1 (Implementer)  
 **Date**: 2026-10-02  
@@ -13,88 +13,19 @@
 
 ## 1. Problem Statement & Motivation
 
-During on-device physical testing on Pixel 10 hardware of `ATT-1958` (where `LapDisplayMode` persistence and the `VISUALIZER_ONLY` default were verified), user confirmed that settings persistence works cleanly, but observed:
-> *"This works now. However while testing, I observed that we don't need the 'both' option."*
+During Sprint 2026-40.10 review, technical functionality of `LapDisplayMode` was verified (the legacy stacked option `BOTH` was eliminated from domain logic and defaults to `VISUALIZER_ONLY`). However, the presentation in `AdvancedTuningDialog.kt` (`WorkoutMasksAndCardsSection`) used two adjacent `FilterChip` components (`Tabelle` and `Visualizer`).
 
-Currently, `LapDisplayMode` in `AdvancedTuningDialog.kt` offers three FilterChips:
-1. `Table` (`TABLE_ONLY`)
-2. `Visualizer` (`VISUALIZER_ONLY`)
-3. `Both` (`BOTH`)
-
-The `Both` mode renders both the graphical `LapSplitVisualizer` and the classic numeric table stacked together. In practice, this creates unnecessary visual clutter, redundant representations of the exact same lap data, and cognitive load in Expert Settings. Athletes want a clear binary choice: either the high-aesthetic graphical split visualizer or the classic numeric table, not both simultaneously.
+On physical device review (Pixel 10), human testing concluded that using two `FilterChip` items for a binary mutually exclusive display mode selection is an anti-pattern:
+1. `FilterChip` visually implies multi-select or filter tags that can be toggled on/off independently.
+2. Two adjacent unanchored chips lack structural cohesion and tactile affordance.
+3. Per `docs/design_guidelines.md` (§1.1) and `REQ-UI-234`, any binary mutually exclusive mode selection across the application MUST utilize Material 3 `SingleChoiceSegmentedButtonRow` with `SegmentedButton` (identical to the pattern established in `HeartRateZoneDistributionCard` / `PowerZoneDistributionCard` for 5 Zonen vs. Histogramm, and in `DisplaySettingsDialog`).
 
 ---
 
 ## 2. Root Cause Analysis (Forensic Investigation)
 
-1. **Domain Model (`LapDisplayMode.kt`)**:
-   `LapDisplayMode` contains 3 enum constants: `TABLE_ONLY`, `VISUALIZER_ONLY`, and `BOTH`.
-2. **Settings UI (`AdvancedTuningDialog.kt`)**:
-   Under `WorkoutMasksAndCardsSection`, lines 770–792 render three FilterChips in a Row with equal weight `1f`. On narrow screens or long German translations ("Visualizer", "Tabelle", "Beide"), three chips constrain horizontal breathing room. Reducing this to two chips (`Tabelle` and `Visualizer`) creates a clean 50/50 balance.
-3. **DataStore Deserialization (`MyPreferenceManager.kt`)**:
-   Line 114 deserializes `preferences[WORKOUT_CARD_LAP_DISPLAY_MODE]` via `LapDisplayMode.valueOf(rawMode)`. If a user currently has `"BOTH"` persisted, deserialization must gracefully map this legacy string to `LapDisplayMode.VISUALIZER_ONLY` to avoid `IllegalArgumentException` or unexpected behavior.
-4. **Rendering (`WorkoutLaps.kt`)**:
-   Default argument in `WorkoutLaps` is still `LapDisplayMode.BOTH`. `shouldShowVisualizer` and `shouldShowTable` both check `mode == LapDisplayMode.BOTH`. With `BOTH` removed, `WorkoutLaps` defaults to `LapDisplayMode.VISUALIZER_ONLY`, and the rendering logic cleanly alternates between the visualizer and the table.
-
----
-
-## 3. User Scope Grounding (ATT-1250)
-
-* **In-Scope Goals**:
-  * Streamline `LapDisplayMode.kt` to a binary choice: `TABLE_ONLY` and `VISUALIZER_ONLY`.
-  * Ensure defensive deserialization in `MyPreferenceManager.kt` seamlessly maps any legacy persisted `"BOTH"` values to `VISUALIZER_ONLY`.
-  * Update `AdvancedTuningDialog.kt` to present only two FilterChips (`Table` and `Visualizer`), removing the `Both` chip.
-  * Update `WorkoutLaps.kt` default parameter to `VISUALIZER_ONLY` and streamline conditional checks.
-  * Update unit test suites (`LapDisplayModePreferencesTest`, `WorkoutLapsDisplayModeTest`, `LapDisplayModeSettingsTest`) to validate binary choice and legacy migration.
-* **Out-of-Scope Non-Goals (Scope Bounding)**:
-  * No changes to `LapSplitVisualizer.kt` bar layout, animation, or rendering logic.
-  * No changes to `LapTableHeader` or `LapRow` table styling.
-  * No database migrations (lap display mode is stored exclusively in DataStore preferences).
-  * No modification of `LapEditBottomSheet` or interactive lap editing flows.
-
----
-
-## 4. Requirement Archaeology & Chesterton's Fence Audit
-
-### Requirement Archaeology & Chesterton's Fence Audit
-
-* **Original Requirement ID & Target**: `REQ-UI-229` (*Aftermath/Settings: Configurable Lap Section Display Mode (Table vs. Split Visualizer) in Advanced Settings*) under Epic `ATT-111` (*Compact Post-Workout Visual Analytics & Graphs*).
-* **Historical Origin & Commit Trace**: Introduced in Sprint 2026-40.8 (`ATT-1870`, Commit `7f747b02`) and refined in Sprint 2026-40.9 (`ATT-1958`, Commit `2730177f`).
-* **Root Reason for Existing Formulation**: When the `LapSplitVisualizer` was originally introduced in ATT-1870, `BOTH` was provided as a transitional fallback option to allow athletes to see both representations simultaneously without losing the familiar numeric table. However, physical device testing in Sprint 2026-40.9 confirmed that stacking both views creates unwanted visual clutter, and athletes strictly prefer either the modern visualizer or the classic table.
-* **Preservation of Core Invariants**:
-  - The default mode remains `VISUALIZER_ONLY`.
-  - Full backward compatibility for existing installations is guaranteed via defensive mapping of legacy `"BOTH"` to `VISUALIZER_ONLY`.
-  - Interactive lap editing via `LapEditBottomSheet` remains 100% functional across both modes.
-  - 9-language localization parity is strictly preserved.
-
----
-
-## 5. Architectural Strategy & High-Level Solution
-
-1. **`LapDisplayMode.kt`**:
-   Remove `BOTH` constant from enum:
-   ```kotlin
-   enum class LapDisplayMode {
-       TABLE_ONLY,
-       VISUALIZER_ONLY
-   }
-   ```
-2. **`MyPreferenceManager.kt`**:
-   Safely handle legacy `"BOTH"` in DataStore deserialization:
-   ```kotlin
-   lapDisplayMode = try {
-       val rawMode = preferences[WORKOUT_CARD_LAP_DISPLAY_MODE]
-       if (rawMode != null && rawMode != "BOTH") {
-           LapDisplayMode.valueOf(rawMode)
-       } else {
-           LapDisplayMode.VISUALIZER_ONLY
-       }
-   } catch (e: Exception) {
-       LapDisplayMode.VISUALIZER_ONLY
-   }
-   ```
-3. **`AdvancedTuningDialog.kt`**:
-   Remove the `FilterChip` for `BOTH`, leaving only `Table` and `Visualizer`:
+1. **Current Composable Implementation**:
+   In `AdvancedTuningDialog.kt` (lines 833–850):
    ```kotlin
    Row(
        modifier = Modifier.fillMaxWidth(),
@@ -114,18 +45,95 @@ The `Both` mode renders both the graphical `LapSplitVisualizer` and the classic 
        )
    }
    ```
-4. **`WorkoutLaps.kt`**:
-   - Default parameter: `lapDisplayMode: LapDisplayMode = LapDisplayMode.VISUALIZER_ONLY`.
-   - `shouldShowVisualizer(mode: LapDisplayMode) = mode == LapDisplayMode.VISUALIZER_ONLY`.
-   - `shouldShowTable(mode: LapDisplayMode) = mode == LapDisplayMode.TABLE_ONLY`.
+   This implementation bypassed `SingleChoiceSegmentedButtonRow`, introducing visual inconsistency with modern Material 3 guidelines.
+
+2. **Domain Model & Persistence State**:
+   - `LapDisplayMode` enum already contains exactly two values: `TABLE_ONLY` and `VISUALIZER_ONLY`.
+   - `MyPreferenceManager` defaults to `VISUALIZER_ONLY` and defensively deserializes legacy `"BOTH"` or unknown values to `VISUALIZER_ONLY`.
+   - The domain and persistence layers are fully established and need zero mutations.
+
+3. **Design Guidelines & Requirement Alignment**:
+   - `docs/design_guidelines.md` §1.1 explicitly dictates:
+     *"Standard Control: Material 3 `SingleChoiceSegmentedButtonRow` with `SegmentedButton`."*
+     *"When to Use: Choosing between exactly two mutually exclusive display, calculation, or visualization modes (e.g. Tabelle vs. Visualizer)."*
+     *"Anti-Pattern: Do NOT use `FilterChip` for binary exclusive choices."*
+   - `REQ-UI-234` mandates `SingleChoiceSegmentedButtonRow` for binary exclusive choices.
+   - `REQ-UI-229` section 3 still mentions `FilterChip` in its textual description, which must be updated to `SingleChoiceSegmentedButtonRow` with `SegmentedButton`.
+
+---
+
+## 3. User Scope Grounding (ATT-1250)
+
+* **In-Scope Goals**:
+  1. Replace the two `FilterChip` components under "Rundendarstellung" (`R.string.tuning_lap_display_mode_title`) in `WorkoutMasksAndCardsSection` of `AdvancedTuningDialog.kt` with a Material 3 `SingleChoiceSegmentedButtonRow` containing two `SegmentedButton` components:
+     - Index 0: `TABLE_ONLY` (`settings_lap_display_mode_table`).
+     - Index 1: `VISUALIZER_ONLY` (`settings_lap_display_mode_visualizer`).
+  2. Use standard `SegmentedButtonDefaults.itemShape(index = index, count = 2)`.
+  3. Update `REQ-UI-229` in `docs/requirements.md` and `TST-UI-191` in `docs/tests.md` to reflect `SingleChoiceSegmentedButtonRow` / `SegmentedButton`.
+  4. Update unit test `LapDisplayModeSettingsTest.kt` and contract test `AdvancedTuningVisualContractTest.kt` to assert presence of `SingleChoiceSegmentedButtonRow` and zero `FilterChip` elements for lap display mode.
+
+* **Out-of-Scope Non-Goals (Scope Bounding)**:
+  1. No changes to `LapDisplayMode.kt` domain enum or `WorkoutLaps.kt` rendering logic.
+  2. No changes to DataStore keys or `MyPreferenceManager.kt` serialization/deserialization.
+  3. No changes to other sections in `AdvancedTuningDialog.kt` (e.g. X-Axis Domain in AftermathAnalysisSection, typography, battery saver).
+  4. No database schema changes or SQLite migrations.
+
+---
+
+## 4. Requirement Archaeology & Chesterton's Fence Audit
+
+* **Original Requirement ID & Target**:
+  - `REQ-UI-229`: *Aftermath/Settings: Configurable Lap Section Display Mode (Table vs. Split Visualizer) in Advanced Settings.*
+  - Refined by `REQ-UI-234`: *UI & Interaction Design System: Mutually Exclusive Binary Mode Selection & Component Heuristics.*
+* **Historical Origin & Commit Trace**:
+  - `7f747b02` (Sprint 2026-40.8, `ATT-1870`): Initial introduction of `LapDisplayMode` with 3 options (`TABLE_ONLY`, `VISUALIZER_ONLY`, `BOTH`).
+  - Sprint 2026-40.9 / 40.10 (`ATT-1958`): Removal of `BOTH` option and defaulting to `VISUALIZER_ONLY`.
+  - Sprint 2026-40.10 Review (`ATT-1988` / `ATT-1989`): Identification of `FilterChip` UI defect on physical hardware, mandating migration to `SingleChoiceSegmentedButtonRow`.
+* **Root Reason for Existing Formulation**:
+  - In `ATT-1870`, 3 chips were used (`Table`, `Visualizer`, `Both`). When `Both` was removed in `ATT-1958`, the remaining two options were kept inside the existing `FilterChip` layout as a simple deletion without redesigning the container into a segmented button row.
+* **Preservation of Core Invariants**:
+  - Replacing the two `FilterChip` elements with `SingleChoiceSegmentedButtonRow` strictly preserves the underlying model: `TABLE_ONLY` and `VISUALIZER_ONLY` toggle the exact same `WorkoutCardSectionPreferences.copy(lapDisplayMode = ...)`, maintain 9-language localization parity, and cause zero functional disruption to workout card rendering or lap editing bottom sheet.
+
+---
+
+## 5. Architectural Strategy & High-Level Solution
+
+1. **`AdvancedTuningDialog.kt` Refactoring**:
+   In `WorkoutMasksAndCardsSection`:
+   ```kotlin
+   SingleChoiceSegmentedButtonRow(
+       modifier = Modifier.fillMaxWidth()
+   ) {
+       SegmentedButton(
+           selected = workoutCardPrefs.lapDisplayMode == LapDisplayMode.TABLE_ONLY,
+           onClick = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(lapDisplayMode = LapDisplayMode.TABLE_ONLY)) },
+           shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+       ) {
+           Text(stringResource(R.string.settings_lap_display_mode_table))
+       }
+       SegmentedButton(
+           selected = workoutCardPrefs.lapDisplayMode == LapDisplayMode.VISUALIZER_ONLY,
+           onClick = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(lapDisplayMode = LapDisplayMode.VISUALIZER_ONLY)) },
+           shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+       ) {
+           Text(stringResource(R.string.settings_lap_display_mode_visualizer))
+       }
+   }
+   ```
+2. **Testing Strategy**:
+   - `LapDisplayModeSettingsTest.kt`: Add structural contract test checking `AdvancedTuningDialog.kt` contains `SingleChoiceSegmentedButtonRow` for lap display mode and zero `FilterChip` items for `lapDisplayMode`.
+   - `AdvancedTuningVisualContractTest.kt`: Add assertion ensuring `SingleChoiceSegmentedButtonRow` is utilized in `WorkoutMasksAndCardsSection`.
+   - Run unit test suite: `./gradlew testDebugUnitTest`.
 
 ---
 
 ## 6. System Invariants & Risk Assessment
 
 * **Core Invariants**:
-  1. Zero regression in existing unit test suites.
-  2. DataStore schema forward/backward compatibility preserved via defensive deserialization.
-  3. Parent ticket Human Decision Gate remains strictly enforced (`Final Review (Human)`).
-* **Risk Rating**: **LOW**  
-  The change simplifies state from 3 options to 2, eliminates visual clutter, contains defensive fallback for legacy data, and touches zero database schemas.
+  1. Zero regression in existing features and unit tests.
+  2. DataStore persistence and defensive legacy fallback remain intact.
+  3. Parent ticket Human Decision Gate remains strictly enforced.
+  4. 9-language localization parity preserved.
+* **Risk Rating**: **LOW**
+  - Self-contained UI component replacement within `WorkoutMasksAndCardsSection`.
+  - Zero database schema or domain enum alterations.
