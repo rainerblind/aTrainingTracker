@@ -901,6 +901,11 @@ fun WorkoutMasksAndCardsSection(
             onCheckedChange = { onEditWorkoutPrefsChange(editWorkoutPrefs.copy(showCommuteTrainer = it)) }
         )
         TuningToggleItem(
+            title = stringResource(R.string.settings_edit_workout_race),
+            isChecked = editWorkoutPrefs.showRace,
+            onCheckedChange = { onEditWorkoutPrefsChange(editWorkoutPrefs.copy(showRace = it)) }
+        )
+        TuningToggleItem(
             title = stringResource(R.string.settings_edit_workout_strava),
             isChecked = editWorkoutPrefs.showStravaUpload,
             onCheckedChange = { onEditWorkoutPrefsChange(editWorkoutPrefs.copy(showStravaUpload = it)) }

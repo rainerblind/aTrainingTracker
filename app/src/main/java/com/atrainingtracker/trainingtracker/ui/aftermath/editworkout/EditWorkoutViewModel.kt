@@ -387,6 +387,10 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         _workoutData.update { it?.copy(uploadToStrava = if (isChecked) 1 else 0) }
     }
 
+    fun updateIsRace(isChecked: Boolean) {
+        _workoutData.update { it?.copy(race = isChecked) }
+    }
+
 
     /**
      * Saves the current state of the WorkoutData object to the database.

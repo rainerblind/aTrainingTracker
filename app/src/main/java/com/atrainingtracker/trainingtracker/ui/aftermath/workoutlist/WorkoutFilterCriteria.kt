@@ -44,6 +44,7 @@ data class WorkoutFilterCriteria(
     val equipmentId: Long? = null,
     val isCommute: Boolean? = null,
     val isTrainer: Boolean? = null,
+    val isRace: Boolean? = null,
     val hasGpsTrack: Boolean? = null,
     val minDistanceMeters: Double? = null,
     val maxDistanceMeters: Double? = null,
@@ -68,6 +69,7 @@ data class WorkoutFilterCriteria(
             if (equipmentId != null) count++
             if (isCommute != null) count++
             if (isTrainer != null) count++
+            if (isRace != null) count++
             if (hasGpsTrack == true) count++
             if (minDistanceMeters != null || maxDistanceMeters != null) count++
             if (minDurationSec != null || maxDurationSec != null) count++
@@ -150,6 +152,11 @@ data class WorkoutFilterCriteria(
             return false
         }
 
+        // Race flag (ATT-2005)
+        if (isRace != null && workout.race != isRace) {
+            return false
+        }
+
         // Has GPS track
         if (hasGpsTrack == true && workout.mapPolyline.isEmpty()) {
             return false
@@ -205,6 +212,7 @@ data class WorkoutFilterCriteria(
         equipmentId?.let { json.put("equipmentId", it) }
         isCommute?.let { json.put("isCommute", it) }
         isTrainer?.let { json.put("isTrainer", it) }
+        isRace?.let { json.put("isRace", it) }
         hasGpsTrack?.let { json.put("hasGpsTrack", it) }
         minDistanceMeters?.let { json.put("minDistanceMeters", it) }
         maxDistanceMeters?.let { json.put("maxDistanceMeters", it) }
@@ -240,6 +248,7 @@ data class WorkoutFilterCriteria(
                     equipmentId = if (json.has("equipmentId")) json.optLong("equipmentId") else null,
                     isCommute = if (json.has("isCommute")) json.optBoolean("isCommute") else null,
                     isTrainer = if (json.has("isTrainer")) json.optBoolean("isTrainer") else null,
+                    isRace = if (json.has("isRace")) json.optBoolean("isRace") else null,
                     hasGpsTrack = if (json.has("hasGpsTrack")) json.optBoolean("hasGpsTrack") else null,
                     minDistanceMeters = if (json.has("minDistanceMeters")) json.optDouble("minDistanceMeters") else null,
                     maxDistanceMeters = if (json.has("maxDistanceMeters")) json.optDouble("maxDistanceMeters") else null,

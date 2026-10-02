@@ -222,6 +222,17 @@ fun EditWorkoutDialog(
                 }
             }
 
+            // 4b. Checkbox (Race / Wettkampf, Configurable, ATT-2005)
+            if (fieldPrefs.showRace) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = workoutData?.race ?: false,
+                        onCheckedChange = { viewModel.updateIsRace(it) }
+                    )
+                    Text(stringResource(R.string.race))
+                }
+            }
+
             // 5. Workout individual upload to Strava (Configurable)
             if (fieldPrefs.showStravaUpload && TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

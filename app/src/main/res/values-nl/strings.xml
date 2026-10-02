@@ -1141,12 +1141,16 @@
     <string name="settings_edit_workout_title">Training bewerken</string>
     <string name="settings_edit_workout_cluster">Route / Cluster</string>
     <string name="settings_edit_workout_commute_trainer">Woon-werk &amp; fietstrainer</string>
+    <string name="settings_edit_workout_race">Wedstrijd</string>
     <string name="settings_edit_workout_strava">Strava-upload</string>
     <string name="settings_edit_workout_description">Beschrijving &amp; notities</string>
     <string name="settings_edit_workout_goal">Doel</string>
     <string name="settings_edit_workout_method">Methode</string>
     <string name="filter_commute">Woon-werkverkeer</string>
     <string name="filter_trainer">Binnen / Fietstrainer</string>
+    <string name="filter_race_only">Alleen wedstrijden</string>
+    <string name="race">Wedstrijd</string>
+    <string name="race_badge">Wedstrijd</string>
     <string name="filter_has_gps">Met GPS-route</string>
     <string name="filter_min_distance_format">&gt; %1$s km</string>
     <string name="filter_max_distance_format">&lt; %1$s km</string>
