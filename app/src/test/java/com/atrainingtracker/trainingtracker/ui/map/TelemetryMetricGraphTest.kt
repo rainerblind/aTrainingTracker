@@ -156,9 +156,15 @@ class TelemetryMetricGraphTest {
 
         // For running pace at 10 m/s:
         // 1000m / 10 m/s = 100s = 1.6667 min/km
-        val paceMetric = TelemetryMetricUtils.extractMetricValue(pt, TelemetryMetricType.PACE, MyUnits.METRIC)
-        assertNotNull(paceMetric)
-        assertEquals(100.0 / 60.0, paceMetric!!, 0.01)
+        // With default athletic pace ceiling of 3:00 min/km (REQ-UI-243), 1.6667 min/km is clamped to 3.0 min/km:
+        val paceMetricDefault = TelemetryMetricUtils.extractMetricValue(pt, TelemetryMetricType.PACE, MyUnits.METRIC)
+        assertNotNull(paceMetricDefault)
+        assertEquals(3.0, paceMetricDefault!!, 0.01)
+
+        // When custom ceiling (e.g. 1.5 min/km) is supplied, raw pace is preserved:
+        val paceMetricUnclamped = TelemetryMetricUtils.extractMetricValue(pt, TelemetryMetricType.PACE, MyUnits.METRIC, paceCeilingMinKm = 1.5f)
+        assertNotNull(paceMetricUnclamped)
+        assertEquals(100.0 / 60.0, paceMetricUnclamped!!, 0.01)
     }
 
     @Test
