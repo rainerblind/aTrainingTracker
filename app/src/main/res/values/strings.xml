@@ -1569,6 +1569,9 @@
 
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Power Zones</string>
+    <!-- Telemetry Frequency Histogram (ATT-1845 / REQ-UI-231) -->
+    <string name="zone_mode_5_zones">5 Zones</string>
+    <string name="zone_mode_histogram">Histogram</string>
     <string name="aftermath_laps_splits_title">Laps &amp; Splits</string>
     <string name="split_badge_best">Best</string>
     <!-- Continuous Metric Graphs & Headings (ATT-1740 / REQ-UI-206) -->

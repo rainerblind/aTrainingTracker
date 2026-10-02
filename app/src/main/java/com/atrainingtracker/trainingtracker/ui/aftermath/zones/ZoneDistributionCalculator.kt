@@ -100,9 +100,12 @@ object ZoneDistributionCalculator {
             )
         }
 
+        val histogram = TelemetryHistogramCalculator.calculateHeartRateHistogram(validSamples, thresholds)
+
         return ZoneDistributionData(
             totalActiveTimeSec = totalDuration,
-            entries = entries
+            entries = entries,
+            histogram = histogram
         )
     }
 
@@ -159,9 +162,12 @@ object ZoneDistributionCalculator {
             )
         }
 
+        val histogram = TelemetryHistogramCalculator.calculatePowerHistogram(validSamples, thresholds)
+
         return ZoneDistributionData(
             totalActiveTimeSec = totalDuration,
-            entries = entries
+            entries = entries,
+            histogram = histogram
         )
     }
 

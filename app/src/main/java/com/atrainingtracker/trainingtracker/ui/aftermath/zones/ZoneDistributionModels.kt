@@ -62,9 +62,42 @@ data class ZoneTimeEntry(
 )
 
 /**
- * Aggregate 5-zone time distribution data for a workout.
+ * Individual frequency bin for fine-grained telemetry histograms.
+ */
+data class TelemetryHistogramBin(
+    val binIndex: Int,
+    val rangeMin: Int,
+    val rangeMax: Int,
+    val durationSec: Long,
+    val percentage: Float,
+    val zoneIndex: Int, // 1..5
+    val color: Color
+)
+
+/**
+ * Complete fine-grained telemetry histogram dataset for a workout metric (HR or Power).
+ */
+data class TelemetryHistogramData(
+    val binWidth: Int,
+    val dataMin: Int,
+    val dataMax: Int,
+    val totalActiveTimeSec: Long,
+    val bins: List<TelemetryHistogramBin>
+)
+
+/**
+ * Display modes for zone distribution cards.
+ */
+enum class ZoneCardDisplayMode {
+    FIVE_ZONES,
+    HISTOGRAM
+}
+
+/**
+ * Aggregate 5-zone time distribution data for a workout, optionally containing fine-grained histogram data.
  */
 data class ZoneDistributionData(
     val totalActiveTimeSec: Long,
-    val entries: List<ZoneTimeEntry>
+    val entries: List<ZoneTimeEntry>,
+    val histogram: TelemetryHistogramData? = null
 )
