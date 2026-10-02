@@ -46,6 +46,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
+import com.atrainingtracker.trainingtracker.MyUnits
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
@@ -92,6 +94,7 @@ fun AdvancedTuningDialog(
     var gpsAccuracy by remember { mutableFloatStateOf(TuningPreferencesDefaults.GPS_ACCURACY_THRESHOLD_M) }
     var altitudeWindowSec by remember { mutableIntStateOf(TuningPreferencesDefaults.ALTITUDE_FILTER_WINDOW_SEC) }
     var slopeMinSpeed by remember { mutableFloatStateOf(TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS) }
+    var paceCeilingMinKm by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM) }
     var cockpitFontFamily by remember { mutableStateOf(TuningPreferencesDefaults.COCKPIT_FONT_FAMILY) }
     var cockpitFontWeight by remember { mutableStateOf(TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT) }
 
@@ -145,6 +148,7 @@ fun AdvancedTuningDialog(
         gpsAccuracy = persistedConfig.gpsAccuracyThresholdMeters
         altitudeWindowSec = persistedConfig.altitudeFilterWindowSec
         slopeMinSpeed = persistedConfig.slopeMinSpeedMps
+        paceCeilingMinKm = persistedConfig.paceCeilingMinKm
     }
 
     AppBottomSheetContent(
@@ -167,7 +171,8 @@ fun AdvancedTuningDialog(
                         downwardDelaySec = downwardDelaySec,
                         gpsAccuracyThresholdMeters = gpsAccuracy,
                         altitudeFilterWindowSec = altitudeWindowSec,
-                        slopeMinSpeedMps = slopeMinSpeed
+                        slopeMinSpeedMps = slopeMinSpeed,
+                        paceCeilingMinKm = paceCeilingMinKm
                     )
                     scope.launch {
                         tuningDataStore.saveTuningConfig(newConfig)
@@ -292,7 +297,9 @@ fun AdvancedTuningDialog(
                     elevationXAxisDomain = elevationXAxisDomain,
                     onElevationDomainChange = { elevationXAxisDomain = it },
                     telemetryXAxisDomain = telemetryXAxisDomain,
-                    onTelemetryDomainChange = { telemetryXAxisDomain = it }
+                    onTelemetryDomainChange = { telemetryXAxisDomain = it },
+                    paceCeilingMinKm = paceCeilingMinKm,
+                    onPaceCeilingChange = { paceCeilingMinKm = it }
                 )
             }
 
@@ -336,6 +343,7 @@ fun AdvancedTuningDialog(
                         gpsAccuracy = TuningPreferencesDefaults.GPS_ACCURACY_THRESHOLD_M
                         altitudeWindowSec = TuningPreferencesDefaults.ALTITUDE_FILTER_WINDOW_SEC
                         slopeMinSpeed = TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS
+                        paceCeilingMinKm = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM
                         onSettingsChanged?.invoke()
                         Toast.makeText(
                             context,
@@ -703,12 +711,30 @@ fun AftermathAnalysisSection(
     elevationXAxisDomain: ProfileXAxisDomain,
     onElevationDomainChange: (ProfileXAxisDomain) -> Unit,
     telemetryXAxisDomain: ProfileXAxisDomain,
-    onTelemetryDomainChange: (ProfileXAxisDomain) -> Unit
+    onTelemetryDomainChange: (ProfileXAxisDomain) -> Unit,
+    paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM,
+    onPaceCeilingChange: (Float) -> Unit = {}
 ) {
+    val isMetric = remember { TrainingApplication.getUnit() == MyUnits.METRIC }
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // Minimum Pace Ceiling (defaults to 3:00 min/km)
+        TuningSliderItem(
+            title = stringResource(R.string.tuning_pace_ceiling_title),
+            valueText = TuningPaceCeilingFormatter.formatPaceCeiling(paceCeilingMinKm, isMetric),
+            helperText = stringResource(R.string.tuning_pace_ceiling_desc),
+            defaultText = stringResource(
+                R.string.tuning_default_format,
+                TuningPaceCeilingFormatter.formatPaceCeiling(TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM, isMetric)
+            ),
+            value = paceCeilingMinKm,
+            onValueChange = onPaceCeilingChange,
+            valueRange = TuningPreferencesDefaults.MIN_PACE_CEILING_MIN_KM..TuningPreferencesDefaults.MAX_PACE_CEILING_MIN_KM,
+            steps = 15
+        )
+
         // Elevation Profile X-Axis Domain (defaults to Distance)
         Column(
             modifier = Modifier.fillMaxWidth(),
