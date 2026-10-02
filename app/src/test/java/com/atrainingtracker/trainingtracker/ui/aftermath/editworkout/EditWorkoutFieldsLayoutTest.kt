@@ -18,14 +18,14 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.editworkout
 
-import com.atrainingtracker.trainingtracker.EditWorkoutFieldPreferences
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 /**
- * Structural contract test for [EditWorkoutScreen] field visibility rules
- * pursuant to REQ-UI-211 and TST-UI-165.2.
+ * Structural contract test for [EditWorkoutScreen] unconditional field layout
+ * pursuant to REQ-UI-239 and TST-UI-198.2.
  */
 class EditWorkoutFieldsLayoutTest {
 
@@ -34,7 +34,9 @@ class EditWorkoutFieldsLayoutTest {
         SPORT_TYPE,
         EQUIPMENT,
         ROUTE_CLUSTER,
-        COMMUTE_TRAINER,
+        COMMUTE,
+        TRAINER,
+        RACE,
         STRAVA_UPLOAD,
         DESCRIPTION,
         GOAL,
@@ -42,88 +44,71 @@ class EditWorkoutFieldsLayoutTest {
     }
 
     /**
-     * Replicates the layout visibility resolver of EditWorkoutScreen.kt
+     * Layout visibility resolver representing unconditional presentation in EditWorkoutScreen.kt (REQ-UI-239)
      */
     private fun isFieldVisible(
         field: EditWorkoutField,
-        prefs: EditWorkoutFieldPreferences,
         communityStravaEnabled: Boolean = true
     ): Boolean {
         return when (field) {
-            EditWorkoutField.WORKOUT_NAME -> true // Core Anchor: permanently visible
-            EditWorkoutField.SPORT_TYPE -> true   // Core Anchor: permanently visible
-            EditWorkoutField.EQUIPMENT -> true    // Core Anchor: permanently visible
-            EditWorkoutField.ROUTE_CLUSTER -> prefs.showCluster
-            EditWorkoutField.COMMUTE_TRAINER -> prefs.showCommuteTrainer
-            EditWorkoutField.STRAVA_UPLOAD -> prefs.showStravaUpload && communityStravaEnabled
-            EditWorkoutField.DESCRIPTION -> prefs.showDescription
-            EditWorkoutField.GOAL -> prefs.showGoal
-            EditWorkoutField.METHOD -> prefs.showMethod
+            EditWorkoutField.WORKOUT_NAME -> true
+            EditWorkoutField.SPORT_TYPE -> true
+            EditWorkoutField.EQUIPMENT -> true
+            EditWorkoutField.ROUTE_CLUSTER -> true
+            EditWorkoutField.COMMUTE -> true
+            EditWorkoutField.TRAINER -> true
+            EditWorkoutField.RACE -> true
+            EditWorkoutField.STRAVA_UPLOAD -> communityStravaEnabled
+            EditWorkoutField.DESCRIPTION -> true
+            EditWorkoutField.GOAL -> true
+            EditWorkoutField.METHOD -> true
         }
     }
 
-    @Test
-    fun coreAnchors_remainPermanentlyVisible_evenWhenAllOptionalFieldsDisabled() {
-        val allDisabled = EditWorkoutFieldPreferences(
-            showCluster = false,
-            showCommuteTrainer = false,
-            showStravaUpload = false,
-            showDescription = false,
-            showGoal = false,
-            showMethod = false
+    private fun findEditWorkoutScreenFile(): File {
+        val candidates = listOf(
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/editworkout/EditWorkoutScreen.kt"),
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/editworkout/EditWorkoutScreen.kt"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/editworkout/EditWorkoutScreen.kt")
         )
-
-        assertTrue("Workout Name must be visible", isFieldVisible(EditWorkoutField.WORKOUT_NAME, allDisabled))
-        assertTrue("Sport Type must be visible", isFieldVisible(EditWorkoutField.SPORT_TYPE, allDisabled))
-        assertTrue("Equipment must be visible", isFieldVisible(EditWorkoutField.EQUIPMENT, allDisabled))
-
-        assertFalse("Route / Cluster must be hidden", isFieldVisible(EditWorkoutField.ROUTE_CLUSTER, allDisabled))
-        assertFalse("Commute / Trainer must be hidden", isFieldVisible(EditWorkoutField.COMMUTE_TRAINER, allDisabled))
-        assertFalse("Strava upload must be hidden", isFieldVisible(EditWorkoutField.STRAVA_UPLOAD, allDisabled))
-        assertFalse("Description must be hidden", isFieldVisible(EditWorkoutField.DESCRIPTION, allDisabled))
-        assertFalse("Goal must be hidden", isFieldVisible(EditWorkoutField.GOAL, allDisabled))
-        assertFalse("Method must be hidden", isFieldVisible(EditWorkoutField.METHOD, allDisabled))
+        return candidates.firstOrNull { it.exists() }
+            ?: error("EditWorkoutScreen.kt not found in candidates: $candidates")
     }
 
     @Test
-    fun defaultPreferences_renderAllFields() {
-        val defaultPrefs = EditWorkoutFieldPreferences()
+    fun testEditWorkoutScreen_doesNotReferenceFieldPrefs() {
+        val file = findEditWorkoutScreenFile()
+        val content = file.readText()
 
+        assertFalse("EditWorkoutScreen must NOT collect fieldPreferences", content.contains("fieldPreferences"))
+        assertFalse("EditWorkoutScreen must NOT reference fieldPrefs", content.contains("fieldPrefs"))
+        assertFalse("EditWorkoutScreen must NOT guard showCluster", content.contains(".showCluster"))
+        assertFalse("EditWorkoutScreen must NOT guard showCommuteTrainer", content.contains(".showCommuteTrainer"))
+        assertFalse("EditWorkoutScreen must NOT guard showRace", content.contains(".showRace"))
+        assertFalse("EditWorkoutScreen must NOT guard showStravaUpload", content.contains(".showStravaUpload"))
+        assertFalse("EditWorkoutScreen must NOT guard showDescription", content.contains(".showDescription"))
+        assertFalse("EditWorkoutScreen must NOT guard showGoal", content.contains(".showGoal"))
+        assertFalse("EditWorkoutScreen must NOT guard showMethod", content.contains(".showMethod"))
+    }
+
+    @Test
+    fun testAllMetadataFields_areUnconditionallyVisible() {
         for (field in EditWorkoutField.values()) {
-            assertTrue("Field $field must be visible with defaults", isFieldVisible(field, defaultPrefs, communityStravaEnabled = true))
+            if (field != EditWorkoutField.STRAVA_UPLOAD) {
+                assertTrue("Field $field must be unconditionally visible", isFieldVisible(field))
+            }
         }
     }
 
     @Test
-    fun individualFieldToggling_operatesIndependently() {
-        val prefs = EditWorkoutFieldPreferences(
-            showCluster = true,
-            showCommuteTrainer = false,
-            showStravaUpload = true,
-            showDescription = false,
-            showGoal = true,
-            showMethod = false
-        )
-
-        assertTrue(isFieldVisible(EditWorkoutField.ROUTE_CLUSTER, prefs))
-        assertFalse(isFieldVisible(EditWorkoutField.COMMUTE_TRAINER, prefs))
-        assertTrue(isFieldVisible(EditWorkoutField.STRAVA_UPLOAD, prefs, communityStravaEnabled = true))
-        assertFalse(isFieldVisible(EditWorkoutField.DESCRIPTION, prefs))
-        assertTrue(isFieldVisible(EditWorkoutField.GOAL, prefs))
-        assertFalse(isFieldVisible(EditWorkoutField.METHOD, prefs))
-    }
-
-    @Test
-    fun stravaUpload_respectsCommunityEnablementCondition() {
-        val prefs = EditWorkoutFieldPreferences(showStravaUpload = true)
-
+    fun stravaUpload_respectsCommunityEnablementConditionSolely() {
         assertTrue(
-            "Strava field should be visible when both pref and community flag are true",
-            isFieldVisible(EditWorkoutField.STRAVA_UPLOAD, prefs, communityStravaEnabled = true)
+            "Strava upload must be visible when community Strava is enabled",
+            isFieldVisible(EditWorkoutField.STRAVA_UPLOAD, communityStravaEnabled = true)
         )
         assertFalse(
-            "Strava field should be hidden if community flag is false even when pref is true",
-            isFieldVisible(EditWorkoutField.STRAVA_UPLOAD, prefs, communityStravaEnabled = false)
+            "Strava upload must be hidden when community Strava is disabled",
+            isFieldVisible(EditWorkoutField.STRAVA_UPLOAD, communityStravaEnabled = false)
         )
     }
 }

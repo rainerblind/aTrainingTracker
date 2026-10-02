@@ -1355,7 +1355,7 @@
     <string name="reset_to_defaults_success">チューニング設定が工場出荷時のデフォルトに戻りました。</string>
     <string name="tuning_cat_sensors_gps">センサー、GPS、フィルター</string>
     <string name="tuning_cat_workout_masks_cards">ワークアウトカードと入力項目</string>
-    <string name="tuning_summary_masks_cards_format">%1$d/8 カード、%2$d/6 項目</string>
+    <string name="tuning_summary_masks_cards_format">%1$d/8 カード</string>
     <string name="map_splitter_content_description">マップとテレメトリの分割バー。上下にドラッグしてサイズ変更、ダブルタップでリセット。</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
