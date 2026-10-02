@@ -311,4 +311,55 @@ class BottomSheetVisualContractTest {
             !periodMap.contains("120.dp + navBarHeight")
         )
     }
+
+    @Test
+    fun testDynamicHeaderMeasurement_wiringAndForwarding() {
+        val mapDetail = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapDetailLayout.kt").readText()
+        assertTrue(
+            "MapDetailLayout must declare onHeaderHeightMeasured parameter",
+            mapDetail.contains("onHeaderHeightMeasured: ((Dp) -> Unit)? = null")
+        )
+        assertTrue(
+            "MapDetailLayout must use onGloballyPositioned around the header container",
+            mapDetail.contains("onGloballyPositioned") && mapDetail.contains("onHeaderHeightMeasured(heightDp)")
+        )
+
+        val segmentScreen = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/SegmentOnMapScreen.kt").readText()
+        assertTrue(
+            "SegmentOnMapScreen must declare onHeaderHeightMeasured parameter",
+            segmentScreen.contains("onHeaderHeightMeasured: ((Dp) -> Unit)? = null")
+        )
+        assertTrue(
+            "SegmentOnMapScreen must forward onHeaderHeightMeasured to MapDetailLayout",
+            segmentScreen.contains("onHeaderHeightMeasured = onHeaderHeightMeasured")
+        )
+
+        val routeScreen = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteOnMapScreen.kt").readText()
+        assertTrue(
+            "RouteOnMapScreen must declare onHeaderHeightMeasured parameter",
+            routeScreen.contains("onHeaderHeightMeasured: ((Dp) -> Unit)? = null")
+        )
+        assertTrue(
+            "RouteOnMapScreen must forward onHeaderHeightMeasured to MapDetailLayout",
+            routeScreen.contains("onHeaderHeightMeasured = onHeaderHeightMeasured")
+        )
+
+        val mapWithTrack = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapScreenWithTrack.kt").readText()
+        assertTrue(
+            "MapScreenWithTrack must remember measuredSegmentHeaderHeight",
+            mapWithTrack.contains("measuredSegmentHeaderHeight")
+        )
+        assertTrue(
+            "MapScreenWithTrack must remember measuredRouteHeaderHeight",
+            mapWithTrack.contains("measuredRouteHeaderHeight")
+        )
+        assertTrue(
+            "MapScreenWithTrack must pass onHeaderHeightMeasured to SegmentOnMapScreen",
+            mapWithTrack.contains("onHeaderHeightMeasured = { measuredSegmentHeaderHeight = it }")
+        )
+        assertTrue(
+            "MapScreenWithTrack must pass onHeaderHeightMeasured to RouteOnMapScreen",
+            mapWithTrack.contains("onHeaderHeightMeasured = { measuredRouteHeaderHeight = it }")
+        )
+    }
 }
