@@ -104,7 +104,7 @@ fun MapDetailLayout(
     var isSharing by remember { mutableStateOf(false) }
     var selectedDistance by remember { mutableStateOf<Double?>(null) }
     var profileZoomScale by remember(activeScrubPath) { mutableFloatStateOf(1.0f) }
-    var profileStartDist by remember(activeScrubPath) { mutableDoubleStateOf(0.0) }
+    var viewportStartFraction by remember(activeScrubPath) { mutableDoubleStateOf(0.0) }
     var isPanMode by remember(activeScrubPath) { mutableStateOf(false) }
     var splitFraction by rememberSaveable { mutableFloatStateOf(SplitPaneMath.DEFAULT_SPLIT_FRACTION) }
     val noLocation = remember { MutableStateFlow<LatLng?>(null) }
@@ -112,6 +112,8 @@ fun MapDetailLayout(
     val isTrackless = (activeScrubPath?.lastOrNull()?.distance ?: 0.0) == 0.0 && (activeScrubPath?.lastOrNull()?.timeSec ?: 0) > 0
     val activeTelemetryDomain = if (isTrackless) ProfileXAxisDomain.TIME else tuningConfig.telemetryXAxisDomain
     val isElevationTimeDomain = (tuningConfig.elevationXAxisDomain == ProfileXAxisDomain.TIME || isTrackless) && (activeScrubPath?.lastOrNull()?.timeSec ?: 0) > 0
+    val elevationTotalSpan = if (isElevationTimeDomain) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
+    val telemetryTotalSpan = if (activeTelemetryDomain == ProfileXAxisDomain.TIME) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
     val totalSpan = if (isElevationTimeDomain || isTrackless) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
 
     val hasZoomToolbar = showZoomControls && activeScrubPath != null && activeScrubPath.isNotEmpty()
@@ -233,10 +235,10 @@ fun MapDetailLayout(
                                     xAxisDomain = tuningConfig.elevationXAxisDomain,
                                     bSportType = bSportType,
                                     zoomScale = profileZoomScale,
-                                    startDist = profileStartDist,
+                                    startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, elevationTotalSpan, profileZoomScale),
                                     onZoomChanged = { z, s ->
                                         profileZoomScale = z
-                                        profileStartDist = s
+                                        viewportStartFraction = MapDetailViewportMath.domainToFraction(s, elevationTotalSpan, z)
                                     },
                                     isPanMode = isPanMode,
                                     modifier = Modifier.fillMaxWidth()
@@ -263,11 +265,11 @@ fun MapDetailLayout(
                                             xAxisDomain = activeTelemetryDomain,
                                             bSportType = bSportType,
                                             zoomScale = profileZoomScale,
-                                            startDist = profileStartDist,
+                                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
                                             isPanMode = isPanMode,
                                             onZoomChanged = { z, s ->
                                                 profileZoomScale = z
-                                                profileStartDist = s
+                                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
                                             },
                                             modifier = Modifier.fillMaxWidth()
                                         )
@@ -322,11 +324,11 @@ fun MapDetailLayout(
                                             xAxisDomain = activeTelemetryDomain,
                                             bSportType = bSportType,
                                             zoomScale = profileZoomScale,
-                                            startDist = profileStartDist,
+                                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
                                             isPanMode = isPanMode,
                                             onZoomChanged = { z, s ->
                                                 profileZoomScale = z
-                                                profileStartDist = s
+                                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
                                             },
                                             modifier = Modifier.fillMaxWidth()
                                         )
@@ -377,11 +379,11 @@ fun MapDetailLayout(
                                             xAxisDomain = activeTelemetryDomain,
                                             bSportType = bSportType,
                                             zoomScale = profileZoomScale,
-                                            startDist = profileStartDist,
+                                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
                                             isPanMode = isPanMode,
                                             onZoomChanged = { z, s ->
                                                 profileZoomScale = z
-                                                profileStartDist = s
+                                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
                                             },
                                             modifier = Modifier.fillMaxWidth()
                                         )
@@ -503,11 +505,11 @@ fun MapDetailLayout(
                     if (hasZoomToolbar) {
                         GlobalTelemetryZoomToolbar(
                             zoomScale = profileZoomScale,
-                            startDist = profileStartDist,
+                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
                             totalSpan = totalSpan,
                             onZoomChanged = { z, s ->
                                 profileZoomScale = z
-                                profileStartDist = s
+                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
                             },
                             isPanMode = isPanMode,
                             onPanModeToggle = { isPanMode = !isPanMode },
@@ -536,11 +538,11 @@ fun MapDetailLayout(
             if (hasZoomToolbar) {
                 GlobalTelemetryZoomToolbar(
                     zoomScale = profileZoomScale,
-                    startDist = profileStartDist,
+                    startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
                     totalSpan = totalSpan,
                     onZoomChanged = { z, s ->
                         profileZoomScale = z
-                        profileStartDist = s
+                        viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
                     },
                     isPanMode = isPanMode,
                     onPanModeToggle = { isPanMode = !isPanMode },
