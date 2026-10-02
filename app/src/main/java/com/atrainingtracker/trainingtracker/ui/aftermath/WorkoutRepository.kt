@@ -388,6 +388,85 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     /**
+     * Extracts continuous sensor telemetry points (HR, Power, Speed) across the Time domain
+     * for trackless workouts where GPS coordinate fixes are absent (REQ-UI-235 / ATT-2006).
+     *
+     * @param workoutId The database ID of the workout summary.
+     * @return Decimated list of [PathPoint] containing continuous time-domain telemetry.
+     */
+    suspend fun getWorkoutTelemetryPoints(
+        workoutId: Long
+    ): List<PathPoint> = withContext(Dispatchers.IO) {
+        val points = mutableListOf<PathPoint>()
+
+        val baseFileName = summariesManager.getBaseFileName(workoutId)
+            ?: return@withContext emptyList()
+
+        val db = samplesManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+
+        if (!samplesManager.existsTable(baseFileName)) {
+            return@withContext emptyList()
+        }
+
+        db.query(tableName, null, null, null, null, null, null).use { cursor ->
+            val distIdx = cursor.getColumnIndex(SensorType.DISTANCE_m.name)
+            val timeActiveIdx = cursor.getColumnIndex(SensorType.TIME_ACTIVE.name)
+            val timeTotalIdx = cursor.getColumnIndex(SensorType.TIME_TOTAL.name)
+            val timeIdx = cursor.getColumnIndex(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME)
+            val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
+            val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
+            val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
+
+            var initialEpochSec: Long? = null
+            var sampleIndex = 0L
+
+            while (cursor.moveToNext()) {
+                val timeSec = when {
+                    timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx) -> cursor.getLong(timeActiveIdx)
+                    timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx) -> cursor.getLong(timeTotalIdx)
+                    timeIdx != -1 && !cursor.isNull(timeIdx) -> {
+                        val (offset, anchor) = parseTimestampOffset(cursor.getString(timeIdx), initialEpochSec)
+                        initialEpochSec = anchor
+                        offset ?: sampleIndex
+                    }
+                    else -> sampleIndex
+                }
+
+                val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getInt(hrIdx) else null
+                val power = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getInt(powerIdx) else null
+                val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
+                val dist = if (distIdx != -1 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx) else 0.0
+
+                if (hr != null || power != null || speed != null) {
+                    points.add(
+                        PathPoint(
+                            distance = dist,
+                            latLng = LatLng(0.0, 0.0),
+                            altitude = 0.0,
+                            timeSec = timeSec,
+                            hr = hr,
+                            power = power,
+                            speedMps = speed,
+                            slope = null
+                        )
+                    )
+                }
+                sampleIndex++
+            }
+        }
+
+        if (points.size > 800) {
+            val step = kotlin.math.ceil(points.size / 800.0).toInt()
+            points.filterIndexed { index, _ ->
+                index == 0 || index == points.lastIndex || index % step == 0
+            }
+        } else {
+            points
+        }
+    }
+
+    /**
      * Calculates the 5-zone heart rate distribution for a workout from stored samples.
      *
      * @param workoutId The database ID of the workout summary.
@@ -1098,6 +1177,7 @@ class WorkoutRepository private constructor(private val application: Application
                             method = userEditedWorkout.method,
                             commute = userEditedWorkout.commute,
                             trainer = userEditedWorkout.trainer,
+                            race = userEditedWorkout.race,
                             uploadToStrava = userEditedWorkout.uploadToStrava
                         )
                     } else current

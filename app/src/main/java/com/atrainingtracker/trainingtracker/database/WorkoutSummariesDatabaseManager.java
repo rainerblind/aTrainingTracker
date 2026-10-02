@@ -168,6 +168,9 @@ public class WorkoutSummariesDatabaseManager {
         values.put(WorkoutSummaries.COMMUTE, workoutData.getCommute());
         values.put(WorkoutSummaries.TRAINER, workoutData.getTrainer());
 
+        // race (ATT-2005)
+        values.put(WorkoutSummaries.RACE, workoutData.getRace() ? 1 : 0);
+
         // individual Strava upload
         values.put(WorkoutSummaries.UPLOAD_TO_STRAVA, workoutData.getUploadToStrava());
 
@@ -1358,6 +1361,7 @@ public class WorkoutSummariesDatabaseManager {
         public static final String BOUND_MIN_LNG = "boundMinLng"; // added in Version 21
         public static final String BOUND_MAX_LAT = "boundMaxLat"; // added in Version 21
         public static final String BOUND_MAX_LNG = "boundMaxLng"; // added in Version 21
+        public static final String RACE = "race"; // added in Version 23 (02.10.2026, ATT-2005)
         // new entries in version 5 of the DB
         @Deprecated
         public static final String EXTREMA_VALUES_CALCULATED = "extremumValuesCalculated";
@@ -1410,7 +1414,8 @@ public class WorkoutSummariesDatabaseManager {
         // public static final int DB_VERSION = 16; // upgrade to Version 16 at 08.05.2026: Added uploadToStrava
         // public static final int DB_VERSION = 17; // 08.05.2026: Bugfix: add eventually missing columns (altitude and distance stream)
         // public static final int DB_VERSION = 21; // 25.07.2026 Added bounding box for performance (ATT-352)
-        public static final int DB_VERSION = 22; // 01.10.2026 Added composite index on extrema table for start location queries (ATT-1734)
+        // public static final int DB_VERSION = 22; // 01.10.2026 Added composite index on extrema table for start location queries (ATT-1734)
+        public static final int DB_VERSION = 23; // 02.10.2026 Added race column (ATT-2005)
         
 
 
@@ -1450,7 +1455,8 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.BOUND_MIN_LAT + " real,"   // added in Version 21
                 + WorkoutSummaries.BOUND_MIN_LNG + " real,"   // added in Version 21
                 + WorkoutSummaries.BOUND_MAX_LAT + " real,"   // added in Version 21
-                + WorkoutSummaries.BOUND_MAX_LNG + " real)";  // added in Version 21
+                + WorkoutSummaries.BOUND_MAX_LNG + " real,"   // added in Version 21
+                + WorkoutSummaries.RACE + " int DEFAULT 0)";  // added in Version 23
 
         protected static final String CREATE_TABLE_EXTREMA_VALUES = "create table " + WorkoutSummaries.TABLE_EXTREMA_VALUES + " ("
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -1691,6 +1697,11 @@ public class WorkoutSummariesDatabaseManager {
                 Log.i(TAG, "upgrading to DB version 22 (Adding composite index on extrema table for start locations)");
                 db.execSQL("CREATE INDEX IF NOT EXISTS idx_extrema_sensor_extrema ON " + WorkoutSummaries.TABLE_EXTREMA_VALUES
                         + " (" + WorkoutSummaries.SENSOR_TYPE + ", " + WorkoutSummaries.EXTREMA_TYPE + ")");
+            }
+
+            if (oldVersion < 23) {
+                Log.i(TAG, "upgrading to DB version 23 (Adding race column)");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.RACE, "int", "0");
             }
         }
 

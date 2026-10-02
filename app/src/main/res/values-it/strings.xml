@@ -1141,12 +1141,16 @@
     <string name="settings_edit_workout_title">Modifica allenamento</string>
     <string name="settings_edit_workout_cluster">Percorso / Itinerario</string>
     <string name="settings_edit_workout_commute_trainer">Tragitto casa-lavoro e rullo</string>
+    <string name="settings_edit_workout_race">Gara</string>
     <string name="settings_edit_workout_strava">Caricamento su Strava</string>
     <string name="settings_edit_workout_description">Descrizione e note</string>
     <string name="settings_edit_workout_goal">Obiettivo</string>
     <string name="settings_edit_workout_method">Metodo</string>
     <string name="filter_commute">Spostamento</string>
     <string name="filter_trainer">Indoor / Rulli</string>
+    <string name="filter_race_only">Solo gare</string>
+    <string name="race">Gara</string>
+    <string name="race_badge">Gara</string>
     <string name="filter_has_gps">Con traccia GPS</string>
     <string name="filter_min_distance_format">&gt; %1$s km</string>
     <string name="filter_max_distance_format">&lt; %1$s km</string>

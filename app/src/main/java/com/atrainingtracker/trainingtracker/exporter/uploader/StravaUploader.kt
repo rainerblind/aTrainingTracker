@@ -78,6 +78,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         private const val COMMUTE = "commute"
         private const val TRAINER = "trainer"
         private const val SPORT_TYPE = "sport_type"
+        private const val WORKOUT_TYPE = "workout_type"
 
         // Strava Status messages
         private const val STATUS_PROCESSING = "Your activity is still being processed."
@@ -418,6 +419,13 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         val description = myGetStringFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCRIPTION)
         val trainer = myGetBooleanFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.TRAINER)
         val commute = myGetBooleanFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.COMMUTE)
+        val race = myGetBooleanFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.RACE)
+        val bSportString = myGetStringFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT)
+        val bSportType = try {
+            bSportString?.let { BSportType.valueOf(it) } ?: BSportType.UNKNOWN
+        } catch (e: Exception) {
+            SportTypeDatabaseManager.getInstance(mContext).getBSportType(sportId)
+        }
 
         val eqIndex = cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.EQUIPMENT_ID)
         val gearId: String? = if (!cursor.isNull(eqIndex)) {
@@ -554,6 +562,14 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         }
         formBuilder.add(TRAINER, trainer.toString())
         formBuilder.add(COMMUTE, commute.toString())
+        if (race) {
+            val workoutType = when (bSportType) {
+                BSportType.BIKE -> "11" // Strava Race Ride
+                BSportType.RUN -> "1"   // Strava Race Run
+                else -> null
+            }
+            workoutType?.let { formBuilder.add(WORKOUT_TYPE, it) }
+        }
 
         // update the activity
         activityJSON = updateStravaActivity(activityId, formBuilder.build())

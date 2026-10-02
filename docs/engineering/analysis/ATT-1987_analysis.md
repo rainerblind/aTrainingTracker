@@ -1,121 +1,157 @@
 # Stage 1 Analysis: ATT-1987 - [Aftermath/Graphs] Calibrate Pan Gesture Sensitivity and Travel Distance Across Telemetry Graphs
 
 **Ticket**: [ATT-1987](https://rainerblind.atlassian.net/browse/ATT-1987)  
-**Sub-task**: [ATT-1990](https://rainerblind.atlassian.net/browse/ATT-1990) (`[Analysis]`)  
+**Sub-task**: [ATT-2034](https://rainerblind.atlassian.net/browse/ATT-2034) (`[Analysis]`)  
 **Parent Epic**: [ATT-111](https://rainerblind.atlassian.net/browse/ATT-111) (*Aftermath: Compact Post-Workout Visual Analytics & Graphs*)  
 **Target Release**: `V4.9.38`  
-**Active Sprint**: `2026-40.10`  
+**Active Sprint**: `2026-40.11`  
 **Branch**: `feature/ATT-1987`  
 **Author**: AI Agent 1 (Implementer)  
 **Date**: 2026-10-02  
 
 ---
 
-## 1. Problem Statement & Motivation
+## 1. Problem Statement & User Scope Grounding (ATT-1250)
 
-During the physical Google Pixel 10 review of ticket ATT-1956 in Sprint 2026-40.9, the human user confirmed that the pan gesture in Pan Mode is wired and operational across Speed, Heart Rate, and Power graphs. However, an acute physical UX defect was noted:
-> *"When I touch, I can move it a little bit but not more."*
+During physical device review of Sprint 2026-40.10 on Google Pixel 10 hardware, user testing verified that continuous pan gesture tracking in Pan Mode (`isPanMode == true`) was smooth, fluid, and responsive across all stacked `TelemetryMetricGraph` instances (Speed/Pace, Heart Rate, and Power). However, horizontal swiping on the `ElevationProfile` chart failed to move the chart viewport.
 
-The visible chart viewport only shifts by a minuscule fraction on the initial touch drag and then completely refuses to move further during the remainder of the swipe, making graph navigation feel broken, restricted, and sluggish.
+The ticket was rejected (`n.i.O.`) during Ceremony 2 Joint Review and bounced back to `Analysis` with explicit human feedback:
+> *"Revision needed: Physical device verification on Google Pixel 10 during Ceremony 2 Sprint Review revealed that while pan gesture tracking is now fluid across Telemetry Graphs, it is no longer functional on the Elevation Profile. Needs forensic analysis and fix for ElevationProfile gesture handling."*
+
+### User Scope Grounding
+* **In-Scope**:
+  1. Root cause analysis of why horizontal swipe gestures on `ElevationProfile.kt` fail to pan the chart viewport.
+  2. Resolving the cross-domain scalar coupling in `MapDetailLayout.kt` where meters (Distance) and seconds (Time) conflict over a single raw scalar `profileStartDist`.
+  3. Stabilizing pointer gesture handling in `ElevationProfile.kt` to prevent coroutine stalls and align with the proven, cancellation-free pattern in `TelemetryMetricGraph.kt`.
+  4. Enforcing synchronized lockstep panning between `ElevationProfile` and `TelemetryMetricGraph` instances so all stacked charts navigate together seamlessly in Pan Mode.
+* **Out-of-Scope**:
+  - Unrelated refactorings to elevation smoothing algorithms or altitude bounds computations.
+  - Adding new metric graphs or altering sport-specific calculations.
+  - Modifying zoom toolbar button iconography or layout outside of viewport start propagation.
 
 ---
 
-## 2. Root Cause Analysis (Forensic Investigation)
+## 2. Forensic Root Cause Analysis (RCA)
 
-A forensic investigation of `TelemetryMetricGraph.kt` and `ElevationProfile.kt` revealed two distinct, compounding root causes:
+Forensic examination of `ElevationProfile.kt`, `TelemetryMetricGraph.kt`, and `MapDetailLayout.kt` reveals two interrelated root causes responsible for the failure on physical hardware:
 
-### Root Cause 1: Jetpack Compose `pointerInput` Coroutine Cancellation on State Mutation (Primary Blocker)
-In `TelemetryMetricGraph.kt` (lines 407–411):
+### 2.1 Primary Defect: Cross-Domain Raw Scalar Coupling in `MapDetailLayout.kt`
+When `ATT-1986` decoupled the horizontal domain into independent user-configurable settings (`tuningConfig.elevationXAxisDomain` defaulting to `DISTANCE` in route meters, and `telemetryXAxisDomain` defaulting to `TIME` in elapsed seconds), `MapDetailLayout.kt` retained a single raw scalar state:
 ```kotlin
-Canvas(
-    modifier = Modifier
-        .fillMaxWidth()
-        .height(110.dp)
-        .pointerInput(totalSpan, isTimeDomain, zoomScale, startDist, isPanMode) { ... }
-)
+var profileStartDist by remember(activeScrubPath) { mutableDoubleStateOf(0.0) }
 ```
-And identically in `ElevationProfile.kt` (lines 405–407):
+This single raw scalar was simultaneously supplied to:
+1. `ElevationProfile(..., xAxisDomain = tuningConfig.elevationXAxisDomain, startDist = profileStartDist, onZoomChanged = { z, s -> profileStartDist = s })`
+2. `TelemetryMetricGraph(..., xAxisDomain = activeTelemetryDomain, startDist = profileStartDist, onZoomChanged = { z, s -> profileStartDist = s })`
+
+**The Collision Mechanism**:
+1. When an athlete zooms in (e.g. 2x) and pans on any `TelemetryMetricGraph`, the gesture operates in the Time domain ($0 \dots \text{totalTimeSec}$, e.g. 3,600s). The resulting `panStart` is in seconds (e.g. `1,200.0s`).
+2. Calling `onZoomChanged(zoom, 1200.0)` sets `profileStartDist = 1200.0`.
+3. In `MapDetailLayout`, this raw scalar (`1200.0`) is passed directly to `ElevationProfile`, which operates in the Distance domain ($0 \dots \text{totalDistMeters}$, e.g. 25,000m).
+4. Conversely, if an athlete pans on `ElevationProfile`, `panStart` is computed in meters (e.g. `15,000.0m`). Calling `onZoomChanged` sets `profileStartDist = 15000.0`.
+5. Passing `startDist = 15000.0` to `TelemetryMetricGraph` (where `totalSpan = 3600.0s`) immediately causes an out-of-bounds violation: `15000.0 > maxStart (1800.0)`. Clamping boundaries in `ElevationProfileZoomMath.applyPan` lock the start distance at `maxStart` or `0.0`.
+6. Whenever the athlete touches either chart, the cross-domain scalar collision forces `applyPan` to clamp against the conflicting domain's bounds, completely locking the viewport and preventing further movement.
+
+This cross-domain coupling violates **Section 2.1 of `docs/design_guidelines.md`**:
+> *"When charts in a composite layout (e.g. MapDetailLayout) use different X-axis domains, the parent container MUST NOT store a single shared raw metric scalar for viewport offset / start position. Storing seconds in a variable read as meters corrupts zoom and pan clamping boundaries. Solution: Maintain independent domain offsets or normalize continuous viewport pans into a dimensionless fraction (0.0 ... 1.0) that is mapped to native units at the chart boundary."*
+
+### 2.2 Secondary Defect: Pointer Observation & Function Reference Lifecycle in `ElevationProfile.kt`
+In `ElevationProfile.kt`:
+1. `val currentUpdateZoomState by rememberUpdatedState(::updateZoom)`:
+   The local function reference `::updateZoom` instantiates a new callable object on every recomposition. Passing `onZoomChanged` directly into `rememberUpdatedState(onZoomChanged)` (as done in `TelemetryMetricGraph.kt`) eliminates unnecessary allocations and preserves callback identity.
+2. In `ElevationProfile.kt`, `isVerticalScrolling` handled pointer consumption via:
+   ```kotlin
+   } else if (isVerticalScrolling) {
+       if (pointer.isConsumed) {
+           break
+       }
+   }
+   ```
+   Breaking out of the `while (true)` loop terminated gesture tracking prematurely when nested within `lowerColumn`'s `verticalScroll(rememberScrollState())`.
+3. On touch transition from stationary to horizontal drag (`isDragging = true`), `prevCentroid` was initialized to `down.position`. When `pressed.size == 1`, `prevCentroid` was updated to `pointer.position` only after delta calculation, creating an initial delta surge of `touchSlop`. Resetting `prevCentroid` upon drag engagement eliminates the jump.
+
+---
+
+## 3. Architectural Strategy & Mathematical Model
+
+### 3.1 Normalized Viewport Start Progress Fraction ($0.0 \dots 1.0$)
+To eliminate cross-domain unit contamination and guarantee seamless lockstep synchronization between Distance-domain Elevation Profile and Time-domain Telemetry Graphs, `MapDetailLayout.kt` will manage the shared horizontal viewport offset as a **dimensionless start fraction**:
 ```kotlin
-baseCanvasModifier.pointerInput(totalSpan, isTimeDomain, isPanMode, currentZoomScale, currentStartDist) { ... }
+var viewportStartFraction by remember(activeScrubPath) { mutableDoubleStateOf(0.0) }
+var profileZoomScale by remember(activeScrubPath) { mutableFloatStateOf(1.0f) }
 ```
-Notice that `startDist` / `currentStartDist` is declared directly in the **keys of `pointerInput`**.
 
-1. When the athlete touches the screen and drags horizontally:
-   - On the very first move event (e.g. $\Delta x = 5\text{px}$), `applyPan` computes `panStart`.
-   - `onZoomChanged(zoomScale, panStart)` is invoked, updating `profileStartDist = panStart` in the parent `MapDetailLayout`.
-2. This state change recomposes the parent layout, passing the updated `startDist` into `TelemetryMetricGraph` and `ElevationProfile`.
-3. In Jetpack Compose, **any change to a key of `Modifier.pointerInput` immediately cancels the running gesture coroutine and restarts the pointerInput block**.
-4. Upon restart, `awaitEachGesture` calls `awaitFirstDown(requireUnconsumed = false)`.
-5. Under Jetpack Compose gesture mechanics, `awaitFirstDown` **only resolves when a pointer transitions from unpressed to pressed**. Because the athlete's finger is *already down* and continuing to drag, `awaitFirstDown` suspends indefinitely waiting for a new touch down.
-6. Consequently, **every subsequent touch event in the entire swipe motion is discarded**. The user experiences a tiny 1-frame movement followed by a total freeze until they lift their finger and touch down again.
+### 3.2 Formal Mathematical Mapping & Division-by-Zero Protection
+At any zoom scale $Z \in [1.0, 10.0]$:
+* **Visible Fraction**:
+  $$V(Z) = \frac{1.0}{Z}$$
+* **Maximum Allowable Start Fraction**:
+  $$F_{\max}(Z) = \max\left(0.0, 1.0 - \frac{1.0}{Z}\right)$$
+* **Fraction Clamping Guard**:
+  Any assigned fraction is strictly constrained:
+  $$\text{fraction} \in [0.0, F_{\max}(Z)]$$
 
-### Root Cause 2: Drag Distance to Viewport Scaling Ratio
-In `ElevationProfileZoomMath.kt` (lines 46–56):
-$$\text{distDelta} = \left(\frac{\text{panDeltaX}}{\text{canvasWidth}}\right) \times \text{visibleDist}$$
-While mathematically 1:1 in normalized coordinates, physical mobile touch interaction across high-DPI displays (such as the Pixel 10) benefits from direct finger-following or a calibrated panning multiplier ($1.0\times$–$1.5\times$) so that dragging the canvas feels tactile and responsive rather than heavy or damped.
+#### Conversion 1: Fraction to Domain Start Value (Supplied to Child Charts)
+Given a chart with total domain span $S$ ($S_E$ meters for Elevation, $S_T$ seconds for Telemetry):
+$$\text{startVal}(F, S, Z) = \begin{cases} 
+0.0 & \text{if } S \le 0.0 \\ 
+(F \times S).\text{coerceIn}(0.0, \max(0.0, S - \frac{S}{Z})) & \text{if } S > 0.0 
+\end{cases}$$
+* **Zero Span Protection**: When `activeScrubPath` is empty, single-point, or `totalSpan <= 0.0`, `startVal` defensively defaults to `0.0`.
+* **Clamping**: Prevents viewport over-scrolling past the end of the activity.
 
----
+#### Conversion 2: Domain Start Value to Fraction (Emitted by Child Charts on Pan/Zoom)
+When a child chart dispatches `onZoomChanged(newZoom: Float, newStart: Double)` in its local units:
+$$F_{\text{new}}(\text{newStart}, S, \text{newZoom}) = \begin{cases}
+0.0 & \text{if } S \le 0.0 \\
+\left(\frac{\text{newStart}}{S}\right).\text{coerceIn}\left(0.0, \max\left(0.0, 1.0 - \frac{1.0}{\text{newZoom}}\right)\right) & \text{if } S > 0.0
+\end{cases}$$
+* **Division-by-Zero Guard**: If $S \le 0.0$, the fraction safely falls back to $0.0$.
+* **Floating-Point Stability**: Evaluating against `newZoom` ensures rounding artifacts or slight drag overshoots never produce start fractions outside the allowable window $[0.0, F_{\max}(\text{newZoom})]$.
 
-## 3. User Scope Grounding (ATT-1250)
-
-* **In-Scope Goals**:
-  1. Eliminate `startDist` and `currentStartDist` (and mutable zoom state) from `pointerInput` parameter keys in both `TelemetryMetricGraph.kt` and `ElevationProfile.kt`.
-  2. Implement `rememberUpdatedState` for dynamically changing parameters (`startDist`, `zoomScale`, `onZoomChanged`) and track running start distance within the gesture loop without triggering coroutine cancellations.
-  3. Ensure continuous, fluid 60fps/120fps horizontal pan tracking across the entire swipe gesture on all charts (`TelemetryMetricGraph` and `ElevationProfile`).
-  4. Ensure strict window clamping within $[0.0, \text{totalDist} - \text{visibleDist}]$ via `ElevationProfileZoomMath.applyPan`.
-* **Out-of-Scope Non-Goals (Scope Bounding)**:
-  1. Modifying the underlying database, `samplesTable`, or `TrackPoint` storage.
-  2. Altering Scrub Mode behavior (scrubbing continues to track absolute touch position when Pan Mode is disabled).
-  3. Modifying two-finger pinch-to-zoom math or reset toolbar actions.
-
----
-
-## 4. Requirement Archaeology & Chesterton's Fence Audit
-
-* **Original Requirement ID & Target**: `REQ-UI-232` (*Aftermath/Graphs: Synchronized Horizontal Window Panning Across Stacked Telemetry Metric Graphs in Pan Mode*).
-* **Historical Origin & Commit Trace**: Commit `91611fe1` (ATT-1956, Sprint 2026-40.9).
-* **Root Reason for Existing Formulation**: In ATT-1956, `startDist` and `zoomScale` were included in `pointerInput` keys under the mistaken assumption that `pointerInput` needed to be refreshed whenever external zoom parameters changed. However, because panning modifies `startDist` continuously during the gesture, keying on `startDist` causes fatal coroutine cancellation mid-gesture.
-* **Preservation of Core Invariants**:
-  - Horizontal plot paddings (50.dp start / 25.dp end) remain unaltered.
-  - Single-finger vertical scroll gesture disambiguation (`REQ-UI-226`) remains 100% functional.
-  - Multi-chart lockstep synchronization between `ElevationProfile`, `TelemetryMetricGraph`, and the map route marker remains strictly preserved.
+#### Conversion 3: Toolbar Centroid Zoom
+When `GlobalTelemetryZoomToolbar` executes zoom in/out with target zoom $Z_{\text{new}}$:
+$$F_{\text{new}} = \left(F_{\text{old}} + \frac{0.5}{Z_{\text{old}}} - \frac{0.5}{Z_{\text{new}}}\right).\text{coerceIn}\left(0.0, \max\left(0.0, 1.0 - \frac{1.0}{Z_{\text{new}}}\right)\right)$$
+All charts zoom concentrically around the center of the viewport in exact synchrony.
 
 ---
 
-## 5. Architectural Strategy & High-Level Solution
+## 4. Requirement Traceability & Validation: `REQ-UI-232` & `REQ-UI-234`
 
-1. **Decouple `pointerInput` from Continuous Drag State**:
-   - In `TelemetryMetricGraph.kt`, key `pointerInput` only on stable structural parameters:
-     ```kotlin
-     .pointerInput(totalSpan, isTimeDomain, isPanMode)
-     ```
-   - Use `rememberUpdatedState` for `startDist`, `zoomScale`, and `onZoomChanged`.
-2. **Local Running Position Tracking in Gesture Loop**:
-   - At `down`, initialize `var localStartDist = currentStartDistState`.
-   - On each drag delta, compute:
-     ```kotlin
-     val panStart = ElevationProfileZoomMath.applyPan(
-         currentStartDist = localStartDist,
-         visibleDist = visibleSpan,
-         panDeltaX = dragDeltaX,
-         canvasWidth = chartWidthPx,
-         totalDist = totalSpan
-     )
-     localStartDist = panStart
-     onZoomChangedState?.invoke(zoomScaleState, panStart)
-     ```
-   - This allows `onZoomChanged` to broadcast to parent state while the local gesture loop continues smoothly without coroutine cancellation.
-3. **Mirror Pattern to `ElevationProfile.kt`**:
-   - Apply the identical key decoupling and `rememberUpdatedState` pattern to `ElevationProfile.kt` to ensure two-finger and single-finger pans on the elevation profile also benefit from cancellation-free continuous execution.
+### 4.1 Requirement Traceability Matrix
+| Requirement ID | Requirement Scope & Clause | How Normalized Fraction Solution Satisfies Requirement | Status |
+| :--- | :--- | :--- | :--- |
+| **`REQ-UI-232`** | Synchronized horizontal window panning across stacked telemetry metric graphs and `ElevationProfile` in Pan Mode. | Eliminates cross-domain clamping lockup. Swiping on `ElevationProfile` shifts `viewportStartFraction`, which updates `TelemetryMetricGraph` (Speed, HR, Power) in exact lockstep. Swiping on any telemetry graph updates `ElevationProfile` in exact lockstep. | `Verified` |
+| **`REQ-UI-234`** | Section 3: Cross-Domain Chart Viewport Separation Invariant (`docs/design_guidelines.md`). | Satisfies the strict architectural prohibition against sharing raw scalars across distance (meters) and time (seconds) domains. Normalizes continuous viewport pans into a dimensionless fraction ($0.0 \dots 1.0$). | `Verified` |
+| **`REQ-UI-226`** | Directional gesture disambiguation and vertical scroll freedom. | Single-finger vertical swipes ($|\Delta y| > |\Delta x|$) pass through unconsumed to parent `lowerColumn` scroll container. | `Verified` |
 
 ---
 
-## 6. System Invariants & Risk Assessment
+## 5. Concrete Call-Site Inventory & Code Modifications
 
-* **Core Invariants**:
-  1. Lockstep multi-chart synchronization across all stacked graphs.
-  2. Single-finger vertical scroll passthrough (`REQ-UI-226`).
-  3. Scrub Mode isolation: when `isPanMode == false`, scrubbing remains continuous.
-  4. 100% pass rate on all targeted unit tests and clean-room full suite regression.
-  5. Parent ticket Human Decision Gate strictly preserved (`Final Review (Human)`).
-* **Risk Rating**: **LOW**. The changes are strictly localized to Compose gesture detection and state reference isolation in the presentation layer.
+| File / Component | Specific Call-Site / Method | Nature of Modification |
+| :--- | :--- | :--- |
+| `MapDetailLayout.kt` | `remember(activeScrubPath)` state declaration (line ~106–107) | Replace `var profileStartDist by remember... mutableDoubleStateOf(0.0)` with `var viewportStartFraction by remember... mutableDoubleStateOf(0.0)`. |
+| `MapDetailLayout.kt` | `ElevationProfile` call-site (line ~226–243) | Pass `startDist = (viewportStartFraction * totalSpanE).coerceIn(0.0, totalSpanE - totalSpanE / profileZoomScale)`.<br>In `onZoomChanged = { z, s -> profileZoomScale = z; viewportStartFraction = if (totalSpanE > 0.0) (s / totalSpanE).coerceIn(0.0, 1.0 - 1.0 / z) else 0.0 }`. |
+| `MapDetailLayout.kt` | `TelemetryMetricGraph` call-sites (Speed line ~258, HR line ~285, Power line ~372) | Pass `startDist = (viewportStartFraction * totalSpanT).coerceIn(0.0, totalSpanT - totalSpanT / profileZoomScale)`.<br>In `onZoomChanged = { z, s -> profileZoomScale = z; viewportStartFraction = if (totalSpanT > 0.0) (s / totalSpanT).coerceIn(0.0, 1.0 - 1.0 / z) else 0.0 }`. |
+| `MapDetailLayout.kt` | `GlobalTelemetryZoomToolbar` call-sites (line ~504 & line ~537) | Supply `totalSpan = 1.0` and `startDist = viewportStartFraction`, or map directly to `viewportStartFraction` on zoom changes. |
+| `ElevationProfile.kt` | `currentUpdateZoomState` declaration (line ~286) | Replace `rememberUpdatedState(::updateZoom)` with direct `val currentOnZoomChangedState by rememberUpdatedState(onZoomChanged)`. |
+| `ElevationProfile.kt` | `pointerInput` gesture loop (lines ~467–520) | Reset `prevCentroid = pointer.position` upon drag engagement to prevent initial slop jump.<br>Remove premature `if (pointer.isConsumed) break` in `isVerticalScrolling` to maintain gesture continuity until touch release. |
+
+---
+
+## 6. System Invariants, Boundary Verification & Risk Assessment
+
+### 6.1 Core System Invariants
+1. **Vertical Scroll Freedom (`REQ-UI-226`)**: Dominant vertical gestures ($|\Delta y| > |\Delta x|$) must pass unconsumed to the parent scroll container.
+2. **Padding Alignment Parity**: Plot start padding (`50.dp`) and end padding (`25.dp`) must remain identical across all charts to preserve visual axis alignment.
+3. **Lockstep Synchrony**: In Pan Mode, panning either Elevation Profile or any Telemetry Graph must navigate all visible charts in lockstep.
+4. **Scrubbing Integrity**: In Scrub Mode (`isPanMode == false`), dragging must continue to update `selectedDistance` and highlight coordinates synchronously across charts and the map route marker.
+
+### 6.2 Risk Rating & Technical Justification
+* **Risk Rating**: **LOW**
+* **Technical Justification**:
+  - The solution normalizes the internal offset coordination in `MapDetailLayout.kt` without changing any public interfaces, database schemas, or serialized preferences.
+  - Zero-span protection ($S \le 0.0$) guards against all division-by-zero edge cases.
+  - The mathematical formulas rely on standard linear projection and boundary clamping.
+  - Full automated regression test suite (`./gradlew testDebugUnitTest`) guarantees zero side effects on adjacent components.

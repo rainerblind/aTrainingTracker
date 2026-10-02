@@ -312,6 +312,7 @@ fun WorkoutTabsScreen(
                                 onRemoveEquipment = { onUpdateFilterCriteria { it.copy(equipmentId = null) } },
                                 onRemoveCommute = { onUpdateFilterCriteria { it.copy(isCommute = null) } },
                                 onRemoveTrainer = { onUpdateFilterCriteria { it.copy(isTrainer = null) } },
+                                onRemoveRace = { onUpdateFilterCriteria { it.copy(isRace = null) } },
                                 onRemoveGpsTrack = { onUpdateFilterCriteria { it.copy(hasGpsTrack = null) } },
                                 onRemoveMinDistance = { onUpdateFilterCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
                                 onRemoveMinDuration = { onUpdateFilterCriteria { it.copy(minDurationSec = null, maxDurationSec = null) } },

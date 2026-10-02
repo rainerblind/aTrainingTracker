@@ -194,6 +194,7 @@ class WorkoutSummariesListFragment : Fragment() {
                                     onEditWorkout = { id -> selectedWorkoutIdForEdit = id },
                                     hrZoneDistribution = aftermathUIState.hrZoneDistribution,
                                     powerZoneDistribution = aftermathUIState.powerZoneDistribution,
+                                    telemetryPath = aftermathUIState.telemetryPath,
                                     modifier = Modifier
                                 )
 

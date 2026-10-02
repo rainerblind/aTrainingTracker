@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import android.graphics.Bitmap
+import kotlin.math.abs
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -37,6 +38,8 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.R
@@ -63,7 +66,8 @@ import kotlinx.coroutines.withContext
 /**
  * A unified layout for screen-level map details (Aftermath, Routes, Segments).
  * It manages the standard layout (Header + Map + Profile), shared interaction state,
- * dynamic draggable viewport resizing (REQ-UI-223 / ATT-1890), and snapshot generation logic.
+ * dynamic draggable viewport resizing (REQ-UI-223 / ATT-1890), dynamic peek baseline
+ * self-measurement (REQ-UI-221 / ATT-1645), and snapshot generation logic.
  */
 @Composable
 fun MapDetailLayout(
@@ -82,7 +86,8 @@ fun MapDetailLayout(
     showElevationProfile: Boolean = true,
     showZoomControls: Boolean = true,
     onMapClick: ((LatLng) -> Unit)? = null,
-    analyticsContent: (@Composable ColumnScope.() -> Unit)? = null
+    analyticsContent: (@Composable ColumnScope.() -> Unit)? = null,
+    onHeaderHeightMeasured: ((Dp) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -99,13 +104,17 @@ fun MapDetailLayout(
     var isSharing by remember { mutableStateOf(false) }
     var selectedDistance by remember { mutableStateOf<Double?>(null) }
     var profileZoomScale by remember(activeScrubPath) { mutableFloatStateOf(1.0f) }
-    var profileStartDist by remember(activeScrubPath) { mutableDoubleStateOf(0.0) }
+    var viewportStartFraction by remember(activeScrubPath) { mutableDoubleStateOf(0.0) }
     var isPanMode by remember(activeScrubPath) { mutableStateOf(false) }
     var splitFraction by rememberSaveable { mutableFloatStateOf(SplitPaneMath.DEFAULT_SPLIT_FRACTION) }
     val noLocation = remember { MutableStateFlow<LatLng?>(null) }
 
-    val isElevationTimeDomain = tuningConfig.elevationXAxisDomain == ProfileXAxisDomain.TIME && (activeScrubPath?.lastOrNull()?.timeSec ?: 0) > 0
-    val totalSpan = if (isElevationTimeDomain) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
+    val isTrackless = (activeScrubPath?.lastOrNull()?.distance ?: 0.0) == 0.0 && (activeScrubPath?.lastOrNull()?.timeSec ?: 0) > 0
+    val activeTelemetryDomain = if (isTrackless) ProfileXAxisDomain.TIME else tuningConfig.telemetryXAxisDomain
+    val isElevationTimeDomain = (tuningConfig.elevationXAxisDomain == ProfileXAxisDomain.TIME || isTrackless) && (activeScrubPath?.lastOrNull()?.timeSec ?: 0) > 0
+    val elevationTotalSpan = if (isElevationTimeDomain) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
+    val telemetryTotalSpan = if (activeTelemetryDomain == ProfileXAxisDomain.TIME) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
+    val totalSpan = if (isElevationTimeDomain || isTrackless) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
 
     val hasZoomToolbar = showZoomControls && activeScrubPath != null && activeScrubPath.isNotEmpty()
     val hasTelemetryGraphs = showZoomControls && activeScrubPath != null && (
@@ -198,7 +207,11 @@ fun MapDetailLayout(
                 activeScrubPath?.let { path ->
                     Surface(
                         color = MaterialTheme.colorScheme.surface,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(
+                                if (analyticsContent == null) Modifier.navigationBarsPadding() else Modifier
+                            )
                     ) {
                         Box(modifier = Modifier.drawWithContent {
                             elevationLayer.record {
@@ -226,10 +239,10 @@ fun MapDetailLayout(
                                     xAxisDomain = tuningConfig.elevationXAxisDomain,
                                     bSportType = bSportType,
                                     zoomScale = profileZoomScale,
-                                    startDist = profileStartDist,
+                                    startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, elevationTotalSpan, profileZoomScale),
                                     onZoomChanged = { z, s ->
                                         profileZoomScale = z
-                                        profileStartDist = s
+                                        viewportStartFraction = MapDetailViewportMath.domainToFraction(s, elevationTotalSpan, z)
                                     },
                                     isPanMode = isPanMode,
                                     modifier = Modifier.fillMaxWidth()
@@ -253,14 +266,14 @@ fun MapDetailLayout(
                                             metricType = if (isRunning) TelemetryMetricType.PACE else TelemetryMetricType.SPEED,
                                             currentDistance = selectedDistance,
                                             onDistanceSelected = { selectedDistance = it },
-                                            xAxisDomain = tuningConfig.telemetryXAxisDomain,
+                                            xAxisDomain = activeTelemetryDomain,
                                             bSportType = bSportType,
                                             zoomScale = profileZoomScale,
-                                            startDist = profileStartDist,
+                                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
                                             isPanMode = isPanMode,
                                             onZoomChanged = { z, s ->
                                                 profileZoomScale = z
-                                                profileStartDist = s
+                                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
                                             },
                                             modifier = Modifier.fillMaxWidth()
                                         )
@@ -269,8 +282,39 @@ fun MapDetailLayout(
                                     // HR Graph
                                     if (TelemetryMetricUtils.hasHeartRateData(path)) {
                                         Spacer(modifier = Modifier.height(8.dp))
+                                        val activeHrPoint = if (selectedDistance != null) {
+                                            if (isTrackless) {
+                                                path.minByOrNull { abs(it.timeSec - selectedDistance!!) }
+                                            } else {
+                                                path.minByOrNull { abs(it.distance - selectedDistance!!) }
+                                            }
+                                        } else null
+                                        val activeHr = activeHrPoint?.hr
+                                        val hrHeaderText = if (activeHr != null) {
+                                            val hrThresholds = runCatching {
+                                                val zoneType = if (bSportType == BSportType.BIKE) {
+                                                    com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType.HR_BIKE
+                                                } else {
+                                                    com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType.HR_RUN
+                                                }
+                                                val z1 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
+                                                val z2 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
+                                                val z3 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
+                                                val z4 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+                                                if (z1 > 0 && z2 > 0 && z3 > 0 && z4 > 0) {
+                                                    com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds(z1, z2, z3, z4)
+                                                } else null
+                                            }.getOrNull()
+                                            val zoneTag = if (hrThresholds != null) {
+                                                val zoneIdx = TelemetryZoneMath.determineHeartRateZone(activeHr.toDouble(), hrThresholds)
+                                                " • Z$zoneIdx"
+                                            } else ""
+                                            "${stringResource(R.string.graph_heading_heart_rate)}: $activeHr bpm$zoneTag"
+                                        } else {
+                                            stringResource(R.string.graph_heading_heart_rate)
+                                        }
                                         Text(
-                                            text = stringResource(R.string.graph_heading_heart_rate),
+                                            text = hrHeaderText,
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                                             color = MaterialTheme.colorScheme.onSurface,
@@ -281,14 +325,14 @@ fun MapDetailLayout(
                                             metricType = TelemetryMetricType.HEART_RATE,
                                             currentDistance = selectedDistance,
                                             onDistanceSelected = { selectedDistance = it },
-                                            xAxisDomain = tuningConfig.telemetryXAxisDomain,
+                                            xAxisDomain = activeTelemetryDomain,
                                             bSportType = bSportType,
                                             zoomScale = profileZoomScale,
-                                            startDist = profileStartDist,
+                                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
                                             isPanMode = isPanMode,
                                             onZoomChanged = { z, s ->
                                                 profileZoomScale = z
-                                                profileStartDist = s
+                                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
                                             },
                                             modifier = Modifier.fillMaxWidth()
                                         )
@@ -297,8 +341,35 @@ fun MapDetailLayout(
                                     // Power Graph
                                     if (TelemetryMetricUtils.hasPowerData(path)) {
                                         Spacer(modifier = Modifier.height(8.dp))
+                                        val activePowerPoint = if (selectedDistance != null) {
+                                            if (isTrackless) {
+                                                path.minByOrNull { abs(it.timeSec - selectedDistance!!) }
+                                            } else {
+                                                path.minByOrNull { abs(it.distance - selectedDistance!!) }
+                                            }
+                                        } else null
+                                        val activePower = activePowerPoint?.power
+                                        val powerHeaderText = if (activePower != null) {
+                                            val powerThresholds = runCatching {
+                                                val zoneType = com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType.PWR_BIKE
+                                                val z1 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
+                                                val z2 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
+                                                val z3 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
+                                                val z4 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+                                                if (z1 > 0 && z2 > 0 && z3 > 0 && z4 > 0) {
+                                                    com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds(z1, z2, z3, z4)
+                                                } else null
+                                            }.getOrNull()
+                                            val zoneTag = if (powerThresholds != null) {
+                                                val zoneIdx = TelemetryZoneMath.determinePowerZone(activePower.toDouble(), powerThresholds)
+                                                " • Z$zoneIdx"
+                                            } else ""
+                                            "${stringResource(R.string.graph_heading_power)}: $activePower W$zoneTag"
+                                        } else {
+                                            stringResource(R.string.graph_heading_power)
+                                        }
                                         Text(
-                                            text = stringResource(R.string.graph_heading_power),
+                                            text = powerHeaderText,
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                                             color = MaterialTheme.colorScheme.onSurface,
@@ -309,14 +380,14 @@ fun MapDetailLayout(
                                             metricType = TelemetryMetricType.POWER,
                                             currentDistance = selectedDistance,
                                             onDistanceSelected = { selectedDistance = it },
-                                            xAxisDomain = tuningConfig.telemetryXAxisDomain,
+                                            xAxisDomain = activeTelemetryDomain,
                                             bSportType = bSportType,
                                             zoomScale = profileZoomScale,
-                                            startDist = profileStartDist,
+                                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
                                             isPanMode = isPanMode,
                                             onZoomChanged = { z, s ->
                                                 profileZoomScale = z
-                                                profileStartDist = s
+                                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
                                             },
                                             modifier = Modifier.fillMaxWidth()
                                         )
@@ -326,6 +397,8 @@ fun MapDetailLayout(
                         }
                     }
                 }
+            } else if (analyticsContent == null && !useStatusBarsPadding) {
+                Spacer(modifier = Modifier.navigationBarsPadding())
             }
 
             // 4. ANALYTICS (Slotted - REQ-UI-205 / ATT-1393)
@@ -352,31 +425,43 @@ fun MapDetailLayout(
     Column(
         modifier = modifier
             .then(
-                if (showMap) Modifier.fillMaxSize() else Modifier.wrapContentHeight()
+                if (showMap || hasScrollableContent) Modifier.fillMaxSize() else Modifier.wrapContentHeight()
             )
             .then(
                 if (!useStatusBarsPadding) Modifier.background(MaterialTheme.colorScheme.surface) else Modifier
             )
     ) {
-        // DRAG HANDLE (For sheets - REQ-UI-148, REQ-UI-189, REQ-UI-196, ATT-1644)
-        if (!useStatusBarsPadding) {
-            MinimumDragHandle()
-        }
-
-        // 1. HEADER (Slotted)
-        Surface(
-            color = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            shape = if (useStatusBarsPadding) RectangleShape else BottomSheetDesign.SheetShape,
-            modifier = if (useStatusBarsPadding) Modifier.statusBarsPadding() else Modifier
-        ) {
-            Box(modifier = Modifier.drawWithContent {
-                headerLayer.record {
-                    this@drawWithContent.drawContent()
+        val density = LocalDensity.current
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .onGloballyPositioned { coordinates ->
+                    if (!useStatusBarsPadding && onHeaderHeightMeasured != null) {
+                        val heightDp = with(density) { coordinates.size.height.toDp() }
+                        onHeaderHeightMeasured(heightDp)
+                    }
                 }
-                drawLayer(headerLayer)
-            }) {
-                header()
+        ) {
+            // DRAG HANDLE (For sheets - REQ-UI-148, REQ-UI-189, REQ-UI-196, ATT-1644)
+            if (!useStatusBarsPadding) {
+                MinimumDragHandle()
+            }
+
+            // 1. HEADER (Slotted)
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                shape = if (useStatusBarsPadding) RectangleShape else BottomSheetDesign.SheetShape,
+                modifier = if (useStatusBarsPadding) Modifier.statusBarsPadding() else Modifier
+            ) {
+                Box(modifier = Modifier.drawWithContent {
+                    headerLayer.record {
+                        this@drawWithContent.drawContent()
+                    }
+                    drawLayer(headerLayer)
+                }) {
+                    header()
+                }
             }
         }
 
@@ -426,11 +511,11 @@ fun MapDetailLayout(
                     if (hasZoomToolbar) {
                         GlobalTelemetryZoomToolbar(
                             zoomScale = profileZoomScale,
-                            startDist = profileStartDist,
+                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
                             totalSpan = totalSpan,
                             onZoomChanged = { z, s ->
                                 profileZoomScale = z
-                                profileStartDist = s
+                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
                             },
                             isPanMode = isPanMode,
                             onPanModeToggle = { isPanMode = !isPanMode },
@@ -459,11 +544,11 @@ fun MapDetailLayout(
             if (hasZoomToolbar) {
                 GlobalTelemetryZoomToolbar(
                     zoomScale = profileZoomScale,
-                    startDist = profileStartDist,
+                    startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
                     totalSpan = totalSpan,
                     onZoomChanged = { z, s ->
                         profileZoomScale = z
-                        profileStartDist = s
+                        viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
                     },
                     isPanMode = isPanMode,
                     onPanModeToggle = { isPanMode = !isPanMode },
@@ -471,11 +556,18 @@ fun MapDetailLayout(
                 )
             }
 
-            lowerColumn(
+            val columnModifier = if (!showMap && hasScrollableContent) {
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+            } else {
                 Modifier
                     .fillMaxWidth()
                     .wrapContentHeight()
-            )
+            }
+
+            lowerColumn(columnModifier)
         }
     }
 }

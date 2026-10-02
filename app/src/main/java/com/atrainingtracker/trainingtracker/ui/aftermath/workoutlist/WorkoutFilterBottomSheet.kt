@@ -148,6 +148,7 @@ fun WorkoutFilterBottomSheet(
     var localEquipId by remember(criteria.equipmentId) { mutableStateOf(criteria.equipmentId) }
     var localCommute by remember(criteria.isCommute) { mutableStateOf(criteria.isCommute) }
     var localTrainer by remember(criteria.isTrainer) { mutableStateOf(criteria.isTrainer) }
+    var localRace by remember(criteria.isRace) { mutableStateOf(criteria.isRace) }
     var localHasGps by remember(criteria.hasGpsTrack) { mutableStateOf(criteria.hasGpsTrack) }
 
     var localStartLocationName by remember(criteria.startLocationName) { mutableStateOf(criteria.startLocationName) }
@@ -271,6 +272,7 @@ fun WorkoutFilterBottomSheet(
             localEquipId = null
             localCommute = null
             localTrainer = null
+            localRace = null
             localHasGps = null
             localMinDistanceMeters = null
             localMaxDistanceMeters = null
@@ -296,6 +298,7 @@ fun WorkoutFilterBottomSheet(
                 equipmentId = localEquipId,
                 isCommute = localCommute,
                 isTrainer = localTrainer,
+                isRace = localRace,
                 hasGpsTrack = localHasGps,
                 minDistanceMeters = localMinDistanceMeters,
                 maxDistanceMeters = localMaxDistanceMeters,
@@ -501,6 +504,12 @@ fun WorkoutFilterBottomSheet(
                     selected = (localTrainer == true),
                     onClick = { localTrainer = if (localTrainer == true) null else true },
                     label = { Text(stringResource(R.string.filter_trainer)) }
+                )
+
+                FilterChip(
+                    selected = (localRace == true),
+                    onClick = { localRace = if (localRace == true) null else true },
+                    label = { Text(stringResource(R.string.filter_race_only)) }
                 )
 
                 FilterChip(

@@ -61,6 +61,7 @@ data class WorkoutCardSectionPreferences(
 data class EditWorkoutFieldPreferences(
     val showCluster: Boolean = true,
     val showCommuteTrainer: Boolean = true,
+    val showRace: Boolean = true,
     val showStravaUpload: Boolean = true,
     val showDescription: Boolean = true,
     val showGoal: Boolean = true,
@@ -93,6 +94,7 @@ class MyPreferenceManager(context: Context) {
 
         val EDIT_WORKOUT_SHOW_CLUSTER = booleanPreferencesKey("edit_workout_show_cluster")
         val EDIT_WORKOUT_SHOW_COMMUTE_TRAINER = booleanPreferencesKey("edit_workout_show_commute_trainer")
+        val EDIT_WORKOUT_SHOW_RACE = booleanPreferencesKey("edit_workout_show_race")
         val EDIT_WORKOUT_SHOW_STRAVA_UPLOAD = booleanPreferencesKey("edit_workout_show_strava_upload")
         val EDIT_WORKOUT_SHOW_DESCRIPTION = booleanPreferencesKey("edit_workout_show_description")
         val EDIT_WORKOUT_SHOW_GOAL = booleanPreferencesKey("edit_workout_show_goal")
@@ -136,6 +138,7 @@ class MyPreferenceManager(context: Context) {
         EditWorkoutFieldPreferences(
             showCluster = preferences[EDIT_WORKOUT_SHOW_CLUSTER] ?: true,
             showCommuteTrainer = preferences[EDIT_WORKOUT_SHOW_COMMUTE_TRAINER] ?: true,
+            showRace = preferences[EDIT_WORKOUT_SHOW_RACE] ?: true,
             showStravaUpload = preferences[EDIT_WORKOUT_SHOW_STRAVA_UPLOAD] ?: true,
             showDescription = preferences[EDIT_WORKOUT_SHOW_DESCRIPTION] ?: true,
             showGoal = preferences[EDIT_WORKOUT_SHOW_GOAL] ?: true,
@@ -147,6 +150,7 @@ class MyPreferenceManager(context: Context) {
         dataStore.edit { preferences ->
             preferences[EDIT_WORKOUT_SHOW_CLUSTER] = prefs.showCluster
             preferences[EDIT_WORKOUT_SHOW_COMMUTE_TRAINER] = prefs.showCommuteTrainer
+            preferences[EDIT_WORKOUT_SHOW_RACE] = prefs.showRace
             preferences[EDIT_WORKOUT_SHOW_STRAVA_UPLOAD] = prefs.showStravaUpload
             preferences[EDIT_WORKOUT_SHOW_DESCRIPTION] = prefs.showDescription
             preferences[EDIT_WORKOUT_SHOW_GOAL] = prefs.showGoal

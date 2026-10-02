@@ -62,6 +62,7 @@ fun ActiveFilterChipsRow(
     onRemoveEquipment: () -> Unit,
     onRemoveCommute: () -> Unit,
     onRemoveTrainer: () -> Unit,
+    onRemoveRace: () -> Unit = {},
     onRemoveGpsTrack: () -> Unit,
     onRemoveDistanceRange: () -> Unit = {},
     onRemoveDurationRange: () -> Unit = {},
@@ -199,6 +200,16 @@ fun ActiveFilterChipsRow(
                 RemovableFilterChip(
                     label = stringResource(R.string.filter_trainer),
                     onRemove = onRemoveTrainer
+                )
+            }
+        }
+
+        // Race Chip (ATT-2005)
+        if (criteria.isRace != null) {
+            item("race") {
+                RemovableFilterChip(
+                    label = stringResource(R.string.filter_race_only),
+                    onRemove = onRemoveRace
                 )
             }
         }

@@ -32,6 +32,7 @@ import com.atrainingtracker.banalservice.BSportType
  * @property equipmentName Linked equipment / gear name if assigned.
  * @property commute Flag indicating whether the activity was a commute.
  * @property trainer Flag indicating whether the session was on a stationary trainer.
+ * @property race Flag indicating whether the session was a competitive race event (ATT-2005).
  * @property uploadToStrava Strava upload sync status code.
  * @property stravaSportName Strava-specific sport name override.
  * @property clusterId Unique identifier of the linked [com.atrainingtracker.trainingtracker.database.WorkoutCluster].
@@ -48,6 +49,7 @@ data class WorkoutHeaderData(
     var equipmentName: String?,
     var commute: Boolean,
     var trainer: Boolean,
+    var race: Boolean = false,
     val uploadToStrava: Int,
     val stravaSportName: String? = null,
     val clusterId: Long = -1L,

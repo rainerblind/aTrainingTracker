@@ -830,22 +830,23 @@ fun WorkoutMasksAndCardsSection(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    FilterChip(
+                    SegmentedButton(
                         selected = workoutCardPrefs.lapDisplayMode == LapDisplayMode.TABLE_ONLY,
                         onClick = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(lapDisplayMode = LapDisplayMode.TABLE_ONLY)) },
-                        label = { Text(stringResource(R.string.settings_lap_display_mode_table)) },
-                        modifier = Modifier.weight(1f)
-                    )
-                    FilterChip(
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                    ) {
+                        Text(stringResource(R.string.settings_lap_display_mode_table))
+                    }
+                    SegmentedButton(
                         selected = workoutCardPrefs.lapDisplayMode == LapDisplayMode.VISUALIZER_ONLY,
                         onClick = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(lapDisplayMode = LapDisplayMode.VISUALIZER_ONLY)) },
-                        label = { Text(stringResource(R.string.settings_lap_display_mode_visualizer)) },
-                        modifier = Modifier.weight(1f)
-                    )
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                    ) {
+                        Text(stringResource(R.string.settings_lap_display_mode_visualizer))
+                    }
                 }
             }
         }
@@ -899,6 +900,11 @@ fun WorkoutMasksAndCardsSection(
             title = stringResource(R.string.settings_edit_workout_commute_trainer),
             isChecked = editWorkoutPrefs.showCommuteTrainer,
             onCheckedChange = { onEditWorkoutPrefsChange(editWorkoutPrefs.copy(showCommuteTrainer = it)) }
+        )
+        TuningToggleItem(
+            title = stringResource(R.string.settings_edit_workout_race),
+            isChecked = editWorkoutPrefs.showRace,
+            onCheckedChange = { onEditWorkoutPrefsChange(editWorkoutPrefs.copy(showRace = it)) }
         )
         TuningToggleItem(
             title = stringResource(R.string.settings_edit_workout_strava),

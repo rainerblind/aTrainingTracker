@@ -134,26 +134,27 @@ class MapDetailLayoutTest {
         assertTrue("MapDetailLayout.kt must exist", mapDetailLayoutFile.exists())
         val content = mapDetailLayoutFile.readText()
 
-        // 1. Zoom state hoisting with remember(activeScrubPath)
+        // 1. Zoom and Viewport Fraction state hoisting with remember(activeScrubPath) (REQ-UI-215, REQ-UI-232, REQ-UI-234)
         assertTrue(
             "MapDetailLayout must hoist profileZoomScale remembering across activeScrubPath (REQ-UI-215)",
             content.contains("var profileZoomScale by remember(activeScrubPath) { mutableFloatStateOf(1.0f) }")
         )
         assertTrue(
-            "MapDetailLayout must hoist profileStartDist remembering across activeScrubPath (REQ-UI-215)",
-            content.contains("var profileStartDist by remember(activeScrubPath) { mutableDoubleStateOf(0.0) }")
+            "MapDetailLayout must hoist viewportStartFraction remembering across activeScrubPath (REQ-UI-232, REQ-UI-234)",
+            content.contains("var viewportStartFraction by remember(activeScrubPath) { mutableDoubleStateOf(0.0) }")
         )
 
-        // 2. Wired to ElevationProfile
+        // 2. Wired to ElevationProfile via MapDetailViewportMath
         assertTrue(
             "MapDetailLayout must pass zoomScale and startDist to ElevationProfile",
-            content.contains("zoomScale = profileZoomScale") && content.contains("startDist = profileStartDist")
+            content.contains("zoomScale = profileZoomScale") &&
+                    content.contains("startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, elevationTotalSpan, profileZoomScale)")
         )
         assertTrue(
-            "MapDetailLayout must provide onZoomChanged callback to ElevationProfile",
+            "MapDetailLayout must provide onZoomChanged callback to ElevationProfile updating viewportStartFraction",
             content.contains("onZoomChanged = { z, s ->") &&
                     content.contains("profileZoomScale = z") &&
-                    content.contains("profileStartDist = s")
+                    content.contains("viewportStartFraction = MapDetailViewportMath.domainToFraction(s, elevationTotalSpan, z)")
         )
 
         // 3. Forwarded to TelemetryMetricGraphs
@@ -163,10 +164,10 @@ class MapDetailLayoutTest {
             occurrencesZoomScale >= 4
         )
 
-        val occurrencesStartDist = Regex("""startDist\s*=\s*profileStartDist""").findAll(content).count()
+        val occurrencesFractionToDomain = Regex("""MapDetailViewportMath\.fractionToDomain""").findAll(content).count()
         assertTrue(
-            "MapDetailLayout must forward startDist = profileStartDist to ElevationProfile and 3 TelemetryMetricGraphs (count >= 4)",
-            occurrencesStartDist >= 4
+            "MapDetailLayout must forward mapped startDist via MapDetailViewportMath to ElevationProfile and TelemetryMetricGraphs (count >= 4)",
+            occurrencesFractionToDomain >= 4
         )
     }
 

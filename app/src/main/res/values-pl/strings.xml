@@ -1131,12 +1131,16 @@
     <string name="settings_edit_workout_title">Edytuj trening</string>
     <string name="settings_edit_workout_cluster">Trasa / Segment</string>
     <string name="settings_edit_workout_commute_trainer">Dojazd do pracy i trenażer</string>
+    <string name="settings_edit_workout_race">Wyścig</string>
     <string name="settings_edit_workout_strava">Przesyłanie do Strava</string>
     <string name="settings_edit_workout_description">Opis i notatki</string>
     <string name="settings_edit_workout_goal">Cel</string>
     <string name="settings_edit_workout_method">Metoda</string>
     <string name="filter_commute">Dojazd</string>
     <string name="filter_trainer">Trenażer / Wewnątrz</string>
+    <string name="filter_race_only">Tylko wyścigi</string>
+    <string name="race">Wyścig</string>
+    <string name="race_badge">Wyścig</string>
     <string name="filter_has_gps">Z trasą GPS</string>
     <string name="filter_min_distance_format">&gt; %1$s km</string>
     <string name="filter_max_distance_format">&lt; %1$s km</string>
