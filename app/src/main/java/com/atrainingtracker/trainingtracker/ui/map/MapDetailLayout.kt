@@ -377,7 +377,14 @@ fun MapDetailLayout(
                                     // HR Graph
                                     if (TelemetryMetricUtils.hasHeartRateData(path)) {
                                         Spacer(modifier = Modifier.height(8.dp))
-                                        val activeHr = activeScrubPoint?.hr
+                                        val activeHrPoint = if (selectedDistance != null) {
+                                            if (isTrackless) {
+                                                path.minByOrNull { abs(it.timeSec - selectedDistance!!) }
+                                            } else {
+                                                path.minByOrNull { abs(it.distance - selectedDistance!!) }
+                                            }
+                                        } else null
+                                        val activeHr = activeHrPoint?.hr
                                         val hrHeaderText = if (activeHr != null) {
                                             val zoneTag = if (hrThresholds != null) {
                                                 val zoneIdx = TelemetryZoneMath.determineHeartRateZone(activeHr.toDouble(), hrThresholds)
@@ -415,7 +422,14 @@ fun MapDetailLayout(
                                     // Power Graph
                                     if (TelemetryMetricUtils.hasPowerData(path)) {
                                         Spacer(modifier = Modifier.height(8.dp))
-                                        val activePower = activeScrubPoint?.power
+                                        val activePowerPoint = if (selectedDistance != null) {
+                                            if (isTrackless) {
+                                                path.minByOrNull { abs(it.timeSec - selectedDistance!!) }
+                                            } else {
+                                                path.minByOrNull { abs(it.distance - selectedDistance!!) }
+                                            }
+                                        } else null
+                                        val activePower = activePowerPoint?.power
                                         val powerHeaderText = if (activePower != null) {
                                             val zoneTag = if (powerThresholds != null) {
                                                 val zoneIdx = TelemetryZoneMath.determinePowerZone(activePower.toDouble(), powerThresholds)
