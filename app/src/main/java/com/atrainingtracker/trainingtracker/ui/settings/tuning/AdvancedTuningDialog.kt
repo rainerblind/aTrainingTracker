@@ -783,12 +783,6 @@ fun WorkoutMasksAndCardsSection(
                         label = { Text(stringResource(R.string.settings_lap_display_mode_visualizer)) },
                         modifier = Modifier.weight(1f)
                     )
-                    FilterChip(
-                        selected = workoutCardPrefs.lapDisplayMode == LapDisplayMode.BOTH,
-                        onClick = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(lapDisplayMode = LapDisplayMode.BOTH)) },
-                        label = { Text(stringResource(R.string.settings_lap_display_mode_both)) },
-                        modifier = Modifier.weight(1f)
-                    )
                 }
             }
         }

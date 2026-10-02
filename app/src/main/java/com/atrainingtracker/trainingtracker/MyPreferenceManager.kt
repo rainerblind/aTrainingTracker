@@ -111,7 +111,7 @@ class MyPreferenceManager(context: Context) {
             showZoneAnalysis = preferences[WORKOUT_CARD_SHOW_ZONES] ?: false,
             lapDisplayMode = try {
                 val rawMode = preferences[WORKOUT_CARD_LAP_DISPLAY_MODE]
-                if (rawMode != null) LapDisplayMode.valueOf(rawMode) else LapDisplayMode.VISUALIZER_ONLY
+                if (rawMode != null && rawMode != "BOTH") LapDisplayMode.valueOf(rawMode) else LapDisplayMode.VISUALIZER_ONLY
             } catch (e: Exception) {
                 LapDisplayMode.VISUALIZER_ONLY
             }

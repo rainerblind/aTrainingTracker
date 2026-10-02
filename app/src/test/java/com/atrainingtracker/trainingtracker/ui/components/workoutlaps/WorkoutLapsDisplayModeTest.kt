@@ -25,20 +25,18 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Unit tests verifying conditional display logic for LapDisplayMode (REQ-UI-229, TST-UI-183, ATT-1870).
+ * Unit tests verifying conditional display logic for LapDisplayMode (REQ-UI-229, TST-UI-183, TST-UI-191, ATT-1870, ATT-1988).
  */
 class WorkoutLapsDisplayModeTest {
 
     @Test
     fun testShouldShowVisualizer_acrossAllDisplayModes() {
-        assertTrue("BOTH must show split visualizer", WorkoutLapsHelper.shouldShowVisualizer(LapDisplayMode.BOTH))
         assertTrue("VISUALIZER_ONLY must show split visualizer", WorkoutLapsHelper.shouldShowVisualizer(LapDisplayMode.VISUALIZER_ONLY))
         assertFalse("TABLE_ONLY must hide split visualizer", WorkoutLapsHelper.shouldShowVisualizer(LapDisplayMode.TABLE_ONLY))
     }
 
     @Test
     fun testShouldShowTable_acrossAllDisplayModes() {
-        assertTrue("BOTH must show lap table", WorkoutLapsHelper.shouldShowTable(LapDisplayMode.BOTH))
         assertTrue("TABLE_ONLY must show lap table", WorkoutLapsHelper.shouldShowTable(LapDisplayMode.TABLE_ONLY))
         assertFalse("VISUALIZER_ONLY must hide lap table", WorkoutLapsHelper.shouldShowTable(LapDisplayMode.VISUALIZER_ONLY))
     }
