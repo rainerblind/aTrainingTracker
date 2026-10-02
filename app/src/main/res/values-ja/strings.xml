@@ -1376,4 +1376,10 @@
     <string name="zoom_reset">ズームをリセット</string>
     <string name="zoom_pan_mode">パンモード</string>
     <string name="zoom_scrub_mode">スクラブモード</string>
+
+    <!-- Configurable Lap Display Mode (ATT-1870 / REQ-UI-229) -->
+    <string name="settings_lap_display_mode_title">ラップ表示モード</string>
+    <string name="settings_lap_display_mode_table">テーブル</string>
+    <string name="settings_lap_display_mode_visualizer">ビジュアライザー</string>
+    <string name="settings_lap_display_mode_both">両方</string>
 </resources>
