@@ -33,6 +33,7 @@ import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -51,10 +52,14 @@ data class AftermathMapUIState(
     val bSportType: BSportType = BSportType.UNKNOWN,
     val zoomFocus: MapZoomFocus = MapZoomFocus.FIT_PRIMARY,
     val hrZoneDistribution: ZoneDistributionData? = null,
-    val powerZoneDistribution: ZoneDistributionData? = null
+    val powerZoneDistribution: ZoneDistributionData? = null,
+    val telemetryPath: List<PathPoint> = emptyList()
 )
 
-class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(application) {
+class TrackOnMapAftermathViewModel @JvmOverloads constructor(
+    application: Application,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(AftermathMapUIState())
     val uiState = _uiState.asStateFlow()
@@ -87,7 +92,7 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
     }
 
     fun loadAftermathData(workoutData: WorkoutData) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val workoutId = workoutData.id
             val bSportType = workoutData.bSportType
 
@@ -195,6 +200,13 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
                     _uiState.value = _uiState.value.copy(
                         tracks = fullTracks,
                         availableTrackTypes = fullTracks.map { it.type }.toSet()
+                    )
+                }
+            } else {
+                val telemetryPoints = workoutRepository.getWorkoutTelemetryPoints(workoutId)
+                withContext(Dispatchers.Main) {
+                    _uiState.value = _uiState.value.copy(
+                        telemetryPath = telemetryPoints
                     )
                 }
             }

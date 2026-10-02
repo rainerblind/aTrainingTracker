@@ -313,7 +313,10 @@ fun TelemetryMetricGraph(
         }
     }
 
-    val isTimeDomain = xAxisDomain == ProfileXAxisDomain.TIME
+    val isTrackless = remember(pathPoints) {
+        (pathPoints.lastOrNull()?.distance ?: 0.0) == 0.0 && (pathPoints.lastOrNull()?.timeSec ?: 0L) > 0L
+    }
+    val isTimeDomain = xAxisDomain == ProfileXAxisDomain.TIME || isTrackless
     val totalSpan = remember(pathPoints, isTimeDomain) {
         if (isTimeDomain) {
             (pathPoints.lastOrNull()?.timeSec ?: 0L).toDouble().coerceAtLeast(1.0)
@@ -473,7 +476,11 @@ fun TelemetryMetricGraph(
                                         if (isTimeDomain) {
                                             val targetTimeSec = selectedVal.toLong()
                                             val nearest = pathPoints.minByOrNull { abs(it.timeSec - targetTimeSec) }
-                                            currentOnDistanceSelectedState(nearest?.distance)
+                                            if (isTrackless) {
+                                                currentOnDistanceSelectedState(nearest?.timeSec?.toDouble())
+                                            } else {
+                                                currentOnDistanceSelectedState(nearest?.distance)
+                                            }
                                         } else {
                                             currentOnDistanceSelectedState(selectedVal)
                                         }
@@ -507,7 +514,11 @@ fun TelemetryMetricGraph(
                                 if (isTimeDomain) {
                                     val targetTimeSec = selectedVal.toLong()
                                     val nearest = pathPoints.minByOrNull { abs(it.timeSec - targetTimeSec) }
-                                    currentOnDistanceSelectedState(nearest?.distance)
+                                    if (isTrackless) {
+                                        currentOnDistanceSelectedState(nearest?.timeSec?.toDouble())
+                                    } else {
+                                        currentOnDistanceSelectedState(nearest?.distance)
+                                    }
                                 } else {
                                     currentOnDistanceSelectedState(selectedVal)
                                 }
@@ -790,8 +801,12 @@ fun TelemetryMetricGraph(
             // Synchronized Scrubbing Cursor & Marker Dot
             if (currentDistance != null) {
                 val cursorDistSpan = if (isTimeDomain) {
-                    val nearestPt = pathPoints.minByOrNull { abs(it.distance - currentDistance) }
-                    (nearestPt?.timeSec ?: 0L).toDouble()
+                    if (isTrackless) {
+                        currentDistance
+                    } else {
+                        val nearestPt = pathPoints.minByOrNull { abs(it.distance - currentDistance) }
+                        (nearestPt?.timeSec ?: 0L).toDouble()
+                    }
                 } else {
                     currentDistance
                 }
@@ -810,7 +825,11 @@ fun TelemetryMetricGraph(
                     )
 
                     // 2. Highlight circle on the curve
-                    val nearestPoint = pathPoints.minByOrNull { abs(it.distance - currentDistance) }
+                    val nearestPoint = if (isTrackless && isTimeDomain) {
+                        pathPoints.minByOrNull { abs(it.timeSec - currentDistance.toLong()) }
+                    } else {
+                        pathPoints.minByOrNull { abs(it.distance - currentDistance) }
+                    }
                     if (nearestPoint != null) {
                         val metricVal = TelemetryMetricUtils.extractMetricValue(nearestPoint, metricType, unit)
                         if (metricVal != null) {
