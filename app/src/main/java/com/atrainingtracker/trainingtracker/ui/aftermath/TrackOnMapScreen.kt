@@ -62,11 +62,18 @@ fun TrackOnMapScreen(
     headerActions: @Composable RowScope.() -> Unit = {},
     hrZoneDistribution: ZoneDistributionData? = null,
     powerZoneDistribution: ZoneDistributionData? = null,
-    analyticsContent: (@Composable ColumnScope.() -> Unit)? = null
+    analyticsContent: (@Composable ColumnScope.() -> Unit)? = null,
+    telemetryPath: List<PathPoint> = emptyList()
 ) {
     // PERFORMANCE: Memoize the filtered tracks list
     val filteredTracks = remember(tracks, enabledTrackTypes) {
         tracks.filter { it.type in enabledTrackTypes }
+    }
+
+    val hasGpsTrack = remember(tracks) {
+        tracks.any { track ->
+            track.path.isNotEmpty() && track.latLngs.any { it.latitude != 0.0 || it.longitude != 0.0 }
+        }
     }
 
     var selectedLapNr by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -91,6 +98,14 @@ fun TrackOnMapScreen(
         bestTrack?.path?.map { it.distance } ?: emptyList()
     }
 
+    val activeScrubPath = remember(hasGpsTrack, bestTrack, tracks, telemetryPath) {
+        if (hasGpsTrack) {
+            bestTrack?.path ?: tracks.firstOrNull()?.path
+        } else {
+            telemetryPath.ifEmpty { null }
+        }
+    }
+
     val (startDistM, endDistM) = remember(workoutData.laps, selectedLapNr) {
         if (selectedLapNr != null) {
             LapSegmentUtils.calculateLapDistanceRange(workoutData.laps, selectedLapNr!!)
@@ -110,11 +125,12 @@ fun TrackOnMapScreen(
     MapDetailLayout(
         bSportType = workoutData.bSportType,
         zoomFocus = MapZoomFocus.FIT_PRIMARY,
-        activeScrubPath = tracks.find { it.type == TrackType.BEST }?.path ?: tracks.firstOrNull()?.path,
+        activeScrubPath = activeScrubPath,
         minAltitudeOverride = workoutData.minAltitude,
         maxAltitudeOverride = workoutData.maxAltitude,
         useStatusBarsPadding = useStatusBarsPadding,
-        showMap = showMap,
+        showMap = showMap && hasGpsTrack,
+        showElevationProfile = hasGpsTrack && (workoutData.minAltitude != null || (activeScrubPath?.any { it.altitude != 0.0 } == true)),
         header = {
             WorkoutHeader(
                 modifier = Modifier.fillMaxWidth(),

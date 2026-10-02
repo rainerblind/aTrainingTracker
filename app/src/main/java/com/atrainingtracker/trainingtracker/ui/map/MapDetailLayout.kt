@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import android.graphics.Bitmap
+import kotlin.math.abs
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -108,8 +109,10 @@ fun MapDetailLayout(
     var splitFraction by rememberSaveable { mutableFloatStateOf(SplitPaneMath.DEFAULT_SPLIT_FRACTION) }
     val noLocation = remember { MutableStateFlow<LatLng?>(null) }
 
-    val isElevationTimeDomain = tuningConfig.elevationXAxisDomain == ProfileXAxisDomain.TIME && (activeScrubPath?.lastOrNull()?.timeSec ?: 0) > 0
-    val totalSpan = if (isElevationTimeDomain) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
+    val isTrackless = (activeScrubPath?.lastOrNull()?.distance ?: 0.0) == 0.0 && (activeScrubPath?.lastOrNull()?.timeSec ?: 0) > 0
+    val activeTelemetryDomain = if (isTrackless) ProfileXAxisDomain.TIME else tuningConfig.telemetryXAxisDomain
+    val isElevationTimeDomain = (tuningConfig.elevationXAxisDomain == ProfileXAxisDomain.TIME || isTrackless) && (activeScrubPath?.lastOrNull()?.timeSec ?: 0) > 0
+    val totalSpan = if (isElevationTimeDomain || isTrackless) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
 
     val hasZoomToolbar = showZoomControls && activeScrubPath != null && activeScrubPath.isNotEmpty()
     val hasTelemetryGraphs = showZoomControls && activeScrubPath != null && (
@@ -257,7 +260,7 @@ fun MapDetailLayout(
                                             metricType = if (isRunning) TelemetryMetricType.PACE else TelemetryMetricType.SPEED,
                                             currentDistance = selectedDistance,
                                             onDistanceSelected = { selectedDistance = it },
-                                            xAxisDomain = tuningConfig.telemetryXAxisDomain,
+                                            xAxisDomain = activeTelemetryDomain,
                                             bSportType = bSportType,
                                             zoomScale = profileZoomScale,
                                             startDist = profileStartDist,
@@ -273,8 +276,39 @@ fun MapDetailLayout(
                                     // HR Graph
                                     if (TelemetryMetricUtils.hasHeartRateData(path)) {
                                         Spacer(modifier = Modifier.height(8.dp))
+                                        val activeHrPoint = if (selectedDistance != null) {
+                                            if (isTrackless) {
+                                                path.minByOrNull { abs(it.timeSec - selectedDistance!!) }
+                                            } else {
+                                                path.minByOrNull { abs(it.distance - selectedDistance!!) }
+                                            }
+                                        } else null
+                                        val activeHr = activeHrPoint?.hr
+                                        val hrHeaderText = if (activeHr != null) {
+                                            val hrThresholds = runCatching {
+                                                val zoneType = if (bSportType == BSportType.BIKE) {
+                                                    com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType.HR_BIKE
+                                                } else {
+                                                    com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType.HR_RUN
+                                                }
+                                                val z1 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
+                                                val z2 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
+                                                val z3 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
+                                                val z4 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+                                                if (z1 > 0 && z2 > 0 && z3 > 0 && z4 > 0) {
+                                                    com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds(z1, z2, z3, z4)
+                                                } else null
+                                            }.getOrNull()
+                                            val zoneTag = if (hrThresholds != null) {
+                                                val zoneIdx = TelemetryZoneMath.determineHeartRateZone(activeHr.toDouble(), hrThresholds)
+                                                " • Z$zoneIdx"
+                                            } else ""
+                                            "${stringResource(R.string.graph_heading_heart_rate)}: $activeHr bpm$zoneTag"
+                                        } else {
+                                            stringResource(R.string.graph_heading_heart_rate)
+                                        }
                                         Text(
-                                            text = stringResource(R.string.graph_heading_heart_rate),
+                                            text = hrHeaderText,
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                                             color = MaterialTheme.colorScheme.onSurface,
@@ -285,7 +319,7 @@ fun MapDetailLayout(
                                             metricType = TelemetryMetricType.HEART_RATE,
                                             currentDistance = selectedDistance,
                                             onDistanceSelected = { selectedDistance = it },
-                                            xAxisDomain = tuningConfig.telemetryXAxisDomain,
+                                            xAxisDomain = activeTelemetryDomain,
                                             bSportType = bSportType,
                                             zoomScale = profileZoomScale,
                                             startDist = profileStartDist,
@@ -301,8 +335,35 @@ fun MapDetailLayout(
                                     // Power Graph
                                     if (TelemetryMetricUtils.hasPowerData(path)) {
                                         Spacer(modifier = Modifier.height(8.dp))
+                                        val activePowerPoint = if (selectedDistance != null) {
+                                            if (isTrackless) {
+                                                path.minByOrNull { abs(it.timeSec - selectedDistance!!) }
+                                            } else {
+                                                path.minByOrNull { abs(it.distance - selectedDistance!!) }
+                                            }
+                                        } else null
+                                        val activePower = activePowerPoint?.power
+                                        val powerHeaderText = if (activePower != null) {
+                                            val powerThresholds = runCatching {
+                                                val zoneType = com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType.PWR_BIKE
+                                                val z1 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
+                                                val z2 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
+                                                val z3 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
+                                                val z4 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+                                                if (z1 > 0 && z2 > 0 && z3 > 0 && z4 > 0) {
+                                                    com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds(z1, z2, z3, z4)
+                                                } else null
+                                            }.getOrNull()
+                                            val zoneTag = if (powerThresholds != null) {
+                                                val zoneIdx = TelemetryZoneMath.determinePowerZone(activePower.toDouble(), powerThresholds)
+                                                " • Z$zoneIdx"
+                                            } else ""
+                                            "${stringResource(R.string.graph_heading_power)}: $activePower W$zoneTag"
+                                        } else {
+                                            stringResource(R.string.graph_heading_power)
+                                        }
                                         Text(
-                                            text = stringResource(R.string.graph_heading_power),
+                                            text = powerHeaderText,
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                                             color = MaterialTheme.colorScheme.onSurface,
@@ -313,7 +374,7 @@ fun MapDetailLayout(
                                             metricType = TelemetryMetricType.POWER,
                                             currentDistance = selectedDistance,
                                             onDistanceSelected = { selectedDistance = it },
-                                            xAxisDomain = tuningConfig.telemetryXAxisDomain,
+                                            xAxisDomain = activeTelemetryDomain,
                                             bSportType = bSportType,
                                             zoomScale = profileZoomScale,
                                             startDist = profileStartDist,
@@ -356,7 +417,7 @@ fun MapDetailLayout(
     Column(
         modifier = modifier
             .then(
-                if (showMap) Modifier.fillMaxSize() else Modifier.wrapContentHeight()
+                if (showMap || hasScrollableContent) Modifier.fillMaxSize() else Modifier.wrapContentHeight()
             )
             .then(
                 if (!useStatusBarsPadding) Modifier.background(MaterialTheme.colorScheme.surface) else Modifier
@@ -487,11 +548,18 @@ fun MapDetailLayout(
                 )
             }
 
-            lowerColumn(
+            val columnModifier = if (!showMap && hasScrollableContent) {
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+            } else {
                 Modifier
                     .fillMaxWidth()
                     .wrapContentHeight()
-            )
+            }
+
+            lowerColumn(columnModifier)
         }
     }
 }
