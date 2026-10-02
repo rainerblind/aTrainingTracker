@@ -370,6 +370,7 @@ fun MapDetailLayout(
                                                 profileZoomScale = z
                                                 viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
                                             },
+                                            paceCeilingMinKm = tuningConfig.paceCeilingMinKm,
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     }

@@ -1431,6 +1431,8 @@
     <string name="tuning_profile_x_axis_time">Zeit</string>
     <string name="tuning_telemetry_x_axis_title">Telemetriegraphen X-Achse</string>
     <string name="tuning_telemetry_x_axis_desc">Horizontale Achsendomäne für Telemetriegraphen (Herzfrequenz, Tempo/Geschwindigkeit, Leistung) wählen.</string>
+    <string name="tuning_pace_ceiling_title">Schnellste Tempo-Grenze</string>
+    <string name="tuning_pace_ceiling_desc">Filtert GPS-Ausreißer im Tempo-Diagramm. Werte schneller als diese Grenze werden abgeschnitten.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">Cockpit-Typografie</string>

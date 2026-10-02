@@ -55,6 +55,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
@@ -108,7 +109,8 @@ object TelemetryMetricUtils {
     fun extractMetricValue(
         point: PathPoint,
         metricType: TelemetryMetricType,
-        unit: MyUnits
+        unit: MyUnits,
+        paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM
     ): Double? {
         return when (metricType) {
             TelemetryMetricType.HEART_RATE -> {
@@ -127,7 +129,12 @@ object TelemetryMetricUtils {
                     } else {
                         secPerKm * (BANALService.METER_PER_MILE / 1000.0)
                     }
-                    (secPerUnit / 60.0).coerceIn(1.5, 20.0)
+                    val effectiveCeiling = if (unit == MyUnits.METRIC) {
+                        paceCeilingMinKm.toDouble()
+                    } else {
+                        paceCeilingMinKm.toDouble() * (BANALService.METER_PER_MILE / 1000.0)
+                    }
+                    (secPerUnit / 60.0).coerceIn(effectiveCeiling, 20.0)
                 }
             }
             TelemetryMetricType.POWER -> {
@@ -260,7 +267,8 @@ fun TelemetryMetricGraph(
     isPanMode: Boolean = false,
     onZoomChanged: ((Float, Double) -> Unit)? = null,
     hrZoneThresholds: HeartRateZoneThresholds? = null,
-    powerZoneThresholds: PowerZoneThresholds? = null
+    powerZoneThresholds: PowerZoneThresholds? = null,
+    paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM
 ) {
     if (pathPoints.isEmpty()) return
 
@@ -329,14 +337,14 @@ fun TelemetryMetricGraph(
     }
 
     // Extract scalar values
-    val rawValues = remember(pathPoints, metricType, unit) {
-        pathPoints.map { TelemetryMetricUtils.extractMetricValue(it, metricType, unit) }
+    val rawValues = remember(pathPoints, metricType, unit, paceCeilingMinKm) {
+        pathPoints.map { TelemetryMetricUtils.extractMetricValue(it, metricType, unit, paceCeilingMinKm) }
     }
 
     val validValues = remember(rawValues) { rawValues.filterNotNull() }
     if (validValues.isEmpty()) return
 
-    val (dataMin, dataMax) = remember(validValues, metricType) {
+    val (dataMin, dataMax) = remember(validValues, metricType, paceCeilingMinKm, unit) {
         val min = validValues.minOrNull() ?: 0.0
         val max = validValues.maxOrNull() ?: 1.0
         when (metricType) {
@@ -350,8 +358,13 @@ fun TelemetryMetricGraph(
                 0.0 to (max * 1.1).coerceAtLeast(5.0)
             }
             TelemetryMetricType.PACE -> {
+                val effectiveCeiling = if (unit == MyUnits.METRIC) {
+                    paceCeilingMinKm.toDouble()
+                } else {
+                    paceCeilingMinKm.toDouble() * (BANALService.METER_PER_MILE / 1000.0)
+                }
                 // For Pace: min is fastest, max is slowest
-                val paceMin = (min * 0.95).coerceAtLeast(1.5)
+                val paceMin = (min * 0.95).coerceAtLeast(effectiveCeiling)
                 val paceMax = (max * 1.05).coerceAtMost(20.0)
                 paceMin to paceMax.coerceAtLeast(paceMin + 1.0)
             }

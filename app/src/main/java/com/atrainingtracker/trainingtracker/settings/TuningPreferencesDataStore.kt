@@ -76,6 +76,10 @@ object TuningPreferencesDefaults {
     const val MAX_ALTITUDE_WINDOW_SEC = 60
     const val MIN_SLOPE_SPEED_MPS = 0.2f
     const val MAX_SLOPE_SPEED_MPS = 2.0f
+
+    const val DEFAULT_PACE_CEILING_MIN_KM = 3.0f
+    const val MIN_PACE_CEILING_MIN_KM = 2.0f
+    const val MAX_PACE_CEILING_MIN_KM = 6.0f
 }
 
 /**
@@ -94,7 +98,8 @@ data class TuningConfig(
     val downwardDelaySec: Int = TuningPreferencesDefaults.DOWNWARD_DELAY_SEC,
     val gpsAccuracyThresholdMeters: Float = TuningPreferencesDefaults.GPS_ACCURACY_THRESHOLD_M,
     val altitudeFilterWindowSec: Int = TuningPreferencesDefaults.ALTITUDE_FILTER_WINDOW_SEC,
-    val slopeMinSpeedMps: Float = TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS
+    val slopeMinSpeedMps: Float = TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS,
+    val paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM
 ) {
     @Deprecated("Use elevationXAxisDomain or telemetryXAxisDomain", ReplaceWith("elevationXAxisDomain"))
     val profileXAxisDomain: ProfileXAxisDomain
@@ -113,7 +118,8 @@ data class TuningConfig(
         downwardDelaySec: Int = TuningPreferencesDefaults.DOWNWARD_DELAY_SEC,
         gpsAccuracyThresholdMeters: Float = TuningPreferencesDefaults.GPS_ACCURACY_THRESHOLD_M,
         altitudeFilterWindowSec: Int = TuningPreferencesDefaults.ALTITUDE_FILTER_WINDOW_SEC,
-        slopeMinSpeedMps: Float = TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS
+        slopeMinSpeedMps: Float = TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS,
+        paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM
     ) : this(
         elevationXAxisDomain = profileXAxisDomain,
         telemetryXAxisDomain = profileXAxisDomain,
@@ -127,7 +133,8 @@ data class TuningConfig(
         downwardDelaySec = downwardDelaySec,
         gpsAccuracyThresholdMeters = gpsAccuracyThresholdMeters,
         altitudeFilterWindowSec = altitudeFilterWindowSec,
-        slopeMinSpeedMps = slopeMinSpeedMps
+        slopeMinSpeedMps = slopeMinSpeedMps,
+        paceCeilingMinKm = paceCeilingMinKm
     )
 }
 
@@ -153,6 +160,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_GPS_ACCURACY_THRESHOLD: Preferences.Key<Float> = floatPreferencesKey("tuning_gps_accuracy_threshold")
         val KEY_ALTITUDE_FILTER_WINDOW: Preferences.Key<Int> = intPreferencesKey("tuning_altitude_filter_window")
         val KEY_SLOPE_MIN_SPEED: Preferences.Key<Float> = floatPreferencesKey("tuning_slope_min_speed")
+        val KEY_PACE_CEILING_MIN_KM: Preferences.Key<Float> = floatPreferencesKey("tuning_pace_ceiling_min_km")
 
         private val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -168,7 +176,8 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_DOWNWARD_DELAY_SEC,
             KEY_GPS_ACCURACY_THRESHOLD,
             KEY_ALTITUDE_FILTER_WINDOW,
-            KEY_SLOPE_MIN_SPEED
+            KEY_SLOPE_MIN_SPEED,
+            KEY_PACE_CEILING_MIN_KM
         )
     }
 
@@ -252,6 +261,12 @@ class TuningPreferencesDataStore(private val context: Context) {
             TuningPreferencesDefaults.MAX_SLOPE_SPEED_MPS
         )
 
+        val rawPaceCeiling = prefs[KEY_PACE_CEILING_MIN_KM] ?: TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM
+        val clampedPaceCeiling = rawPaceCeiling.coerceIn(
+            TuningPreferencesDefaults.MIN_PACE_CEILING_MIN_KM,
+            TuningPreferencesDefaults.MAX_PACE_CEILING_MIN_KM
+        )
+
         TuningConfig(
             elevationXAxisDomain = elevationDomain,
             telemetryXAxisDomain = telemetryDomain,
@@ -265,7 +280,8 @@ class TuningPreferencesDataStore(private val context: Context) {
             downwardDelaySec = clampedDownward,
             gpsAccuracyThresholdMeters = clampedAccuracy,
             altitudeFilterWindowSec = clampedAltWindow,
-            slopeMinSpeedMps = clampedSlopeSpeed
+            slopeMinSpeedMps = clampedSlopeSpeed,
+            paceCeilingMinKm = clampedPaceCeiling
         )
     }
 
@@ -306,6 +322,10 @@ class TuningPreferencesDataStore(private val context: Context) {
             TuningPreferencesDefaults.MIN_SLOPE_SPEED_MPS,
             TuningPreferencesDefaults.MAX_SLOPE_SPEED_MPS
         )
+        val clampedPaceCeiling = config.paceCeilingMinKm.coerceIn(
+            TuningPreferencesDefaults.MIN_PACE_CEILING_MIN_KM,
+            TuningPreferencesDefaults.MAX_PACE_CEILING_MIN_KM
+        )
 
         context.dataStore.edit { prefs ->
             prefs[KEY_ELEVATION_X_AXIS_DOMAIN] = config.elevationXAxisDomain.name
@@ -322,6 +342,7 @@ class TuningPreferencesDataStore(private val context: Context) {
             prefs[KEY_GPS_ACCURACY_THRESHOLD] = clampedAccuracy
             prefs[KEY_ALTITUDE_FILTER_WINDOW] = clampedAltWindow
             prefs[KEY_SLOPE_MIN_SPEED] = clampedSlopeSpeed
+            prefs[KEY_PACE_CEILING_MIN_KM] = clampedPaceCeiling
         }
     }
 
