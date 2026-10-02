@@ -1,10 +1,10 @@
 # Stage 3: Implementation Plan - ATT-2006: [Aftermath/Telemetry] Display Heart Rate Graph When HR Telemetry Exists Even Without GPS Track
 
-**Ticket**: [ATT-2006](https://rainerblind.atlassian.net/browse/ATT-2006)  
-**Sub-task**: [ATT-2019](https://rainerblind.atlassian.net/browse/ATT-2019) (`[Impl-Plan]`)  
-**Parent Epic**: [ATT-111](https://rainerblind.atlassian.net/browse/ATT-111) (*Compact Post-Workout Visual Analytics & Graphs*)  
+**Ticket**: [ATT-2006](https://atrainingtracker.atlassian.net/browse/ATT-2006)  
+**Sub-task**: [ATT-2062](https://atrainingtracker.atlassian.net/browse/ATT-2062) (`[Impl-Plan]`)  
+**Parent Epic**: [ATT-111](https://atrainingtracker.atlassian.net/browse/ATT-111) (*Aftermath: Compact Post-Workout Visual Analytics & Graphs*)  
 **Target Release**: `V4.9.38`  
-**Active Sprint**: `2026-40.11`  
+**Active Sprint**: `2026-40.12`  
 **Requirement Mapping**: `REQ-UI-235`  
 **Test Mapping**: `TST-UI-194`  
 **Branch**: `feature/ATT-2006`  
@@ -15,17 +15,17 @@
 
 ## 1. Problem Description & Background
 
-Athletes frequently record training sessions without GPS coordinates (e.g. indoor treadmill running, stationary cycling trainer sessions, indoor rowing, or outdoor sessions where GPS lock was not acquired). While spatial map coordinates and elevation profiles do not exist for these activities, they contain rich sensor telemetry—specifically continuous Heart Rate and Cycling Power streams recorded at 1 Hz in SQLite `WorkoutSamples.db`.
+During Ceremony 2 physical device testing on Google Pixel 10 hardware (Sprint 2026-40.11 Review), indoor running workout `'2014-12-03_145500'` (duration: 39:38, sport: Laufen) was inspected in the post-workout Aftermath detailed view (`TrackOnMapScreen` / `MapDetailLayout`).
 
-In the current architecture:
-1. `WorkoutRepository.getWorkoutTrackPoints` discards all sample rows where `latitude` or `longitude` columns are null or unindexed (`latIdx == -1 || lonIdx == -1 || cursor.isNull(latIdx) || cursor.isNull(lonIdx)`), returning an empty point list.
-2. `TrackOnMapAftermathViewModel` populates `tracks` strictly from GPS fixes, leaving `tracks` empty for trackless workouts.
-3. `TrackOnMapScreen` resolves `activeScrubPath = tracks.find { it.type == TrackType.BEST }?.path ?: tracks.firstOrNull()?.path`, which evaluates to `null`.
-4. `MapDetailLayout` guards all telemetry graph rendering inside `activeScrubPath?.let { path -> ... }` and `hasTelemetryGraphs = showZoomControls && activeScrubPath != null && ...`, completely suppressing the continuous Heart Rate curve despite valid HR samples in SQLite.
-5. Simultaneously, `ATrainingTrackerMap` renders an empty Google Map centered at (0.0, 0.0) in the Atlantic Ocean off the coast of Africa.
-6. When scrubbing on trackless data, `TelemetryMetricGraph` dispatches `nearest?.distance` (which is 0.0), pinning the cursor to 0:00.
+While the Google Map correctly collapsed and the Heart Rate Zone card rendered completely, the continuous Heart Rate curve was missing, displaying only the sticky zoom toolbar above the zone card.
 
-`REQ-UI-235` decouples sensor telemetry extraction and ingestion from GPS coordinates, renders continuous telemetry curves along the Time domain across workout duration, enables synchronized time-domain scrubbing with instantaneous metric readouts, and cleanly collapses the Google Map container when no GPS coordinates exist.
+Forensic analysis confirmed that:
+1. `WorkoutRepository.getWorkoutTelemetryPoints` and `TrackOnMapAftermathViewModel` already populate `activeScrubPath` with time-domain `telemetryPath` (`distance = 0.0`, `latLng = LatLng(0.0, 0.0)`, `timeSec = timeSec`, `hr = hr`).
+2. When a workout lacks GPS track points, `TrackOnMapScreen.kt` passes `showElevationProfile = false`.
+3. In `MapDetailLayout.kt`, all `TelemetryMetricGraph` instances (Pace/Speed, Heart Rate, Power) and their container `Surface` were nested directly inside `if (showElevationProfile) { ... }`.
+4. When `showElevationProfile` evaluates to `false`, `MapDetailLayout.kt` completely bypassed the chart container, suppressing all continuous telemetry graphs!
+
+`REQ-UI-235` decouples `TelemetryMetricGraph` rendering from `showElevationProfile`, rendering continuous sensor curves whenever `hasTelemetryGraphs` is true, even when elevation profiles and GPS maps are absent.
 
 ---
 
@@ -35,15 +35,16 @@ In the current architecture:
   - Clause 1: Decoupled Telemetry Extraction (`WorkoutRepository.kt`).
   - Clause 2: ViewModel Telemetry Ingestion (`TrackOnMapAftermathViewModel.kt`).
   - Clause 3: TrackOnMapScreen Scrubber & Layout Wiring (`TrackOnMapScreen.kt`).
-  - Clause 4: Map Collapse & Scrollable Full-Screen Layout (`MapDetailLayout.kt`).
+  - Clause 4: Decoupled Telemetry Rendering, Map Collapse & Full-Screen Layout (`MapDetailLayout.kt`).
   - Clause 5: Synchronized Time-Domain Scrubbing (`TelemetryMetricGraph.kt`).
   - Clause 6: Preservation of Core Invariants (GPS workouts, 9-language localization parity, SQLite single-thread confinement).
 * **Test Mapping**: `TST-UI-194` (*Aftermath/Telemetry: Trackless Continuous Telemetry Graph Ingestion, Time-Domain Scrubbing, and Map Collapse Verification*)
   - `[TST-UI-194.1]`: `WorkoutRepositoryTelemetryTest.kt` (Extraction, data integrity, decimation).
   - `[TST-UI-194.2]`: `TrackOnMapViewModelTelemetryTest.kt` (State exposure, ingestion when tracks empty).
-  - `[TST-UI-194.3]`: `TracklessAftermathVisualContractTest.kt` (GPS detection, map collapse, vertical scrolling, header readout).
+  - `[TST-UI-194.3]`: `TracklessAftermathVisualContractTest.kt` (GPS detection, map collapse, vertical scrolling, header readout, decoupled graph rendering).
   - `[TST-UI-194.4]`: `TelemetryMetricGraphTracklessScrubbingTest.kt` (Time-domain dispatch, cursor positioning).
-  - `[TST-UI-194.5]`: Clean-room full test suite regression (`./gradlew testDebugUnitTest`).
+  - `[TST-UI-194.5]`: 9-language localization parity audit (`res/values*/strings.xml`).
+  - `[TST-UI-194.6]`: Clean-room full test suite regression (`./gradlew testDebugUnitTest`).
 
 ---
 
@@ -55,190 +56,140 @@ In the current architecture:
 4. **9-Language Localization Parity**: Zero hardcoded strings. All UI text tokens exist across all 9 supported application locales.
 5. **Subtask Self-Sufficiency**: Subtasks transition directly to `Erledigt` upon passing Gate audit via `freigabe`.
 6. **Parent Human Gate Invariance**: Terminal completion of parent tickets remains reserved for the human user in `Final Review (Human)`. Never advance parent to `Erledigt`.
-7. **Programmatic Pre-Check Gate**: Gate 3 verification via `tools/jira_util.py check-gate ATT-2019` must pass before any production code edits.
+7. **Programmatic Pre-Check Gate**: Gate 3 verification via `tools/jira_util.py check-gate ATT-2062` must pass before any production code edits.
 
 ---
 
 ## 4. Proposed Architectural Changes (SWE.2)
 
-### Component 1: `WorkoutRepository.kt` (`com.atrainingtracker.trainingtracker.ui.aftermath`)
-* **Add Method**:
-  ```kotlin
-  suspend fun getWorkoutTelemetryPoints(workoutId: Long): List<PathPoint> = withContext(Dispatchers.IO) {
-      val points = ArrayList<PathPoint>()
-      val db = workoutSamplesDatabaseManager.readableDatabase ?: return@withContext emptyList()
-      val tableName = WorkoutSamplesDatabaseManager.getSamplesTableName(workoutId)
+### Component: `MapDetailLayout.kt` (`com.atrainingtracker.trainingtracker.ui.map`)
+In `lowerColumn`:
+Refactor chart container from gating on `if (showElevationProfile)` to `if (showElevationProfile || hasTelemetryGraphs)`:
+```kotlin
+val lowerColumn: @Composable (Modifier) -> Unit = { colModifier ->
+    Column(modifier = colModifier) {
+        if (showElevationProfile || hasTelemetryGraphs) {
+            activeScrubPath?.let { path ->
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (analyticsContent == null) Modifier.navigationBarsPadding() else Modifier
+                        )
+                ) {
+                    Box(modifier = Modifier.drawWithContent {
+                        elevationLayer.record {
+                            this@drawWithContent.drawContent()
+                        }
+                        drawLayer(elevationLayer)
+                    }) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            if (showElevationProfile) {
+                                if (showZoomControls) {
+                                    Text(
+                                        text = stringResource(R.string.graph_heading_elevation),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
+                                    )
+                                }
+                                ElevationProfile(
+                                    pathPoints = path,
+                                    currentDistance = selectedDistance,
+                                    minAltitudeOverride = minAltitudeOverride,
+                                    maxAltitudeOverride = maxAltitudeOverride,
+                                    onDistanceSelected = { selectedDistance = it },
+                                    showZoomControls = showZoomControls,
+                                    xAxisDomain = tuningConfig.elevationXAxisDomain,
+                                    bSportType = bSportType,
+                                    zoomScale = profileZoomScale,
+                                    startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, elevationTotalSpan, profileZoomScale),
+                                    onZoomChanged = { z, s ->
+                                        profileZoomScale = z
+                                        viewportStartFraction = MapDetailViewportMath.domainToFraction(s, elevationTotalSpan, z)
+                                    },
+                                    isPanMode = isPanMode,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
 
-      // Query all recorded samples for the workout
-      db.query(tableName, null, null, null, null, null, null).use { cursor ->
-          val timeActiveIdx = cursor.getColumnIndex(SensorType.TIME_ACTIVE.name)
-          val timeTotalIdx = cursor.getColumnIndex(SensorType.TIME_TOTAL.name)
-          val timeIdx = cursor.getColumnIndex(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME)
-          val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
-          val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
-          val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
+                            // Telemetry Metric Graphs in detailed inspection view
+                            if (showZoomControls) {
+                                // Speed / Pace Graph
+                                if (TelemetryMetricUtils.hasSpeedData(path)) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    val isRunning = bSportType == BSportType.RUN
+                                    Text(
+                                        text = stringResource(if (isRunning) R.string.graph_heading_pace else R.string.graph_heading_speed),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                                    )
+                                    TelemetryMetricGraph(...)
+                                }
 
-          var initialEpochSec: Long? = null
-          var sampleIndex = 0L
+                                // HR Graph
+                                if (TelemetryMetricUtils.hasHeartRateData(path)) {
+                                    ...
+                                    TelemetryMetricGraph(
+                                        pathPoints = path,
+                                        metricType = TelemetryMetricType.HEART_RATE,
+                                        ...
+                                    )
+                                }
 
-          while (cursor.moveToNext()) {
-              val timeSec = when {
-                  timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx) -> cursor.getLong(timeActiveIdx)
-                  timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx) -> cursor.getLong(timeTotalIdx)
-                  timeIdx != -1 && !cursor.isNull(timeIdx) -> {
-                      val (offset, anchor) = parseTimestampOffset(cursor.getString(timeIdx), initialEpochSec)
-                      initialEpochSec = anchor
-                      offset ?: sampleIndex
-                  }
-                  else -> sampleIndex
-              }
+                                // Power Graph
+                                if (TelemetryMetricUtils.hasPowerData(path)) {
+                                    ...
+                                    TelemetryMetricGraph(
+                                        pathPoints = path,
+                                        metricType = TelemetryMetricType.POWER,
+                                        ...
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else if (analyticsContent == null && !useStatusBarsPadding) {
+            Spacer(modifier = Modifier.navigationBarsPadding())
+        }
 
-              val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getInt(hrIdx) else null
-              val power = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getInt(powerIdx) else null
-              val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
-
-              if (hr != null || power != null || speed != null) {
-                  points.add(
-                      PathPoint(
-                          distance = 0.0,
-                          latLng = LatLng(0.0, 0.0),
-                          altitude = 0.0,
-                          timeSec = timeSec,
-                          hr = hr,
-                          power = power,
-                          speedMps = speed,
-                          slope = null
-                      )
-                  )
-              }
-              sampleIndex++
-          }
-      }
-
-      // Decimate if count exceeds 800 to maintain 120fps UI performance
-      if (points.size > 800) {
-          val step = kotlin.math.ceil(points.size / 800.0).toInt()
-          points.filterIndexed { index, _ ->
-              index == 0 || index == points.lastIndex || index % step == 0
-          }
-      } else {
-          points
-      }
-  }
-  ```
-
-### Component 2: `TrackOnMapAftermathViewModel.kt` (`com.atrainingtracker.trainingtracker.ui.map`)
-* **State Updates**:
-  ```kotlin
-  data class AftermathMapUIState(
-      val tracks: List<MapTrack> = emptyList(),
-      val availableTrackTypes: Set<TrackType> = setOf(TrackType.BEST),
-      val segments: List<MapSegment> = emptyList(),
-      val routes: List<MapRoute> = emptyList(),
-      val markers: List<LocationMarker> = emptyList(),
-      val bSportType: BSportType = BSportType.UNKNOWN,
-      val zoomFocus: MapZoomFocus = MapZoomFocus.FIT_PRIMARY,
-      val hrZoneDistribution: ZoneDistributionData? = null,
-      val powerZoneDistribution: ZoneDistributionData? = null,
-      val telemetryPath: List<PathPoint> = emptyList() // REQ-UI-235
-  )
-  ```
-* **Phase 1 Reset**:
-  Clear `telemetryPath = emptyList()` upon loading a new workout.
-* **Phase 4 Telemetry Fallback**:
-  ```kotlin
-  if (fullTracks.isNotEmpty()) {
-      withContext(Dispatchers.Main) {
-          _uiState.value = _uiState.value.copy(
-              tracks = fullTracks,
-              availableTrackTypes = fullTracks.map { it.type }.toSet()
-          )
-      }
-  } else {
-      val telemetryPoints = workoutRepository.getWorkoutTelemetryPoints(workoutId)
-      withContext(Dispatchers.Main) {
-          _uiState.value = _uiState.value.copy(
-              telemetryPath = telemetryPoints
-          )
-      }
-  }
-  ```
-
-### Component 3: `TrackOnMapScreen.kt` (`com.atrainingtracker.trainingtracker.ui.aftermath`)
-* **Parameter & State Additions**:
-  - Accept `telemetryPath: List<PathPoint> = emptyList()`.
-  - Calculate `val hasGpsTrack = remember(tracks) { tracks.any { it.path.isNotEmpty() && it.latLngs.any { p -> p.latitude != 0.0 || p.longitude != 0.0 } } }`.
-  - Bind `val activeScrubPath = remember(hasGpsTrack, tracks, telemetryPath) { if (hasGpsTrack) (bestTrack?.path) else telemetryPath.ifEmpty { null } }`.
-  - Pass `showMap = showMap && hasGpsTrack` and `showElevationProfile = hasGpsTrack && (workoutData.minAltitude != null || (activeScrubPath?.any { it.altitude != 0.0 } == true))` to `MapDetailLayout`.
-
-### Component 4: `MapDetailLayout.kt` (`com.atrainingtracker.trainingtracker.ui.map`)
-* **Layout Adaptation**:
-  - Recognize trackless state: `val isTrackless = (activeScrubPath?.lastOrNull()?.distance ?: 0.0) == 0.0 && (activeScrubPath?.lastOrNull()?.timeSec ?: 0) > 0`.
-  - If `isTrackless`, enforce `ProfileXAxisDomain.TIME` for telemetry graphs and calculate `totalSpan = (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble()`.
-  - Outer column: apply `if (showMap || hasScrollableContent) Modifier.fillMaxSize() else Modifier.wrapContentHeight()`.
-  - In `else` branch (when `!showMap`): when `hasScrollableContent == true`, apply `Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())` to `lowerColumn`.
-  - Header metric readout during scrubbing: when `selectedDistance != null`, compute instantaneous HR/Power and zone tag, displaying next to heading title (e.g. `148 bpm • Z3`).
-
-### Component 5: `TelemetryMetricGraph.kt` (`com.atrainingtracker.trainingtracker.ui.map`)
-* **Scrubbing & Cursor Adaptation**:
-  - In touch drag and tap handlers, when `isTimeDomain`:
-    ```kotlin
-    val isTrackless = (pathPoints.lastOrNull()?.distance ?: 0.0) == 0.0 && (pathPoints.lastOrNull()?.timeSec ?: 0) > 0
-    if (isTrackless) {
-        currentOnDistanceSelectedState(nearest?.timeSec?.toDouble())
-    } else {
-        currentOnDistanceSelectedState(nearest?.distance)
+        // 4. ANALYTICS
+        analyticsContent?.let { content ->
+            ...
+        }
     }
-    ```
-  - In cursor drawing, when `isTrackless`:
-    Evaluate `cursorDistSpan = currentDistance` directly against `0.0..totalSpan` and `startDist..(startDist + visibleSpan)`.
-    Resolve `nearestPoint = pathPoints.minByOrNull { abs(it.timeSec - currentDistance) }`.
+}
+```
 
 ---
 
 ## 5. Step-by-Step Implementation Sequence (Stage 4 Construction)
 
 ### Step 1: Programmatic Gate 3 Pre-Check
-* Verify Gate 3 status of `ATT-2019` via `python3 tools/jira_util.py check-gate ATT-2019`.
+* Verify Gate 3 status of `ATT-2062` via `python3 tools/jira_util.py check-gate ATT-2062`.
 
-### Step 2: Decoupled Telemetry Extraction (`WorkoutRepository.kt`)
-* Implement `getWorkoutTelemetryPoints(workoutId: Long): List<PathPoint>`.
-* Add unit tests in `WorkoutRepositoryTelemetryTest.kt`.
-* Verify with:
+### Step 2: Decouple Telemetry Graph Rendering in `MapDetailLayout.kt`
+* In `MapDetailLayout.kt`, change container conditional to `if (showElevationProfile || hasTelemetryGraphs)`.
+* Wrap `ElevationProfile` block in `if (showElevationProfile)`.
+* Maintain independent `if (showZoomControls)` block for `TelemetryMetricGraph` instances.
+
+### Step 3: Update & Extend Visual Contract Tests (`TracklessAftermathVisualContractTest.kt`)
+* Verify `MapDetailLayout.kt` file structure confirms:
+  1. `showElevationProfile || hasTelemetryGraphs` condition.
+  2. `TelemetryMetricGraph` instances are not gated inside `if (showElevationProfile)`.
+* Execute unit tests:
   ```bash
-  ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest"
+  ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.map.TracklessAftermathVisualContractTest"
   ```
 
-### Step 3: ViewModel Ingestion (`TrackOnMapAftermathViewModel.kt`)
-* Add `telemetryPath: List<PathPoint>` to `AftermathMapUIState`.
-* Populate `telemetryPath` in `loadAftermathData()` when `fullTracks` is empty.
-* Add unit tests in `TrackOnMapViewModelTelemetryTest.kt`.
-* Verify with:
-  ```bash
-  ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.map.TrackOnMapViewModelTelemetryTest"
-  ```
-
-### Step 4: Screen Wiring & Map Suppression (`TrackOnMapScreen.kt`)
-* Add `telemetryPath` parameter to `TrackOnMapScreen.kt`.
-* Wire `WorkoutSummariesTabbedScreen.kt` and `WorkoutSummariesListFragment.kt` to forward `aftermathUIState.telemetryPath`.
-* Evaluate `hasGpsTrack`, conditional `showMap`, and fallback `activeScrubPath`.
-
-### Step 5: Layout Container Scrolling & Header Readouts (`MapDetailLayout.kt`)
-* Update `MapDetailLayout.kt` to enforce `ProfileXAxisDomain.TIME` for trackless workouts.
-* Apply `verticalScroll` and `weight(1f)` to `lowerColumn` when `showMap == false && hasScrollableContent == true`.
-* Render instantaneous metric and zone badge in graph section headers during active scrubbing.
-
-### Step 6: Scrubbing Cursor in Time Domain (`TelemetryMetricGraph.kt`)
-* Update `TelemetryMetricGraph.kt` gesture dispatch and cursor evaluation for trackless time domain.
-* Add unit tests in `TelemetryMetricGraphTracklessScrubbingTest.kt`.
-* Verify with:
-  ```bash
-  ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTracklessScrubbingTest"
-  ```
-
-### Step 7: Visual & Contract Test Suite
-* Author `TracklessAftermathVisualContractTest.kt` verifying map collapse, graph presence, and header readouts.
-* Verify all targeted test suites:
+### Step 4: Run Complete Telemetry Test Suite
+* Execute:
   ```bash
   ./gradlew testDebugUnitTest \
     --tests "com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest" \
@@ -252,4 +203,4 @@ In the current architecture:
 ## 6. Verification & Rollback Plan
 
 * **Verification**: Targeted unit tests during construction, followed by clean-room full test suite regression (`./gradlew testDebugUnitTest`) in Stage 5.
-* **Rollback**: Branch isolation on `feature/ATT-2006` allows complete rollback via `git reset --hard origin/sprint/2026-40.11` without impacting integration branches.
+* **Rollback**: Branch isolation on `feature/ATT-2006` allows complete rollback via `git reset --hard origin/sprint/2026-40.12` without impacting integration branches.
