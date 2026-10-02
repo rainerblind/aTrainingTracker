@@ -89,4 +89,8 @@ These rules are strictly binding on all AI assistants and agent instances operat
 * **Rule**: Whenever starting work on any new parent ticket or transitioning to a new ASPICE lifecycle stage / sprint ceremony, the agent **MUST** explicitly re-read the governing rules (`.agents/rules/aspice_governance.md`) and the corresponding skill (`.agents/skills/<skill_name>/SKILL.md`) using `view_file` (`"Then we should add a rule to obey the rules. I.e. to reread the rules / skill whenever a new ticket is handled."`).
 * Relying on degraded memory or conversational history from earlier turns across compactions is strictly prohibited. Re-reading the canonical documentation pulls constraints directly into active working context, ensuring 100% compliance with current standards and preventing behavioral drift.
 
+## 16. Mandatory Device Deployment Invariant Before Sprint Review ("Install Before Review")
+* **Rule**: Ceremony 2 (Sprint Review) MUST begin with compiling and installing the latest integrated sprint build directly onto the attached physical test device (e.g. Google Pixel 10) via `./gradlew installDebug` (`"Sprint Review session must start with installing the latest sprint version on the phone."`).
+* Reviewing tickets against outdated device binaries or presenting walkthroughs before on-device deployment is strictly forbidden. The agent must verify successful APK installation prior to querying and presenting tickets in `Final Review (Human)`.
+
 
