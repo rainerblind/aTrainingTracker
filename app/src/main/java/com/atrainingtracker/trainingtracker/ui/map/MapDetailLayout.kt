@@ -203,7 +203,7 @@ fun MapDetailLayout(
 
     val lowerColumn: @Composable (Modifier) -> Unit = { colModifier ->
         Column(modifier = colModifier) {
-            if (showElevationProfile) {
+            if (showElevationProfile || hasTelemetryGraphs) {
                 activeScrubPath?.let { path ->
                     Surface(
                         color = MaterialTheme.colorScheme.surface,
@@ -220,33 +220,35 @@ fun MapDetailLayout(
                             drawLayer(elevationLayer)
                         }) {
                             Column(modifier = Modifier.fillMaxWidth()) {
-                                if (showZoomControls) {
-                                    Text(
-                                        text = stringResource(R.string.graph_heading_elevation),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
+                                if (showElevationProfile) {
+                                    if (showZoomControls) {
+                                        Text(
+                                            text = stringResource(R.string.graph_heading_elevation),
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
+                                        )
+                                    }
+                                    ElevationProfile(
+                                        pathPoints = path,
+                                        currentDistance = selectedDistance,
+                                        minAltitudeOverride = minAltitudeOverride,
+                                        maxAltitudeOverride = maxAltitudeOverride,
+                                        onDistanceSelected = { selectedDistance = it },
+                                        showZoomControls = showZoomControls,
+                                        xAxisDomain = tuningConfig.elevationXAxisDomain,
+                                        bSportType = bSportType,
+                                        zoomScale = profileZoomScale,
+                                        startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, elevationTotalSpan, profileZoomScale),
+                                        onZoomChanged = { z, s ->
+                                            profileZoomScale = z
+                                            viewportStartFraction = MapDetailViewportMath.domainToFraction(s, elevationTotalSpan, z)
+                                        },
+                                        isPanMode = isPanMode,
+                                        modifier = Modifier.fillMaxWidth()
                                     )
                                 }
-                                ElevationProfile(
-                                    pathPoints = path,
-                                    currentDistance = selectedDistance,
-                                    minAltitudeOverride = minAltitudeOverride,
-                                    maxAltitudeOverride = maxAltitudeOverride,
-                                    onDistanceSelected = { selectedDistance = it },
-                                    showZoomControls = showZoomControls,
-                                    xAxisDomain = tuningConfig.elevationXAxisDomain,
-                                    bSportType = bSportType,
-                                    zoomScale = profileZoomScale,
-                                    startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, elevationTotalSpan, profileZoomScale),
-                                    onZoomChanged = { z, s ->
-                                        profileZoomScale = z
-                                        viewportStartFraction = MapDetailViewportMath.domainToFraction(s, elevationTotalSpan, z)
-                                    },
-                                    isPanMode = isPanMode,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
 
                                 // Telemetry Metric Graphs in detailed inspection view
                                 if (showZoomControls) {
