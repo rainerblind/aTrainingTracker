@@ -95,10 +95,51 @@ class TelemetryMetricGraphGestureTest {
             content.contains("else if (!isVerticalScrolling) {")
         )
 
-        // 4. Clears distance on drag completion
+        // 4. Clears distance on drag completion when not in pan mode
         assertTrue(
-            "TelemetryMetricGraph must clear distance on drag completion",
-            content.contains("if (isDragging) {\n                            onDistanceSelected(null)")
+            "TelemetryMetricGraph must clear distance on drag completion when not in pan mode",
+            content.contains("if (isDragging) {") &&
+                    Regex("""if\s*\(!isPanMode\)\s*\{\s*onDistanceSelected\(null\)""").containsMatchIn(content)
+        )
+    }
+
+    @Test
+    fun testTelemetryMetricGraph_supportsPanModeGesturesAndZoomMath() {
+        assertTrue("TelemetryMetricGraph.kt must exist", telemetryMetricGraphFile.exists())
+        val content = telemetryMetricGraphFile.readText()
+
+        // 1. Declares isPanMode and onZoomChanged parameters
+        assertTrue(
+            "TelemetryMetricGraph must declare isPanMode parameter with default false (REQ-UI-232)",
+            content.contains("isPanMode: Boolean = false")
+        )
+        assertTrue(
+            "TelemetryMetricGraph must declare onZoomChanged parameter with default null (REQ-UI-232)",
+            content.contains("onZoomChanged: ((Float, Double) -> Unit)? = null")
+        )
+
+        // 2. Incorporates isPanMode into pointerInput keys
+        assertTrue(
+            "TelemetryMetricGraph must incorporate isPanMode into pointerInput remember keys",
+            content.contains("pointerInput(totalSpan, isTimeDomain, zoomScale, startDist, isPanMode)")
+        )
+
+        // 3. Invokes ElevationProfileZoomMath.applyPan and dispatches onZoomChanged
+        assertTrue(
+            "TelemetryMetricGraph must calculate dragDeltaX and invoke ElevationProfileZoomMath.applyPan",
+            content.contains("ElevationProfileZoomMath.applyPan(") &&
+                    content.contains("dragDeltaX = pointer.position.x - prevX")
+        )
+        assertTrue(
+            "TelemetryMetricGraph must dispatch updated startDist via onZoomChanged",
+            Regex("""onZoomChanged\(\s*zoomScale\s*,\s*panStart\s*\)""").containsMatchIn(content)
+        )
+
+        // 4. Guards tap selection against pan mode
+        assertTrue(
+            "TelemetryMetricGraph must guard tap selection with !isPanMode",
+            content.contains("else if (!isVerticalScrolling) {") &&
+                    Regex("""else if \(!isVerticalScrolling\) \{\s*if \(!isPanMode\) \{""").containsMatchIn(content)
         )
     }
 }

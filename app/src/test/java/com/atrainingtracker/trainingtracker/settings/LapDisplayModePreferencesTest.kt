@@ -40,9 +40,9 @@ class LapDisplayModePreferencesTest {
     }
 
     @Test
-    fun testDefaultWorkoutCardSectionPreferences_lapDisplayModeIsBoth() {
+    fun testDefaultWorkoutCardSectionPreferences_lapDisplayModeIsVisualizerOnly() {
         val defaultPrefs = WorkoutCardSectionPreferences()
-        assertEquals(LapDisplayMode.BOTH, defaultPrefs.lapDisplayMode)
+        assertEquals(LapDisplayMode.VISUALIZER_ONLY, defaultPrefs.lapDisplayMode)
     }
 
     @Test
@@ -62,17 +62,17 @@ class LapDisplayModePreferencesTest {
         // Valid deserializations matching MyPreferenceManager logic
         for (mode in LapDisplayMode.values()) {
             val parsed = runCatching { LapDisplayMode.valueOf(mode.name) }
-                .getOrDefault(LapDisplayMode.BOTH)
+                .getOrDefault(LapDisplayMode.VISUALIZER_ONLY)
             assertEquals(mode, parsed)
         }
 
         // Unknown, corrupted, or legacy string fallback
         val fallbackUnknown = runCatching { LapDisplayMode.valueOf("INVALID_MODE") }
-            .getOrDefault(LapDisplayMode.BOTH)
-        assertEquals(LapDisplayMode.BOTH, fallbackUnknown)
+            .getOrDefault(LapDisplayMode.VISUALIZER_ONLY)
+        assertEquals(LapDisplayMode.VISUALIZER_ONLY, fallbackUnknown)
 
         val fallbackEmpty = runCatching { LapDisplayMode.valueOf("") }
-            .getOrDefault(LapDisplayMode.BOTH)
-        assertEquals(LapDisplayMode.BOTH, fallbackEmpty)
+            .getOrDefault(LapDisplayMode.VISUALIZER_ONLY)
+        assertEquals(LapDisplayMode.VISUALIZER_ONLY, fallbackEmpty)
     }
 }

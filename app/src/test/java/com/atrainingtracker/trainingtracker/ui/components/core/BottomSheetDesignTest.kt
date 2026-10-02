@@ -75,8 +75,9 @@ class BottomSheetDesignTest {
     fun testBottomSheetDesign_peekHeightBaselineConstants() {
         assertEquals("PeekHeightWorkout must be 140.dp", 140.dp, BottomSheetDesign.PeekHeightWorkout)
         assertEquals("PeekHeightRoute must be 112.dp", 112.dp, BottomSheetDesign.PeekHeightRoute)
-        assertEquals("PeekHeightSegment must be 156.dp", 156.dp, BottomSheetDesign.PeekHeightSegment)
+        assertEquals("PeekHeightRouteWithDescription must be 152.dp", 152.dp, BottomSheetDesign.PeekHeightRouteWithDescription)
+        assertEquals("PeekHeightSegment must be 192.dp", 192.dp, BottomSheetDesign.PeekHeightSegment)
         assertEquals("PeekHeightKnownLocation must be 108.dp", 108.dp, BottomSheetDesign.PeekHeightKnownLocation)
-        assertEquals("PeekHeightLiveSegment must be 140.dp", 140.dp, BottomSheetDesign.PeekHeightLiveSegment)
+        assertEquals("PeekHeightLiveSegment must be 126.dp", 126.dp, BottomSheetDesign.PeekHeightLiveSegment)
     }
 }

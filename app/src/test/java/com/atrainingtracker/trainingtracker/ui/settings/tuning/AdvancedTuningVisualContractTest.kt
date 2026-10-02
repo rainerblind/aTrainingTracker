@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.tuning
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -130,4 +131,45 @@ class AdvancedTuningVisualContractTest {
             content.contains("fun WorkoutMasksAndCardsSection(")
         )
     }
+
+    @Test
+    fun testAdvancedTuningDialog_initiallyCollapsesAllSections() {
+        val dialogFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
+        val content = dialogFile.readText()
+
+        // 1. Verify emptySet initialization in rememberSaveable (REQ-UI-222 / ATT-1957)
+        assertTrue(
+            "AdvancedTuningDialog must initialize expandedSections with emptySet() (REQ-UI-222 / ATT-1957)",
+            Regex("""var\s+expandedSections\s+by\s+rememberSaveable\s*\{\s*mutableStateOf\(\s*emptySet<String>\(\)\s*\)\s*\}""").containsMatchIn(content)
+        )
+
+        // 2. Verify CockpitTypography is not expanded by default
+        assertFalse(
+            "AdvancedTuningDialog must NOT default-expand COCKPIT_TYPOGRAPHY (ATT-1957)",
+            content.contains("setOf(TuningSection.COCKPIT_TYPOGRAPHY.name)")
+        )
+    }
+
+    @Test
+    fun testAdvancedTuningDialog_workoutCardPrefsFlowGating() {
+        val dialogFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
+        val content = dialogFile.readText()
+
+        // Verify initial = null flow collection to prevent race condition (REQ-UI-229 / ATT-1958)
+        assertTrue(
+            "workoutCardPreferencesFlow must be collected with initial = null to avoid race condition",
+            content.contains("workoutCardPreferencesFlow.collectAsState(initial = null)")
+        )
+        assertTrue(
+            "editWorkoutFieldPreferencesFlow must be collected with initial = null to avoid race condition",
+            content.contains("editWorkoutFieldPreferencesFlow.collectAsState(initial = null)")
+        )
+
+        // Verify non-null gating before initialization
+        assertTrue(
+            "LaunchedEffect must gate state initialization on non-null preferences",
+            content.contains("cardPrefs != null && editPrefs != null")
+        )
+    }
 }
+

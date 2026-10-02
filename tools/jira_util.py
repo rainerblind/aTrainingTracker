@@ -469,20 +469,36 @@ def transition_issue(issue_key, status_name, role="agent1"):
     normalized_target = aliases.get(normalized_input, normalized_input)
 
     chosen_trans = None
-    # First pass: exact match
+    # Pass 1: exact match on target status name
     for t in available_transitions:
         target_name = t.get("to", {}).get("name", "").lower()
-        trans_name = t.get("name", "").lower()
-        if normalized_target == target_name or normalized_target == trans_name:
+        if normalized_target == target_name:
             chosen_trans = t
             break
 
-    # Second pass: substring match fallback
+    # Pass 2: exact match on transition name
+    if not chosen_trans:
+        for t in available_transitions:
+            trans_name = t.get("name", "").lower()
+            if normalized_target == trans_name:
+                chosen_trans = t
+                break
+
+    # Pass 3: substring match on target status name
     if not chosen_trans:
         for t in available_transitions:
             target_name = t.get("to", {}).get("name", "").lower()
+            if normalized_target in target_name:
+                chosen_trans = t
+                break
+
+    # Pass 4: substring match on transition name (skip negative/rejection transitions like 'n.i.o.' unless requested)
+    if not chosen_trans:
+        for t in available_transitions:
             trans_name = t.get("name", "").lower()
-            if normalized_target in target_name or normalized_target in trans_name:
+            if "n.i.o." in trans_name and "n.i.o." not in normalized_target:
+                continue
+            if normalized_target in trans_name:
                 chosen_trans = t
                 break
 

@@ -266,6 +266,10 @@ class BottomSheetVisualContractTest {
             mapScreen.contains("BottomSheetDesign.PeekHeightRoute")
         )
         assertTrue(
+            "MapScreenWithTrack must consume BottomSheetDesign.PeekHeightRouteWithDescription",
+            mapScreen.contains("BottomSheetDesign.PeekHeightRouteWithDescription")
+        )
+        assertTrue(
             "MapScreenWithTrack must consume BottomSheetDesign.PeekHeightKnownLocation",
             mapScreen.contains("BottomSheetDesign.PeekHeightKnownLocation")
         )

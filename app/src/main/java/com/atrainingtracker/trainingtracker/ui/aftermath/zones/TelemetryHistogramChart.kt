@@ -123,11 +123,6 @@ fun TelemetryHistogramChart(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "${histogram.bins.count { it.durationSec > 0 }} active bins",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
                         text = "Δ ${histogram.binWidth} $unit",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
