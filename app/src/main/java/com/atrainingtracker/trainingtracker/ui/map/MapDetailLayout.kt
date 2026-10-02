@@ -85,6 +85,7 @@ fun MapDetailLayout(
     showMap: Boolean = true,
     showElevationProfile: Boolean = true,
     showZoomControls: Boolean = true,
+    showTelemetryCharts: Boolean = true,
     onMapClick: ((LatLng) -> Unit)? = null,
     analyticsContent: (@Composable ColumnScope.() -> Unit)? = null,
     onHeaderHeightMeasured: ((Dp) -> Unit)? = null
@@ -117,7 +118,7 @@ fun MapDetailLayout(
     val totalSpan = if (isElevationTimeDomain || isTrackless) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
 
     val hasZoomToolbar = showZoomControls && activeScrubPath != null && activeScrubPath.isNotEmpty()
-    val hasTelemetryGraphs = showZoomControls && activeScrubPath != null && (
+    val hasTelemetryGraphs = showZoomControls && showTelemetryCharts && activeScrubPath != null && (
         TelemetryMetricUtils.hasHeartRateData(activeScrubPath) ||
         TelemetryMetricUtils.hasSpeedData(activeScrubPath) ||
         TelemetryMetricUtils.hasPowerData(activeScrubPath)
@@ -251,7 +252,7 @@ fun MapDetailLayout(
                                 }
 
                                 // Telemetry Metric Graphs in detailed inspection view
-                                if (showZoomControls) {
+                                if (showZoomControls && showTelemetryCharts) {
                                     // Speed / Pace Graph
                                     if (TelemetryMetricUtils.hasSpeedData(path)) {
                                         Spacer(modifier = Modifier.height(8.dp))

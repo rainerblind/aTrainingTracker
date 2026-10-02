@@ -40,9 +40,8 @@ class WorkoutCardSectionPreferencesTest {
         assertTrue("Laps should be enabled by default", prefs.showLaps)
         assertTrue("Strava activity should be enabled by default", prefs.showStrava)
         assertTrue("Map preview should be enabled by default", prefs.showMapPreview)
-        assertTrue("Elevation profile should be enabled by default", prefs.showElevationProfile)
-
-        // Heavy analytical sections default to false for 60/120fps LazyColumn scroll performance
+        // Heavy analytical sections (including elevation profile) default to false for 60/120fps LazyColumn scroll performance (REQ-UI-240)
+        assertFalse("Elevation profile should be disabled by default for list cards", prefs.showElevationProfile)
         assertFalse("Telemetry charts should be disabled by default", prefs.showTelemetryCharts)
         assertFalse("Zone analysis should be disabled by default", prefs.showZoneAnalysis)
     }
@@ -61,7 +60,7 @@ class WorkoutCardSectionPreferencesTest {
         assertTrue(modified.showLaps)
         assertTrue(modified.showStrava)
         assertFalse(modified.showMapPreview)
-        assertTrue(modified.showElevationProfile)
+        assertFalse(modified.showElevationProfile)
         assertTrue(modified.showTelemetryCharts)
         assertTrue(modified.showZoneAnalysis)
     }

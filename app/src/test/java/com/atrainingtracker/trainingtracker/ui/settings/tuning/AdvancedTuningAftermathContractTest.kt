@@ -94,4 +94,46 @@ class AdvancedTuningAftermathContractTest {
             content.contains("setEditWorkoutFieldPreferences")
         )
     }
+
+    @Test
+    fun testAdvancedTuningDialog_hostsMatrixTableWithWorkoutDetailPreferences() {
+        val file = findAdvancedTuningDialogFile()
+        val content = file.readText()
+
+        // 1. Model Imports & References
+        assertTrue(
+            "AdvancedTuningDialog must reference WorkoutDetailPreferences (REQ-UI-240)",
+            content.contains("WorkoutDetailPreferences")
+        )
+        assertTrue(
+            "AdvancedTuningDialog must collect workoutDetailPreferencesFlow (REQ-UI-240)",
+            content.contains("workoutDetailPreferencesFlow.collectAsState(initial = null)")
+        )
+
+        // 2. Matrix Table Columns
+        assertTrue(
+            "AdvancedTuningDialog must reference tuning_matrix_col_list",
+            content.contains("tuning_matrix_col_list")
+        )
+        assertTrue(
+            "AdvancedTuningDialog must reference tuning_matrix_col_details",
+            content.contains("tuning_matrix_col_details")
+        )
+        assertTrue(
+            "AdvancedTuningDialog must reference tuning_matrix_feature",
+            content.contains("tuning_matrix_feature")
+        )
+
+        // 3. Persistence on Save
+        assertTrue(
+            "AdvancedTuningDialog must invoke setWorkoutDetailPreferences on save (REQ-UI-240)",
+            content.contains("setWorkoutDetailPreferences")
+        )
+
+        // 4. Subtitle Formatter Integration
+        assertTrue(
+            "AdvancedTuningDialog must invoke formatWorkoutMatrixSubtitle (REQ-UI-240)",
+            content.contains("formatWorkoutMatrixSubtitle")
+        )
+    }
 }

@@ -22,6 +22,7 @@ import android.content.Context
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.EditWorkoutFieldPreferences
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
+import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
@@ -207,5 +208,49 @@ class AdvancedTuningAccordionTest {
             mockContext
         )
         assertEquals("3/8 Cards", subsetSubtitle)
+    }
+
+    @Test
+    fun testWorkoutMatrixSubtitle_reflectsListAndDetailCounts() {
+        val mockContext = mockk<Context>()
+        every {
+            mockContext.getString(
+                R.string.tuning_summary_matrix_format,
+                any(),
+                any()
+            )
+        } answers {
+            val formatArgs = args[1] as Array<*>
+            "${formatArgs[0]}/8 List, ${formatArgs[1]}/8 Details"
+        }
+
+        val cardPrefs = WorkoutCardSectionPreferences(
+            showDescription = true,
+            showExtrema = false,
+            showLaps = true,
+            showStrava = false,
+            showMapPreview = true,
+            showElevationProfile = false,
+            showTelemetryCharts = false,
+            showZoneAnalysis = false
+        ) // 3 active
+
+        val detailPrefs = WorkoutDetailPreferences(
+            showDescription = true,
+            showExtrema = true,
+            showLaps = true,
+            showStrava = true,
+            showMap = true,
+            showElevationProfile = true,
+            showTelemetryCharts = true,
+            showZoneAnalysis = true
+        ) // 8 active
+
+        val subtitle = TuningSubtitleFormatter.formatWorkoutMatrixSubtitle(
+            cardPrefs,
+            detailPrefs,
+            mockContext
+        )
+        assertEquals("3/8 List, 8/8 Details", subtitle)
     }
 }
