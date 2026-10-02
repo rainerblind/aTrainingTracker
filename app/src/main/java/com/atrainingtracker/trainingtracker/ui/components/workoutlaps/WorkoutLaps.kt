@@ -63,8 +63,8 @@ fun WorkoutLaps(
         LapSplitCalculator.calculateSplitData(
             laps = laps,
             bSportType = bSportType,
-            paceFormatter = { formatters.pace.format(it) },
-            speedFormatter = { formatters.speed.format(it) }
+            paceFormatter = { formatters.pace.format_with_units(it) },
+            speedFormatter = { formatters.speed.format_with_units(it) }
         )
     }
 
