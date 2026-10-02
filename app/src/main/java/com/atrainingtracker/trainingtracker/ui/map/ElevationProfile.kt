@@ -272,18 +272,19 @@ fun ElevationProfile(
     val currentZoomScale = if (onZoomChanged != null) zoomScale else internalZoomScale
     val currentStartDist = if (onZoomChanged != null) startDist else internalStartDist
 
-    fun updateZoom(newZoom: Float, newStart: Double) {
-        if (onZoomChanged != null) {
-            onZoomChanged(newZoom, newStart)
+    val currentOnZoomChangedState by rememberUpdatedState(onZoomChanged)
+    val currentStartDistState by rememberUpdatedState(currentStartDist)
+    val currentZoomScaleState by rememberUpdatedState(currentZoomScale)
+    val updateZoom: (Float, Double) -> Unit = { newZoom, newStart ->
+        val onZoom = currentOnZoomChangedState
+        if (onZoom != null) {
+            onZoom(newZoom, newStart)
         } else {
             internalZoomScale = newZoom
             internalStartDist = newStart
         }
     }
-
-    val currentStartDistState by rememberUpdatedState(currentStartDist)
-    val currentZoomScaleState by rememberUpdatedState(currentZoomScale)
-    val currentUpdateZoomState by rememberUpdatedState(::updateZoom)
+    val currentUpdateZoomState by rememberUpdatedState(updateZoom)
     val currentOnDistanceSelectedState by rememberUpdatedState(onDistanceSelected)
     val currentOnPointSelectedState by rememberUpdatedState(onPointSelected)
 
@@ -474,6 +475,7 @@ fun ElevationProfile(
                                     isVerticalScrolling = true
                                 } else if (ChartGestureDisambiguator.isDominantHorizontal(diffX, diffY, touchSlop)) {
                                     isDragging = true
+                                    prevCentroid = pointer.position
                                 }
                             }
 
@@ -512,9 +514,7 @@ fun ElevationProfile(
                                 }
                                 prevCentroid = pointer.position
                             } else if (isVerticalScrolling) {
-                                if (pointer.isConsumed) {
-                                    break
-                                }
+                                // Yield unconsumed to parent vertical scroll container without breaking loop prematurely
                             }
                         }
                     }
@@ -535,7 +535,7 @@ fun ElevationProfile(
                                 lastTapTime = 0L
                                 currentOnDistanceSelectedState(null)
                                 currentOnPointSelectedState?.invoke(null)
-                            } else {
+                            } else if (!isPanMode) {
                                 // Single tap inspection
                                 lastTapTime = currentTime
                                 val activeVisibleSpan = ElevationProfileZoomMath.calculateVisibleDistance(totalSpan, currentZoomScaleState)
