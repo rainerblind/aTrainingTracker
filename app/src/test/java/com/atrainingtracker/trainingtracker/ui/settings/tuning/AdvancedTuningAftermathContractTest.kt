@@ -18,15 +18,15 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.tuning
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
 /**
- * Structural contract test verifying that AdvancedTuningDialog hosts both Aftermath customization
- * sections (WorkoutCardSectionPreferences and EditWorkoutFieldPreferences) in Category 4 with
- * all 14 toggle switches, DataStore persistence, and factory reset in accordance with REQ-UI-216
- * and TST-UI-170.2.
+ * Structural contract test verifying that AdvancedTuningDialog hosts WorkoutCardSectionPreferences
+ * with all 8 toggle switches, while excising EditWorkoutFieldPreferences, edit dialog toggles,
+ * and setEditWorkoutFieldPreferences pursuant to REQ-UI-239 and TST-UI-198.1.
  */
 class AdvancedTuningAftermathContractTest {
 
@@ -41,7 +41,7 @@ class AdvancedTuningAftermathContractTest {
     }
 
     @Test
-    fun testAdvancedTuningDialog_containsAftermathSectionsAndAllToggles() {
+    fun testAdvancedTuningDialog_containsWorkoutCardTogglesAndOmitsEditDialogToggles() {
         val file = findAdvancedTuningDialogFile()
         val content = file.readText()
 
@@ -50,18 +50,18 @@ class AdvancedTuningAftermathContractTest {
             "AdvancedTuningDialog must reference WorkoutCardSectionPreferences",
             content.contains("WorkoutCardSectionPreferences")
         )
-        assertTrue(
-            "AdvancedTuningDialog must reference EditWorkoutFieldPreferences",
+        assertFalse(
+            "AdvancedTuningDialog must NOT reference EditWorkoutFieldPreferences",
             content.contains("EditWorkoutFieldPreferences")
         )
 
-        // 2. Category 4 Section Headers
+        // 2. Section Headers
         assertTrue(
             "AdvancedTuningDialog must reference settings_workout_card_title",
             content.contains("settings_workout_card_title")
         )
-        assertTrue(
-            "AdvancedTuningDialog must reference settings_edit_workout_title",
+        assertFalse(
+            "AdvancedTuningDialog must NOT reference settings_edit_workout_title",
             content.contains("settings_edit_workout_title")
         )
 
@@ -75,21 +75,22 @@ class AdvancedTuningAftermathContractTest {
         assertTrue(content.contains("settings_workout_card_charts"))
         assertTrue(content.contains("settings_workout_card_zones"))
 
-        // 4. All 6 Edit Workout Field Toggles
-        assertTrue(content.contains("settings_edit_workout_description"))
-        assertTrue(content.contains("settings_edit_workout_cluster"))
-        assertTrue(content.contains("settings_edit_workout_commute_trainer"))
-        assertTrue(content.contains("settings_edit_workout_strava"))
-        assertTrue(content.contains("settings_edit_workout_goal"))
-        assertTrue(content.contains("settings_edit_workout_method"))
+        // 4. All 7 Edit Workout Field Toggles excised
+        assertFalse(content.contains("settings_edit_workout_description"))
+        assertFalse(content.contains("settings_edit_workout_cluster"))
+        assertFalse(content.contains("settings_edit_workout_commute_trainer"))
+        assertFalse(content.contains("settings_edit_workout_race"))
+        assertFalse(content.contains("settings_edit_workout_strava"))
+        assertFalse(content.contains("settings_edit_workout_goal"))
+        assertFalse(content.contains("settings_edit_workout_method"))
 
         // 5. DataStore Persistence on Save & Factory Reset
         assertTrue(
             "AdvancedTuningDialog must invoke setWorkoutCardPreferences",
             content.contains("setWorkoutCardPreferences")
         )
-        assertTrue(
-            "AdvancedTuningDialog must invoke setEditWorkoutFieldPreferences",
+        assertFalse(
+            "AdvancedTuningDialog must NOT invoke setEditWorkoutFieldPreferences",
             content.contains("setEditWorkoutFieldPreferences")
         )
     }

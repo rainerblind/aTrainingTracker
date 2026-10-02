@@ -160,15 +160,11 @@ class AdvancedTuningVisualContractTest {
             "workoutCardPreferencesFlow must be collected with initial = null to avoid race condition",
             content.contains("workoutCardPreferencesFlow.collectAsState(initial = null)")
         )
-        assertTrue(
-            "editWorkoutFieldPreferencesFlow must be collected with initial = null to avoid race condition",
-            content.contains("editWorkoutFieldPreferencesFlow.collectAsState(initial = null)")
-        )
 
         // Verify non-null gating before initialization
         assertTrue(
             "LaunchedEffect must gate state initialization on non-null preferences",
-            content.contains("cardPrefs != null && editPrefs != null")
+            content.contains("cardPrefs != null")
         )
     }
 

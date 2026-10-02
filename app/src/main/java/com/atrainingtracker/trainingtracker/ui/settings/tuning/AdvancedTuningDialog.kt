@@ -42,7 +42,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.EditWorkoutFieldPreferences
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
@@ -76,7 +75,6 @@ fun AdvancedTuningDialog(
 
     val preferenceManager = remember { MyPreferenceManager(context.applicationContext) }
     val persistedWorkoutCardPrefs by preferenceManager.workoutCardPreferencesFlow.collectAsState(initial = null)
-    val persistedEditWorkoutPrefs by preferenceManager.editWorkoutFieldPreferencesFlow.collectAsState(initial = null)
 
     var elevationXAxisDomain by remember { mutableStateOf(TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN) }
     var telemetryXAxisDomain by remember { mutableStateOf(TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN) }
@@ -93,7 +91,6 @@ fun AdvancedTuningDialog(
     var cockpitFontWeight by remember { mutableStateOf(TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }
-    var editWorkoutPrefs by remember { mutableStateOf(EditWorkoutFieldPreferences()) }
     var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
 
     // Multi-section expansion state tracked across configuration changes via string identifiers
@@ -110,12 +107,10 @@ fun AdvancedTuningDialog(
         }
     }
 
-    LaunchedEffect(persistedWorkoutCardPrefs, persistedEditWorkoutPrefs) {
+    LaunchedEffect(persistedWorkoutCardPrefs) {
         val cardPrefs = persistedWorkoutCardPrefs
-        val editPrefs = persistedEditWorkoutPrefs
-        if (!isAftermathPrefsInitialized && cardPrefs != null && editPrefs != null) {
+        if (!isAftermathPrefsInitialized && cardPrefs != null) {
             workoutCardPrefs = cardPrefs
-            editWorkoutPrefs = editPrefs
             isAftermathPrefsInitialized = true
         }
     }
@@ -161,7 +156,6 @@ fun AdvancedTuningDialog(
                     scope.launch {
                         tuningDataStore.saveTuningConfig(newConfig)
                         preferenceManager.setWorkoutCardPreferences(workoutCardPrefs)
-                        preferenceManager.setEditWorkoutFieldPreferences(editWorkoutPrefs)
                         onSettingsChanged?.invoke()
                         onDismiss()
                     }
@@ -289,15 +283,13 @@ fun AdvancedTuningDialog(
             TuningAccordionSection(
                 icon = Icons.AutoMirrored.Filled.ViewList,
                 title = stringResource(R.string.tuning_cat_workout_masks_cards),
-                subtitle = TuningSubtitleFormatter.formatWorkoutMasksSubtitle(workoutCardPrefs, editWorkoutPrefs, context),
+                subtitle = TuningSubtitleFormatter.formatWorkoutMasksSubtitle(workoutCardPrefs, context),
                 isExpanded = isSectionExpanded(TuningSection.WORKOUT_MASKS_CARDS),
                 onToggle = { toggleSection(TuningSection.WORKOUT_MASKS_CARDS) }
             ) {
                 WorkoutMasksAndCardsSection(
                     workoutCardPrefs = workoutCardPrefs,
-                    onWorkoutCardPrefsChange = { workoutCardPrefs = it },
-                    editWorkoutPrefs = editWorkoutPrefs,
-                    onEditWorkoutPrefsChange = { editWorkoutPrefs = it }
+                    onWorkoutCardPrefsChange = { workoutCardPrefs = it }
                 )
             }
 
@@ -309,9 +301,7 @@ fun AdvancedTuningDialog(
                     scope.launch {
                         tuningDataStore.resetToDefaults()
                         preferenceManager.setWorkoutCardPreferences(WorkoutCardSectionPreferences())
-                        preferenceManager.setEditWorkoutFieldPreferences(EditWorkoutFieldPreferences())
                         workoutCardPrefs = WorkoutCardSectionPreferences()
-                        editWorkoutPrefs = EditWorkoutFieldPreferences()
                         elevationXAxisDomain = TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN
                         telemetryXAxisDomain = TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN
                         cockpitFontFamily = TuningPreferencesDefaults.COCKPIT_FONT_FAMILY
@@ -787,9 +777,7 @@ fun AftermathAnalysisSection(
 @Composable
 fun WorkoutMasksAndCardsSection(
     workoutCardPrefs: WorkoutCardSectionPreferences,
-    onWorkoutCardPrefsChange: (WorkoutCardSectionPreferences) -> Unit,
-    editWorkoutPrefs: EditWorkoutFieldPreferences,
-    onEditWorkoutPrefsChange: (EditWorkoutFieldPreferences) -> Unit
+    onWorkoutCardPrefsChange: (WorkoutCardSectionPreferences) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -874,52 +862,6 @@ fun WorkoutMasksAndCardsSection(
             title = stringResource(R.string.settings_workout_card_zones),
             isChecked = workoutCardPrefs.showZoneAnalysis,
             onCheckedChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showZoneAnalysis = it)) }
-        )
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-        // Sub-block 2: Edit Workout Fields
-        Text(
-            text = stringResource(R.string.settings_edit_workout_title),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary
-        )
-
-        TuningToggleItem(
-            title = stringResource(R.string.settings_edit_workout_description),
-            isChecked = editWorkoutPrefs.showDescription,
-            onCheckedChange = { onEditWorkoutPrefsChange(editWorkoutPrefs.copy(showDescription = it)) }
-        )
-        TuningToggleItem(
-            title = stringResource(R.string.settings_edit_workout_cluster),
-            isChecked = editWorkoutPrefs.showCluster,
-            onCheckedChange = { onEditWorkoutPrefsChange(editWorkoutPrefs.copy(showCluster = it)) }
-        )
-        TuningToggleItem(
-            title = stringResource(R.string.settings_edit_workout_commute_trainer),
-            isChecked = editWorkoutPrefs.showCommuteTrainer,
-            onCheckedChange = { onEditWorkoutPrefsChange(editWorkoutPrefs.copy(showCommuteTrainer = it)) }
-        )
-        TuningToggleItem(
-            title = stringResource(R.string.settings_edit_workout_race),
-            isChecked = editWorkoutPrefs.showRace,
-            onCheckedChange = { onEditWorkoutPrefsChange(editWorkoutPrefs.copy(showRace = it)) }
-        )
-        TuningToggleItem(
-            title = stringResource(R.string.settings_edit_workout_strava),
-            isChecked = editWorkoutPrefs.showStravaUpload,
-            onCheckedChange = { onEditWorkoutPrefsChange(editWorkoutPrefs.copy(showStravaUpload = it)) }
-        )
-        TuningToggleItem(
-            title = stringResource(R.string.settings_edit_workout_goal),
-            isChecked = editWorkoutPrefs.showGoal,
-            onCheckedChange = { onEditWorkoutPrefsChange(editWorkoutPrefs.copy(showGoal = it)) }
-        )
-        TuningToggleItem(
-            title = stringResource(R.string.settings_edit_workout_method),
-            isChecked = editWorkoutPrefs.showMethod,
-            onCheckedChange = { onEditWorkoutPrefsChange(editWorkoutPrefs.copy(showMethod = it)) }
         )
     }
 }

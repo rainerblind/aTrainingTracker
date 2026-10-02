@@ -1372,7 +1372,7 @@
     <string name="reset_to_defaults_success">Paramètres de réglage rétablis aux valeurs d\'usine par défaut.</string>
     <string name="tuning_cat_sensors_gps">Capteurs, GPS et filtrage</string>
     <string name="tuning_cat_workout_masks_cards">Cartes et champs d\'entraînement</string>
-    <string name="tuning_summary_masks_cards_format">%1$d/8 cartes, %2$d/6 champs</string>
+    <string name="tuning_summary_masks_cards_format">%1$d/8 cartes</string>
     <string name="map_splitter_content_description">Barre de séparation de la carte et de la télémétrie. Glissez verticalement pour redimensionner, appuyez deux fois pour réinitialiser.</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->

@@ -165,15 +165,14 @@ class AdvancedTuningAccordionTest {
         every {
             mockContext.getString(
                 R.string.tuning_summary_masks_cards_format,
-                any(),
                 any()
             )
         } answers {
             val formatArgs = args[1] as Array<*>
-            "${formatArgs[0]}/8 Cards, ${formatArgs[1]}/6 Fields"
+            "${formatArgs[0]}/8 Cards"
         }
 
-        // All 8 cards true, all 6 fields true
+        // All 8 cards true
         val fullCardPrefs = WorkoutCardSectionPreferences(
             showDescription = true,
             showExtrema = true,
@@ -184,23 +183,14 @@ class AdvancedTuningAccordionTest {
             showTelemetryCharts = true,
             showZoneAnalysis = true
         )
-        val fullEditPrefs = EditWorkoutFieldPreferences(
-            showDescription = true,
-            showCluster = true,
-            showCommuteTrainer = true,
-            showStravaUpload = true,
-            showGoal = true,
-            showMethod = true
-        )
 
         val fullSubtitle = TuningSubtitleFormatter.formatWorkoutMasksSubtitle(
             fullCardPrefs,
-            fullEditPrefs,
             mockContext
         )
-        assertEquals("8/8 Cards, 6/6 Fields", fullSubtitle)
+        assertEquals("8/8 Cards", fullSubtitle)
 
-        // Custom subset: 3 cards, 2 fields
+        // Custom subset: 3 cards
         val subsetCardPrefs = WorkoutCardSectionPreferences(
             showDescription = true,
             showExtrema = false,
@@ -211,20 +201,11 @@ class AdvancedTuningAccordionTest {
             showTelemetryCharts = false,
             showZoneAnalysis = false
         )
-        val subsetEditPrefs = EditWorkoutFieldPreferences(
-            showDescription = true,
-            showCluster = false,
-            showCommuteTrainer = true,
-            showStravaUpload = false,
-            showGoal = false,
-            showMethod = false
-        )
 
         val subsetSubtitle = TuningSubtitleFormatter.formatWorkoutMasksSubtitle(
             subsetCardPrefs,
-            subsetEditPrefs,
             mockContext
         )
-        assertEquals("3/8 Cards, 2/6 Fields", subsetSubtitle)
+        assertEquals("3/8 Cards", subsetSubtitle)
     }
 }

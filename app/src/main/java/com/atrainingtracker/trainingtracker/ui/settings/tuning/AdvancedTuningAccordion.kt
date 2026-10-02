@@ -133,7 +133,6 @@ object TuningSubtitleFormatter {
 
     fun formatWorkoutMasksSubtitle(
         cardPrefs: WorkoutCardSectionPreferences,
-        editPrefs: EditWorkoutFieldPreferences,
         context: Context
     ): String {
         val activeCards = listOf(
@@ -147,16 +146,16 @@ object TuningSubtitleFormatter {
             cardPrefs.showZoneAnalysis
         ).count { it }
 
-        val activeFields = listOf(
-            editPrefs.showDescription,
-            editPrefs.showCluster,
-            editPrefs.showCommuteTrainer,
-            editPrefs.showStravaUpload,
-            editPrefs.showGoal,
-            editPrefs.showMethod
-        ).count { it }
+        return context.getString(R.string.tuning_summary_masks_cards_format, activeCards)
+    }
 
-        return context.getString(R.string.tuning_summary_masks_cards_format, activeCards, activeFields)
+    @Deprecated("Use formatWorkoutMasksSubtitle(cardPrefs, context)")
+    fun formatWorkoutMasksSubtitle(
+        cardPrefs: WorkoutCardSectionPreferences,
+        editPrefs: EditWorkoutFieldPreferences,
+        context: Context
+    ): String {
+        return formatWorkoutMasksSubtitle(cardPrefs, context)
     }
 }
 
