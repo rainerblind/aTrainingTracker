@@ -76,8 +76,8 @@ fun TrackOnMapScreen(
         LapSplitCalculator.calculateSplitData(
             laps = workoutData.laps,
             bSportType = workoutData.bSportType,
-            paceFormatter = { formatters.pace.format(it) },
-            speedFormatter = { formatters.speed.format(it) }
+            paceFormatter = { formatters.pace.format_with_units(it) },
+            speedFormatter = { formatters.speed.format_with_units(it) }
         )
     }
 
