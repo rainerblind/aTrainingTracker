@@ -326,8 +326,8 @@ private fun KnownLocationsListContent(
 }
 
 /**
- * Compact map preview thumbnail for [KnownLocationCard] (REQ-UI-217).
- * Displays an 80dp square map in lite mode, centered at the location coordinates with a heart pin marker
+ * Compact map preview thumbnail for [KnownLocationCard] (REQ-UI-217, REQ-UI-244).
+ * Displays a 100dp square map in lite mode, centered at the location coordinates with a heart pin marker
  * and geofence circle, styled for dark/light themes with an anti-flash overlay and offline preview fallback.
  */
 @Composable
@@ -338,7 +338,7 @@ private fun KnownLocationThumbnailMap(
 ) {
     Surface(
         modifier = modifier
-            .size(80.dp)
+            .size(100.dp)
             .testTag("location_map_preview_${item.id}"),
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh
@@ -604,7 +604,7 @@ private fun KnownLocationCard(
 
                     Spacer(modifier = Modifier.width(12.dp))
 
-                    // Map Preview Thumbnail (right side, REQ-UI-217)
+                    // Map Preview Thumbnail (right side, REQ-UI-217, REQ-UI-244)
                     KnownLocationThumbnailMap(
                         item = item,
                         onShowOnMap = onShowOnMap
