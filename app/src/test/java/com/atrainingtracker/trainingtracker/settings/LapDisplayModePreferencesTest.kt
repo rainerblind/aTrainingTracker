@@ -21,22 +21,23 @@ package com.atrainingtracker.trainingtracker.settings
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
  * Unit tests verifying LapDisplayMode enum, WorkoutCardSectionPreferences default value,
- * and deserialization safety with defensive fallback (REQ-UI-229, TST-UI-183, ATT-1870).
+ * and deserialization safety with defensive fallback (REQ-UI-229, TST-UI-183, TST-UI-191, ATT-1870, ATT-1988).
  */
 class LapDisplayModePreferencesTest {
 
     @Test
     fun testLapDisplayModeEnumCoverage() {
         val names = LapDisplayMode.values().map { it.name }
-        assertEquals(3, names.size)
+        assertEquals(2, names.size)
         assertTrue(names.contains("TABLE_ONLY"))
         assertTrue(names.contains("VISUALIZER_ONLY"))
-        assertTrue(names.contains("BOTH"))
+        assertFalse(names.contains("BOTH"))
     }
 
     @Test
@@ -52,27 +53,37 @@ class LapDisplayModePreferencesTest {
 
         val visualizerOnlyPrefs = WorkoutCardSectionPreferences(lapDisplayMode = LapDisplayMode.VISUALIZER_ONLY)
         assertEquals(LapDisplayMode.VISUALIZER_ONLY, visualizerOnlyPrefs.lapDisplayMode)
-
-        val bothPrefs = WorkoutCardSectionPreferences(lapDisplayMode = LapDisplayMode.BOTH)
-        assertEquals(LapDisplayMode.BOTH, bothPrefs.lapDisplayMode)
     }
 
     @Test
     fun testLapDisplayModeDeserializationAndDefensiveFallback() {
         // Valid deserializations matching MyPreferenceManager logic
         for (mode in LapDisplayMode.values()) {
-            val parsed = runCatching { LapDisplayMode.valueOf(mode.name) }
-                .getOrDefault(LapDisplayMode.VISUALIZER_ONLY)
+            val parsed = runCatching {
+                val raw = mode.name
+                if (raw != "BOTH") LapDisplayMode.valueOf(raw) else LapDisplayMode.VISUALIZER_ONLY
+            }.getOrDefault(LapDisplayMode.VISUALIZER_ONLY)
             assertEquals(mode, parsed)
         }
 
+        // Legacy "BOTH" string mapping to VISUALIZER_ONLY
+        val legacyBoth = runCatching {
+            val raw = "BOTH"
+            if (raw != "BOTH") LapDisplayMode.valueOf(raw) else LapDisplayMode.VISUALIZER_ONLY
+        }.getOrDefault(LapDisplayMode.VISUALIZER_ONLY)
+        assertEquals(LapDisplayMode.VISUALIZER_ONLY, legacyBoth)
+
         // Unknown, corrupted, or legacy string fallback
-        val fallbackUnknown = runCatching { LapDisplayMode.valueOf("INVALID_MODE") }
-            .getOrDefault(LapDisplayMode.VISUALIZER_ONLY)
+        val fallbackUnknown = runCatching {
+            val raw = "INVALID_MODE"
+            if (raw != "BOTH") LapDisplayMode.valueOf(raw) else LapDisplayMode.VISUALIZER_ONLY
+        }.getOrDefault(LapDisplayMode.VISUALIZER_ONLY)
         assertEquals(LapDisplayMode.VISUALIZER_ONLY, fallbackUnknown)
 
-        val fallbackEmpty = runCatching { LapDisplayMode.valueOf("") }
-            .getOrDefault(LapDisplayMode.VISUALIZER_ONLY)
+        val fallbackEmpty = runCatching {
+            val raw = ""
+            if (raw != "BOTH") LapDisplayMode.valueOf(raw) else LapDisplayMode.VISUALIZER_ONLY
+        }.getOrDefault(LapDisplayMode.VISUALIZER_ONLY)
         assertEquals(LapDisplayMode.VISUALIZER_ONLY, fallbackEmpty)
     }
 }

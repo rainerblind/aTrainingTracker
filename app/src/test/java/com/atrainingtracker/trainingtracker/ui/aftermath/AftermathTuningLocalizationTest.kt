@@ -39,7 +39,9 @@ class AftermathTuningLocalizationTest {
         "tuning_profile_x_axis_title",
         "tuning_profile_x_axis_desc",
         "tuning_profile_x_axis_distance",
-        "tuning_profile_x_axis_time"
+        "tuning_profile_x_axis_time",
+        "tuning_telemetry_x_axis_title",
+        "tuning_telemetry_x_axis_desc"
     )
 
     private fun findResDir(): File {

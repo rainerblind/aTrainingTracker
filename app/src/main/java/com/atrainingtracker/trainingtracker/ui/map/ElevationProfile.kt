@@ -281,6 +281,12 @@ fun ElevationProfile(
         }
     }
 
+    val currentStartDistState by rememberUpdatedState(currentStartDist)
+    val currentZoomScaleState by rememberUpdatedState(currentZoomScale)
+    val currentUpdateZoomState by rememberUpdatedState(::updateZoom)
+    val currentOnDistanceSelectedState by rememberUpdatedState(onDistanceSelected)
+    val currentOnPointSelectedState by rememberUpdatedState(onPointSelected)
+
     var lastTapTime by remember { mutableLongStateOf(0L) }
 
     val cachedData = remember(pathPoints, unit, minAltitudeOverride, maxAltitudeOverride) {
@@ -403,7 +409,7 @@ fun ElevationProfile(
             .height(totalCanvasHeight)
 
         val canvasModifier = if (showZoomControls) {
-            baseCanvasModifier.pointerInput(totalSpan, isTimeDomain, isPanMode, currentZoomScale, currentStartDist) {
+            baseCanvasModifier.pointerInput(totalSpan, isTimeDomain, isPanMode) {
                 val startPaddingPx = 50.dp.toPx()
                 val endPaddingPx = 25.dp.toPx()
                 val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
@@ -416,6 +422,8 @@ fun ElevationProfile(
                     var isTransforming = false
                     var isDragging = false
                     var isVerticalScrolling = false
+                    var localStartDist = currentStartDistState
+                    var localZoom = currentZoomScaleState
 
                     while (true) {
                         val event = awaitPointerEvent()
@@ -436,11 +444,11 @@ fun ElevationProfile(
 
                                 val (newZoom, newStart) = ElevationProfileZoomMath.applyZoomAtCentroid(
                                     totalDist = totalSpan,
-                                    currentZoom = currentZoomScale,
-                                    targetZoom = currentZoomScale * zoomFactor,
+                                    currentZoom = localZoom,
+                                    targetZoom = localZoom * zoomFactor,
                                     centroidX = adjustedCentroidX,
                                     canvasWidth = chartWidthPx,
-                                    currentStartDist = currentStartDist
+                                    currentStartDist = localStartDist
                                 )
                                 val panStart = ElevationProfileZoomMath.applyPan(
                                     currentStartDist = newStart,
@@ -449,7 +457,9 @@ fun ElevationProfile(
                                     canvasWidth = chartWidthPx,
                                     totalDist = totalSpan
                                 )
-                                updateZoom(newZoom, panStart)
+                                localZoom = newZoom
+                                localStartDist = panStart
+                                currentUpdateZoomState(newZoom, panStart)
                             }
                             prevSpan = span
                             prevCentroid = centroid
@@ -470,21 +480,24 @@ fun ElevationProfile(
                             if (isDragging) {
                                 val dragDeltaX = pointer.position.x - prevCentroid.x
                                 pointer.consume()
+                                val activeZoom = currentZoomScaleState
+                                val activeVisibleSpan = ElevationProfileZoomMath.calculateVisibleDistance(totalSpan, activeZoom)
                                 if (isPanMode && totalSpan > 10.0) {
                                     val panStart = ElevationProfileZoomMath.applyPan(
-                                        currentStartDist = currentStartDist,
-                                        visibleDist = visibleSpan,
+                                        currentStartDist = localStartDist,
+                                        visibleDist = activeVisibleSpan,
                                         panDeltaX = dragDeltaX,
                                         canvasWidth = chartWidthPx,
                                         totalDist = totalSpan
                                     )
-                                    updateZoom(currentZoomScale, panStart)
+                                    localStartDist = panStart
+                                    currentUpdateZoomState(activeZoom, panStart)
                                 } else {
                                     val adjustedX = (pointer.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
                                     val selectedValue = ElevationProfileZoomMath.canvasXToDistance(
                                         canvasX = adjustedX,
-                                        startDist = currentStartDist,
-                                        visibleDist = visibleSpan,
+                                        startDist = currentStartDistState,
+                                        visibleDist = activeVisibleSpan,
                                         canvasWidth = chartWidthPx,
                                         totalDist = totalSpan
                                     )
@@ -494,8 +507,8 @@ fun ElevationProfile(
                                         pathPoints.indexOfLast { it.distance <= selectedValue }.coerceAtLeast(0)
                                     }
                                     val activePoint = pathPoints.getOrNull(activeIndex) ?: pathPoints.firstOrNull()
-                                    onDistanceSelected(activePoint?.distance ?: selectedValue)
-                                    onPointSelected?.invoke(activePoint)
+                                    currentOnDistanceSelectedState(activePoint?.distance ?: selectedValue)
+                                    currentOnPointSelectedState?.invoke(activePoint)
                                 }
                                 prevCentroid = pointer.position
                             } else if (isVerticalScrolling) {
@@ -510,26 +523,27 @@ fun ElevationProfile(
                     if (!isTransforming) {
                         if (isDragging) {
                             if (!isPanMode) {
-                                onDistanceSelected(null)
-                                onPointSelected?.invoke(null)
+                                currentOnDistanceSelectedState(null)
+                                currentOnPointSelectedState?.invoke(null)
                             }
                         } else if (!isVerticalScrolling) {
                             // Tap detection
                             val currentTime = System.currentTimeMillis()
                             if (currentTime - lastTapTime < 350L && totalSpan > 10.0) {
                                 // Double tap reset
-                                updateZoom(1.0f, 0.0)
+                                currentUpdateZoomState(1.0f, 0.0)
                                 lastTapTime = 0L
-                                onDistanceSelected(null)
-                                onPointSelected?.invoke(null)
+                                currentOnDistanceSelectedState(null)
+                                currentOnPointSelectedState?.invoke(null)
                             } else {
                                 // Single tap inspection
                                 lastTapTime = currentTime
+                                val activeVisibleSpan = ElevationProfileZoomMath.calculateVisibleDistance(totalSpan, currentZoomScaleState)
                                 val adjustedX = (down.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
                                 val selectedValue = ElevationProfileZoomMath.canvasXToDistance(
                                     canvasX = adjustedX,
-                                    startDist = currentStartDist,
-                                    visibleDist = visibleSpan,
+                                    startDist = currentStartDistState,
+                                    visibleDist = activeVisibleSpan,
                                     canvasWidth = chartWidthPx,
                                     totalDist = totalSpan
                                 )
@@ -539,8 +553,8 @@ fun ElevationProfile(
                                     pathPoints.indexOfLast { it.distance <= selectedValue }.coerceAtLeast(0)
                                 }
                                 val activePoint = pathPoints.getOrNull(activeIndex) ?: pathPoints.firstOrNull()
-                                onDistanceSelected(activePoint?.distance ?: selectedValue)
-                                onPointSelected?.invoke(activePoint)
+                                currentOnDistanceSelectedState(activePoint?.distance ?: selectedValue)
+                                currentOnPointSelectedState?.invoke(activePoint)
                             }
                         }
                     }
