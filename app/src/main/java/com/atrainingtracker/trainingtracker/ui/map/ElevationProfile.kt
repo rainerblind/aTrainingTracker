@@ -37,7 +37,10 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
@@ -878,24 +881,50 @@ fun ScrubbingTelemetryBadge(
                         val hrZone = effectiveHrThresholds?.let {
                             TelemetryZoneMath.determineHeartRateZone(point.hr.toDouble(), it)
                         }
-                        val hrText = if (hrZone != null) "${point.hr} bpm • Z$hrZone" else "${point.hr} bpm"
+                        val hrAnnotated = buildAnnotatedString {
+                            withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurface)) {
+                                append("${point.hr} bpm")
+                            }
+                            if (hrZone != null && hrZone in 1..5) {
+                                withStyle(
+                                    SpanStyle(
+                                        color = TelemetryZoneMath.ZONE_COLORS[hrZone - 1],
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                ) {
+                                    append(" • Z$hrZone")
+                                }
+                            }
+                        }
                         Text(
-                            text = hrText,
+                            text = hrAnnotated,
                             style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TTColor.Zone4
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                     if (hasPower) {
                         val powerZone = effectivePowerThresholds?.let {
                             TelemetryZoneMath.determinePowerZone(point.power.toDouble(), it)
                         }
-                        val powerText = if (powerZone != null) "${point.power} W • Z$powerZone" else "${point.power} W"
+                        val powerAnnotated = buildAnnotatedString {
+                            withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurface)) {
+                                append("${point.power} W")
+                            }
+                            if (powerZone != null && powerZone in 1..5) {
+                                withStyle(
+                                    SpanStyle(
+                                        color = TelemetryZoneMath.ZONE_COLORS[powerZone - 1],
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                ) {
+                                    append(" • Z$powerZone")
+                                }
+                            }
+                        }
                         Text(
-                            text = powerText,
+                            text = powerAnnotated,
                             style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TTColor.Zone5
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                     if (hasSpeed) {
