@@ -37,6 +37,8 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.R
@@ -63,7 +65,8 @@ import kotlinx.coroutines.withContext
 /**
  * A unified layout for screen-level map details (Aftermath, Routes, Segments).
  * It manages the standard layout (Header + Map + Profile), shared interaction state,
- * dynamic draggable viewport resizing (REQ-UI-223 / ATT-1890), and snapshot generation logic.
+ * dynamic draggable viewport resizing (REQ-UI-223 / ATT-1890), dynamic peek baseline
+ * self-measurement (REQ-UI-221 / ATT-1645), and snapshot generation logic.
  */
 @Composable
 fun MapDetailLayout(
@@ -82,7 +85,8 @@ fun MapDetailLayout(
     showElevationProfile: Boolean = true,
     showZoomControls: Boolean = true,
     onMapClick: ((LatLng) -> Unit)? = null,
-    analyticsContent: (@Composable ColumnScope.() -> Unit)? = null
+    analyticsContent: (@Composable ColumnScope.() -> Unit)? = null,
+    onHeaderHeightMeasured: ((Dp) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -358,25 +362,37 @@ fun MapDetailLayout(
                 if (!useStatusBarsPadding) Modifier.background(MaterialTheme.colorScheme.surface) else Modifier
             )
     ) {
-        // DRAG HANDLE (For sheets - REQ-UI-148, REQ-UI-189, REQ-UI-196, ATT-1644)
-        if (!useStatusBarsPadding) {
-            MinimumDragHandle()
-        }
-
-        // 1. HEADER (Slotted)
-        Surface(
-            color = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            shape = if (useStatusBarsPadding) RectangleShape else BottomSheetDesign.SheetShape,
-            modifier = if (useStatusBarsPadding) Modifier.statusBarsPadding() else Modifier
-        ) {
-            Box(modifier = Modifier.drawWithContent {
-                headerLayer.record {
-                    this@drawWithContent.drawContent()
+        val density = LocalDensity.current
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .onGloballyPositioned { coordinates ->
+                    if (!useStatusBarsPadding && onHeaderHeightMeasured != null) {
+                        val heightDp = with(density) { coordinates.size.height.toDp() }
+                        onHeaderHeightMeasured(heightDp)
+                    }
                 }
-                drawLayer(headerLayer)
-            }) {
-                header()
+        ) {
+            // DRAG HANDLE (For sheets - REQ-UI-148, REQ-UI-189, REQ-UI-196, ATT-1644)
+            if (!useStatusBarsPadding) {
+                MinimumDragHandle()
+            }
+
+            // 1. HEADER (Slotted)
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                shape = if (useStatusBarsPadding) RectangleShape else BottomSheetDesign.SheetShape,
+                modifier = if (useStatusBarsPadding) Modifier.statusBarsPadding() else Modifier
+            ) {
+                Box(modifier = Modifier.drawWithContent {
+                    headerLayer.record {
+                        this@drawWithContent.drawContent()
+                    }
+                    drawLayer(headerLayer)
+                }) {
+                    header()
+                }
             }
         }
 

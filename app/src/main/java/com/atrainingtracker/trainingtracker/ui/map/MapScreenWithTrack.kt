@@ -60,6 +60,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -97,6 +98,9 @@ fun MapScreenWithTrack(
     var selectedLocationId by rememberSaveable { mutableStateOf<Long?>(targetLocationId) }
     var editingLocation by remember { mutableStateOf<KnownLocationItem?>(null) }
     var previewRadius by remember { mutableStateOf<Int?>(null) }
+
+    var measuredSegmentHeaderHeight by remember(selectedSegmentId) { mutableStateOf<Dp?>(null) }
+    var measuredRouteHeaderHeight by remember(selectedRouteId) { mutableStateOf<Dp?>(null) }
 
     LaunchedEffect(targetLocationId) {
         if (targetLocationId != null && targetLocationId > 0) {
@@ -157,15 +161,19 @@ fun MapScreenWithTrack(
             sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
             sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
             sheetPeekHeight = when {
-                selectedSegmentId != null -> BottomSheetDesign.PeekHeightSegment + navBarHeight
+                selectedSegmentId != null -> {
+                    val base = measuredSegmentHeaderHeight ?: BottomSheetDesign.PeekHeightSegment
+                    base + navBarHeight
+                }
                 selectedRouteId != null -> {
                     val routeSummary = allRoutes.find { it.summary.id == selectedRouteId }?.summary
-                    val basePeek = if (routeSummary?.description.isNullOrEmpty()) {
+                    val defaultPeek = if (routeSummary?.description.isNullOrEmpty()) {
                         BottomSheetDesign.PeekHeightRoute
                     } else {
                         BottomSheetDesign.PeekHeightRouteWithDescription
                     }
-                    basePeek + navBarHeight
+                    val base = measuredRouteHeaderHeight ?: defaultPeek
+                    base + navBarHeight
                 }
                 selectedLocationId != null -> BottomSheetDesign.PeekHeightKnownLocation + navBarHeight
                 else -> 0.dp
@@ -197,7 +205,8 @@ fun MapScreenWithTrack(
                                     segmentSummary = liveSegments.find { it.summary.stravaId == selectedSegmentId }?.summary,
                                     segment = selectedSegment,
                                     modifier = Modifier.fillMaxSize(),
-                                    useStatusBarsPadding = false
+                                    useStatusBarsPadding = false,
+                                    onHeaderHeightMeasured = { measuredSegmentHeaderHeight = it }
                                 )
                             }
                             selectedRouteId != null -> {
@@ -212,7 +221,8 @@ fun MapScreenWithTrack(
                                         selected = it
                                     ) },
                                     modifier = Modifier.fillMaxSize(),
-                                    useStatusBarsPadding = false
+                                    useStatusBarsPadding = false,
+                                    onHeaderHeightMeasured = { measuredRouteHeaderHeight = it }
                                 )
                             }
                         }

@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
 import com.atrainingtracker.trainingtracker.segments.SegmentSummary
@@ -57,7 +58,8 @@ fun SegmentOnMapScreen(
     backgroundPaths: List<MappablePath> = emptyList(),
     modifier: Modifier = Modifier,
     useStatusBarsPadding: Boolean = true,
-    showMap: Boolean = true
+    showMap: Boolean = true,
+    onHeaderHeightMeasured: ((Dp) -> Unit)? = null
 ) {
     val bSportType = segment?.bSportType ?: segmentSummary?.bSportType ?: BSportType.UNKNOWN
 
@@ -77,6 +79,7 @@ fun SegmentOnMapScreen(
         activeScrubPath = segment?.path,
         useStatusBarsPadding = useStatusBarsPadding,
         showMap = showMap,
+        onHeaderHeightMeasured = onHeaderHeightMeasured,
         header = {
             segmentSummary?.let {
                 Column {
