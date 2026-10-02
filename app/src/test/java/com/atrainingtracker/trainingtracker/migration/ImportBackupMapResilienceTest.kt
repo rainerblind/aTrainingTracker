@@ -138,16 +138,88 @@ class ImportBackupMapResilienceTest {
     }
 
     @Test
+    fun testSequentialQueueRecompositionCameraUpdate() {
+        // TST-MAP-024.1: Advancing through sequential queue items must re-frame camera without losing isMapLoaded
+        var isMapLoaded = false
+        val cluster1Bounds = LatLngBounds.builder()
+            .include(LatLng(48.1351, 11.5820))
+            .include(LatLng(48.1400, 11.5900))
+            .build()
+        val cluster2Bounds = LatLngBounds.builder()
+            .include(LatLng(52.5200, 13.4050))
+            .include(LatLng(52.5300, 13.4150))
+            .build()
+
+        var currentAnimatedBounds: LatLngBounds? = null
+
+        fun simulateDialogComposition(stateId: Int, bounds: LatLngBounds?) {
+            // Emulating LaunchedEffect(state, bounds, isMapLoaded)
+            if (isMapLoaded && bounds != null) {
+                currentAnimatedBounds = bounds
+            }
+        }
+
+        // 1. Initial Dialog Mount: Map loading in progress
+        simulateDialogComposition(stateId = 1, bounds = cluster1Bounds)
+        assertNull("Camera update must not trigger before onMapLoaded fires", currentAnimatedBounds)
+
+        // 2. Map finishes loading for item 1
+        isMapLoaded = true
+        simulateDialogComposition(stateId = 1, bounds = cluster1Bounds)
+        assertEquals("Camera must animate to cluster 1 bounds", cluster1Bounds, currentAnimatedBounds)
+
+        // 3. User names cluster 1; dialog advances to cluster 2 (recomposition with stateId = 2)
+        // CRITICAL INVARIANT (ATT-2022): isMapLoaded must NOT reset to false!
+        simulateDialogComposition(stateId = 2, bounds = cluster2Bounds)
+        assertEquals("Camera must immediately animate to cluster 2 bounds", cluster2Bounds, currentAnimatedBounds)
+        val animated = currentAnimatedBounds
+        assertNotNull(animated)
+        assertEquals(52.5250, animated!!.center.latitude, 0.001)
+        assertEquals(13.4100, animated.center.longitude, 0.001)
+    }
+
+    @Test
+    fun testBoundsBuilderIncludesStartEndApexMarkers() {
+        // TST-MAP-024.3: Bounds envelope must include track polyline as well as start, end, and apex markers
+        val decodedPoints = listOf(
+            LatLng(48.1350, 11.5800),
+            LatLng(48.1360, 11.5810)
+        )
+        val startMarker = LatLng(48.1300, 11.5700) // Extends south-west
+        val endMarker = LatLng(48.1370, 11.5820)
+        val apexMarker = LatLng(48.1450, 11.5950) // Extends north-east
+
+        val b = LatLngBounds.builder()
+        var hasPoints = false
+        decodedPoints.forEach {
+            b.include(it)
+            hasPoints = true
+        }
+        startMarker.let { b.include(it); hasPoints = true }
+        endMarker.let { b.include(it); hasPoints = true }
+        apexMarker.let { b.include(it); hasPoints = true }
+        val bounds = if (hasPoints) b.build() else null
+
+        assertNotNull(bounds)
+        assertTrue("Bounds must enclose start marker", bounds!!.contains(startMarker))
+        assertTrue("Bounds must enclose end marker", bounds.contains(endMarker))
+        assertTrue("Bounds must enclose apex marker", bounds.contains(apexMarker))
+        decodedPoints.forEach {
+            assertTrue("Bounds must enclose track point $it", bounds.contains(it))
+        }
+    }
+
+    @Test
     fun testImportBackupTabsScreenSourceCodeContract() {
         // Contract test ensuring the source code strictly incorporates all resilience requirements
         val sourceFile = findSourceFile("ImportBackupTabsScreen.kt")
         assertTrue("ImportBackupTabsScreen.kt source file must exist", sourceFile.exists())
         val content = sourceFile.readText()
 
-        // 1. isMapLoaded state tracked and keyed to state
+        // 1. isMapLoaded state tracked via remember (uncoupled from state to persist across queue transitions)
         assertTrue(
-            "Must declare isMapLoaded keyed to state",
-            content.contains("var isMapLoaded by remember(state) { mutableStateOf(false) }")
+            "Must declare isMapLoaded using remember without state key",
+            content.contains("var isMapLoaded by remember { mutableStateOf(false) }")
         )
 
         // 2. GoogleMap onMapLoaded callback wired
@@ -156,10 +228,10 @@ class ImportBackupMapResilienceTest {
             content.contains("onMapLoaded = { isMapLoaded = true }")
         )
 
-        // 3. LaunchedEffect keyed to bounds and isMapLoaded
+        // 3. LaunchedEffect keyed to state, bounds and isMapLoaded
         assertTrue(
-            "LaunchedEffect must be keyed to bounds and isMapLoaded",
-            content.contains("LaunchedEffect(bounds, isMapLoaded)")
+            "LaunchedEffect must be keyed to state, bounds, and isMapLoaded",
+            content.contains("LaunchedEffect(state, bounds, isMapLoaded)")
         )
 
         // 4. Guard condition inside LaunchedEffect

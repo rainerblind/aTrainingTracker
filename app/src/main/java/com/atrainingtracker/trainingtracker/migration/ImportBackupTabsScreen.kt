@@ -513,18 +513,30 @@ fun ClusterNamingDialog(
     }
 
     val decodedPoints = remember(state.polyline) { PolyUtil.decode(state.polyline) }
-    val bounds = remember(decodedPoints) {
-        if (decodedPoints.isEmpty()) return@remember null
+    val bounds = remember(decodedPoints, state.start, state.end, state.apex) {
         val b = LatLngBounds.builder()
-        decodedPoints.forEach { b.include(it) }
-        b.build()
+        var hasPoints = false
+        decodedPoints.forEach {
+            b.include(it)
+            hasPoints = true
+        }
+        state.start?.let { b.include(it); hasPoints = true }
+        state.end?.let { b.include(it); hasPoints = true }
+        state.apex?.let { b.include(it); hasPoints = true }
+        if (!hasPoints) null else {
+            try {
+                b.build()
+            } catch (e: Exception) {
+                null
+            }
+        }
     }
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(bounds?.center ?: LatLng(0.0, 0.0), 12f)
     }
-    var isMapLoaded by remember(state) { mutableStateOf(false) }
+    var isMapLoaded by remember { mutableStateOf(false) }
 
-    LaunchedEffect(bounds, isMapLoaded) {
+    LaunchedEffect(state, bounds, isMapLoaded) {
         if (isMapLoaded && bounds != null) {
             try {
                 cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(bounds, 50))
