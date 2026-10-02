@@ -788,7 +788,7 @@ fun TelemetryMetricGraph(
             }
 
             // Synchronized Scrubbing Cursor & Marker Dot
-            if (currentDistance != null && currentDistance in 0.0..totalSpan) {
+            if (currentDistance != null) {
                 val cursorDistSpan = if (isTimeDomain) {
                     val nearestPt = pathPoints.minByOrNull { abs(it.distance - currentDistance) }
                     (nearestPt?.timeSec ?: 0L).toDouble()
@@ -796,7 +796,7 @@ fun TelemetryMetricGraph(
                     currentDistance
                 }
 
-                if (cursorDistSpan in startDist..(startDist + visibleSpan)) {
+                if (cursorDistSpan in 0.0..totalSpan && cursorDistSpan in startDist..(startDist + visibleSpan)) {
                     val cursorX = (startPaddingPx + ElevationProfileZoomMath.distanceToCanvasX(cursorDistSpan, startDist, visibleSpan, chartWidthPx))
                         .coerceIn(startPaddingPx, startPaddingPx + chartWidthPx)
 

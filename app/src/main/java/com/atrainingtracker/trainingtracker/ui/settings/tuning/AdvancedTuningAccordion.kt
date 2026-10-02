@@ -98,6 +98,27 @@ object TuningSubtitleFormatter {
     }
 
     fun formatAftermathSubtitle(
+        elevationDomain: ProfileXAxisDomain,
+        telemetryDomain: ProfileXAxisDomain,
+        context: Context
+    ): String {
+        val elevStr = if (elevationDomain == ProfileXAxisDomain.DISTANCE) {
+            context.getString(R.string.tuning_profile_x_axis_distance)
+        } else {
+            context.getString(R.string.tuning_profile_x_axis_time)
+        }
+        val telemStr = if (telemetryDomain == ProfileXAxisDomain.DISTANCE) {
+            context.getString(R.string.tuning_profile_x_axis_distance)
+        } else {
+            context.getString(R.string.tuning_profile_x_axis_time)
+        }
+        val elevPrefix = context.getString(R.string.tuning_profile_x_axis_title)
+        val telemPrefix = context.getString(R.string.tuning_telemetry_x_axis_title)
+        return "$elevPrefix: $elevStr | $telemPrefix: $telemStr"
+    }
+
+    @Deprecated("Use formatAftermathSubtitle(elevationDomain, telemetryDomain, context)")
+    fun formatAftermathSubtitle(
         domain: ProfileXAxisDomain,
         context: Context
     ): String {

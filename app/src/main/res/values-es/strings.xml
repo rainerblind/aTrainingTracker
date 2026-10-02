@@ -1340,6 +1340,8 @@
     <string name="tuning_profile_x_axis_desc">Seleccionar la métrica del eje horizontal para los gráficos de altitud.</string>
     <string name="tuning_profile_x_axis_distance">Distancia</string>
     <string name="tuning_profile_x_axis_time">Tiempo</string>
+    <string name="tuning_telemetry_x_axis_title">Eje X de gráficos de telemetría</string>
+    <string name="tuning_telemetry_x_axis_desc">Seleccione el dominio del eje horizontal para los gráficos de telemetría (frecuencia cardíaca, ritmo/velocidad, potencia).</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">Tipografía de la cabina</string>

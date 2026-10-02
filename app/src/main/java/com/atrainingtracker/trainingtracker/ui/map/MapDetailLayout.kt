@@ -104,8 +104,8 @@ fun MapDetailLayout(
     var splitFraction by rememberSaveable { mutableFloatStateOf(SplitPaneMath.DEFAULT_SPLIT_FRACTION) }
     val noLocation = remember { MutableStateFlow<LatLng?>(null) }
 
-    val isTimeDomain = tuningConfig.profileXAxisDomain == ProfileXAxisDomain.TIME && (activeScrubPath?.lastOrNull()?.timeSec ?: 0) > 0
-    val totalSpan = if (isTimeDomain) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
+    val isElevationTimeDomain = tuningConfig.elevationXAxisDomain == ProfileXAxisDomain.TIME && (activeScrubPath?.lastOrNull()?.timeSec ?: 0) > 0
+    val totalSpan = if (isElevationTimeDomain) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
 
     val hasZoomToolbar = showZoomControls && activeScrubPath != null && activeScrubPath.isNotEmpty()
     val hasTelemetryGraphs = showZoomControls && activeScrubPath != null && (
@@ -223,7 +223,7 @@ fun MapDetailLayout(
                                     maxAltitudeOverride = maxAltitudeOverride,
                                     onDistanceSelected = { selectedDistance = it },
                                     showZoomControls = showZoomControls,
-                                    xAxisDomain = tuningConfig.profileXAxisDomain,
+                                    xAxisDomain = tuningConfig.elevationXAxisDomain,
                                     bSportType = bSportType,
                                     zoomScale = profileZoomScale,
                                     startDist = profileStartDist,
@@ -253,7 +253,7 @@ fun MapDetailLayout(
                                             metricType = if (isRunning) TelemetryMetricType.PACE else TelemetryMetricType.SPEED,
                                             currentDistance = selectedDistance,
                                             onDistanceSelected = { selectedDistance = it },
-                                            xAxisDomain = tuningConfig.profileXAxisDomain,
+                                            xAxisDomain = tuningConfig.telemetryXAxisDomain,
                                             bSportType = bSportType,
                                             zoomScale = profileZoomScale,
                                             startDist = profileStartDist,
@@ -281,7 +281,7 @@ fun MapDetailLayout(
                                             metricType = TelemetryMetricType.HEART_RATE,
                                             currentDistance = selectedDistance,
                                             onDistanceSelected = { selectedDistance = it },
-                                            xAxisDomain = tuningConfig.profileXAxisDomain,
+                                            xAxisDomain = tuningConfig.telemetryXAxisDomain,
                                             bSportType = bSportType,
                                             zoomScale = profileZoomScale,
                                             startDist = profileStartDist,
@@ -309,7 +309,7 @@ fun MapDetailLayout(
                                             metricType = TelemetryMetricType.POWER,
                                             currentDistance = selectedDistance,
                                             onDistanceSelected = { selectedDistance = it },
-                                            xAxisDomain = tuningConfig.profileXAxisDomain,
+                                            xAxisDomain = tuningConfig.telemetryXAxisDomain,
                                             bSportType = bSportType,
                                             zoomScale = profileZoomScale,
                                             startDist = profileStartDist,

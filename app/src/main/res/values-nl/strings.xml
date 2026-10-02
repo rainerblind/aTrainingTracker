@@ -1338,6 +1338,8 @@
     <string name="tuning_profile_x_axis_desc">Selecteer de horizontale as-metriek voor hoogteprofielen.</string>
     <string name="tuning_profile_x_axis_distance">Afstand</string>
     <string name="tuning_profile_x_axis_time">Tijd</string>
+    <string name="tuning_telemetry_x_axis_title">Telemetriegrafieken X-as</string>
+    <string name="tuning_telemetry_x_axis_desc">Selecteer het horizontale asdomein voor telemetriegrafieken (hartslag, tempo/snelheid, vermogen).</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">Cockpit-typografie</string>

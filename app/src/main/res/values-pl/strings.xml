@@ -1332,6 +1332,8 @@
     <string name="tuning_profile_x_axis_desc">Wybierz metrykę osi poziomej dla wykresów profilu wysokości.</string>
     <string name="tuning_profile_x_axis_distance">Dystans</string>
     <string name="tuning_profile_x_axis_time">Czas</string>
+    <string name="tuning_telemetry_x_axis_title">Oś X wykresów telemetrycznych</string>
+    <string name="tuning_telemetry_x_axis_desc">Wybierz domenę osi poziomej dla wykresów telemetrycznych (tętno, tempo/prędkość, moc).</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">Typografia kokpitu</string>

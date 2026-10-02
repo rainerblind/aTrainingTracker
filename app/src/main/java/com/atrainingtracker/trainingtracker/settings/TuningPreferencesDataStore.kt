@@ -43,7 +43,9 @@ enum class ProfileXAxisDomain {
  * Encapsulates battle-tested factory defaults and safety clamping bounds for advanced tuning.
  */
 object TuningPreferencesDefaults {
-    val PROFILE_X_AXIS_DOMAIN = ProfileXAxisDomain.DISTANCE
+    val ELEVATION_X_AXIS_DOMAIN = ProfileXAxisDomain.DISTANCE
+    val TELEMETRY_X_AXIS_DOMAIN = ProfileXAxisDomain.TIME
+    val PROFILE_X_AXIS_DOMAIN = ELEVATION_X_AXIS_DOMAIN
     val COCKPIT_FONT_FAMILY = CockpitFontFamily.SYSTEM_DEFAULT
     val COCKPIT_FONT_WEIGHT = CockpitFontWeight.SEMI_BOLD
     const val FULL_DIM_FACTOR = 0.25f
@@ -80,7 +82,8 @@ object TuningPreferencesDefaults {
  * Immutable snapshot of active tuning preferences.
  */
 data class TuningConfig(
-    val profileXAxisDomain: ProfileXAxisDomain = TuningPreferencesDefaults.PROFILE_X_AXIS_DOMAIN,
+    val elevationXAxisDomain: ProfileXAxisDomain = TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN,
+    val telemetryXAxisDomain: ProfileXAxisDomain = TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN,
     val cockpitFontFamily: CockpitFontFamily = TuningPreferencesDefaults.COCKPIT_FONT_FAMILY,
     val cockpitFontWeight: CockpitFontWeight = TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT,
     val fullDimFactor: Float = TuningPreferencesDefaults.FULL_DIM_FACTOR,
@@ -92,7 +95,41 @@ data class TuningConfig(
     val gpsAccuracyThresholdMeters: Float = TuningPreferencesDefaults.GPS_ACCURACY_THRESHOLD_M,
     val altitudeFilterWindowSec: Int = TuningPreferencesDefaults.ALTITUDE_FILTER_WINDOW_SEC,
     val slopeMinSpeedMps: Float = TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS
-)
+) {
+    @Deprecated("Use elevationXAxisDomain or telemetryXAxisDomain", ReplaceWith("elevationXAxisDomain"))
+    val profileXAxisDomain: ProfileXAxisDomain
+        get() = elevationXAxisDomain
+
+    @Deprecated("Use constructor with elevationXAxisDomain and telemetryXAxisDomain")
+    constructor(
+        profileXAxisDomain: ProfileXAxisDomain,
+        cockpitFontFamily: CockpitFontFamily = TuningPreferencesDefaults.COCKPIT_FONT_FAMILY,
+        cockpitFontWeight: CockpitFontWeight = TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT,
+        fullDimFactor: Float = TuningPreferencesDefaults.FULL_DIM_FACTOR,
+        mediumDimFactor: Float = TuningPreferencesDefaults.MEDIUM_DIM_FACTOR,
+        slopeFlatThreshold: Float = TuningPreferencesDefaults.SLOPE_FLAT_THRESHOLD,
+        slopeSteepThreshold: Float = TuningPreferencesDefaults.SLOPE_STEEP_THRESHOLD,
+        wakeupDurationSec: Int = TuningPreferencesDefaults.WAKEUP_DURATION_SEC,
+        downwardDelaySec: Int = TuningPreferencesDefaults.DOWNWARD_DELAY_SEC,
+        gpsAccuracyThresholdMeters: Float = TuningPreferencesDefaults.GPS_ACCURACY_THRESHOLD_M,
+        altitudeFilterWindowSec: Int = TuningPreferencesDefaults.ALTITUDE_FILTER_WINDOW_SEC,
+        slopeMinSpeedMps: Float = TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS
+    ) : this(
+        elevationXAxisDomain = profileXAxisDomain,
+        telemetryXAxisDomain = profileXAxisDomain,
+        cockpitFontFamily = cockpitFontFamily,
+        cockpitFontWeight = cockpitFontWeight,
+        fullDimFactor = fullDimFactor,
+        mediumDimFactor = mediumDimFactor,
+        slopeFlatThreshold = slopeFlatThreshold,
+        slopeSteepThreshold = slopeSteepThreshold,
+        wakeupDurationSec = wakeupDurationSec,
+        downwardDelaySec = downwardDelaySec,
+        gpsAccuracyThresholdMeters = gpsAccuracyThresholdMeters,
+        altitudeFilterWindowSec = altitudeFilterWindowSec,
+        slopeMinSpeedMps = slopeMinSpeedMps
+    )
+}
 
 /**
  * DataStore repository managing expert tuning preferences with strict parameter validation and atomic factory reset.
@@ -101,6 +138,9 @@ data class TuningConfig(
 class TuningPreferencesDataStore(private val context: Context) {
 
     companion object {
+        val KEY_ELEVATION_X_AXIS_DOMAIN: Preferences.Key<String> = stringPreferencesKey("tuning_elevation_x_axis_domain")
+        val KEY_TELEMETRY_X_AXIS_DOMAIN: Preferences.Key<String> = stringPreferencesKey("tuning_telemetry_x_axis_domain")
+        @Deprecated("Use KEY_ELEVATION_X_AXIS_DOMAIN or KEY_TELEMETRY_X_AXIS_DOMAIN")
         val KEY_PROFILE_X_AXIS_DOMAIN: Preferences.Key<String> = stringPreferencesKey("tuning_profile_x_axis_domain")
         val KEY_COCKPIT_FONT_FAMILY: Preferences.Key<String> = stringPreferencesKey("tuning_cockpit_font_family")
         val KEY_COCKPIT_FONT_WEIGHT: Preferences.Key<String> = stringPreferencesKey("tuning_cockpit_font_weight")
@@ -115,6 +155,8 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_SLOPE_MIN_SPEED: Preferences.Key<Float> = floatPreferencesKey("tuning_slope_min_speed")
 
         private val ALL_KEYS = listOf(
+            KEY_ELEVATION_X_AXIS_DOMAIN,
+            KEY_TELEMETRY_X_AXIS_DOMAIN,
             KEY_PROFILE_X_AXIS_DOMAIN,
             KEY_COCKPIT_FONT_FAMILY,
             KEY_COCKPIT_FONT_WEIGHT,
@@ -131,11 +173,18 @@ class TuningPreferencesDataStore(private val context: Context) {
     }
 
     val tuningConfigFlow: Flow<TuningConfig> = context.dataStore.data.map { prefs ->
-        val rawDomainStr = prefs[KEY_PROFILE_X_AXIS_DOMAIN]
-        val domain = try {
-            if (rawDomainStr != null) ProfileXAxisDomain.valueOf(rawDomainStr) else TuningPreferencesDefaults.PROFILE_X_AXIS_DOMAIN
+        val rawElevationDomainStr = prefs[KEY_ELEVATION_X_AXIS_DOMAIN] ?: prefs[KEY_PROFILE_X_AXIS_DOMAIN]
+        val elevationDomain = try {
+            if (rawElevationDomainStr != null) ProfileXAxisDomain.valueOf(rawElevationDomainStr) else TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN
         } catch (e: Exception) {
-            TuningPreferencesDefaults.PROFILE_X_AXIS_DOMAIN
+            TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN
+        }
+
+        val rawTelemetryDomainStr = prefs[KEY_TELEMETRY_X_AXIS_DOMAIN]
+        val telemetryDomain = try {
+            if (rawTelemetryDomainStr != null) ProfileXAxisDomain.valueOf(rawTelemetryDomainStr) else TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN
+        } catch (e: Exception) {
+            TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN
         }
 
         val rawFontFamilyStr = prefs[KEY_COCKPIT_FONT_FAMILY]
@@ -204,7 +253,8 @@ class TuningPreferencesDataStore(private val context: Context) {
         )
 
         TuningConfig(
-            profileXAxisDomain = domain,
+            elevationXAxisDomain = elevationDomain,
+            telemetryXAxisDomain = telemetryDomain,
             cockpitFontFamily = cockpitFontFamily,
             cockpitFontWeight = cockpitFontWeight,
             fullDimFactor = clampedFullDim,
@@ -258,7 +308,9 @@ class TuningPreferencesDataStore(private val context: Context) {
         )
 
         context.dataStore.edit { prefs ->
-            prefs[KEY_PROFILE_X_AXIS_DOMAIN] = config.profileXAxisDomain.name
+            prefs[KEY_ELEVATION_X_AXIS_DOMAIN] = config.elevationXAxisDomain.name
+            prefs[KEY_TELEMETRY_X_AXIS_DOMAIN] = config.telemetryXAxisDomain.name
+            prefs[KEY_PROFILE_X_AXIS_DOMAIN] = config.elevationXAxisDomain.name
             prefs[KEY_COCKPIT_FONT_FAMILY] = config.cockpitFontFamily.name
             prefs[KEY_COCKPIT_FONT_WEIGHT] = config.cockpitFontWeight.name
             prefs[KEY_FULL_DIM_FACTOR] = clampedFullDim

@@ -78,7 +78,8 @@ fun AdvancedTuningDialog(
     val persistedWorkoutCardPrefs by preferenceManager.workoutCardPreferencesFlow.collectAsState(initial = null)
     val persistedEditWorkoutPrefs by preferenceManager.editWorkoutFieldPreferencesFlow.collectAsState(initial = null)
 
-    var profileXAxisDomain by remember { mutableStateOf(TuningPreferencesDefaults.PROFILE_X_AXIS_DOMAIN) }
+    var elevationXAxisDomain by remember { mutableStateOf(TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN) }
+    var telemetryXAxisDomain by remember { mutableStateOf(TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN) }
     var fullDimFactor by remember { mutableFloatStateOf(TuningPreferencesDefaults.FULL_DIM_FACTOR) }
     var mediumDimFactor by remember { mutableFloatStateOf(TuningPreferencesDefaults.MEDIUM_DIM_FACTOR) }
     var slopeFlat by remember { mutableFloatStateOf(TuningPreferencesDefaults.SLOPE_FLAT_THRESHOLD) }
@@ -120,7 +121,8 @@ fun AdvancedTuningDialog(
     }
 
     LaunchedEffect(persistedConfig) {
-        profileXAxisDomain = persistedConfig.profileXAxisDomain
+        elevationXAxisDomain = persistedConfig.elevationXAxisDomain
+        telemetryXAxisDomain = persistedConfig.telemetryXAxisDomain
         cockpitFontFamily = persistedConfig.cockpitFontFamily
         cockpitFontWeight = persistedConfig.cockpitFontWeight
         fullDimFactor = persistedConfig.fullDimFactor
@@ -142,7 +144,8 @@ fun AdvancedTuningDialog(
             AppDialogActions.SaveCancel(
                 onSave = {
                     val newConfig = TuningConfig(
-                        profileXAxisDomain = profileXAxisDomain,
+                        elevationXAxisDomain = elevationXAxisDomain,
+                        telemetryXAxisDomain = telemetryXAxisDomain,
                         cockpitFontFamily = cockpitFontFamily,
                         cockpitFontWeight = cockpitFontWeight,
                         fullDimFactor = fullDimFactor,
@@ -270,13 +273,15 @@ fun AdvancedTuningDialog(
             TuningAccordionSection(
                 icon = Icons.AutoMirrored.Filled.ShowChart,
                 title = stringResource(R.string.tuning_cat_aftermath),
-                subtitle = TuningSubtitleFormatter.formatAftermathSubtitle(profileXAxisDomain, context),
+                subtitle = TuningSubtitleFormatter.formatAftermathSubtitle(elevationXAxisDomain, telemetryXAxisDomain, context),
                 isExpanded = isSectionExpanded(TuningSection.AFTERMATH_ANALYSIS),
                 onToggle = { toggleSection(TuningSection.AFTERMATH_ANALYSIS) }
             ) {
                 AftermathAnalysisSection(
-                    profileXAxisDomain = profileXAxisDomain,
-                    onDomainChange = { profileXAxisDomain = it }
+                    elevationXAxisDomain = elevationXAxisDomain,
+                    onElevationDomainChange = { elevationXAxisDomain = it },
+                    telemetryXAxisDomain = telemetryXAxisDomain,
+                    onTelemetryDomainChange = { telemetryXAxisDomain = it }
                 )
             }
 
@@ -307,7 +312,8 @@ fun AdvancedTuningDialog(
                         preferenceManager.setEditWorkoutFieldPreferences(EditWorkoutFieldPreferences())
                         workoutCardPrefs = WorkoutCardSectionPreferences()
                         editWorkoutPrefs = EditWorkoutFieldPreferences()
-                        profileXAxisDomain = TuningPreferencesDefaults.PROFILE_X_AXIS_DOMAIN
+                        elevationXAxisDomain = TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN
+                        telemetryXAxisDomain = TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN
                         cockpitFontFamily = TuningPreferencesDefaults.COCKPIT_FONT_FAMILY
                         cockpitFontWeight = TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT
                         fullDimFactor = TuningPreferencesDefaults.FULL_DIM_FACTOR
@@ -683,42 +689,99 @@ fun SensorsGpsFilterSection(
 
 @Composable
 fun AftermathAnalysisSection(
-    profileXAxisDomain: ProfileXAxisDomain,
-    onDomainChange: (ProfileXAxisDomain) -> Unit
+    elevationXAxisDomain: ProfileXAxisDomain,
+    onElevationDomainChange: (ProfileXAxisDomain) -> Unit,
+    telemetryXAxisDomain: ProfileXAxisDomain,
+    onTelemetryDomainChange: (ProfileXAxisDomain) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(
-            text = stringResource(R.string.tuning_profile_x_axis_title),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold
-        )
-        Text(
-            text = stringResource(R.string.tuning_profile_x_axis_desc),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Row(
+        // Elevation Profile X-Axis Domain (defaults to Distance)
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            FilterChip(
-                selected = profileXAxisDomain == ProfileXAxisDomain.DISTANCE,
-                onClick = { onDomainChange(ProfileXAxisDomain.DISTANCE) },
-                label = { Text(stringResource(R.string.tuning_profile_x_axis_distance)) },
-                modifier = Modifier.weight(1f)
+            Text(
+                text = stringResource(R.string.tuning_profile_x_axis_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
             )
-            FilterChip(
-                selected = profileXAxisDomain == ProfileXAxisDomain.TIME,
-                onClick = { onDomainChange(ProfileXAxisDomain.TIME) },
-                label = { Text(stringResource(R.string.tuning_profile_x_axis_time)) },
-                modifier = Modifier.weight(1f)
+            Text(
+                text = stringResource(R.string.tuning_profile_x_axis_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Spacer(modifier = Modifier.height(2.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = elevationXAxisDomain == ProfileXAxisDomain.DISTANCE,
+                    onClick = { onElevationDomainChange(ProfileXAxisDomain.DISTANCE) },
+                    label = { Text(stringResource(R.string.tuning_profile_x_axis_distance)) },
+                    modifier = Modifier.weight(1f)
+                )
+                FilterChip(
+                    selected = elevationXAxisDomain == ProfileXAxisDomain.TIME,
+                    onClick = { onElevationDomainChange(ProfileXAxisDomain.TIME) },
+                    label = { Text(stringResource(R.string.tuning_profile_x_axis_time)) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        // Telemetry Graphs X-Axis Domain (defaults to Time)
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.tuning_telemetry_x_axis_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = stringResource(R.string.tuning_telemetry_x_axis_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = telemetryXAxisDomain == ProfileXAxisDomain.DISTANCE,
+                    onClick = { onTelemetryDomainChange(ProfileXAxisDomain.DISTANCE) },
+                    label = { Text(stringResource(R.string.tuning_profile_x_axis_distance)) },
+                    modifier = Modifier.weight(1f)
+                )
+                FilterChip(
+                    selected = telemetryXAxisDomain == ProfileXAxisDomain.TIME,
+                    onClick = { onTelemetryDomainChange(ProfileXAxisDomain.TIME) },
+                    label = { Text(stringResource(R.string.tuning_profile_x_axis_time)) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
     }
+}
+
+@Deprecated("Use overload accepting elevationXAxisDomain and telemetryXAxisDomain")
+@Composable
+fun AftermathAnalysisSection(
+    profileXAxisDomain: ProfileXAxisDomain,
+    onDomainChange: (ProfileXAxisDomain) -> Unit
+) {
+    AftermathAnalysisSection(
+        elevationXAxisDomain = profileXAxisDomain,
+        onElevationDomainChange = onDomainChange,
+        telemetryXAxisDomain = profileXAxisDomain,
+        onTelemetryDomainChange = onDomainChange
+    )
 }
 
 @Composable
