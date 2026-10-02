@@ -381,7 +381,8 @@ fun CockpitTypographySection(
                 )
                 ExposedDropdownMenu(
                     expanded = expanded,
-                    onDismissRequest = { expanded = false }
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.heightIn(max = 360.dp)
                 ) {
                     CockpitFontFamily.values().forEach { family ->
                         val itemFontFamily = remember(family) {

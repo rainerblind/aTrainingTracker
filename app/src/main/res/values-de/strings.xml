@@ -1434,6 +1434,14 @@
     <string name="tuning_font_modern_athletic">Modern Sportlich</string>
     <string name="tuning_font_monospace">Nichtproportional (Monospace)</string>
     <string name="tuning_font_playful">Verspielt</string>
+    <string name="tuning_font_bebas_neue">Bebas Neue</string>
+    <string name="tuning_font_teko">Teko</string>
+    <string name="tuning_font_barlow_condensed">Barlow Condensed</string>
+    <string name="tuning_font_oswald">Oswald</string>
+    <string name="tuning_font_chakra_petch">Chakra Petch</string>
+    <string name="tuning_font_oxanium">Oxanium</string>
+    <string name="tuning_font_rajdhani">Rajdhani</string>
+    <string name="tuning_font_montserrat">Montserrat</string>
     <string name="tuning_cockpit_font_weight_title">Schriftstärke</string>
     <string name="tuning_weight_normal">Normal</string>
     <string name="tuning_weight_semi_bold">Halbfett</string>
