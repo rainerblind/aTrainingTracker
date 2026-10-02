@@ -54,7 +54,15 @@ enum class CockpitFontFamily {
     SEVEN_SEGMENT,
     MODERN_ATHLETIC,
     MONOSPACE,
-    PLAYFUL;
+    PLAYFUL,
+    BEBAS_NEUE,
+    TEKO,
+    BARLOW_CONDENSED,
+    OSWALD,
+    CHAKRA_PETCH,
+    OXANIUM,
+    RAJDHANI,
+    MONTSERRAT;
 
     fun getDisplayNameRes(): Int = when (this) {
         SYSTEM_DEFAULT -> R.string.tuning_font_system_default
@@ -62,6 +70,14 @@ enum class CockpitFontFamily {
         MODERN_ATHLETIC -> R.string.tuning_font_modern_athletic
         MONOSPACE -> R.string.tuning_font_monospace
         PLAYFUL -> R.string.tuning_font_playful
+        BEBAS_NEUE -> R.string.tuning_font_bebas_neue
+        TEKO -> R.string.tuning_font_teko
+        BARLOW_CONDENSED -> R.string.tuning_font_barlow_condensed
+        OSWALD -> R.string.tuning_font_oswald
+        CHAKRA_PETCH -> R.string.tuning_font_chakra_petch
+        OXANIUM -> R.string.tuning_font_oxanium
+        RAJDHANI -> R.string.tuning_font_rajdhani
+        MONTSERRAT -> R.string.tuning_font_montserrat
     }
 }
 
@@ -100,6 +116,14 @@ object CockpitTypography {
                     CockpitFontFamily.MODERN_ATHLETIC -> FontFamily(Font(R.font.roboto_condensed))
                     CockpitFontFamily.MONOSPACE -> FontFamily(Font(R.font.roboto_mono))
                     CockpitFontFamily.PLAYFUL -> FontFamily(Font(R.font.comic_neue))
+                    CockpitFontFamily.BEBAS_NEUE -> FontFamily(Font(R.font.bebas_neue))
+                    CockpitFontFamily.TEKO -> FontFamily(Font(R.font.teko))
+                    CockpitFontFamily.BARLOW_CONDENSED -> FontFamily(Font(R.font.barlow_condensed))
+                    CockpitFontFamily.OSWALD -> FontFamily(Font(R.font.oswald))
+                    CockpitFontFamily.CHAKRA_PETCH -> FontFamily(Font(R.font.chakra_petch))
+                    CockpitFontFamily.OXANIUM -> FontFamily(Font(R.font.oxanium))
+                    CockpitFontFamily.RAJDHANI -> FontFamily(Font(R.font.rajdhani))
+                    CockpitFontFamily.MONTSERRAT -> FontFamily(Font(R.font.montserrat))
                 }
             } catch (t: Throwable) {
                 fallbackFontFamily(family)
@@ -131,6 +155,14 @@ object CockpitTypography {
             CockpitFontFamily.MODERN_ATHLETIC -> FontFamily.SansSerif
             CockpitFontFamily.MONOSPACE -> FontFamily.Monospace
             CockpitFontFamily.PLAYFUL -> FontFamily.Cursive
+            CockpitFontFamily.BEBAS_NEUE,
+            CockpitFontFamily.TEKO,
+            CockpitFontFamily.BARLOW_CONDENSED,
+            CockpitFontFamily.OSWALD,
+            CockpitFontFamily.CHAKRA_PETCH,
+            CockpitFontFamily.OXANIUM,
+            CockpitFontFamily.RAJDHANI,
+            CockpitFontFamily.MONTSERRAT -> FontFamily.SansSerif
         }
     }
 }

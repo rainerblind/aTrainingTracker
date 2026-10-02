@@ -34,6 +34,7 @@ class CockpitTypographyResolutionTest {
 
     @Test
     fun allFontFamilies_resolveNonNullFontFamily() {
+        assertEquals(13, CockpitFontFamily.values().size)
         for (family in CockpitFontFamily.values()) {
             val resolved = CockpitTypography.resolveFontFamily(family)
             assertNotNull("Resolved font family must not be null for $family", resolved)
@@ -47,6 +48,14 @@ class CockpitTypographyResolutionTest {
         assertEquals(FontFamily.SansSerif, CockpitTypography.fallbackFontFamily(CockpitFontFamily.MODERN_ATHLETIC))
         assertEquals(FontFamily.Monospace, CockpitTypography.fallbackFontFamily(CockpitFontFamily.MONOSPACE))
         assertEquals(FontFamily.Cursive, CockpitTypography.fallbackFontFamily(CockpitFontFamily.PLAYFUL))
+        assertEquals(FontFamily.SansSerif, CockpitTypography.fallbackFontFamily(CockpitFontFamily.BEBAS_NEUE))
+        assertEquals(FontFamily.SansSerif, CockpitTypography.fallbackFontFamily(CockpitFontFamily.TEKO))
+        assertEquals(FontFamily.SansSerif, CockpitTypography.fallbackFontFamily(CockpitFontFamily.BARLOW_CONDENSED))
+        assertEquals(FontFamily.SansSerif, CockpitTypography.fallbackFontFamily(CockpitFontFamily.OSWALD))
+        assertEquals(FontFamily.SansSerif, CockpitTypography.fallbackFontFamily(CockpitFontFamily.CHAKRA_PETCH))
+        assertEquals(FontFamily.SansSerif, CockpitTypography.fallbackFontFamily(CockpitFontFamily.OXANIUM))
+        assertEquals(FontFamily.SansSerif, CockpitTypography.fallbackFontFamily(CockpitFontFamily.RAJDHANI))
+        assertEquals(FontFamily.SansSerif, CockpitTypography.fallbackFontFamily(CockpitFontFamily.MONTSERRAT))
     }
 
     @Test
@@ -63,6 +72,14 @@ class CockpitTypographyResolutionTest {
         assertEquals(R.string.tuning_font_modern_athletic, CockpitFontFamily.MODERN_ATHLETIC.getDisplayNameRes())
         assertEquals(R.string.tuning_font_monospace, CockpitFontFamily.MONOSPACE.getDisplayNameRes())
         assertEquals(R.string.tuning_font_playful, CockpitFontFamily.PLAYFUL.getDisplayNameRes())
+        assertEquals(R.string.tuning_font_bebas_neue, CockpitFontFamily.BEBAS_NEUE.getDisplayNameRes())
+        assertEquals(R.string.tuning_font_teko, CockpitFontFamily.TEKO.getDisplayNameRes())
+        assertEquals(R.string.tuning_font_barlow_condensed, CockpitFontFamily.BARLOW_CONDENSED.getDisplayNameRes())
+        assertEquals(R.string.tuning_font_oswald, CockpitFontFamily.OSWALD.getDisplayNameRes())
+        assertEquals(R.string.tuning_font_chakra_petch, CockpitFontFamily.CHAKRA_PETCH.getDisplayNameRes())
+        assertEquals(R.string.tuning_font_oxanium, CockpitFontFamily.OXANIUM.getDisplayNameRes())
+        assertEquals(R.string.tuning_font_rajdhani, CockpitFontFamily.RAJDHANI.getDisplayNameRes())
+        assertEquals(R.string.tuning_font_montserrat, CockpitFontFamily.MONTSERRAT.getDisplayNameRes())
 
         for (family in CockpitFontFamily.values()) {
             assertTrue("Resource ID must be positive for $family", family.getDisplayNameRes() > 0)
