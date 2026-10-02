@@ -108,4 +108,111 @@ class TelemetryHistogramCardTest {
         val readout = "${bin.rangeMin}–${bin.rangeMax} bpm • $durationFormatted (${String.format(java.util.Locale.US, "%.1f", bin.percentage)}%) • Z${bin.zoneIndex}"
         assertEquals("160–162 bpm • 4:05 (24.5%) • Z3", readout)
     }
+
+    private fun findProjectRoot(): java.io.File {
+        var dir: java.io.File = java.io.File(".").canonicalFile
+        while (dir.parentFile != null) {
+            if (java.io.File(dir, "gradlew").exists() && java.io.File(dir, "app").exists()) {
+                return dir
+            }
+            dir = dir.parentFile!!
+        }
+        return java.io.File(".").canonicalFile
+    }
+
+    private fun resolveSourceFile(relativePath: String): java.io.File {
+        val root = findProjectRoot()
+        val target = java.io.File(root, relativePath)
+        assertTrue("Source file must exist: $relativePath", target.exists())
+        return target
+    }
+
+    @Test
+    fun testHeartRateZoneDistributionCard_headerAndToggleLayoutContract() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/HeartRateZoneDistributionCard.kt")
+        val content = file.readText()
+
+        // Verify Header Row does not contain SingleChoiceSegmentedButtonRow
+        val headerStartIndex = content.indexOf("// Header Row:")
+        assertTrue("Header row comment must exist", headerStartIndex != -1)
+        val bodyStartIndex = content.indexOf("// Body:")
+        assertTrue("Body comment must exist", bodyStartIndex > headerStartIndex)
+        val headerSnippet = content.substring(headerStartIndex, bodyStartIndex)
+
+        assertFalse(
+            "Header row must not contain SingleChoiceSegmentedButtonRow (REQ-UI-231)",
+            headerSnippet.contains("SingleChoiceSegmentedButtonRow")
+        )
+        assertTrue(
+            "Header row must contain total duration formatting",
+            headerSnippet.contains("ZoneDistributionChartMath.formatZoneDuration(distribution.totalActiveTimeSec)")
+        )
+
+        // Verify Mode Switcher is positioned after Body chart
+        val bottomSwitcherIndex = content.indexOf("// Bottom Mode Switcher:")
+        assertTrue("Bottom Mode Switcher comment must exist", bottomSwitcherIndex > bodyStartIndex)
+        val bottomSnippet = content.substring(bottomSwitcherIndex)
+        assertTrue(
+            "Bottom section must host SingleChoiceSegmentedButtonRow",
+            bottomSnippet.contains("SingleChoiceSegmentedButtonRow")
+        )
+        assertTrue(
+            "Bottom section must be centered horizontally",
+            bottomSnippet.contains("horizontalArrangement = Arrangement.Center")
+        )
+    }
+
+    @Test
+    fun testPowerZoneDistributionCard_headerAndToggleLayoutContract() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/PowerZoneDistributionCard.kt")
+        val content = file.readText()
+
+        // Verify Header Row does not contain SingleChoiceSegmentedButtonRow
+        val headerStartIndex = content.indexOf("// Header Row:")
+        assertTrue("Header row comment must exist", headerStartIndex != -1)
+        val bodyStartIndex = content.indexOf("// Body:")
+        assertTrue("Body comment must exist", bodyStartIndex > headerStartIndex)
+        val headerSnippet = content.substring(headerStartIndex, bodyStartIndex)
+
+        assertFalse(
+            "Header row must not contain SingleChoiceSegmentedButtonRow (REQ-UI-231)",
+            headerSnippet.contains("SingleChoiceSegmentedButtonRow")
+        )
+        assertTrue(
+            "Header row must contain total duration formatting",
+            headerSnippet.contains("ZoneDistributionChartMath.formatZoneDuration(distribution.totalActiveTimeSec)")
+        )
+
+        // Verify Mode Switcher is positioned after Body chart
+        val bottomSwitcherIndex = content.indexOf("// Bottom Mode Switcher:")
+        assertTrue("Bottom Mode Switcher comment must exist", bottomSwitcherIndex > bodyStartIndex)
+        val bottomSnippet = content.substring(bottomSwitcherIndex)
+        assertTrue(
+            "Bottom section must host SingleChoiceSegmentedButtonRow",
+            bottomSnippet.contains("SingleChoiceSegmentedButtonRow")
+        )
+        assertTrue(
+            "Bottom section must be centered horizontally",
+            bottomSnippet.contains("horizontalArrangement = Arrangement.Center")
+        )
+    }
+
+    @Test
+    fun testTelemetryHistogramChart_streamlinedReadoutContract() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/TelemetryHistogramChart.kt")
+        val content = file.readText()
+
+        assertFalse(
+            "TelemetryHistogramChart must not contain hardcoded 'active bins' label (REQ-UI-231)",
+            content.contains("active bins")
+        )
+        assertTrue(
+            "TelemetryHistogramChart must display range in resting readout",
+            content.contains("\${histogram.dataMin}–\${histogram.dataMax} \$unit")
+        )
+        assertTrue(
+            "TelemetryHistogramChart must display bin delta in resting readout",
+            content.contains("Δ \${histogram.binWidth} \$unit")
+        )
+    }
 }

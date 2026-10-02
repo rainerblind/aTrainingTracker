@@ -55,7 +55,7 @@ fun PowerZoneDistributionCard(
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Header Row: Power Icon + Localized Title + Optional Mode Toggle + Total Active Time
+            // Header Row: Power Icon + Localized Title + Total Active Time
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -74,39 +74,6 @@ fun PowerZoneDistributionCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.weight(1f))
-
-                if (distribution.histogram != null) {
-                    SingleChoiceSegmentedButtonRow(
-                        modifier = Modifier.height(28.dp)
-                    ) {
-                        SegmentedButton(
-                            selected = displayMode == ZoneCardDisplayMode.FIVE_ZONES,
-                            onClick = { displayMode = ZoneCardDisplayMode.FIVE_ZONES },
-                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                            icon = {},
-                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.zone_mode_5_zones),
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        }
-                        SegmentedButton(
-                            selected = displayMode == ZoneCardDisplayMode.HISTOGRAM,
-                            onClick = { displayMode = ZoneCardDisplayMode.HISTOGRAM },
-                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                            icon = {},
-                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.zone_mode_histogram),
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-
                 Text(
                     text = ZoneDistributionChartMath.formatZoneDuration(distribution.totalActiveTimeSec),
                     style = MaterialTheme.typography.bodySmall,
@@ -128,6 +95,43 @@ fun PowerZoneDistributionCard(
                         unit = "W",
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+            }
+
+            // Bottom Mode Switcher: Centered below chart for ample breathing room (ATT-1959)
+            if (distribution.histogram != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    SingleChoiceSegmentedButtonRow(
+                        modifier = Modifier.height(28.dp)
+                    ) {
+                        SegmentedButton(
+                            selected = displayMode == ZoneCardDisplayMode.FIVE_ZONES,
+                            onClick = { displayMode = ZoneCardDisplayMode.FIVE_ZONES },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                            icon = {},
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.zone_mode_5_zones),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                        SegmentedButton(
+                            selected = displayMode == ZoneCardDisplayMode.HISTOGRAM,
+                            onClick = { displayMode = ZoneCardDisplayMode.HISTOGRAM },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                            icon = {},
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.zone_mode_histogram),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    }
                 }
             }
         }
