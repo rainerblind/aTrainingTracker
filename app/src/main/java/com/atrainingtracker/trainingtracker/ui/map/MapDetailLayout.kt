@@ -207,7 +207,11 @@ fun MapDetailLayout(
                 activeScrubPath?.let { path ->
                     Surface(
                         color = MaterialTheme.colorScheme.surface,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(
+                                if (analyticsContent == null) Modifier.navigationBarsPadding() else Modifier
+                            )
                     ) {
                         Box(modifier = Modifier.drawWithContent {
                             elevationLayer.record {
@@ -393,6 +397,8 @@ fun MapDetailLayout(
                         }
                     }
                 }
+            } else if (analyticsContent == null && !useStatusBarsPadding) {
+                Spacer(modifier = Modifier.navigationBarsPadding())
             }
 
             // 4. ANALYTICS (Slotted - REQ-UI-205 / ATT-1393)
