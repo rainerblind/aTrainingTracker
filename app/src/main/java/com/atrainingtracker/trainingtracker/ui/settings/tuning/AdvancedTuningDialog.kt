@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.settings.tuning
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -35,7 +36,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -44,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
+import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
@@ -75,6 +79,7 @@ fun AdvancedTuningDialog(
 
     val preferenceManager = remember { MyPreferenceManager(context.applicationContext) }
     val persistedWorkoutCardPrefs by preferenceManager.workoutCardPreferencesFlow.collectAsState(initial = null)
+    val persistedWorkoutDetailPrefs by preferenceManager.workoutDetailPreferencesFlow.collectAsState(initial = null)
 
     var elevationXAxisDomain by remember { mutableStateOf(TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN) }
     var telemetryXAxisDomain by remember { mutableStateOf(TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN) }
@@ -92,6 +97,9 @@ fun AdvancedTuningDialog(
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }
     var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
+
+    var workoutDetailPrefs by remember { mutableStateOf(WorkoutDetailPreferences()) }
+    var isDetailPrefsInitialized by remember { mutableStateOf(false) }
 
     // Multi-section expansion state tracked across configuration changes via string identifiers
     // Initially all sections are collapsed (emptySet) providing a clean, compact overview (ATT-1957)
@@ -112,6 +120,14 @@ fun AdvancedTuningDialog(
         if (!isAftermathPrefsInitialized && cardPrefs != null) {
             workoutCardPrefs = cardPrefs
             isAftermathPrefsInitialized = true
+        }
+    }
+
+    LaunchedEffect(persistedWorkoutDetailPrefs) {
+        val detailPrefs = persistedWorkoutDetailPrefs
+        if (!isDetailPrefsInitialized && detailPrefs != null) {
+            workoutDetailPrefs = detailPrefs
+            isDetailPrefsInitialized = true
         }
     }
 
@@ -156,6 +172,7 @@ fun AdvancedTuningDialog(
                     scope.launch {
                         tuningDataStore.saveTuningConfig(newConfig)
                         preferenceManager.setWorkoutCardPreferences(workoutCardPrefs)
+                        preferenceManager.setWorkoutDetailPreferences(workoutDetailPrefs)
                         onSettingsChanged?.invoke()
                         onDismiss()
                     }
@@ -283,13 +300,15 @@ fun AdvancedTuningDialog(
             TuningAccordionSection(
                 icon = Icons.AutoMirrored.Filled.ViewList,
                 title = stringResource(R.string.tuning_cat_workout_masks_cards),
-                subtitle = TuningSubtitleFormatter.formatWorkoutMasksSubtitle(workoutCardPrefs, context),
+                subtitle = TuningSubtitleFormatter.formatWorkoutMatrixSubtitle(workoutCardPrefs, workoutDetailPrefs, context),
                 isExpanded = isSectionExpanded(TuningSection.WORKOUT_MASKS_CARDS),
                 onToggle = { toggleSection(TuningSection.WORKOUT_MASKS_CARDS) }
             ) {
                 WorkoutMasksAndCardsSection(
                     workoutCardPrefs = workoutCardPrefs,
-                    onWorkoutCardPrefsChange = { workoutCardPrefs = it }
+                    onWorkoutCardPrefsChange = { workoutCardPrefs = it },
+                    workoutDetailPrefs = workoutDetailPrefs,
+                    onWorkoutDetailPrefsChange = { workoutDetailPrefs = it }
                 )
             }
 
@@ -301,7 +320,9 @@ fun AdvancedTuningDialog(
                     scope.launch {
                         tuningDataStore.resetToDefaults()
                         preferenceManager.setWorkoutCardPreferences(WorkoutCardSectionPreferences())
+                        preferenceManager.setWorkoutDetailPreferences(WorkoutDetailPreferences())
                         workoutCardPrefs = WorkoutCardSectionPreferences()
+                        workoutDetailPrefs = WorkoutDetailPreferences()
                         elevationXAxisDomain = TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN
                         telemetryXAxisDomain = TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN
                         cockpitFontFamily = TuningPreferencesDefaults.COCKPIT_FONT_FAMILY
@@ -774,96 +795,228 @@ fun AftermathAnalysisSection(
     )
 }
 
+private data class MatrixFeatureRow(
+    val titleRes: Int,
+    val listChecked: Boolean,
+    val onListChange: (Boolean) -> Unit,
+    val detailChecked: Boolean,
+    val onDetailChange: (Boolean) -> Unit,
+    val isLaps: Boolean = false
+)
+
 @Composable
 fun WorkoutMasksAndCardsSection(
     workoutCardPrefs: WorkoutCardSectionPreferences,
-    onWorkoutCardPrefsChange: (WorkoutCardSectionPreferences) -> Unit
+    onWorkoutCardPrefsChange: (WorkoutCardSectionPreferences) -> Unit,
+    workoutDetailPrefs: WorkoutDetailPreferences = WorkoutDetailPreferences(),
+    onWorkoutDetailPrefsChange: (WorkoutDetailPreferences) -> Unit = {}
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // Sub-block 1: Workout List (Detailed Cards)
+        // Section Header Subtitle
         Text(
             text = stringResource(R.string.settings_workout_card_title),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        TuningToggleItem(
-            title = stringResource(R.string.settings_workout_card_description),
-            isChecked = workoutCardPrefs.showDescription,
-            onCheckedChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showDescription = it)) }
+        // Matrix Table Column Headers (REQ-UI-240-E)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.tuning_matrix_feature),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f)
+            )
+            Box(
+                modifier = Modifier.width(64.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.tuning_matrix_col_list),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            Box(
+                modifier = Modifier.width(64.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.tuning_matrix_col_details),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+        // 8 Feature Matrix Rows with Alternating Backgrounds & 48dp Touch Targets
+        val features = listOf(
+            MatrixFeatureRow(
+                titleRes = R.string.settings_workout_card_description,
+                listChecked = workoutCardPrefs.showDescription,
+                onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showDescription = it)) },
+                detailChecked = workoutDetailPrefs.showDescription,
+                onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showDescription = it)) }
+            ),
+            MatrixFeatureRow(
+                titleRes = R.string.settings_workout_card_extrema,
+                listChecked = workoutCardPrefs.showExtrema,
+                onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showExtrema = it)) },
+                detailChecked = workoutDetailPrefs.showExtrema,
+                onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showExtrema = it)) }
+            ),
+            MatrixFeatureRow(
+                titleRes = R.string.settings_workout_card_laps,
+                listChecked = workoutCardPrefs.showLaps,
+                onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showLaps = it)) },
+                detailChecked = workoutDetailPrefs.showLaps,
+                onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showLaps = it)) },
+                isLaps = true
+            ),
+            MatrixFeatureRow(
+                titleRes = R.string.settings_workout_card_strava,
+                listChecked = workoutCardPrefs.showStrava,
+                onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showStrava = it)) },
+                detailChecked = workoutDetailPrefs.showStrava,
+                onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showStrava = it)) }
+            ),
+            MatrixFeatureRow(
+                titleRes = R.string.settings_workout_card_map,
+                listChecked = workoutCardPrefs.showMapPreview,
+                onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showMapPreview = it)) },
+                detailChecked = workoutDetailPrefs.showMap,
+                onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showMap = it)) }
+            ),
+            MatrixFeatureRow(
+                titleRes = R.string.settings_workout_card_elevation,
+                listChecked = workoutCardPrefs.showElevationProfile,
+                onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showElevationProfile = it)) },
+                detailChecked = workoutDetailPrefs.showElevationProfile,
+                onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showElevationProfile = it)) }
+            ),
+            MatrixFeatureRow(
+                titleRes = R.string.settings_workout_card_charts,
+                listChecked = workoutCardPrefs.showTelemetryCharts,
+                onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showTelemetryCharts = it)) },
+                detailChecked = workoutDetailPrefs.showTelemetryCharts,
+                onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showTelemetryCharts = it)) }
+            ),
+            MatrixFeatureRow(
+                titleRes = R.string.settings_workout_card_zones,
+                listChecked = workoutCardPrefs.showZoneAnalysis,
+                onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showZoneAnalysis = it)) },
+                detailChecked = workoutDetailPrefs.showZoneAnalysis,
+                onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showZoneAnalysis = it)) }
+            )
         )
-        TuningToggleItem(
-            title = stringResource(R.string.settings_workout_card_extrema),
-            isChecked = workoutCardPrefs.showExtrema,
-            onCheckedChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showExtrema = it)) }
-        )
-        TuningToggleItem(
-            title = stringResource(R.string.settings_workout_card_laps),
-            isChecked = workoutCardPrefs.showLaps,
-            onCheckedChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showLaps = it)) }
-        )
-        if (workoutCardPrefs.showLaps) {
+
+        features.forEachIndexed { index, feature ->
+            val rowBg = if (index % 2 == 0) {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+            } else {
+                Color.Transparent
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, bottom = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(rowBg)
+                    .padding(horizontal = 8.dp, vertical = 2.dp)
             ) {
-                Text(
-                    text = stringResource(R.string.settings_lap_display_mode_title),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                SingleChoiceSegmentedButtonRow(
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SegmentedButton(
-                        selected = workoutCardPrefs.lapDisplayMode == LapDisplayMode.TABLE_ONLY,
-                        onClick = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(lapDisplayMode = LapDisplayMode.TABLE_ONLY)) },
-                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                    Text(
+                        text = stringResource(feature.titleRes),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Box(
+                        modifier = Modifier.size(64.dp, 48.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(stringResource(R.string.settings_lap_display_mode_table))
+                        Checkbox(
+                            checked = feature.listChecked,
+                            onCheckedChange = feature.onListChange
+                        )
                     }
-                    SegmentedButton(
-                        selected = workoutCardPrefs.lapDisplayMode == LapDisplayMode.VISUALIZER_ONLY,
-                        onClick = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(lapDisplayMode = LapDisplayMode.VISUALIZER_ONLY)) },
-                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                    Box(
+                        modifier = Modifier.size(64.dp, 48.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(stringResource(R.string.settings_lap_display_mode_visualizer))
+                        Checkbox(
+                            checked = feature.detailChecked,
+                            onCheckedChange = feature.onDetailChange
+                        )
+                    }
+                }
+
+                if (feature.isLaps && (workoutCardPrefs.showLaps || workoutDetailPrefs.showLaps)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 8.dp, end = 8.dp, bottom = 8.dp, top = 2.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.settings_lap_display_mode_title),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        SingleChoiceSegmentedButtonRow(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            SegmentedButton(
+                                selected = workoutCardPrefs.lapDisplayMode == LapDisplayMode.TABLE_ONLY,
+                                onClick = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(lapDisplayMode = LapDisplayMode.TABLE_ONLY)) },
+                                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                            ) {
+                                Text(stringResource(R.string.settings_lap_display_mode_table))
+                            }
+                            SegmentedButton(
+                                selected = workoutCardPrefs.lapDisplayMode == LapDisplayMode.VISUALIZER_ONLY,
+                                onClick = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(lapDisplayMode = LapDisplayMode.VISUALIZER_ONLY)) },
+                                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                            ) {
+                                Text(stringResource(R.string.settings_lap_display_mode_visualizer))
+                            }
+                        }
                     }
                 }
             }
         }
-        TuningToggleItem(
-            title = stringResource(R.string.settings_workout_card_strava),
-            isChecked = workoutCardPrefs.showStrava,
-            onCheckedChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showStrava = it)) }
-        )
-        TuningToggleItem(
-            title = stringResource(R.string.settings_workout_card_map),
-            isChecked = workoutCardPrefs.showMapPreview,
-            onCheckedChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showMapPreview = it)) }
-        )
-        TuningToggleItem(
-            title = stringResource(R.string.settings_workout_card_elevation),
-            isChecked = workoutCardPrefs.showElevationProfile,
-            onCheckedChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showElevationProfile = it)) }
-        )
-        TuningToggleItem(
-            title = stringResource(R.string.settings_workout_card_charts),
-            isChecked = workoutCardPrefs.showTelemetryCharts,
-            onCheckedChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showTelemetryCharts = it)) }
-        )
-        TuningToggleItem(
-            title = stringResource(R.string.settings_workout_card_zones),
-            isChecked = workoutCardPrefs.showZoneAnalysis,
-            onCheckedChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showZoneAnalysis = it)) }
-        )
     }
+}
+
+@Composable
+fun WorkoutAftermathMatrixSection(
+    workoutCardPrefs: WorkoutCardSectionPreferences,
+    onWorkoutCardPrefsChange: (WorkoutCardSectionPreferences) -> Unit,
+    workoutDetailPrefs: WorkoutDetailPreferences = WorkoutDetailPreferences(),
+    onWorkoutDetailPrefsChange: (WorkoutDetailPreferences) -> Unit = {}
+) {
+    WorkoutMasksAndCardsSection(
+        workoutCardPrefs = workoutCardPrefs,
+        onWorkoutCardPrefsChange = onWorkoutCardPrefsChange,
+        workoutDetailPrefs = workoutDetailPrefs,
+        onWorkoutDetailPrefsChange = onWorkoutDetailPrefsChange
+    )
 }
 
 @Composable

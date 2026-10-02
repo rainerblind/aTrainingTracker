@@ -40,8 +40,10 @@ import kotlinx.coroutines.launch
 
 private val Context.dataStore by preferencesDataStore(name = "user_preferences")
 
+typealias WorkoutListCardPreferences = WorkoutCardSectionPreferences
+
 /**
- * Configurable section visibility preferences for detailed workout journal cards (REQ-UI-210 / ATT-1714 / REQ-UI-229).
+ * Configurable section visibility preferences for detailed workout journal cards (REQ-UI-210 / ATT-1714 / REQ-UI-229 / REQ-UI-240).
  */
 data class WorkoutCardSectionPreferences(
     val showDescription: Boolean = true,
@@ -49,10 +51,24 @@ data class WorkoutCardSectionPreferences(
     val showLaps: Boolean = true,
     val showStrava: Boolean = true,
     val showMapPreview: Boolean = true,
-    val showElevationProfile: Boolean = true,
+    val showElevationProfile: Boolean = false,
     val showTelemetryCharts: Boolean = false,
     val showZoneAnalysis: Boolean = false,
     val lapDisplayMode: LapDisplayMode = LapDisplayMode.VISUALIZER_ONLY
+)
+
+/**
+ * Configurable section visibility preferences for the full-screen Workout Details screen (REQ-UI-240 / ATT-2030).
+ */
+data class WorkoutDetailPreferences(
+    val showDescription: Boolean = true,
+    val showExtrema: Boolean = true,
+    val showLaps: Boolean = true,
+    val showStrava: Boolean = true,
+    val showMap: Boolean = true,
+    val showElevationProfile: Boolean = true,
+    val showTelemetryCharts: Boolean = true,
+    val showZoneAnalysis: Boolean = true
 )
 
 /**
@@ -92,6 +108,15 @@ class MyPreferenceManager(context: Context) {
         val WORKOUT_CARD_SHOW_ZONES = booleanPreferencesKey("workout_card_show_zones")
         val WORKOUT_CARD_LAP_DISPLAY_MODE = stringPreferencesKey("workout_card_lap_display_mode")
 
+        val WORKOUT_DETAIL_SHOW_DESCRIPTION = booleanPreferencesKey("workout_detail_show_description")
+        val WORKOUT_DETAIL_SHOW_EXTREMA = booleanPreferencesKey("workout_detail_show_extrema")
+        val WORKOUT_DETAIL_SHOW_LAPS = booleanPreferencesKey("workout_detail_show_laps")
+        val WORKOUT_DETAIL_SHOW_STRAVA = booleanPreferencesKey("workout_detail_show_strava")
+        val WORKOUT_DETAIL_SHOW_MAP = booleanPreferencesKey("workout_detail_show_map")
+        val WORKOUT_DETAIL_SHOW_ELEVATION = booleanPreferencesKey("workout_detail_show_elevation")
+        val WORKOUT_DETAIL_SHOW_CHARTS = booleanPreferencesKey("workout_detail_show_charts")
+        val WORKOUT_DETAIL_SHOW_ZONES = booleanPreferencesKey("workout_detail_show_zones")
+
         val EDIT_WORKOUT_SHOW_CLUSTER = booleanPreferencesKey("edit_workout_show_cluster")
         val EDIT_WORKOUT_SHOW_COMMUTE_TRAINER = booleanPreferencesKey("edit_workout_show_commute_trainer")
         val EDIT_WORKOUT_SHOW_RACE = booleanPreferencesKey("edit_workout_show_race")
@@ -108,7 +133,7 @@ class MyPreferenceManager(context: Context) {
             showLaps = preferences[WORKOUT_CARD_SHOW_LAPS] ?: true,
             showStrava = preferences[WORKOUT_CARD_SHOW_STRAVA] ?: true,
             showMapPreview = preferences[WORKOUT_CARD_SHOW_MAP] ?: true,
-            showElevationProfile = preferences[WORKOUT_CARD_SHOW_ELEVATION] ?: true,
+            showElevationProfile = preferences[WORKOUT_CARD_SHOW_ELEVATION] ?: false,
             showTelemetryCharts = preferences[WORKOUT_CARD_SHOW_CHARTS] ?: false,
             showZoneAnalysis = preferences[WORKOUT_CARD_SHOW_ZONES] ?: false,
             lapDisplayMode = try {
@@ -131,6 +156,36 @@ class MyPreferenceManager(context: Context) {
             preferences[WORKOUT_CARD_SHOW_CHARTS] = prefs.showTelemetryCharts
             preferences[WORKOUT_CARD_SHOW_ZONES] = prefs.showZoneAnalysis
             preferences[WORKOUT_CARD_LAP_DISPLAY_MODE] = prefs.lapDisplayMode.name
+        }
+    }
+
+    val workoutDetailPreferencesFlow: Flow<WorkoutDetailPreferences> = dataStore.data.map { preferences ->
+        WorkoutDetailPreferences(
+            showDescription = preferences[WORKOUT_DETAIL_SHOW_DESCRIPTION]
+                ?: preferences[WORKOUT_CARD_SHOW_DESCRIPTION] ?: true,
+            showExtrema = preferences[WORKOUT_DETAIL_SHOW_EXTREMA]
+                ?: preferences[WORKOUT_CARD_SHOW_EXTREMA] ?: true,
+            showLaps = preferences[WORKOUT_DETAIL_SHOW_LAPS]
+                ?: preferences[WORKOUT_CARD_SHOW_LAPS] ?: true,
+            showStrava = preferences[WORKOUT_DETAIL_SHOW_STRAVA]
+                ?: preferences[WORKOUT_CARD_SHOW_STRAVA] ?: true,
+            showMap = preferences[WORKOUT_DETAIL_SHOW_MAP] ?: true,
+            showElevationProfile = preferences[WORKOUT_DETAIL_SHOW_ELEVATION] ?: true,
+            showTelemetryCharts = preferences[WORKOUT_DETAIL_SHOW_CHARTS] ?: true,
+            showZoneAnalysis = preferences[WORKOUT_DETAIL_SHOW_ZONES] ?: true
+        )
+    }
+
+    suspend fun setWorkoutDetailPreferences(prefs: WorkoutDetailPreferences) {
+        dataStore.edit { preferences ->
+            preferences[WORKOUT_DETAIL_SHOW_DESCRIPTION] = prefs.showDescription
+            preferences[WORKOUT_DETAIL_SHOW_EXTREMA] = prefs.showExtrema
+            preferences[WORKOUT_DETAIL_SHOW_LAPS] = prefs.showLaps
+            preferences[WORKOUT_DETAIL_SHOW_STRAVA] = prefs.showStrava
+            preferences[WORKOUT_DETAIL_SHOW_MAP] = prefs.showMap
+            preferences[WORKOUT_DETAIL_SHOW_ELEVATION] = prefs.showElevationProfile
+            preferences[WORKOUT_DETAIL_SHOW_CHARTS] = prefs.showTelemetryCharts
+            preferences[WORKOUT_DETAIL_SHOW_ZONES] = prefs.showZoneAnalysis
         }
     }
 

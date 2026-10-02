@@ -42,7 +42,7 @@ class AftermathTuningSettingsTest {
         assertTrue(defaultPrefs.showLaps)
         assertTrue(defaultPrefs.showStrava)
         assertTrue(defaultPrefs.showMapPreview)
-        assertTrue(defaultPrefs.showElevationProfile)
+        assertFalse(defaultPrefs.showElevationProfile)
         assertFalse(defaultPrefs.showTelemetryCharts)
         assertFalse(defaultPrefs.showZoneAnalysis)
 

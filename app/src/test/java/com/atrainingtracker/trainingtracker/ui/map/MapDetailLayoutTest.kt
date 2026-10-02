@@ -59,7 +59,7 @@ class MapDetailLayoutTest {
 
         assertTrue(
             "MapDetailLayout must compute hasTelemetryGraphs checking HR, Speed, and Power data",
-            content.contains("val hasTelemetryGraphs = showZoomControls && activeScrubPath != null && (") &&
+            content.contains("val hasTelemetryGraphs = showZoomControls && showTelemetryCharts && activeScrubPath != null && (") &&
                     content.contains("TelemetryMetricUtils.hasHeartRateData(activeScrubPath)") &&
                     content.contains("TelemetryMetricUtils.hasSpeedData(activeScrubPath)") &&
                     content.contains("TelemetryMetricUtils.hasPowerData(activeScrubPath)")
@@ -68,6 +68,17 @@ class MapDetailLayoutTest {
         assertTrue(
             "MapDetailLayout must compute hasScrollableContent checking analyticsContent and telemetry graphs",
             content.contains("val hasScrollableContent = analyticsContent != null || hasTelemetryGraphs")
+        )
+    }
+
+    @Test
+    fun testMapDetailLayout_declaresShowTelemetryCharts() {
+        assertTrue("MapDetailLayout.kt must exist", mapDetailLayoutFile.exists())
+        val content = mapDetailLayoutFile.readText()
+
+        assertTrue(
+            "MapDetailLayout must declare showTelemetryCharts parameter with default true (REQ-UI-240)",
+            content.contains("showTelemetryCharts: Boolean = true")
         )
     }
 

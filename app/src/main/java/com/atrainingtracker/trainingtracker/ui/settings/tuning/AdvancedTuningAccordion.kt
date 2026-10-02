@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.EditWorkoutFieldPreferences
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
+import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
@@ -129,6 +130,36 @@ object TuningSubtitleFormatter {
         }
         val prefix = context.getString(R.string.tuning_profile_x_axis_title)
         return "$prefix: $domainName"
+    }
+
+    fun formatWorkoutMatrixSubtitle(
+        cardPrefs: WorkoutCardSectionPreferences,
+        detailPrefs: WorkoutDetailPreferences,
+        context: Context
+    ): String {
+        val listCount = listOf(
+            cardPrefs.showDescription,
+            cardPrefs.showExtrema,
+            cardPrefs.showLaps,
+            cardPrefs.showStrava,
+            cardPrefs.showMapPreview,
+            cardPrefs.showElevationProfile,
+            cardPrefs.showTelemetryCharts,
+            cardPrefs.showZoneAnalysis
+        ).count { it }
+
+        val detailCount = listOf(
+            detailPrefs.showDescription,
+            detailPrefs.showExtrema,
+            detailPrefs.showLaps,
+            detailPrefs.showStrava,
+            detailPrefs.showMap,
+            detailPrefs.showElevationProfile,
+            detailPrefs.showTelemetryCharts,
+            detailPrefs.showZoneAnalysis
+        ).count { it }
+
+        return context.getString(R.string.tuning_summary_matrix_format, listCount, detailCount)
     }
 
     fun formatWorkoutMasksSubtitle(

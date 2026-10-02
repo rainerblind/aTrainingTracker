@@ -1370,8 +1370,12 @@
     <string name="reset_to_defaults">Ripristina impostazioni predefinite</string>
     <string name="reset_to_defaults_success">Impostazioni di regolazione ripristinate ai valori di fabbrica.</string>
     <string name="tuning_cat_sensors_gps">Sensori, GPS e filtri</string>
-    <string name="tuning_cat_workout_masks_cards">Schede e campi allenamento</string>
+    <string name="tuning_cat_workout_masks_cards">Schede e dettagli allenamento</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 schede</string>
+    <string name="tuning_matrix_col_list">In elenco</string>
+    <string name="tuning_matrix_col_details">Nei dettagli</string>
+    <string name="tuning_matrix_feature">Elemento</string>
+    <string name="tuning_summary_matrix_format">%1$d/8 in elenco, %2$d/8 nei dettagli</string>
     <string name="map_splitter_content_description">Barra di divisione mappa e telemetria. Trascina verticalmente per ridimensionare, tocca due volte per ripristinare.</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
