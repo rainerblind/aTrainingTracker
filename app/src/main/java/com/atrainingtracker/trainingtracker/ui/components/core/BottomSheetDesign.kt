@@ -63,17 +63,20 @@ object BottomSheetDesign {
     /** Calibrated baseline for single workout detail peeks in analytical map screens (Heatmap & Period Map) cleanly framing WorkoutHeader. */
     val PeekHeightWorkout: Dp = 140.dp
 
-    /** Calibrated baseline for route detail peeks framing RouteSummaryHeader and visibility switch. */
+    /** Calibrated baseline for route detail peeks without description framing RouteSummaryHeader and visibility switch. */
     val PeekHeightRoute: Dp = 112.dp
 
-    /** Calibrated baseline for segment detail peeks framing SegmentHeader and SegmentDetails without empty container gaps. */
-    val PeekHeightSegment: Dp = 156.dp
+    /** Calibrated baseline for route detail peeks with an active description string, ensuring complete visibility of description text above navigation bars. */
+    val PeekHeightRouteWithDescription: Dp = 152.dp
+
+    /** Calibrated baseline for segment detail peeks framing SegmentHeader and full 3-row SegmentDetails without cut-offs. */
+    val PeekHeightSegment: Dp = 192.dp
 
     /** Calibrated baseline for favorite location (Lieblingsort) peeks framing KnownLocationOnMapSheet. */
     val PeekHeightKnownLocation: Dp = 108.dp
 
-    /** Calibrated baseline for active live segment tracking peek framing live delta and target metrics. */
-    val PeekHeightLiveSegment: Dp = 140.dp
+    /** Calibrated baseline for active live segment tracking peek framing live delta and target metrics without prematurely revealing elevation chart. */
+    val PeekHeightLiveSegment: Dp = 126.dp
 }
 
 /**

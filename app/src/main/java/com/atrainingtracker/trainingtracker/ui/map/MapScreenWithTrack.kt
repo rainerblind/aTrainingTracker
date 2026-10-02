@@ -158,7 +158,15 @@ fun MapScreenWithTrack(
             sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
             sheetPeekHeight = when {
                 selectedSegmentId != null -> BottomSheetDesign.PeekHeightSegment + navBarHeight
-                selectedRouteId != null -> BottomSheetDesign.PeekHeightRoute + navBarHeight
+                selectedRouteId != null -> {
+                    val routeSummary = allRoutes.find { it.summary.id == selectedRouteId }?.summary
+                    val basePeek = if (routeSummary?.description.isNullOrEmpty()) {
+                        BottomSheetDesign.PeekHeightRoute
+                    } else {
+                        BottomSheetDesign.PeekHeightRouteWithDescription
+                    }
+                    basePeek + navBarHeight
+                }
                 selectedLocationId != null -> BottomSheetDesign.PeekHeightKnownLocation + navBarHeight
                 else -> 0.dp
             },
