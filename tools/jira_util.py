@@ -310,6 +310,17 @@ def list_versions(role="agent1"):
 
 def set_fix_version(issue_key, version_name, role="agent1"):
     config = get_config()
+    if version_name.lower() in ("none", "clear", "remove", "null", ""):
+        url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}"
+        payload = {
+            "fields": {
+                "fixVersions": []
+            }
+        }
+        jira_request(url, method="PUT", payload=payload, role=role)
+        print(f"Lösungsversion (Fix Version) cleared on {issue_key}.")
+        return
+
     # Validate against project ATT versions
     url_versions = f"{config['JIRA_URL']}/rest/api/2/project/ATT/versions"
     versions = jira_request(url_versions, role=role)
@@ -697,7 +708,7 @@ if __name__ == "__main__":
     active_role, remaining_argv = parse_role_from_args(sys.argv[1:])
 
     if len(remaining_argv) < 1:
-        print("Usage: jira_util.py [--as agent1|agent2|coordinator] [list | show KEY | status KEY | check-gate KEY | versions | set-fixversion KEY VERSION | move KEY todo|in_progress|in_review|freigabe | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC [--add-to-sprint] | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY] [--fixversion=VERSION] | add-to-sprint KEY]", file=sys.stderr)
+        print("Usage: jira_util.py [--as agent1|agent2|coordinator] [list | show KEY | status KEY | check-gate KEY | versions | set-fixversion KEY VERSION | clear-fixversion KEY | move KEY todo|in_progress|in_review|freigabe | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC [--add-to-sprint] | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY] [--fixversion=VERSION] | add-to-sprint KEY]", file=sys.stderr)
         sys.exit(1)
 
     cmd = remaining_argv[0]
@@ -713,6 +724,8 @@ if __name__ == "__main__":
         list_versions(role=active_role)
     elif cmd == "set-fixversion" and len(remaining_argv) == 3:
         set_fix_version(remaining_argv[1], remaining_argv[2], role=active_role)
+    elif cmd == "clear-fixversion" and len(remaining_argv) == 2:
+        set_fix_version(remaining_argv[1], "none", role=active_role)
     elif cmd == "download" and len(remaining_argv) == 3:
         download_attachment(remaining_argv[1], remaining_argv[2], role=active_role)
     elif cmd == "download-all" and len(remaining_argv) == 2:
