@@ -82,8 +82,11 @@ class TrackerServiceAsyncInitTest {
             notificationShown = true
         }
 
+        val stopSelfLatch = CountDownLatch(1)
+
         override fun performStopSelf() {
             stoppedSelf = true
+            stopSelfLatch.countDown()
         }
 
         override fun performStartForeground(id: Int, notification: Notification?, foregroundServiceType: Int) {
@@ -239,6 +242,7 @@ class TrackerServiceAsyncInitTest {
         // 1. Future is completed exceptionally
         assertTrue(future.isCompletedExceptionally)
         // 2. Service stopped itself
+        assertTrue("performStopSelf must complete within timeout", service.stopSelfLatch.await(5, TimeUnit.SECONDS))
         assertTrue("performStopSelf must be called on fatal error", service.stoppedSelf)
         // 3. Notification shown to user
         assertTrue("User must be notified about interrupted tracking", service.notificationShown)
