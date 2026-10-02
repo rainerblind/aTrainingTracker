@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BANALService
@@ -47,6 +48,10 @@ import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.theme.*
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
@@ -252,7 +257,9 @@ fun ElevationProfile(
     startDist: Double = 0.0,
     onZoomChanged: ((zoomScale: Float, startDist: Double) -> Unit)? = null,
     isPanMode: Boolean = false,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    hrZoneThresholds: HeartRateZoneThresholds? = null,
+    powerZoneThresholds: PowerZoneThresholds? = null
 ) {
     if (pathPoints.isEmpty()) return
 
@@ -718,7 +725,9 @@ fun ElevationProfile(
                     xAxisDomain = xAxisDomain,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
-                        .padding(top = 4.dp)
+                        .padding(top = 4.dp),
+                    hrZoneThresholds = hrZoneThresholds,
+                    powerZoneThresholds = powerZoneThresholds
                 )
             }
         }
@@ -750,8 +759,37 @@ fun ScrubbingTelemetryBadge(
     altitude: Double,
     unit: MyUnits,
     xAxisDomain: ProfileXAxisDomain,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    hrZoneThresholds: HeartRateZoneThresholds? = null,
+    powerZoneThresholds: PowerZoneThresholds? = null
 ) {
+    val context = LocalContext.current
+    val effectiveHrThresholds = remember(hrZoneThresholds, bSportType, context) {
+        hrZoneThresholds ?: runCatching {
+            val zoneType = if (bSportType == BSportType.BIKE) SettingsDataStore.ZoneType.HR_BIKE else SettingsDataStore.ZoneType.HR_RUN
+            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
+            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
+            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
+            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+            if (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3) {
+                HeartRateZoneThresholds(z1, z2, z3, z4)
+            } else null
+        }.getOrNull()
+    }
+
+    val effectivePowerThresholds = remember(powerZoneThresholds, context) {
+        powerZoneThresholds ?: runCatching {
+            val zoneType = SettingsDataStore.ZoneType.PWR_BIKE
+            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
+            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
+            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
+            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+            if (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3) {
+                PowerZoneThresholds(z1, z2, z3, z4)
+            } else null
+        }.getOrNull()
+    }
+
     val distanceFormatter = remember(unit) { DistanceFormatter() }
     val altitudeFormatter = remember(unit) { AltitudeFormatter() }
     val speedFormatter = remember(unit) { SpeedFormatter() }
@@ -820,16 +858,24 @@ fun ScrubbingTelemetryBadge(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (hasHr) {
+                        val hrZone = effectiveHrThresholds?.let {
+                            TelemetryZoneMath.determineHeartRateZone(point.hr.toDouble(), it)
+                        }
+                        val hrText = if (hrZone != null) "${point.hr} bpm • Z$hrZone" else "${point.hr} bpm"
                         Text(
-                            text = "${point.hr} bpm",
+                            text = hrText,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold,
                             color = TTColor.Zone4
                         )
                     }
                     if (hasPower) {
+                        val powerZone = effectivePowerThresholds?.let {
+                            TelemetryZoneMath.determinePowerZone(point.power.toDouble(), it)
+                        }
+                        val powerText = if (powerZone != null) "${point.power} W • Z$powerZone" else "${point.power} W"
                         Text(
-                            text = "${point.power} W",
+                            text = powerText,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold,
                             color = TTColor.Zone5

@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
@@ -50,6 +51,10 @@ import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import java.util.Locale
 import kotlin.math.abs
@@ -148,11 +153,21 @@ object TelemetryMetricUtils {
         metricType: TelemetryMetricType,
         unit: MyUnits,
         speedFormatter: SpeedFormatter,
-        paceFormatter: PaceFormatter
+        paceFormatter: PaceFormatter,
+        hrZoneThresholds: HeartRateZoneThresholds? = null,
+        powerZoneThresholds: PowerZoneThresholds? = null
     ): String {
         if (value == null) return "--"
         return when (metricType) {
-            TelemetryMetricType.HEART_RATE -> "${value.toInt()} bpm"
+            TelemetryMetricType.HEART_RATE -> {
+                val base = "${value.toInt()} bpm"
+                if (hrZoneThresholds != null) {
+                    val zone = TelemetryZoneMath.determineHeartRateZone(value, hrZoneThresholds)
+                    "$base • Z$zone"
+                } else {
+                    base
+                }
+            }
             TelemetryMetricType.SPEED -> {
                 val mps = if (unit == MyUnits.METRIC) value / 3.6 else value / 2.236936
                 speedFormatter.format_with_units(mps)
@@ -166,7 +181,15 @@ object TelemetryMetricUtils {
                 }
                 paceFormatter.format_with_units(spm)
             }
-            TelemetryMetricType.POWER -> "${value.toInt()} W"
+            TelemetryMetricType.POWER -> {
+                val base = "${value.toInt()} W"
+                if (powerZoneThresholds != null) {
+                    val zone = TelemetryZoneMath.determinePowerZone(value, powerZoneThresholds)
+                    "$base • Z$zone"
+                } else {
+                    base
+                }
+            }
         }
     }
 
@@ -231,9 +254,38 @@ fun TelemetryMetricGraph(
     xAxisDomain: ProfileXAxisDomain = ProfileXAxisDomain.DISTANCE,
     bSportType: BSportType = BSportType.UNKNOWN,
     zoomScale: Float = 1.0f,
-    startDist: Double = 0.0
+    startDist: Double = 0.0,
+    hrZoneThresholds: HeartRateZoneThresholds? = null,
+    powerZoneThresholds: PowerZoneThresholds? = null
 ) {
     if (pathPoints.isEmpty()) return
+
+    val context = LocalContext.current
+    val effectiveHrThresholds = remember(hrZoneThresholds, bSportType, context) {
+        hrZoneThresholds ?: runCatching {
+            val zoneType = if (bSportType == BSportType.BIKE) SettingsDataStore.ZoneType.HR_BIKE else SettingsDataStore.ZoneType.HR_RUN
+            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
+            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
+            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
+            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+            if (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3) {
+                HeartRateZoneThresholds(z1, z2, z3, z4)
+            } else null
+        }.getOrNull()
+    }
+
+    val effectivePowerThresholds = remember(powerZoneThresholds, context) {
+        powerZoneThresholds ?: runCatching {
+            val zoneType = SettingsDataStore.ZoneType.PWR_BIKE
+            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
+            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
+            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
+            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+            if (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3) {
+                PowerZoneThresholds(z1, z2, z3, z4)
+            } else null
+        }.getOrNull()
+    }
 
     val unit = remember {
         try {
@@ -312,6 +364,39 @@ fun TelemetryMetricGraph(
             color = colorScheme.outlineVariant.copy(alpha = 0.35f).toArgb()
             strokeWidth = 1f
             isAntiAlias = true
+        }
+    }
+
+    val zoneBands = remember(metricType, effectiveHrThresholds, effectivePowerThresholds, dataMin, dataMax) {
+        when (metricType) {
+            TelemetryMetricType.HEART_RATE -> effectiveHrThresholds?.let {
+                TelemetryZoneMath.calculateHeartRateZoneBands(it, dataMin, dataMax)
+            } ?: emptyList()
+            TelemetryMetricType.POWER -> effectivePowerThresholds?.let {
+                TelemetryZoneMath.calculatePowerZoneBands(it, dataMin, dataMax)
+            } ?: emptyList()
+            else -> emptyList()
+        }
+    }
+
+    val thresholdDashes = remember(metricType, effectiveHrThresholds, effectivePowerThresholds, dataMin, dataMax) {
+        when (metricType) {
+            TelemetryMetricType.HEART_RATE -> effectiveHrThresholds?.let {
+                TelemetryZoneMath.calculateThresholdDashes(it.z1Max, it.z2Max, it.z3Max, it.z4Max, dataMin, dataMax)
+            } ?: emptyList()
+            TelemetryMetricType.POWER -> effectivePowerThresholds?.let {
+                TelemetryZoneMath.calculateThresholdDashes(it.z1Max, it.z2Max, it.z3Max, it.z4Max, dataMin, dataMax)
+            } ?: emptyList()
+            else -> emptyList()
+        }
+    }
+
+    val zoneLabelPaint = remember(colorScheme) {
+        Paint().apply {
+            color = colorScheme.onSurfaceVariant.toArgb()
+            textSize = 24f
+            isAntiAlias = true
+            textAlign = Paint.Align.CENTER
         }
     }
 
@@ -421,8 +506,48 @@ fun TelemetryMetricGraph(
                 }
             }
 
-            // Draw Y-axis labels (min and max)
             val nativeCanvas = drawContext.canvas.nativeCanvas
+
+            // 1. Draw horizontal background training zone bands (REQ-UI-230 / ATT-1839)
+            if (zoneBands.isNotEmpty()) {
+                for (band in zoneBands) {
+                    val yTop = valueToY(band.maxVal)
+                    val yBottom = valueToY(band.minVal)
+                    val rectTop = minOf(yTop, yBottom)
+                    val rectHeight = abs(yTop - yBottom)
+
+                    drawRect(
+                        color = band.color.copy(alpha = TelemetryZoneMath.ZONE_BAND_ALPHA),
+                        topLeft = Offset(startPaddingPx, rectTop),
+                        size = androidx.compose.ui.geometry.Size(chartWidthPx, rectHeight)
+                    )
+
+                    // Draw right-hand secondary zone axis label (Z1-Z5)
+                    if (TelemetryZoneMath.shouldRenderZoneLabel(rectHeight, 12.dp.toPx())) {
+                        val yCenter = rectTop + (rectHeight / 2f)
+                        val textBaseline = yCenter - ((zoneLabelPaint.descent() + zoneLabelPaint.ascent()) / 2f)
+                        val rightAxisCenterX = startPaddingPx + chartWidthPx + (endPaddingPx / 2f)
+                        nativeCanvas.drawText(band.label, rightAxisCenterX, textBaseline, zoneLabelPaint)
+                    }
+                }
+            }
+
+            // 2. Draw horizontal threshold boundary guidelines (REQ-UI-230 / ATT-1839)
+            if (thresholdDashes.isNotEmpty()) {
+                val dashEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 6.dp.toPx()), 0f)
+                for (dashVal in thresholdDashes) {
+                    val dashY = valueToY(dashVal)
+                    drawLine(
+                        color = colorScheme.outlineVariant.copy(alpha = 0.35f),
+                        start = Offset(startPaddingPx, dashY),
+                        end = Offset(startPaddingPx + chartWidthPx, dashY),
+                        strokeWidth = 1f,
+                        pathEffect = dashEffect
+                    )
+                }
+            }
+
+            // Draw Y-axis labels (min and max)
             val maxLabel = if (metricType == TelemetryMetricType.PACE) {
                 TelemetryMetricUtils.formatPaceMinutes(dataMin)
             } else {
