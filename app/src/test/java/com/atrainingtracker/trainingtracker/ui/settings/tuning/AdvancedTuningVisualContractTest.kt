@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.tuning
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -128,6 +129,24 @@ class AdvancedTuningVisualContractTest {
         assertTrue(
             "Must define WorkoutMasksAndCardsSection composable",
             content.contains("fun WorkoutMasksAndCardsSection(")
+        )
+    }
+
+    @Test
+    fun testAdvancedTuningDialog_initiallyCollapsesAllSections() {
+        val dialogFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
+        val content = dialogFile.readText()
+
+        // 1. Verify emptySet initialization in rememberSaveable (REQ-UI-222 / ATT-1957)
+        assertTrue(
+            "AdvancedTuningDialog must initialize expandedSections with emptySet() (REQ-UI-222 / ATT-1957)",
+            Regex("""var\s+expandedSections\s+by\s+rememberSaveable\s*\{\s*mutableStateOf\(\s*emptySet<String>\(\)\s*\)\s*\}""").containsMatchIn(content)
+        )
+
+        // 2. Verify CockpitTypography is not expanded by default
+        assertFalse(
+            "AdvancedTuningDialog must NOT default-expand COCKPIT_TYPOGRAPHY (ATT-1957)",
+            content.contains("setOf(TuningSection.COCKPIT_TYPOGRAPHY.name)")
         )
     }
 }

@@ -96,7 +96,8 @@ fun AdvancedTuningDialog(
     var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
 
     // Multi-section expansion state tracked across configuration changes via string identifiers
-    var expandedSections by rememberSaveable { mutableStateOf(setOf(TuningSection.COCKPIT_TYPOGRAPHY.name)) }
+    // Initially all sections are collapsed (emptySet) providing a clean, compact overview (ATT-1957)
+    var expandedSections by rememberSaveable { mutableStateOf(emptySet<String>()) }
 
     fun isSectionExpanded(section: TuningSection): Boolean = expandedSections.contains(section.name)
 
