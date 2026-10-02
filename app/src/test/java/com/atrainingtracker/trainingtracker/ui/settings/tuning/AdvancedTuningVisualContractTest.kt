@@ -171,5 +171,29 @@ class AdvancedTuningVisualContractTest {
             content.contains("cardPrefs != null && editPrefs != null")
         )
     }
+
+    @Test
+    fun testWorkoutMasksAndCardsSection_lapDisplayModeUsesSegmentedButton() {
+        val dialogFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
+        val content = dialogFile.readText()
+
+        val sectionStartIndex = content.indexOf("fun WorkoutMasksAndCardsSection(")
+        assertTrue("WorkoutMasksAndCardsSection must exist", sectionStartIndex >= 0)
+        val sectionContent = content.substring(sectionStartIndex)
+
+        assertTrue(
+            "WorkoutMasksAndCardsSection must use SingleChoiceSegmentedButtonRow for lap display mode (REQ-UI-229, REQ-UI-234, ATT-1988)",
+            sectionContent.contains("SingleChoiceSegmentedButtonRow(")
+        )
+        assertTrue(
+            "WorkoutMasksAndCardsSection must use SegmentedButtonDefaults.itemShape for 2 items",
+            sectionContent.contains("SegmentedButtonDefaults.itemShape(index = 0, count = 2)") &&
+                    sectionContent.contains("SegmentedButtonDefaults.itemShape(index = 1, count = 2)")
+        )
+        assertFalse(
+            "WorkoutMasksAndCardsSection must NOT use FilterChip for lap display mode (REQ-UI-234, ATT-1988)",
+            sectionContent.contains("FilterChip(")
+        )
+    }
 }
 
