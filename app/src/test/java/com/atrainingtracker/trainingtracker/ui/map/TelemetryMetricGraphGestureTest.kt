@@ -99,7 +99,7 @@ class TelemetryMetricGraphGestureTest {
         assertTrue(
             "TelemetryMetricGraph must clear distance on drag completion when not in pan mode",
             content.contains("if (isDragging) {") &&
-                    Regex("""if\s*\(!isPanMode\)\s*\{\s*onDistanceSelected\(null\)""").containsMatchIn(content)
+                    Regex("""if\s*\(!isPanMode\)\s*\{\s*(?:currentOnDistanceSelectedState|onDistanceSelected)\(null\)""").containsMatchIn(content)
         )
     }
 
@@ -118,10 +118,18 @@ class TelemetryMetricGraphGestureTest {
             content.contains("onZoomChanged: ((Float, Double) -> Unit)? = null")
         )
 
-        // 2. Incorporates isPanMode into pointerInput keys
+        // 2. Incorporates isPanMode into pointerInput keys and decouples mutable running parameters (REQ-UI-232, ATT-1987)
         assertTrue(
-            "TelemetryMetricGraph must incorporate isPanMode into pointerInput remember keys",
+            "TelemetryMetricGraph must decouple mutable zoom parameters and key pointerInput only on structural state",
+            content.contains("pointerInput(totalSpan, isTimeDomain, isPanMode)")
+        )
+        assertFalse(
+            "TelemetryMetricGraph must NOT key pointerInput on mutable startDist or zoomScale",
             content.contains("pointerInput(totalSpan, isTimeDomain, zoomScale, startDist, isPanMode)")
+        )
+        assertTrue(
+            "TelemetryMetricGraph must track mutable startDist via rememberUpdatedState",
+            content.contains("val currentStartDistState by rememberUpdatedState(startDist)")
         )
 
         // 3. Invokes ElevationProfileZoomMath.applyPan and dispatches onZoomChanged
@@ -131,8 +139,9 @@ class TelemetryMetricGraphGestureTest {
                     content.contains("dragDeltaX = pointer.position.x - prevX")
         )
         assertTrue(
-            "TelemetryMetricGraph must dispatch updated startDist via onZoomChanged",
-            Regex("""onZoomChanged\(\s*zoomScale\s*,\s*panStart\s*\)""").containsMatchIn(content)
+            "TelemetryMetricGraph must track localStartDist across drag events and dispatch via onZoomChanged",
+            content.contains("localStartDist = panStart") &&
+                    content.contains("onZoomChangedFn(activeZoom, panStart)")
         )
 
         // 4. Guards tap selection against pan mode
