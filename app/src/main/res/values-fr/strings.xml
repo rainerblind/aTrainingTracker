@@ -1348,6 +1348,14 @@
     <string name="tuning_font_modern_athletic">Sportif moderne</string>
     <string name="tuning_font_monospace">Monospace</string>
     <string name="tuning_font_playful">Ludique</string>
+    <string name="tuning_font_bebas_neue">Bebas Neue</string>
+    <string name="tuning_font_teko">Teko</string>
+    <string name="tuning_font_barlow_condensed">Barlow Condensed</string>
+    <string name="tuning_font_oswald">Oswald</string>
+    <string name="tuning_font_chakra_petch">Chakra Petch</string>
+    <string name="tuning_font_oxanium">Oxanium</string>
+    <string name="tuning_font_rajdhani">Rajdhani</string>
+    <string name="tuning_font_montserrat">Montserrat</string>
     <string name="tuning_cockpit_font_weight_title">Graisse de police</string>
     <string name="tuning_weight_normal">Normal</string>
     <string name="tuning_weight_semi_bold">Semi-gras</string>
@@ -1356,6 +1364,10 @@
     <string name="tuning_default_format">Par défaut : %1$s</string>
     <string name="reset_to_defaults">Rétablir les paramètres par défaut</string>
     <string name="reset_to_defaults_success">Paramètres de réglage rétablis aux valeurs d\'usine par défaut.</string>
+    <string name="tuning_cat_sensors_gps">Capteurs, GPS et filtrage</string>
+    <string name="tuning_cat_workout_masks_cards">Cartes et champs d\'entraînement</string>
+    <string name="tuning_summary_masks_cards_format">%1$d/8 cartes, %2$d/6 champs</string>
+    <string name="map_splitter_content_description">Barre de séparation de la carte et de la télémétrie. Glissez verticalement pour redimensionner, appuyez deux fois pour réinitialiser.</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
     <string name="move_tile_banner_instruction">Tuile sélectionnée : Touchez une autre tuile pour échanger ou \'+\' pour déplacer.</string>
@@ -1366,6 +1378,9 @@
 
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Zones de puissance</string>
+    <!-- Telemetry Frequency Histogram (ATT-1845 / REQ-UI-231) -->
+    <string name="zone_mode_5_zones">5 zones</string>
+    <string name="zone_mode_histogram">Histogramme</string>
     <string name="aftermath_laps_splits_title">Tours et intervalles</string>
     <string name="split_badge_best">Meilleur</string>
     <!-- Continuous Metric Graphs & Headings (ATT-1740 / REQ-UI-206) -->
@@ -1374,4 +1389,17 @@
     <string name="graph_heading_speed">Vitesse</string>
     <string name="graph_heading_pace">Allure</string>
     <string name="graph_heading_power">Puissance</string>
+
+    <!-- Persistent Sticky Global Zoom Toolbar (ATT-1876 / REQ-UI-225) -->
+    <string name="zoom_in">Zoom avant</string>
+    <string name="zoom_out">Zoom arrière</string>
+    <string name="zoom_reset">Réinitialiser le zoom</string>
+    <string name="zoom_pan_mode">Mode panoramique</string>
+    <string name="zoom_scrub_mode">Mode défilement</string>
+
+    <!-- Configurable Lap Display Mode (ATT-1870 / REQ-UI-229) -->
+    <string name="settings_lap_display_mode_title">Mode d\'affichage des tours</string>
+    <string name="settings_lap_display_mode_table">Tableau</string>
+    <string name="settings_lap_display_mode_visualizer">Visualiseur</string>
+    <string name="settings_lap_display_mode_both">Les deux</string>
 </resources>

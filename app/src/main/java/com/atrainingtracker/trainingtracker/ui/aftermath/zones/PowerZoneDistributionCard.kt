@@ -21,7 +21,8 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.zones
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -31,16 +32,16 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 
 /**
- * Compact card displaying a 5-zone Cycling Power vertical column histogram and time-in-zone breakdown.
- *
- * X-Axis: 5 discrete vertical columns for Zone 1 through Zone 5.
- * Y-Axis: Height of each column reflects duration spent in that zone.
+ * Compact card displaying a 5-zone Cycling Power vertical column histogram and time-in-zone breakdown,
+ * with an interactive toggle to switch to a fine-grained telemetry frequency histogram (10 W bins).
  */
 @Composable
 fun PowerZoneDistributionCard(
     distribution: ZoneDistributionData,
     modifier: Modifier = Modifier
 ) {
+    var displayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }
+
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
@@ -54,7 +55,7 @@ fun PowerZoneDistributionCard(
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Header Row: Power Icon + Localized Title + Total Active Time
+            // Header Row: Power Icon + Localized Title + Optional Mode Toggle + Total Active Time
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -73,6 +74,39 @@ fun PowerZoneDistributionCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.weight(1f))
+
+                if (distribution.histogram != null) {
+                    SingleChoiceSegmentedButtonRow(
+                        modifier = Modifier.height(28.dp)
+                    ) {
+                        SegmentedButton(
+                            selected = displayMode == ZoneCardDisplayMode.FIVE_ZONES,
+                            onClick = { displayMode = ZoneCardDisplayMode.FIVE_ZONES },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                            icon = {},
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.zone_mode_5_zones),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                        SegmentedButton(
+                            selected = displayMode == ZoneCardDisplayMode.HISTOGRAM,
+                            onClick = { displayMode = ZoneCardDisplayMode.HISTOGRAM },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                            icon = {},
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.zone_mode_histogram),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+
                 Text(
                     text = ZoneDistributionChartMath.formatZoneDuration(distribution.totalActiveTimeSec),
                     style = MaterialTheme.typography.bodySmall,
@@ -80,11 +114,22 @@ fun PowerZoneDistributionCard(
                 )
             }
 
-            // 5-Column Vertical Histogram
-            ZoneDistributionColumnChart(
-                distribution = distribution,
-                modifier = Modifier.fillMaxWidth()
-            )
+            // Body: 5-Column Vertical Histogram or Fine-Grained Telemetry Frequency Histogram
+            when (displayMode) {
+                ZoneCardDisplayMode.FIVE_ZONES -> {
+                    ZoneDistributionColumnChart(
+                        distribution = distribution,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                ZoneCardDisplayMode.HISTOGRAM -> {
+                    TelemetryHistogramChart(
+                        histogram = distribution.histogram,
+                        unit = "W",
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
         }
     }
 }

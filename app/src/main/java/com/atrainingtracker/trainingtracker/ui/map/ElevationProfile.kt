@@ -26,12 +26,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.PanTool
-import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.RestartAlt
-import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,6 +36,7 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BANALService
@@ -52,6 +48,10 @@ import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.theme.*
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
@@ -213,6 +213,7 @@ fun ElevationProfile(
     zoomScale: Float = 1.0f,
     startDist: Double = 0.0,
     onZoomChanged: ((zoomScale: Float, startDist: Double) -> Unit)? = null,
+    isPanMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val decodedData = remember(encodedAltitudes, encodedDistances) {
@@ -236,6 +237,7 @@ fun ElevationProfile(
         zoomScale = zoomScale,
         startDist = startDist,
         onZoomChanged = onZoomChanged,
+        isPanMode = isPanMode,
         modifier = modifier
     )
 }
@@ -254,7 +256,10 @@ fun ElevationProfile(
     zoomScale: Float = 1.0f,
     startDist: Double = 0.0,
     onZoomChanged: ((zoomScale: Float, startDist: Double) -> Unit)? = null,
-    modifier: Modifier = Modifier
+    isPanMode: Boolean = false,
+    modifier: Modifier = Modifier,
+    hrZoneThresholds: HeartRateZoneThresholds? = null,
+    powerZoneThresholds: PowerZoneThresholds? = null
 ) {
     if (pathPoints.isEmpty()) return
 
@@ -276,7 +281,6 @@ fun ElevationProfile(
         }
     }
 
-    var isPanMode by remember { mutableStateOf(false) }
     var lastTapTime by remember { mutableLongStateOf(0L) }
 
     val cachedData = remember(pathPoints, unit, minAltitudeOverride, maxAltitudeOverride) {
@@ -390,8 +394,8 @@ fun ElevationProfile(
         }
     }
 
-    val topPadding = if (showZoomControls) 72.dp else 16.dp
-    val totalCanvasHeight = if (showZoomControls) cachedData.adaptiveHeight + 48.dp else cachedData.adaptiveHeight
+    val topPadding = if (showZoomControls) 44.dp else 16.dp
+    val totalCanvasHeight = if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight
 
     Box(modifier = modifier.fillMaxWidth()) {
         val baseCanvasModifier = Modifier
@@ -403,6 +407,7 @@ fun ElevationProfile(
                 val startPaddingPx = 50.dp.toPx()
                 val endPaddingPx = 25.dp.toPx()
                 val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
+                val touchSlop = viewConfiguration.touchSlop
 
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
@@ -410,6 +415,7 @@ fun ElevationProfile(
                     var prevSpan = 0f
                     var isTransforming = false
                     var isDragging = false
+                    var isVerticalScrolling = false
 
                     while (true) {
                         val event = awaitPointerEvent()
@@ -452,8 +458,13 @@ fun ElevationProfile(
                             val pointer = pressed[0]
                             val diffX = pointer.position.x - down.position.x
                             val diffY = pointer.position.y - down.position.y
-                            if (!isDragging && (diffX * diffX + diffY * diffY > 64f)) {
-                                isDragging = true
+
+                            if (!isDragging && !isVerticalScrolling) {
+                                if (ChartGestureDisambiguator.isDominantVertical(diffX, diffY, touchSlop)) {
+                                    isVerticalScrolling = true
+                                } else if (ChartGestureDisambiguator.isDominantHorizontal(diffX, diffY, touchSlop)) {
+                                    isDragging = true
+                                }
                             }
 
                             if (isDragging) {
@@ -486,8 +497,12 @@ fun ElevationProfile(
                                     onDistanceSelected(activePoint?.distance ?: selectedValue)
                                     onPointSelected?.invoke(activePoint)
                                 }
+                                prevCentroid = pointer.position
+                            } else if (isVerticalScrolling) {
+                                if (pointer.isConsumed) {
+                                    break
+                                }
                             }
-                            prevCentroid = pointer.position
                         }
                     }
 
@@ -498,7 +513,7 @@ fun ElevationProfile(
                                 onDistanceSelected(null)
                                 onPointSelected?.invoke(null)
                             }
-                        } else {
+                        } else if (!isVerticalScrolling) {
                             // Tap detection
                             val currentTime = System.currentTimeMillis()
                             if (currentTime - lastTapTime < 350L && totalSpan > 10.0) {
@@ -710,104 +725,10 @@ fun ElevationProfile(
                     xAxisDomain = xAxisDomain,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
-                        .padding(top = 28.dp)
+                        .padding(top = 4.dp),
+                    hrZoneThresholds = hrZoneThresholds,
+                    powerZoneThresholds = powerZoneThresholds
                 )
-            }
-        }
-
-        if (showZoomControls && cachedData.totalDist > 10.0) {
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(start = 50.dp, top = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                IconButton(
-                    onClick = {
-                        val (newZoom, newStart) = ElevationProfileZoomMath.applyZoomAtCentroid(
-                            totalDist = totalSpan,
-                            currentZoom = currentZoomScale,
-                            targetZoom = currentZoomScale * 1.5f,
-                            centroidX = 0.5f,
-                            canvasWidth = 1.0f,
-                            currentStartDist = currentStartDist
-                        )
-                        updateZoom(newZoom, newStart)
-                    },
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Zoom In",
-                        modifier = Modifier.size(16.dp),
-                        tint = colorScheme.onSurfaceVariant
-                    )
-                }
-
-                IconButton(
-                    onClick = {
-                        val (newZoom, newStart) = ElevationProfileZoomMath.applyZoomAtCentroid(
-                            totalDist = totalSpan,
-                            currentZoom = currentZoomScale,
-                            targetZoom = currentZoomScale / 1.5f,
-                            centroidX = 0.5f,
-                            canvasWidth = 1.0f,
-                            currentStartDist = currentStartDist
-                        )
-                        updateZoom(newZoom, newStart)
-                    },
-                    enabled = currentZoomScale > 1.01f,
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Remove,
-                        contentDescription = "Zoom Out",
-                        modifier = Modifier.size(16.dp),
-                        tint = if (currentZoomScale > 1.01f) colorScheme.onSurfaceVariant else colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Disabled)
-                    )
-                }
-
-                IconButton(
-                    onClick = { isPanMode = !isPanMode },
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        imageVector = if (isPanMode) Icons.Default.PanTool else Icons.Default.TouchApp,
-                        contentDescription = if (isPanMode) "Pan Mode" else "Scrub Mode",
-                        modifier = Modifier.size(16.dp),
-                        tint = if (isPanMode) colorScheme.primary else colorScheme.onSurfaceVariant
-                    )
-                }
-
-                if (currentZoomScale > 1.01f) {
-                    Surface(
-                        onClick = {
-                            updateZoom(1.0f, 0.0)
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        color = colorScheme.primaryContainer,
-                        modifier = Modifier.height(22.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = String.format(Locale.US, "%.1fx", currentZoomScale),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = colorScheme.onPrimaryContainer
-                            )
-                            Icon(
-                                imageVector = Icons.Default.RestartAlt,
-                                contentDescription = "Reset Zoom",
-                                modifier = Modifier.size(12.dp),
-                                tint = colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
-                }
             }
         }
 
@@ -838,8 +759,37 @@ fun ScrubbingTelemetryBadge(
     altitude: Double,
     unit: MyUnits,
     xAxisDomain: ProfileXAxisDomain,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    hrZoneThresholds: HeartRateZoneThresholds? = null,
+    powerZoneThresholds: PowerZoneThresholds? = null
 ) {
+    val context = LocalContext.current
+    val effectiveHrThresholds = remember(hrZoneThresholds, bSportType, context) {
+        hrZoneThresholds ?: runCatching {
+            val zoneType = if (bSportType == BSportType.BIKE) SettingsDataStore.ZoneType.HR_BIKE else SettingsDataStore.ZoneType.HR_RUN
+            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
+            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
+            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
+            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+            if (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3) {
+                HeartRateZoneThresholds(z1, z2, z3, z4)
+            } else null
+        }.getOrNull()
+    }
+
+    val effectivePowerThresholds = remember(powerZoneThresholds, context) {
+        powerZoneThresholds ?: runCatching {
+            val zoneType = SettingsDataStore.ZoneType.PWR_BIKE
+            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
+            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
+            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
+            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+            if (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3) {
+                PowerZoneThresholds(z1, z2, z3, z4)
+            } else null
+        }.getOrNull()
+    }
+
     val distanceFormatter = remember(unit) { DistanceFormatter() }
     val altitudeFormatter = remember(unit) { AltitudeFormatter() }
     val speedFormatter = remember(unit) { SpeedFormatter() }
@@ -908,16 +858,24 @@ fun ScrubbingTelemetryBadge(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (hasHr) {
+                        val hrZone = effectiveHrThresholds?.let {
+                            TelemetryZoneMath.determineHeartRateZone(point.hr.toDouble(), it)
+                        }
+                        val hrText = if (hrZone != null) "${point.hr} bpm • Z$hrZone" else "${point.hr} bpm"
                         Text(
-                            text = "${point.hr} bpm",
+                            text = hrText,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold,
                             color = TTColor.Zone4
                         )
                     }
                     if (hasPower) {
+                        val powerZone = effectivePowerThresholds?.let {
+                            TelemetryZoneMath.determinePowerZone(point.power.toDouble(), it)
+                        }
+                        val powerText = if (powerZone != null) "${point.power} W • Z$powerZone" else "${point.power} W"
                         Text(
-                            text = "${point.power} W",
+                            text = powerText,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold,
                             color = TTColor.Zone5

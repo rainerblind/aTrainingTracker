@@ -76,10 +76,10 @@ class MapDetailLayoutTest {
         assertTrue("MapDetailLayout.kt must exist", mapDetailLayoutFile.exists())
         val content = mapDetailLayoutFile.readText()
 
-        // 1. Minimum height on Map Box when scrollable content is present
+        // 1. Minimum height on Map Box when scrollable content is present (REQ-UI-213 evolved by REQ-UI-223)
         assertTrue(
-            "MapDetailLayout must apply heightIn(min = 240.dp) to Map Box to prevent 0dp collapse (REQ-UI-213)",
-            content.contains(".heightIn(min = 240.dp)")
+            "MapDetailLayout must apply heightIn(min = SplitPaneMath.MIN_MAP_HEIGHT) to Map Box to prevent 0dp collapse (REQ-UI-213, REQ-UI-223)",
+            content.contains(".heightIn(min = SplitPaneMath.MIN_MAP_HEIGHT)")
         )
 
         // 2. Vertical scroll on lower charts and analytics container
@@ -89,9 +89,9 @@ class MapDetailLayoutTest {
         )
 
         assertTrue(
-            "MapDetailLayout lower container must use flexible weight (1.2f) when scrollable",
+            "MapDetailLayout lower container must use dynamic weight (1f - splitFraction) when scrollable (REQ-UI-223)",
             content.contains("if (showMap && hasScrollableContent)") &&
-                    content.contains(".weight(1.2f)")
+                    content.contains(".weight(1f - splitFraction)")
         )
     }
 
@@ -102,8 +102,7 @@ class MapDetailLayoutTest {
 
         assertTrue(
             "MapDetailLayout must retain wrapContentHeight on lower container when hasScrollableContent is false",
-            content.contains("Modifier\n                .fillMaxWidth()\n                .wrapContentHeight()") ||
-                    content.contains(".fillMaxWidth().wrapContentHeight()")
+            Regex("""Modifier\s*\.fillMaxWidth\(\)\s*\.wrapContentHeight\(\)""").containsMatchIn(content)
         )
     }
 
@@ -170,4 +169,45 @@ class MapDetailLayoutTest {
             occurrencesStartDist >= 4
         )
     }
+
+    @Test
+    fun testMapDetailLayout_integratesGlobalTelemetryZoomToolbar() {
+        assertTrue("MapDetailLayout.kt must exist", mapDetailLayoutFile.exists())
+        val content = mapDetailLayoutFile.readText()
+
+        // 1. Zoom toolbar height definition and subtraction in SplitPaneMath
+        assertTrue(
+            "MapDetailLayout must query GlobalTelemetryZoomToolbarDefaults.TOOLBAR_HEIGHT",
+            content.contains("val toolbarHeightPx = if (hasZoomToolbar) with(density) { GlobalTelemetryZoomToolbarDefaults.TOOLBAR_HEIGHT.toPx() } else 0f")
+        )
+        assertTrue(
+            "MapDetailLayout must subtract dividerHeightPx + toolbarHeightPx in SplitPaneMath.calculateAvailableHeight",
+            content.contains("SplitPaneMath.calculateAvailableHeight(totalHeightPx, dividerHeightPx + toolbarHeightPx)")
+        )
+
+        // 2. Toolbar placement directly below SplitPaneDivider and outside scrollable lower container
+        val dividerIndex = content.indexOf("SplitPaneDivider(")
+        val toolbarIndex = content.indexOf("GlobalTelemetryZoomToolbar(")
+        val lowerColIndex = content.indexOf("lowerColumn(")
+
+        assertTrue("SplitPaneDivider must be present", dividerIndex != -1)
+        assertTrue("GlobalTelemetryZoomToolbar must be present", toolbarIndex != -1)
+        assertTrue("lowerColumn must be present", lowerColIndex != -1)
+
+        assertTrue(
+            "GlobalTelemetryZoomToolbar must be placed between SplitPaneDivider and lowerColumn (sticky outside vertical scroll)",
+            dividerIndex < toolbarIndex && toolbarIndex < lowerColIndex
+        )
+
+        // 3. Pan mode hoisting and passing to ElevationProfile
+        assertTrue(
+            "MapDetailLayout must hoist isPanMode",
+            content.contains("var isPanMode by remember(activeScrubPath) { mutableStateOf(false) }")
+        )
+        assertTrue(
+            "MapDetailLayout must pass isPanMode to ElevationProfile",
+            content.contains("isPanMode = isPanMode")
+        )
+    }
 }
+

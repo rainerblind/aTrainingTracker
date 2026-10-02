@@ -252,4 +252,59 @@ class BottomSheetVisualContractTest {
             importBackup.contains("tonalElevation = 0.dp")
         )
     }
+
+    @Test
+    fun testScreens_consumeStandardizedPeekHeightTokens() {
+        // MapScreenWithTrack.kt
+        val mapScreen = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapScreenWithTrack.kt").readText()
+        assertTrue(
+            "MapScreenWithTrack must consume BottomSheetDesign.PeekHeightSegment",
+            mapScreen.contains("BottomSheetDesign.PeekHeightSegment")
+        )
+        assertTrue(
+            "MapScreenWithTrack must consume BottomSheetDesign.PeekHeightRoute",
+            mapScreen.contains("BottomSheetDesign.PeekHeightRoute")
+        )
+        assertTrue(
+            "MapScreenWithTrack must consume BottomSheetDesign.PeekHeightKnownLocation",
+            mapScreen.contains("BottomSheetDesign.PeekHeightKnownLocation")
+        )
+        assertTrue(
+            "MapScreenWithTrack must not contain hardcoded 185.dp peek height",
+            !mapScreen.contains("185.dp + navBarHeight")
+        )
+
+        // SensorGridScreen.kt
+        val sensorGrid = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt").readText()
+        assertTrue(
+            "SensorGridScreen must consume BottomSheetDesign.PeekHeightLiveSegment",
+            sensorGrid.contains("BottomSheetDesign.PeekHeightLiveSegment")
+        )
+        assertTrue(
+            "SensorGridScreen must not contain hardcoded 140.dp peek height",
+            !sensorGrid.contains("140.dp + navBarHeight")
+        )
+
+        // WorkoutClusterHeatmapScreen.kt
+        val clusterHeatmap = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterHeatmapScreen.kt").readText()
+        assertTrue(
+            "WorkoutClusterHeatmapScreen must consume BottomSheetDesign.PeekHeightWorkout",
+            clusterHeatmap.contains("BottomSheetDesign.PeekHeightWorkout")
+        )
+        assertTrue(
+            "WorkoutClusterHeatmapScreen must not contain hardcoded 120.dp peek height",
+            !clusterHeatmap.contains("120.dp + navBarHeight")
+        )
+
+        // PeriodMapScreen.kt
+        val periodMap = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodMapScreen.kt").readText()
+        assertTrue(
+            "PeriodMapScreen must consume BottomSheetDesign.PeekHeightWorkout",
+            periodMap.contains("BottomSheetDesign.PeekHeightWorkout")
+        )
+        assertTrue(
+            "PeriodMapScreen must not contain hardcoded 120.dp peek height",
+            !periodMap.contains("120.dp + navBarHeight")
+        )
+    }
 }

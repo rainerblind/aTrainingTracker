@@ -1331,6 +1331,14 @@
     <string name="tuning_font_modern_athletic">モダンアスレチック</string>
     <string name="tuning_font_monospace">等幅フォント (Monospace)</string>
     <string name="tuning_font_playful">カジュアル (Playful)</string>
+    <string name="tuning_font_bebas_neue">Bebas Neue</string>
+    <string name="tuning_font_teko">Teko</string>
+    <string name="tuning_font_barlow_condensed">Barlow Condensed</string>
+    <string name="tuning_font_oswald">Oswald</string>
+    <string name="tuning_font_chakra_petch">Chakra Petch</string>
+    <string name="tuning_font_oxanium">Oxanium</string>
+    <string name="tuning_font_rajdhani">Rajdhani</string>
+    <string name="tuning_font_montserrat">Montserrat</string>
     <string name="tuning_cockpit_font_weight_title">太さ</string>
     <string name="tuning_weight_normal">標準</string>
     <string name="tuning_weight_semi_bold">中太</string>
@@ -1339,6 +1347,10 @@
     <string name="tuning_default_format">デフォルト: %1$s</string>
     <string name="reset_to_defaults">デフォルトに戻す</string>
     <string name="reset_to_defaults_success">チューニング設定が工場出荷時のデフォルトに戻りました。</string>
+    <string name="tuning_cat_sensors_gps">センサー、GPS、フィルター</string>
+    <string name="tuning_cat_workout_masks_cards">ワークアウトカードと入力項目</string>
+    <string name="tuning_summary_masks_cards_format">%1$d/8 カード、%2$d/6 項目</string>
+    <string name="map_splitter_content_description">マップとテレメトリの分割バー。上下にドラッグしてサイズ変更、ダブルタップでリセット。</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
     <string name="move_tile_banner_instruction">タイルを選択中: 別のタイルをタップして入れ替え、または「+」をタップして移動します。</string>
@@ -1349,6 +1361,9 @@
 
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">パワーゾーン</string>
+    <!-- Telemetry Frequency Histogram (ATT-1845 / REQ-UI-231) -->
+    <string name="zone_mode_5_zones">5ゾーン</string>
+    <string name="zone_mode_histogram">ヒストグラム</string>
     <string name="aftermath_laps_splits_title">ラップとスプリット</string>
     <string name="split_badge_best">ベスト</string>
     <!-- Continuous Metric Graphs & Headings (ATT-1740 / REQ-UI-206) -->
@@ -1357,4 +1372,17 @@
     <string name="graph_heading_speed">速度</string>
     <string name="graph_heading_pace">ペース</string>
     <string name="graph_heading_power">パワー</string>
+
+    <!-- Persistent Sticky Global Zoom Toolbar (ATT-1876 / REQ-UI-225) -->
+    <string name="zoom_in">拡大</string>
+    <string name="zoom_out">縮小</string>
+    <string name="zoom_reset">ズームをリセット</string>
+    <string name="zoom_pan_mode">パンモード</string>
+    <string name="zoom_scrub_mode">スクラブモード</string>
+
+    <!-- Configurable Lap Display Mode (ATT-1870 / REQ-UI-229) -->
+    <string name="settings_lap_display_mode_title">ラップ表示モード</string>
+    <string name="settings_lap_display_mode_table">テーブル</string>
+    <string name="settings_lap_display_mode_visualizer">ビジュアライザー</string>
+    <string name="settings_lap_display_mode_both">両方</string>
 </resources>

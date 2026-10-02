@@ -28,6 +28,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMarker
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterMarkerType
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteria
+import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
 import com.atrainingtracker.trainingtracker.ui.routes.RouteFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.SegmentFilterCriteria
 import kotlinx.coroutines.CoroutineScope
@@ -40,7 +41,7 @@ import kotlinx.coroutines.launch
 private val Context.dataStore by preferencesDataStore(name = "user_preferences")
 
 /**
- * Configurable section visibility preferences for detailed workout journal cards (REQ-UI-210 / ATT-1714).
+ * Configurable section visibility preferences for detailed workout journal cards (REQ-UI-210 / ATT-1714 / REQ-UI-229).
  */
 data class WorkoutCardSectionPreferences(
     val showDescription: Boolean = true,
@@ -50,7 +51,8 @@ data class WorkoutCardSectionPreferences(
     val showMapPreview: Boolean = true,
     val showElevationProfile: Boolean = true,
     val showTelemetryCharts: Boolean = false,
-    val showZoneAnalysis: Boolean = false
+    val showZoneAnalysis: Boolean = false,
+    val lapDisplayMode: LapDisplayMode = LapDisplayMode.BOTH
 )
 
 /**
@@ -87,6 +89,7 @@ class MyPreferenceManager(context: Context) {
         val WORKOUT_CARD_SHOW_ELEVATION = booleanPreferencesKey("workout_card_show_elevation")
         val WORKOUT_CARD_SHOW_CHARTS = booleanPreferencesKey("workout_card_show_charts")
         val WORKOUT_CARD_SHOW_ZONES = booleanPreferencesKey("workout_card_show_zones")
+        val WORKOUT_CARD_LAP_DISPLAY_MODE = stringPreferencesKey("workout_card_lap_display_mode")
 
         val EDIT_WORKOUT_SHOW_CLUSTER = booleanPreferencesKey("edit_workout_show_cluster")
         val EDIT_WORKOUT_SHOW_COMMUTE_TRAINER = booleanPreferencesKey("edit_workout_show_commute_trainer")
@@ -105,7 +108,13 @@ class MyPreferenceManager(context: Context) {
             showMapPreview = preferences[WORKOUT_CARD_SHOW_MAP] ?: true,
             showElevationProfile = preferences[WORKOUT_CARD_SHOW_ELEVATION] ?: true,
             showTelemetryCharts = preferences[WORKOUT_CARD_SHOW_CHARTS] ?: false,
-            showZoneAnalysis = preferences[WORKOUT_CARD_SHOW_ZONES] ?: false
+            showZoneAnalysis = preferences[WORKOUT_CARD_SHOW_ZONES] ?: false,
+            lapDisplayMode = try {
+                val rawMode = preferences[WORKOUT_CARD_LAP_DISPLAY_MODE]
+                if (rawMode != null) LapDisplayMode.valueOf(rawMode) else LapDisplayMode.BOTH
+            } catch (e: Exception) {
+                LapDisplayMode.BOTH
+            }
         )
     }
 
@@ -119,6 +128,7 @@ class MyPreferenceManager(context: Context) {
             preferences[WORKOUT_CARD_SHOW_ELEVATION] = prefs.showElevationProfile
             preferences[WORKOUT_CARD_SHOW_CHARTS] = prefs.showTelemetryCharts
             preferences[WORKOUT_CARD_SHOW_ZONES] = prefs.showZoneAnalysis
+            preferences[WORKOUT_CARD_LAP_DISPLAY_MODE] = prefs.lapDisplayMode.name
         }
     }
 

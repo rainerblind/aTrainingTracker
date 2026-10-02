@@ -25,6 +25,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,14 +38,16 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import java.util.Locale
 
 /**
  * High-aesthetic Lap & Interval Split Visualizer displaying comparative lap performance
  * with clean columnar alignment, subtle tonal proportional bars, and interactive map highlighting.
- * (REQ-UI-204 / ATT-1742)
+ * (REQ-UI-204 / ATT-1742, REQ-UI-228 / ATT-1869)
  */
 @Composable
 fun LapSplitVisualizer(
@@ -50,11 +56,18 @@ fun LapSplitVisualizer(
     onLapClick: ((Long) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    var isExpanded by rememberSaveable { mutableStateOf(false) }
+    val displayedSplits = if (isExpanded || splitData.splits.size <= 3) {
+        splitData.splits
+    } else {
+        splitData.splits.take(3)
+    }
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        splitData.splits.forEach { split ->
+        displayedSplits.forEach { split ->
             val isSelected = (selectedLapNr != null && selectedLapNr == split.lapNr)
 
             Surface(
@@ -70,7 +83,7 @@ fun LapSplitVisualizer(
                 modifier = Modifier
                     .fillMaxWidth()
                     .semantics {
-                        contentDescription = "Lap ${split.lapNr}: ${split.formattedPaceOrSpeed}"
+                        contentDescription = "${split.displayName}: ${split.formattedPaceOrSpeed}"
                     }
                     .clickable(enabled = onLapClick != null) {
                         onLapClick?.invoke(split.lapNr)
@@ -81,12 +94,12 @@ fun LapSplitVisualizer(
                         .fillMaxWidth()
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
-                    // Top Metric Row: Lap Badge | Distance & Duration | Pace/Speed | Best Pill
+                    // Top Metric Row: Lap Badge | Distance & Duration | [🐇] Pace/Speed (Right-Aligned)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Lap Pill Badge
+                        // Lap Pill Badge with actual/custom lap name
                         Surface(
                             shape = RoundedCornerShape(4.dp),
                             color = if (isSelected) {
@@ -96,18 +109,21 @@ fun LapSplitVisualizer(
                             }
                         ) {
                             Text(
-                                text = "L${split.lapNr}",
+                                text = split.displayName,
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isSelected) {
-                                MaterialTheme.colorScheme.onPrimary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
+                                    MaterialTheme.colorScheme.onPrimary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
                                 textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier
                                     .defaultMinSize(minWidth = 26.dp)
-                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                                    .widthIn(max = 120.dp)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
 
@@ -117,34 +133,35 @@ fun LapSplitVisualizer(
                         Text(
                             text = "${formatSplitDistance(split.distanceMeters)} • ${formatSplitDuration(split.durationSec)}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            softWrap = false
                         )
 
                         Spacer(modifier = Modifier.weight(1f))
 
-                        // Formatted Pace or Speed
-                        Text(
-                            text = split.formattedPaceOrSpeed,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-
-                        // Elegant 'Best' Pill Badge
-                        if (split.isFastest) {
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = MaterialTheme.colorScheme.tertiaryContainer
-                            ) {
+                        // Formatted Pace or Speed with Rabbit on fastest split (Right-Aligned)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            if (split.isFastest) {
                                 Text(
-                                    text = stringResource(R.string.split_badge_best),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                    text = "🐇",
+                                    fontSize = 13.sp,
+                                    modifier = Modifier.semantics {
+                                        contentDescription = "Fastest split"
+                                    }
                                 )
+                                Spacer(modifier = Modifier.width(4.dp))
                             }
+                            Text(
+                                text = split.formattedPaceOrSpeed,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.End
+                            )
                         }
                     }
 
@@ -173,6 +190,24 @@ fun LapSplitVisualizer(
                         )
                     }
                 }
+            }
+        }
+
+        // Expandable toggle button when > 3 laps
+        if (splitData.splits.size > 3) {
+            TextButton(
+                onClick = { isExpanded = !isExpanded },
+                modifier = Modifier.align(Alignment.Start)
+            ) {
+                Text(
+                    text = if (!isExpanded) {
+                        stringResource(R.string.show_all_laps, splitData.splits.size)
+                    } else {
+                        stringResource(R.string.show_fewer_laps)
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }

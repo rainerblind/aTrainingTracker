@@ -82,12 +82,20 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
 Jointly review all completed sprint tickets with the human user against expectations on the integrated sprint build, authorize release, handle rejected items, and cleanly close the sprint into `develop`.
 
 ### Step-by-Step Procedure
-1. **Query Tickets Ready for Review in Rank Order**:
+1. **Mandatory Device Build & Deployment ('Install Before Review')**:
+   Before commencing ticket inspection with the human user, the agent MUST compile and deploy the latest integrated sprint APK from `sprint/<SPRINT_NAME>` to the attached physical device (e.g. Google Pixel 10) (`"Sprint Review session must start with installing the latest sprint version on the phone."`):
+   ```bash
+   ./gradlew installDebug
+   ```
+   Confirm successful installation before proceeding to ticket walkthroughs.
+
+2. **Query Tickets Ready for Review in Rank Order**:
    Find all sprint tickets in status `Final Review (Human)` sorted strictly by backlog rank:
    ```bash
    python3 tools/jira_util.py search "project = ATT AND sprint in openSprints() AND status = 'Final Review (Human)' ORDER BY rank ASC"
    ```
-2. **Collaborative Ticket Inspection**:
+
+3. **Collaborative Ticket Inspection**:
    Ensure git is checked out on `sprint/<SPRINT_NAME>` (which contains all integrated sprint changes).
    * **Rule (Strict Rank Order)**: Review tickets strictly in backlog rank order (`ORDER BY rank ASC`) (`"During the sprint planning and the sprint review, always respect the rank of the tickets."`). No ticket may jump ahead of a higher-ranked ticket.
    * **Rule (Single-Ticket Focus)**: Evaluate tickets **strictly one-by-one** (`"Please make one ticket after the other. Please also keep this in mind for the retro."`). Never batch or present multiple tickets simultaneously. Complete verification and human acceptance for the current ticket before proceeding to the next.
@@ -109,13 +117,13 @@ Jointly review all completed sprint tickets with the human user against expectat
          python3 tools/jira_util.py comment <KEY> "Revision needed: [Human feedback]"
          python3 tools/jira_util.py move <KEY> "analysis"
          ```
-3. **Sprint Retrospective & Process Hardening ("Retro Before Merge")**:
+4. **Sprint Retrospective & Process Hardening ("Retro Before Merge")**:
    * **Mandate**: Conduct the Retrospective and update governance documents on `sprint/<SPRINT_NAME>` **BEFORE** merging into `develop` (`"During the last sprint, we learned that we should do the retro before the merge. During the retro, we probably change some files. :)"`).
    * Synthesize real-time comments logged during the sprint in the `Review & Retro` ticket into actionable root cause analyses.
    * Document insights in `docs/engineering/Sprint_Review_and_Retro_<KEY>.md`.
    * Update `.agents/rules/aspice_governance.md`, relevant skills, and `docs/project_protocol.md` with permanent countermeasures.
    * Commit retrospective deliverables to `sprint/<SPRINT_NAME>`.
-4. **Sprint Closure & Merge to `develop`**:
+5. **Sprint Closure & Merge to `develop`**:
    * Once all tickets and the Retrospective are signed off:
    ```bash
    git checkout develop
