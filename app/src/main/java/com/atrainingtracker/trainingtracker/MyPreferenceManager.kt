@@ -52,7 +52,7 @@ data class WorkoutCardSectionPreferences(
     val showElevationProfile: Boolean = true,
     val showTelemetryCharts: Boolean = false,
     val showZoneAnalysis: Boolean = false,
-    val lapDisplayMode: LapDisplayMode = LapDisplayMode.BOTH
+    val lapDisplayMode: LapDisplayMode = LapDisplayMode.VISUALIZER_ONLY
 )
 
 /**
@@ -111,9 +111,9 @@ class MyPreferenceManager(context: Context) {
             showZoneAnalysis = preferences[WORKOUT_CARD_SHOW_ZONES] ?: false,
             lapDisplayMode = try {
                 val rawMode = preferences[WORKOUT_CARD_LAP_DISPLAY_MODE]
-                if (rawMode != null) LapDisplayMode.valueOf(rawMode) else LapDisplayMode.BOTH
+                if (rawMode != null) LapDisplayMode.valueOf(rawMode) else LapDisplayMode.VISUALIZER_ONLY
             } catch (e: Exception) {
-                LapDisplayMode.BOTH
+                LapDisplayMode.VISUALIZER_ONLY
             }
         )
     }
