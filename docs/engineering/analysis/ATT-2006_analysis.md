@@ -25,11 +25,33 @@ Athletes routinely record workouts indoors (treadmill runs, stationary bike trai
 
 ---
 
-## 2. Root Cause Analysis (Forensic Investigation)
+## 2. Root Cause Analysis (Forensic Investigation & Architectural Reconciliation)
 
-Forensic examination of `TrackOnMapScreen.kt` and `MapDetailLayout.kt` reveals the architectural cause of this omission:
+To address the relationship between parent ticket ATT-2006's initial scope and current codebase state:
 
-### 2.1 The Gatekeeping Bug in `MapDetailLayout.kt`
+### 2.1 Historical Context & Sprint 2026-40.11 Groundwork
+In Sprint 2026-40.11, the initial data pipeline gap described in ATT-2006's parent description was partially resolved:
+1. `WorkoutRepository.getWorkoutTelemetryPoints(workoutId: Long)` was introduced to extract sensor telemetry samples (HR, power, speed, cadence) paired with `timeSec` directly from `WorkoutSamples.db`, bypassing the GPS coordinate filter (`!cursor.isNull(latIdx) && !cursor.isNull(lonIdx)`).
+2. `TrackOnMapAftermathViewModel` was updated to populate `telemetryPath: List<PathPoint>` in `AftermathMapUIState` whenever `fullTracks.isEmpty()`.
+3. In `TrackOnMapScreen.kt`, `activeScrubPath` was bound to fall back to `telemetryPath`:
+   ```kotlin
+   val activeScrubPath = remember(hasGpsTrack, bestTrack, tracks, telemetryPath) {
+       if (hasGpsTrack) {
+           bestTrack?.path ?: tracks.firstOrNull()?.path
+       } else {
+           telemetryPath.ifEmpty { null }
+       }
+   }
+   ```
+4. In `MapDetailLayout.kt`, trackless detection was added:
+   ```kotlin
+   val isTrackless = (activeScrubPath?.lastOrNull()?.distance ?: 0.0) == 0.0 && (activeScrubPath?.lastOrNull()?.timeSec ?: 0) > 0
+   val activeTelemetryDomain = if (isTrackless) ProfileXAxisDomain.TIME else tuningConfig.telemetryXAxisDomain
+   ```
+
+### 2.2 The Remaining Root Cause: UI-Layer Gating Bug in `MapDetailLayout.kt`
+Despite `activeScrubPath` being successfully populated with the time-domain `telemetryPath` (`distance = 0.0`, `latLng = LatLng(0.0, 0.0)`, `timeSec = timeSec`, `hr = hr`), the graph was never drawn on device.
+
 In `MapDetailLayout.kt` lines 204–400:
 ```kotlin
 val lowerColumn: @Composable (Modifier) -> Unit = { colModifier ->
@@ -63,7 +85,6 @@ val lowerColumn: @Composable (Modifier) -> Unit = { colModifier ->
 ```
 All `TelemetryMetricGraph` instances—Speed/Pace, Heart Rate, and Power—are nested directly inside `if (showElevationProfile) { ... }`.
 
-### 2.2 Elevation Profile Suppression in `TrackOnMapScreen.kt`
 In `TrackOnMapScreen.kt` line 133:
 ```kotlin
 showElevationProfile = hasGpsTrack && (workoutData.minAltitude != null || (activeScrubPath?.any { it.altitude != 0.0 } == true)),
@@ -76,6 +97,14 @@ Because `showElevationProfile` evaluates to `false`, `MapDetailLayout.kt` comple
 2. BUT all `TelemetryMetricGraph` components (including Heart Rate) are also bypassed and never composed!
 3. The zoom toolbar still renders because it checks `hasZoomToolbar` (line 544), and the zone distribution card renders because it is in `analyticsContent` (line 405), leaving a vacant gap where the heart rate graph was expected.
 
+### 2.4 Data Structure & Zero-Coordinate Safety Verification
+`TelemetryMetricGraph` consumes `pathPoints: List<PathPoint>`.
+During canvas layout and rendering:
+- X-coordinates are mapped via `pathPoints.map { if (isTimeDomain) it.timeSec.toDouble() else it.distance }`.
+- Y-coordinates are mapped via `pathPoints.mapNotNull { it.hr?.toFloat() }`.
+- `it.latLng` is **NEVER accessed or referenced** during graph rendering, scaling, or touch scrubbing.
+- Passing `LatLng(0.0, 0.0)` in `PathPoint` for trackless workouts is 100% mathematically and graphically crash-safe with zero danger of `IndexOutOfBoundsException` or null pointer dereferencing.
+
 ---
 
 ## 3. User Scope Grounding (ATT-1250)
@@ -84,7 +113,7 @@ Because `showElevationProfile` evaluates to `false`, `MapDetailLayout.kt` comple
 1. **Decouple Telemetry Metric Graphs from Elevation Profile in `MapDetailLayout.kt`**:
    - Refactor `lowerColumn` so that `ElevationProfile` is conditionally rendered when `showElevationProfile && activeScrubPath != null`, while `TelemetryMetricGraph` components (Pace/Speed, Heart Rate, Power) are rendered whenever `hasTelemetryGraphs` is true (`showZoomControls && activeScrubPath != null && TelemetryMetricUtils.has...Data(path)`), regardless of whether `showElevationProfile` is true or false.
 2. **Unified Surface & Padding Management**:
-   - Ensure the `Surface` wrapper enclosing the charts correctly handles elevation graphics layering, background color, and navigation bar insets when `ElevationProfile` is absent but telemetry graphs are present.
+   - Ensure the `Surface` wrapper enclosing the charts correctly handles elevation graphics layering, background color, and navigation bar insets when `ElevationProfile` is absent but telemetry graphs are present (`showElevationProfile || hasTelemetryGraphs`).
 3. **Synchronized Time-Domain Scrubbing**:
    - Ensure scrubbing on the continuous Heart Rate graph functions seamlessly when `isTrackless` is true, displaying instantaneous BPM and zone tags in the header row.
 4. **Preserve GPS Workouts**:
@@ -155,20 +184,49 @@ flowchart TD
      ```kotlin
      if (showElevationProfile || hasTelemetryGraphs) {
          activeScrubPath?.let { path ->
-             Surface(...) {
-                 Column(...) {
-                     if (showElevationProfile) {
-                         // Elevation header and ElevationProfile(...)
+             Surface(
+                 color = MaterialTheme.colorScheme.surface,
+                 modifier = Modifier
+                     .fillMaxWidth()
+                     .then(
+                         if (analyticsContent == null) Modifier.navigationBarsPadding() else Modifier
+                     )
+             ) {
+                 Box(modifier = Modifier.drawWithContent {
+                     elevationLayer.record {
+                         this@drawWithContent.drawContent()
                      }
-                     if (showZoomControls) {
-                         // TelemetryMetricGraph for Speed, HR, Power
+                     drawLayer(elevationLayer)
+                 }) {
+                     Column(modifier = Modifier.fillMaxWidth()) {
+                         if (showElevationProfile) {
+                             if (showZoomControls) {
+                                 Text(...)
+                             }
+                             ElevationProfile(...)
+                         }
+                         if (showZoomControls) {
+                             if (TelemetryMetricUtils.hasSpeedData(path)) {
+                                 TelemetryMetricGraph(...)
+                             }
+                             if (TelemetryMetricUtils.hasHeartRateData(path)) {
+                                 TelemetryMetricGraph(
+                                     metricType = TelemetryMetricType.HEART_RATE,
+                                     ...
+                                 )
+                             }
+                             if (TelemetryMetricUtils.hasPowerData(path)) {
+                                 TelemetryMetricGraph(...)
+                             }
+                         }
                      }
                  }
              }
          }
-     }
      ```
    - This ensures that if `showElevationProfile` is false but `hasTelemetryGraphs` is true (the exact trackless HR workout case), the `Surface` and `TelemetryMetricGraph` instances are composed and rendered cleanly.
+2. **Fallback Layout Positioning Invariant**:
+   - When `!showMap && hasScrollableContent`, `GlobalTelemetryZoomToolbar` remains pinned at the top above the scrollable lower column, and the graphs scroll smoothly above `analyticsContent`.
 
 ---
 
