@@ -144,4 +144,28 @@ class TracklessAftermathVisualContractTest {
                     content.contains("path.minByOrNull { abs(it.timeSec - selectedDistance!!) }")
         )
     }
+
+    @Test
+    fun testMapDetailLayout_rendersTelemetryGraphs_evenWhenShowElevationProfileIsFalse() {
+        assertTrue("MapDetailLayout.kt must exist", mapDetailLayoutFile.exists())
+        val content = mapDetailLayoutFile.readText()
+
+        assertTrue(
+            "MapDetailLayout lowerColumn must render chart surface when showElevationProfile || hasTelemetryGraphs",
+            content.contains("if (showElevationProfile || hasTelemetryGraphs) {")
+        )
+
+        assertTrue(
+            "MapDetailLayout must guard ElevationProfile specifically with showElevationProfile",
+            content.contains("if (showElevationProfile) {") &&
+                    content.contains("ElevationProfile(")
+        )
+
+        assertTrue(
+            "MapDetailLayout must allow TelemetryMetricGraph when showZoomControls without requiring showElevationProfile",
+            content.contains("if (showZoomControls) {") &&
+                    content.contains("TelemetryMetricType.HEART_RATE")
+        )
+    }
 }
+
