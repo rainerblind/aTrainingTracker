@@ -72,7 +72,7 @@ class LapDisplayModeSettingsTest {
     @Test
     fun testWorkoutCardSectionPreferences_lapDisplayModeDefaultAndMutation() {
         val defaultPrefs = WorkoutCardSectionPreferences()
-        assertEquals(LapDisplayMode.BOTH, defaultPrefs.lapDisplayMode)
+        assertEquals(LapDisplayMode.VISUALIZER_ONLY, defaultPrefs.lapDisplayMode)
 
         val tableOnly = defaultPrefs.copy(lapDisplayMode = LapDisplayMode.TABLE_ONLY)
         assertEquals(LapDisplayMode.TABLE_ONLY, tableOnly.lapDisplayMode)
@@ -81,7 +81,7 @@ class LapDisplayModeSettingsTest {
         assertEquals(LapDisplayMode.VISUALIZER_ONLY, visualizerOnly.lapDisplayMode)
 
         val resetPrefs = WorkoutCardSectionPreferences()
-        assertEquals(LapDisplayMode.BOTH, resetPrefs.lapDisplayMode)
+        assertEquals(LapDisplayMode.VISUALIZER_ONLY, resetPrefs.lapDisplayMode)
     }
 
     @Test

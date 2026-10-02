@@ -75,8 +75,8 @@ fun AdvancedTuningDialog(
     val persistedConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
 
     val preferenceManager = remember { MyPreferenceManager(context.applicationContext) }
-    val persistedWorkoutCardPrefs by preferenceManager.workoutCardPreferencesFlow.collectAsState(initial = WorkoutCardSectionPreferences())
-    val persistedEditWorkoutPrefs by preferenceManager.editWorkoutFieldPreferencesFlow.collectAsState(initial = EditWorkoutFieldPreferences())
+    val persistedWorkoutCardPrefs by preferenceManager.workoutCardPreferencesFlow.collectAsState(initial = null)
+    val persistedEditWorkoutPrefs by preferenceManager.editWorkoutFieldPreferencesFlow.collectAsState(initial = null)
 
     var profileXAxisDomain by remember { mutableStateOf(TuningPreferencesDefaults.PROFILE_X_AXIS_DOMAIN) }
     var fullDimFactor by remember { mutableFloatStateOf(TuningPreferencesDefaults.FULL_DIM_FACTOR) }
@@ -110,9 +110,11 @@ fun AdvancedTuningDialog(
     }
 
     LaunchedEffect(persistedWorkoutCardPrefs, persistedEditWorkoutPrefs) {
-        if (!isAftermathPrefsInitialized) {
-            workoutCardPrefs = persistedWorkoutCardPrefs
-            editWorkoutPrefs = persistedEditWorkoutPrefs
+        val cardPrefs = persistedWorkoutCardPrefs
+        val editPrefs = persistedEditWorkoutPrefs
+        if (!isAftermathPrefsInitialized && cardPrefs != null && editPrefs != null) {
+            workoutCardPrefs = cardPrefs
+            editWorkoutPrefs = editPrefs
             isAftermathPrefsInitialized = true
         }
     }

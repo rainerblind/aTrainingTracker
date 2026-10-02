@@ -149,4 +149,27 @@ class AdvancedTuningVisualContractTest {
             content.contains("setOf(TuningSection.COCKPIT_TYPOGRAPHY.name)")
         )
     }
+
+    @Test
+    fun testAdvancedTuningDialog_workoutCardPrefsFlowGating() {
+        val dialogFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
+        val content = dialogFile.readText()
+
+        // Verify initial = null flow collection to prevent race condition (REQ-UI-229 / ATT-1958)
+        assertTrue(
+            "workoutCardPreferencesFlow must be collected with initial = null to avoid race condition",
+            content.contains("workoutCardPreferencesFlow.collectAsState(initial = null)")
+        )
+        assertTrue(
+            "editWorkoutFieldPreferencesFlow must be collected with initial = null to avoid race condition",
+            content.contains("editWorkoutFieldPreferencesFlow.collectAsState(initial = null)")
+        )
+
+        // Verify non-null gating before initialization
+        assertTrue(
+            "LaunchedEffect must gate state initialization on non-null preferences",
+            content.contains("cardPrefs != null && editPrefs != null")
+        )
+    }
 }
+
