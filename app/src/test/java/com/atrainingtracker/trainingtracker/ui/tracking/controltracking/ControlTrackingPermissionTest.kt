@@ -23,17 +23,24 @@ import android.content.Intent
 import android.util.Log
 import androidx.arch.core.executor.ArchTaskExecutor
 import androidx.arch.core.executor.TaskExecutor
+import androidx.lifecycle.MutableLiveData
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
+import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.slot
 import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -54,6 +61,9 @@ class ControlTrackingPermissionTest {
     private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var application: Application
     private lateinit var viewModel: ControlTrackingViewModel
+    private lateinit var mockDeviceDataRepository: DeviceDataRepository
+    private lateinit var mockBanalRepo: BANALServiceRepository
+    private lateinit var mockDevicesDb: DevicesDatabaseManager
 
     @Before
     fun setUp() {
@@ -74,6 +84,23 @@ class ControlTrackingPermissionTest {
         every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
         every { anyConstructed<Intent>().action } returns TrainingApplication.REQUEST_START_TRACKING
         every { anyConstructed<Intent>().`package` } returns "com.atrainingtracker"
+
+        mockDeviceDataRepository = mockk(relaxed = true)
+        mockkObject(DeviceDataRepository.Companion)
+        every { DeviceDataRepository.getInstance(any()) } returns mockDeviceDataRepository
+        every { mockDeviceDataRepository.allDevices } returns MutableStateFlow(emptyList())
+
+        mockBanalRepo = mockk(relaxed = true)
+        mockkObject(BANALServiceRepository.Companion)
+        every { BANALServiceRepository.getInstance(any()) } returns mockBanalRepo
+        every { mockBanalRepo.activeRemoteDevicesIds } returns MutableStateFlow(emptyList())
+        every { mockBanalRepo.trackingMode } returns MutableLiveData(TrackingMode.IDLE)
+        every { mockBanalRepo.activeSensors } returns MutableStateFlow(emptySet())
+        every { mockBanalRepo.bSportType } returns MutableStateFlow(BSportType.RUN)
+
+        mockDevicesDb = mockk(relaxed = true)
+        mockkStatic(DevicesDatabaseManager::class)
+        every { DevicesDatabaseManager.getInstance(any()) } returns mockDevicesDb
 
         application = mockk(relaxed = true)
         every { application.packageName } returns "com.atrainingtracker"
