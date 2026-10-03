@@ -1431,6 +1431,8 @@
     <string name="tuning_profile_x_axis_time">Zeit</string>
     <string name="tuning_telemetry_x_axis_title">Telemetriegraphen X-Achse</string>
     <string name="tuning_telemetry_x_axis_desc">Horizontale Achsendomäne für Telemetriegraphen (Herzfrequenz, Tempo/Geschwindigkeit, Leistung) wählen.</string>
+    <string name="tuning_pace_ceiling_title">Schnellste Tempo-Grenze</string>
+    <string name="tuning_pace_ceiling_desc">Filtert GPS-Ausreißer im Tempo-Diagramm. Werte schneller als diese Grenze werden abgeschnitten.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">Cockpit-Typografie</string>
@@ -1457,8 +1459,12 @@
     <string name="reset_to_defaults">Auf Werkseinstellungen zurücksetzen</string>
     <string name="reset_to_defaults_success">Abstimmungseinstellungen auf Werkseinstellungen zurückgesetzt.</string>
     <string name="tuning_cat_sensors_gps">Sensoren, GPS &amp; Filter</string>
-    <string name="tuning_cat_workout_masks_cards">Workout-Karten &amp; Eingabemasken</string>
-    <string name="tuning_summary_masks_cards_format">%1$d/8 Karten, %2$d/6 Felder</string>
+    <string name="tuning_cat_workout_masks_cards">Trainingsliste &amp; Details</string>
+    <string name="tuning_summary_masks_cards_format">%1$d/8 Karten</string>
+    <string name="tuning_matrix_col_list">In Liste</string>
+    <string name="tuning_matrix_col_details">In Details</string>
+    <string name="tuning_matrix_feature">Bereich</string>
+    <string name="tuning_summary_matrix_format">%1$d/8 Liste, %2$d/8 Details</string>
     <string name="map_splitter_content_description">Teiler für Karte und Telemetrie. Vertikal ziehen zum Anpassen der Größe, doppelt tippen zum Zurücksetzen.</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->

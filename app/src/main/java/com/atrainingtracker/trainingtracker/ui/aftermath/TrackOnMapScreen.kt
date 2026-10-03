@@ -42,6 +42,12 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitCalculat
 import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitVisualizerCard
 import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
 import com.atrainingtracker.trainingtracker.ui.map.*
+import androidx.compose.ui.platform.LocalContext
+import com.atrainingtracker.trainingtracker.MyPreferenceManager
+import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
+import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.WorkoutDescription
+import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
+import com.atrainingtracker.trainingtracker.ui.components.strava.StravaActivitySection
 
 @Composable
 fun TrackOnMapScreen(
@@ -63,8 +69,14 @@ fun TrackOnMapScreen(
     hrZoneDistribution: ZoneDistributionData? = null,
     powerZoneDistribution: ZoneDistributionData? = null,
     analyticsContent: (@Composable ColumnScope.() -> Unit)? = null,
-    telemetryPath: List<PathPoint> = emptyList()
+    telemetryPath: List<PathPoint> = emptyList(),
+    detailPreferences: WorkoutDetailPreferences? = null
 ) {
+    val context = LocalContext.current
+    val preferenceManager = remember { MyPreferenceManager(context.applicationContext) }
+    val persistedDetailPrefs by preferenceManager.workoutDetailPreferencesFlow.collectAsState(initial = WorkoutDetailPreferences())
+    val activeDetailPrefs = detailPreferences ?: persistedDetailPrefs
+
     // PERFORMANCE: Memoize the filtered tracks list
     val filteredTracks = remember(tracks, enabledTrackTypes) {
         tracks.filter { it.type in enabledTrackTypes }
@@ -129,8 +141,9 @@ fun TrackOnMapScreen(
         minAltitudeOverride = workoutData.minAltitude,
         maxAltitudeOverride = workoutData.maxAltitude,
         useStatusBarsPadding = useStatusBarsPadding,
-        showMap = showMap && hasGpsTrack,
-        showElevationProfile = hasGpsTrack && (workoutData.minAltitude != null || (activeScrubPath?.any { it.altitude != 0.0 } == true)),
+        showMap = showMap && hasGpsTrack && activeDetailPrefs.showMap,
+        showElevationProfile = hasGpsTrack && activeDetailPrefs.showElevationProfile && (workoutData.minAltitude != null || (activeScrubPath?.any { it.altitude != 0.0 } == true)),
+        showTelemetryCharts = activeDetailPrefs.showTelemetryCharts,
         header = {
             WorkoutHeader(
                 modifier = Modifier.fillMaxWidth(),
@@ -245,29 +258,57 @@ fun TrackOnMapScreen(
             if (analyticsContent != null) {
                 analyticsContent()
             } else {
-                hrZoneDistribution?.let { distribution ->
-                    HeartRateZoneDistributionCard(
-                        distribution = distribution,
+                if (activeDetailPrefs.showZoneAnalysis) {
+                    hrZoneDistribution?.let { distribution ->
+                        HeartRateZoneDistributionCard(
+                            distribution = distribution,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
+                    powerZoneDistribution?.let { distribution ->
+                        PowerZoneDistributionCard(
+                            distribution = distribution,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+                if (activeDetailPrefs.showLaps) {
+                    splitChartData?.let { splits ->
+                        LapSplitVisualizerCard(
+                            splitData = splits,
+                            selectedLapNr = selectedLapNr,
+                            onLapClick = { tappedLapNr ->
+                                selectedLapNr = if (selectedLapNr == tappedLapNr) null else tappedLapNr
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+                if (activeDetailPrefs.showDescription) {
+                    WorkoutDescription(
+                        data = workoutData.descriptionData,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                 }
-                powerZoneDistribution?.let { distribution ->
-                    PowerZoneDistributionCard(
-                        distribution = distribution,
+                if (activeDetailPrefs.showExtrema && workoutData.extremaData.dataRows.isNotEmpty()) {
+                    WorkoutExtrema(
+                        data = workoutData.extremaData,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                 }
-                splitChartData?.let { splits ->
-                    LapSplitVisualizerCard(
-                        splitData = splits,
-                        selectedLapNr = selectedLapNr,
-                        onLapClick = { tappedLapNr ->
-                            selectedLapNr = if (selectedLapNr == tappedLapNr) null else tappedLapNr
-                        },
+                if (activeDetailPrefs.showStrava && !workoutData.stravaActivityData.isNullOrBlank()) {
+                    StravaActivitySection(
+                        rawActivityJson = workoutData.stravaActivityData,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)

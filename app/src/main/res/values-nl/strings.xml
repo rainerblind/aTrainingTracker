@@ -1344,6 +1344,8 @@
     <string name="tuning_profile_x_axis_time">Tijd</string>
     <string name="tuning_telemetry_x_axis_title">Telemetriegrafieken X-as</string>
     <string name="tuning_telemetry_x_axis_desc">Selecteer het horizontale asdomein voor telemetriegrafieken (hartslag, tempo/snelheid, vermogen).</string>
+    <string name="tuning_pace_ceiling_title">Maximale tempogrens</string>
+    <string name="tuning_pace_ceiling_desc">Filtert GPS-uitschieters in de tempografiek. Waarden sneller dan deze grens worden afgekapt.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">Cockpit-typografie</string>
@@ -1370,8 +1372,12 @@
     <string name="reset_to_defaults">Fabrieksinstellingen herstellen</string>
     <string name="reset_to_defaults_success">Afstemmingsinstellingen hersteld naar fabrieksinstellingen.</string>
     <string name="tuning_cat_sensors_gps">Sensoren, gps en filtering</string>
-    <string name="tuning_cat_workout_masks_cards">Workout-kaarten en invoervelden</string>
-    <string name="tuning_summary_masks_cards_format">%1$d/8 kaarten, %2$d/6 velden</string>
+    <string name="tuning_cat_workout_masks_cards">Workout-kaarten en details</string>
+    <string name="tuning_summary_masks_cards_format">%1$d/8 kaarten</string>
+    <string name="tuning_matrix_col_list">In lijst</string>
+    <string name="tuning_matrix_col_details">In details</string>
+    <string name="tuning_matrix_feature">Onderdeel</string>
+    <string name="tuning_summary_matrix_format">%1$d/8 in lijst, %2$d/8 in details</string>
     <string name="map_splitter_content_description">Verdeellijn voor kaart en telemetrie. Sleep verticaal om het formaat te wijzigen, dubbeltik om te herstellen.</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->

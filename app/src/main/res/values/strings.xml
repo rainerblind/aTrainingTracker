@@ -1536,6 +1536,8 @@
     <string name="tuning_profile_x_axis_time">Time</string>
     <string name="tuning_telemetry_x_axis_title">Telemetry Graphs X-Axis</string>
     <string name="tuning_telemetry_x_axis_desc">Select horizontal axis domain for telemetry graphs (Heart Rate, Speed/Pace, Power).</string>
+    <string name="tuning_pace_ceiling_title">Minimum Pace Ceiling</string>
+    <string name="tuning_pace_ceiling_desc">Filters GPS noise spikes in the pace chart. Speeds faster than this ceiling are clamped.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">Cockpit Typography</string>
@@ -1562,8 +1564,12 @@
     <string name="reset_to_defaults">Reset to Defaults</string>
     <string name="reset_to_defaults_success">Tuning preferences restored to factory defaults.</string>
     <string name="tuning_cat_sensors_gps">Sensors, GPS &amp; Filtering</string>
-    <string name="tuning_cat_workout_masks_cards">Workout Cards &amp; Field Masks</string>
-    <string name="tuning_summary_masks_cards_format">%1$d/8 Cards, %2$d/6 Fields</string>
+    <string name="tuning_cat_workout_masks_cards">Workout Cards &amp; Details</string>
+    <string name="tuning_summary_masks_cards_format">%1$d/8 Cards</string>
+    <string name="tuning_matrix_col_list">In List</string>
+    <string name="tuning_matrix_col_details">In Details</string>
+    <string name="tuning_matrix_feature">Feature</string>
+    <string name="tuning_summary_matrix_format">%1$d/8 List, %2$d/8 Details</string>
     <string name="map_splitter_content_description">Map and telemetry splitter bar. Drag vertically to resize, double-tap to reset.</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->

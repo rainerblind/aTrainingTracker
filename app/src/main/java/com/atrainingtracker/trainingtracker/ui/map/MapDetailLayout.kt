@@ -47,6 +47,9 @@ import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import com.atrainingtracker.trainingtracker.ui.components.core.GlobalTelemetryZoomToolbar
@@ -85,6 +88,7 @@ fun MapDetailLayout(
     showMap: Boolean = true,
     showElevationProfile: Boolean = true,
     showZoomControls: Boolean = true,
+    showTelemetryCharts: Boolean = true,
     onMapClick: ((LatLng) -> Unit)? = null,
     analyticsContent: (@Composable ColumnScope.() -> Unit)? = null,
     onHeaderHeightMeasured: ((Dp) -> Unit)? = null
@@ -117,12 +121,100 @@ fun MapDetailLayout(
     val totalSpan = if (isElevationTimeDomain || isTrackless) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
 
     val hasZoomToolbar = showZoomControls && activeScrubPath != null && activeScrubPath.isNotEmpty()
-    val hasTelemetryGraphs = showZoomControls && activeScrubPath != null && (
+    val hasTelemetryGraphs = showZoomControls && showTelemetryCharts && activeScrubPath != null && (
         TelemetryMetricUtils.hasHeartRateData(activeScrubPath) ||
         TelemetryMetricUtils.hasSpeedData(activeScrubPath) ||
         TelemetryMetricUtils.hasPowerData(activeScrubPath)
     )
     val hasScrollableContent = analyticsContent != null || hasTelemetryGraphs
+
+    val unit = remember { TrainingApplication.getUnit() }
+
+    val hrThresholds = remember(bSportType, context) {
+        runCatching {
+            val zoneType = if (bSportType == BSportType.BIKE) {
+                com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType.HR_BIKE
+            } else {
+                com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType.HR_RUN
+            }
+            val z1 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
+            val z2 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
+            val z3 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
+            val z4 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+            if (z1 > 0 && z2 > 0 && z3 > 0 && z4 > 0) {
+                HeartRateZoneThresholds(z1, z2, z3, z4)
+            } else null
+        }.getOrNull()
+    }
+
+    val powerThresholds = remember(context) {
+        runCatching {
+            val zoneType = com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType.PWR_BIKE
+            val z1 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
+            val z2 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
+            val z3 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
+            val z4 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+            if (z1 > 0 && z2 > 0 && z3 > 0 && z4 > 0) {
+                PowerZoneThresholds(z1, z2, z3, z4)
+            } else null
+        }.getOrNull()
+    }
+
+    val activeScrubPoint = remember(selectedDistance, activeScrubPath, isTrackless) {
+        if (selectedDistance != null && !activeScrubPath.isNullOrEmpty()) {
+            if (isTrackless) {
+                activeScrubPath.minByOrNull { abs(it.timeSec - selectedDistance!!) }
+            } else {
+                val activeIndex = activeScrubPath.indexOfLast { it.distance <= selectedDistance!! }.coerceAtLeast(0)
+                activeScrubPath.getOrNull(activeIndex) ?: activeScrubPath.firstOrNull()
+            }
+        } else null
+    }
+
+    val activeScrubAltitude = remember(selectedDistance, activeScrubPath, isTrackless, activeScrubPoint) {
+        if (selectedDistance != null && !activeScrubPath.isNullOrEmpty() && activeScrubPoint != null) {
+            if (isTrackless) {
+                val activeIndex = activeScrubPath.indexOf(activeScrubPoint).coerceAtLeast(0)
+                val pLeft = activeScrubPath[activeIndex]
+                val pRight = activeScrubPath.getOrNull(activeIndex + 1)
+                if (pRight != null && pRight.timeSec > pLeft.timeSec) {
+                    val factor = ((selectedDistance!! - pLeft.timeSec) / (pRight.timeSec - pLeft.timeSec).toDouble()).coerceIn(0.0, 1.0)
+                    pLeft.altitude + factor * (pRight.altitude - pLeft.altitude)
+                } else {
+                    pLeft.altitude
+                }
+            } else {
+                val activeIndex = activeScrubPath.indexOfLast { it.distance <= selectedDistance!! }.coerceAtLeast(0)
+                val pLeft = activeScrubPath[activeIndex]
+                val pRight = activeScrubPath.getOrNull(activeIndex + 1)
+                if (pRight != null && pRight.distance > pLeft.distance) {
+                    val factor = ((selectedDistance!! - pLeft.distance) / (pRight.distance - pLeft.distance)).coerceIn(0.0, 1.0)
+                    pLeft.altitude + factor * (pRight.altitude - pLeft.altitude)
+                } else {
+                    pLeft.altitude
+                }
+            }
+        } else 0.0
+    }
+
+    val scrubbingOverlay: @Composable BoxScope.() -> Unit = {
+        if (showZoomControls && selectedDistance != null && activeScrubPoint != null) {
+            ScrubbingTelemetryBadge(
+                point = activeScrubPoint,
+                bSportType = bSportType,
+                altitude = activeScrubAltitude,
+                unit = unit,
+                xAxisDomain = if (isTrackless) ProfileXAxisDomain.TIME
+                              else if (showElevationProfile) tuningConfig.elevationXAxisDomain
+                              else tuningConfig.telemetryXAxisDomain,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 4.dp),
+                hrZoneThresholds = hrThresholds,
+                powerZoneThresholds = powerThresholds
+            )
+        }
+    }
 
     val mapBox: @Composable (Modifier) -> Unit = { boxModifier ->
         Box(modifier = boxModifier) {
@@ -203,7 +295,7 @@ fun MapDetailLayout(
 
     val lowerColumn: @Composable (Modifier) -> Unit = { colModifier ->
         Column(modifier = colModifier) {
-            if (showElevationProfile) {
+            if (showElevationProfile || hasTelemetryGraphs) {
                 activeScrubPath?.let { path ->
                     Surface(
                         color = MaterialTheme.colorScheme.surface,
@@ -220,36 +312,39 @@ fun MapDetailLayout(
                             drawLayer(elevationLayer)
                         }) {
                             Column(modifier = Modifier.fillMaxWidth()) {
-                                if (showZoomControls) {
-                                    Text(
-                                        text = stringResource(R.string.graph_heading_elevation),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
+                                if (showElevationProfile) {
+                                    if (showZoomControls) {
+                                        Text(
+                                            text = stringResource(R.string.graph_heading_elevation),
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
+                                        )
+                                    }
+                                    ElevationProfile(
+                                        pathPoints = path,
+                                        currentDistance = selectedDistance,
+                                        minAltitudeOverride = minAltitudeOverride,
+                                        maxAltitudeOverride = maxAltitudeOverride,
+                                        onDistanceSelected = { selectedDistance = it },
+                                        showZoomControls = showZoomControls,
+                                        xAxisDomain = tuningConfig.elevationXAxisDomain,
+                                        bSportType = bSportType,
+                                        zoomScale = profileZoomScale,
+                                        startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, elevationTotalSpan, profileZoomScale),
+                                        onZoomChanged = { z, s ->
+                                            profileZoomScale = z
+                                            viewportStartFraction = MapDetailViewportMath.domainToFraction(s, elevationTotalSpan, z)
+                                        },
+                                        isPanMode = isPanMode,
+                                        showScrubbingBadge = false,
+                                        modifier = Modifier.fillMaxWidth()
                                     )
                                 }
-                                ElevationProfile(
-                                    pathPoints = path,
-                                    currentDistance = selectedDistance,
-                                    minAltitudeOverride = minAltitudeOverride,
-                                    maxAltitudeOverride = maxAltitudeOverride,
-                                    onDistanceSelected = { selectedDistance = it },
-                                    showZoomControls = showZoomControls,
-                                    xAxisDomain = tuningConfig.elevationXAxisDomain,
-                                    bSportType = bSportType,
-                                    zoomScale = profileZoomScale,
-                                    startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, elevationTotalSpan, profileZoomScale),
-                                    onZoomChanged = { z, s ->
-                                        profileZoomScale = z
-                                        viewportStartFraction = MapDetailViewportMath.domainToFraction(s, elevationTotalSpan, z)
-                                    },
-                                    isPanMode = isPanMode,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
 
                                 // Telemetry Metric Graphs in detailed inspection view
-                                if (showZoomControls) {
+                                if (showZoomControls && showTelemetryCharts) {
                                     // Speed / Pace Graph
                                     if (TelemetryMetricUtils.hasSpeedData(path)) {
                                         Spacer(modifier = Modifier.height(8.dp))
@@ -275,6 +370,7 @@ fun MapDetailLayout(
                                                 profileZoomScale = z
                                                 viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
                                             },
+                                            paceCeilingMinKm = tuningConfig.paceCeilingMinKm,
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     }
@@ -291,20 +387,6 @@ fun MapDetailLayout(
                                         } else null
                                         val activeHr = activeHrPoint?.hr
                                         val hrHeaderText = if (activeHr != null) {
-                                            val hrThresholds = runCatching {
-                                                val zoneType = if (bSportType == BSportType.BIKE) {
-                                                    com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType.HR_BIKE
-                                                } else {
-                                                    com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType.HR_RUN
-                                                }
-                                                val z1 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
-                                                val z2 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
-                                                val z3 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
-                                                val z4 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
-                                                if (z1 > 0 && z2 > 0 && z3 > 0 && z4 > 0) {
-                                                    com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds(z1, z2, z3, z4)
-                                                } else null
-                                            }.getOrNull()
                                             val zoneTag = if (hrThresholds != null) {
                                                 val zoneIdx = TelemetryZoneMath.determineHeartRateZone(activeHr.toDouble(), hrThresholds)
                                                 " • Z$zoneIdx"
@@ -350,16 +432,6 @@ fun MapDetailLayout(
                                         } else null
                                         val activePower = activePowerPoint?.power
                                         val powerHeaderText = if (activePower != null) {
-                                            val powerThresholds = runCatching {
-                                                val zoneType = com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType.PWR_BIKE
-                                                val z1 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
-                                                val z2 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
-                                                val z3 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
-                                                val z4 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
-                                                if (z1 > 0 && z2 > 0 && z3 > 0 && z4 > 0) {
-                                                    com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds(z1, z2, z3, z4)
-                                                } else null
-                                            }.getOrNull()
                                             val zoneTag = if (powerThresholds != null) {
                                                 val zoneIdx = TelemetryZoneMath.determinePowerZone(activePower.toDouble(), powerThresholds)
                                                 " • Z$zoneIdx"
@@ -523,12 +595,18 @@ fun MapDetailLayout(
                         )
                     }
 
-                    lowerColumn(
-                        Modifier
+                    Box(
+                        modifier = Modifier
                             .weight(1f - splitFraction)
                             .fillMaxWidth()
-                            .verticalScroll(rememberScrollState())
-                    )
+                    ) {
+                        lowerColumn(
+                            Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                        )
+                        scrubbingOverlay()
+                    }
                 }
             }
         } else {
@@ -556,18 +634,33 @@ fun MapDetailLayout(
                 )
             }
 
-            val columnModifier = if (!showMap && hasScrollableContent) {
-                Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
+            if (!showMap && hasScrollableContent) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) {
+                    lowerColumn(
+                        Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                    )
+                    scrubbingOverlay()
+                }
             } else {
-                Modifier
-                    .fillMaxWidth()
-                    .wrapContentHeight()
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight()
+                ) {
+                    lowerColumn(
+                        Modifier
+                            .fillMaxWidth()
+                            .wrapContentHeight()
+                    )
+                    scrubbingOverlay()
+                }
             }
-
-            lowerColumn(columnModifier)
         }
     }
 }

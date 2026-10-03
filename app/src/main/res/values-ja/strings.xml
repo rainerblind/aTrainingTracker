@@ -1328,6 +1328,8 @@
     <string name="tuning_profile_x_axis_time">時間</string>
     <string name="tuning_telemetry_x_axis_title">テレメトリグラフX軸</string>
     <string name="tuning_telemetry_x_axis_desc">テレメトリグラフ（心拍数、ペース/速度、パワー）の水平軸ドメインを選択します。</string>
+    <string name="tuning_pace_ceiling_title">ペース上限（最速値）</string>
+    <string name="tuning_pace_ceiling_desc">ペースグラフのGPS異常値を抑制します。この上限を超える速度はクランプされます。</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">コックピットのフォント</string>
@@ -1354,8 +1356,12 @@
     <string name="reset_to_defaults">デフォルトに戻す</string>
     <string name="reset_to_defaults_success">チューニング設定が工場出荷時のデフォルトに戻りました。</string>
     <string name="tuning_cat_sensors_gps">センサー、GPS、フィルター</string>
-    <string name="tuning_cat_workout_masks_cards">ワークアウトカードと入力項目</string>
-    <string name="tuning_summary_masks_cards_format">%1$d/8 カード、%2$d/6 項目</string>
+    <string name="tuning_cat_workout_masks_cards">ワークアウトカードと詳細</string>
+    <string name="tuning_summary_masks_cards_format">%1$d/8 カード</string>
+    <string name="tuning_matrix_col_list">一覧</string>
+    <string name="tuning_matrix_col_details">詳細</string>
+    <string name="tuning_matrix_feature">項目</string>
+    <string name="tuning_summary_matrix_format">%1$d/8 一覧, %2$d/8 詳細</string>
     <string name="map_splitter_content_description">マップとテレメトリの分割バー。上下にドラッグしてサイズ変更、ダブルタップでリセット。</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
