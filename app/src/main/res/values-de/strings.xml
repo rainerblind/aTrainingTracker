@@ -776,6 +776,23 @@
         <item quantity="other">❌ Die %1$s Dateien konnten nicht zur Dropbox hochgeladen werden.</item>  <!-- Uploading the TCX and CSV files to Dropbox failed. -->
     </plurals>
 
+<plurals name="export_notification__detail__GoogleDrive_waiting">
+        <item quantity="one">⏳ Warten auf Hochladen der %1$s-Datei zu Google Drive.</item>
+        <item quantity="other">⏳ Warten auf Hochladen der %1$s-Dateien zu Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_ongoing">
+        <item quantity="one">📤 Lädt die %1$s-Datei zu Google Drive hoch.</item>
+        <item quantity="other">📤 Lädt die %1$s-Dateien zu Google Drive hoch.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_success">
+        <item quantity="one">✅ Die %1$s-Datei wurde erfolgreich zu Google Drive hochgeladen.</item>
+        <item quantity="other">✅ Die %1$s-Dateien wurden erfolgreich zu Google Drive hochgeladen.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_failed">
+        <item quantity="one">❌ Hochladen der %1$s-Datei zu Google Drive fehlgeschlagen.</item>
+        <item quantity="other">❌ Hochladen der %1$s-Dateien zu Google Drive fehlgeschlagen.</item>
+    </plurals>
+
     <!-- writing to Community failed
         (0: #fails for quantity)
         1: string representing the failed file formats-->
@@ -1561,4 +1578,20 @@
     <string name="route_filter_length">Länge</string>
     <string name="route_empty_title">Keine Routen vorhanden</string>
     <string name="route_empty_desc">Importiere GPX-Dateien oder synchronisiere mit Strava.</string>
+    <string name="google_drive">Google Drive</string>
+    <string name="google_drive_connect">Mit Google Drive verbinden</string>
+    <string name="google_drive_disconnect">Von Google Drive trennen</string>
+    <string name="google_drive_connected_status">Du bist mit Google Drive verbunden</string>
+    <string name="google_drive_disconnected_status">Nicht mit Google Drive verbunden</string>
+    <string name="google_drive_account_email_label">Konto: %1$s</string>
+    <string name="upload_workouts_to_google_drive">Workouts automatisch exportieren</string>
+    <string name="upload_workouts_to_google_drive_summary">Lädt Aktivitäten (FIT, TCX, GPX, CSV) nach dem Speichern in Google Drive hoch</string>
+    <string name="upload_backup_to_google_drive">Datenbank-Backup automatisch synchronisieren</string>
+    <string name="upload_backup_to_google_drive_summary">Sichert die Datenbank regelmäßig in Google Drive</string>
+    <string name="google_drive_only_wifi">Nur über WLAN hochladen</string>
+    <string name="google_drive_only_wifi_summary">Schont das mobile Datenvolumen</string>
+    <string name="google_drive_last_sync">Letzter Upload: %1$s</string>
+    <string name="google_drive_never_synced">Bisher keine Synchronisierung</string>
+    <string name="restore_from_google_drive">Aus Google Drive wiederherstellen</string>
+    <string name="upload_to_google_drive">In Google Drive sichern</string>
 </resources>

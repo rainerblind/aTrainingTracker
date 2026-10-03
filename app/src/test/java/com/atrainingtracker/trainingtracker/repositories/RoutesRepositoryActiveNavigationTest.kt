@@ -24,6 +24,8 @@ import com.atrainingtracker.trainingtracker.database.RoutesDatabaseManager
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.unmockkAll
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
@@ -72,5 +74,11 @@ class RoutesRepositoryActiveNavigationTest {
 
         repository.setActiveNavigatedRoute(null)
         assertNull(repository.activeNavigatedRouteId.value)
+    }
+
+    @After
+    fun tearDown() {
+        repository.cancelScope()
+        unmockkAll()
     }
 }

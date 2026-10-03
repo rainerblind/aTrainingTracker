@@ -41,33 +41,18 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class WorkoutNavigationEventsTest {
 
-    companion object {
-        private val testDispatcher = StandardTestDispatcher()
-
-        @BeforeClass
-        @JvmStatic
-        fun beforeClass() {
-            Dispatchers.setMain(testDispatcher)
-            ArchTaskExecutor.getInstance().setDelegate(object : TaskExecutor() {
-                override fun executeOnDiskIO(runnable: Runnable) = runnable.run()
-                override fun postToMainThread(runnable: Runnable) = runnable.run()
-                override fun isMainThread(): Boolean = true
-            })
-        }
-
-        @AfterClass
-        @JvmStatic
-        fun afterClass() {
-            ArchTaskExecutor.getInstance().setDelegate(null)
-            Dispatchers.resetMain()
-        }
-    }
+    private val testDispatcher = StandardTestDispatcher()
 
     @Before
     fun setUp() {
+        Dispatchers.setMain(testDispatcher)
+        ArchTaskExecutor.getInstance().setDelegate(object : TaskExecutor() {
+            override fun executeOnDiskIO(runnable: Runnable) = runnable.run()
+            override fun postToMainThread(runnable: Runnable) = runnable.run()
+            override fun isMainThread(): Boolean = true
+        })
         WorkoutNavigationEvents.reset()
         WorkoutNavigationEvents.resetCluster()
-        testDispatcher.scheduler.advanceUntilIdle()
     }
 
     @After
@@ -75,6 +60,8 @@ class WorkoutNavigationEventsTest {
         WorkoutNavigationEvents.reset()
         WorkoutNavigationEvents.resetCluster()
         testDispatcher.scheduler.advanceUntilIdle()
+        ArchTaskExecutor.getInstance().setDelegate(null)
+        Dispatchers.resetMain()
     }
 
     @Test
@@ -92,6 +79,8 @@ class WorkoutNavigationEventsTest {
             assertEquals(42L, liveDataValue)
         } finally {
             WorkoutNavigationEvents.navigateToClusterLiveData.removeObserver(observer)
+            testScheduler.advanceTimeBy(6000)
+            testScheduler.runCurrent()
         }
     }
 
@@ -112,6 +101,8 @@ class WorkoutNavigationEventsTest {
             assertNull(WorkoutNavigationEvents.navigateToClusterLiveData.value)
         } finally {
             WorkoutNavigationEvents.navigateToClusterLiveData.removeObserver(observer)
+            testScheduler.advanceTimeBy(6000)
+            testScheduler.runCurrent()
         }
     }
 

@@ -745,7 +745,7 @@ class WorkoutRepository private constructor(private val application: Application
 
 
     val exportStatusDataProvider = ExportStatusDataProvider(application)
-    val orderedExportTypes = listOf(ExportType.FILE, ExportType.DROPBOX, ExportType.COMMUNITY)
+    val orderedExportTypes = listOf(ExportType.FILE, ExportType.DROPBOX, ExportType.GOOGLE_DRIVE, ExportType.COMMUNITY)
 
     private var isListLoading = false
 

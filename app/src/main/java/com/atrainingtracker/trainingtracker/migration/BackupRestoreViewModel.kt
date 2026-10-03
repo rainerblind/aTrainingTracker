@@ -233,6 +233,62 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
+    fun uploadToGoogleDrive(context: Context) {
+        viewModelScope.launch {
+            val token = TrainingApplication.getGoogleDriveAuthToken()
+            if (token.isNullOrBlank() || !TrainingApplication.uploadToGoogleDrive()) {
+                _uiState.value = UiState.Error(context.getString(R.string.google_drive_disconnected_status))
+                return@launch
+            }
+            _uiState.value = UiState.Loading("Creating backup...")
+            val backupFile = withContext(Dispatchers.IO) { 
+                BackupManager.createBackup(context, object : BackupManager.ProgressListener {
+                    override fun onProgress(message: String) {
+                        _uiState.value = UiState.Loading(message)
+                    }
+                }) 
+            }
+            if (backupFile != null) {
+                _uiState.value = UiState.Loading("Uploading to Google Drive...")
+                val success = GoogleDriveBackupManager.uploadBackup(context, backupFile)
+                if (success) {
+                    _uiState.value = UiState.Success("Backup uploaded to Google Drive")
+                } else {
+                    _uiState.value = UiState.Error("Google Drive upload failed")
+                }
+            } else {
+                _uiState.value = UiState.Error("Failed to create backup")
+            }
+        }
+    }
+
+    fun restoreFromGoogleDrive(context: Context) {
+        viewModelScope.launch {
+            val token = TrainingApplication.getGoogleDriveAuthToken()
+            if (token.isNullOrBlank() || !TrainingApplication.uploadToGoogleDrive()) {
+                _uiState.value = UiState.Error(context.getString(R.string.google_drive_disconnected_status))
+                return@launch
+            }
+            _uiState.value = UiState.Loading("Downloading from Google Drive...")
+            val tempFile = File(context.cacheDir, "google_drive_restore.attbackup")
+            val downloadSuccess = GoogleDriveBackupManager.downloadBackup(context, tempFile)
+            if (downloadSuccess) {
+                val success = withContext(Dispatchers.IO) { 
+                    MigrationEngine.performFullRestore(context, tempFile, object : MigrationEngine.ProgressListener {
+                        override fun onProgress(message: String) {
+                            _uiState.value = UiState.Loading(message)
+                        }
+                    }) 
+                }
+                if (!success) {
+                    _uiState.value = UiState.Error("Restore failed")
+                }
+            } else {
+                _uiState.value = UiState.Error("Failed to download from Google Drive")
+            }
+        }
+    }
+
     fun performFullRestore(context: Context, uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = UiState.Loading("Processing backup file...")

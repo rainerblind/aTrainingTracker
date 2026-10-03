@@ -128,6 +128,12 @@ class ExportStatusDataProvider(private val context: Context) {
                 R.plurals.export_notification__detail__Dropbox_success,
                 R.plurals.export_notification__detail__Dropbox_failed
             )
+            ExportType.GOOGLE_DRIVE -> PluralIds(
+                R.plurals.export_notification__detail__GoogleDrive_waiting,
+                R.plurals.export_notification__detail__GoogleDrive_ongoing,
+                R.plurals.export_notification__detail__GoogleDrive_success,
+                R.plurals.export_notification__detail__GoogleDrive_failed
+            )
             ExportType.COMMUNITY -> PluralIds(
                 R.plurals.export_notification__detail__Community_waiting,
                 R.plurals.export_notification__detail__Community_ongoing,
