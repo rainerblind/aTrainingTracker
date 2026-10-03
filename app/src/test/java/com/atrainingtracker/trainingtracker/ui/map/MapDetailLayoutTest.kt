@@ -66,8 +66,8 @@ class MapDetailLayoutTest {
         )
 
         assertTrue(
-            "MapDetailLayout must compute hasScrollableContent checking analyticsContent and telemetry graphs",
-            content.contains("val hasScrollableContent = analyticsContent != null || hasTelemetryGraphs")
+            "MapDetailLayout must compute hasScrollableContent checking metadataContent, analyticsContent and telemetry graphs (REQ-UI-245)",
+            content.contains("val hasScrollableContent = metadataContent != null || analyticsContent != null || hasTelemetryGraphs")
         )
     }
 

@@ -91,6 +91,7 @@ fun MapDetailLayout(
     showTelemetryCharts: Boolean = true,
     onMapClick: ((LatLng) -> Unit)? = null,
     analyticsContent: (@Composable ColumnScope.() -> Unit)? = null,
+    metadataContent: (@Composable ColumnScope.() -> Unit)? = null,
     onHeaderHeightMeasured: ((Dp) -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -126,7 +127,7 @@ fun MapDetailLayout(
         TelemetryMetricUtils.hasSpeedData(activeScrubPath) ||
         TelemetryMetricUtils.hasPowerData(activeScrubPath)
     )
-    val hasScrollableContent = analyticsContent != null || hasTelemetryGraphs
+    val hasScrollableContent = metadataContent != null || analyticsContent != null || hasTelemetryGraphs
 
     val unit = remember { TrainingApplication.getUnit() }
 
@@ -295,6 +296,18 @@ fun MapDetailLayout(
 
     val lowerColumn: @Composable (Modifier) -> Unit = { colModifier ->
         Column(modifier = colModifier) {
+            // 0. UPPER METADATA SLOT (REQ-UI-245 / ATT-2112)
+            metadataContent?.let { mContent ->
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        mContent()
+                    }
+                }
+            }
+
             if (showElevationProfile || hasTelemetryGraphs) {
                 activeScrubPath?.let { path ->
                     Surface(

@@ -69,6 +69,7 @@ fun TrackOnMapScreen(
     hrZoneDistribution: ZoneDistributionData? = null,
     powerZoneDistribution: ZoneDistributionData? = null,
     analyticsContent: (@Composable ColumnScope.() -> Unit)? = null,
+    metadataContent: (@Composable ColumnScope.() -> Unit)? = null,
     telemetryPath: List<PathPoint> = emptyList(),
     detailPreferences: WorkoutDetailPreferences? = null
 ) {
@@ -254,6 +255,28 @@ fun TrackOnMapScreen(
                 }
             }
         },
+        metadataContent = {
+            if (metadataContent != null) {
+                metadataContent()
+            } else {
+                if (activeDetailPrefs.showDescription) {
+                    WorkoutDescription(
+                        data = workoutData.descriptionData,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
+                if (activeDetailPrefs.showExtrema && workoutData.extremaData.dataRows.isNotEmpty()) {
+                    WorkoutExtrema(
+                        data = workoutData.extremaData,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        },
         analyticsContent = {
             if (analyticsContent != null) {
                 analyticsContent()
@@ -289,22 +312,6 @@ fun TrackOnMapScreen(
                                 .padding(horizontal = 16.dp, vertical = 4.dp)
                         )
                     }
-                }
-                if (activeDetailPrefs.showDescription) {
-                    WorkoutDescription(
-                        data = workoutData.descriptionData,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
-                }
-                if (activeDetailPrefs.showExtrema && workoutData.extremaData.dataRows.isNotEmpty()) {
-                    WorkoutExtrema(
-                        data = workoutData.extremaData,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
                 }
                 if (activeDetailPrefs.showStrava && !workoutData.stravaActivityData.isNullOrBlank()) {
                     StravaActivitySection(
