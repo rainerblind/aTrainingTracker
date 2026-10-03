@@ -11,6 +11,9 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
 package com.atrainingtracker.trainingtracker.database
@@ -28,12 +31,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.lang.reflect.Method
 
 /**
- * Unit tests verifying WorkoutSummariesDatabaseManager Schema V23 upgrade and race column persistence (REQ-UI-236, TST-UI-195).
+ * Unit tests verifying WorkoutSummariesDatabaseManager Schema V24 upgrade and source column persistence (REQ-DAT-017, TST-DAT-012.1).
  */
-class WorkoutSummariesDatabaseRaceMigrationTest {
+class WorkoutSummariesDatabaseSourceMigrationTest {
 
     private lateinit var mockContext: Context
     private lateinit var mockDb: SQLiteDatabase
@@ -71,8 +73,8 @@ class WorkoutSummariesDatabaseRaceMigrationTest {
         every { anyConstructed<ContentValues>().putNull(any<String>()) } answers {
             capturedValuesMap[firstArg<String>()] = null
         }
-        every { anyConstructed<ContentValues>().getAsInteger(any<String>()) } answers {
-            capturedValuesMap[firstArg<String>()] as? Int
+        every { anyConstructed<ContentValues>().getAsString(any<String>()) } answers {
+            capturedValuesMap[firstArg<String>()] as? String
         }
     }
 
@@ -82,17 +84,17 @@ class WorkoutSummariesDatabaseRaceMigrationTest {
     }
 
     @Test
-    fun testDbVersion_isAtLeast23() {
-        assertTrue("DB_VERSION must be at least 23", WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper.DB_VERSION >= 23)
+    fun testDbVersion_is24() {
+        assertEquals("DB_VERSION must be 24", 24, WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper.DB_VERSION)
     }
 
     @Test
-    fun testRaceColumnConstant_isRace() {
-        assertEquals("Column constant must be 'race'", "race", WorkoutSummaries.RACE)
+    fun testSourceColumnConstant_isSource() {
+        assertEquals("Column constant must be 'source'", "source", WorkoutSummaries.SOURCE)
     }
 
     @Test
-    fun testOnUpgrade_fromV22ToV23_addsRaceColumn() {
+    fun testOnUpgrade_fromV23ToV24_addsSourceColumn() {
         val helper = WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper(mockContext)
 
         // Mock cursor returning column names to simulate column check
@@ -103,18 +105,18 @@ class WorkoutSummariesDatabaseRaceMigrationTest {
         every { cursor.getColumnIndex("name") } returns 1
         every { cursor.getString(1) } returns WorkoutSummaries.C_ID
 
-        helper.onUpgrade(mockDb, 22, 23)
+        helper.onUpgrade(mockDb, 23, 24)
 
-        // Verify ALTER TABLE execution for adding race column
+        // Verify ALTER TABLE execution for adding source column with default 'TRACKED'
         verify {
             mockDb.execSQL(match {
-                it.contains("ALTER TABLE ${WorkoutSummaries.TABLE} ADD COLUMN ${WorkoutSummaries.RACE} int DEFAULT 0")
+                it.contains("ALTER TABLE ${WorkoutSummaries.TABLE} ADD COLUMN ${WorkoutSummaries.SOURCE} text DEFAULT 'TRACKED'")
             })
         }
     }
 
     @Test
-    fun testUpdateWorkoutData_persistsRaceTrueAsOne() {
+    fun testUpdateWorkoutData_persistsSource() {
         val manager = object : WorkoutSummariesDatabaseManager(mockContext) {
             override fun getDatabase(): SQLiteDatabase = mockDb
         }
@@ -130,41 +132,10 @@ class WorkoutSummariesDatabaseRaceMigrationTest {
 
         val workoutData = mockk<WorkoutData>(relaxed = true)
         every { workoutData.id } returns 101L
-        every { workoutData.race } returns true
+        every { workoutData.source } returns WorkoutSource.TCX
         manager.updateWorkoutData(workoutData)
 
-        assertEquals(1, capturedValuesMap[WorkoutSummaries.RACE])
-        verify {
-            mockDb.update(
-                WorkoutSummaries.TABLE,
-                any(),
-                match { it.contains(WorkoutSummaries.C_ID) },
-                null
-            )
-        }
-    }
-
-    @Test
-    fun testUpdateWorkoutData_persistsRaceFalseAsZero() {
-        val manager = object : WorkoutSummariesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
-        }
-
-        every {
-            mockDb.update(
-                WorkoutSummaries.TABLE,
-                any(),
-                match { it.contains(WorkoutSummaries.C_ID) },
-                null
-            )
-        } returns 1
-
-        val workoutData = mockk<WorkoutData>(relaxed = true)
-        every { workoutData.id } returns 102L
-        every { workoutData.race } returns false
-        manager.updateWorkoutData(workoutData)
-
-        assertEquals(0, capturedValuesMap[WorkoutSummaries.RACE])
+        assertEquals("TCX", capturedValuesMap[WorkoutSummaries.SOURCE])
         verify {
             mockDb.update(
                 WorkoutSummaries.TABLE,

@@ -30,6 +30,7 @@ import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
+import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
@@ -699,6 +700,7 @@ object LegacyImportEngine {
                             put(WorkoutSummaries.B_SPORT, bSportType.name)
                             put(WorkoutSummaries.EQUIPMENT_ID, -1L)
                             put(WorkoutSummaries.FINISHED, 1)
+                            put(WorkoutSummaries.SOURCE, WorkoutSource.TCX.name)
                             if (uploadToStrava && TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
                                 put(WorkoutSummaries.UPLOAD_TO_STRAVA, 1)
                             } else {
@@ -1108,6 +1110,7 @@ object LegacyImportEngine {
                             put(WorkoutSummaries.B_SPORT, bSportType.name)
                             put(WorkoutSummaries.EQUIPMENT_ID, -1L)
                             put(WorkoutSummaries.FINISHED, 1)
+                            put(WorkoutSummaries.SOURCE, WorkoutSource.GPX.name)
                             if (uploadToStrava && TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
                                 put(WorkoutSummaries.UPLOAD_TO_STRAVA, 1)
                             } else {

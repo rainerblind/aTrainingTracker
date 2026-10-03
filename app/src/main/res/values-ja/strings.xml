@@ -1397,4 +1397,10 @@
     <string name="settings_lap_display_mode_table">テーブル</string>
     <string name="settings_lap_display_mode_visualizer">ビジュアライザー</string>
     <string name="settings_lap_display_mode_both">両方</string>
+
+    <!-- Workout Origin Source (ATT-2186 / REQ-DAT-017) -->
+    <string name="workout_source_tracked">記録済み</string>
+    <string name="workout_source_tcx">TCX</string>
+    <string name="workout_source_gpx">GPX</string>
+    <string name="workout_source_fit">FIT</string>
 </resources>

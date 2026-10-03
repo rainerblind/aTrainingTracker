@@ -1413,4 +1413,10 @@
     <string name="settings_lap_display_mode_table">Tabella</string>
     <string name="settings_lap_display_mode_visualizer">Visualizzatore</string>
     <string name="settings_lap_display_mode_both">Entrambi</string>
+
+    <!-- Workout Origin Source (ATT-2186 / REQ-DAT-017) -->
+    <string name="workout_source_tracked">Registrato</string>
+    <string name="workout_source_tcx">TCX</string>
+    <string name="workout_source_gpx">GPX</string>
+    <string name="workout_source_fit">FIT</string>
 </resources>
