@@ -404,6 +404,9 @@
     <string name="equipment_type_shoe">Schuhe</string>
     <string name="equipment_no_bikes">Keine Räder</string>
     <string name="equipment_no_shoes">Keine Schuhe</string>
+    <string name="equipment_tab_sensor_matrix">Sensor-Matrix</string>
+    <string name="equipment_matrix_no_sensors">Keine gekoppelten Sensoren gefunden. Koppeln Sie zuerst Sensoren in den Einstellungen.</string>
+    <string name="equipment_matrix_no_equipment">Keine Ausrüstung gefunden. Fügen Sie zuerst Räder oder Schuhe hinzu.</string>
 
 
     <!-- dialogs -->

@@ -62,7 +62,8 @@ public class DevicesDatabaseManager {
     private final Context mContext;
     private SQLiteDatabase mDatabase = null;
 
-    private DevicesDatabaseManager(@NonNull Context context) {
+    @androidx.annotation.VisibleForTesting
+    protected DevicesDatabaseManager(@NonNull Context context) {
         this.mContext = context.getApplicationContext();
         this.cDevicesDbHelper = new DevicesDbHelper(mContext);
     }
@@ -731,6 +732,39 @@ public class DevicesDatabaseManager {
             ));
         }
         cursor.close();
+
+        return sensors;
+    }
+
+    /**
+     * Returns all paired external remote sensors (ANT+ and Bluetooth LE), excluding internal smartphone sensors (REQ-UI-256).
+     *
+     * @return Alphabetically sorted list of SimpleSensorInfo objects.
+     */
+    public List<SimpleSensorInfo> getAllRemoteSensors() {
+        List<SimpleSensorInfo> sensors = new ArrayList<>();
+        String selection = DevicesDbHelper.NAME + " IS NOT NULL AND " + DevicesDbHelper.NAME + " != ''"
+                + " AND (" + DevicesDbHelper.PROTOCOL + " = 'ANT_PLUS' OR " + DevicesDbHelper.PROTOCOL + " = 'BLUETOOTH_LE'"
+                + " OR " + DevicesDbHelper.DEVICE_TYPE + " LIKE 'BIKE%' OR " + DevicesDbHelper.DEVICE_TYPE + " LIKE 'RUN%'"
+                + " OR " + DevicesDbHelper.DEVICE_TYPE + " = 'HRM' OR " + DevicesDbHelper.DEVICE_TYPE + " = 'ENVIRONMENT')";
+
+        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
+                new String[]{DevicesDbHelper.C_ID, DevicesDbHelper.NAME},
+                selection,
+                null, null, null, DevicesDbHelper.NAME + " COLLATE NOCASE ASC");
+
+        if (cursor != null) {
+            int idCol = cursor.getColumnIndex(DevicesDbHelper.C_ID);
+            int nameCol = cursor.getColumnIndex(DevicesDbHelper.NAME);
+
+            while (cursor.moveToNext()) {
+                sensors.add(new SimpleSensorInfo(
+                        cursor.getLong(idCol),
+                        cursor.getString(nameCol)
+                ));
+            }
+            cursor.close();
+        }
 
         return sensors;
     }
