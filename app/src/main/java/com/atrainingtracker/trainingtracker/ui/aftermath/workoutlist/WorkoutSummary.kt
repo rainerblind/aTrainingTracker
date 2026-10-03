@@ -284,21 +284,28 @@ fun WorkoutSummary(
                     color = MaterialTheme.colorScheme.outlineVariant
                 )
                 val isRunning = workoutData.bSportType == BSportType.RUN
-                Text(
-                    text = stringResource(if (isRunning) R.string.graph_heading_pace else R.string.graph_heading_speed),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
-                )
-                TelemetryMetricGraph(
-                    pathPoints = telemetryPoints,
-                    metricType = if (isRunning) TelemetryMetricType.PACE else TelemetryMetricType.SPEED,
-                    currentDistance = null,
-                    onDistanceSelected = {},
-                    bSportType = workoutData.bSportType,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(mapClickModifier)
+                ) {
+                    Text(
+                        text = stringResource(if (isRunning) R.string.graph_heading_pace else R.string.graph_heading_speed),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                    )
+                    TelemetryMetricGraph(
+                        pathPoints = telemetryPoints,
+                        metricType = if (isRunning) TelemetryMetricType.PACE else TelemetryMetricType.SPEED,
+                        currentDistance = null,
+                        onDistanceSelected = {},
+                        bSportType = workoutData.bSportType,
+                        enableGestures = false,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
             if (TelemetryMetricUtils.hasHeartRateData(telemetryPoints)) {
                 HorizontalDivider(
@@ -306,21 +313,28 @@ fun WorkoutSummary(
                     thickness = 0.5.dp,
                     color = MaterialTheme.colorScheme.outlineVariant
                 )
-                Text(
-                    text = stringResource(R.string.graph_heading_heart_rate),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
-                )
-                TelemetryMetricGraph(
-                    pathPoints = telemetryPoints,
-                    metricType = TelemetryMetricType.HEART_RATE,
-                    currentDistance = null,
-                    onDistanceSelected = {},
-                    bSportType = workoutData.bSportType,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(mapClickModifier)
+                ) {
+                    Text(
+                        text = stringResource(R.string.graph_heading_heart_rate),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                    )
+                    TelemetryMetricGraph(
+                        pathPoints = telemetryPoints,
+                        metricType = TelemetryMetricType.HEART_RATE,
+                        currentDistance = null,
+                        onDistanceSelected = {},
+                        bSportType = workoutData.bSportType,
+                        enableGestures = false,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
             if (TelemetryMetricUtils.hasPowerData(telemetryPoints)) {
                 HorizontalDivider(
@@ -328,21 +342,28 @@ fun WorkoutSummary(
                     thickness = 0.5.dp,
                     color = MaterialTheme.colorScheme.outlineVariant
                 )
-                Text(
-                    text = stringResource(R.string.graph_heading_power),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
-                )
-                TelemetryMetricGraph(
-                    pathPoints = telemetryPoints,
-                    metricType = TelemetryMetricType.POWER,
-                    currentDistance = null,
-                    onDistanceSelected = {},
-                    bSportType = workoutData.bSportType,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(mapClickModifier)
+                ) {
+                    Text(
+                        text = stringResource(R.string.graph_heading_power),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                    )
+                    TelemetryMetricGraph(
+                        pathPoints = telemetryPoints,
+                        metricType = TelemetryMetricType.POWER,
+                        currentDistance = null,
+                        onDistanceSelected = {},
+                        bSportType = workoutData.bSportType,
+                        enableGestures = false,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
 
@@ -359,6 +380,7 @@ fun WorkoutSummary(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .then(mapClickModifier)
                 )
             }
             powerZoneDistribution?.let { distribution ->
@@ -367,6 +389,7 @@ fun WorkoutSummary(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .then(mapClickModifier)
                 )
             }
         }

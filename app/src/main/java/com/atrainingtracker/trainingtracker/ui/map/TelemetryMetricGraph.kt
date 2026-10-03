@@ -268,7 +268,8 @@ fun TelemetryMetricGraph(
     onZoomChanged: ((Float, Double) -> Unit)? = null,
     hrZoneThresholds: HeartRateZoneThresholds? = null,
     powerZoneThresholds: PowerZoneThresholds? = null,
-    paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM
+    paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM,
+    enableGestures: Boolean = true
 ) {
     if (pathPoints.isEmpty()) return
 
@@ -426,119 +427,126 @@ fun TelemetryMetricGraph(
     val currentOnDistanceSelectedState by rememberUpdatedState(onDistanceSelected)
 
     Box(modifier = modifier.fillMaxWidth()) {
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(110.dp)
-                .pointerInput(totalSpan, isTimeDomain, isPanMode) {
-                    val startPaddingPx = 50.dp.toPx()
-                    val endPaddingPx = 25.dp.toPx()
-                    val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
-                    val touchSlop = viewConfiguration.touchSlop
+        val baseCanvasModifier = Modifier
+            .fillMaxWidth()
+            .height(110.dp)
 
-                    awaitEachGesture {
-                        val down = awaitFirstDown(requireUnconsumed = false)
-                        var prevX = down.position.x
-                        var isDragging = false
-                        var isVerticalScrolling = false
-                        var localStartDist = currentStartDistState
+        val canvasModifier = if (enableGestures) {
+            baseCanvasModifier.pointerInput(totalSpan, isTimeDomain, isPanMode) {
+                val startPaddingPx = 50.dp.toPx()
+                val endPaddingPx = 25.dp.toPx()
+                val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
+                val touchSlop = viewConfiguration.touchSlop
 
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val pressed = event.changes.filter { it.pressed }
-                            if (pressed.isEmpty()) break
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    var prevX = down.position.x
+                    var isDragging = false
+                    var isVerticalScrolling = false
+                    var localStartDist = currentStartDistState
 
-                            if (pressed.size == 1) {
-                                val pointer = pressed[0]
-                                val diffX = pointer.position.x - down.position.x
-                                val diffY = pointer.position.y - down.position.y
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val pressed = event.changes.filter { it.pressed }
+                        if (pressed.isEmpty()) break
 
-                                if (!isDragging && !isVerticalScrolling) {
-                                    if (ChartGestureDisambiguator.isDominantVertical(diffX, diffY, touchSlop)) {
-                                        isVerticalScrolling = true
-                                    } else if (ChartGestureDisambiguator.isDominantHorizontal(diffX, diffY, touchSlop)) {
-                                        isDragging = true
-                                    }
-                                }
+                        if (pressed.size == 1) {
+                            val pointer = pressed[0]
+                            val diffX = pointer.position.x - down.position.x
+                            val diffY = pointer.position.y - down.position.y
 
-                                if (isDragging) {
-                                    val dragDeltaX = pointer.position.x - prevX
-                                    pointer.consume()
-                                    val activeZoom = currentZoomScaleState
-                                    val activeVisibleSpan = ElevationProfileZoomMath.calculateVisibleDistance(totalSpan, activeZoom)
-                                    val onZoomChangedFn = currentOnZoomChangedState
-                                    if (isPanMode && totalSpan > 10.0 && onZoomChangedFn != null) {
-                                        val panStart = ElevationProfileZoomMath.applyPan(
-                                            currentStartDist = localStartDist,
-                                            visibleDist = activeVisibleSpan,
-                                            panDeltaX = dragDeltaX,
-                                            canvasWidth = chartWidthPx,
-                                            totalDist = totalSpan
-                                        )
-                                        localStartDist = panStart
-                                        onZoomChangedFn(activeZoom, panStart)
-                                    } else {
-                                        val localX = (pointer.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
-                                        val selectedVal = ElevationProfileZoomMath.canvasXToDistance(
-                                            canvasX = localX,
-                                            startDist = currentStartDistState,
-                                            visibleDist = activeVisibleSpan,
-                                            canvasWidth = chartWidthPx,
-                                            totalDist = totalSpan
-                                        )
-                                        if (isTimeDomain) {
-                                            val targetTimeSec = selectedVal.toLong()
-                                            val nearest = pathPoints.minByOrNull { abs(it.timeSec - targetTimeSec) }
-                                            if (isTrackless) {
-                                                currentOnDistanceSelectedState(nearest?.timeSec?.toDouble())
-                                            } else {
-                                                currentOnDistanceSelectedState(nearest?.distance)
-                                            }
-                                        } else {
-                                            currentOnDistanceSelectedState(selectedVal)
-                                        }
-                                    }
-                                    prevX = pointer.position.x
-                                } else if (isVerticalScrolling) {
-                                    if (pointer.isConsumed) {
-                                        break
-                                    }
+                            if (!isDragging && !isVerticalScrolling) {
+                                if (ChartGestureDisambiguator.isDominantVertical(diffX, diffY, touchSlop)) {
+                                    isVerticalScrolling = true
+                                } else if (ChartGestureDisambiguator.isDominantHorizontal(diffX, diffY, touchSlop)) {
+                                    isDragging = true
                                 }
                             }
-                        }
 
-                        // On gesture completion
-                        if (isDragging) {
-                            if (!isPanMode) {
-                                currentOnDistanceSelectedState(null)
-                            }
-                        } else if (!isVerticalScrolling) {
-                            if (!isPanMode) {
-                                // Tap selection
-                                val activeVisibleSpan = ElevationProfileZoomMath.calculateVisibleDistance(totalSpan, currentZoomScaleState)
-                                val localX = (down.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
-                                val selectedVal = ElevationProfileZoomMath.canvasXToDistance(
-                                    canvasX = localX,
-                                    startDist = currentStartDistState,
-                                    visibleDist = activeVisibleSpan,
-                                    canvasWidth = chartWidthPx,
-                                    totalDist = totalSpan
-                                )
-                                if (isTimeDomain) {
-                                    val targetTimeSec = selectedVal.toLong()
-                                    val nearest = pathPoints.minByOrNull { abs(it.timeSec - targetTimeSec) }
-                                    if (isTrackless) {
-                                        currentOnDistanceSelectedState(nearest?.timeSec?.toDouble())
-                                    } else {
-                                        currentOnDistanceSelectedState(nearest?.distance)
-                                    }
+                            if (isDragging) {
+                                val dragDeltaX = pointer.position.x - prevX
+                                pointer.consume()
+                                val activeZoom = currentZoomScaleState
+                                val activeVisibleSpan = ElevationProfileZoomMath.calculateVisibleDistance(totalSpan, activeZoom)
+                                val onZoomChangedFn = currentOnZoomChangedState
+                                if (isPanMode && totalSpan > 10.0 && onZoomChangedFn != null) {
+                                    val panStart = ElevationProfileZoomMath.applyPan(
+                                        currentStartDist = localStartDist,
+                                        visibleDist = activeVisibleSpan,
+                                        panDeltaX = dragDeltaX,
+                                        canvasWidth = chartWidthPx,
+                                        totalDist = totalSpan
+                                    )
+                                    localStartDist = panStart
+                                    onZoomChangedFn(activeZoom, panStart)
                                 } else {
-                                    currentOnDistanceSelectedState(selectedVal)
+                                    val localX = (pointer.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
+                                    val selectedVal = ElevationProfileZoomMath.canvasXToDistance(
+                                        canvasX = localX,
+                                        startDist = currentStartDistState,
+                                        visibleDist = activeVisibleSpan,
+                                        canvasWidth = chartWidthPx,
+                                        totalDist = totalSpan
+                                    )
+                                    if (isTimeDomain) {
+                                        val targetTimeSec = selectedVal.toLong()
+                                        val nearest = pathPoints.minByOrNull { abs(it.timeSec - targetTimeSec) }
+                                        if (isTrackless) {
+                                            currentOnDistanceSelectedState(nearest?.timeSec?.toDouble())
+                                        } else {
+                                            currentOnDistanceSelectedState(nearest?.distance)
+                                        }
+                                    } else {
+                                        currentOnDistanceSelectedState(selectedVal)
+                                    }
+                                }
+                                prevX = pointer.position.x
+                            } else if (isVerticalScrolling) {
+                                if (pointer.isConsumed) {
+                                    break
                                 }
                             }
                         }
                     }
+
+                    // On gesture completion
+                    if (isDragging) {
+                        if (!isPanMode) {
+                            currentOnDistanceSelectedState(null)
+                        }
+                    } else if (!isVerticalScrolling) {
+                        if (!isPanMode) {
+                            // Tap selection
+                            val activeVisibleSpan = ElevationProfileZoomMath.calculateVisibleDistance(totalSpan, currentZoomScaleState)
+                            val localX = (down.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
+                            val selectedVal = ElevationProfileZoomMath.canvasXToDistance(
+                                canvasX = localX,
+                                startDist = currentStartDistState,
+                                visibleDist = activeVisibleSpan,
+                                canvasWidth = chartWidthPx,
+                                totalDist = totalSpan
+                            )
+                            if (isTimeDomain) {
+                                val targetTimeSec = selectedVal.toLong()
+                                val nearest = pathPoints.minByOrNull { abs(it.timeSec - targetTimeSec) }
+                                if (isTrackless) {
+                                    currentOnDistanceSelectedState(nearest?.timeSec?.toDouble())
+                                } else {
+                                    currentOnDistanceSelectedState(nearest?.distance)
+                                }
+                            } else {
+                                currentOnDistanceSelectedState(selectedVal)
+                            }
+                        }
+                    }
                 }
+            }
+        } else {
+            baseCanvasModifier
+        }
+
+        Canvas(
+            modifier = canvasModifier
         ) {
             val startPaddingPx = 50.dp.toPx()
             val endPaddingPx = 25.dp.toPx()
