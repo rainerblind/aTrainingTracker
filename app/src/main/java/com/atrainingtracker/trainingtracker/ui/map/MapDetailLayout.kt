@@ -50,6 +50,8 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import com.atrainingtracker.trainingtracker.ui.components.core.GlobalTelemetryZoomToolbar
@@ -96,7 +98,11 @@ fun MapDetailLayout(
     onMapClick: ((LatLng) -> Unit)? = null,
     analyticsContent: (@Composable ColumnScope.() -> Unit)? = null,
     metadataContent: (@Composable ColumnScope.() -> Unit)? = null,
-    onHeaderHeightMeasured: ((Dp) -> Unit)? = null
+    onHeaderHeightMeasured: ((Dp) -> Unit)? = null,
+    hrZoneDistribution: ZoneDistributionData? = null,
+    powerZoneDistribution: ZoneDistributionData? = null,
+    hrZoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.FIVE_ZONES,
+    powerZoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.FIVE_ZONES
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -423,6 +429,8 @@ fun MapDetailLayout(
                                                 profileZoomScale = z
                                                 viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
                                             },
+                                            zoneDistribution = hrZoneDistribution,
+                                            zoneDisplayMode = hrZoneDisplayMode,
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     }
@@ -468,6 +476,8 @@ fun MapDetailLayout(
                                                 profileZoomScale = z
                                                 viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
                                             },
+                                            zoneDistribution = powerZoneDistribution,
+                                            zoneDisplayMode = powerZoneDisplayMode,
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     }
