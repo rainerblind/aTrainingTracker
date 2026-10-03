@@ -184,6 +184,7 @@ fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
             items = listOf(
                 DrawerItemConfig(R.id.drawer_strava, R.drawable.logo_square_strava, R.string.Strava, tintIcon = false),
                 DrawerItemConfig(R.id.drawer_dropbox, R.drawable.dropbox_logo_blue, R.string.Dropbox, tintIcon = false),
+                DrawerItemConfig(R.id.drawer_google_drive, R.drawable.ic_google_drive, R.string.google_drive, tintIcon = false),
                 DrawerItemConfig(R.id.drawer_export, R.drawable.ic_upload, R.string.prefsExportTitle)
             )
         ),

@@ -894,6 +894,23 @@
         <item quantity="other">❌ Uploading the %1$s files to Dropbox failed.</item>  <!-- Uploading the TCX and CSV files to Dropbox failed. -->
     </plurals>
 
+<plurals name="export_notification__detail__GoogleDrive_waiting">
+        <item quantity="one">⏳ Waiting to upload the %1$s file to Google Drive.</item>
+        <item quantity="other">⏳ Waiting to upload the %1$s files to Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_ongoing">
+        <item quantity="one">📤 Uploading the %1$s file to Google Drive.</item>
+        <item quantity="other">📤 Uploading the %1$s files to Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_success">
+        <item quantity="one">✅ Successfully uploaded the %1$s file to Google Drive.</item>
+        <item quantity="other">✅ Successfully uploaded the %1$s files to Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_failed">
+        <item quantity="one">❌ Uploading the %1$s file to Google Drive failed.</item>
+        <item quantity="other">❌ Uploading the %1$s files to Google Drive failed.</item>
+    </plurals>
+
     <!-- writing to Community failed
         (0: #fails for quantity)
         1: string representing the failed file formats-->
@@ -1667,6 +1684,22 @@
     <string name="route_filter_length">Length</string>
     <string name="route_empty_title">No routes available</string>
     <string name="route_empty_desc">Import GPX files or sync with Strava.</string>
+    <string name="google_drive">Google Drive</string>
+    <string name="google_drive_connect">Connect to Google Drive</string>
+    <string name="google_drive_disconnect">Disconnect from Google Drive</string>
+    <string name="google_drive_connected_status">You are connected to Google Drive</string>
+    <string name="google_drive_disconnected_status">You are not connected to Google Drive</string>
+    <string name="google_drive_account_email_label">Account: %1$s</string>
+    <string name="upload_workouts_to_google_drive">Automatically export workouts</string>
+    <string name="upload_workouts_to_google_drive_summary">Uploads activities (FIT, TCX, GPX, CSV) to Google Drive after saving</string>
+    <string name="upload_backup_to_google_drive">Automatically synchronize database backup</string>
+    <string name="upload_backup_to_google_drive_summary">Periodically backs up the database to Google Drive</string>
+    <string name="google_drive_only_wifi">Upload over Wi-Fi only</string>
+    <string name="google_drive_only_wifi_summary">Conserves mobile cellular data</string>
+    <string name="google_drive_last_sync">Last upload: %1$s</string>
+    <string name="google_drive_never_synced">Not synchronized yet</string>
+    <string name="restore_from_google_drive">Restore from Google Drive</string>
+    <string name="upload_to_google_drive">Back up to Google Drive</string>
 </resources>
 
 

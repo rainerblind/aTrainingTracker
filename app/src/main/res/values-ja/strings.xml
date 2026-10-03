@@ -684,6 +684,19 @@
         <item quantity="other">❌ %1$s の Dropbox 送信に失敗しました。</item>
     </plurals>
 
+<plurals name="export_notification__detail__GoogleDrive_waiting">
+        <item quantity="other">⏳ %1$s ファイルを Google ドライブにアップロードするのを待機中。</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_ongoing">
+        <item quantity="other">📤 %1$s ファイルを Google ドライブにアップロード中。</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_success">
+        <item quantity="other">✅ %1$s ファイルを Google ドライブに正常にアップロードしました。</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_failed">
+        <item quantity="other">❌ %1$s ファイルの Google ドライブへのアップロードに失敗しました。</item>
+    </plurals>
+
     <plurals name="export_notification__detail__Community_failed">
         <item quantity="other">❌ %1$s への送信に失敗しました。</item>
     </plurals>
@@ -1458,4 +1471,20 @@
     <string name="route_filter_length">長さ</string>
     <string name="route_empty_title">利用可能なルートがありません</string>
     <string name="route_empty_desc">GPXファイルをインポートするかStravaと同期してください。</string>
+    <string name="google_drive">Google Drive</string>
+    <string name="google_drive_connect">Google ドライブに接続</string>
+    <string name="google_drive_disconnect">Google ドライブから切断</string>
+    <string name="google_drive_connected_status">Google ドライブに接続されています</string>
+    <string name="google_drive_disconnected_status">Google ドライブに接続されていません</string>
+    <string name="google_drive_account_email_label">アカウント: %1$s</string>
+    <string name="upload_workouts_to_google_drive">ワークアウトを自動エクスポート</string>
+    <string name="upload_workouts_to_google_drive_summary">保存後にアクティビティ（FIT、TCX、GPX、CSV）を Google ドライブにアップロードします</string>
+    <string name="upload_backup_to_google_drive">データベースバックアップを自動同期</string>
+    <string name="upload_backup_to_google_drive_summary">データベースを定期的に Google ドライブにバックアップします</string>
+    <string name="google_drive_only_wifi">Wi-Fi 経由でのみアップロード</string>
+    <string name="google_drive_only_wifi_summary">モバイルデータ通信量を節約します</string>
+    <string name="google_drive_last_sync">前回のアップロード: %1$s</string>
+    <string name="google_drive_never_synced">まだ同期されていません</string>
+    <string name="restore_from_google_drive">Google ドライブから復元</string>
+    <string name="upload_to_google_drive">Google ドライブにバックアップ</string>
 </resources>

@@ -124,6 +124,21 @@ class ModalBottomSheetDialogsIntegrityTest {
     }
 
     @Test
+    fun testGoogleDriveSettingsDialog_existsAndExposesComposableAndFragment() {
+        val dialogClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.googledrive.GoogleDriveSettingsDialogKt")
+        val composableMethod = dialogClass.declaredMethods.find { it.name == "GoogleDriveSettingsDialog" }
+        assertNotNull("GoogleDriveSettingsDialog composable function must exist", composableMethod)
+        assertTrue(Modifier.isPublic(composableMethod!!.modifiers))
+
+        val fragmentClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.googledrive.GoogleDriveSettingsDialogFragment")
+        val baseClass = Class.forName("com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetDialogFragment")
+        assertTrue(
+            "GoogleDriveSettingsDialogFragment must extend AppBottomSheetDialogFragment",
+            baseClass.isAssignableFrom(fragmentClass)
+        )
+    }
+
+    @Test
     fun testStravaSettingsDialog_existsAndExposesComposableAndFragment() {
         val dialogClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.strava.StravaSettingsDialogKt")
         val composableMethod = dialogClass.declaredMethods.find { it.name == "StravaSettingsDialog" }

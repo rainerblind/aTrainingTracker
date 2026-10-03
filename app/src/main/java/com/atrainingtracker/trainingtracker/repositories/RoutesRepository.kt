@@ -36,6 +36,7 @@ import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -445,7 +446,10 @@ class RoutesRepository internal constructor(
         return@withContext pathPoints
     }
 
-
+    @androidx.annotation.VisibleForTesting
+    fun cancelScope() {
+        repositoryScope.cancel()
+    }
 
     companion object {
         private val TAG = RoutesRepository::class.java.simpleName
@@ -461,6 +465,7 @@ class RoutesRepository internal constructor(
 
         @androidx.annotation.VisibleForTesting
         fun resetForTesting(newInstance: RoutesRepository? = null) {
+            instance?.repositoryScope?.cancel()
             instance = newInstance
         }
     }

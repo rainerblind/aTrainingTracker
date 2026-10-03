@@ -92,6 +92,7 @@ import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegme
 import com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialog
+import com.atrainingtracker.trainingtracker.ui.settings.googledrive.GoogleDriveSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialog
 import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaSettingsDialog
@@ -456,6 +457,9 @@ fun ATrainingTrackerApp(
                     onDismiss = { drawerController.activeBottomSheet = null }
                 )
                 SettingsBottomSheetType.DROPBOX -> DropboxSettingsDialog(
+                    onDismiss = { drawerController.activeBottomSheet = null }
+                )
+                SettingsBottomSheetType.GOOGLE_DRIVE -> GoogleDriveSettingsDialog(
                     onDismiss = { drawerController.activeBottomSheet = null }
                 )
                 SettingsBottomSheetType.EXPORT -> ExportSettingsDialog(

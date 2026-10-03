@@ -176,8 +176,11 @@ class StravaRouteSyncTest {
         val mockRoutesDb = mockk<com.atrainingtracker.trainingtracker.database.RoutesDatabaseManager>(relaxed = true)
 
         val repository = RoutesRepository(mockContext, mockRoutesDb)
-
-        val result = repository.syncRoutesFromStrava()
-        assertFalse("syncRoutesFromStrava must return false when access token is null", result)
+        try {
+            val result = repository.syncRoutesFromStrava()
+            assertFalse("syncRoutesFromStrava must return false when access token is null", result)
+        } finally {
+            repository.cancelScope()
+        }
     }
 }

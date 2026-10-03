@@ -26,6 +26,7 @@ import com.atrainingtracker.R
 enum class SettingsBottomSheetType {
     STRAVA,
     DROPBOX,
+    GOOGLE_DRIVE,
     EXPORT,
     UNITS,
     DISPLAY,
@@ -118,6 +119,7 @@ object NavRoutes {
     fun toBottomSheetType(itemId: Int): SettingsBottomSheetType? = when (itemId) {
         R.id.drawer_strava -> SettingsBottomSheetType.STRAVA
         R.id.drawer_dropbox -> SettingsBottomSheetType.DROPBOX
+        R.id.drawer_google_drive -> SettingsBottomSheetType.GOOGLE_DRIVE
         R.id.drawer_export -> SettingsBottomSheetType.EXPORT
         R.id.drawer_units -> SettingsBottomSheetType.UNITS
         R.id.drawer_display_settings -> SettingsBottomSheetType.DISPLAY
