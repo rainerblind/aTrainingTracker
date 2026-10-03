@@ -57,6 +57,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.material3.CardElevation
+import androidx.compose.material3.CardDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -106,6 +111,9 @@ fun SensorGridScreen(
     currentLocationFlow: StateFlow<LatLng?>,
     liveSegments: StateFlow<List<LiveSegment>>,
     selectedFieldForMove: SensorFieldState? = null,
+    gridSpacing: Dp = 0.dp,
+    fieldShape: Shape = RectangleShape,
+    fieldElevation: CardElevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
 ) {
     val context = LocalContext.current
     val tuningDataStore = remember { TuningPreferencesDataStore(context) }
@@ -210,7 +218,8 @@ fun SensorGridScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = if (gridSpacing > 0.dp) Arrangement.spacedBy(gridSpacing) else Arrangement.Top
             ) {
                 val fieldsByRow = state.fields.groupBy { it.rowNr }
                 val sortedRows = fieldsByRow.keys.sorted()
@@ -231,7 +240,8 @@ fun SensorGridScreen(
                     val fieldsInThisRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.height(IntrinsicSize.Min)
+                        modifier = Modifier.height(IntrinsicSize.Min),
+                        horizontalArrangement = if (gridSpacing > 0.dp) Arrangement.spacedBy(gridSpacing) else Arrangement.Start
                     ) {
                         var maxColNr = 0
                         fieldsInThisRow.forEach { fieldState ->
@@ -251,6 +261,8 @@ fun SensorGridScreen(
                                     fieldState = fieldState,
                                     screenMode = screenMode,
                                     isSelectedForMove = isSelected,
+                                    shape = fieldShape,
+                                    cardElevation = fieldElevation,
                                     onStartMove = { gridActions.onSelectFieldForMove(fieldState) },
                                     onEdit = {
                                         if (screenMode == ScreenMode.CONFIGURATION && selectedFieldForMove != null) {
