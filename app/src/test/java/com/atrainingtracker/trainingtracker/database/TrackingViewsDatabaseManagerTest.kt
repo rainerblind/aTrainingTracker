@@ -41,6 +41,12 @@ class TrackingViewsDatabaseManagerTest {
 
     @Before
     fun setUp() {
+        mockkStatic(android.util.Log::class)
+        every { android.util.Log.i(any(), any()) } returns 0
+        every { android.util.Log.d(any(), any()) } returns 0
+        every { android.util.Log.w(any(), any<String>()) } returns 0
+        every { android.util.Log.e(any(), any(), any()) } returns 0
+
         mockkStatic(HavePressureSensor::class)
         every { HavePressureSensor.havePressureSensor(any()) } returns false
 
@@ -53,6 +59,8 @@ class TrackingViewsDatabaseManagerTest {
         every { anyConstructed<ContentValues>().put(any<String>(), any<String>()) } returns Unit
         every { anyConstructed<ContentValues>().put(any<String>(), any<Long>()) } returns Unit
         every { anyConstructed<ContentValues>().put(any<String>(), any<Int>()) } returns Unit
+        every { anyConstructed<ContentValues>().put(any<String>(), any<Double>()) } returns Unit
+        every { anyConstructed<ContentValues>().clear() } returns Unit
     }
 
     @After
@@ -261,5 +269,87 @@ class TrackingViewsDatabaseManagerTest {
         verify(atLeast = 1) { mockDb.execSQL(match { it.contains("RowNr") && it.contains("+1") }) }
         verify(exactly = 1) { mockDb.setTransactionSuccessful() }
         verify(exactly = 1) { mockDb.endTransaction() }
+    }
+
+    @Test
+    fun testAddDefaultTab_insertsViewSize() {
+        val dbHelper = TrackingViewsDatabaseManager.TrackingViewsDbHelper(mockContext)
+        val rowData = TrackingViewsDatabaseManager.TrackingViewsDbHelper.RowData(
+            com.atrainingtracker.banalservice.sensor.SensorType.HR,
+            com.atrainingtracker.trainingtracker.ui.tracking.ViewSize.LARGE,
+            1,
+            1
+        )
+        every { mockDb.insert(any(), any(), any()) } returns 1L
+
+        dbHelper.addDefaultTab(
+            mockDb,
+            com.atrainingtracker.banalservice.ActivityType.GENERIC_HR,
+            "Default",
+            1,
+            true,
+            false,
+            false,
+            listOf(rowData)
+        )
+
+        verify {
+            anyConstructed<ContentValues>().put(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEW_SIZE,
+                "LARGE"
+            )
+        }
+    }
+
+    @Test
+    fun testOnUpgrade_from10To11_executesRepairSql() {
+        val dbHelper = TrackingViewsDatabaseManager.TrackingViewsDbHelper(mockContext)
+        dbHelper.onUpgrade(mockDb, 10, 11)
+
+        verify(exactly = 1) {
+            mockDb.execSQL(match {
+                it.contains("LayoutRowsTable") && it.contains("ViewSize") && it.contains("NORMAL")
+            })
+        }
+    }
+
+    @Test
+    fun testGetAllFilterData_handlesNullAndInvalidEnumsWithoutThrowing() {
+        val manager = TrackingViewsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        val cursor = mockk<Cursor>(relaxed = true)
+        every { cursor.moveToNext() } returnsMany listOf(true, true, false)
+
+        every { cursor.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SENSOR_TYPE) } returns 0
+        every { cursor.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SOURCE_DEVICE_ID) } returns 1
+        every { cursor.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.FILTER_TYPE) } returns 2
+        every { cursor.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.FILTER_CONSTANT) } returns 3
+
+        every { cursor.getString(0) } returnsMany listOf(null, "INVALID_SENSOR")
+        every { cursor.getInt(1) } returns 0
+        every { cursor.getString(2) } returnsMany listOf(null, "INVALID_FILTER")
+        every { cursor.getDouble(3) } returns 1.0
+
+        every {
+            mockDb.query(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROWS_TABLE,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            )
+        } returns cursor
+
+        val mockDevicesDbManager = mockk<com.atrainingtracker.banalservice.database.DevicesDatabaseManager>(relaxed = true)
+        val filterList = manager.getAllFilterData(mockDevicesDbManager)
+
+        assertEquals(2, filterList.size)
+        assertEquals(com.atrainingtracker.banalservice.sensor.SensorType.TIME_ACTIVE, filterList[0].sensorType)
+        assertEquals(com.atrainingtracker.banalservice.filters.FilterType.INSTANTANEOUS, filterList[0].filterType)
+        assertEquals(com.atrainingtracker.banalservice.sensor.SensorType.TIME_ACTIVE, filterList[1].sensorType)
+        assertEquals(com.atrainingtracker.banalservice.filters.FilterType.INSTANTANEOUS, filterList[1].filterType)
     }
 }
