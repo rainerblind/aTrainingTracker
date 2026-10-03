@@ -1442,4 +1442,16 @@
     <string name="permission_rationale_open_settings">Ouvrir les paramètres</string>
     <string name="permission_rationale_settings_explanation">L\'autorisation de localisation a été refusée. Sans accès à la localisation, l\'enregistrement de l\'itinéraire GPS est indisponible. Vous pouvez activer l\'autorisation dans les paramètres de l\'application.</string>
     <string name="permission_warning_badge_desc">Autorisation de localisation manquante</string>
+
+    <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
+    <string name="unfinished_workout_title">Entraînement interrompu</string>
+    <string name="kill_reason_battery_title">Arrêté par l\'optimisation de batterie</string>
+    <string name="kill_reason_battery_stage1">Qui ne veut rien entendre… 😉 Mais nous sommes vraiment désolés pour vos kilomètres perdus ! Android a arrêté le suivi en arrière-plan en raison de l\'optimisation de batterie.</string>
+    <string name="kill_reason_battery_stage1_strava">Et vous connaissez le dicton : \'If it\'s not on Strava, it didn\'t happen\'… doublement amer ! 🙈</string>
+    <string name="kill_reason_battery_stage2">Pas encore… Déjà le 2e arrêt forcé ! Combien de kilomètres perdus vous faut-il comme preuve ? Veuillez désactiver l\'optimisation de batterie pour aTrainingTracker.</string>
+    <string name="kill_reason_battery_stage3">Jamais deux sans trois… Athlète le plus réfractaire aux conseils du mois ! 🏆 Le système continuera de couper votre suivi tant que vous n\'aurez pas configuré l\'exception.</string>
+    <string name="kill_reason_low_memory">L\'enregistrement a été interrompu par Android en raison d\'un manque aigu de mémoire vive (ex. appareil photo ou navigation 3D au premier plan). Vos données enregistrées jusque-là ont été préservées.</string>
+    <string name="kill_reason_permission_revoked">L\'enregistrement a été interrompu car les autorisations de localisation ou de notification ont été révoquées pendant votre entraînement.</string>
+    <string name="action_disable_battery_optimization">Désactiver l\'optimisation de batterie</string>
+    <string name="battery_optimization_exempt_celebration">Enfin ! Voie libre pour vos données d\'entraînement 🎉</string>
 </resources>

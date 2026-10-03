@@ -1441,4 +1441,16 @@
     <string name="permission_rationale_open_settings">Apri impostazioni</string>
     <string name="permission_rationale_settings_explanation">L\'autorizzazione alla posizione è stata negata. Senza accesso alla posizione, la registrazione del percorso GPS non è disponibile. Puoi concedere l\'autorizzazione nelle impostazioni dell\'app.</string>
     <string name="permission_warning_badge_desc">Autorizzazione di posizione mancante</string>
+
+    <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
+    <string name="unfinished_workout_title">Allenamento interrotto</string>
+    <string name="kill_reason_battery_title">Terminato dall\'ottimizzazione batteria</string>
+    <string name="kill_reason_battery_stage1">Chi non ascolta… 😉 Ma siamo davvero dispiaciuti per i tuoi chilometri persi! Android ha interrotto il monitoraggio in background a causa dell\'ottimizzazione batteria.</string>
+    <string name="kill_reason_battery_stage1_strava">E come ben sai: \'If it\'s not on Strava, it didn\'t happen\'… doppiamente amaro! 🙈</string>
+    <string name="kill_reason_battery_stage2">Non di nuovo… Già la seconda volta! Di quanti chilometri persi hai bisogno come prova? Disattiva l\'ottimizzazione della batteria per aTrainingTracker.</string>
+    <string name="kill_reason_battery_stage3">Non c\'è due senza tre… Atleta più resistente ai consigli del mese! 🏆 Il sistema continuerà a chiudere l\'allenamento finché non imposti l\'eccezione.</string>
+    <string name="kill_reason_low_memory">La registrazione è stata interrotta da Android per carenza di memoria RAM (ad es. fotocamera o navigazione 3D in primo piano). I dati registrati fino a quel momento sono al sicuro.</string>
+    <string name="kill_reason_permission_revoked">La registrazione è stata interrotta perché le autorizzazioni di posizione o notifica sono state revocate durante l\'allenamento.</string>
+    <string name="action_disable_battery_optimization">Disattiva ottimizzazione batteria</string>
+    <string name="battery_optimization_exempt_celebration">Finalmente! Via libera per i tuoi dati di allenamento 🎉</string>
 </resources>

@@ -1441,4 +1441,16 @@
     <string name="permission_rationale_open_settings">Instellingen openen</string>
     <string name="permission_rationale_settings_explanation">Locatietoestemming is geweigerd. Zonder locatietoegang kunnen er geen GPS-routegegevens worden vastgelegd. Je kunt toestemming geven in de app-instellingen.</string>
     <string name="permission_warning_badge_desc">Locatietoestemming ontbreekt</string>
+
+    <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
+    <string name="unfinished_workout_title">Training onderbroken</string>
+    <string name="kill_reason_battery_title">Beëindigd door batterijoptimalisatie</string>
+    <string name="kill_reason_battery_stage1">Tja, wie niet horen wil… 😉 Maar we vinden het echt zonde van je verloren kilometers! Android heeft de tracking op de achtergrond gestopt vanwege actieve batterijoptimalisatie.</string>
+    <string name="kill_reason_battery_stage1_strava">En je weet: \'If it\'s not on Strava, it didn\'t happen\'… dubbel pijnlijk! 🙈</string>
+    <string name="kill_reason_battery_stage2">Niet weer… Al de 2e kill! Hoeveel verloren kilometers heb je nog nodig als bewijs? Schakel batterijoptimalisatie voor aTrainingTracker uit.</string>
+    <string name="kill_reason_battery_stage3">Drie keer is scheepsrecht… Meest eigenwijze atleet van de maand! 🏆 Het systeem blijft je training afsluiten totdat je de uitzondering instelt.</string>
+    <string name="kill_reason_low_memory">De registratie is door Android gestopt wegens acuut geheugentekort (bijv. camera of 3D-navigatie op de voorgrond). Je gegevens tot dat moment zijn bewaard.</string>
+    <string name="kill_reason_permission_revoked">De registratie is onderbroken omdat locatie- of meldingsmachtigingen tijdens de training zijn ingetrokken.</string>
+    <string name="action_disable_battery_optimization">Batterijoptimalisatie uitschakelen</string>
+    <string name="battery_optimization_exempt_celebration">Eindelijk! Vrij baan voor je trainingsgegevens 🎉</string>
 </resources>

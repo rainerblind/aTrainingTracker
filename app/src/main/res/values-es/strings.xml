@@ -1443,4 +1443,16 @@
     <string name="permission_rationale_open_settings">Abrir ajustes</string>
     <string name="permission_rationale_settings_explanation">Se denegó el permiso de ubicación. Sin acceso a la ubicación, no se pueden registrar rutas ni puntos GPS. Puedes conceder el permiso en los Ajustes de la aplicación.</string>
     <string name="permission_warning_badge_desc">Falta el permiso de ubicación</string>
+
+    <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
+    <string name="unfinished_workout_title">Entrenamiento interrumpido</string>
+    <string name="kill_reason_battery_title">Finalizado por optimización de batería</string>
+    <string name="kill_reason_battery_stage1">Bueno, el que no escucha… 😉 ¡Pero lamentamos mucho tus kilómetros perdidos! Android detuvo el servicio de grabación en segundo plano por la optimización de batería.</string>
+    <string name="kill_reason_battery_stage1_strava">Y ya sabes: \'If it\'s not on Strava, it didn\'t happen\'… ¡doblemente amargo! 🙈</string>
+    <string name="kill_reason_battery_stage2">¡Otra vez no… ya van 2 cierres! ¿Cuántos kilómetros perdidos necesitas como prueba? Desactiva la optimización de batería para aTrainingTracker.</string>
+    <string name="kill_reason_battery_stage3">No hay dos sin tres… ¡Atleta más resistente a los consejos del mes! 🏆 El sistema seguirá cerrando tu entrenamiento hasta que configures la excepción.</string>
+    <string name="kill_reason_low_memory">La grabación fue detenida por Android por falta de memoria RAM (p. ej. cámara o navegación 3D en primer plano). Tus datos registrados hasta ese momento están a salvo.</string>
+    <string name="kill_reason_permission_revoked">La grabación se interrumpió porque se retiraron los permisos de ubicación o notificaciones durante el entrenamiento.</string>
+    <string name="action_disable_battery_optimization">Desactivar optimización de batería</string>
+    <string name="battery_optimization_exempt_celebration">¡Por fin! Vía libre para tus datos de entrenamiento 🎉</string>
 </resources>
