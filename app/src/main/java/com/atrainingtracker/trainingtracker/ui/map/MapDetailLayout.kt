@@ -56,8 +56,12 @@ import com.atrainingtracker.trainingtracker.ui.components.core.GlobalTelemetryZo
 import com.atrainingtracker.trainingtracker.ui.components.core.GlobalTelemetryZoomToolbarDefaults
 import com.atrainingtracker.trainingtracker.ui.components.core.MinimumDragHandle
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.zIndex
 import com.atrainingtracker.trainingtracker.ui.components.core.SplitPaneDivider
+import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import com.atrainingtracker.trainingtracker.ui.components.core.SplitPaneMath
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
@@ -130,6 +134,8 @@ fun MapDetailLayout(
     val hasScrollableContent = metadataContent != null || analyticsContent != null || hasTelemetryGraphs
 
     val unit = remember { TrainingApplication.getUnit() }
+    val connection = remember { CollapsingAppBarNestedScrollConnection(0) }
+    var headerHeightPx by remember { mutableIntStateOf(0) }
 
     val hrThresholds = remember(bSportType, context) {
         runCatching {
@@ -495,7 +501,7 @@ fun MapDetailLayout(
         }
     }
 
-    Column(
+    BoxWithConstraints(
         modifier = modifier
             .then(
                 if (showMap || hasScrollableContent) Modifier.fillMaxSize() else Modifier.wrapContentHeight()
@@ -503,14 +509,25 @@ fun MapDetailLayout(
             .then(
                 if (!useStatusBarsPadding) Modifier.background(MaterialTheme.colorScheme.surface) else Modifier
             )
+            .nestedScroll(connection)
     ) {
         val density = LocalDensity.current
+        val screenHeightPx = constraints.maxHeight
+        val currentTopPaddingPx = (headerHeightPx + connection.appBarOffset).coerceAtLeast(0)
+        val currentTopPaddingDp = with(density) { currentTopPaddingPx.toDp() }
+
+        // 1. UPPER METADATA & HEADER (Slotted - REQ-UI-245, REQ-UI-250 / ATT-2112, ATT-2150)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .zIndex(1f)
+                .offset { IntOffset(0, connection.appBarOffset) }
                 .onGloballyPositioned { coordinates ->
+                    val measured = coordinates.size.height
+                    headerHeightPx = measured
+                    connection.appBarMaxHeight = measured
                     if (!useStatusBarsPadding && onHeaderHeightMeasured != null) {
-                        val heightDp = with(density) { coordinates.size.height.toDp() }
+                        val heightDp = with(density) { measured.toDp() }
                         onHeaderHeightMeasured(heightDp)
                     }
                 }
@@ -537,14 +554,28 @@ fun MapDetailLayout(
                 }
             }
 
-            // 2. UPPER METADATA (Description & Extrema ABOVE the map - REQ-UI-245 / ATT-2112)
+            // 2. UPPER METADATA (Description & Extrema ABOVE the map - REQ-UI-245 / ATT-2112, ATT-2150)
             metadataContent?.let { mContent ->
+                val minRequiredViewportPx = with(density) {
+                    (SplitPaneMath.MIN_MAP_HEIGHT +
+                     SplitPaneMath.DIVIDER_TOUCH_HEIGHT +
+                     (if (hasZoomToolbar) GlobalTelemetryZoomToolbarDefaults.TOOLBAR_HEIGHT else 0.dp) +
+                     SplitPaneMath.MIN_LOWER_HEIGHT).roundToPx()
+                }
+                val maxMetadataHeightPx = (screenHeightPx - minRequiredViewportPx - with(density) { 60.dp.roundToPx() }).coerceAtLeast(with(density) { 100.dp.roundToPx() })
+                val maxMetadataHeightDp = with(density) { maxMetadataHeightPx.toDp() }
+
                 Surface(
                     color = MaterialTheme.colorScheme.surface,
                     contentColor = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = maxMetadataHeightDp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
                         mContent()
                     }
                 }
@@ -552,12 +583,15 @@ fun MapDetailLayout(
         }
 
         // 2. RESIZABLE VIEWPORT (Map + SplitPaneDivider + Scrollable Lower Section)
-        if (showMap && hasScrollableContent) {
-            BoxWithConstraints(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = currentTopPaddingDp)
+        ) {
+            if (showMap && hasScrollableContent) {
+                BoxWithConstraints(
+                    modifier = Modifier.fillMaxSize()
+                ) {
                 val density = LocalDensity.current
                 val totalHeightPx = constraints.maxHeight.toFloat()
                 val dividerHeightPx = with(density) { SplitPaneMath.DIVIDER_TOUCH_HEIGHT.toPx() }
@@ -629,41 +663,41 @@ fun MapDetailLayout(
             // When hasScrollableContent is false (Routes & Segments), or when showMap is false (LiveSegmentSheet)
             if (showMap) {
                 mapBox(
-                    Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
+                    Modifier.fillMaxSize()
                 )
             }
 
             if (!showMap && hasScrollableContent) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        if (hasZoomToolbar) {
-                            GlobalTelemetryZoomToolbar(
-                                zoomScale = profileZoomScale,
-                                startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
-                                totalSpan = totalSpan,
-                                onZoomChanged = { z, s ->
-                                    profileZoomScale = z
-                                    viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
-                                },
-                                isPanMode = isPanMode,
-                                onPanModeToggle = { isPanMode = !isPanMode },
-                                modifier = Modifier.fillMaxWidth()
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            if (hasZoomToolbar) {
+                                GlobalTelemetryZoomToolbar(
+                                    zoomScale = profileZoomScale,
+                                    startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
+                                    totalSpan = totalSpan,
+                                    onZoomChanged = { z, s ->
+                                        profileZoomScale = z
+                                        viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
+                                    },
+                                    isPanMode = isPanMode,
+                                    onPanModeToggle = { isPanMode = !isPanMode },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            lowerColumn(
+                                Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth()
+                                    .verticalScroll(rememberScrollState())
                             )
                         }
-                        lowerColumn(
-                            Modifier
-                                .weight(1f)
-                                .fillMaxWidth()
-                                .verticalScroll(rememberScrollState())
-                        )
+                        scrubbingOverlay()
                     }
-                    scrubbingOverlay()
                 }
             } else {
                 if (hasZoomToolbar) {
@@ -695,4 +729,5 @@ fun MapDetailLayout(
             }
         }
     }
+}
 }
