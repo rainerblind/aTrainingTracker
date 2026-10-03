@@ -635,10 +635,31 @@ object LegacyImportEngine {
                 baseFileName = firstTime!!.replace(" ", "_").replace(":", "")
             }
 
+            val sportTypeManager = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(context)
+            var bSportType = BSportType.UNKNOWN
+            var resolvedSportId = -1L
+            if (sportName != null) {
+                val sportId = sportTypeManager.getSportTypeIdFromTcxName(sportName!!)
+                if (sportId != -1L) {
+                    resolvedSportId = sportId
+                    bSportType = sportTypeManager.getBSportType(sportId)
+                } else {
+                    bSportType = when (sportName!!.lowercase()) {
+                        "running" -> BSportType.RUN
+                        "biking", "cycling" -> BSportType.BIKE
+                        "walking" -> BSportType.RUN
+                        else -> BSportType.UNKNOWN
+                    }
+                    if (bSportType != BSportType.UNKNOWN) {
+                        resolvedSportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
+                    }
+                }
+            }
+
             var workoutId = -1L
             // ATT-2023 / REQ-MIG-031: Mutex-guarded multi-dimensional deduplication and atomic insertion
             val isDuplicate = importMutex.withLock {
-                if (isWorkoutExisting(summaryDb, baseFileName, firstTime)) {
+                if (isWorkoutExisting(summaryDb, baseFileName, firstTime, bSportType)) {
                     if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
                     return@withLock true
                 }
@@ -674,7 +695,8 @@ object LegacyImportEngine {
                             put(WorkoutSummaries.FILE_BASE_NAME, baseFileName)
                             put(WorkoutSummaries.WORKOUT_NAME, if (!workoutName.isNullOrBlank()) workoutName!!.trim() else baseFileName)
                             put(WorkoutSummaries.TIME_START, firstTime)
-                            put(WorkoutSummaries.SPORT_ID, -1L)
+                            put(WorkoutSummaries.SPORT_ID, resolvedSportId)
+                            put(WorkoutSummaries.B_SPORT, bSportType.name)
                             put(WorkoutSummaries.EQUIPMENT_ID, -1L)
                             put(WorkoutSummaries.FINISHED, 1)
                             if (uploadToStrava && TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
@@ -694,32 +716,6 @@ object LegacyImportEngine {
             }
 
             if (firstTime != null) {
-                val sportTypeManager = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(context)
-                var bSportType = BSportType.UNKNOWN
-                
-                if (sportName != null) {
-                    val sportId = sportTypeManager.getSportTypeIdFromTcxName(sportName!!)
-                    if (sportId != -1L) {
-                        bSportType = sportTypeManager.getBSportType(sportId)
-                        val updateValues = ContentValues().apply {
-                            put(WorkoutSummaries.SPORT_ID, sportId)
-                        }
-                        summaryDb.database.update(WorkoutSummaries.TABLE, updateValues, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
-                    } else {
-                        bSportType = when (sportName!!.lowercase()) {
-                            "running" -> BSportType.RUN
-                            "biking", "cycling" -> BSportType.BIKE
-                            "walking" -> BSportType.RUN
-                            else -> BSportType.UNKNOWN
-                        }
-                        if (bSportType != BSportType.UNKNOWN) {
-                            val fallbackSportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
-                            summaryDb.database.update(WorkoutSummaries.TABLE, ContentValues().apply {
-                                put(WorkoutSummaries.SPORT_ID, fallbackSportId)
-                            }, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
-                        }
-                    }
-                }
 
                 // ATT-316: Synchronous post-processing to support backpressure (ATT-349).
                 // Refined: We no longer hold the mutex for the entire duration to allow the queue to grow,
@@ -1049,10 +1045,32 @@ object LegacyImportEngine {
                 baseFileName = firstTime!!.replace(" ", "_").replace(":", "")
             }
 
+            val sportTypeManager = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(context)
+            var bSportType = BSportType.UNKNOWN
+            var resolvedSportId = -1L
+
+            if (sportName != null) {
+                val sportId = sportTypeManager.getSportTypeIdFromTcxName(sportName!!)
+                if (sportId != -1L) {
+                    resolvedSportId = sportId
+                    bSportType = sportTypeManager.getBSportType(sportId)
+                } else {
+                    bSportType = when (sportName!!.lowercase()) {
+                        "running", "run", "jogging" -> BSportType.RUN
+                        "biking", "cycling", "bike", "ride", "mountain biking", "road cycling" -> BSportType.BIKE
+                        "walking", "hiking", "hike", "walk" -> BSportType.RUN
+                        else -> BSportType.UNKNOWN
+                    }
+                    if (bSportType != BSportType.UNKNOWN) {
+                        resolvedSportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
+                    }
+                }
+            }
+
             var workoutId = -1L
             // ATT-2023 / REQ-MIG-031: Mutex-guarded multi-dimensional deduplication and atomic insertion
             val isDuplicate = importMutex.withLock {
-                if (isWorkoutExisting(summaryDb, baseFileName, firstTime)) {
+                if (isWorkoutExisting(summaryDb, baseFileName, firstTime, bSportType)) {
                     if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
                     return@withLock true
                 }
@@ -1086,7 +1104,8 @@ object LegacyImportEngine {
                             put(WorkoutSummaries.FILE_BASE_NAME, baseFileName)
                             put(WorkoutSummaries.WORKOUT_NAME, if (!workoutName.isNullOrBlank()) workoutName!!.trim() else baseFileName)
                             put(WorkoutSummaries.TIME_START, firstTime)
-                            put(WorkoutSummaries.SPORT_ID, -1L)
+                            put(WorkoutSummaries.SPORT_ID, resolvedSportId)
+                            put(WorkoutSummaries.B_SPORT, bSportType.name)
                             put(WorkoutSummaries.EQUIPMENT_ID, -1L)
                             put(WorkoutSummaries.FINISHED, 1)
                             if (uploadToStrava && TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
@@ -1106,34 +1125,6 @@ object LegacyImportEngine {
             }
 
             if (firstTime != null) {
-                val sportTypeManager = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(context)
-                var bSportType = BSportType.UNKNOWN
-
-                if (sportName != null) {
-                    val sportId = sportTypeManager.getSportTypeIdFromTcxName(sportName!!)
-                    if (sportId != -1L) {
-                        bSportType = sportTypeManager.getBSportType(sportId)
-                        val updateValues = ContentValues().apply {
-                            put(WorkoutSummaries.SPORT_ID, sportId)
-                            put(WorkoutSummaries.B_SPORT, bSportType.name)
-                        }
-                        summaryDb.database.update(WorkoutSummaries.TABLE, updateValues, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
-                    } else {
-                        bSportType = when (sportName!!.lowercase()) {
-                            "running", "run", "jogging" -> BSportType.RUN
-                            "biking", "cycling", "bike", "ride", "mountain biking", "road cycling" -> BSportType.BIKE
-                            "walking", "hiking", "hike", "walk" -> BSportType.RUN
-                            else -> BSportType.UNKNOWN
-                        }
-                        if (bSportType != BSportType.UNKNOWN) {
-                            val fallbackSportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
-                            summaryDb.database.update(WorkoutSummaries.TABLE, ContentValues().apply {
-                                put(WorkoutSummaries.SPORT_ID, fallbackSportId)
-                                put(WorkoutSummaries.B_SPORT, bSportType.name)
-                            }, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
-                        }
-                    }
-                }
 
                 // If sport is still unknown, infer from movement speed (ATT-1116)
                 if (bSportType == BSportType.UNKNOWN && cumDist > 0) {
@@ -1205,7 +1196,8 @@ object LegacyImportEngine {
     internal fun isWorkoutExisting(
         db: WorkoutSummariesDatabaseManager, 
         fileBaseName: String, 
-        timeStart: String? = null
+        timeStart: String? = null,
+        bSportType: BSportType? = null
     ): Boolean {
         if (timeStart.isNullOrBlank()) {
             db.database.query(
@@ -1219,10 +1211,22 @@ object LegacyImportEngine {
             }
         }
 
-        val selection = "${WorkoutSummaries.FILE_BASE_NAME} = ? OR " +
-                "${WorkoutSummaries.TIME_START} = ? OR " +
-                "(${WorkoutSummaries.TIME_START} IS NOT NULL AND ABS(strftime('%s', ${WorkoutSummaries.TIME_START}) - strftime('%s', ?)) <= 30)"
-        val selectionArgs = arrayOf(fileBaseName, timeStart, timeStart)
+        val hasSport = bSportType != null && bSportType != BSportType.UNKNOWN
+        val selection = if (hasSport) {
+            "${WorkoutSummaries.FILE_BASE_NAME} = ? OR " +
+                    "${WorkoutSummaries.TIME_START} = ? OR " +
+                    "(${WorkoutSummaries.B_SPORT} = ? AND ${WorkoutSummaries.TIME_START} IS NOT NULL AND ABS(strftime('%s', ${WorkoutSummaries.TIME_START}) - strftime('%s', ?)) <= 180)"
+        } else {
+            "${WorkoutSummaries.FILE_BASE_NAME} = ? OR " +
+                    "${WorkoutSummaries.TIME_START} = ? OR " +
+                    "(${WorkoutSummaries.TIME_START} IS NOT NULL AND ABS(strftime('%s', ${WorkoutSummaries.TIME_START}) - strftime('%s', ?)) <= 180)"
+        }
+
+        val selectionArgs = if (hasSport) {
+            arrayOf(fileBaseName, timeStart, bSportType.name, timeStart)
+        } else {
+            arrayOf(fileBaseName, timeStart, timeStart)
+        }
 
         db.database.query(
             WorkoutSummaries.TABLE, 
