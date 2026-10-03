@@ -212,15 +212,23 @@ class TrackingViewModel(
         }
     }
 
+    private data class MapData<T1, T2, T3, T4>(
+        val allLiveSegments: T1,
+        val activeLiveSegments: T2,
+        val allRoutes: T3,
+        val activeNavigatedRouteId: T4
+    )
+
     private fun loadSensorFieldStates() {
         viewModelScope.launch {
             // 1. First, create a combined flow for all Map-related data
             val mapDataFlow = combine(
                 liveSegmentsRepository.liveSegments,
                 activeLiveSegments,
-                routesRepository.allRoutes
-            ) { allSegments, activeSegments, allRoutes ->
-                Triple(allSegments, activeSegments, allRoutes)
+                routesRepository.allRoutes,
+                routesRepository.activeNavigatedRouteId
+            ) { allSegments, activeSegments, allRoutes, activeNavigatedRouteId ->
+                MapData(allSegments, activeSegments, allRoutes, activeNavigatedRouteId)
             }
 
             // 2. Now combine the Sensor data with the Map data (This keeps us under the 5-flow limit)
@@ -231,7 +239,7 @@ class TrackingViewModel(
                 banalServiceRepository.currentPathPoints,
                 mapDataFlow
             ) { configs, allSensorData, viewInfo, livePathPoints, mapData ->
-                val (allLiveSegments, activeLiveSegments, allRoutes) = mapData
+                val (allLiveSegments, activeLiveSegments, allRoutes, activeNavigatedRouteId) = mapData
 
                 // --- Step 1: Create the base state from the latest configurations ---
                 val currentActivity = banalServiceRepository.activityType.value
@@ -304,7 +312,7 @@ class TrackingViewModel(
                     bSportType = banalServiceRepository.bSportType.value,
                     currentTrack = currentTrack,
                     mapSegments = mapSegments,
-                    mapRoutes = allRoutes.map { it.toMapRoute() },
+                    mapRoutes = allRoutes.map { it.toMapRoute(isActiveNavigation = (it.summary.id == activeNavigatedRouteId)) },
                     activeLiveSegmentIds = activeIds,
                     mapMarkers = markerList
                 )

@@ -74,6 +74,18 @@ class RoutesRepository internal constructor(
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
+    // StateFlow to track actively navigated route ID (REQ-MAP-023 / ATT-1841)
+    private val _activeNavigatedRouteId = MutableStateFlow<Long?>(null)
+    val activeNavigatedRouteId: StateFlow<Long?> = _activeNavigatedRouteId.asStateFlow()
+
+    /**
+     * Sets or clears the actively navigated route.
+     * When set, this route is visually highlighted with high prominence and directional chevrons.
+     */
+    fun setActiveNavigatedRoute(routeId: Long?) {
+        _activeNavigatedRouteId.value = routeId
+    }
+
     init {
         // Prune any expired cached Strava routes on initialization (Section 6.2 compliance)
         routesDb.pruneExpiredStravaRoutes()
