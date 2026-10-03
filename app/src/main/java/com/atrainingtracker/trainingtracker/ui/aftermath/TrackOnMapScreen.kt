@@ -275,6 +275,14 @@ fun TrackOnMapScreen(
                             .padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                 }
+                if (activeDetailPrefs.showStrava && !workoutData.stravaActivityData.isNullOrBlank()) {
+                    StravaActivitySection(
+                        rawActivityJson = workoutData.stravaActivityData,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
             }
         },
         analyticsContent = {
@@ -312,14 +320,6 @@ fun TrackOnMapScreen(
                                 .padding(horizontal = 16.dp, vertical = 4.dp)
                         )
                     }
-                }
-                if (activeDetailPrefs.showStrava && !workoutData.stravaActivityData.isNullOrBlank()) {
-                    StravaActivitySection(
-                        rawActivityJson = workoutData.stravaActivityData,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
                 }
             }
         }
