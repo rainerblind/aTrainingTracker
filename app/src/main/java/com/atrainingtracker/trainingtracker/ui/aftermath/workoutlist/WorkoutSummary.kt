@@ -75,7 +75,9 @@ import com.atrainingtracker.trainingtracker.ui.map.toMapTrack
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneDistributionCard
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
+import androidx.compose.runtime.saveable.rememberSaveable
 
 /**
  * A comprehensive summary of a workout.
@@ -100,6 +102,8 @@ fun WorkoutSummary(
     val contentAlpha = if (workoutData.headerData.finished) TTAlpha.High else 0.5f
 
     var activeEditingLap by remember { mutableStateOf<LapData?>(null) }
+    var hrZoneDisplayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }
+    var powerZoneDisplayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }
     val context = LocalContext.current
     val repository = remember(context) { WorkoutRepository.getInstance(context.applicationContext as Application) }
 
@@ -332,6 +336,8 @@ fun WorkoutSummary(
                         onDistanceSelected = {},
                         bSportType = workoutData.bSportType,
                         enableGestures = false,
+                        zoneDistribution = hrZoneDistribution,
+                        zoneDisplayMode = hrZoneDisplayMode,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -361,6 +367,8 @@ fun WorkoutSummary(
                         onDistanceSelected = {},
                         bSportType = workoutData.bSportType,
                         enableGestures = false,
+                        zoneDistribution = powerZoneDistribution,
+                        zoneDisplayMode = powerZoneDisplayMode,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -377,6 +385,8 @@ fun WorkoutSummary(
             hrZoneDistribution?.let { distribution ->
                 HeartRateZoneDistributionCard(
                     distribution = distribution,
+                    displayMode = hrZoneDisplayMode,
+                    onDisplayModeChange = { hrZoneDisplayMode = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -386,6 +396,8 @@ fun WorkoutSummary(
             powerZoneDistribution?.let { distribution ->
                 PowerZoneDistributionCard(
                     distribution = distribution,
+                    displayMode = powerZoneDisplayMode,
+                    onDisplayModeChange = { powerZoneDisplayMode = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
