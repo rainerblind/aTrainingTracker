@@ -71,7 +71,9 @@ fun MappablePathLayer(
         overlayZIndex = path.overlayZIndex ?: path.zIndex,
         pattern = if (alpha >= 1.0f) path.pattern else null,
         clickable = true,
-        onClick = { onPathClick(path.id) }
+        onClick = { onPathClick(path.id) },
+        overlayColor = (path.overlayColor ?: path.color).copy(alpha = alpha),
+        overlayWidth = path.overlayWidth ?: path.width
     )
 
     // 2. Specialized Decorations (Segments only)
@@ -83,6 +85,58 @@ fun MappablePathLayer(
             context = context,
             directionIcons = directionIcons
         )
+    } else if (path is MapRoute && path.isActiveNavigation && directionIcons != null) {
+        ActiveRouteDecorations(
+            route = path,
+            alpha = alpha,
+            currentZoom = currentZoom,
+            directionIcons = directionIcons
+        )
+    }
+}
+
+/**
+ * Specialized decorations for actively navigated routes: Directional chevrons along polyline.
+ * (REQ-MAP-023 / ATT-1841)
+ */
+@Composable
+private fun ActiveRouteDecorations(
+    route: MapRoute,
+    alpha: Float,
+    currentZoom: Float,
+    directionIcons: Triple<BitmapDescriptor?, BitmapDescriptor?, BitmapDescriptor?>
+) {
+    if (currentZoom > 13f && route.path.size >= 2) {
+        val arrowIcon = when {
+            currentZoom > 17f -> directionIcons.third
+            currentZoom > 15.5f -> directionIcons.second
+            else -> directionIcons.first
+        }
+
+        val step = when {
+            currentZoom > 16f -> 10
+            currentZoom > 14f -> 20
+            else -> 40
+        }
+
+        route.path.windowed(2, step).forEach { pair ->
+            val p1 = pair[0].latLng
+            val p2 = pair[1].latLng
+            val midPos = LatLng(
+                (p1.latitude + p2.latitude) / 2.0,
+                (p1.longitude + p2.longitude) / 2.0
+            )
+            val bearing = calculateBearing(p1, p2).toFloat()
+            Marker(
+                state = remember(midPos) { MarkerState(position = midPos) },
+                icon = arrowIcon,
+                rotation = bearing,
+                flat = true,
+                anchor = Offset(0.5f, 0.5f),
+                alpha = alpha,
+                zIndex = route.zIndex + 1.0f
+            )
+        }
     }
 }
 
@@ -327,7 +381,9 @@ private fun XRayPolyline(
     pattern: List<PatternItem>? = null,
     jointType: Int = JointType.DEFAULT,
     clickable: Boolean = false,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    overlayColor: Color = color,
+    overlayWidth: Float = width
 ) {
     // 1. Solid Base
     Polyline(
@@ -344,8 +400,8 @@ private fun XRayPolyline(
     if (pattern != null) {
         Polyline(
             points = points,
-            color = color,
-            width = width,
+            color = overlayColor,
+            width = overlayWidth,
             zIndex = overlayZIndex,
             pattern = pattern,
             jointType = jointType

@@ -131,6 +131,8 @@ object TTColor {
     // Route Visualization
     val RouteSelected = Color(0xFF228B22) // ForestGreen
     val RouteUnselected = Color(0xFF90EE90) // LightGreen
+    val RouteActiveNavigation = Color(0xFF00E676) // Vibrant Electric Emerald for actively navigated routes
+    val RouteActiveNavigationOverlay = Color(0xFF004D20) // Deep Emerald for active route dashed overlay
 
     // Spatial Signature Points
     val StartPoint = Color(0xFF2E7D32) // Material Green 800
