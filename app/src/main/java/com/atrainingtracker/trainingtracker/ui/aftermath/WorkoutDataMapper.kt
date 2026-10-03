@@ -35,6 +35,7 @@ import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManag
 import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
@@ -133,6 +134,9 @@ class WorkoutDataMapper(
             commute = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.COMMUTE)) == 1,
             trainer = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TRAINER)) == 1,
             race = cursor.getColumnIndex(WorkoutSummaries.RACE).takeIf { it >= 0 }?.let { cursor.getInt(it) == 1 } ?: false,
+            source = cursor.getColumnIndex(WorkoutSummaries.SOURCE).takeIf { it >= 0 }?.let {
+                WorkoutSource.fromString(cursor.getString(it))
+            } ?: WorkoutSource.TRACKED,
             uploadToStrava = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.UPLOAD_TO_STRAVA)),
             mapPolyline = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.MAP_POLYLINE)) ?: "",
             encodedAltitudes = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.ALTITUDE_STREAM)) ?: "",

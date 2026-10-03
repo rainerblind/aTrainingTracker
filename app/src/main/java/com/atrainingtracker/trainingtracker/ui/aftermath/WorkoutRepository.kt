@@ -1178,6 +1178,7 @@ class WorkoutRepository private constructor(private val application: Application
                             commute = userEditedWorkout.commute,
                             trainer = userEditedWorkout.trainer,
                             race = userEditedWorkout.race,
+                            source = current.source,
                             uploadToStrava = userEditedWorkout.uploadToStrava
                         )
                     } else current
