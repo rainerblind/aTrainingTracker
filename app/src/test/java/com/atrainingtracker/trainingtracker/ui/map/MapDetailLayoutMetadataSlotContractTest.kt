@@ -63,17 +63,22 @@ class MapDetailLayoutMetadataSlotContractTest {
     }
 
     @Test
-    fun testMapDetailLayout_rendersMetadataContentAtTopOfLowerColumnBeforeGraphs() {
+    fun testMapDetailLayout_rendersMetadataContentAboveMapBeforeViewport() {
         assertTrue("MapDetailLayout.kt must exist", mapDetailLayoutFile.exists())
         val content = mapDetailLayoutFile.readText()
 
+        val headerIdx = content.indexOf("header()")
+        assertTrue("header() must be invoked", headerIdx > 0)
+
+        val metadataSlotIdx = content.indexOf("metadataContent?.let", headerIdx)
+        assertTrue("metadataContent?.let must be rendered after header()", metadataSlotIdx > headerIdx)
+
+        val viewportIdx = content.indexOf("BoxWithConstraints", metadataSlotIdx)
+        assertTrue("metadataContent must precede BoxWithConstraints (the map viewport) (REQ-UI-245)", viewportIdx > metadataSlotIdx)
+
         val lowerColIdx = content.indexOf("val lowerColumn:")
-        assertTrue("lowerColumn must be declared", lowerColIdx > 0)
-
-        val metadataSlotIdx = content.indexOf("metadataContent?.let", lowerColIdx)
-        assertTrue("metadataContent?.let must be rendered inside lowerColumn", metadataSlotIdx > lowerColIdx)
-
-        val graphsIdx = content.indexOf("if (showElevationProfile || hasTelemetryGraphs)", metadataSlotIdx)
-        assertTrue("metadataContent must precede elevation profile and telemetry graphs in lowerColumn", graphsIdx > metadataSlotIdx)
+        val endLowerColIdx = content.indexOf("val density = LocalDensity.current")
+        val lowerColBlock = content.substring(lowerColIdx, endLowerColIdx)
+        assertTrue("metadataContent must not be rendered inside lowerColumn", !lowerColBlock.contains("metadataContent?.let"))
     }
 }

@@ -296,18 +296,6 @@ fun MapDetailLayout(
 
     val lowerColumn: @Composable (Modifier) -> Unit = { colModifier ->
         Column(modifier = colModifier) {
-            // 0. UPPER METADATA SLOT (REQ-UI-245 / ATT-2112)
-            metadataContent?.let { mContent ->
-                Surface(
-                    color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        mContent()
-                    }
-                }
-            }
-
             if (showElevationProfile || hasTelemetryGraphs) {
                 activeScrubPath?.let { path ->
                     Surface(
@@ -546,6 +534,19 @@ fun MapDetailLayout(
                     drawLayer(headerLayer)
                 }) {
                     header()
+                }
+            }
+
+            // 2. UPPER METADATA (Description & Extrema ABOVE the map - REQ-UI-245 / ATT-2112)
+            metadataContent?.let { mContent ->
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        mContent()
+                    }
                 }
             }
         }
