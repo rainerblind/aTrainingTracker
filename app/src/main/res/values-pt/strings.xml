@@ -1507,4 +1507,7 @@
     <string name="google_drive_never_synced">Ainda não sincronizado</string>
     <string name="restore_from_google_drive">Restaurar do Google Drive</string>
     <string name="upload_to_google_drive">Fazer backup no Google Drive</string>
+    <string name="gpx_enriching_elevation">A obter dados de elevação…</string>
+    <string name="gpx_elevation_enriched">Dados de elevação adicionados com sucesso</string>
+    <string name="gpx_elevation_enrichment_failed">Falha ao obter altitude, rota 2D importada</string>
 </resources>

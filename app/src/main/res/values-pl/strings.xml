@@ -1509,4 +1509,7 @@
     <string name="google_drive_never_synced">Jeszcze nie zsynchronizowano</string>
     <string name="restore_from_google_drive">Przywróć z Dysku Google</string>
     <string name="upload_to_google_drive">Utwórz kopię zapasową na Dysku Google</string>
+    <string name="gpx_enriching_elevation">Pobieranie danych wysokości…</string>
+    <string name="gpx_elevation_enriched">Dane wysokości dodane pomyślnie</string>
+    <string name="gpx_elevation_enrichment_failed">Nie udało się pobrać wysokości, zaimportowano trasę 2D</string>
 </resources>

@@ -1700,6 +1700,9 @@
     <string name="google_drive_never_synced">Not synchronized yet</string>
     <string name="restore_from_google_drive">Restore from Google Drive</string>
     <string name="upload_to_google_drive">Back up to Google Drive</string>
+    <string name="gpx_enriching_elevation">Fetching elevation data…</string>
+    <string name="gpx_elevation_enriched">Elevation data successfully added</string>
+    <string name="gpx_elevation_enrichment_failed">Elevation lookup failed, imported 2D route</string>
 </resources>
 
 

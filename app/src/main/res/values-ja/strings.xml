@@ -1487,4 +1487,7 @@
     <string name="google_drive_never_synced">まだ同期されていません</string>
     <string name="restore_from_google_drive">Google ドライブから復元</string>
     <string name="upload_to_google_drive">Google ドライブにバックアップ</string>
+    <string name="gpx_enriching_elevation">標高データを取得中…</string>
+    <string name="gpx_elevation_enriched">標高データを正常に追加しました</string>
+    <string name="gpx_elevation_enrichment_failed">標高の取得に失敗しました。2Dルートをインポートしました</string>
 </resources>
