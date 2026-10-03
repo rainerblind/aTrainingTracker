@@ -27,6 +27,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
 import com.atrainingtracker.trainingtracker.ui.util.BaseMappableListViewModel
 import com.atrainingtracker.trainingtracker.ui.util.MappableSortOrder
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
@@ -153,6 +154,13 @@ class WorkoutSummariesViewModel(application: Application) :
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = WorkoutCardSectionPreferences()
+        )
+
+    val workoutSectionsOrder: StateFlow<List<WorkoutSectionType>> = prefManager.workoutSectionsOrderFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = WorkoutSectionType.DEFAULT_ORDER
         )
 
     // 3. Update the toggle logic to save to DataStore

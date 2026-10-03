@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
@@ -102,7 +103,8 @@ fun WorkoutTabsScreen(
     onMarkFinished: (Long) -> Unit = {},
     knownLocations: List<KnownLocationItem> = emptyList(),
     availableClusters: List<WorkoutCluster> = emptyList(),
-    workoutCardPreferences: WorkoutCardSectionPreferences = WorkoutCardSectionPreferences()
+    workoutCardPreferences: WorkoutCardSectionPreferences = WorkoutCardSectionPreferences(),
+    workoutSectionsOrder: List<WorkoutSectionType> = WorkoutSectionType.DEFAULT_ORDER
 ) {
     val tabs = listOf(
         stringResource(R.string.workout_summaries_tab_all),
@@ -235,7 +237,8 @@ fun WorkoutTabsScreen(
                     headerHeightPx = appBarMaxHeightPx.toFloat(),
                     onClusterClick = onClusterClick,
                     onMarkFinished = onMarkFinished,
-                    workoutCardPreferences = workoutCardPreferences
+                    workoutCardPreferences = workoutCardPreferences,
+                    workoutSectionsOrder = workoutSectionsOrder
                 )
             }
 
