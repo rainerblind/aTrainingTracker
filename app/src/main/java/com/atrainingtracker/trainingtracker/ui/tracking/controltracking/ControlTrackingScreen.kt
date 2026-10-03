@@ -72,6 +72,7 @@ fun ControlTrackingScreen(
     selectingProtocol: Protocol?,
     onDeviceTypeSelected: (DeviceType) -> Unit,
     onCancelDeviceTypeSelection: () -> Unit,
+    showResearchButton: Boolean = true,
     locationCalibrationStatus: com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.LocationCalibrationStatus? = null,
     modifier: Modifier = Modifier
 ) {
@@ -184,11 +185,13 @@ fun ControlTrackingScreen(
 
             // Research Button - Anchored to the far left of the screen
             // note that this must be added at the end to get the clicking working...
-            Box(modifier = Modifier.align(Alignment.TopStart)) {
-                ResearchButton(
-                    isEnabled = searchingFor == null,
-                    onClick = onSearch
-                )
+            if (showResearchButton) {
+                Box(modifier = Modifier.align(Alignment.TopStart)) {
+                    ResearchButton(
+                        isEnabled = searchingFor == null,
+                        onClick = onSearch
+                    )
+                }
             }
         }
 
@@ -318,6 +321,32 @@ fun PreviewControlTrackingScreen() {
                 onSearch = {}, onDeviceClick = {}, onSportSelected = {},
                 onStart = {}, onPause = {}, onResume = {}, onStop = {}, onPairingClicked = {},
                 selectingProtocol = null, onDeviceTypeSelected = {}, onCancelDeviceTypeSelection = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "Light Mode - No Remote Devices (Hidden Suchen)")
+@Preview(
+    showBackground = true,
+    name = "Dark Mode - No Remote Devices (Hidden Suchen)",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun PreviewControlTrackingScreenNoRemoteDevices() {
+    ATrainingTrackerTheme {
+        Surface {
+            ControlTrackingScreen(
+                trackingMode = TrackingMode.READY,
+                searchingFor = null,
+                devices = emptyList(),
+                currentSport = BSportType.RUN,
+                isAntSupported = true,
+                isBluetoothSupported = true,
+                onSearch = {}, onDeviceClick = {}, onSportSelected = {},
+                onStart = {}, onPause = {}, onResume = {}, onStop = {}, onPairingClicked = {},
+                selectingProtocol = null, onDeviceTypeSelected = {}, onCancelDeviceTypeSelection = {},
+                showResearchButton = false
             )
         }
     }
