@@ -192,6 +192,9 @@ class WorkoutSummariesListFragment : Fragment() {
                                     showTechnicalTracks = true,
                                     onClusterClick = { clusterId -> WorkoutNavigationEvents.triggerCluster(clusterId) },
                                     onEditWorkout = { id -> selectedWorkoutIdForEdit = id },
+                                    hrZoneDistribution = aftermathUIState.hrZoneDistribution,
+                                    powerZoneDistribution = aftermathUIState.powerZoneDistribution,
+                                    telemetryPath = aftermathUIState.telemetryPath,
                                     modifier = Modifier
                                 )
 

@@ -34,6 +34,8 @@ import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscov
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
@@ -86,8 +88,10 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
     private val banalRepository = BANALServiceRepository.getInstance(application)
     private val discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(application)
     private val preferenceManager = MyPreferenceManager(application)
+    private val knownLocationsRepo = KnownLocationsRepository.getInstance(application)
 
     val allClusters: StateFlow<List<WorkoutCluster>> = repository.allClusters
+    val knownLocations: StateFlow<List<KnownLocationItem>> = knownLocationsRepo.locationsFlow
     val currentLocation: StateFlow<LatLng?> = banalRepository.currentLocation
 
     private val _clusterWorkouts = MutableStateFlow<List<WorkoutData>>(emptyList())
@@ -481,5 +485,17 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
     fun getLinkedEquipmentSet(sportId: Long): Set<String> {
         val sportName = getSportName(sportId)
         return discoveryManager.getEquipmentNamesForSport(sportName)
+    }
+
+    /**
+     * Resolves the recognized start location name for a cluster's start coordinates (REQ-UI-186, ATT-1402).
+     */
+    fun getStartLocationName(lat: Double, lng: Double): String? {
+        return try {
+            val loc = com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.getInstance(getApplication()).getMyLocation(LatLng(lat, lng))
+            loc?.name
+        } catch (_: Exception) {
+            null
+        }
     }
 }

@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
@@ -62,7 +63,8 @@ fun RouteOnMapScreen(
     onToggleSelection: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     useStatusBarsPadding: Boolean = true,
-    showMap: Boolean = true
+    showMap: Boolean = true,
+    onHeaderHeightMeasured: ((Dp) -> Unit)? = null
 ) {
     val bSportType = route?.bSportType ?: routeSummary?.bSportType ?: BSportType.UNKNOWN
 
@@ -94,6 +96,7 @@ fun RouteOnMapScreen(
         activeScrubPath = route?.path,
         useStatusBarsPadding = useStatusBarsPadding,
         showMap = showMap,
+        onHeaderHeightMeasured = onHeaderHeightMeasured,
         header = {
             routeSummary?.let {
                 RouteSummaryHeader(

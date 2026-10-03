@@ -158,7 +158,9 @@ public class GPXFileWriter extends BaseFileWriter {
 
                     if (haveAltitude && dataValid(cursor, SensorType.ALTITUDE.name())) {
                         altitude = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.ALTITUDE.name()));
-                        bufferedWriter.write("    <ele>" + altitude + "</ele>\n");
+                        if (altitude >= -500.0 && altitude <= 9000.0) {
+                            bufferedWriter.write("    <ele>" + altitude + "</ele>\n");
+                        }
                     }
 
                     bufferedWriter.write("    <time>"

@@ -1,0 +1,24 @@
+h2. Gate 1: Problem Analysis & Forensic Review (Local Independent Auditor)
+
+*Auditor Model*: *Local Independent Agent Instance*
+*Audit Decision*: *RECOMMEND PASS*
+*Risk Level*: *LOW* (The root cause analysis conclusively identifies the event mechanism failure, pager state desynchronization, and rising-edge emission issues, proposing an idiomatic Kotlin SharedFlow solution).
+
+h3. 1. Problem Definition & Scope Audit
+* *User Impact*: Accurately describes the user regression: when tracking is started, the pager stays on Page 0 (Control) instead of automatically navigating to Page 1 (first cockpit tab).
+* *Affected Scope*: Strictly localized to `TrackingTabsScreen.kt` and `TrackingTabsViewModel.kt`.
+
+h3. 2. Root Cause Verification
+* *SingleLiveEvent / Compose Bridge Failure*: Conclusively demonstrates why `SingleLiveEvent.call()` + `observeAsState()` fails in Compose: `Unit == Unit` structural equality prevents recomposition on subsequent triggers, and `LaunchedEffect(navigateTrigger)` never re-fires once set.
+* *Pager State & lastKnownPage Desynchronization*: Identifies the race condition where `scrollToPage(1)` omitted updating `lastKnownPage`, causing `key(trackingViews.size, screenMode)` pager recreation to snap back to Page 0.
+* *Rising-Edge Transition Detection*: Notes that observing `trackingMode` directly without previous state comparison can lead to false triggers on cold starts or resumes.
+* *Architectural Duplication*: Highlights that `TabNavigationEvent.NavigateTo` via `SharedFlow` already exists in `TrackingTabsViewModel` for tab adding/deletion and should be the unified event bus.
+
+h3. 3. Proposed Resolution Soundness
+* *Idiomatic Flow Unification*: Retiring `SingleLiveEvent` in favor of emitting `TabNavigationEvent.NavigateTo(0)` through the existing `_navigationEvent` SharedFlow eliminates legacy LiveData friction.
+* *Animated Transitions*: Replaces instant snapping with `animateScrollToPage(target)`.
+* *State Pinned*: Assigning `lastKnownPage = target` before animation prevents pager recreation from falling back to Page 0.
+
+h3. 4. Auditor Recommendation & Notes
+* *Verdict*: *RECOMMEND PASS*. The analysis is comprehensive and ready for Stage 2 Test Specification.
+* *Actionable Next Steps*: Advance ATT-1342 to {{Freigabe (Human)}} for user approval.

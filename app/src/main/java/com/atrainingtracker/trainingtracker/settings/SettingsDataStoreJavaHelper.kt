@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.settings
 
 import android.content.Context
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
@@ -49,5 +50,52 @@ object SettingsDataStoreJavaHelper {
                 else -> 0 // Fallback
             }
         }
+    }
+
+    /**
+     * Synchronous bridge for legacy Java or non-coroutine callers to fetch zone display options.
+     * Executes safely on Dispatchers.IO to prevent UI thread blocking.
+     */
+    @JvmStatic
+    fun getZoneDisplayOptions(context: Context, zoneType: SettingsDataStore.ZoneType): ZoneDisplayOptions {
+        val dataStore = SettingsDataStore(context)
+        return runBlocking(Dispatchers.IO) {
+            dataStore.getZoneDisplayOptionsFlow(zoneType).first()
+        }
+    }
+
+    /**
+     * Synchronous bridge for legacy Java sensor drivers to fetch the active tuning configuration.
+     */
+    @JvmStatic
+    fun getTuningConfig(context: Context): TuningConfig {
+        val tuningDataStore = TuningPreferencesDataStore(context)
+        return runBlocking(Dispatchers.IO) {
+            tuningDataStore.tuningConfigFlow.first()
+        }
+    }
+
+    /**
+     * Synchronous bridge to fetch the GPS horizontal accuracy rejection threshold in meters.
+     */
+    @JvmStatic
+    fun getGpsAccuracyThreshold(context: Context): Float {
+        return getTuningConfig(context).gpsAccuracyThresholdMeters
+    }
+
+    /**
+     * Synchronous bridge to fetch the barometric altitude filter moving average window in seconds.
+     */
+    @JvmStatic
+    fun getAltitudeFilterWindow(context: Context): Int {
+        return getTuningConfig(context).altitudeFilterWindowSec
+    }
+
+    /**
+     * Synchronous bridge to fetch the minimum speed for gradient calculation in m/s.
+     */
+    @JvmStatic
+    fun getSlopeMinSpeed(context: Context): Float {
+        return getTuningConfig(context).slopeMinSpeedMps
     }
 }

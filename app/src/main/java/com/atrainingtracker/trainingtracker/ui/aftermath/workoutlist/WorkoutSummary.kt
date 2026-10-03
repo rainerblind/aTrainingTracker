@@ -40,15 +40,23 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
+
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.aftermath.LapData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapEditBottomSheet
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.compose.runtime.produceState
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatus
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.WorkoutDescription
@@ -58,9 +66,18 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutH
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLaps
 import com.atrainingtracker.trainingtracker.ui.components.strava.StravaActivitySection
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
+import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.PathPreviewMap
+import com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraph
+import com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricType
+import com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtils
 import com.atrainingtracker.trainingtracker.ui.map.toMapTrack
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneDistributionCard
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
+import androidx.compose.runtime.saveable.rememberSaveable
 
 /**
  * A comprehensive summary of a workout.
@@ -78,12 +95,61 @@ fun WorkoutSummary(
     onMapClick: () -> Unit,
     modifier: Modifier = Modifier,
     onClusterClick: ((Long) -> Unit)? = null,
-    onMarkFinished: (() -> Unit)? = null
+    onMarkFinished: (() -> Unit)? = null,
+    preferences: WorkoutCardSectionPreferences = WorkoutCardSectionPreferences()
 ) {
     // When the workout is not yet finished (properly), we show it with an alpha of 0.5
     val contentAlpha = if (workoutData.headerData.finished) TTAlpha.High else 0.5f
 
     var activeEditingLap by remember { mutableStateOf<LapData?>(null) }
+    var hrZoneDisplayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }
+    var powerZoneDisplayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }
+    val context = LocalContext.current
+    val repository = remember(context) { WorkoutRepository.getInstance(context.applicationContext as Application) }
+
+    // Lazy telemetry points loading (ATT-1714 / REQ-UI-210)
+    val telemetryPoints by produceState<List<PathPoint>>(
+        initialValue = emptyList(),
+        key1 = workoutData.id,
+        key2 = preferences.showTelemetryCharts
+    ) {
+        if (preferences.showTelemetryCharts) {
+            value = withContext(Dispatchers.IO) {
+                repository.getWorkoutTrackPoints(workoutData.id, TrackType.BEST)
+            }
+        } else {
+            value = emptyList()
+        }
+    }
+
+    // Lazy zone distribution loading (ATT-1714 / REQ-UI-210)
+    val hrZoneDistribution by produceState<ZoneDistributionData?>(
+        initialValue = null,
+        key1 = workoutData.id,
+        key2 = preferences.showZoneAnalysis
+    ) {
+        if (preferences.showZoneAnalysis) {
+            value = withContext(Dispatchers.IO) {
+                repository.getHeartRateZoneDistribution(workoutData.id, workoutData.bSportType)
+            }
+        } else {
+            value = null
+        }
+    }
+
+    val powerZoneDistribution by produceState<ZoneDistributionData?>(
+        initialValue = null,
+        key1 = workoutData.id,
+        key2 = preferences.showZoneAnalysis
+    ) {
+        if (preferences.showZoneAnalysis) {
+            value = withContext(Dispatchers.IO) {
+                repository.getPowerZoneDistribution(workoutData.id)
+            }
+        } else {
+            value = null
+        }
+    }
 
     // Shared modifier for the clickable body sections (navigates to map view, ATT-850)
     val mapClickModifier = Modifier.clickable {
@@ -97,7 +163,7 @@ fun WorkoutSummary(
         alpha = contentAlpha,
         modifier = modifier
     ) {
-        // 1. Header
+        // 1. Header (ALWAYS MANDATORY)
         val isActivelyTracked = TrainingApplication.isActivelyTracked(workoutData.id)
         val canDelete = !isActivelyTracked
         val canMarkFinished = !workoutData.headerData.finished && !isActivelyTracked
@@ -121,28 +187,30 @@ fun WorkoutSummary(
         )
 
         // 2. Description Section (Notes, Goals, Method)
-        // Hidden automatically if all fields are null/blank
-        WorkoutDescription(
-            data = workoutData.descriptionData,
-            modifier = mapClickModifier
-        )
+        // Hidden automatically if all fields are null/blank or disabled via preferences
+        if (preferences.showDescription) {
+            WorkoutDescription(
+                data = workoutData.descriptionData,
+                modifier = mapClickModifier
+            )
+        }
 
-        // 3. Main Details Section (Distance, Time, Speed/Pace)
+        // 3. Main Details Section (Distance, Time, Speed/Pace) - ALWAYS MANDATORY
         WorkoutDetails(
             data = workoutData.detailsData,
             modifier = mapClickModifier
         )
 
         // 4. Extrema Values Section
-        if (workoutData.extremaData.dataRows.isNotEmpty()) {
+        if (preferences.showExtrema && workoutData.extremaData.dataRows.isNotEmpty()) {
             WorkoutExtrema(
                 data = workoutData.extremaData,
                 modifier = mapClickModifier
             )
         }
 
-        // ATT-510: Laps Overview Section
-        if (workoutData.laps.isNotEmpty()) {
+        // 5. Laps Overview Section
+        if (preferences.showLaps && workoutData.laps.isNotEmpty()) {
             HorizontalDivider(
                 modifier = Modifier.padding(horizontal = 12.dp),
                 thickness = 0.5.dp,
@@ -151,12 +219,13 @@ fun WorkoutSummary(
             WorkoutLaps(
                 laps = workoutData.laps,
                 bSportType = workoutData.bSportType,
+                lapDisplayMode = preferences.lapDisplayMode,
                 onLapClick = { lap -> activeEditingLap = lap }
             )
         }
 
-        // 5. Strava Activity Data Section
-        if (!workoutData.stravaActivityData.isNullOrBlank()) {
+        // 6. Strava Activity Data Section
+        if (preferences.showStrava && !workoutData.stravaActivityData.isNullOrBlank()) {
             HorizontalDivider(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 thickness = 0.5.dp,
@@ -167,15 +236,177 @@ fun WorkoutSummary(
             )
         }
 
-        if (isPlayServiceAvailable && workoutData.mapPolyline != "") {
+        // 7. Decoupled Media Section (Map Preview & Elevation Profile)
+        val hasMap = isPlayServiceAvailable && workoutData.mapPolyline != ""
+        val hasElevation = workoutData.encodedAltitudes.isNotEmpty() || hasMap
+
+        if (preferences.showMapPreview && preferences.showElevationProfile && hasMap) {
             WorkoutMediaSection(
-                // workoutId = workoutData.id,
                 workoutData = workoutData,
                 onMapClick = onMapClick
             )
+        } else if (preferences.showMapPreview && hasMap) {
+            val startTitle = if (!workoutData.startLocationName.isNullOrBlank()) {
+                "${stringResource(R.string.Start)}: ${workoutData.startLocationName}"
+            } else null
+            val endTitle = if (!workoutData.endLocationName.isNullOrBlank()) {
+                "${stringResource(R.string.Stop)}: ${workoutData.endLocationName}"
+            } else null
+
+            PathPreviewMap(
+                path = workoutData.toMapTrack(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                start = workoutData.startLatLng,
+                end = workoutData.endLatLng,
+                apex = workoutData.maxDisplacementLatLng,
+                startTitle = startTitle,
+                endTitle = endTitle,
+                onMapClick = { onMapClick() }
+            )
+        } else if (preferences.showElevationProfile && hasElevation) {
+            ElevationProfile(
+                encodedAltitudes = workoutData.encodedAltitudes,
+                encodedDistances = workoutData.encodedDistances,
+                currentDistance = null,
+                minAltitudeOverride = workoutData.minAltitude,
+                maxAltitudeOverride = workoutData.maxAltitude,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp)
+                    .clickable { onMapClick() }
+            )
         }
 
-        // 6. Export Status Section
+        // 8. Telemetry Metric Graphs (Lazy-Loaded HR, Speed/Pace, Power)
+        if (preferences.showTelemetryCharts && telemetryPoints.isNotEmpty()) {
+            if (TelemetryMetricUtils.hasSpeedData(telemetryPoints)) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+                val isRunning = workoutData.bSportType == BSportType.RUN
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(mapClickModifier)
+                ) {
+                    Text(
+                        text = stringResource(if (isRunning) R.string.graph_heading_pace else R.string.graph_heading_speed),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                    )
+                    TelemetryMetricGraph(
+                        pathPoints = telemetryPoints,
+                        metricType = if (isRunning) TelemetryMetricType.PACE else TelemetryMetricType.SPEED,
+                        currentDistance = null,
+                        onDistanceSelected = {},
+                        bSportType = workoutData.bSportType,
+                        enableGestures = false,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+            if (TelemetryMetricUtils.hasHeartRateData(telemetryPoints)) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(mapClickModifier)
+                ) {
+                    Text(
+                        text = stringResource(R.string.graph_heading_heart_rate),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                    )
+                    TelemetryMetricGraph(
+                        pathPoints = telemetryPoints,
+                        metricType = TelemetryMetricType.HEART_RATE,
+                        currentDistance = null,
+                        onDistanceSelected = {},
+                        bSportType = workoutData.bSportType,
+                        enableGestures = false,
+                        zoneDistribution = hrZoneDistribution,
+                        zoneDisplayMode = hrZoneDisplayMode,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+            if (TelemetryMetricUtils.hasPowerData(telemetryPoints)) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(mapClickModifier)
+                ) {
+                    Text(
+                        text = stringResource(R.string.graph_heading_power),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                    )
+                    TelemetryMetricGraph(
+                        pathPoints = telemetryPoints,
+                        metricType = TelemetryMetricType.POWER,
+                        currentDistance = null,
+                        onDistanceSelected = {},
+                        bSportType = workoutData.bSportType,
+                        enableGestures = false,
+                        zoneDistribution = powerZoneDistribution,
+                        zoneDisplayMode = powerZoneDisplayMode,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+
+        // 9. Zone Distribution Cards (Lazy-Loaded HR & Power 5-Zone Analysis)
+        if (preferences.showZoneAnalysis && (hrZoneDistribution != null || powerZoneDistribution != null)) {
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+            hrZoneDistribution?.let { distribution ->
+                HeartRateZoneDistributionCard(
+                    distribution = distribution,
+                    displayMode = hrZoneDisplayMode,
+                    onDisplayModeChange = { hrZoneDisplayMode = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .then(mapClickModifier)
+                )
+            }
+            powerZoneDistribution?.let { distribution ->
+                PowerZoneDistributionCard(
+                    distribution = distribution,
+                    displayMode = powerZoneDisplayMode,
+                    onDisplayModeChange = { powerZoneDisplayMode = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .then(mapClickModifier)
+                )
+            }
+        }
+
+        // 10. Export Status Section
         ExportStatus(
             exportStatuses = workoutData.exportStatuses
         )
@@ -216,6 +447,13 @@ private fun WorkoutMediaSection(
             .fillMaxWidth()
             .height(300.dp) // Total height for map + profile area
     ) {
+        val startTitle = if (!workoutData.startLocationName.isNullOrBlank()) {
+            "${stringResource(R.string.Start)}: ${workoutData.startLocationName}"
+        } else null
+        val endTitle = if (!workoutData.endLocationName.isNullOrBlank()) {
+            "${stringResource(R.string.Stop)}: ${workoutData.endLocationName}"
+        } else null
+
         // 1. The Map (Weight 1 lets it take remaining space above profile)
         PathPreviewMap(
             path = workoutData.toMapTrack(),
@@ -225,8 +463,11 @@ private fun WorkoutMediaSection(
             start = workoutData.startLatLng,
             end = workoutData.endLatLng,
             apex = workoutData.maxDisplacementLatLng,
+            startTitle = startTitle,
+            endTitle = endTitle,
             onMapClick = { onMapClick() }
         )
+
 
         // 2. The Elevation Profile
         ElevationProfile(

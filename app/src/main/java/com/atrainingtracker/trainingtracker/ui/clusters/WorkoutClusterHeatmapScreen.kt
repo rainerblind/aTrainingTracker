@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.EditLocationAlt
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Save
@@ -35,6 +36,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
+import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -272,6 +274,8 @@ fun WorkoutClusterHeatmapScreen(
     if (showDeleteConfirmation) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
             title = { Text(stringResource(R.string.cluster_delete_title)) },
             text = { Text(stringResource(R.string.cluster_delete_message)) },
             confirmButton = {
@@ -339,7 +343,11 @@ fun WorkoutClusterHeatmapScreen(
 
         BottomSheetScaffold(
             scaffoldState = scaffoldState,
-            sheetPeekHeight = if (peekedWorkoutDataWithTrack != null && !isEditingFingerprint) 120.dp + navBarHeight else 0.dp,
+            sheetShape = BottomSheetDesign.SheetShape,
+            sheetContainerColor = MaterialTheme.colorScheme.surface,
+            sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
+            sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
+            sheetPeekHeight = if (peekedWorkoutDataWithTrack != null && !isEditingFingerprint) BottomSheetDesign.PeekHeightWorkout + navBarHeight else 0.dp,
             sheetDragHandle = null,
             sheetContent = {
                 if (peekedWorkoutDataWithTrack != null) {
@@ -739,12 +747,17 @@ fun WorkoutClusterSummaryHeader(
                     }
                 } else {
                     IconButton(onClick = onEditFingerprint) {
-                        Icon(Icons.Default.EditLocationAlt, contentDescription = stringResource(R.string.cluster_edit_fingerprint_content_desc))
+                        Icon(
+                            imageVector = Icons.Default.EditLocationAlt,
+                            contentDescription = stringResource(R.string.cluster_edit_fingerprint_content_desc),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                     IconButton(onClick = onRename) {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_table_edit),
-                            contentDescription = stringResource(R.string.edit_workout_name)
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = stringResource(R.string.edit_workout_name),
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 }

@@ -108,7 +108,7 @@ fun EditWorkoutDialog(
                 .padding(horizontal = 4.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Workout Name
+            // 1. Workout Name (Mandatory Core Anchor)
             OutlinedTextField(
                 value = workoutData?.workoutName ?: "",
                 onValueChange = { viewModel.updateWorkoutName(it) },
@@ -182,7 +182,7 @@ fun EditWorkoutDialog(
                 )
             }
 
-            // 2. Spinners (Sport & Equipment)
+            // 3. Spinners (Sport & Equipment) (Mandatory Core Anchors)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 DropdownSelector(
                     label = stringResource(R.string.Sport),
@@ -202,7 +202,7 @@ fun EditWorkoutDialog(
                 )
             }
 
-            // 3. Checkboxes (Commute / Trainer)
+            // 4. Checkboxes (Commute / Trainer)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(
                     checked = workoutData?.commute ?: false,
@@ -217,7 +217,16 @@ fun EditWorkoutDialog(
                 Text(stringResource(R.string.trainer_general))
             }
 
-            // 3.5 Workout individual upload to Strava
+            // 4b. Checkbox (Race / Wettkampf, ATT-2005)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = workoutData?.race ?: false,
+                    onCheckedChange = { viewModel.updateIsRace(it) }
+                )
+                Text(stringResource(R.string.race))
+            }
+
+            // 5. Workout individual upload to Strava (Conditional solely on active Strava community connection)
             if (TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     val uploadStatus = workoutData?.uploadToStrava ?: -1
@@ -250,7 +259,7 @@ fun EditWorkoutDialog(
                 }
             }
 
-            // 4. Description
+            // 6. Description
             OutlinedTextField(
                 value = workoutData?.description ?: "",
                 onValueChange = { newValue -> viewModel.updateDescription(newDescription = newValue) },
@@ -259,7 +268,7 @@ fun EditWorkoutDialog(
                 minLines = 3
             )
 
-            // 5. Goal
+            // 7. Goal
             OutlinedTextField(
                 value = workoutData?.goal ?: "",
                 onValueChange = { newValue -> viewModel.updateGoal(newGoal = newValue) },
@@ -268,7 +277,7 @@ fun EditWorkoutDialog(
                 singleLine = true
             )
 
-            // 6. Method
+            // 8. Method
             OutlinedTextField(
                 value = workoutData?.method ?: "",
                 onValueChange = { newValue -> viewModel.updateMethod(newMethod = newValue) },

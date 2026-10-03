@@ -39,4 +39,16 @@
     <string name="filter_type">Tipo de suavização</string>
     <string name="filter_value">Valor</string>
 
+    <string name="filter_presets_header">Predefinições rápidas</string>
+    <string name="filter_preset_direct">Direto (1 s)</string>
+    <string name="filter_preset_3s">3 s (Potência)</string>
+    <string name="filter_preset_10s">10 s (Ritmo)</string>
+    <string name="filter_preset_30s">30 s (Resistência)</string>
+    <string name="filter_preset_avg">Média da sessão (Ø)</string>
+    <string name="filter_preset_max">Máximo da sessão</string>
+    <string name="filter_preset_custom">Personalizado / Especialista</string>
+    <string name="filter_custom_header">Configuração avançada</string>
+    <string name="filter_mode_presets">Predefinições</string>
+    <string name="filter_mode_custom">Personalizado / Especialista</string>
+
 </resources>

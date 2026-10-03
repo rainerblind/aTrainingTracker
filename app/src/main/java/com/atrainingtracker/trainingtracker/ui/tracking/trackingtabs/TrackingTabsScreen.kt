@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
 import android.util.Log
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,29 +38,48 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.preference.PreferenceManager
 import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory
 import com.atrainingtracker.trainingtracker.TrackingMode
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import androidx.core.view.WindowCompat
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.batterysaver.BatterySaverController
+import com.atrainingtracker.trainingtracker.batterysaver.TelemetrySnapshot
+import com.atrainingtracker.trainingtracker.batterysaver.DisplayBrightnessMode
+import com.atrainingtracker.trainingtracker.batterysaver.calculateZoneIndex
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode
+import com.atrainingtracker.trainingtracker.ui.theme.resolveEffectiveCockpitDarkTheme
+import com.atrainingtracker.trainingtracker.ui.theme.resolveEffectiveCockpitThemeState
 import com.atrainingtracker.trainingtracker.ui.tracking.LapSummaryDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlNavigation
@@ -77,6 +97,48 @@ fun TrackingTabsScreen(
     trackingTabsViewModel: TrackingTabsViewModel
 ) {
     val context = LocalContext.current as androidx.appcompat.app.AppCompatActivity
+
+    val isSystemDark = isSystemInDarkTheme()
+    var cockpitThemeMode by remember { mutableStateOf(TrainingApplication.getCockpitThemeMode()) }
+    var brightnessMode by remember { mutableStateOf(TrainingApplication.getDisplayBrightnessMode()) }
+    var customBrightness by remember { mutableStateOf(TrainingApplication.getCustomDisplayBrightness()) }
+    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+    val prefsListener = remember {
+        android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == TrainingApplication.SP_COCKPIT_THEME_MODE) {
+                cockpitThemeMode = TrainingApplication.getCockpitThemeMode()
+            } else if (key == TrainingApplication.SP_DISPLAY_BRIGHTNESS_MODE || key == TrainingApplication.SP_BATTERY_SAVER) {
+                brightnessMode = TrainingApplication.getDisplayBrightnessMode()
+            } else if (key == TrainingApplication.SP_CUSTOM_DISPLAY_BRIGHTNESS) {
+                customBrightness = TrainingApplication.getCustomDisplayBrightness()
+            }
+        }
+    }
+    val displaySettingsListener = remember {
+        TrainingApplication.OnDisplaySettingsChangeListener {
+            cockpitThemeMode = TrainingApplication.getCockpitThemeMode()
+            brightnessMode = TrainingApplication.getDisplayBrightnessMode()
+            customBrightness = TrainingApplication.getCustomDisplayBrightness()
+        }
+    }
+    DisposableEffect(prefs, prefsListener, displaySettingsListener) {
+        prefs.registerOnSharedPreferenceChangeListener(prefsListener)
+        TrainingApplication.addDisplaySettingsChangeListener(displaySettingsListener)
+        onDispose {
+            prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
+            TrainingApplication.removeDisplaySettingsChangeListener(displaySettingsListener)
+        }
+    }
+
+    val batterySaverController = remember { BatterySaverController(activity = context) }
+    LaunchedEffect(brightnessMode, customBrightness) {
+        batterySaverController.setMode(brightnessMode, customBrightness)
+    }
+    DisposableEffect(batterySaverController) {
+        onDispose {
+            batterySaverController.release()
+        }
+    }
 
     val trackingViews by trackingTabsViewModel.trackingViews.collectAsState(initial = emptyList())
     val trackingMode by trackingTabsViewModel.trackingMode.observeAsState(TrackingMode.READY)
@@ -103,6 +165,93 @@ fun TrackingTabsScreen(
     val activeSensors by controlViewModel.activeSensors.collectAsState()
     val bSportType by controlViewModel.bSportType.collectAsState()
     val selectingProtocol by controlViewModel.selectingProtocol.collectAsState()
+    val locationCalibrationStatus by trackingTabsViewModel.locationCalibrationStatus.collectAsState()
+
+    // Battery Saver Telemetry & Event Subscriptions
+    val tuningDataStore = remember { com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore(context) }
+    val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(
+        initial = com.atrainingtracker.trainingtracker.settings.TuningConfig()
+    )
+
+    LaunchedEffect(tuningConfig) {
+        batterySaverController.updateTuningConfig(
+            com.atrainingtracker.trainingtracker.batterysaver.BatterySaverTuningConfig(
+                fullDimFactor = tuningConfig.fullDimFactor,
+                mediumDimFactor = tuningConfig.mediumDimFactor,
+                slopeFlatThreshold = tuningConfig.slopeFlatThreshold,
+                slopeSteepThreshold = tuningConfig.slopeSteepThreshold,
+                wakeupDurationMs = tuningConfig.wakeupDurationSec * 1000L,
+                downwardHysteresisMs = tuningConfig.downwardDelaySec * 1000L
+            )
+        )
+    }
+
+    val filteredSensorData by trackingTabsViewModel.allFilteredSensorData.collectAsState()
+    val activityType by trackingTabsViewModel.activityType.collectAsState()
+    val liveSegments by trackingTabsViewModel.liveSegments.collectAsState()
+
+    LaunchedEffect(filteredSensorData, activityType, brightnessMode, tuningConfig) {
+        if (brightnessMode != DisplayBrightnessMode.AUTO) return@LaunchedEffect
+
+        val speedData = filteredSensorData.find { it.sensorType == SensorType.SPEED_mps }
+        val speed = (speedData?.value as? Number)?.toDouble() ?: 0.0
+
+        val slopeData = filteredSensorData.find { it.sensorType == SensorType.SLOPE }
+        val rawSlope = (slopeData?.value as? Number)?.toFloat()
+        val slope = if (speed > tuningConfig.slopeMinSpeedMps && rawSlope != null && !rawSlope.isNaN() && !rawSlope.isInfinite()) rawSlope else 0.0f
+
+        val hrData = filteredSensorData.find { it.sensorType == SensorType.HR }
+        val hrValue = (hrData?.value as? Number)?.toDouble()
+
+        val powerData = filteredSensorData.find { it.sensorType == SensorType.POWER }
+        val powerValue = (powerData?.value as? Number)?.toDouble()
+
+        val isCycling = activityType.sportType == BSportType.BIKE
+        val hrZone = if (hrValue != null && hrValue > 0) {
+            val zoneType = if (isCycling) SettingsDataStore.ZoneType.HR_BIKE else SettingsDataStore.ZoneType.HR_RUN
+            calculateZoneIndex(context, zoneType, hrValue)
+        } else null
+
+        val powerZone = if (isCycling && powerValue != null && powerValue > 0) {
+            calculateZoneIndex(context, SettingsDataStore.ZoneType.PWR_BIKE, powerValue)
+        } else null
+
+        batterySaverController.updateTelemetry(
+            TelemetrySnapshot(
+                slopePercent = slope,
+                hrZone = hrZone,
+                powerZone = powerZone,
+                isCycling = isCycling
+            )
+        )
+    }
+
+    LaunchedEffect(trackingMode) {
+        batterySaverController.onWakeupEvent()
+    }
+
+    var lastActiveSegmentStatus by remember { mutableStateOf<Map<Long, LiveSegmentStatus>>(emptyMap()) }
+    LaunchedEffect(liveSegments) {
+        val currentStatusMap: Map<Long, LiveSegmentStatus> = liveSegments.associate { 
+            it.staticData.summary.stravaId to it.liveData.segmentStatus 
+        }
+        var hasRelevantTransition = false
+        for ((id, status) in currentStatusMap) {
+            val previous = lastActiveSegmentStatus[id]
+            if (previous != status) {
+                if (status == LiveSegmentStatus.APPROACHING ||
+                    status == LiveSegmentStatus.ON_SEGMENT ||
+                    status == LiveSegmentStatus.FINISHED) {
+                    hasRelevantTransition = true
+                    break
+                }
+            }
+        }
+        lastActiveSegmentStatus = currentStatusMap
+        if (hasRelevantTransition) {
+            batterySaverController.onWakeupEvent()
+        }
+    }
 
 
     // Page count: Control Tab + Sensor Tabs
@@ -135,16 +284,30 @@ fun TrackingTabsScreen(
         lastKnownPage = pagerState.currentPage
     }
 
+    val cockpitThemeState = resolveEffectiveCockpitThemeState(
+        screenMode = screenMode,
+        currentPage = pagerState.currentPage,
+        cockpitThemeMode = cockpitThemeMode,
+        isSystemDark = isSystemDark
+    )
+
     val scope = rememberCoroutineScope()
 
-    // BACK NAVIGATION HANDLER: CONFIG -> PREVIEW (ATT-245)
-    // PREVIEW -> FINISH is handled by the Activity
+    // BACK NAVIGATION HANDLER: CONFIG -> PREVIEW -> TRACKING (ATT-245 / ATT-1456)
     BackHandler(enabled = screenMode == ScreenMode.CONFIGURATION) {
         trackingTabsViewModel.handleBackPressToPreview()
+    }
+    BackHandler(enabled = screenMode == ScreenMode.PREVIEW) {
+        trackingTabsViewModel.exitConfiguration()
     }
 
     // -- Show Lap Summary Dialog
     val lapEvent by trackingTabsViewModel.lapEvent.observeAsState()
+    LaunchedEffect(lapEvent) {
+        if (lapEvent != null) {
+            batterySaverController.onWakeupEvent()
+        }
+    }
     lapEvent?.let { event ->
         LapSummaryDialog(
             lapNr = event.lapNumber,
@@ -158,25 +321,56 @@ fun TrackingTabsScreen(
     }
 
 
-    // NAVIGATION COLLECTION (necessary, when deleting tabs)
+    val currentPagerState by rememberUpdatedState(pagerState)
+    val currentScreenMode by rememberUpdatedState(screenMode)
+
+    // NAVIGATION COLLECTION (necessary, when deleting tabs or tracking starts)
     LaunchedEffect(Unit) {
+        Log.i(TAG, "LaunchedEffect(Unit) started collecting navigationEvent")
         trackingTabsViewModel.navigationEvent.collect { tabNavigationEvent ->
+            Log.i(TAG, "navigationEvent received: $tabNavigationEvent, currentScreenMode=$currentScreenMode, pageCount=${currentPagerState.pageCount}, currentPage=${currentPagerState.currentPage}")
             when (tabNavigationEvent) {
                 is TabNavigationEvent.NavigateTo -> {
-
                     // Calculate offset: if TRACKING mode, page 0 is Control, so add 1
-                    val offset = if (screenMode == ScreenMode.TRACKING) 1 else 0
+                    val offset = if (currentScreenMode == ScreenMode.TRACKING) 1 else 0
                     val target = tabNavigationEvent.index + offset
+                    Log.i(TAG, "Navigating to target=$target (offset=$offset)")
 
-                    // Animate to the requested page
-                    scope.launch {
+                    lastKnownPage = target
+
+                    // If pager hasn't loaded enough pages yet, wait for pageCount to be ready
+                    if (currentPagerState.pageCount <= target) {
                         try {
-                            lastKnownPage = target
-                            pagerState.animateScrollToPage(target)
+                            kotlinx.coroutines.withTimeout(2000) {
+                                androidx.compose.runtime.snapshotFlow { currentPagerState.pageCount }
+                                    .collect { count ->
+                                        if (count > target) {
+                                            throw kotlinx.coroutines.CancellationException("PageCountReady")
+                                        }
+                                    }
+                            }
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            if (e.message != "PageCountReady") throw e
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Timed out waiting for pageCount > $target", e)
                         }
-                        catch (e: Exception) {
-                            Log.e(TAG, "Navigation failed: page $target not ready yet", e)
+                    }
+
+                    if (target in 0 until currentPagerState.pageCount) {
+                        try {
+                            currentPagerState.animateScrollToPage(target)
+                            Log.i(TAG, "Successfully animated to page $target")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "animateScrollToPage failed: page $target not ready yet", e)
+                            try {
+                                currentPagerState.scrollToPage(target)
+                                Log.i(TAG, "Fallback scrollToPage succeeded for page $target")
+                            } catch (e2: Exception) {
+                                Log.e(TAG, "Fallback scrollToPage also failed", e2)
+                            }
                         }
+                    } else {
+                        Log.e(TAG, "Cannot scroll to target $target: pageCount is ${currentPagerState.pageCount}")
                     }
                 }
                 is TabNavigationEvent.EditDevice -> {
@@ -193,31 +387,53 @@ fun TrackingTabsScreen(
         }
     }
 
-    // Move to first tab when tracking is started
-    val navigateTrigger by trackingTabsViewModel.navigateToTrackingTab.observeAsState()
-    LaunchedEffect(navigateTrigger) {
-        if (navigateTrigger != null) {
-            if (screenMode == ScreenMode.TRACKING) {
-                pagerState.scrollToPage(1)
-            }
-        }
-    }
 
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 trackingTabsViewModel.onResume()
+                cockpitThemeMode = TrainingApplication.getCockpitThemeMode()
+                brightnessMode = TrainingApplication.getDisplayBrightnessMode()
+                customBrightness = TrainingApplication.getCustomDisplayBrightness()
+                batterySaverController.setMode(brightnessMode, customBrightness)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
+    DisposableEffect(context, isSystemDark) {
+        onDispose {
+            if (!context.isFinishing && !context.isDestroyed) {
+                context.window?.let { window ->
+                    val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+                    insetsController.isAppearanceLightStatusBars = !isSystemDark
+                    insetsController.isAppearanceLightNavigationBars = !isSystemDark
+                }
+            }
+        }
+    }
+
+    ATrainingTrackerTheme(
+        darkTheme = cockpitThemeState.darkTheme,
+        amoled = cockpitThemeState.amoled
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                                batterySaverController.onWakeupEvent()
+                            }
+                        }
+                    }
+            ) {
 
             // Get the current view info
             val currentViewInfo = if (screenMode != ScreenMode.TRACKING) {
@@ -258,7 +474,7 @@ fun TrackingTabsScreen(
                                         allDevices = allDevices,
                                         onDeviceClick = { trackingTabsViewModel.onEditDevice(it) },
                                         onMenuClick = {
-                                            (context as? MainActivityWithNavigation)?.findViewById<androidx.drawerlayout.widget.DrawerLayout>(R.id.drawer_layout)?.openDrawer(androidx.core.view.GravityCompat.START)
+                                            (context as? MainActivityWithNavigation)?.openDrawer()
                                         }
                                     )
                                 }
@@ -286,6 +502,7 @@ fun TrackingTabsScreen(
                                     TrackingTabPreviewHeader(
                                         viewInfo = currentViewInfo,
                                         onToggleMode = { trackingTabsViewModel.toggleScreenMode() },
+                                        onExitConfig = { trackingTabsViewModel.exitConfiguration() }
                                     )
                                 }
                             }
@@ -299,20 +516,27 @@ fun TrackingTabsScreen(
                             divider = {}
                         ) {
                             if (screenMode == ScreenMode.TRACKING) {
+                                val isSelected = pagerState.currentPage == 0
                                 Tab(
-                                    selected = pagerState.currentPage == 0,
+                                    selected = isSelected,
                                     onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
+                                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                     text = {
                                         // Dynamic Title for Control Tab (Tracking/Paused/Start)
-                                        Text(getControlTabTitle(trackingMode))
+                                        Text(
+                                            text = getControlTabTitle(trackingMode),
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
                                 )
                             }
                             trackingViews.forEachIndexed { index, view ->
                                 val targetPage =
                                     if (screenMode == ScreenMode.TRACKING) index + 1 else index
+                                val isSelected = pagerState.currentPage == targetPage
                                 Tab(
-                                    selected = pagerState.currentPage == targetPage,
+                                    selected = isSelected,
                                     onClick = {
                                         scope.launch {
                                             pagerState.animateScrollToPage(
@@ -320,7 +544,14 @@ fun TrackingTabsScreen(
                                             )
                                         }
                                     },
-                                    text = { Text(view.name) }
+                                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    text = {
+                                        Text(
+                                            text = view.name,
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 )
                             }
                         }
@@ -381,7 +612,8 @@ fun TrackingTabsScreen(
                             onPairingClicked = { controlViewModel.onPairingClicked(it) },
                             selectingProtocol = selectingProtocol,
                             onDeviceTypeSelected = { controlViewModel.onDeviceTypeSelected(it) },
-                            onCancelDeviceTypeSelection = { controlViewModel.onCancelDeviceTypeSelection() }
+                            onCancelDeviceTypeSelection = { controlViewModel.onCancelDeviceTypeSelection() },
+                            locationCalibrationStatus = locationCalibrationStatus
                         )
                     } else {
                         val viewIndex =
@@ -424,6 +656,7 @@ fun TrackingTabsScreen(
             }
         }
     }
+}
 }
 
 @Composable

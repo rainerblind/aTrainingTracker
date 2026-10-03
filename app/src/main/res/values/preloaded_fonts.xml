@@ -20,5 +20,17 @@
 <resources>
     <array name="preloaded_fonts" translatable="false">
         <item>@font/roboto_black_italic</item>
+        <item>@font/orbitron</item>
+        <item>@font/roboto_condensed</item>
+        <item>@font/comic_neue</item>
+        <item>@font/roboto_mono</item>
+        <item>@font/bebas_neue</item>
+        <item>@font/teko</item>
+        <item>@font/barlow_condensed</item>
+        <item>@font/oswald</item>
+        <item>@font/chakra_petch</item>
+        <item>@font/oxanium</item>
+        <item>@font/rajdhani</item>
+        <item>@font/montserrat</item>
     </array>
 </resources>

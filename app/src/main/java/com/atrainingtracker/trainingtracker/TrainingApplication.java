@@ -44,6 +44,10 @@ import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
 
+import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode;
+import com.atrainingtracker.trainingtracker.batterysaver.DisplayBrightnessMode;
+import com.atrainingtracker.trainingtracker.batterysaver.DimmingLevel;
+
 import android.util.Log;
 import android.widget.Toast;
 
@@ -61,6 +65,7 @@ import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleService;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleServiceBuildIn;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.Watchapp;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
+import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHelper;
@@ -94,6 +99,8 @@ public class TrainingApplication extends Application {
             "keepScreenOn",
             "noUnlocking"
     )));
+    public static final String SP_COCKPIT_THEME_MODE = "cockpit_theme_mode";
+    public static final String DEFAULT_COCKPIT_THEME_MODE = "system";
     public static final String SP_UNITS = "listUnits";
 
     // configure search behaviour
@@ -459,6 +466,108 @@ public class TrainingApplication extends Application {
 
     public static boolean NoUnlocking() {
         return getDisplayOptions().contains("noUnlocking");
+    }
+
+    @NonNull
+    public static CockpitThemeMode getCockpitThemeMode() {
+        String modeId = cSharedPreferences.getString(SP_COCKPIT_THEME_MODE, DEFAULT_COCKPIT_THEME_MODE);
+        return CockpitThemeMode.Companion.fromId(modeId);
+    }
+
+    public static void setCockpitThemeMode(@NonNull CockpitThemeMode mode) {
+        cSharedPreferences.edit().putString(SP_COCKPIT_THEME_MODE, mode.getId()).apply();
+        notifyDisplaySettingsChanged();
+    }
+
+    public static final String SP_LIEBLINGSORT_COCKPIT_FEEDBACK = "lieblingsortCockpitFeedback";
+    public static final boolean DEFAULT_LIEBLINGSORT_COCKPIT_FEEDBACK = true;
+
+    public static boolean isLieblingsortCockpitFeedbackEnabled() {
+        return cSharedPreferences.getBoolean(SP_LIEBLINGSORT_COCKPIT_FEEDBACK, DEFAULT_LIEBLINGSORT_COCKPIT_FEEDBACK);
+    }
+
+    public static void setLieblingsortCockpitFeedbackEnabled(boolean enabled) {
+        cSharedPreferences.edit().putBoolean(SP_LIEBLINGSORT_COCKPIT_FEEDBACK, enabled).apply();
+        notifyDisplaySettingsChanged();
+    }
+
+    public interface OnDisplaySettingsChangeListener {
+        void onDisplaySettingsChanged();
+    }
+    private static final java.util.List<OnDisplaySettingsChangeListener> cDisplaySettingsChangeListeners = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    public static void addDisplaySettingsChangeListener(@NonNull OnDisplaySettingsChangeListener listener) {
+        if (!cDisplaySettingsChangeListeners.contains(listener)) {
+            cDisplaySettingsChangeListeners.add(listener);
+        }
+    }
+
+    public static void removeDisplaySettingsChangeListener(@NonNull OnDisplaySettingsChangeListener listener) {
+        cDisplaySettingsChangeListeners.remove(listener);
+    }
+
+    public static void notifyDisplaySettingsChanged() {
+        for (OnDisplaySettingsChangeListener listener : cDisplaySettingsChangeListeners) {
+            listener.onDisplaySettingsChanged();
+        }
+    }
+
+    public static final String SP_BATTERY_SAVER = "battery_saver";
+    public static final boolean DEFAULT_BATTERY_SAVER = true;
+
+    public static final String SP_DISPLAY_BRIGHTNESS_MODE = "display_brightness_mode";
+    public static final String DEFAULT_DISPLAY_BRIGHTNESS_MODE = DisplayBrightnessMode.AUTO.getId();
+
+    public static final String SP_CUSTOM_DISPLAY_BRIGHTNESS = "custom_display_brightness";
+    public static final float DEFAULT_CUSTOM_DISPLAY_BRIGHTNESS = 0.30f;
+
+    @NonNull
+    public static DisplayBrightnessMode getDisplayBrightnessMode() {
+        String modeId = cSharedPreferences.getString(SP_DISPLAY_BRIGHTNESS_MODE, null);
+        if (modeId != null) {
+            return DisplayBrightnessMode.Companion.fromId(modeId);
+        }
+        if (cSharedPreferences.contains(SP_BATTERY_SAVER)) {
+            boolean legacyEnabled = cSharedPreferences.getBoolean(SP_BATTERY_SAVER, DEFAULT_BATTERY_SAVER);
+            return legacyEnabled ? DisplayBrightnessMode.AUTO : DisplayBrightnessMode.SYSTEM;
+        }
+        return DisplayBrightnessMode.AUTO;
+    }
+
+    public static void setDisplayBrightnessMode(@NonNull DisplayBrightnessMode mode) {
+        cSharedPreferences.edit()
+                .putString(SP_DISPLAY_BRIGHTNESS_MODE, mode.getId())
+                .putBoolean(SP_BATTERY_SAVER, mode == DisplayBrightnessMode.AUTO)
+                .apply();
+        notifyDisplaySettingsChanged();
+    }
+
+    public static float getCustomDisplayBrightness() {
+        return cSharedPreferences.getFloat(SP_CUSTOM_DISPLAY_BRIGHTNESS, DEFAULT_CUSTOM_DISPLAY_BRIGHTNESS);
+    }
+
+    public static void setCustomDisplayBrightness(float brightness) {
+        float clamped = Math.max(DimmingLevel.SAFETY_FLOOR, Math.min(1.0f, brightness));
+        cSharedPreferences.edit().putFloat(SP_CUSTOM_DISPLAY_BRIGHTNESS, clamped).apply();
+        notifyDisplaySettingsChanged();
+    }
+
+    public static void setDisplayBrightnessSettings(@NonNull DisplayBrightnessMode mode, float customBrightness) {
+        float clamped = Math.max(DimmingLevel.SAFETY_FLOOR, Math.min(1.0f, customBrightness));
+        cSharedPreferences.edit()
+                .putString(SP_DISPLAY_BRIGHTNESS_MODE, mode.getId())
+                .putBoolean(SP_BATTERY_SAVER, mode == DisplayBrightnessMode.AUTO)
+                .putFloat(SP_CUSTOM_DISPLAY_BRIGHTNESS, clamped)
+                .apply();
+        notifyDisplaySettingsChanged();
+    }
+
+    public static boolean isBatterySaverEnabled() {
+        return getDisplayBrightnessMode() == DisplayBrightnessMode.AUTO;
+    }
+
+    public static void setBatterySaverEnabled(boolean enabled) {
+        setDisplayBrightnessMode(enabled ? DisplayBrightnessMode.AUTO : DisplayBrightnessMode.SYSTEM);
     }
 
     @NonNull
@@ -1007,6 +1116,7 @@ public class TrainingApplication extends Application {
         com.google.android.gms.maps.MapsInitializer.initialize(this);
 
         runWorkoutClusterMigration();
+        KnownLocationsDatabaseManager.getInstance(this).healLegacyLocationsAsync();
     }
 
     private void runWorkoutClusterMigration() {

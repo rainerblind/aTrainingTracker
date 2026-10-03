@@ -62,11 +62,14 @@ fun ActiveFilterChipsRow(
     onRemoveEquipment: () -> Unit,
     onRemoveCommute: () -> Unit,
     onRemoveTrainer: () -> Unit,
+    onRemoveRace: () -> Unit = {},
     onRemoveGpsTrack: () -> Unit,
     onRemoveDistanceRange: () -> Unit = {},
     onRemoveDurationRange: () -> Unit = {},
     onRemoveMinDistance: () -> Unit = onRemoveDistanceRange,
     onRemoveMinDuration: () -> Unit = onRemoveDurationRange,
+    onRemoveStartLocation: () -> Unit = {},
+    onRemoveCluster: () -> Unit = {},
     onClearAll: () -> Unit,
     sportName: String? = null,
     equipmentName: String? = null,
@@ -88,6 +91,36 @@ fun ActiveFilterChipsRow(
                 RemovableFilterChip(
                     label = "\"${criteria.query}\"",
                     onRemove = onRemoveQuery
+                )
+            }
+        }
+
+        // Start Location Chip
+        if ((criteria.startLocationLat != null && criteria.startLocationLng != null) || !criteria.startLocationName.isNullOrBlank()) {
+            item("startLocation") {
+                val label = if (!criteria.startLocationName.isNullOrBlank()) {
+                    criteria.startLocationName
+                } else {
+                    stringResource(R.string.filter_start_location)
+                }
+                RemovableFilterChip(
+                    label = label,
+                    onRemove = onRemoveStartLocation
+                )
+            }
+        }
+
+        // Route Cluster Chip
+        if (criteria.clusterId != null || !criteria.clusterName.isNullOrBlank()) {
+            item("cluster") {
+                val label = if (!criteria.clusterName.isNullOrBlank()) {
+                    criteria.clusterName
+                } else {
+                    stringResource(R.string.my_locations)
+                }
+                RemovableFilterChip(
+                    label = label,
+                    onRemove = onRemoveCluster
                 )
             }
         }
@@ -167,6 +200,16 @@ fun ActiveFilterChipsRow(
                 RemovableFilterChip(
                     label = stringResource(R.string.filter_trainer),
                     onRemove = onRemoveTrainer
+                )
+            }
+        }
+
+        // Race Chip (ATT-2005)
+        if (criteria.isRace != null) {
+            item("race") {
+                RemovableFilterChip(
+                    label = stringResource(R.string.filter_race_only),
+                    onRemove = onRemoveRace
                 )
             }
         }

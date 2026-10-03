@@ -41,8 +41,8 @@ import com.atrainingtracker.banalservice.Protocol;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 
-import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 //import de.rainerblind.MyAntPlusApp;
 
@@ -54,10 +54,23 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     private static final int READ_BATTERY_PERCENTAGE_PERIOD = 5 * 60 * 1000; // 5 minutes
     protected String mAddress; // the MAC Address
     // private static final int READ_BATTERY_PERCENTAGE_PERIOD = 10 * 1000; // 10 seconds (just for testing)
-    protected BluetoothGatt mBluetoothGatt;
-    protected Queue<BluetoothGattCharacteristic> mReadCharacteristicQueue = new LinkedList<BluetoothGattCharacteristic>();
+    private final Object mGattLock = new Object();
+    protected volatile BluetoothGatt mBluetoothGatt;
+    protected final Queue<BluetoothGattCharacteristic> mReadCharacteristicQueue = new ConcurrentLinkedQueue<BluetoothGattCharacteristic>();
     protected State mState = State.DISCONNECTED;
     Handler mHandler;
+    private BluetoothGattCharacteristic mBatteryCharacteristic;
+    private final Runnable mBatteryReadRunnable = new Runnable() {
+        @Override
+        public void run() {
+            final BluetoothGatt gatt = mBluetoothGatt;
+            final BluetoothGattCharacteristic batteryChar = mBatteryCharacteristic;
+            if (gatt != null && batteryChar != null) {
+                mReadCharacteristicQueue.add(batteryChar);
+                readNextCharacteristic();
+            }
+        }
+    };
     private final String TAG = "MyBTLEDevice";
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
@@ -75,8 +88,11 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                         if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                             return;
                         }
-                        mBluetoothGatt.discoverServices();
-                        notifyStopSearching(true);  // we found the device
+                        final BluetoothGatt gatt = mBluetoothGatt;
+                        if (gatt != null) {
+                            gatt.discoverServices();
+                            notifyStopSearching(true);  // we found the device
+                        }
                     }
                 });
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
@@ -181,23 +197,37 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                 if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                     return;
                 }
-                mBluetoothGatt = device.connectGatt(mContext, false, mGattCallback);
+                synchronized (mGattLock) {
+                    mBluetoothGatt = device.connectGatt(mContext, false, mGattCallback);
+                }
             }
         });
     }
 
-    private void disconnectFromGatt() {
+    protected void disconnectFromGatt() {
         if (DEBUG) Log.i(TAG, "disconnectFromGatt()");
 
-        if (mBluetoothGatt != null) {
+        mHandler.removeCallbacks(mBatteryReadRunnable);
+        mReadCharacteristicQueue.clear();
+
+        final BluetoothGatt gattToClose;
+        synchronized (mGattLock) {
+            gattToClose = mBluetoothGatt;
+            mBluetoothGatt = null;
+        }
+
+        if (gattToClose != null) {
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
-                    if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                        return;
+                    try {
+                        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                            gattToClose.disconnect();
+                            gattToClose.close();
+                        }
+                    } catch (Exception e) {
+                        Log.w(TAG, "Error closing GATT", e);
                     }
-                    mBluetoothGatt.disconnect();
-                    mBluetoothGatt.close();
                 }
             });
         }
@@ -248,13 +278,9 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             }
 
             //reread after some time
-            mHandler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    mReadCharacteristicQueue.add(characteristic);
-                    readNextCharacteristic();
-                }
-            }, READ_BATTERY_PERCENTAGE_PERIOD);
+            mBatteryCharacteristic = characteristic;
+            mHandler.removeCallbacks(mBatteryReadRunnable);
+            mHandler.postDelayed(mBatteryReadRunnable, READ_BATTERY_PERCENTAGE_PERIOD);
         }
         // else {
         //	Log.d(TAG, "TODO: implement characteristicUpdate for other services");
@@ -264,18 +290,20 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     protected void readNextCharacteristic() {
         if (DEBUG) Log.i(TAG, "readNextCharacteristic");
 
-        if (!mReadCharacteristicQueue.isEmpty()) {
+        final BluetoothGattCharacteristic gattChar = mReadCharacteristicQueue.poll();
+        if (gattChar != null) {
             if (DEBUG) Log.i(TAG, "queue is not empty, so we read the next characteristic");
 
-            final BluetoothGattCharacteristic gattChar = mReadCharacteristicQueue.poll();
-            if (gattChar == null) Log.d(TAG, "WTF: gattChar == null");
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
                     if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                         return;
                     }
-                    mBluetoothGatt.readCharacteristic(gattChar);
+                    final BluetoothGatt gatt = mBluetoothGatt;
+                    if (gatt != null) {
+                        gatt.readCharacteristic(gattChar);
+                    }
                 }
             });
         } else { // queue is empty
@@ -287,20 +315,30 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                 mHandler.post(new Runnable() {
                     @Override
                     public void run() {
-                        BluetoothGattService btGattService = mBluetoothGatt.getService(BluetoothConstants.getServiceUUID(getDeviceType()));
+                        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                            return;
+                        }
+                        final BluetoothGatt gatt = mBluetoothGatt;
+                        if (gatt == null) {
+                            return;
+                        }
+                        BluetoothGattService btGattService = gatt.getService(BluetoothConstants.getServiceUUID(getDeviceType()));
                         if (btGattService == null) {
                             Log.d(TAG, "WTF, we expected a service here!");
                             return;
                         }
-                        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                        BluetoothGattCharacteristic btGattChar = btGattService.getCharacteristic(BluetoothConstants.getCharacteristicUUID(getDeviceType()));
+                        if (btGattChar == null) {
+                            Log.d(TAG, "Expected characteristic not found!");
                             return;
                         }
-                        BluetoothGattCharacteristic btGattChar = btGattService.getCharacteristic(BluetoothConstants.getCharacteristicUUID(getDeviceType()));
-                        mBluetoothGatt.setCharacteristicNotification(btGattChar, true);
+                        gatt.setCharacteristicNotification(btGattChar, true);
 
                         BluetoothGattDescriptor descriptor = btGattChar.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG);
-                        descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                        mBluetoothGatt.writeDescriptor(descriptor);
+                        if (descriptor != null) {
+                            descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                            gatt.writeDescriptor(descriptor);
+                        }
                     }
                 });
             }

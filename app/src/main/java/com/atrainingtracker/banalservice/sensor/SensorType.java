@@ -24,6 +24,7 @@ import android.os.Parcelable;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter;
+import com.atrainingtracker.banalservice.sensor.formater.BatteryRemainingTimeFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.CadenceFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.DefaultNumberFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.DefaultStringFormatter;
@@ -94,7 +95,9 @@ public enum SensorType
     TORQUE(R.string.torque, R.string.torque_short, R.string.units_torque, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
     TORQUE_EFFECTIVENESS_L(R.string.torque_effectiveness_l, R.string.torque_effectiveness_l_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
     TORQUE_EFFECTIVENESS_R(R.string.torque_effectiveness_r, R.string.torque_effectiveness_r_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
-    VERTICAL_SPEED(R.string.vertical_speed, R.string.vertical_speed_short, R.string.units_vertical_speed_basic, SensorValueType.INTEGER, new IntegerFormatter(), true);
+    VERTICAL_SPEED(R.string.vertical_speed, R.string.vertical_speed_short, R.string.units_vertical_speed_basic, SensorValueType.INTEGER, new IntegerFormatter(), true),
+    PHONE_BATTERY(R.string.phone_battery, R.string.phone_battery_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), false),
+    BATTERY_REMAINING_TIME(R.string.battery_remaining_time, R.string.battery_remaining_time_short, R.string.units_none, SensorValueType.INTEGER, new BatteryRemainingTimeFormatter(), false);
 
     // max bit = 118
 
@@ -142,6 +145,7 @@ public enum SensorType
             case CADENCE -> R.drawable.ic_cadence;
             case HR -> R.drawable.ic_heart_rate;
             case POWER -> R.drawable.ic_power;
+            case PHONE_BATTERY, BATTERY_REMAINING_TIME -> R.drawable.ic_battery_full;
             default -> R.drawable.ic_cross;
         };
     }

@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.navigation
 
+import android.content.res.Resources
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -43,16 +44,19 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.annotation.VisibleForTesting
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
@@ -74,11 +78,13 @@ import com.google.accompanist.drawablepainter.rememberDrawablePainter
  * @property id Android resource ID associated with the navigation destination (e.g. `R.id.drawer_start_tracking`).
  * @property iconRes Drawable resource ID for the item's leading icon.
  * @property titleRes String resource ID for the item's localized display label.
+ * @property tintIcon Whether the icon should adapt with theme-aware contrast tinting. Set false for multi-colored brand assets.
  */
 data class DrawerItemConfig(
     val id: Int,
     val iconRes: Int,
-    val titleRes: Int
+    val titleRes: Int,
+    val tintIcon: Boolean = true
 )
 
 /**
@@ -106,6 +112,99 @@ class NavigationDrawerController(
 ) {
     var selectedItemId: Int by mutableIntStateOf(initialSelectedItemId)
     var startTrackingTitleRes: Int by mutableIntStateOf(initialStartTrackingTitleRes)
+    var activeBottomSheet: SettingsBottomSheetType? by mutableStateOf(null)
+
+    private var _unboundIsDrawerOpen by mutableStateOf(false)
+    private var openDrawerAction: (() -> Unit)? = null
+    private var closeDrawerAction: (() -> Unit)? = null
+    private var isDrawerOpenProvider: (() -> Boolean)? = null
+
+    val isDrawerOpen: Boolean
+        get() = isDrawerOpenProvider?.invoke() ?: _unboundIsDrawerOpen
+
+    fun openDrawer() {
+        val action = openDrawerAction
+        if (action != null) action.invoke() else _unboundIsDrawerOpen = true
+    }
+
+    fun closeDrawer() {
+        val action = closeDrawerAction
+        if (action != null) action.invoke() else _unboundIsDrawerOpen = false
+    }
+
+    fun bindDrawer(open: () -> Unit, close: () -> Unit, isOpen: () -> Boolean) {
+        openDrawerAction = open
+        closeDrawerAction = close
+        isDrawerOpenProvider = isOpen
+    }
+
+    fun unbindDrawer() {
+        openDrawerAction = null
+        closeDrawerAction = null
+        isDrawerOpenProvider = null
+    }
+}
+
+/**
+ * Creates the list of [DrawerGroup] objects defining the drawer layout and items.
+ */
+@VisibleForTesting
+fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
+    return listOf(
+        DrawerGroup(
+            titleRes = R.string.drawer__training,
+            items = listOf(
+                DrawerItemConfig(R.id.drawer_start_tracking, R.drawable.control_start, startTrackingTitleRes),
+                DrawerItemConfig(R.id.drawer_workouts, R.drawable.workout_list, R.string.tab_workouts),
+                DrawerItemConfig(R.id.drawer_periods, R.drawable.ic_calendar_month, R.string.workout_periods__periods)
+            )
+        ),
+        DrawerGroup(
+            titleRes = R.string.drawer__maps,
+            items = listOf(
+                DrawerItemConfig(R.id.drawer_map, R.drawable.ic_map, R.string.tab_map),
+                DrawerItemConfig(R.id.drawer_segments, R.drawable.ic_segment, R.string.segments),
+                DrawerItemConfig(R.id.drawer_routes, R.drawable.ic_route, R.string.routes),
+                DrawerItemConfig(R.id.drawer_my_locations, R.drawable.ic_favorite_route, R.string.my_locations),
+                DrawerItemConfig(R.id.drawer_start_locations, R.drawable.my_locations, R.string.drawer_start_locations)
+            )
+        ),
+        DrawerGroup(
+            titleRes = R.string.drawer__my_stuff,
+            items = listOf(
+                DrawerItemConfig(R.id.drawer_my_sensors, R.drawable.ic_my_paired_devices, R.string.devices_myRemoteDevices),
+                DrawerItemConfig(R.id.drawer_bikes, R.drawable.ic_equipment_bike, R.string.prefs_manage_bikes_title),
+                DrawerItemConfig(R.id.drawer_shoes, R.drawable.ic_equipment_shoe, R.string.prefs_manage_shoes_title),
+                DrawerItemConfig(R.id.drawer_sport_types, R.drawable.ic_sports_combined, R.string.sport_types),
+                DrawerItemConfig(R.id.drawer_training_zones, R.drawable.ic_zones_hr_run_combined, R.string.prefs_training_zones)
+            )
+        ),
+        DrawerGroup(
+            titleRes = R.string.prefsOnlineCommunities,
+            items = listOf(
+                DrawerItemConfig(R.id.drawer_strava, R.drawable.logo_square_strava, R.string.Strava, tintIcon = false),
+                DrawerItemConfig(R.id.drawer_dropbox, R.drawable.dropbox_logo_blue, R.string.Dropbox, tintIcon = false),
+                DrawerItemConfig(R.id.drawer_export, R.drawable.ic_upload, R.string.prefsExportTitle)
+            )
+        ),
+        DrawerGroup(
+            titleRes = R.string.drawer__settings,
+            items = listOf(
+                DrawerItemConfig(R.id.drawer_units, R.drawable.ic_square_foot, R.string.prefsUnitsTitle),
+                DrawerItemConfig(R.id.drawer_display_settings, R.drawable.ic_display_settings, R.string.Display),
+                DrawerItemConfig(R.id.drawer_tracking_layouts, R.drawable.ic_table_edit, R.string.prefsConfigureDisplaysTitle),
+                DrawerItemConfig(R.id.drawer_search_settings, R.drawable.ic_search, R.string.Search_Settings),
+                DrawerItemConfig(R.id.drawer_backup_restore, R.drawable.ic_save_to_disc, R.string.import_backup),
+                DrawerItemConfig(R.id.drawer_privacy_policy, R.drawable.ic_privacy, R.string.privacy_policy)
+            )
+        ),
+        DrawerGroup(
+            titleRes = R.string.drawer__expert_settings,
+            items = listOf(
+                DrawerItemConfig(R.id.drawer_advanced_tuning, R.drawable.ic_tune, R.string.advanced_tuning_title)
+            )
+        )
+    )
 }
 
 /**
@@ -124,54 +223,9 @@ fun AppNavigationDrawer(
     startTrackingTitleRes: Int,
     onItemSelected: (Int) -> Unit
 ) {
-    val groups = listOf(
-        DrawerGroup(
-            titleRes = R.string.drawer__training,
-            items = listOf(
-                DrawerItemConfig(R.id.drawer_start_tracking, R.drawable.control_start, startTrackingTitleRes),
-                DrawerItemConfig(R.id.drawer_workouts, R.drawable.workout_list, R.string.tab_workouts),
-                DrawerItemConfig(R.id.drawer_periods, R.drawable.ic_calendar_month, R.string.workout_periods__periods)
-            )
-        ),
-        DrawerGroup(
-            titleRes = R.string.drawer__maps,
-            items = listOf(
-                DrawerItemConfig(R.id.drawer_map, R.drawable.ic_map, R.string.tab_map),
-                DrawerItemConfig(R.id.drawer_segments, R.drawable.ic_segment, R.string.segments),
-                DrawerItemConfig(R.id.drawer_routes, R.drawable.ic_route, R.string.routes),
-                DrawerItemConfig(R.id.drawer_my_locations, R.drawable.my_locations, R.string.my_locations)
-            )
-        ),
-        DrawerGroup(
-            titleRes = R.string.drawer__my_stuff,
-            items = listOf(
-                DrawerItemConfig(R.id.drawer_my_sensors, R.drawable.ic_my_paired_devices, R.string.devices_myRemoteDevices),
-                DrawerItemConfig(R.id.drawer_bikes, R.drawable.ic_equipment_bike, R.string.prefs_manage_bikes_title),
-                DrawerItemConfig(R.id.drawer_shoes, R.drawable.ic_equipment_shoe, R.string.prefs_manage_shoes_title),
-                DrawerItemConfig(R.id.drawer_sport_types, R.drawable.ic_sports_combined, R.string.sport_types),
-                DrawerItemConfig(R.id.drawer_training_zones, R.drawable.ic_zones_hr_run_combined, R.string.prefs_training_zones)
-            )
-        ),
-        DrawerGroup(
-            titleRes = R.string.prefsOnlineCommunities,
-            items = listOf(
-                DrawerItemConfig(R.id.drawer_strava, R.drawable.logo_square_strava, R.string.Strava),
-                DrawerItemConfig(R.id.drawer_dropbox, R.drawable.dropbox_logo_blue, R.string.Dropbox),
-                DrawerItemConfig(R.id.drawer_export, R.drawable.ic_upload, R.string.prefsExportTitle)
-            )
-        ),
-        DrawerGroup(
-            titleRes = R.string.drawer__settings,
-            items = listOf(
-                DrawerItemConfig(R.id.drawer_units, R.drawable.ic_square_foot, R.string.prefsUnitsTitle),
-                DrawerItemConfig(R.id.drawer_display_settings, R.drawable.ic_display_settings, R.string.Display),
-                DrawerItemConfig(R.id.drawer_tracking_layouts, R.drawable.ic_table_edit, R.string.prefsConfigureDisplaysTitle),
-                DrawerItemConfig(R.id.drawer_search_settings, R.drawable.ic_search, R.string.Search_Settings),
-                DrawerItemConfig(R.id.drawer_backup_restore, R.drawable.ic_save_to_disc, R.string.import_backup),
-                DrawerItemConfig(R.id.drawer_privacy_policy, R.drawable.ic_privacy, R.string.privacy_policy)
-            )
-        )
-    )
+    val groups = remember(startTrackingTitleRes) {
+        createDrawerGroups(startTrackingTitleRes)
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -315,14 +369,27 @@ fun DrawerItemView(
         verticalAlignment = Alignment.CenterVertically
     ) {
         val context = LocalContext.current
-        val drawable = remember(item.iconRes) {
-            ContextCompat.getDrawable(context, item.iconRes)
+        val drawable = remember(item.iconRes, context) {
+            try {
+                if (item.iconRes != 0) {
+                    ContextCompat.getDrawable(context, item.iconRes)
+                } else {
+                    null
+                }
+            } catch (e: Resources.NotFoundException) {
+                Log.w("AppNavigationDrawer", "Resource not found for drawer icon 0x${Integer.toHexString(item.iconRes)}", e)
+                null
+            } catch (e: Throwable) {
+                Log.w("AppNavigationDrawer", "Failed to load drawer icon 0x${Integer.toHexString(item.iconRes)}", e)
+                null
+            }
         }
         if (drawable != null) {
             Image(
                 painter = rememberDrawablePainter(drawable),
                 contentDescription = null,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(24.dp),
+                colorFilter = if (item.tintIcon) ColorFilter.tint(contentColor) else null
             )
         } else {
             Spacer(modifier = Modifier.size(24.dp))

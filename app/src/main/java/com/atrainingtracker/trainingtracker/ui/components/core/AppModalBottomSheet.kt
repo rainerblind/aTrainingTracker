@@ -41,8 +41,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.SheetState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -99,6 +99,9 @@ fun AppModalBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
+        shape = BottomSheetDesign.SheetShape,
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = BottomSheetDesign.SheetTonalElevation,
         dragHandle = { MinimumDragHandle() },
         modifier = modifier
     ) {
@@ -149,15 +152,14 @@ fun AppBottomSheetContent(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        shape = BottomSheetDesign.SheetShape,
         color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp
+        tonalElevation = BottomSheetDesign.SheetTonalElevation,
+        border = BorderStroke(BottomSheetDesign.BorderWidth, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             MinimumDragHandle(
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .padding(top = 8.dp, bottom = 4.dp)
+                modifier = Modifier.align(Alignment.CenterHorizontally)
             )
             AppBottomSheetBody(
                 title = title,

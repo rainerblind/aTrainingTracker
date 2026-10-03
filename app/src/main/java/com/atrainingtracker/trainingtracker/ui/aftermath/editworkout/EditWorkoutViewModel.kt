@@ -42,6 +42,8 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
@@ -52,6 +54,15 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     private val sportTypesRepository = SportTypesRepository.getInstance(application)
     private val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(application)
     private val discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(application)
+    private val prefManager = com.atrainingtracker.trainingtracker.MyPreferenceManager(application)
+
+    @Deprecated("Edit workout dialog fields are rendered unconditionally (REQ-UI-239)")
+    val fieldPreferences: StateFlow<com.atrainingtracker.trainingtracker.EditWorkoutFieldPreferences> = prefManager.editWorkoutFieldPreferencesFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000),
+            initialValue = com.atrainingtracker.trainingtracker.EditWorkoutFieldPreferences()
+        )
 
     // Using StateFlow for modern reactive UI
     private val _workoutData = MutableStateFlow<WorkoutData?>(null)
@@ -375,6 +386,10 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     fun updateUploadToStrava(isChecked: Boolean) {
         _workoutData.update { it?.copy(uploadToStrava = if (isChecked) 1 else 0) }
+    }
+
+    fun updateIsRace(isChecked: Boolean) {
+        _workoutData.update { it?.copy(race = isChecked) }
     }
 
 

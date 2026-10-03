@@ -47,6 +47,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
+import com.atrainingtracker.trainingtracker.ui.components.core.MinimumDragHandle
 
 /**
  * Reusable Material 3 modal bottom sheet scaffold for multi-dimensional filtering.
@@ -81,6 +83,10 @@ fun FilterBottomSheetScaffold(
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
+        shape = BottomSheetDesign.SheetShape,
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = BottomSheetDesign.SheetTonalElevation,
+        dragHandle = { MinimumDragHandle() },
         modifier = modifier
     ) {
         Column(

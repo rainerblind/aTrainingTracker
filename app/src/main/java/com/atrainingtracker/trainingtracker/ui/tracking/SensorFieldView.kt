@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -47,9 +48,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material3.Typography
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
@@ -57,10 +63,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import com.atrainingtracker.trainingtracker.ui.tracking.typography.LocalCockpitTypography
 
 
 enum class ViewSize {
-    XSMALL, SMALL, NORMAL, LARGE, XLARGE, HUGE, XHUGE
+    XSMALL, SMALL, NORMAL, LARGE, XLARGE, HUGE, XHUGE, XXHUGE, XXXHUGE
 }
 
 /**
@@ -75,8 +82,59 @@ fun ViewSize.getDisplayName(context: Context): String {
         ViewSize.XLARGE -> R.string.view_size_xlarge
         ViewSize.HUGE -> R.string.view_size_huge
         ViewSize.XHUGE -> R.string.view_size_xhuge
+        ViewSize.XXHUGE -> R.string.view_size_xxhuge
+        ViewSize.XXXHUGE -> R.string.view_size_xxxhuge
     }
     return context.getString(resourceId)
+}
+
+/**
+ * Resolves the typography style for the primary sensor metric value, enforcing configured or default font family and weight (ATT-1264, ATT-1751 / REQ-UI-212).
+ */
+fun getSensorValueTextStyle(
+    viewSize: ViewSize,
+    typography: Typography,
+    fontFamily: FontFamily? = null,
+    fontWeight: FontWeight = FontWeight.SemiBold
+): TextStyle {
+    val baseStyle = when (viewSize) {
+        ViewSize.XSMALL -> typography.headlineSmall.copy(fontSize = 20.sp)
+        ViewSize.SMALL -> typography.headlineMedium
+        ViewSize.NORMAL -> typography.displaySmall
+        ViewSize.LARGE -> typography.displayMedium
+        ViewSize.XLARGE -> typography.displayLarge.copy(fontSize = 50.sp)
+        ViewSize.HUGE -> typography.displayLarge.copy(fontSize = 76.sp)
+        ViewSize.XHUGE -> typography.displayLarge.copy(fontSize = 100.sp)
+        ViewSize.XXHUGE -> typography.displayLarge.copy(fontSize = 140.sp)
+        ViewSize.XXXHUGE -> typography.displayLarge.copy(fontSize = 180.sp)
+    }
+    return if (fontFamily != null) {
+        baseStyle.copy(fontWeight = fontWeight, fontFamily = fontFamily)
+    } else {
+        baseStyle.copy(fontWeight = fontWeight)
+    }
+}
+
+/**
+ * Resolves the typography style for the sensor metric unit annotation (ATT-1264, ATT-1751 / REQ-UI-212).
+ */
+fun getSensorUnitTextStyle(
+    viewSize: ViewSize,
+    typography: Typography,
+    fontFamily: FontFamily? = null
+): TextStyle {
+    val baseStyle = when (viewSize) {
+        ViewSize.XSMALL -> typography.bodySmall.copy(fontSize = 10.sp)
+        ViewSize.SMALL -> typography.bodySmall
+        ViewSize.NORMAL -> typography.bodyLarge
+        ViewSize.LARGE -> typography.headlineSmall
+        ViewSize.XLARGE -> typography.headlineMedium.copy(fontSize = 32.sp)
+        ViewSize.HUGE -> typography.headlineMedium.copy(fontSize = 40.sp)
+        ViewSize.XHUGE -> typography.headlineLarge.copy(fontSize = 48.sp)
+        ViewSize.XXHUGE -> typography.headlineLarge.copy(fontSize = 56.sp)
+        ViewSize.XXXHUGE -> typography.headlineLarge.copy(fontSize = 64.sp)
+    }
+    return if (fontFamily != null) baseStyle.copy(fontFamily = fontFamily) else baseStyle
 }
 
 /**
@@ -89,80 +147,45 @@ fun SensorFieldView(
     fieldState: SensorFieldState,
     modifier: Modifier = Modifier,
     screenMode: ScreenMode,
+    isSelectedForMove: Boolean = false,
+    onStartMove: () -> Unit = {},
     onEdit: () -> Unit = {},
     onDelete: () -> Unit = {}
 ) {
-    // Determine text styles based on the size parameter.
-    val valueStyle: TextStyle
-    val unitStyle: TextStyle
-    val labelStyle: TextStyle
-    val filterStyle: TextStyle
-    when (fieldState.viewSize) {
-        ViewSize.XSMALL -> {
-        // --- MANUALLY DECREASE FONT SIZE ---
-            valueStyle = MaterialTheme.typography.headlineSmall.copy(
-                fontSize = 20.sp // Manually set a much smaller font size
-            )
-            unitStyle = MaterialTheme.typography.bodySmall.copy(
-                fontSize = 10.sp
-            )
-            labelStyle = MaterialTheme.typography.bodySmall
-            filterStyle = MaterialTheme.typography.labelSmall
-        }
-
-        ViewSize.SMALL -> {
-            valueStyle = MaterialTheme.typography.headlineMedium
-            unitStyle = MaterialTheme.typography.bodySmall
-            labelStyle = MaterialTheme.typography.bodyMedium
-            filterStyle = MaterialTheme.typography.bodySmall
-        }
-        ViewSize.NORMAL -> {
-            valueStyle = MaterialTheme.typography.displaySmall
-            unitStyle = MaterialTheme.typography.bodyLarge
-            labelStyle = MaterialTheme.typography.titleMedium
-            filterStyle = MaterialTheme.typography.bodySmall
-        }
-        ViewSize.LARGE -> {
-            valueStyle = MaterialTheme.typography.displayMedium
-            unitStyle = MaterialTheme.typography.headlineSmall
-            labelStyle = MaterialTheme.typography.titleLarge
-            filterStyle = MaterialTheme.typography.bodyMedium
-        }
-        ViewSize.XLARGE -> {
-            valueStyle = MaterialTheme.typography.displayLarge.copy(
-                fontSize = 50.sp // Manually set a much larger font size
-            )
-            unitStyle = MaterialTheme.typography.headlineMedium.copy(
-                fontSize = 32.sp // Also increase the unit size
-            )
-            labelStyle = MaterialTheme.typography.headlineSmall
-            filterStyle = MaterialTheme.typography.bodyLarge
-        }
-        ViewSize.HUGE -> {
-            valueStyle = MaterialTheme.typography.displayLarge.copy(
-                fontSize = 76.sp // Significantly larger
-            )
-            unitStyle = MaterialTheme.typography.headlineMedium.copy(
-                fontSize = 40.sp
-            )
-            labelStyle = MaterialTheme.typography.headlineSmall.copy(
-                fontSize = 28.sp
-            )
-            filterStyle = MaterialTheme.typography.bodyLarge
-        }
-        ViewSize.XHUGE -> {
-            valueStyle = MaterialTheme.typography.displayLarge.copy(
-                fontSize = 100.sp // Very large "Jumbotron" size
-            )
-            unitStyle = MaterialTheme.typography.headlineLarge.copy(
-                fontSize = 48.sp
-            )
-            labelStyle = MaterialTheme.typography.headlineMedium.copy(
-                fontSize = 32.sp
-            )
-            filterStyle = MaterialTheme.typography.titleMedium
-        }
-
+    val cockpitTypography = LocalCockpitTypography.current
+    // Determine text styles based on the size parameter and configured cockpit typography.
+    val valueStyle = getSensorValueTextStyle(
+        viewSize = fieldState.viewSize,
+        typography = MaterialTheme.typography,
+        fontFamily = cockpitTypography.resolvedFontFamily,
+        fontWeight = cockpitTypography.weight.asFontWeight()
+    )
+    val unitStyle = getSensorUnitTextStyle(
+        viewSize = fieldState.viewSize,
+        typography = MaterialTheme.typography,
+        fontFamily = cockpitTypography.resolvedFontFamily
+    )
+    val labelStyle = when (fieldState.viewSize) {
+        ViewSize.XSMALL -> MaterialTheme.typography.bodySmall
+        ViewSize.SMALL -> MaterialTheme.typography.bodyMedium
+        ViewSize.NORMAL -> MaterialTheme.typography.titleMedium
+        ViewSize.LARGE -> MaterialTheme.typography.titleLarge
+        ViewSize.XLARGE -> MaterialTheme.typography.headlineSmall
+        ViewSize.HUGE -> MaterialTheme.typography.headlineSmall.copy(fontSize = 28.sp)
+        ViewSize.XHUGE -> MaterialTheme.typography.headlineMedium.copy(fontSize = 32.sp)
+        ViewSize.XXHUGE -> MaterialTheme.typography.headlineMedium.copy(fontSize = 36.sp)
+        ViewSize.XXXHUGE -> MaterialTheme.typography.headlineLarge.copy(fontSize = 40.sp)
+    }
+    val filterStyle = when (fieldState.viewSize) {
+        ViewSize.XSMALL -> MaterialTheme.typography.labelSmall
+        ViewSize.SMALL -> MaterialTheme.typography.bodySmall
+        ViewSize.NORMAL -> MaterialTheme.typography.bodySmall
+        ViewSize.LARGE -> MaterialTheme.typography.bodyMedium
+        ViewSize.XLARGE -> MaterialTheme.typography.bodyLarge
+        ViewSize.HUGE -> MaterialTheme.typography.bodyLarge
+        ViewSize.XHUGE -> MaterialTheme.typography.titleMedium
+        ViewSize.XXHUGE -> MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp)
+        ViewSize.XXXHUGE -> MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp)
     }
 
     Card(
@@ -176,24 +199,30 @@ fun SensorFieldView(
                     }
                 },
                 onLongClick = {
-                    if (screenMode == ScreenMode.TRACKING) {
+                    if (screenMode == ScreenMode.CONFIGURATION) {
+                        onStartMove()
+                    } else if (screenMode == ScreenMode.TRACKING) {
                         onEdit()
                     }
                 }
             ),
         shape = RectangleShape,
         colors = CardDefaults.cardColors(
-            containerColor = if (fieldState.zoneColor == Color.Transparent) {
-                MaterialTheme.colorScheme.surface
+            containerColor = if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showBackground) {
+                fieldState.zoneColor.copy(alpha = 0.12f).compositeOver(MaterialTheme.colorScheme.surface)
             } else {
-                fieldState.zoneColor.copy(alpha = 0.12f)
+                MaterialTheme.colorScheme.surface
             }
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        border = if (isSelectedForMove) {
+            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+        } else {
+            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        }
     ) {
         Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-            // 1. Vertical Indicator Strip
-            if (fieldState.zoneColor != Color.Transparent) {
+            // 1. Left Indicator Strip
+            if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showLeftBar) {
                 Spacer(
                     modifier = Modifier
                         .width(6.dp)
@@ -201,73 +230,100 @@ fun SensorFieldView(
                         .background(fieldState.zoneColor)
                 )
             }
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-        ) {
-            // Top row for Label and Filter information
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                // Label on the top-left
-                Text(
-                    text = fieldState.label,
-                    style = labelStyle,
-                    color = MaterialTheme.colorScheme.onSurface // Ensure readability
-                )
-                // Filter info on the top-right
-                Text(
-                    text = fieldState.filterDescription,
-                    style = filterStyle,
-                    fontStyle = FontStyle.Italic,
-                    textAlign = TextAlign.End,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // Value and Unit Row, centered
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.Bottom,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = fieldState.value,
-                    style = valueStyle,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = fieldState.units,
-                    style = unitStyle,
-                    modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            // Conditionally add the delete button at the bottom in configuration mode
-            if (screenMode == ScreenMode.CONFIGURATION) {
-                Spacer(modifier = Modifier.height(8.dp))
+                // Top row for Label and Filter information
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
                 ) {
-                    IconButton(
-                        onClick = onDelete,
-                        modifier = Modifier.size(24.dp) // Make the button compact
+                    // Label on the top-left
+                    Text(
+                        text = fieldState.label,
+                        style = labelStyle,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    // Filter info on the top-right
+                    Text(
+                        text = fieldState.filterDescription,
+                        style = filterStyle,
+                        fontStyle = FontStyle.Italic,
+                        textAlign = TextAlign.End,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Value and Unit Row, centered
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.Bottom,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = fieldState.value,
+                        style = valueStyle,
+                        color = if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showTextColor) {
+                            fieldState.zoneColor
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        }
+                    )
+                    Text(
+                        text = fieldState.units,
+                        style = unitStyle,
+                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Conditionally add the action buttons at the bottom in configuration mode
+                if (screenMode == ScreenMode.CONFIGURATION) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete Field", // For accessibility
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        IconButton(
+                            onClick = onStartMove,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SwapHoriz,
+                                contentDescription = "Move Field",
+                                tint = if (isSelectedForMove) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(24.dp) // Make the button compact
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete Field", // For accessibility
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
-        }
+            // 2. Right Indicator Strip
+            if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showRightBar) {
+                Spacer(
+                    modifier = Modifier
+                        .width(6.dp)
+                        .fillMaxHeight()
+                        .background(fieldState.zoneColor)
+                )
+            }
         }
     }
 }
+
 
 
 //================================================================================

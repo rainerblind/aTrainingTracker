@@ -54,19 +54,42 @@ public class BTLEHeartRateDevice extends MyBTLEDevice {
 
     @Override
     protected void measurementCharacteristicUpdate(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-        int flag = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
-
-        int format = -1;
-        if ((flag & 0x01) != 0) {
-            format = BluetoothGattCharacteristic.FORMAT_UINT16;
-            // Log.i(TAG, "Heart rate format UINT16.");
-        } else {
-            format = BluetoothGattCharacteristic.FORMAT_UINT8;
-            // Log.i(TAG, "Heart rate format UINT8.");
+        if (characteristic == null) {
+            return;
         }
-        int heartRate = characteristic.getIntValue(format, 1);
-        if (DEBUG) Log.i(TAG, String.format("Received heart rate: %d", heartRate));
-        mHeartRateSensor.newValue(heartRate);
+        byte[] value = characteristic.getValue();
+        if (value == null || value.length < 2) {
+            if (DEBUG) Log.w(TAG, "measurementCharacteristicUpdate: packet too short or null");
+            return;
+        }
 
+        try {
+            Integer flag = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
+            if (flag == null) {
+                return;
+            }
+
+            int format;
+            int requiredLength;
+            if ((flag & 0x01) != 0) {
+                format = BluetoothGattCharacteristic.FORMAT_UINT16;
+                requiredLength = 3;
+            } else {
+                format = BluetoothGattCharacteristic.FORMAT_UINT8;
+                requiredLength = 2;
+            }
+
+            if (value.length >= requiredLength) {
+                Integer heartRate = characteristic.getIntValue(format, 1);
+                if (heartRate != null) {
+                    if (DEBUG) Log.i(TAG, String.format("Received heart rate: %d", heartRate));
+                    mHeartRateSensor.newValue(heartRate);
+                }
+            } else {
+                Log.w(TAG, "Heart rate characteristic truncated: length=" + value.length + ", required=" + requiredLength);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Error parsing HR characteristic notification", e);
+        }
     }
 }

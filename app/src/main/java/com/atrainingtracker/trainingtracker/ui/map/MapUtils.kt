@@ -69,6 +69,42 @@ fun createSensorMarker(
     return saveBitmapDescriptorFactoryFromBitmap(bitmap)
 }
 
+/**
+ * Creates a custom Google Maps marker with a theme-colored pin base and a white heart glyph.
+ * Used for Lieblingsorte (known start locations) map visualization (REQ-UI-166).
+ */
+fun createHeartPinMarker(
+    context: Context,
+    pinColor: Color,
+    heartColor: Color = Color.White
+): BitmapDescriptor? {
+    val density = context.resources.displayMetrics.density
+    val size = (36 * density).toInt()
+
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+
+    // Draw white circle backing for the heart cutout
+    val headRadius = size * 0.30f
+    val headCenterX = size * 0.5f
+    val headCenterY = size * 0.38f
+    val heartPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = heartColor.toArgb()
+        style = Paint.Style.FILL
+    }
+    canvas.drawCircle(headCenterX, headCenterY, headRadius, heartPaint)
+
+    // Draw pin with heart cutout tinted with pinColor
+    val pinDrawable = ContextCompat.getDrawable(context, R.drawable.my_locations)?.mutate()
+    pinDrawable?.let {
+        it.setTint(pinColor.toArgb())
+        it.setBounds(0, 0, size, size)
+        it.draw(canvas)
+    }
+
+    return saveBitmapDescriptorFactoryFromBitmap(bitmap)
+}
+
 fun bitmapDescriptorFromVectorInternal(context: Context, resId: Int, sizeDp: Int, tint: Color?): BitmapDescriptor? {
     val drawable = ContextCompat.getDrawable(context, resId)?.mutate() ?: return null
     tint?.let { drawable.setTint(it.toArgb()) }

@@ -70,6 +70,10 @@ class RoutesRepository internal constructor(
     private val _allRoutes = MutableStateFlow<List<RouteWithPath>>(emptyList())
     val allRoutes: StateFlow<List<RouteWithPath>> = _allRoutes.asStateFlow()
 
+    // StateFlow to track active route synchronization (ATT-1230)
+    private val _isSyncing = MutableStateFlow(false)
+    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+
     init {
         // Prune any expired cached Strava routes on initialization (Section 6.2 compliance)
         routesDb.pruneExpiredStravaRoutes()
@@ -210,135 +214,140 @@ class RoutesRepository internal constructor(
      * @return true if synchronization succeeded, false otherwise.
      */
     suspend fun syncRoutesFromStrava(): Boolean = syncMutex.withLock {
-        withContext(Dispatchers.IO) {
-        val accessToken = StravaHelper.getRefreshedAccessToken()
-        if (accessToken.isNullOrEmpty()) {
-            Log.e(TAG, "Strava Access Token is null or empty")
-            return@withContext false
-        }
-
-        var athleteId = TrainingApplication.getStravaAthleteId()
-        if (athleteId == 0) {
-            Log.i(TAG, "Strava Athlete ID is not set. Fetching authenticated athlete...")
-            athleteId = fetchAuthenticatedAthleteId(accessToken)
-            if (athleteId == 0) {
-                Log.e(TAG, "Strava Athlete ID could not be resolved")
-                return@withContext false
-            }
-            TrainingApplication.setStravaAthleteId(athleteId)
-        }
-
-        // 1. Fetch all routes from Strava
-        // Strava API: GET /athletes/{id}/routes
-        val url = "https://www.strava.com/api/v3/athletes/$athleteId/routes?per_page=100"
-
-        val client = OkHttpClient()
-        val request = Request.Builder()
-            .url(url)
-            .addHeader("Authorization", "Bearer $accessToken")
-            .build()
-
-        val routesResponse = try {
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    Log.e(TAG, "Failed to fetch Strava routes: ${response.code}")
+        _isSyncing.value = true
+        try {
+            withContext(Dispatchers.IO) {
+                val accessToken = StravaHelper.getRefreshedAccessToken()
+                if (accessToken.isNullOrEmpty()) {
+                    Log.e(TAG, "Strava Access Token is null or empty")
                     return@withContext false
                 }
-                response.body?.string() ?: "[]"
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Exception fetching Strava routes", e)
-            return@withContext false
-        }
 
-        val stravaRoutes = try {
-            json.decodeFromString<List<StravaRoute>>(routesResponse)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error decoding Strava routes JSON", e)
-            return@withContext false
-        }
-
-        // 2. Identify which routes are already in the DB
-        val activeExtIds = stravaRoutes.map { it.idStr }.toSet()
-        val existingRoutes = routesDb.getAllRoutes()
-        val existingRoutesByExtId = existingRoutes
-            .filter { it.summary.source == RouteSource.STRAVA && it.summary.externalId.isNotBlank() }
-            .associateBy { it.summary.externalId }
-
-        for (stravaRoute in stravaRoutes) {
-            val existing = existingRoutesByExtId[stravaRoute.idStr]
-            if (existing != null) {
-                // Route already imported: refresh its synced_at timestamp to extend cache validity
-                routesDb.updateRouteSyncedAt(existing.summary.id, System.currentTimeMillis())
-                continue
-            }
-
-            // 3. Transform StravaRoute to RouteSummary & Path
-            val sportType = when (stravaRoute.type) {
-                1 -> BSportType.BIKE
-                2 -> BSportType.RUN
-                else -> BSportType.UNKNOWN
-            }
-
-            // TRY TO GET DETAILED STREAM FIRST
-            val pathPoints = fetchRouteStreams(stravaRoute.id) ?: run {
-                // Fallback to polyline if stream fails
-                val polyline = stravaRoute.map.polyline ?: stravaRoute.map.summaryPolyline
-                if (polyline == null) return@run emptyList<PathPoint>()
-                
-                val decodedPoints = PolyUtil.decode(polyline)
-                var accumulatedDistance = 0.0
-                decodedPoints.mapIndexed { index, latLng ->
-                    if (index > 0) {
-                        val results = FloatArray(1)
-                        android.location.Location.distanceBetween(
-                            decodedPoints[index - 1].latitude, decodedPoints[index - 1].longitude,
-                            latLng.latitude, latLng.longitude,
-                            results
-                        )
-                        accumulatedDistance += results[0]
+                var athleteId = TrainingApplication.getStravaAthleteId()
+                if (athleteId == 0) {
+                    Log.i(TAG, "Strava Athlete ID is not set. Fetching authenticated athlete...")
+                    athleteId = fetchAuthenticatedAthleteId(accessToken)
+                    if (athleteId == 0) {
+                        Log.e(TAG, "Strava Athlete ID could not be resolved")
+                        return@withContext false
                     }
-                    PathPoint(accumulatedDistance, latLng, 0.0)
+                    TrainingApplication.setStravaAthleteId(athleteId)
                 }
+
+                // 1. Fetch all routes from Strava
+                // Strava API: GET /athletes/{id}/routes
+                val url = "https://www.strava.com/api/v3/athletes/$athleteId/routes?per_page=100"
+
+                val client = OkHttpClient()
+                val request = Request.Builder()
+                    .url(url)
+                    .addHeader("Authorization", "Bearer $accessToken")
+                    .build()
+
+                val routesResponse = try {
+                    client.newCall(request).execute().use { response ->
+                        if (!response.isSuccessful) {
+                            Log.e(TAG, "Failed to fetch Strava routes: ${response.code}")
+                            return@withContext false
+                        }
+                        response.body?.string() ?: "[]"
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Exception fetching Strava routes", e)
+                    return@withContext false
+                }
+
+                val stravaRoutes = try {
+                    json.decodeFromString<List<StravaRoute>>(routesResponse)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error decoding Strava routes JSON", e)
+                    return@withContext false
+                }
+
+                // 2. Identify which routes are already in the DB
+                val activeExtIds = stravaRoutes.map { it.idStr }.toSet()
+                val existingRoutes = routesDb.getAllRoutes()
+                val existingRoutesByExtId = existingRoutes
+                    .filter { it.summary.source == RouteSource.STRAVA && it.summary.externalId.isNotBlank() }
+                    .associateBy { it.summary.externalId }
+
+                for (stravaRoute in stravaRoutes) {
+                    val existing = existingRoutesByExtId[stravaRoute.idStr]
+                    if (existing != null) {
+                        // Route already imported: refresh its synced_at timestamp to extend cache validity
+                        routesDb.updateRouteSyncedAt(existing.summary.id, System.currentTimeMillis())
+                        continue
+                    }
+
+                    // 3. Transform StravaRoute to RouteSummary & Path
+                    val sportType = when (stravaRoute.type) {
+                        1 -> BSportType.BIKE
+                        2 -> BSportType.RUN
+                        else -> BSportType.UNKNOWN
+                    }
+
+                    // TRY TO GET DETAILED STREAM FIRST
+                    val pathPoints = fetchRouteStreams(stravaRoute.id) ?: run {
+                        // Fallback to polyline if stream fails
+                        val polyline = stravaRoute.map.polyline ?: stravaRoute.map.summaryPolyline
+                        if (polyline == null) return@run emptyList<PathPoint>()
+                        
+                        val decodedPoints = PolyUtil.decode(polyline)
+                        var accumulatedDistance = 0.0
+                        decodedPoints.mapIndexed { index, latLng ->
+                            if (index > 0) {
+                                val results = FloatArray(1)
+                                android.location.Location.distanceBetween(
+                                    decodedPoints[index - 1].latitude, decodedPoints[index - 1].longitude,
+                                    latLng.latitude, latLng.longitude,
+                                    results
+                                )
+                                accumulatedDistance += results[0]
+                            }
+                            PathPoint(accumulatedDistance, latLng, 0.0)
+                        }
+                    }
+
+                    if (pathPoints.isEmpty()) continue
+
+                    val summary = RouteSummary(
+                        id = 0,
+                        externalId = stravaRoute.idStr,
+                        name = stravaRoute.name,
+                        description = stravaRoute.description ?: "",
+                        isSelected = false,
+                        distance = stravaRoute.distance,
+                        elevationGain = stravaRoute.elevationGain,
+                        bSportType = sportType,
+                        source = RouteSource.STRAVA,
+                        syncedAt = System.currentTimeMillis()
+                    )
+
+                    // 4. Insert into DB
+                    val newId = routesDb.insertRoute(summary, pathPoints)
+                    
+                    // Seed the cluster database (SCRUM-207)
+                    val clusterId = WorkoutClusterEngine.getInstance(context)
+                        .learnFromRoute(RouteWithPath(summary.copy(id = newId), pathPoints))
+
+                    // Store the persistent link
+                    if (clusterId != -1L) {
+                        routesDb.updateRouteSummary(summary.copy(id = newId, clusterId = clusterId))
+                    }
+                }
+
+                // 4b. Prune orphan Strava routes that were deleted or unstarred on Strava
+                routesDb.pruneOrphanStravaRoutes(activeExtIds)
+
+                // 5. Update timestamp & notify observers
+                val timestamp = java.text.DateFormat.getDateTimeInstance().format(java.util.Date())
+                TrainingApplication.setLastUpdateTimeOfStravaRoutes(timestamp)
+
+                refreshRoutes()
+                true
             }
-
-            if (pathPoints.isEmpty()) continue
-
-            val summary = RouteSummary(
-                id = 0,
-                externalId = stravaRoute.idStr,
-                name = stravaRoute.name,
-                description = stravaRoute.description ?: "",
-                isSelected = false,
-                distance = stravaRoute.distance,
-                elevationGain = stravaRoute.elevationGain,
-                bSportType = sportType,
-                source = RouteSource.STRAVA,
-                syncedAt = System.currentTimeMillis()
-            )
-
-            // 4. Insert into DB
-            val newId = routesDb.insertRoute(summary, pathPoints)
-            
-            // Seed the cluster database (SCRUM-207)
-            val clusterId = WorkoutClusterEngine.getInstance(context)
-                .learnFromRoute(RouteWithPath(summary.copy(id = newId), pathPoints))
-
-            // Store the persistent link
-            if (clusterId != -1L) {
-                routesDb.updateRouteSummary(summary.copy(id = newId, clusterId = clusterId))
-            }
-        }
-
-        // 4b. Prune orphan Strava routes that were deleted or unstarred on Strava
-        routesDb.pruneOrphanStravaRoutes(activeExtIds)
-
-        // 5. Update timestamp & notify observers
-        val timestamp = java.text.DateFormat.getDateTimeInstance().format(java.util.Date())
-        TrainingApplication.setLastUpdateTimeOfStravaRoutes(timestamp)
-
-        refreshRoutes()
-        true
+        } finally {
+            _isSyncing.value = false
         }
     }
 

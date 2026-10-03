@@ -19,14 +19,17 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import androidx.compose.runtime.Immutable
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.google.android.gms.maps.model.LatLng
 import org.json.JSONObject
 
 /**
  * Immutable domain model representing multi-dimensional filter criteria for workout lists.
  *
  * Holds filter values for free-text search, temporal ranges, sport subtypes, gear assignments,
- * workout flags (commute, trainer, GPS presence), and numerical distance/duration thresholds.
+ * workout flags (commute, trainer, GPS presence), numerical distance/duration thresholds,
+ * and spatial geofence starting location filters.
  * Provides high-performance predicate evaluation via [matches] and lightweight JSON serialization
  * for asynchronous preference persistence.
  */
@@ -41,11 +44,18 @@ data class WorkoutFilterCriteria(
     val equipmentId: Long? = null,
     val isCommute: Boolean? = null,
     val isTrainer: Boolean? = null,
+    val isRace: Boolean? = null,
     val hasGpsTrack: Boolean? = null,
     val minDistanceMeters: Double? = null,
     val maxDistanceMeters: Double? = null,
     val minDurationSec: Long? = null,
-    val maxDurationSec: Long? = null
+    val maxDurationSec: Long? = null,
+    val startLocationName: String? = null,
+    val startLocationLat: Double? = null,
+    val startLocationLng: Double? = null,
+    val startLocationRadiusM: Double? = null,
+    val clusterId: Long? = null,
+    val clusterName: String? = null
 ) {
     /**
      * Total count of distinct active filter dimensions.
@@ -59,9 +69,12 @@ data class WorkoutFilterCriteria(
             if (equipmentId != null) count++
             if (isCommute != null) count++
             if (isTrainer != null) count++
+            if (isRace != null) count++
             if (hasGpsTrack == true) count++
             if (minDistanceMeters != null || maxDistanceMeters != null) count++
             if (minDurationSec != null || maxDurationSec != null) count++
+            if (startLocationLat != null && startLocationLng != null) count++
+            if (clusterId != null) count++
             return count
         }
 
@@ -139,6 +152,11 @@ data class WorkoutFilterCriteria(
             return false
         }
 
+        // Race flag (ATT-2005)
+        if (isRace != null && workout.race != isRace) {
+            return false
+        }
+
         // Has GPS track
         if (hasGpsTrack == true && workout.mapPolyline.isEmpty()) {
             return false
@@ -157,6 +175,21 @@ data class WorkoutFilterCriteria(
             return false
         }
         if (maxDurationSec != null && workout.activeTimeSec > maxDurationSec) {
+            return false
+        }
+
+        // Start Location geofence filter
+        if (startLocationLat != null && startLocationLng != null) {
+            val start = workout.startLatLng ?: return false
+            val radius = startLocationRadiusM ?: 200.0
+            val dist = WorkoutClusterEngine.distanceBetween(start, LatLng(startLocationLat, startLocationLng))
+            if (dist > radius) {
+                return false
+            }
+        }
+
+        // Cluster filter
+        if (clusterId != null && workout.clusterId != clusterId) {
             return false
         }
 
@@ -179,11 +212,18 @@ data class WorkoutFilterCriteria(
         equipmentId?.let { json.put("equipmentId", it) }
         isCommute?.let { json.put("isCommute", it) }
         isTrainer?.let { json.put("isTrainer", it) }
+        isRace?.let { json.put("isRace", it) }
         hasGpsTrack?.let { json.put("hasGpsTrack", it) }
         minDistanceMeters?.let { json.put("minDistanceMeters", it) }
         maxDistanceMeters?.let { json.put("maxDistanceMeters", it) }
         minDurationSec?.let { json.put("minDurationSec", it) }
         maxDurationSec?.let { json.put("maxDurationSec", it) }
+        startLocationName?.let { json.put("startLocationName", it) }
+        startLocationLat?.let { json.put("startLocationLat", it) }
+        startLocationLng?.let { json.put("startLocationLng", it) }
+        startLocationRadiusM?.let { json.put("startLocationRadiusM", it) }
+        clusterId?.let { json.put("clusterId", it) }
+        clusterName?.let { json.put("clusterName", it) }
         return json.toString()
     }
 
@@ -208,11 +248,18 @@ data class WorkoutFilterCriteria(
                     equipmentId = if (json.has("equipmentId")) json.optLong("equipmentId") else null,
                     isCommute = if (json.has("isCommute")) json.optBoolean("isCommute") else null,
                     isTrainer = if (json.has("isTrainer")) json.optBoolean("isTrainer") else null,
+                    isRace = if (json.has("isRace")) json.optBoolean("isRace") else null,
                     hasGpsTrack = if (json.has("hasGpsTrack")) json.optBoolean("hasGpsTrack") else null,
                     minDistanceMeters = if (json.has("minDistanceMeters")) json.optDouble("minDistanceMeters") else null,
                     maxDistanceMeters = if (json.has("maxDistanceMeters")) json.optDouble("maxDistanceMeters") else null,
                     minDurationSec = if (json.has("minDurationSec")) json.optLong("minDurationSec") else null,
-                    maxDurationSec = if (json.has("maxDurationSec")) json.optLong("maxDurationSec") else null
+                    maxDurationSec = if (json.has("maxDurationSec")) json.optLong("maxDurationSec") else null,
+                    startLocationName = if (json.has("startLocationName")) json.optString("startLocationName") else null,
+                    startLocationLat = if (json.has("startLocationLat")) json.optDouble("startLocationLat") else null,
+                    startLocationLng = if (json.has("startLocationLng")) json.optDouble("startLocationLng") else null,
+                    startLocationRadiusM = if (json.has("startLocationRadiusM")) json.optDouble("startLocationRadiusM") else null,
+                    clusterId = if (json.has("clusterId")) json.optLong("clusterId") else null,
+                    clusterName = if (json.has("clusterName")) json.optString("clusterName") else null
                 )
             } catch (e: Exception) {
                 WorkoutFilterCriteria()

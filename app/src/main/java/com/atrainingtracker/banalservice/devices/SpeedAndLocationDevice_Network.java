@@ -48,9 +48,14 @@ public class SpeedAndLocationDevice_Network extends SpeedAndLocationDevice
         mDeviceId = devicesDatabaseManager.getSpeedAndLocationNetworkDeviceId();
 
         mLocationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
-        if (mLocationManager != null && mLocationManager.getProvider(LocationManager.NETWORK_PROVIDER) != null) {
+        if (mLocationManager != null) {
             try {
-                mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
+                if (mLocationManager.getProvider(LocationManager.NETWORK_PROVIDER) != null) {
+                    mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
+                } else {
+                    Log.w(TAG, "Network location provider is not available on this device");
+                    LocationUnavailable();
+                }
             } catch (IllegalArgumentException | SecurityException e) {
                 Log.w(TAG, "Failed to register Network location updates: " + e.getMessage());
                 LocationUnavailable();
@@ -85,11 +90,13 @@ public class SpeedAndLocationDevice_Network extends SpeedAndLocationDevice
         if (DEBUG) Log.d(TAG, "onProviderEnabled: " + provider);
         if (LocationManager.NETWORK_PROVIDER.equals(provider)) {
             if (DEBUG) Log.d(TAG, "Network location provider enabled");
-            if (mLocationManager != null && mLocationManager.getProvider(LocationManager.NETWORK_PROVIDER) != null) {
+            if (mLocationManager != null) {
                 try {
-                    mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
-                    // set last active
-                    setLastActive();
+                    if (mLocationManager.getProvider(LocationManager.NETWORK_PROVIDER) != null) {
+                        mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
+                        // set last active
+                        setLastActive();
+                    }
                 } catch (IllegalArgumentException | SecurityException e) {
                     Log.w(TAG, "Failed to register Network location updates on provider enabled: " + e.getMessage());
                 }

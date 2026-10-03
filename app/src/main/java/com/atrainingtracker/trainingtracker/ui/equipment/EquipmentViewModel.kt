@@ -31,8 +31,10 @@ import com.atrainingtracker.trainingtracker.database.SportTypeEquipmentLinkManag
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsPeriodHelper
+import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -53,6 +55,23 @@ data class EquipmentItem(
     val statsData: StatsData,
 )
 
+/**
+ * ViewModel for managing equipment items (Bikes and Shoes), their linked sensors and sport types,
+ * and associated usage statistics (REQ-UI-158, REQ-UI-160, ATT-1309).
+ *
+ * Implements self-initialization upon construction and reactive observation of Strava
+ * equipment synchronization completion, ensuring UI views remain up-to-date without
+ * requiring manual polling or external fragment triggers.
+ *
+ * @param application The Android Application instance.
+ * @param ioDispatcher CoroutineDispatcher for offloading SQLite database queries.
+ * @param dbEquipmentHelper SQLite database helper for equipment CRUD.
+ * @param dbLinksHelper Manager for mapping equipment to sport types.
+ * @param dbSportHelper Manager for sport type metadata.
+ * @param dbDevicesHelper Manager for paired sensor devices.
+ * @param dbSummariesManager Manager for workout summaries and equipment stats.
+ * @param syncStatusFlow StateFlow emitting boolean indicator of active Strava equipment synchronization.
+ */
 class EquipmentViewModel @JvmOverloads constructor(
     application: Application,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
@@ -60,9 +79,9 @@ class EquipmentViewModel @JvmOverloads constructor(
     private val dbLinksHelper: SportTypeEquipmentLinkManager = SportTypeEquipmentLinkManager.getInstance(application),
     private val dbSportHelper: SportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(application),
     private val dbDevicesHelper: DevicesDatabaseManager = DevicesDatabaseManager.getInstance(application),
-    private val dbSummariesManager: WorkoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(application)
+    private val dbSummariesManager: WorkoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(application),
+    private val syncStatusFlow: StateFlow<Boolean> = EquipmentRepository.isSyncing
 ) : AndroidViewModel(application) {
-
 
     private val _bikes = MutableStateFlow<List<EquipmentItem>>(emptyList())
     val bikes: StateFlow<List<EquipmentItem>> = _bikes
@@ -76,8 +95,39 @@ class EquipmentViewModel @JvmOverloads constructor(
     val bikeSportTypes = dbSportHelper.getSportTypes(BSportType.BIKE)
     val runSportTypes = dbSportHelper.getSportTypes(BSportType.RUN)
 
-    fun loadEquipment() {
+    @Volatile
+    private var loadJob: Job? = null
+
+    init {
+        loadEquipment()
+        observeSyncStatus()
+    }
+
+    /**
+     * Observes the equipment synchronization state flow in [viewModelScope].
+     * Triggers a reload if and only if the sync status transitions from true to false
+     * (falling edge), indicating a background Strava sync has finished.
+     */
+    private fun observeSyncStatus() {
         viewModelScope.launch(ioDispatcher) {
+            var wasSyncing = false
+            syncStatusFlow.collect { syncing ->
+                if (wasSyncing && !syncing) {
+                    loadEquipment()
+                }
+                wasSyncing = syncing
+            }
+        }
+    }
+
+    /**
+     * Loads equipment items asynchronously from SQLite and updates [_bikes] and [_shoes] StateFlows.
+     * Cancels any pending prior job to prevent overlapping or stale writes during rapid successive trigger events.
+     */
+    @Synchronized
+    fun loadEquipment() {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch(ioDispatcher) {
             val fetchItems = { sportType: BSportType ->
                 // Use the new method to get full data objects
                 val equipmentDataList = dbEquipmentHelper.getEquipmentItems(sportType)

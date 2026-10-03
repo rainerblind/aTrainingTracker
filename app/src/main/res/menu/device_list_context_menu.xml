@@ -20,10 +20,10 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/editDevice"
-        android:icon="@android:drawable/ic_menu_edit"
+        android:icon="@drawable/ic_edit"
         android:title="@string/edit_device" />
     <item
         android:id="@+id/deleteDevice"
-        android:icon="@android:drawable/ic_menu_edit"
+        android:icon="@android:drawable/ic_menu_delete"
         android:title="@string/delete_device" />
 </menu>

@@ -68,15 +68,16 @@ fun RouteItem(
             onClick = { onMapClick(summary.id) }
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
-                // 1. TOP: Route Summary Header (Title, Source, Metrics, Sport Icon, Switch)
+                // 1. TOP: Route Summary Header (Title, Source, Metrics, Sport Icon, Switch, Edit)
                 RouteSummaryHeader(
                     summary = summary,
                     onToggleSelection = { onToggleSelection(summary.id, it) },
+                    onEditClick = { onHeaderClick(summary.id) },
                     switchScale = 0.6f,
                     modifier = Modifier
                         .fillMaxWidth()
                         .combinedClickable(
-                            onClick = { onHeaderClick(summary.id) },
+                            onClick = { onMapClick(summary.id) },
                             onLongClick = { showContextMenu = true }
                         )
                 )

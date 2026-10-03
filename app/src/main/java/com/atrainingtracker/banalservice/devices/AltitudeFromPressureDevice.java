@@ -28,6 +28,8 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.VisibleForTesting;
 import androidx.core.content.ContextCompat;
 
 import com.atrainingtracker.R;
@@ -37,7 +39,13 @@ import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.database.ExtremaType;
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
+import com.atrainingtracker.trainingtracker.elevation.ElevationResult;
+import com.atrainingtracker.trainingtracker.elevation.ElevationService;
+import com.atrainingtracker.trainingtracker.elevation.ElevationSource;
 import com.google.android.gms.maps.model.LatLng;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 // TODO: use database or preferences to store whether or not the pressure sensor is available.  really necessary??
 
@@ -64,7 +72,10 @@ public class AltitudeFromPressureDevice extends MyDevice
     private final String TAG = "AltitudeFromPressureDev";
     private double mAltitudeCorrection = 0;
     private double mLastRawAltitude = Double.NaN;
+    private double mPendingReferenceAltitude = Double.NaN;
     private boolean mPressureSensorInitialized = false;
+    private boolean mIsCalibrated = false;
+    private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
     private final BroadcastReceiver mGPSProviderEnabledReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             AltitudeFromPressureDevice.this.initPressureSensor();
@@ -102,10 +113,13 @@ public class AltitudeFromPressureDevice extends MyDevice
     @Override
     public void shutDown() {
         super.shutDown();
+        mExecutor.shutdown();
         ((SensorManager) mContext.getSystemService(Context.SENSOR_SERVICE)).unregisterListener(this);
 
         ContextCompat.registerReceiver(mContext, mGPSProviderEnabledReceiver, mGPSProviderEnabledFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         mContext.unregisterReceiver(mGPSProviderEnabledReceiver);
+        mPendingReferenceAltitude = Double.NaN;
+        mIsCalibrated = false;
     }
 
 
@@ -126,36 +140,180 @@ public class AltitudeFromPressureDevice extends MyDevice
 
             double latitude = ((Number) mMySensorManager.getSensor(SensorType.LATITUDE).getValue()).doubleValue();
             double longitude = ((Number) mMySensorManager.getSensor(SensorType.LONGITUDE).getValue()).doubleValue();
-            KnownLocationsDatabaseManager.MyLocation myLocation = KnownLocationsDatabaseManager.getInstance(mContext).getMyLocation(new LatLng(latitude, longitude));
+            LatLng currentLatLng = new LatLng(latitude, longitude);
+            KnownLocationsDatabaseManager knownLocationsDb = KnownLocationsDatabaseManager.getInstance(mContext);
+            KnownLocationsDatabaseManager.MyLocation myLocation = knownLocationsDb.getMyLocation(currentLatLng);
 
             if (myLocation != null) {
-                if (DEBUG) Log.i(TAG, "Location found: " + myLocation.name + " (Reference Alt: " + myLocation.altitude + "m)");
+                if (DEBUG) Log.i(TAG, "Location found: " + myLocation.name + " (Reference Alt: " + myLocation.altitude + "m, source: " + myLocation.source + ")");
                 setAltitudeCorrection(myLocation.altitude);
                 mAltitudeSensor.newValue(myLocation.altitude);
-            }
 
-            // --- ATT-448: Refinement ---
-            // Automatically discover or refine the learned reference altitude using the current raw measurement
-            KnownLocationsDatabaseManager.getInstance(mContext).learnLocation(new LatLng(latitude, longitude), mLastRawAltitude, ExtremaType.START);
+                if (myLocation.source == ElevationSource.LEGACY_RAW && !myLocation.isLocked) {
+                    healLocationAsync(myLocation);
+                    knownLocationsDb.healLegacyLocationsAsync();
+                }
+                // ATT-1447 / REQ-DAT-015: Altimeter calibration operates strictly read-only on sensor warmup.
+                // Workout starts are recorded authoritatively in TrackerService on START_NORMAL.
+            } else {
+                fetchDemOrFallbackAsync(latitude, longitude);
+            }
         }
+    }
+
+    private void healLocationAsync(@NonNull KnownLocationsDatabaseManager.MyLocation location) {
+        mExecutor.execute(() -> {
+            ElevationResult result = ElevationService.getInstance().fetchElevation(location.latLng.latitude, location.latLng.longitude);
+            if (result instanceof ElevationResult.Success success) {
+                if (DEBUG) Log.i(TAG, "Async healed location " + location.name + " to DEM elevation: " + success.getElevationMeters() + "m");
+                KnownLocationsDatabaseManager db = KnownLocationsDatabaseManager.getInstance(mContext);
+                KnownLocationsDatabaseManager.MyLocation current = db.getMyLocation(location.id);
+                if (current != null && !current.isLocked) {
+                    current.altitude = success.getElevationMeters();
+                    String locationName = current.name;
+                    if (com.atrainingtracker.trainingtracker.location.LocationNameResolver.isPlaceholderName(locationName)) {
+                        locationName = com.atrainingtracker.trainingtracker.location.LocationNameResolver.resolveLocationNameBlocking(mContext, current.latLng.latitude, current.latLng.longitude);
+                    }
+                    KnownLocationsDatabaseManager.MyLocation updated = new KnownLocationsDatabaseManager.MyLocation(
+                            current.id, current.latLng.latitude, current.latLng.longitude,
+                            locationName, success.getElevationMeters(), current.radius, current.hitCount,
+                            false, ElevationSource.INTERNET_DEM);
+                    db.updateMyLocation(current.id, updated);
+                    setAltitudeCorrection(success.getElevationMeters());
+                }
+            }
+        });
+    }
+
+    private void fetchDemOrFallbackAsync(double latitude, double longitude) {
+        mExecutor.execute(() -> {
+            ElevationResult result = ElevationService.getInstance().fetchElevation(latitude, longitude);
+            if (result instanceof ElevationResult.Success success) {
+                double demAlt = success.getElevationMeters();
+                if (DEBUG) Log.i(TAG, "Fetched DEM elevation: " + demAlt + "m for (" + latitude + ", " + longitude + ")");
+                KnownLocationsDatabaseManager db = KnownLocationsDatabaseManager.getInstance(mContext);
+                String resolvedName = com.atrainingtracker.trainingtracker.location.LocationNameResolver.resolveLocationNameBlocking(mContext, latitude, longitude);
+                db.upsertLocationByGeofence(new LatLng(latitude, longitude), demAlt, resolvedName,
+                        ExtremaType.START, ElevationSource.INTERNET_DEM, false);
+                setAltitudeCorrection(demAlt);
+            } else {
+                if (DEBUG) Log.d(TAG, "DEM lookup unsuccessful (" + result + "), maintaining default/GPS fallback.");
+            }
+        });
     }
 
 
     /**
-     * set the field mAltitudeCorrection
+     * Set the barometric altitude correction offset (REQ-CON-017).
+     * Calculates new correction strictly relative to raw barometric pressure (mLastRawAltitude),
+     * updates the sensor reading to correctAltitude, and broadcasts the incremental deltaOffset
+     * to ongoing sessions if and only if |deltaOffset| >= 0.1m.
      */
-    private void setAltitudeCorrection(double correctAltitude) {
-        if (DEBUG) Log.d(TAG, "setAltitudeCorrection");
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    void setAltitudeCorrection(double correctAltitude) {
+        if (DEBUG) Log.d(TAG, "setAltitudeCorrection: target=" + correctAltitude + ", raw=" + mLastRawAltitude + ", currentCorr=" + mAltitudeCorrection);
 
-        mAltitudeCorrection = correctAltitude - mAltitudeSensor.getValue().doubleValue();
+        if (Double.isNaN(mLastRawAltitude)) {
+            Log.w(TAG, "Cannot set altitude correction: last raw altitude is NaN, caching pending target.");
+            mPendingReferenceAltitude = correctAltitude;
+            return;
+        }
 
-        if (mAltitudeCorrection != 0.0) {
-            // 	also send broadcast to inform the others (like a tracker) of this change such that they can update all previous samples accordingly!
+        // 1. Calculate new absolute correction strictly relative to raw barometric pressure
+        double newCorrection = correctAltitude - mLastRawAltitude;
+
+        // 2. Calculate delta shift to broadcast to ongoing session
+        double deltaOffset = newCorrection - mAltitudeCorrection;
+
+        // 3. Commit absolute correction state
+        mAltitudeCorrection = newCorrection;
+        mIsCalibrated = true;
+
+        // 4. Update published sensor reading
+        if (mAltitudeSensor != null) {
+            mAltitudeSensor.newValue(mLastRawAltitude + mAltitudeCorrection);
+        }
+
+        // 5. Broadcast delta shift only if significant (>= 0.1m)
+        if (Math.abs(deltaOffset) >= 0.1) {
             Intent intent = new Intent(ALTITUDE_CORRECTION_INTENT)
                     .setPackage(mContext.getPackageName())
-                    .putExtra(ALTITUDE_CORRECTION_VALUE, mAltitudeCorrection);
+                    .putExtra(ALTITUDE_CORRECTION_VALUE, deltaOffset);
             mContext.sendBroadcast(intent);
         }
+    }
+
+    /**
+     * Calibrate the barometric altimeter to a ground-truth reference elevation (REQ-UI-199, REQ-CON-017).
+     * If the raw barometric pressure reading is ready, computes the correction offset immediately,
+     * updates the sensor value, sets the calibrated state, and broadcasts ALTITUDE_CORRECTION_INTENT.
+     * If the sensor is already calibrated within 0.5m of referenceAltitude, returns true immediately (idempotent).
+     * If the sensor is still in warmup (mLastRawAltitude is NaN), stores the target elevation as pending
+     * and automatically applies it upon receiving the first pressure event.
+     *
+     * @param referenceAltitude Target ground-truth elevation in meters.
+     * @return true if calibration was applied immediately or already valid, false if queued for sensor warmup.
+     */
+    public synchronized boolean calibrate(double referenceAltitude) {
+        if (Double.isNaN(referenceAltitude) || referenceAltitude <= -500.0 || referenceAltitude >= 9000.0) {
+            return false;
+        }
+
+        if (isCalibrated() && !Double.isNaN(mLastRawAltitude)) {
+            double currentAltitude = mLastRawAltitude + mAltitudeCorrection;
+            if (Math.abs(currentAltitude - referenceAltitude) < 0.5) {
+                if (DEBUG) Log.d(TAG, "calibrate: already calibrated to " + currentAltitude + " m (target: " + referenceAltitude + " m), skipping redundant work.");
+                return true;
+            }
+        }
+
+        if (!Double.isNaN(mLastRawAltitude)) {
+            setAltitudeCorrection(referenceAltitude);
+            mPressureSensorInitialized = true;
+            mIsCalibrated = true;
+            mPendingReferenceAltitude = Double.NaN;
+            if (mAltitudeSensor != null) {
+                mAltitudeSensor.newValue(mLastRawAltitude + mAltitudeCorrection);
+            }
+            return true;
+        } else {
+            mPendingReferenceAltitude = referenceAltitude;
+            return false;
+        }
+    }
+
+    public synchronized boolean isCalibrated() {
+        return mIsCalibrated;
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    double getAltitudeCorrection() {
+        return mAltitudeCorrection;
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    void setLastRawAltitude(double rawAltitude) {
+        mLastRawAltitude = rawAltitude;
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    double getLastRawAltitude() {
+        return mLastRawAltitude;
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    MySensor<Number> getAltitudeSensor() {
+        return mAltitudeSensor;
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    boolean isPressureSensorInitialized() {
+        return mPressureSensorInitialized;
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    void setPressureSensorInitialized(boolean initialized) {
+        mPressureSensorInitialized = initialized;
     }
 
 
@@ -177,8 +335,15 @@ public class AltitudeFromPressureDevice extends MyDevice
             registerSensors();
         }
 
-        mLastRawAltitude = SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, event.values[0]);
-        if (!mPressureSensorInitialized) {
+        handlePressureMeasurement(event.values[0]);
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
+    void handlePressureMeasurement(float pressureHpa) {
+        mLastRawAltitude = SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, pressureHpa);
+        if (!Double.isNaN(mPendingReferenceAltitude)) {
+            calibrate(mPendingReferenceAltitude);
+        } else if (!mPressureSensorInitialized) {
             initPressureSensor();
         }
         mAltitudeSensor.newValue(mLastRawAltitude + mAltitudeCorrection);

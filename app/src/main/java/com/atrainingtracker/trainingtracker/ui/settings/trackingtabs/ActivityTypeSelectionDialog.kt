@@ -22,6 +22,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -43,7 +45,7 @@ fun ActivityTypeSelectionDialog(
 ) {
     AppBottomSheetContent(
         title = stringResource(R.string.choose_activity_type),
-        iconPainter = painterResource(id = R.drawable.ic_table_edit),
+        icon = Icons.Default.Edit,
         onDismissRequest = onDismiss,
         actions = {
             AppDialogActions.CancelOnly(onCancel = onDismiss)

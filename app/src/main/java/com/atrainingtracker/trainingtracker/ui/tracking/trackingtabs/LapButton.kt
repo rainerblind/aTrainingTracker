@@ -75,8 +75,8 @@ fun LapButton(
             // .alpha(alpha),
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.elevatedButtonColors(
-            containerColor = colorResource(R.color.color_primary),
-            contentColor = colorResource(R.color.color_on_primary),
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
             disabledContainerColor = colorResource(R.color.lap_button_disabled_background),
             disabledContentColor = colorResource(R.color.lap_button_disabled_text)
         ),
@@ -95,7 +95,7 @@ fun LapButton(
                 contentDescription = null,
                 modifier = Modifier.size(48.dp),
                 tint = if (isTracking)
-                    colorResource(R.color.color_on_primary)
+                    MaterialTheme.colorScheme.onPrimary
                 else
                     colorResource(R.color.lap_button_disabled_text)
             )

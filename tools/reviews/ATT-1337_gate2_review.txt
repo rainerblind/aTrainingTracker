@@ -1,0 +1,30 @@
+h2. Gate 2: Test Specification & Requirements Review (Local Independent Auditor)
+
+*Auditor Model*: *Local Independent Agent Instance*
+*Audit Decision*: *RECOMMEND PASS*
+*Risk Level*: *LOW* (The test specification and synchronized requirements rigorously address the root cause of the LIFO dispatcher preemption defect, providing verifiable automated unit tests for dynamic OnBackPressedDispatcher ordering and complete Given-When-Then scenarios).
+
+h3. 1. Requirement & Phrasing Standards Compliance
+* *Syntax & Precision*: The updated specification for {{REQ-UI-162}} adheres strictly to requirements engineering standards. Functional requirements use {{SHALL}} (e.g. "SHALL isolate overlay back navigation", "SHALL be conditionally composed"), and technical/architectural constraints use {{MUST}} (e.g. "MUST NOT change").
+* *State-Oriented & Unambiguous*: The requirement clearly describes the expected runtime states and dynamic LIFO composition behavior rather than implementation change instructions.
+* *Given-When-Then Criteria*: Complete acceptance criteria are defined for all permutations:
+  - Scenario A: Drawer open over non-tracking destination screen -> Back dismisses drawer exclusively, active screen unchanged.
+  - Scenario B: Drawer open over Start Tracking -> Back dismisses drawer exclusively.
+  - Scenario C: Drawer closed over non-tracking destination screen -> Back pops backstack to Start Tracking.
+  - Scenario D: Rapid consecutive back taps -> CancellationException caught without fault, drawer settled to closed.
+  - Scenario E: Animation delay exceeding 400ms -> snapTo(Closed) deadlock safety valve triggers.
+* *System Invariants*: All 21 navigation drawer destinations and routes in {{NavRoutes}} are explicitly preserved; drawerController.selectedItemId synchronization preserved; edge-swipe gesture bounds (REQ-UI-161) preserved.
+
+h3. 2. Bidirectional Traceability Audit
+* *Requirements Synchronization*: {{docs/requirements.md}} has been synchronized with the updated {{REQ-UI-162}}, set to status {{Draft}}.
+* *Verification Specification Synchronization*: {{docs/tests.md}} has been synchronized with the updated {{TST-UI-114}}, set to status {{Draft}}.
+* *Traceability Chain*: Parent requirement {{REQ-UI-159}} -> Target requirement {{REQ-UI-162}} -> Verification spec {{TST-UI-114}} -> Production file {{ATrainingTrackerApp.kt}} -> Unit test file {{SingleActivityNavigationTest.kt}}.
+
+h3. 3. Verification Rigor & Test Suite Soundness
+* *Dynamic LIFO Precedence Test*: The test specification introduces a dedicated unit test in {{SingleActivityNavigationTest.kt}} that directly simulates Android's {{OnBackPressedDispatcher}} callback deque with a mock NavHost entry and a dynamically attached drawer callback, proving that the drawer callback evaluates first when mounted and restores NavHost when unmounted.
+* *Comprehensive Predicate Test*: Evaluates {{isDrawerVisible}} across all 5 animation permutations (Closed/Closed/idle, Closed/Open/animating, Open/Open/idle, Open/Closed/animating, Closed/Closed/animating).
+* *Deadlock & Cancellation Safety*: Verifies 400ms timeout fallback and cooperative CancellationException absorption.
+
+h3. 4. Auditor Recommendation & Notes
+* *Verdict*: *RECOMMEND PASS*. The deliverable is complete, robust, and ready for Stage 3 Implementation Planning.
+* *Actionable Next Steps*: Advance ATT-1337 to {{Freigabe (Human)}} for user approval.

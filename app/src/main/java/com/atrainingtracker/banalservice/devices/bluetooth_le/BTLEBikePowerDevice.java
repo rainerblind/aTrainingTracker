@@ -294,129 +294,179 @@ public class BTLEBikePowerDevice extends MyBTLEDevice {
     // TODO: also check whether the corresponding features are supported
     @Override
     protected void measurementCharacteristicUpdate(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-        int flags = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 0);
-        int offset = FLAGS_WIDTH;
+        if (characteristic == null) {
+            return;
+        }
+        byte[] value = characteristic.getValue();
+        if (value == null || value.length < FLAGS_WIDTH + INSTANTANEOUS_POWER_WIDTH) {
+            if (DEBUG) Log.w(TAG, "measurementCharacteristicUpdate: packet too short or null");
+            return;
+        }
 
-        int power = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_SINT16, offset);
-        if (DEBUG) Log.i(TAG, "got new power value: " + power);
-        mPowerSensor.newValue(power);
-        offset += INSTANTANEOUS_POWER_WIDTH;
-
-        if (isPowerBalancePresent(flags)) {
-            if (DEBUG) Log.i(TAG, "Power Balance present");
-
-            if (mIsPowerBalanceSupported) {
-                double value = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, offset);
-                value = mDoublePowerBalanceValues ? value : value / 2;                              // according to the spec, the value must be halved.  Optionally, we double it by not halving
-                value = mInvertPowerBalanceValues ? 100 - value : value;                            // optionally, invert the value
-                mPowerBalanceSensor.newValue(value);
-            } else {
-                Log.d(TAG, "WTF: BTLE Power Profile not properly implemented: Power Balance present but was not supported");
+        try {
+            Integer flags = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 0);
+            if (flags == null) {
+                return;
             }
+            int offset = FLAGS_WIDTH;
 
-            offset += PEDAL_POWER_BALANCE_WIDTH;
-        }
+            Integer power = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_SINT16, offset);
+            if (power == null) {
+                return;
+            }
+            if (DEBUG) Log.i(TAG, "got new power value: " + power);
+            mPowerSensor.newValue(power);
+            offset += INSTANTANEOUS_POWER_WIDTH;
 
-        if (isAccumulatedTorquePresent(flags)) {
-            if (DEBUG) Log.i(TAG, "Accumulated Torque present (but currently not used)");
+            if (isPowerBalancePresent(flags)) {
+                if (DEBUG) Log.i(TAG, "Power Balance present");
 
-            // TODO: do something with this???
-            offset += ACCUMULATED_TORQUE_WIDTH;
-        }
-
-        if (isWheelRevolutionDataPresent(flags)) {
-            if (DEBUG) Log.i(TAG, "wheelRevolutionDataPresent");
-
-            if (mIsWheelRevolutionDataSupported) {
-
-                long cumulativeWheelRevolutions = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, offset);
-                long wheelEventTime = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, offset + WHEEL_REVOLUTION_DATA__CUMULATIVE_WHEEL_REVOLUTIONS_WIDTH);
-                if (DEBUG)
-                    Log.i(TAG, "revolutions: " + cumulativeWheelRevolutions + ", time: " + wheelEventTime);
-                // TODO: what to do when these values are negative?
-
-                // calc speed and distance
-                if (mLastWheelRevolutionsValid) {
-                    if (wheelEventTime > mLastWheelEventTime) {  // avoiding negative values
-                        mIdenticalWheelTime = 0;
-
-                        long revDiff = cumulativeWheelRevolutions - mLastWheelRevolutions;
-                        long timeDiff = wheelEventTime - mLastWheelEventTime;
-                        if (DEBUG) Log.i(TAG, "revDiff=" + revDiff + ", timeDiff=" + timeDiff);
-
-                        double speed = mCalibrationFactor * revDiff * 2048 / timeDiff;   // Note that this value is differs from the one of the bike speed case
-                        if (DEBUG) Log.i(TAG, "got new speed: " + speed);
-                        mSpeedSensor.newValue(speed);
-                        if (revDiff != 0) {
-                            mPaceSensor.newValue(1 / speed);
+                if (value.length >= offset + PEDAL_POWER_BALANCE_WIDTH) {
+                    if (mIsPowerBalanceSupported) {
+                        Integer rawBalance = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, offset);
+                        if (rawBalance != null) {
+                            double balanceValue = rawBalance;
+                            balanceValue = mDoublePowerBalanceValues ? balanceValue : balanceValue / 2; // according to the spec, the value must be halved.  Optionally, we double it by not halving
+                            balanceValue = mInvertPowerBalanceValues ? 100 - balanceValue : balanceValue; // optionally, invert the value
+                            mPowerBalanceSensor.newValue(balanceValue);
                         }
-
-                        double distance = mCalibrationFactor * (cumulativeWheelRevolutions - mInitWheelRevolutions);
-                        if (DEBUG) Log.i(TAG, "got new distance: " + distance);
-                        mDistanceSensor.accumulate(distance);
-                        mLapDistanceSensor.accumulate(distance);
                     } else {
-                        mIdenticalWheelTime++;
-                        if (mIdenticalWheelTime >= MAX_IDENTICAL) {
-                            if (DEBUG)
-                                Log.i(TAG, mIdenticalWheelTime + " identical wheel times => reset speed to zero");
-                            mSpeedSensor.newValue(0.0);
-                            mPaceSensor.newValue(null);
-                        }
+                        Log.d(TAG, "WTF: BTLE Power Profile not properly implemented: Power Balance present but was not supported");
                     }
+                    offset += PEDAL_POWER_BALANCE_WIDTH;
                 } else {
-                    mInitWheelRevolutions = cumulativeWheelRevolutions;
+                    Log.w(TAG, "Power Balance present in flags but packet truncated: length=" + value.length + ", offset=" + offset);
+                    return;
                 }
-                mLastWheelRevolutions = cumulativeWheelRevolutions;
-                mLastWheelEventTime = wheelEventTime;
-                mLastWheelRevolutionsValid = true;
-            } else {
-                Log.d(TAG, "WTF: BTLE Power Profile not properly implemented: Wheel Revolution Data present but was not supported");
             }
 
-            offset += WHEEL_REVOLUTION_DATA__CUMULATIVE_WHEEL_REVOLUTIONS_WIDTH + WHEEL_REVOLUTION_DATA__LAST_WHEEL_EVENT_TIME_WIDTH;
-        }
+            if (isAccumulatedTorquePresent(flags)) {
+                if (DEBUG) Log.i(TAG, "Accumulated Torque present (but currently not used)");
 
-        if (isCrankRevolutionDataPresent(flags)) {
-            if (DEBUG) Log.i(TAG, "crankRevolutionDataPresent");
+                if (value.length >= offset + ACCUMULATED_TORQUE_WIDTH) {
+                    // TODO: do something with this???
+                    offset += ACCUMULATED_TORQUE_WIDTH;
+                } else {
+                    Log.w(TAG, "Accumulated Torque present in flags but packet truncated: length=" + value.length + ", offset=" + offset);
+                    return;
+                }
+            }
 
-            if (mIsCrankRevolutionDataSupported) {
+            if (isWheelRevolutionDataPresent(flags)) {
+                if (DEBUG) Log.i(TAG, "wheelRevolutionDataPresent");
 
-                long cumulativeCrankRevolutions = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, offset);
-                long crankEventTime = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, offset + CRANK_REVOLUTION_DATA__CUMULATIVE_CRANK_REVOLUTIONS_WIDTH);
-                if (DEBUG)
-                    Log.i(TAG, "revolutions: " + cumulativeCrankRevolutions + ", time: " + crankEventTime);
+                int wheelDataWidth = WHEEL_REVOLUTION_DATA__CUMULATIVE_WHEEL_REVOLUTIONS_WIDTH + WHEEL_REVOLUTION_DATA__LAST_WHEEL_EVENT_TIME_WIDTH;
+                if (value.length >= offset + wheelDataWidth) {
+                    if (mIsWheelRevolutionDataSupported) {
+                        Integer cumulativeWheelRevolutionsInt = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, offset);
+                        Integer wheelEventTimeInt = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, offset + WHEEL_REVOLUTION_DATA__CUMULATIVE_WHEEL_REVOLUTIONS_WIDTH);
 
-                // calc cadence
-                if (mLastCrankRevolutionsValid) {
-                    if (crankEventTime > mLastCrankEventTime) { // avoiding negative values
-                        mIdenticalCrankTime = 0;
+                        if (cumulativeWheelRevolutionsInt != null && wheelEventTimeInt != null) {
+                            long cumulativeWheelRevolutions = cumulativeWheelRevolutionsInt.longValue() & 0xFFFFFFFFL;
+                            long wheelEventTime = wheelEventTimeInt.longValue() & 0xFFFFL;
 
-                        long revDiff = cumulativeCrankRevolutions - mLastCrankRevolutions;
-                        long timeDiff = crankEventTime - mLastCrankEventTime;
-                        if (DEBUG) Log.i(TAG, "revDiff=" + revDiff + ", timeDiff=" + timeDiff);
-
-                        double cadence = 60 * revDiff * 1024 / timeDiff;         // Furthermore, note that this time multiplier is different from the one for the speed
-                        if (DEBUG) Log.i(TAG, "got new cadence: " + cadence);
-                        mCadenceSensor.newValue(cadence);
-                    } else {
-                        mIdenticalCrankTime++;
-                        if (mIdenticalCrankTime >= MAX_IDENTICAL) {
                             if (DEBUG)
-                                Log.i(TAG, mIdenticalCrankTime + " identical crank times => reset cadence to zero");
-                            mCadenceSensor.newValue(0.0);
+                                Log.i(TAG, "revolutions: " + cumulativeWheelRevolutions + ", time: " + wheelEventTime);
+                            // TODO: what to do when these values are negative?
+
+                            // calc speed and distance
+                            if (mLastWheelRevolutionsValid) {
+                                if (wheelEventTime > mLastWheelEventTime) {  // avoiding negative values
+                                    mIdenticalWheelTime = 0;
+
+                                    long revDiff = cumulativeWheelRevolutions - mLastWheelRevolutions;
+                                    long timeDiff = wheelEventTime - mLastWheelEventTime;
+                                    if (DEBUG) Log.i(TAG, "revDiff=" + revDiff + ", timeDiff=" + timeDiff);
+
+                                    double speed = mCalibrationFactor * revDiff * 2048 / timeDiff;   // Note that this value differs from the one of the bike speed case
+                                    if (DEBUG) Log.i(TAG, "got new speed: " + speed);
+                                    mSpeedSensor.newValue(speed);
+                                    if (revDiff != 0) {
+                                        mPaceSensor.newValue(1 / speed);
+                                    }
+
+                                    double distance = mCalibrationFactor * (cumulativeWheelRevolutions - mInitWheelRevolutions);
+                                    if (DEBUG) Log.i(TAG, "got new distance: " + distance);
+                                    mDistanceSensor.accumulate(distance);
+                                    mLapDistanceSensor.accumulate(distance);
+                                } else {
+                                    mIdenticalWheelTime++;
+                                    if (mIdenticalWheelTime >= MAX_IDENTICAL) {
+                                        if (DEBUG)
+                                            Log.i(TAG, mIdenticalWheelTime + " identical wheel times => reset speed to zero");
+                                        mSpeedSensor.newValue(0.0);
+                                        mPaceSensor.newValue(null);
+                                    }
+                                }
+                            } else {
+                                mInitWheelRevolutions = cumulativeWheelRevolutions;
+                            }
+                            mLastWheelRevolutions = cumulativeWheelRevolutions;
+                            mLastWheelEventTime = wheelEventTime;
+                            mLastWheelRevolutionsValid = true;
                         }
+                    } else {
+                        Log.d(TAG, "WTF: BTLE Power Profile not properly implemented: Wheel Revolution Data present but was not supported");
                     }
+                    offset += wheelDataWidth;
+                } else {
+                    Log.w(TAG, "Wheel Revolution Data present in flags but packet truncated: length=" + value.length + ", offset=" + offset);
+                    return;
                 }
-                mLastCrankRevolutions = cumulativeCrankRevolutions;
-                mLastCrankEventTime = crankEventTime;
-                mLastCrankRevolutionsValid = true;
-            } else {
-                Log.d(TAG, "WTF: BTLE Power Profile not properly implemented: Crank Revolution Data present but was not supported");
             }
 
-            offset += CRANK_REVOLUTION_DATA__CUMULATIVE_CRANK_REVOLUTIONS_WIDTH + CRANK_REVOLUTION_DATA__LAST_CRANK_EVENT_TIME_WIDTH;
+            if (isCrankRevolutionDataPresent(flags)) {
+                if (DEBUG) Log.i(TAG, "crankRevolutionDataPresent");
 
+                int crankDataWidth = CRANK_REVOLUTION_DATA__CUMULATIVE_CRANK_REVOLUTIONS_WIDTH + CRANK_REVOLUTION_DATA__LAST_CRANK_EVENT_TIME_WIDTH;
+                if (value.length >= offset + crankDataWidth) {
+                    if (mIsCrankRevolutionDataSupported) {
+                        Integer cumulativeCrankRevolutionsInt = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, offset);
+                        Integer crankEventTimeInt = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, offset + CRANK_REVOLUTION_DATA__CUMULATIVE_CRANK_REVOLUTIONS_WIDTH);
+
+                        if (cumulativeCrankRevolutionsInt != null && crankEventTimeInt != null) {
+                            long cumulativeCrankRevolutions = cumulativeCrankRevolutionsInt.longValue() & 0xFFFFL;
+                            long crankEventTime = crankEventTimeInt.longValue() & 0xFFFFL;
+
+                            if (DEBUG)
+                                Log.i(TAG, "revolutions: " + cumulativeCrankRevolutions + ", time: " + crankEventTime);
+
+                            // calc cadence
+                            if (mLastCrankRevolutionsValid) {
+                                if (crankEventTime > mLastCrankEventTime) { // avoiding negative values
+                                    mIdenticalCrankTime = 0;
+
+                                    long revDiff = cumulativeCrankRevolutions - mLastCrankRevolutions;
+                                    long timeDiff = crankEventTime - mLastCrankEventTime;
+                                    if (DEBUG) Log.i(TAG, "revDiff=" + revDiff + ", timeDiff=" + timeDiff);
+
+                                    double cadence = 60 * revDiff * 1024 / timeDiff;         // Furthermore, note that this time multiplier is different from the one for the speed
+                                    if (DEBUG) Log.i(TAG, "got new cadence: " + cadence);
+                                    mCadenceSensor.newValue(cadence);
+                                } else {
+                                    mIdenticalCrankTime++;
+                                    if (mIdenticalCrankTime >= MAX_IDENTICAL) {
+                                        if (DEBUG)
+                                            Log.i(TAG, mIdenticalCrankTime + " identical crank times => reset cadence to zero");
+                                        mCadenceSensor.newValue(0.0);
+                                    }
+                                }
+                            }
+                            mLastCrankRevolutions = cumulativeCrankRevolutions;
+                            mLastCrankEventTime = crankEventTime;
+                            mLastCrankRevolutionsValid = true;
+                        }
+                    } else {
+                        Log.d(TAG, "WTF: BTLE Power Profile not properly implemented: Crank Revolution Data present but was not supported");
+                    }
+                    offset += crankDataWidth;
+                } else {
+                    Log.w(TAG, "Crank Revolution Data present in flags but packet truncated: length=" + value.length + ", offset=" + offset);
+                    return;
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Error parsing Cycling Power characteristic notification", e);
         }
     }
 }

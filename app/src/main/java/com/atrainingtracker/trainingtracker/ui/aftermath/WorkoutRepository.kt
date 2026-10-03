@@ -63,6 +63,14 @@ import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionCalculator
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneSample
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CoroutineScope
@@ -121,6 +129,30 @@ class WorkoutRepository private constructor(private val application: Application
         @androidx.annotation.VisibleForTesting
         fun resetForTesting(newInstance: WorkoutRepository? = null) {
             INSTANCE = newInstance
+        }
+
+        /**
+         * Resolves the elapsed seconds offset of an ISO datetime timestamp relative to [initialEpochSec].
+         *
+         * @param timeStr Timestamp string in "yyyy-MM-dd HH:mm:ss" format.
+         * @param initialEpochSec The anchor timestamp in epoch seconds, or null if this is the first sample.
+         * @return A pair of (relativeElapsedSec, resolvedAnchorEpochSec). If parsing fails, returns (null, initialEpochSec).
+         */
+        @JvmStatic
+        internal fun parseTimestampOffset(timeStr: String?, initialEpochSec: Long?): Pair<Long?, Long?> {
+            if (timeStr.isNullOrBlank()) return Pair(null, initialEpochSec)
+            return try {
+                val formatted = if (timeStr.length == 19 && timeStr[10] == ' ') {
+                    timeStr.replace(' ', 'T')
+                } else {
+                    timeStr
+                }
+                val epoch = java.time.LocalDateTime.parse(formatted).toEpochSecond(java.time.ZoneOffset.UTC)
+                val anchor = initialEpochSec ?: epoch
+                Pair((epoch - anchor).coerceAtLeast(0L), anchor)
+            } catch (e: Exception) {
+                Pair(null, initialEpochSec)
+            }
         }
     }
 
@@ -304,22 +336,257 @@ class WorkoutRepository private constructor(private val application: Application
             val lonIdx = cursor.getColumnIndex(lonName)
             val altIdx = cursor.getColumnIndex(SensorType.ALTITUDE.name)
             val distIdx = cursor.getColumnIndex(SensorType.DISTANCE_m.name)
+            val timeActiveIdx = cursor.getColumnIndex(SensorType.TIME_ACTIVE.name)
+            val timeTotalIdx = cursor.getColumnIndex(SensorType.TIME_TOTAL.name)
+            val timeIdx = cursor.getColumnIndex(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME)
+            val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
+            val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
+            val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
+            val slopeIdx = cursor.getColumnIndex(SensorType.SLOPE.name)
 
-            // 3. Replicate the Roughness stepSize logic
+            var initialEpochSec: Long? = null
+            var sampleIndex = 0L
+
+            // 3. Replicate the Roughness stepSize logic and extract full-fidelity telemetry
             while (cursor.moveToNext()) {
+                val timeSec = when {
+                    timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx) -> cursor.getLong(timeActiveIdx)
+                    timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx) -> cursor.getLong(timeTotalIdx)
+                    timeIdx != -1 && !cursor.isNull(timeIdx) -> {
+                        val (offset, anchor) = parseTimestampOffset(cursor.getString(timeIdx), initialEpochSec)
+                        initialEpochSec = anchor
+                        offset ?: sampleIndex
+                    }
+                    else -> sampleIndex
+                }
 
                 if (latIdx != -1 && lonIdx != -1 && !cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
+                    val dist = if (distIdx != -1 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx) else 0.0
+                    val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else 0.0
+                    val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getInt(hrIdx) else null
+                    val power = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getInt(powerIdx) else null
+                    val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
+                    val slope = if (slopeIdx != -1 && !cursor.isNull(slopeIdx)) cursor.getDouble(slopeIdx) else null
+
                     points.add(
                         PathPoint(
-                            cursor.getDouble(distIdx),
-                            LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx)),
-                            cursor.getDouble(altIdx)
+                            distance = dist,
+                            latLng = LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx)),
+                            altitude = alt,
+                            timeSec = timeSec,
+                            hr = hr,
+                            power = power,
+                            speedMps = speed,
+                            slope = slope
                         )
                     )
                 }
+                sampleIndex++
             }
         }
         points
+    }
+
+    /**
+     * Extracts continuous sensor telemetry points (HR, Power, Speed) across the Time domain
+     * for trackless workouts where GPS coordinate fixes are absent (REQ-UI-235 / ATT-2006).
+     *
+     * @param workoutId The database ID of the workout summary.
+     * @return Decimated list of [PathPoint] containing continuous time-domain telemetry.
+     */
+    suspend fun getWorkoutTelemetryPoints(
+        workoutId: Long
+    ): List<PathPoint> = withContext(Dispatchers.IO) {
+        val points = mutableListOf<PathPoint>()
+
+        val baseFileName = summariesManager.getBaseFileName(workoutId)
+            ?: return@withContext emptyList()
+
+        val db = samplesManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+
+        if (!samplesManager.existsTable(baseFileName)) {
+            return@withContext emptyList()
+        }
+
+        db.query(tableName, null, null, null, null, null, null).use { cursor ->
+            val distIdx = cursor.getColumnIndex(SensorType.DISTANCE_m.name)
+            val timeActiveIdx = cursor.getColumnIndex(SensorType.TIME_ACTIVE.name)
+            val timeTotalIdx = cursor.getColumnIndex(SensorType.TIME_TOTAL.name)
+            val timeIdx = cursor.getColumnIndex(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME)
+            val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
+            val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
+            val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
+
+            var initialEpochSec: Long? = null
+            var sampleIndex = 0L
+
+            while (cursor.moveToNext()) {
+                val timeSec = when {
+                    timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx) -> cursor.getLong(timeActiveIdx)
+                    timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx) -> cursor.getLong(timeTotalIdx)
+                    timeIdx != -1 && !cursor.isNull(timeIdx) -> {
+                        val (offset, anchor) = parseTimestampOffset(cursor.getString(timeIdx), initialEpochSec)
+                        initialEpochSec = anchor
+                        offset ?: sampleIndex
+                    }
+                    else -> sampleIndex
+                }
+
+                val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getInt(hrIdx) else null
+                val power = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getInt(powerIdx) else null
+                val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
+                val dist = if (distIdx != -1 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx) else 0.0
+
+                if (hr != null || power != null || speed != null) {
+                    points.add(
+                        PathPoint(
+                            distance = dist,
+                            latLng = LatLng(0.0, 0.0),
+                            altitude = 0.0,
+                            timeSec = timeSec,
+                            hr = hr,
+                            power = power,
+                            speedMps = speed,
+                            slope = null
+                        )
+                    )
+                }
+                sampleIndex++
+            }
+        }
+
+        if (points.size > 800) {
+            val step = kotlin.math.ceil(points.size / 800.0).toInt()
+            points.filterIndexed { index, _ ->
+                index == 0 || index == points.lastIndex || index % step == 0
+            }
+        } else {
+            points
+        }
+    }
+
+    /**
+     * Calculates the 5-zone heart rate distribution for a workout from stored samples.
+     *
+     * @param workoutId The database ID of the workout summary.
+     * @param bSportType The sport type of the workout (used to determine bike vs run HR zones).
+     * @return [ZoneDistributionData] or null if no heart rate telemetry is available.
+     */
+    suspend fun getHeartRateZoneDistribution(
+        workoutId: Long,
+        bSportType: BSportType?
+    ): ZoneDistributionData? = withContext(Dispatchers.IO) {
+        val baseFileName = summariesManager.getBaseFileName(workoutId) ?: return@withContext null
+        if (!samplesManager.existsTable(baseFileName)) return@withContext null
+
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        val zoneType = if (bSportType == BSportType.BIKE) SettingsDataStore.ZoneType.HR_BIKE else SettingsDataStore.ZoneType.HR_RUN
+
+        val z1 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
+        val z2 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2)
+        val z3 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3)
+        val z4 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
+        val thresholds = HeartRateZoneThresholds(z1, z2, z3, z4)
+
+        val samples = mutableListOf<ZoneSample>()
+        val db = samplesManager.database
+
+        db.query(tableName, null, null, null, null, null, null).use { cursor ->
+            val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
+            if (hrIdx == -1) return@withContext null
+
+            val timeActiveIdx = cursor.getColumnIndex(SensorType.TIME_ACTIVE.name)
+            val timeTotalIdx = cursor.getColumnIndex(SensorType.TIME_TOTAL.name)
+            val timeIdx = cursor.getColumnIndex(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME)
+
+            var initialEpochSec: Long? = null
+            var sampleIndex = 0L
+
+            while (cursor.moveToNext()) {
+                val timeSec = when {
+                    timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx) -> cursor.getLong(timeActiveIdx)
+                    timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx) -> cursor.getLong(timeTotalIdx)
+                    timeIdx != -1 && !cursor.isNull(timeIdx) -> {
+                        val (offset, anchor) = parseTimestampOffset(cursor.getString(timeIdx), initialEpochSec)
+                        initialEpochSec = anchor
+                        offset ?: sampleIndex
+                    }
+                    else -> sampleIndex
+                }
+
+                if (!cursor.isNull(hrIdx)) {
+                    val hr = cursor.getInt(hrIdx)
+                    if (hr > 0) {
+                        samples.add(ZoneSample(timeActiveSec = timeSec, value = hr))
+                    }
+                }
+                sampleIndex++
+            }
+        }
+
+        ZoneDistributionCalculator.calculateHeartRateDistribution(samples, thresholds)
+    }
+
+    /**
+     * Extracts power samples from the workout's samples table and calculates
+     * a 5-zone time distribution based on athlete cycling power thresholds.
+     *
+     * @param workoutId The session identifier.
+     * @return [ZoneDistributionData] or null if no power telemetry is available.
+     */
+    suspend fun getPowerZoneDistribution(
+        workoutId: Long
+    ): ZoneDistributionData? = withContext(Dispatchers.IO) {
+        val baseFileName = summariesManager.getBaseFileName(workoutId) ?: return@withContext null
+        if (!samplesManager.existsTable(baseFileName)) return@withContext null
+
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        val zoneType = SettingsDataStore.ZoneType.PWR_BIKE
+
+        val z1 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
+        val z2 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2)
+        val z3 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3)
+        val z4 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
+        val thresholds = PowerZoneThresholds(z1, z2, z3, z4)
+
+        val samples = mutableListOf<ZoneSample>()
+        val db = samplesManager.database
+
+        db.query(tableName, null, null, null, null, null, null).use { cursor ->
+            val pwrIdx = cursor.getColumnIndex(SensorType.POWER.name)
+            if (pwrIdx == -1) return@withContext null
+
+            val timeActiveIdx = cursor.getColumnIndex(SensorType.TIME_ACTIVE.name)
+            val timeTotalIdx = cursor.getColumnIndex(SensorType.TIME_TOTAL.name)
+            val timeIdx = cursor.getColumnIndex(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME)
+
+            var initialEpochSec: Long? = null
+            var sampleIndex = 0L
+
+            while (cursor.moveToNext()) {
+                val timeSec = when {
+                    timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx) -> cursor.getLong(timeActiveIdx)
+                    timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx) -> cursor.getLong(timeTotalIdx)
+                    timeIdx != -1 && !cursor.isNull(timeIdx) -> {
+                        val (offset, anchor) = parseTimestampOffset(cursor.getString(timeIdx), initialEpochSec)
+                        initialEpochSec = anchor
+                        offset ?: sampleIndex
+                    }
+                    else -> sampleIndex
+                }
+
+                if (!cursor.isNull(pwrIdx)) {
+                    val pwr = cursor.getInt(pwrIdx)
+                    if (pwr > 0) {
+                        samples.add(ZoneSample(timeActiveSec = timeSec, value = pwr))
+                    }
+                }
+                sampleIndex++
+            }
+        }
+
+        ZoneDistributionCalculator.calculatePowerDistribution(samples, thresholds)
     }
 
     private val extremaSensorTypes = arrayOf(
@@ -342,14 +609,25 @@ class WorkoutRepository private constructor(private val application: Application
 
         // 1. Primary spatial markers (Fast, from WorkoutData)
         workoutData.startLatLng?.let {
-            markerList.add(LocationMarker(it, R.drawable.control_start, application.getString(R.string.Start)))
+            val startTitle = if (!workoutData.startLocationName.isNullOrBlank()) {
+                "${application.getString(R.string.Start)}: ${workoutData.startLocationName}"
+            } else {
+                application.getString(R.string.Start)
+            }
+            markerList.add(LocationMarker(it, R.drawable.control_start, startTitle))
         }
         workoutData.endLatLng?.let {
-            markerList.add(LocationMarker(it, R.drawable.control_stop, application.getString(R.string.Stop)))
+            val stopTitle = if (!workoutData.endLocationName.isNullOrBlank()) {
+                "${application.getString(R.string.Stop)}: ${workoutData.endLocationName}"
+            } else {
+                application.getString(R.string.Stop)
+            }
+            markerList.add(LocationMarker(it, R.drawable.control_stop, stopTitle))
         }
         workoutData.maxDisplacementLatLng?.let {
             markerList.add(LocationMarker(it, R.drawable.ic_distance, application.getString(R.string.max_line_distance)))
         }
+
 
         // 2. Sensor Max/Min Markers (from Extremum table)
         extremaSensorTypes.forEach { sensor ->
@@ -899,6 +1177,7 @@ class WorkoutRepository private constructor(private val application: Application
                             method = userEditedWorkout.method,
                             commute = userEditedWorkout.commute,
                             trainer = userEditedWorkout.trainer,
+                            race = userEditedWorkout.race,
                             uploadToStrava = userEditedWorkout.uploadToStrava
                         )
                     } else current

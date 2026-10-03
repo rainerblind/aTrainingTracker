@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -222,6 +224,32 @@ fun WorkoutHeader(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+
+                    // Race Badge (ATT-2005)
+                    if (data.race) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.EmojiEvents,
+                                    contentDescription = stringResource(R.string.race_badge),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = stringResource(R.string.race_badge),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
                 }
 
                 // Row B: Date and Time
@@ -241,7 +269,50 @@ fun WorkoutHeader(
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
+
+                // Row C: Start & Destination Favorite Locations (ATT-1400 / REQ-UI-184)
+                val hasStartLocation = !data.startLocationName.isNullOrBlank()
+                val hasEndLocation = !data.endLocationName.isNullOrBlank()
+
+                if (hasStartLocation || hasEndLocation) {
+                    val startLoc = data.startLocationName
+                    val endLoc = data.endLocationName
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        if (startLoc != null && endLoc != null && startLoc == endLoc) {
+                            // Round-Trip / Loop
+                            IconTextRow(
+                                iconRes = R.drawable.my_locations,
+                                text = stringResource(R.string.workout_start_and_destination, startLoc),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                        } else {
+                            // Point-to-Point or Single Endpoint
+                            if (!startLoc.isNullOrBlank()) {
+                                IconTextRow(
+                                    iconRes = R.drawable.my_locations,
+                                    text = stringResource(R.string.workout_start_location, startLoc),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                            }
+                            if (!endLoc.isNullOrBlank()) {
+                                IconTextRow(
+                                    iconRes = R.drawable.my_locations,
+                                    text = stringResource(R.string.workout_destination_location, endLoc),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                            }
+                        }
+                    }
+                }
             }
+
 
             // 4. Action / Menu Button Area (Pinned to Top-End)
             Row(
@@ -259,7 +330,7 @@ fun WorkoutHeader(
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_table_edit),
+                            imageVector = Icons.Default.Edit,
                             contentDescription = stringResource(R.string.edit_workout),
                             tint = MaterialTheme.colorScheme.primary
                         )
@@ -381,8 +452,18 @@ fun WorkoutHeader(
  * Helper to mimic the drawableStart + drawablePadding behavior from your XML
  */
 @Composable
-private fun IconTextRow(iconRes: Int, text: String, color: Color = MaterialTheme.colorScheme.onSurfaceVariant) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+private fun IconTextRow(
+    iconRes: Int,
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    maxLines: Int = 1,
+    overflow: TextOverflow = TextOverflow.Ellipsis
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Icon(
             painter = painterResource(id = iconRes),
             contentDescription = null,
@@ -393,10 +474,13 @@ private fun IconTextRow(iconRes: Int, text: String, color: Color = MaterialTheme
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
-            color = color
+            color = color,
+            maxLines = maxLines,
+            overflow = overflow
         )
     }
 }
+
 
 // --- PREVIEWS ---
 
@@ -418,8 +502,11 @@ class WorkoutHeaderPreviewProvider : PreviewParameterProvider<WorkoutHeaderData>
             commute = false,
             trainer = false,
             uploadToStrava = 0,
-            stravaSportName = "Ride"
+            stravaSportName = "Ride",
+            startLocationName = "Home",
+            endLocationName = "Office"
         ),
+
         // Case 2: Commute / Trainer Run (Testing Chips)
         WorkoutHeaderData(
             workoutName = "Morning Run",

@@ -1,0 +1,61 @@
+h1. Walkthrough - ATT-1387: Implement Improved Lieblingsorte UI
+
+*Ticket*: ATT-1387 ([Implementierung] Implement Improved Lieblingsorte UI)
+*Parent Issue*: ATT-1382 ([Verbesserung] Improve Lieblingsorte UI)
+*Sub-Tasks*: ATT-1384 (Analysis), ATT-1385 (Test Spec), ATT-1386 (Plan), ATT-1387 (Implementation)
+*Target Release*: V4.9.38 | *Active Sprint*: 2026-39.2
+*Requirement*: REQ-UI-166 (referencing REQ-UI-165) | *Test Spec*: TST-UI-118
+*Branch*: feature/ATT-1382
+
+h2. 1. Executive Summary
+Under *ATT-1387* (Implementation sub-task of parent *ATT-1382*), the known start locations feature (*Lieblingsorte*) originally introduced in ATT-919 was comprehensively modernized and refined to align directly with aTrainingTracker core screens (RouteTabbedScreen, WorkoutTabsScreen, SegmentsTabsScreen).
+
+The implementation incorporates all design system requirements and user feedback:
+# *Standard Tabbed Layout & Header Surface*:
+#* Replaced generic Scaffold and TopAppBar with the app-standard {{primaryContainer}} header Surface ({{statusBarsPadding()}}, {{titleLarge}} text, {{onPrimaryContainer}} tints).
+#* Removed hamburger icon, location count badge, and search filter input per user guidance.
+#* Text-only {{PrimaryTabRow}} ({{containerColor = surfaceContainerHighest}}, {{divider = \{\}}}) hosting *"Liste"* and *"Karte"* tabs.
+#* Fluid {{HorizontalPager}} with swipe navigation from List to Map (user scrolling disabled on Map to reserve touch gestures for map manipulation).
+# *Multi-Dimension Sorting Menu*:
+#* Header sort button opens {{DropdownMenu}} offering 4 dimensions: (1) Starts, (2) Closest to Location, (3) Altitude, (4) Name.
+#* Distance option is disabled/dimmed when GPS is unavailable; sorting re-evaluates reactively.
+# *Map Marker Long-Click Deletion Context Menu*:
+#* Long-pressing a marker pin or geofence circle opens anchored context menu with Delete option, protected by {{DeleteConfirmationDialog}}.
+# *List Item Card Standardization (Variant 2 Modern Icon Badge) & System Insets*:
+#* Cards compose {{MappableListItem}} (ElevatedCard, 16dp rounded corners, 2dp elevation) with 44dp {{my_locations}} icon container, title, inline ascent and starts metrics, and trailing edit button.
+#* Bottom list content padding explicitly incorporates {{WindowInsets.navigationBars}} to ensure the last card is never obscured.
+# *Unified Edit Dialog & Title Consistency*:
+#* Standardized edit title to "Lieblingsort bearbeiten" / "Edit Favorite Location" across all 9 languages.
+# *Automatic Legacy Start Location Name Healing & Geocoder Auto-Naming*:
+#* Automatically invoked on ViewModel/Repository initialization.
+#* Expanded placeholder detection in {{LocationNameResolver}} to recognize coordinate fallbacks across all 9 locales.
+#* Database upserts persist newly resolved names for placeholder entries while strictly preserving manual user edits.
+# *Drawer Hierarchy & Distinct Iconography*:
+#* Positioned {{drawer_start_locations}} directly below {{drawer_my_locations}} (Lieblingsstrecken).
+#* {{drawer_start_locations}} uses {{my_locations.xml}} (heart pin); {{drawer_my_locations}} uses {{ic_favorite_route.xml}} (trajectory with heart).
+# *Intelligent Fallback Centering & Custom Theme Heart Markers*:
+#* Dynamic marker generation using theme primary color with crisp white heart glyph ({{createHeartPinMarker}}).
+#* Fallback camera centers on location with highest visit count (argmax(hitCount)), defaulting to Munich when empty.
+# *100% Localization Parity Across 9 Locales*:
+#* Complete coverage in DE ("Lieblingsorte", "Lieblingsort bearbeiten"), EN ("Favorite Locations", "Edit Favorite Location"), ES, FR, IT, JA, NL, PL, PT.
+
+h2. 2. Changes Implemented
+* *ic_favorite_route.xml*: Vector drawable combining route trajectory with heart overlay.
+* *AppNavigationDrawer.kt*: Reordered drawer maps group, mapped icons, extracted visible-for-testing drawer group builder.
+* *KnownLocationsScreen.kt*: Header surface, text-only PrimaryTabRow, HorizontalPager, 4-way sorting menu, MappableListItem with Variant 2 badge, bottom navigation insets, map marker long-click delete context menu.
+* *KnownLocationSortOrder.kt*: Enum defining RECORDINGS, DISTANCE_TO_USER, ALTITUDE, NAME.
+* *EditKnownLocationDialog.kt*: Header icon set to ic_table_edit, title set to localized edit string.
+* *MapUtils.kt*: Added {{createHeartPinMarker}}.
+* *KnownLocationsViewModel.kt*: Added {{getFallbackMapLocation()}}, 4-way sorting StateFlow, and {{healLegacyNames()}} in init.
+* *KnownLocationsRepository.kt*: Added {{healLegacyNames()}} in init, removed locked restriction for placeholder healing, resolved names in refreshDem.
+* *LocationNameResolver.kt*: Expanded {{isPlaceholderName()}} to detect coordinate formats and localized prefixes across all languages.
+* *KnownLocationsDatabaseManager.java*: Persisted resolved names in {{upsertLocationByGeofence()}}, {{learnLocation()}}, and {{healLegacyLocations()}}.
+* *strings.xml (9 locales)*: Updated naming to "Lieblingsorte" / "Favorite Locations" and "Lieblingsort bearbeiten" / "Edit Favorite Location".
+
+h2. 3. Verification & Evidence
+* *AppNavigationDrawerTest.kt*: {{testDrawerMapsGroupItemOrderingAndIcons}} passed.
+* *KnownLocationsViewModelTest.kt*: {{testFallbackMapLocation_resolvesMaxHitCountOrNull}} passed.
+* *KnownLocationsScreenTest.kt*: String existence and naming parity tests passed across all 9 locales.
+* *Compilation*: {{./gradlew compileDebugKotlin}} passed with BUILD SUCCESSFUL.
+* *Regression Suite*: {{./gradlew testDebugUnitTest}} 100% SUCCESS (0 failures, 0 regressions).
+* *Build*: {{./gradlew assembleDebug}} completed cleanly.

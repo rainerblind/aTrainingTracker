@@ -98,11 +98,12 @@ object StravaDataPurgeManager {
         // 1. SharedPreferences: Clear tokens, athlete ID, and toggles
         TrainingApplication.deleteStravaToken()
 
-        // 2. StravaUpload.db: Purge activity JSON, segment efforts, and Strava IDs
+        // 2. StravaUpload.db: Purge activity JSON, segment efforts, and Strava IDs, and flush WAL pages (REQ-EXP-013)
         try {
             val uploadDb = StravaUploadDbHelper(context)
             uploadDb.clearAllStravaData()
-            Log.d(TAG, "Purged StravaUploadDbHelper")
+            uploadDb.checkpointWal()
+            Log.d(TAG, "Purged StravaUploadDbHelper and checkpointed WAL")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to purge StravaUploadDbHelper", e)
         }

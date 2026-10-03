@@ -72,7 +72,7 @@ fun WorkoutClustersTabsScreen(
     val sortOrder by viewModel.sortOrder.collectAsState()
     val currentLocation by viewModel.currentLocation.collectAsState()
     val isLocationAvailable by viewModel.isLocationAvailable.collectAsState()
-
+    val knownLocations by viewModel.knownLocations.collectAsState()
 
     var showFilterBottomSheet by rememberSaveable { mutableStateOf(false) }
     var showInfoDialog by rememberSaveable { mutableStateOf(false) }
@@ -87,7 +87,8 @@ fun WorkoutClustersTabsScreen(
             availableEquipment = availableEquipment,
             onApplyCriteria = { viewModel.setFilterCriteria(it) },
             onClearAll = { viewModel.clearFilterCriteria() },
-            onDismissRequest = { showFilterBottomSheet = false }
+            onDismissRequest = { showFilterBottomSheet = false },
+            knownLocations = knownLocations
         )
     }
     
@@ -368,6 +369,16 @@ fun WorkoutClustersTabsScreen(
                                 onRemoveEquipment = { viewModel.updateFilterCriteria { it.copy(equipmentName = null) } },
                                 onRemoveMinDistance = { viewModel.updateFilterCriteria { it.copy(minDistanceMeters = null) } },
                                 onRemoveMinHitCount = { viewModel.updateFilterCriteria { it.copy(minHitCount = null) } },
+                                onRemoveStartLocation = {
+                                    viewModel.updateFilterCriteria {
+                                        it.copy(
+                                            startLocationName = null,
+                                            startLocationLat = null,
+                                            startLocationLng = null,
+                                            startLocationRadiusM = null
+                                        )
+                                    }
+                                },
                                 onClearAll = { viewModel.clearFilterCriteria() }
                             )
                         }

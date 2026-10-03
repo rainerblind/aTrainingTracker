@@ -28,6 +28,7 @@ import com.atrainingtracker.banalservice.sensor.MyDoubleAccumulatorSensor;
 import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper;
 
 
 public abstract class SpeedAndLocationDevice extends MyDevice {
@@ -129,9 +130,10 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
         if (DEBUG) Log.i(TAG, "onNewLocation()");
 
         if (location != null) {
+            double accuracyThreshold = SettingsDataStoreJavaHelper.getGpsAccuracyThreshold(mContext);
             if (DEBUG)
-                Log.d(TAG, "new location, provider: " + location.getProvider() + ", accuracy=" + location.getAccuracy() + ", threshold=" + ACCURACY_THRESHOLD);
-            if (location.getAccuracy() <= ACCURACY_THRESHOLD) {
+                Log.d(TAG, "new location, provider: " + location.getProvider() + ", accuracy=" + location.getAccuracy() + ", threshold=" + accuracyThreshold);
+            if (location.getAccuracy() <= accuracyThreshold) {
                 LocationAvailable();
 
                 // save the first location, i.e., the start location

@@ -51,6 +51,7 @@ public enum DeviceType {
 
     SENSOR_MANAGER(SensorType.SENSORS, BSportType.UNKNOWN, 1),
     CLOCK(SensorType.TIME_TOTAL, BSportType.UNKNOWN, 1),
+    BATTERY(SensorType.PHONE_BATTERY, BSportType.UNKNOWN, 1),
     VERTICAL_SPEED_AND_SLOPE(SensorType.VERTICAL_SPEED, BSportType.UNKNOWN, 1);   // only last one has ';' rest has ','!
 
     private final SensorType mainSensorType;
@@ -131,6 +132,11 @@ public enum DeviceType {
             case TIME_OF_DAY:
             case TIME_TOTAL:
                 deviceTypes.add(DeviceType.CLOCK);
+                break;
+
+            case PHONE_BATTERY:
+            case BATTERY_REMAINING_TIME:
+                deviceTypes.add(DeviceType.BATTERY);
                 break;
 
             // all location sources

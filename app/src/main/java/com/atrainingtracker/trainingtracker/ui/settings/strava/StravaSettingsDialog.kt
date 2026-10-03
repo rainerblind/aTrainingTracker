@@ -18,7 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.strava
 
-import android.app.Activity
+import android.app.Application
 import android.content.SharedPreferences
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -41,6 +41,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDataP
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDeauthorizationThread
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSynchronizeThread
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
+import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorker
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
@@ -80,6 +81,11 @@ fun StravaSettingsDialog(
     var segmentsLastUpdate by remember {
         mutableStateOf(TrainingApplication.getLastUpdateTimeOfStravaSegments())
     }
+    val isEquipmentSyncing by EquipmentRepository.isSyncing.collectAsState()
+    val segmentsRepo = remember { SegmentsRepository.getInstance(context) }
+    val isSegmentsSyncing by segmentsRepo.isSyncing.collectAsState()
+    val routesRepo = remember { RoutesRepository.getInstance(context) }
+    val isRoutesSyncing by routesRepo.isSyncing.collectAsState()
 
     var uploadGps by remember {
         mutableStateOf(prefs.getBoolean("uploadStravaGPS", true))
@@ -127,7 +133,9 @@ fun StravaSettingsDialog(
     // React to OAuth authentication completion
     LaunchedEffect(authState) {
         if (authState is StravaAuthState.Success) {
-            (context as? Activity)?.let { StravaEquipmentSynchronizeThread(it).start() }
+            if (!isEquipmentSyncing) {
+                StravaEquipmentSynchronizeThread(context).start()
+            }
 
             val repository = SegmentsRepository.getInstance(context)
             repository.syncSegmentsAsync(BSportType.UNKNOWN)
@@ -188,6 +196,8 @@ fun StravaSettingsDialog(
             if (showDisconnectConfirmation) {
                 AlertDialog(
                     onDismissRequest = { showDisconnectConfirmation = false },
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 0.dp,
                     title = {
                         Text(text = stringResource(R.string.strava_disconnect_dialog_title))
                     },
@@ -230,7 +240,9 @@ fun StravaSettingsDialog(
                 ) {
                     OutlinedCard(
                         onClick = {
-                            (context as? Activity)?.let { StravaEquipmentSynchronizeThread(it).start() }
+                            if (!isEquipmentSyncing) {
+                                StravaEquipmentSynchronizeThread(context).start()
+                            }
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -244,7 +256,11 @@ fun StravaSettingsDialog(
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Text(
-                                text = equipmentLastUpdate,
+                                text = if (isEquipmentSyncing) {
+                                    stringResource(R.string.lastUpdateOfEquipmentNow)
+                                } else {
+                                    equipmentLastUpdate
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -253,8 +269,9 @@ fun StravaSettingsDialog(
 
                     OutlinedCard(
                         onClick = {
-                            val routesRepo = RoutesRepository.getInstance(context)
-                            routesRepo.syncRoutesFromStravaAsync()
+                            if (!isRoutesSyncing) {
+                                routesRepo.syncRoutesFromStravaAsync()
+                            }
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -268,7 +285,11 @@ fun StravaSettingsDialog(
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Text(
-                                text = routesLastUpdate,
+                                text = if (isRoutesSyncing) {
+                                    stringResource(R.string.lastUpdateOfRoutesNow)
+                                } else {
+                                    routesLastUpdate
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -277,8 +298,9 @@ fun StravaSettingsDialog(
 
                     OutlinedCard(
                         onClick = {
-                            val repository = SegmentsRepository.getInstance(context)
-                            repository.syncSegmentsAsync(BSportType.UNKNOWN)
+                            if (!isSegmentsSyncing) {
+                                segmentsRepo.syncSegmentsAsync(BSportType.UNKNOWN)
+                            }
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -292,7 +314,11 @@ fun StravaSettingsDialog(
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Text(
-                                text = segmentsLastUpdate,
+                                text = if (isSegmentsSyncing) {
+                                    stringResource(R.string.lastUpdateOfSegmentsNow)
+                                } else {
+                                    segmentsLastUpdate
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

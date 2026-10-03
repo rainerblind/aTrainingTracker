@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.migration
 
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import java.text.DateFormat
 import java.util.Date
 import com.atrainingtracker.banalservice.BSportType
@@ -27,6 +28,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -44,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -63,6 +66,7 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import androidx.compose.material.icons.outlined.Info
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
+import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
@@ -252,6 +256,8 @@ fun ImportBackupTabsScreen(
     if (showRestoreConfirm) {
         AlertDialog(
             onDismissRequest = { showRestoreConfirm = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
             title = { Text(stringResource(R.string.restore_warning_title)) },
             text = { Text(stringResource(R.string.restore_warning_message)) },
             confirmButton = {
@@ -276,6 +282,8 @@ fun ImportBackupTabsScreen(
     if (showDropboxRestoreConfirm) {
         AlertDialog(
             onDismissRequest = { showDropboxRestoreConfirm = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
             title = { Text(stringResource(R.string.restore_warning_title)) },
             text = { Text(stringResource(R.string.restore_warning_message)) },
             confirmButton = {
@@ -300,6 +308,8 @@ fun ImportBackupTabsScreen(
     if (showDropboxDisconnectedDialog) {
         AlertDialog(
             onDismissRequest = { showDropboxDisconnectedDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
             title = { Text(stringResource(R.string.Dropbox)) },
             text = { Text(stringResource(R.string.dropbox_disconnected_status)) },
             confirmButton = {
@@ -503,19 +513,37 @@ fun ClusterNamingDialog(
     }
 
     val decodedPoints = remember(state.polyline) { PolyUtil.decode(state.polyline) }
-    val bounds = remember(decodedPoints) {
-        if (decodedPoints.isEmpty()) return@remember null
+    val bounds = remember(decodedPoints, state.start, state.end, state.apex) {
         val b = LatLngBounds.builder()
-        decodedPoints.forEach { b.include(it) }
-        b.build()
+        var hasPoints = false
+        decodedPoints.forEach {
+            b.include(it)
+            hasPoints = true
+        }
+        state.start?.let { b.include(it); hasPoints = true }
+        state.end?.let { b.include(it); hasPoints = true }
+        state.apex?.let { b.include(it); hasPoints = true }
+        if (!hasPoints) null else {
+            try {
+                b.build()
+            } catch (e: Exception) {
+                null
+            }
+        }
     }
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(bounds?.center ?: LatLng(0.0, 0.0), 12f)
     }
+    var isMapLoaded by remember { mutableStateOf(false) }
 
-    LaunchedEffect(bounds) {
-        bounds?.let {
-            cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(it, 50))
+    LaunchedEffect(state, bounds, isMapLoaded) {
+        if (isMapLoaded && bounds != null) {
+            try {
+                cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(bounds, 50))
+            } catch (e: Exception) {
+                Log.w("ImportBackupTabsScreen", "CameraUpdateFactory animation failed, falling back to static bounds center: ${e.message}")
+                cameraPositionState.position = CameraPosition.fromLatLngZoom(bounds.center, 12f)
+            }
         }
     }
 
@@ -550,6 +578,8 @@ fun ClusterNamingDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
         title = { 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.cluster_naming__title))
@@ -606,10 +636,17 @@ fun ClusterNamingDialog(
                     }
                 }
                 
-                Box(modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(8.dp))) {
+                val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                val mapProperties = remember(isDark, localContext) {
+                    DarkMapStyle.resolveMapProperties(isDark, localContext)
+                }
+                
+                Box(modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(8.dp)).background(if (isDark) Color(0xFF121212) else Color.White)) {
                     GoogleMap(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White),
                         cameraPositionState = cameraPositionState,
+                        properties = mapProperties,
+                        onMapLoaded = { isMapLoaded = true },
                         uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false)
                     ) {
                         Polyline(
@@ -716,6 +753,8 @@ fun ImportMappingDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
         title = { Text("Map Data for Import") },
         text = {
             Column(

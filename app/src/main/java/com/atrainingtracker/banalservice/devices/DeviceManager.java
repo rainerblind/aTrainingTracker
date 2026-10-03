@@ -83,6 +83,7 @@ public class DeviceManager {
     protected static MyRemoteDevice cMyRemoteDeviceCurrentlySearchingFor = null;
     protected Context mContext;
     protected ClockDevice mClockDevice;
+    protected BatteryDevice mBatteryDevice;
     protected SpeedAndLocationDevice mSpeedAndLocationDevice_GPS, mSpeedAndLocationDevice_GoogleFused, mSpeedAndLocationDevice_Network;
     protected AltitudeFromPressureDevice mAltitudeFromPressureDevice;
     protected VerticalSpeedAndSlopeDevice mVerticalSpeedAndSlopeDevice;
@@ -269,6 +270,7 @@ public class DeviceManager {
         mSensorManager = mySensorManager;
 
         mClockDevice = new ClockDevice(mContext, mSensorManager);
+        mBatteryDevice = new BatteryDevice(mContext, mSensorManager);
         
         long altitudePressureId = mDevicesDatabaseManager.getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_PRESSURE);
         if (mHavePressureSensor && mDevicesDatabaseManager.isPaired(altitudePressureId)) {
@@ -282,7 +284,7 @@ public class DeviceManager {
         long gpsDeviceId = devicesDatabaseManager.getSpeedAndLocationGPSDeviceId();
         if (devicesDatabaseManager.isPaired(gpsDeviceId)
                 && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
-            if (locationManager != null && locationManager.getProvider(LocationManager.GPS_PROVIDER) != null) {
+            if (isProviderAvailableSafely(locationManager, LocationManager.GPS_PROVIDER)) {
                 if (DEBUG) Log.i(TAG, "creating GPS location device");
                 try {
                     mSpeedAndLocationDevice_GPS = new SpeedAndLocationDevice_GPS(mContext, mSensorManager);
@@ -309,7 +311,7 @@ public class DeviceManager {
         long networkDeviceId = devicesDatabaseManager.getSpeedAndLocationNetworkDeviceId();
         if (devicesDatabaseManager.isPaired(networkDeviceId)
                 && TrainingApplication.havePermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
-            if (locationManager != null && locationManager.getProvider(LocationManager.NETWORK_PROVIDER) != null) {
+            if (isProviderAvailableSafely(locationManager, LocationManager.NETWORK_PROVIDER)) {
                 if (DEBUG) Log.i(TAG, "creating network location device");
                 try {
                     mSpeedAndLocationDevice_Network = new SpeedAndLocationDevice_Network(mContext, mSensorManager);
@@ -382,7 +384,7 @@ public class DeviceManager {
         if (deviceId == gpsDeviceId) {
             if (paired && mSpeedAndLocationDevice_GPS == null // paired and not yet there -> create (if we have the permission)
                     && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
-                if (locationManager != null && locationManager.getProvider(LocationManager.GPS_PROVIDER) != null) {
+                if (isProviderAvailableSafely(locationManager, LocationManager.GPS_PROVIDER)) {
                     try {
                         mSpeedAndLocationDevice_GPS = new SpeedAndLocationDevice_GPS(mContext, mSensorManager);
                     } catch (Exception e) {
@@ -421,7 +423,7 @@ public class DeviceManager {
         if (deviceId == networkDeviceId) {
             if (paired && mSpeedAndLocationDevice_Network == null  // if it does not exist
                     && TrainingApplication.havePermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {  // and we have the permission to do so
-                if (locationManager != null && locationManager.getProvider(LocationManager.NETWORK_PROVIDER) != null) {
+                if (isProviderAvailableSafely(locationManager, LocationManager.NETWORK_PROVIDER)) {
                     try {
                         mSpeedAndLocationDevice_Network = new SpeedAndLocationDevice_Network(mContext, mSensorManager);
                     } catch (Exception e) {
@@ -621,6 +623,17 @@ public class DeviceManager {
         return result;
     }
 
+    public boolean calibrateAltimeter(double referenceAltitude) {
+        if (mAltitudeFromPressureDevice != null) {
+            return mAltitudeFromPressureDevice.calibrate(referenceAltitude);
+        }
+        return false;
+    }
+
+    public boolean isAltimeterCalibrated() {
+        return mAltitudeFromPressureDevice != null && mAltitudeFromPressureDevice.isCalibrated();
+    }
+
     public List<Long> getIdsOfNewlyFoundDevices() {
         if (DEBUG) Log.i(TAG, "getIdsOfNewlyFoundDevices: " + mNewlyFoundDevices.size() + " devices found");
         return mNewlyFoundDevices;
@@ -655,6 +668,9 @@ public class DeviceManager {
         List<MyDevice> myDeviceList = new ArrayList<MyDevice>();
 
         myDeviceList.add(mClockDevice);
+        if (mBatteryDevice != null) {
+            myDeviceList.add(mBatteryDevice);
+        }
         if (mSpeedAndLocationDevice_GPS != null) {
             myDeviceList.add(mSpeedAndLocationDevice_GPS);
         }
@@ -966,6 +982,18 @@ public class DeviceManager {
                 .putExtra(BANALService.DEVICE_ID, deviceId)
                 .setPackage(mContext.getPackageName());
         mContext.sendBroadcast(intent);
+    }
+
+    private static boolean isProviderAvailableSafely(LocationManager locationManager, String provider) {
+        if (locationManager == null || provider == null) {
+            return false;
+        }
+        try {
+            return locationManager.getProvider(provider) != null;
+        } catch (IllegalArgumentException | SecurityException e) {
+            Log.w(TAG, "Failed to query location provider " + provider + ": " + e.getMessage());
+            return false;
+        }
     }
 
 }

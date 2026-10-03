@@ -31,7 +31,9 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
@@ -55,8 +57,14 @@ class WorkoutDataMapper(
     private val workoutSummariesDatabaseManager: WorkoutSummariesDatabaseManager,
     private val sportTypeDatabaseManager: SportTypeDatabaseManager,
     private val equipmentDbHelper: EquipmentDbHelper,
-    private val stravaUploadDbHelper: StravaUploadDbHelper
+    private val stravaUploadDbHelper: StravaUploadDbHelper,
+    private val knownLocationsDatabaseManager: KnownLocationsDatabaseManager? = try {
+        KnownLocationsDatabaseManager.getInstance(context)
+    } catch (_: Throwable) {
+        null
+    }
 ) {
+
     // Define all sensors to check
     val sensorsToCheck = SensorType.CORE_METRICS
 
@@ -104,6 +112,9 @@ class WorkoutDataMapper(
         val clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID))
         val clusterName = WorkoutClusterDatabaseManager.getInstance(context).getClusterNameById(clusterId)
 
+        val startLocationName = resolveLocationName(startLatLng)
+        val endLocationName = resolveLocationName(endLatLng)
+
         // The mapper is responsible for assembling the final object from its constituent parts.
         return WorkoutData(
             id = workoutId,
@@ -121,12 +132,15 @@ class WorkoutDataMapper(
             equipmentId = equipmentId,
             commute = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.COMMUTE)) == 1,
             trainer = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TRAINER)) == 1,
+            race = cursor.getColumnIndex(WorkoutSummaries.RACE).takeIf { it >= 0 }?.let { cursor.getInt(it) == 1 } ?: false,
             uploadToStrava = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.UPLOAD_TO_STRAVA)),
             mapPolyline = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.MAP_POLYLINE)) ?: "",
             encodedAltitudes = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.ALTITUDE_STREAM)) ?: "",
             encodedDistances = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_STREAM)) ?: "",
             clusterId = clusterId,
             clusterName = clusterName,
+            startLocationName = startLocationName,
+            endLocationName = endLocationName,
 
             minLat = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LAT))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LAT)),
             minLng = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LNG))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LNG)),
@@ -245,6 +259,9 @@ class WorkoutDataMapper(
         val clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID))
         val clusterName = batch.clusterNames[clusterId]
 
+        val startLocationName = resolveLocationName(startLatLng)
+        val endLocationName = resolveLocationName(endLatLng)
+
         return WorkoutData(
             id = workoutId,
             finished = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.FINISHED)) == 1,
@@ -261,12 +278,15 @@ class WorkoutDataMapper(
             equipmentId = equipmentId,
             commute = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.COMMUTE)) == 1,
             trainer = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TRAINER)) == 1,
+            race = cursor.getColumnIndex(WorkoutSummaries.RACE).takeIf { it >= 0 }?.let { cursor.getInt(it) == 1 } ?: false,
             uploadToStrava = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.UPLOAD_TO_STRAVA)),
             mapPolyline = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.MAP_POLYLINE)) ?: "",
             encodedAltitudes = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.ALTITUDE_STREAM)) ?: "",
             encodedDistances = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_STREAM)) ?: "",
             clusterId = clusterId,
             clusterName = clusterName,
+            startLocationName = startLocationName,
+            endLocationName = endLocationName,
 
             minLat = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LAT))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LAT)),
             minLng = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LNG))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LNG)),
@@ -557,6 +577,21 @@ class WorkoutDataMapper(
             Log.w("WorkoutDataMapper", "Failed to reconcile altitude extrema for workout $workoutId", e)
         }
         return Pair(recordedMin, recordedMax)
+    }
+
+    /**
+     * Resolves the display name of a recognized favorite location (Lieblingsort)
+     * covering the given coordinate geofence (ATT-1400 / REQ-UI-184).
+     */
+    private fun resolveLocationName(latLng: LatLng?): String? {
+        if (latLng == null) return null
+        val mgr = knownLocationsDatabaseManager ?: return null
+        return try {
+            val myLoc = mgr.getMyLocation(latLng) ?: return null
+            WorkoutAutoNamingHelper.getDisplayName(context, myLoc)
+        } catch (_: Throwable) {
+            null
+        }
     }
 
 }

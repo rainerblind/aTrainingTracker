@@ -35,11 +35,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(
+internal val DarkColorScheme = darkColorScheme(
     primary = DarkPrimary,
     onPrimary = DarkOnPrimary,
-    primaryContainer = BabyBlueEyeInverse,
-    onPrimaryContainer = BabyBlueEye,
+    primaryContainer = DarkPrimaryContainer,
+    onPrimaryContainer = DarkOnPrimaryContainer,
     secondary = DarkSecondary,
     onSecondary = DarkOnSecondary,
     secondaryContainer = DarkSecondaryContainer,
@@ -59,20 +59,41 @@ private val DarkColorScheme = darkColorScheme(
     surfaceVariant = DarkSurface,
     onSurfaceVariant = DarkOnSurfaceVariant,
     outline = DarkOutline,
+    outlineVariant = DarkOutlineVariant,
     inverseOnSurface = DarkInverseOnSurface,
     inverseSurface = DarkInverseSurface,
     inversePrimary = DarkPrimaryInverse,
-    surfaceDim = DarkSurface,
-    surfaceBright = DarkSurface,
-    surfaceContainerLowest = DarkSurface,
-    surfaceContainerLow = DarkSurface,
-    surfaceContainer = DarkSurface,
-    surfaceContainerHigh = DarkSurface,
-    surfaceContainerHighest = surfaceContainerDark, // Used for tab backgrounds
+    surfaceDim = surfaceDimDark,
+    surfaceBright = surfaceBrightDark,
+    surfaceContainerLowest = surfaceContainerLowestDark,
+    surfaceContainerLow = surfaceContainerLowDark,
+    surfaceContainer = surfaceContainerDark,
+    surfaceContainerHigh = surfaceContainerHighDark,
+    surfaceContainerHighest = surfaceContainerHighestDark, // Used for tab backgrounds
     surfaceTint = Color.Transparent
 )
 
-private val LightColorScheme = lightColorScheme(
+internal val AmoledDarkColorScheme = DarkColorScheme.copy(
+    primaryContainer = Color(0xFF000000),
+    onPrimaryContainer = Color(0xFFFFFFFF),
+    background = AmoledBackground,
+    surface = AmoledSurface,
+    surfaceVariant = AmoledSurface,
+    surfaceDim = AmoledSurface,
+    surfaceBright = Color(0xFF1A1A1A),
+    surfaceContainerLowest = AmoledSurface,
+    surfaceContainerLow = AmoledSurface,
+    surfaceContainer = AmoledSurface,
+    surfaceContainerHigh = Color(0xFF121212),
+    surfaceContainerHighest = Color(0xFF000000),
+    outline = AmoledOutline,
+    outlineVariant = AmoledOutlineVariant,
+    onSurface = Color.White,
+    onBackground = Color.White,
+    onSurfaceVariant = AmoledOnSurfaceVariant
+)
+
+internal val LightColorScheme = lightColorScheme(
     primary = LightPrimary,
     onPrimary = LightOnPrimary,
     primaryContainer = BabyBlueEye,
@@ -114,6 +135,8 @@ fun ATrainingTrackerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = false,
+    amoled: Boolean = false,
+    setWindowColors: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -121,21 +144,28 @@ fun ATrainingTrackerTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
+        darkTheme && amoled -> AmoledDarkColorScheme
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
 
     val view = LocalView.current
-    if (!view.isInEditMode) {
+    if (setWindowColors && !view.isInEditMode) {
         SideEffect {
             var context = view.context
             while (context is ContextWrapper) {
                 if (context is Activity) break
                 context = context.baseContext
             }
-            (context as? Activity)?.window?.let { window ->
-                window.statusBarColor = colorScheme.surface.toArgb()
-                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            val activity = context as? Activity
+            if (activity != null && !activity.isFinishing && !activity.isDestroyed) {
+                activity.window?.let { window ->
+                    window.statusBarColor = colorScheme.surface.toArgb()
+                    window.navigationBarColor = colorScheme.surface.toArgb()
+                    val insetsController = WindowCompat.getInsetsController(window, view)
+                    insetsController.isAppearanceLightStatusBars = !darkTheme
+                    insetsController.isAppearanceLightNavigationBars = !darkTheme
+                }
             }
         }
     }

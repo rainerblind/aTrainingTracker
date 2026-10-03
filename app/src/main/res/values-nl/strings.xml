@@ -311,10 +311,13 @@
     <string name="prefsStartLocationsSummary">Hoogte van bekende locaties configureren</string>
     <string name="updateStravaEquipment">Strava materiaal bijwerken</string>
     <string name="lastUpdateOfEquipmentNever">nooit bijgewerkt</string>
+    <string name="lastUpdateOfEquipmentNow">nu</string>
     <string name="updateStravaRoutes">Strava routes bijwerken</string>
     <string name="lastUpdateOfRoutesNever">nooit bijgewerkt</string>
+    <string name="lastUpdateOfRoutesNow">nu</string>
     <string name="updateStravaSegments">Strava-segmenten bijwerken</string>
     <string name="lastUpdateOfSegmentsNever">nooit bijgewerkt</string>
+    <string name="lastUpdateOfSegmentsNow">nu</string>
     <string name="automated_strava_segments_sync">Automatische segmentsynchronisatie</string>
     <string name="automated_strava_segments_sync_summary">Regelmatig gemarkeerde segmenten ophalen van Strava</string>
     <string name="strava_segments_sync_interval">Synchronisatie-interval</string>
@@ -322,9 +325,6 @@
     <string name="automated_strava_routes_sync_summary">Regelmatig routes ophalen van Strava</string>
     <string name="strava_routes_sync_interval">Synchronisatie-interval</string>
 
-    <string name="getting_equipment_from_strava">Strava materiaal ophalen…\neven geduld</string>
-    <string name="got_shoe">Strava schoenen opgehaald\nontvangen: %1$s</string>
-    <string name="got_bike">Strava fietsen opgehaald\nontvangen: %1$s</string>
     <string name="strava_success_but_must_check">geüpload naar Strava, resultaat controleren …</string>
     <string name="strava_success_waiting_for_result">geüpload naar Strava, even wachten …</string>
 
@@ -484,6 +484,22 @@
     <string name="check_ANT_installation">ANT installatie controleren</string>
     <string name="forcePortrait">Staande oriëntatie</string>
     <string name="Display">Scherm</string>
+    <string name="settings_category_savings">Batterijbesparing</string>
+    <string name="settings_category_savings_desc">Verlengt de batterijduur voor langere trainingssessies</string>
+    <string name="prefs_battery_saver_title">Dynamisch scherm dimmen</string>
+    <string name="prefs_battery_saver_summary">Past de schermhelderheid dynamisch aan op basis van helling en trainingszones</string>
+    <string name="cockpit_theme_title">Cockpitthema (tijdens training)</string>
+    <string name="cockpit_theme_description">Geldt uitsluitend voor de telemetrie- en sensorweergaven tijdens actieve workouts. Het hoofdmenu en \'Control Tracking\' behouden het standaardthema.</string>
+    <string name="cockpit_theme_system">Systeem</string>
+    <string name="cockpit_theme_always_dark">Altijd donker</string>
+    <string name="display_brightness_title">Schermhelderheid (tijdens training)</string>
+    <string name="display_brightness_system">Systeem</string>
+    <string name="display_brightness_auto">Auto</string>
+    <string name="display_brightness_custom">Handmatig</string>
+    <string name="display_brightness_system_desc">Gebruikt de standaardschermhelderheid van het systeem</string>
+    <string name="display_brightness_auto_desc">Past de schermhelderheid dynamisch aan op basis van helling en trainingszones</string>
+    <string name="display_brightness_custom_desc">Constant helderheidsniveau gedurende de hele training</string>
+    <string name="display_brightness_slider_format">Helderheid: %1$d%%</string>
     <string name="smoothing">Smoothing waarden</string>
     <string name="powerSmoothingTitle">Vermogen smoothing factor α</string>
     <string name="powerSmoothingTitle_format">Vermogen smoothing: α=%1$f</string>
@@ -594,7 +610,15 @@
     <string name="label_min">Min</string>
     <string name="label_max">Max</string>
 
+    <string name="zone_display_title">Zoneweergave</string>
+    <string name="zone_display_background">Lichte achtergrond</string>
+    <string name="zone_display_left_bar">Balk links</string>
+    <string name="zone_display_right_bar">Balk rechts</string>
+    <string name="zone_display_text_color">Tekstkleur</string>
+    <string name="zone_display_preview_title">Voorbeeld</string>
+
     <string name="prefEmailExport">e-Mail</string>
+
 
 <!-- 2026 -->
     <!-- StringUtils -->
@@ -742,6 +766,8 @@
     <string name="view_size_xlarge">Zeer groot</string>
     <string name="view_size_huge">Enorm</string>
     <string name="view_size_xhuge">Gigantisch</string>
+    <string name="view_size_xxhuge">XGigantisch</string>
+    <string name="view_size_xxxhuge">XXGigantisch</string>
     <string name="configure">Configureren</string>
     <string name="tab_name">Naam</string>
 
@@ -873,6 +899,9 @@
         <item quantity="other">%1$d Trainingen</item>
     </plurals>
     <string name="workout_periods__longest_workout">Langste training</string>
+    <string name="workout_periods__region_format">Regio %1$d (%2$d)</string>
+    <string name="workout_periods__primary_region_format">Hoofdregio: Regio %1$d (%2$d)</string>
+    <string name="workout_periods__all_regions_format">Alle regio\'s (%1$d)</string>
     <string name="workout_periods__migration_querying">Trainingsgeschiedenis laden…</string>
     <string name="workout_periods__migration_reading">Training %1$d van %2$d lezen…</string>
     <string name="workout_periods__migration_syncing">Synchroniseren %1$s…</string>
@@ -1099,8 +1128,29 @@
     <string name="filter_section_equipment">Uitrusting</string>
     <string name="filter_section_attributes">Kenmerken</string>
     <string name="filter_section_thresholds">Afstand &amp; tijdsduur</string>
+    <string name="filter_section_start_at">Start bij</string>
+    <string name="settings_workout_card_title">Trainingslijst (gedetailleerde kaarten)</string>
+    <string name="settings_workout_card_map">Kaartvoorbeeld</string>
+    <string name="settings_workout_card_elevation">Hoogteprofiel</string>
+    <string name="settings_workout_card_extrema">Extreemwaarden</string>
+    <string name="settings_workout_card_laps">Rondenoverzicht</string>
+    <string name="settings_workout_card_strava">Strava-activiteit</string>
+    <string name="settings_workout_card_description">Beschrijving en notities</string>
+    <string name="settings_workout_card_charts">Telemetriegrafieken</string>
+    <string name="settings_workout_card_zones">Zone-analyse (HF &amp; vermogen)</string>
+    <string name="settings_edit_workout_title">Training bewerken</string>
+    <string name="settings_edit_workout_cluster">Route / Cluster</string>
+    <string name="settings_edit_workout_commute_trainer">Woon-werk &amp; fietstrainer</string>
+    <string name="settings_edit_workout_race">Wedstrijd</string>
+    <string name="settings_edit_workout_strava">Strava-upload</string>
+    <string name="settings_edit_workout_description">Beschrijving &amp; notities</string>
+    <string name="settings_edit_workout_goal">Doel</string>
+    <string name="settings_edit_workout_method">Methode</string>
     <string name="filter_commute">Woon-werkverkeer</string>
     <string name="filter_trainer">Binnen / Fietstrainer</string>
+    <string name="filter_race_only">Alleen wedstrijden</string>
+    <string name="race">Wedstrijd</string>
+    <string name="race_badge">Wedstrijd</string>
     <string name="filter_has_gps">Met GPS-route</string>
     <string name="filter_min_distance_format">&gt; %1$s km</string>
     <string name="filter_max_distance_format">&lt; %1$s km</string>
@@ -1198,4 +1248,169 @@
     <string name="lap_table_header_lap">Ronde</string>
     <string name="lap_table_header_time">Tijd</string>
     <string name="lap_table_header_distance">Afstand</string>
+
+    <!-- ATT-919 / ATT-1382: Known Start Locations (Favorite Locations) Management & Altitude Lock UI -->
+    <string name="drawer_start_locations">Favoriete locaties</string>
+    <string name="known_locations_title">Favoriete locaties</string>
+    <string name="known_locations_tab_list">Lijst</string>
+    <string name="known_locations_tab_map">Kaart</string>
+    <string name="known_locations_search_hint">Favoriete locaties zoeken…</string>
+    <string name="known_locations_empty_title">Geen favoriete locaties vastgelegd</string>
+    <string name="known_locations_empty_desc">Favoriete locaties worden automatisch geleerd bij het starten van een training of kunnen handmatig worden gekalibreerd.</string>
+    <string name="known_location_unnamed_format">Startlocatie (%1$.5f, %2$.5f)</string>
+    <string name="known_locations_starts_count">%1$d starts</string>
+    <string name="known_locations_sort_starts">Starts</string>
+    <plurals name="known_locations_starts">
+        <item quantity="one">%1$d start</item>
+        <item quantity="other">%1$d starts</item>
+    </plurals>
+    <plurals name="known_locations_routes">
+        <item quantity="one">%1$d route</item>
+        <item quantity="other">%1$d routes</item>
+    </plurals>
+    <string name="source_internet_dem">Internet (DEM)</string>
+    <string name="source_manual_user">Handmatig</string>
+    <string name="source_auto_learned">Automatisch</string>
+    <string name="source_gps_fallback">GPS</string>
+    <string name="source_legacy_raw">Verouderd</string>
+    <string name="known_location_edit_title">Favoriete locatie bewerken</string>
+    <string name="known_location_fetch_dem">Ophalen van internet (DEM)</string>
+    <string name="known_location_show_map">Op kaart tonen</string>
+    <string name="known_location_hide_map">Kaart verbergen</string>
+    <string name="sort_altitude">Hoogte</string>
+    <string name="known_location_radius_label">Detectiestraal</string>
+    <string name="known_location_radius_format">%1$s: %2$s</string>
+    <string name="phone_battery">Telefoonbatterij</string>
+    <string name="phone_battery_short">Batterij</string>
+    <string name="battery_remaining_time">Resterende batterijtijd</string>
+    <string name="battery_remaining_time_short">Resterend</string>
+    <string name="battery_charging">Opladen</string>
+    <string name="workout_name_run_from">Hardlopen vanaf %1$s</string>
+    <string name="workout_name_ride_from">Rit vanaf %1$s</string>
+    <string name="workout_name_activity_from">Activiteit vanaf %1$s</string>
+    <string name="workout_name_round_trip">Ronde vanaf %1$s</string>
+    <string name="workout_name_run_from_to">Hardlopen van %1$s naar %2$s</string>
+    <string name="workout_name_ride_from_to">Rit van %1$s naar %2$s</string>
+    <string name="workout_name_activity_from_to">Activiteit van %1$s naar %2$s</string>
+    <string name="workout_name_run_to">Hardlopen naar %1$s</string>
+    <string name="workout_name_ride_to">Rit naar %1$s</string>
+    <string name="workout_name_activity_to">Activiteit naar %1$s</string>
+    <string name="cluster_seed_name_loop_format">Ronde vanaf %1$s</string>
+    <string name="prefs_lieblingsort_feedback_title">Favoriete locatie &amp; kalibratiefeedback</string>
+    <string name="prefs_lieblingsort_feedback_summary">Bevestigt herkende startlocatie en barometerkalibratie in de cockpit</string>
+    <string name="location_calibrated_format">%1$s (%2$s gekalibreerd)</string>
+    <string name="location_detected_format">%1$s gedetecteerd</string>
+    <string name="workout_start_location">Start: %s</string>
+    <string name="workout_destination_location">Bestemming: %s</string>
+    <string name="workout_start_and_destination">Start &amp; bestemming: %s</string>
+    <string name="filter_start_location">Startlocatie</string>
+    <string name="known_locations_view_workouts">Workouts bekijken</string>
+    <string name="known_locations_view_routes">Routes bekijken</string>
+    <string name="cluster_start_location">Start: %s</string>
+    <string name="known_location_routes_header">Routes vanaf hier (%d):</string>
+    <string name="filter_by_start_location">Filteren op startlocatie</string>
+
+    <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
+    <string name="drawer__expert_settings">Expertinstellingen</string>
+    <string name="advanced_tuning_title">Expertinstellingen</string>
+    <string name="advanced_tuning_open">Expertinstellingen…</string>
+    <string name="advanced_tuning_warning_title">Expertinstellingen</string>
+    <string name="advanced_tuning_warning_desc">Het wijzigen van deze parameters beïnvloedt trackingheuristieken, sensorfiltering en batterijbesparing. U kunt te allen tijde de fabrieksinstellingen herstellen.</string>
+    <string name="tuning_cat_battery_saver">AMOLED-batterijbesparing</string>
+    <string name="tuning_cat_gps">GPS- &amp; locatiefiltering</string>
+    <string name="tuning_cat_elevation">Hoogte- en hellingsdynamiek</string>
+    <string name="tuning_full_dim_factor_title">Helderheid bij volledige dimming</string>
+    <string name="tuning_full_dim_factor_desc">Doelhelderheid van het scherm op vlak terrein en bij lichte inspanning (begrensd &gt;= 5%).</string>
+    <string name="tuning_medium_dim_factor_title">Helderheid bij gemiddelde dimming</string>
+    <string name="tuning_medium_dim_factor_desc">Doelhelderheid van het scherm bij matige hellingen of tempozones.</string>
+    <string name="tuning_slope_flat_title">Drempel voor vlak terrein</string>
+    <string name="tuning_slope_flat_desc">Hellingspercentage waaronder volledige dimming is toegestaan.</string>
+    <string name="tuning_slope_steep_title">Drempel voor steile klim</string>
+    <string name="tuning_slope_steep_desc">Hellingspercentage waarboven maximale helderheid wordt afgedwongen.</string>
+    <string name="tuning_wakeup_duration_title">Ontwaakduur</string>
+    <string name="tuning_wakeup_duration_desc">Tijd dat het scherm volledig helder blijft na aanraking of nabijheidsgebaar.</string>
+    <string name="tuning_downward_delay_title">Dempingsvertraging bij dimmen</string>
+    <string name="tuning_downward_delay_desc">Hysteresisvertraging vóór het dimmen om flikkeren bij korte hellingswisselingen te voorkomen.</string>
+    <string name="tuning_gps_accuracy_title">GPS-nauwkeurigheidsdrempel</string>
+    <string name="tuning_gps_accuracy_desc">Maximaal acceptabele horizontale fout; minder nauwkeurige locaties worden genegeerd.</string>
+    <string name="tuning_altitude_window_title">Venster voor hoogtevereffening</string>
+    <string name="tuning_altitude_window_desc">Voortschrijdend gemiddelde tijdsvenster voor momentane hoogte en verticale snelheid.</string>
+    <string name="tuning_slope_min_speed_title">Minimale snelheid voor helling</string>
+    <string name="tuning_slope_min_speed_desc">Minimale snelheid vereist om realtime helling te berekenen.</string>
+    <string name="tuning_cat_aftermath">Aftermath &amp; profielanalyse</string>
+    <string name="tuning_profile_x_axis_title">Hoogteprofiel X-as</string>
+    <string name="tuning_profile_x_axis_desc">Selecteer de horizontale as-metriek voor hoogteprofielen.</string>
+    <string name="tuning_profile_x_axis_distance">Afstand</string>
+    <string name="tuning_profile_x_axis_time">Tijd</string>
+    <string name="tuning_telemetry_x_axis_title">Telemetriegrafieken X-as</string>
+    <string name="tuning_telemetry_x_axis_desc">Selecteer het horizontale asdomein voor telemetriegrafieken (hartslag, tempo/snelheid, vermogen).</string>
+    <string name="tuning_pace_ceiling_title">Maximale tempogrens</string>
+    <string name="tuning_pace_ceiling_desc">Filtert GPS-uitschieters in de tempografiek. Waarden sneller dan deze grens worden afgekapt.</string>
+
+    <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
+    <string name="tuning_cat_cockpit_typography">Cockpit-typografie</string>
+    <string name="tuning_cockpit_font_family_title">Lettertype</string>
+    <string name="tuning_font_system_default">Systeemstandaard</string>
+    <string name="tuning_font_seven_segment">7-segment digitaal</string>
+    <string name="tuning_font_modern_athletic">Modern sportief</string>
+    <string name="tuning_font_monospace">Monospace</string>
+    <string name="tuning_font_playful">Speels</string>
+    <string name="tuning_font_bebas_neue">Bebas Neue</string>
+    <string name="tuning_font_teko">Teko</string>
+    <string name="tuning_font_barlow_condensed">Barlow Condensed</string>
+    <string name="tuning_font_oswald">Oswald</string>
+    <string name="tuning_font_chakra_petch">Chakra Petch</string>
+    <string name="tuning_font_oxanium">Oxanium</string>
+    <string name="tuning_font_rajdhani">Rajdhani</string>
+    <string name="tuning_font_montserrat">Montserrat</string>
+    <string name="tuning_cockpit_font_weight_title">Letterdikte</string>
+    <string name="tuning_weight_normal">Normaal</string>
+    <string name="tuning_weight_semi_bold">Halfvet</string>
+    <string name="tuning_weight_bold">Vet</string>
+    <string name="tuning_cockpit_preview_title">Live voorbeeld</string>
+    <string name="tuning_default_format">Standaard: %1$s</string>
+    <string name="reset_to_defaults">Fabrieksinstellingen herstellen</string>
+    <string name="reset_to_defaults_success">Afstemmingsinstellingen hersteld naar fabrieksinstellingen.</string>
+    <string name="tuning_cat_sensors_gps">Sensoren, gps en filtering</string>
+    <string name="tuning_cat_workout_masks_cards">Workout-kaarten en details</string>
+    <string name="tuning_summary_masks_cards_format">%1$d/8 kaarten</string>
+    <string name="tuning_matrix_col_list">In lijst</string>
+    <string name="tuning_matrix_col_details">In details</string>
+    <string name="tuning_matrix_feature">Onderdeel</string>
+    <string name="tuning_summary_matrix_format">%1$d/8 in lijst, %2$d/8 in details</string>
+    <string name="map_splitter_content_description">Verdeellijn voor kaart en telemetrie. Sleep verticaal om het formaat te wijzigen, dubbeltik om te herstellen.</string>
+
+    <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
+    <string name="move_tile_banner_instruction">Tegel geselecteerd: Tik op een andere tegel om te ruilen of op \'+\' om te verplaatsen.</string>
+    <string name="move_tile_cancel">Annuleren</string>
+
+    <!-- Heart Rate 5-Zone Distribution Bar (ATT-1389 / REQ-UI-202) -->
+    <string name="aftermath_hr_zones_title">Hartslagzones</string>
+
+    <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
+    <string name="aftermath_power_zones_title">Vermogenszones</string>
+    <!-- Telemetry Frequency Histogram (ATT-1845 / REQ-UI-231) -->
+    <string name="zone_mode_5_zones">5 zones</string>
+    <string name="zone_mode_histogram">Histogram</string>
+    <string name="aftermath_laps_splits_title">Ronden en tussentijden</string>
+    <string name="split_badge_best">Beste</string>
+    <!-- Continuous Metric Graphs & Headings (ATT-1740 / REQ-UI-206) -->
+    <string name="graph_heading_elevation">Hoogteprofiel</string>
+    <string name="graph_heading_heart_rate">Hartslag</string>
+    <string name="graph_heading_speed">Snelheid</string>
+    <string name="graph_heading_pace">Tempo</string>
+    <string name="graph_heading_power">Vermogen</string>
+
+    <!-- Persistent Sticky Global Zoom Toolbar (ATT-1876 / REQ-UI-225) -->
+    <string name="zoom_in">Inzoomen</string>
+    <string name="zoom_out">Uitzoomen</string>
+    <string name="zoom_reset">Zoom resetten</string>
+    <string name="zoom_pan_mode">Verschuifmodus</string>
+    <string name="zoom_scrub_mode">Scrubmodus</string>
+
+    <!-- Configurable Lap Display Mode (ATT-1870 / REQ-UI-229) -->
+    <string name="settings_lap_display_mode_title">Rondeweergavemodus</string>
+    <string name="settings_lap_display_mode_table">Tabel</string>
+    <string name="settings_lap_display_mode_visualizer">Visualizer</string>
+    <string name="settings_lap_display_mode_both">Beide</string>
 </resources>

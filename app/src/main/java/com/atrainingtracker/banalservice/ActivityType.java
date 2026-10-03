@@ -192,6 +192,10 @@ public enum ActivityType {
             sensors[sensors.length - 1] = SensorType.TEMPERATURE_MAX;
         }
 
+        sensors = Arrays.copyOf(sensors, sensors.length + 2);
+        sensors[sensors.length - 2] = SensorType.PHONE_BATTERY;
+        sensors[sensors.length - 1] = SensorType.BATTERY_REMAINING_TIME;
+
         return sensors;
     }
 }

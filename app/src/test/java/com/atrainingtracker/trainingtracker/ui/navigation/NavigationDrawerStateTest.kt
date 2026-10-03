@@ -84,10 +84,11 @@ class NavigationDrawerStateTest {
             R.id.drawer_start_tracking,
             R.id.drawer_workouts,
             R.id.drawer_periods,
-            // Maps (4)
+            // Maps (5)
             R.id.drawer_map,
             R.id.drawer_segments,
             R.id.drawer_routes,
+            R.id.drawer_start_locations,
             R.id.drawer_my_locations,
             // My Stuff / Equipment (5)
             R.id.drawer_my_sensors,
@@ -108,10 +109,10 @@ class NavigationDrawerStateTest {
             R.id.drawer_privacy_policy
         )
 
-        assertEquals("Navigation drawer must contain exactly 21 destinations", 21, expectedItems.size)
+        assertEquals("Navigation drawer must contain exactly 22 destinations", 22, expectedItems.size)
         // Ensure all IDs are unique non-zero resource integers
         val uniqueItems = expectedItems.toSet()
-        assertEquals("All 21 navigation items must have distinct IDs", 21, uniqueItems.size)
+        assertEquals("All 22 navigation items must have distinct IDs", 22, uniqueItems.size)
         expectedItems.forEach { id ->
             assertNotNull("Item ID must not be null", id)
         }

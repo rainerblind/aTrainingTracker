@@ -26,13 +26,16 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.*
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
+import androidx.compose.foundation.background
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -50,10 +53,13 @@ import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
+import com.atrainingtracker.trainingtracker.ui.map.DarkMapAntiFlashOverlay
+import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMapOptions
 import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
@@ -114,6 +120,9 @@ fun WorkoutClusterMetadataBlock(
     val linkedEquipment = remember(cluster.probableSportId) { viewModel.getLinkedEquipment(cluster.probableSportId) }
     val statsMap by viewModel.clusterStats.collectAsState()
     val stats = statsMap[cluster.id]
+    val startLocationName = remember(cluster.startLat, cluster.startLng) {
+        viewModel.getStartLocationName(cluster.startLat, cluster.startLng)
+    }
 
     Column(modifier = modifier) {
         // 1. Reference Distance & Best Time (PR)
@@ -147,6 +156,30 @@ fun WorkoutClusterMetadataBlock(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
+            }
+        }
+
+        // 1b. Recognized Start Location Badge (REQ-UI-186, ATT-1402)
+        if (startLocationName != null) {
+            Spacer(modifier = Modifier.height(2.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Place,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = stringResource(R.string.cluster_start_location, startLocationName),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
 
@@ -244,7 +277,11 @@ fun ClusterItem(
                             color = MaterialTheme.colorScheme.surfaceContainerHigh
                         ) {
                             val context = LocalContext.current
-                            Box(modifier = Modifier.fillMaxSize()) {
+                            val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                            val mapProperties = remember(isDark, context) {
+                                DarkMapStyle.resolveMapProperties(isDark, context)
+                            }
+                            Box(modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White)) {
                                 val start = LatLng(cluster.startLat, cluster.startLng)
                                 val end = LatLng(cluster.endLat, cluster.endLng)
                                 val apex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
@@ -271,9 +308,12 @@ fun ClusterItem(
                                 }
 
                                 GoogleMap(
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White),
                                     cameraPositionState = cameraPositionState,
-                                    properties = MapProperties(mapType = MapType.TERRAIN),
+                                    googleMapOptionsFactory = {
+                                        GoogleMapOptions().liteMode(true)
+                                    },
+                                    properties = mapProperties,
                                     onMapLoaded = { isMapLoaded = true },
                                     uiSettings = MapUiSettings(
                                         zoomControlsEnabled = false,
@@ -336,6 +376,11 @@ fun ClusterItem(
                                         icon = remember { createSensorMarker(context, R.drawable.ic_distance, TTColor.ApexPoint) }
                                     )
                                 }
+
+                                DarkMapAntiFlashOverlay(
+                                    isMapLoaded = isMapLoaded,
+                                    isDark = isDark
+                                )
                                 
                                 // Transparent overlay to ensure reliable click handling in a scrollable list
                                 Box(modifier = Modifier.fillMaxSize().combinedClickable(
@@ -460,7 +505,11 @@ fun UnclusteredWorkoutItem(
                             color = MaterialTheme.colorScheme.surfaceContainerHigh
                         ) {
                             val context = LocalContext.current
-                            Box(modifier = Modifier.fillMaxSize()) {
+                            val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                            val mapProperties = remember(isDark, context) {
+                                DarkMapStyle.resolveMapProperties(isDark, context)
+                            }
+                            Box(modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White)) {
                                 val start = workout.startLatLng
                                 val end = workout.endLatLng
                                 val apex = workout.maxDisplacementLatLng
@@ -483,9 +532,12 @@ fun UnclusteredWorkoutItem(
                                 }
 
                                 GoogleMap(
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White),
                                     cameraPositionState = cameraPositionState,
-                                    properties = MapProperties(mapType = MapType.TERRAIN),
+                                    googleMapOptionsFactory = {
+                                        GoogleMapOptions().liteMode(true)
+                                    },
+                                    properties = mapProperties,
                                     onMapLoaded = { isMapLoaded = true },
                                     uiSettings = MapUiSettings(
                                         zoomControlsEnabled = false,
@@ -530,6 +582,11 @@ fun UnclusteredWorkoutItem(
                                         )
                                     }
                                 }
+
+                                DarkMapAntiFlashOverlay(
+                                    isMapLoaded = isMapLoaded,
+                                    isDark = isDark
+                                )
                                 
                                 Box(modifier = Modifier.fillMaxSize().clickable { onClick() })
                             }

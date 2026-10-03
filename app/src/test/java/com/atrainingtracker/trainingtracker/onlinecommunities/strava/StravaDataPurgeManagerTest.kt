@@ -71,6 +71,7 @@ class StravaDataPurgeManagerTest {
 
         mockkConstructor(StravaUploadDbHelper::class)
         every { anyConstructed<StravaUploadDbHelper>().clearAllStravaData() } returns 5
+        every { anyConstructed<StravaUploadDbHelper>().checkpointWal() } returns Unit
 
         mockSegmentsDb = mockk(relaxed = true)
         mockkStatic(SegmentsDatabaseManager::class)
@@ -113,8 +114,9 @@ class StravaDataPurgeManagerTest {
         // 1. SharedPreferences credentials cleared
         verify { TrainingApplication.deleteStravaToken() }
 
-        // 2. StravaUpload.db activity JSON and IDs purged
+        // 2. StravaUpload.db activity JSON and IDs purged & WAL checkpointed (REQ-EXP-013)
         verify { anyConstructed<StravaUploadDbHelper>().clearAllStravaData() }
+        verify { anyConstructed<StravaUploadDbHelper>().checkpointWal() }
 
         // 3. Segments.db starred segments wiped & in-memory cache cleared
         verify { mockSegmentsDb.deleteAllTables() }

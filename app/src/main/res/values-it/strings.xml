@@ -311,10 +311,13 @@
     <string name="prefsStartLocationsSummary">Configura altitudine luoghi noti</string>
     <string name="updateStravaEquipment">Aggiorna attrezzatura Strava</string>
     <string name="lastUpdateOfEquipmentNever">mai aggiornato</string>
+    <string name="lastUpdateOfEquipmentNow">adesso</string>
     <string name="updateStravaRoutes">Aggiorna percorsi Strava</string>
     <string name="lastUpdateOfRoutesNever">mai aggiornato</string>
+    <string name="lastUpdateOfRoutesNow">adesso</string>
     <string name="updateStravaSegments">Aggiorna segmenti Strava</string>
     <string name="lastUpdateOfSegmentsNever">mai aggiornato</string>
+    <string name="lastUpdateOfSegmentsNow">adesso</string>
     <string name="automated_strava_segments_sync">Sincronizzazione automatica segmenti</string>
     <string name="automated_strava_segments_sync_summary">Recupera regolarmente i segmenti speciali da Strava</string>
     <string name="strava_segments_sync_interval">Intervallo di sincronizzazione</string>
@@ -322,9 +325,6 @@
     <string name="automated_strava_routes_sync_summary">Recupera regolarmente i percorsi da Strava</string>
     <string name="strava_routes_sync_interval">Intervallo di sincronizzazione</string>
 
-    <string name="getting_equipment_from_strava">caricamento attrezzatura Strava…\nattendere</string>
-    <string name="got_shoe">scarpe Strava ricevute\nricevuto: %1$s</string>
-    <string name="got_bike">bici Strava ricevute\nricevuto: %1$s</string>
     <string name="strava_success_but_must_check">caricato su Strava, verifica…</string>
     <string name="strava_success_waiting_for_result">caricato su Strava, attesa…</string>
 
@@ -484,6 +484,22 @@
     <string name="check_ANT_installation">controlla installazione ANT</string>
     <string name="forcePortrait">Orientamento verticale</string>
     <string name="Display">Schermo</string>
+    <string name="settings_category_savings">Risparmio batteria</string>
+    <string name="settings_category_savings_desc">Prolunga la durata della batteria per allenamenti più lunghi</string>
+    <string name="prefs_battery_saver_title">Oscuramento dinamico dello schermo</string>
+    <string name="prefs_battery_saver_summary">Regola dinamicamente la luminosità dello schermo in base a pendenza e zone di allenamento</string>
+    <string name="cockpit_theme_title">Tema del cockpit (durante l\'allenamento)</string>
+    <string name="cockpit_theme_description">Si applica esclusivamente alle visualizzazioni di telemetria e sensori durante gli allenamenti attivi. Il menu principale e \'Control Tracking\' mantengono il design standard.</string>
+    <string name="cockpit_theme_system">Sistema</string>
+    <string name="cockpit_theme_always_dark">Sempre scuro</string>
+    <string name="display_brightness_title">Luminosità schermo (durante l\'allenamento)</string>
+    <string name="display_brightness_system">Sistema</string>
+    <string name="display_brightness_auto">Auto</string>
+    <string name="display_brightness_custom">Manuale</string>
+    <string name="display_brightness_system_desc">Utilizza la luminosità dello schermo predefinita del sistema</string>
+    <string name="display_brightness_auto_desc">Regola dinamicamente la luminosità dello schermo in base a pendenza e zone di allenamento</string>
+    <string name="display_brightness_custom_desc">Livello di luminosità costante per tutto l\'allenamento</string>
+    <string name="display_brightness_slider_format">Luminosità: %1$d%%</string>
     <string name="smoothing">Smoothing valori</string>
     <string name="powerSmoothingTitle">Fattore α smoothing potenza</string>
     <string name="powerSmoothingTitle_format">Smoothing potenza: α=%1$f</string>
@@ -594,7 +610,15 @@
     <string name="label_min">Min</string>
     <string name="label_max">Max</string>
 
+    <string name="zone_display_title">Visualizzazione delle zone</string>
+    <string name="zone_display_background">Sfondo chiaro</string>
+    <string name="zone_display_left_bar">Barra sinistra</string>
+    <string name="zone_display_right_bar">Barra destra</string>
+    <string name="zone_display_text_color">Colore del testo</string>
+    <string name="zone_display_preview_title">Anteprima</string>
+
     <string name="prefEmailExport">e-Mail</string>
+
 
 <!-- 2026 -->
     <!-- StringUtils -->
@@ -742,6 +766,8 @@
     <string name="view_size_xlarge">Molto grande</string>
     <string name="view_size_huge">Enorme</string>
     <string name="view_size_xhuge">Gigante</string>
+    <string name="view_size_xxhuge">XGigante</string>
+    <string name="view_size_xxxhuge">XXGigante</string>
     <string name="configure">Configura</string>
     <string name="tab_name">Nome</string>
 
@@ -873,6 +899,9 @@
         <item quantity="other">%1$d Sessioni</item>
     </plurals>
     <string name="workout_periods__longest_workout">Allenamento più lungo</string>
+    <string name="workout_periods__region_format">Regione %1$d (%2$d)</string>
+    <string name="workout_periods__primary_region_format">Regione principale: Regione %1$d (%2$d)</string>
+    <string name="workout_periods__all_regions_format">Tutte le regioni (%1$d)</string>
     <string name="workout_periods__migration_querying">Caricamento della cronologia degli allenamenti…</string>
     <string name="workout_periods__migration_reading">Lettura dell\'allenamento %1$d di %2$d…</string>
     <string name="workout_periods__migration_syncing">Sincronizzazione di %1$s…</string>
@@ -1099,8 +1128,29 @@
     <string name="filter_section_equipment">Attrezzatura</string>
     <string name="filter_section_attributes">Attributi</string>
     <string name="filter_section_thresholds">Distanza e durata</string>
+    <string name="filter_section_start_at">Partenza da</string>
+    <string name="settings_workout_card_title">Elenco allenamenti (schede dettagliate)</string>
+    <string name="settings_workout_card_map">Anteprima mappa</string>
+    <string name="settings_workout_card_elevation">Profilo altimetrico</string>
+    <string name="settings_workout_card_extrema">Valori estremi</string>
+    <string name="settings_workout_card_laps">Panoramica giri</string>
+    <string name="settings_workout_card_strava">Attività Strava</string>
+    <string name="settings_workout_card_description">Descrizione e note</string>
+    <string name="settings_workout_card_charts">Grafici di telemetria</string>
+    <string name="settings_workout_card_zones">Analisi zone (FC e potenza)</string>
+    <string name="settings_edit_workout_title">Modifica allenamento</string>
+    <string name="settings_edit_workout_cluster">Percorso / Itinerario</string>
+    <string name="settings_edit_workout_commute_trainer">Tragitto casa-lavoro e rullo</string>
+    <string name="settings_edit_workout_race">Gara</string>
+    <string name="settings_edit_workout_strava">Caricamento su Strava</string>
+    <string name="settings_edit_workout_description">Descrizione e note</string>
+    <string name="settings_edit_workout_goal">Obiettivo</string>
+    <string name="settings_edit_workout_method">Metodo</string>
     <string name="filter_commute">Spostamento</string>
     <string name="filter_trainer">Indoor / Rulli</string>
+    <string name="filter_race_only">Solo gare</string>
+    <string name="race">Gara</string>
+    <string name="race_badge">Gara</string>
     <string name="filter_has_gps">Con traccia GPS</string>
     <string name="filter_min_distance_format">&gt; %1$s km</string>
     <string name="filter_max_distance_format">&lt; %1$s km</string>
@@ -1198,4 +1248,169 @@
     <string name="lap_table_header_lap">Giro</string>
     <string name="lap_table_header_time">Tempo</string>
     <string name="lap_table_header_distance">Distanza</string>
+
+    <!-- ATT-919 / ATT-1382: Known Start Locations (Favorite Locations) Management & Altitude Lock UI -->
+    <string name="drawer_start_locations">Luoghi preferiti</string>
+    <string name="known_locations_title">Luoghi preferiti</string>
+    <string name="known_locations_tab_list">Elenco</string>
+    <string name="known_locations_tab_map">Mappa</string>
+    <string name="known_locations_search_hint">Cerca luoghi preferiti…</string>
+    <string name="known_locations_empty_title">Nessun luogo preferito registrato</string>
+    <string name="known_locations_empty_desc">I luoghi preferiti vengono memorizzati automaticamente all\'avvio di un allenamento o possono essere calibrati manualmente.</string>
+    <string name="known_location_unnamed_format">Posizione di partenza (%1$.5f, %2$.5f)</string>
+    <string name="known_locations_starts_count">%1$d partenze</string>
+    <string name="known_locations_sort_starts">Partenze</string>
+    <plurals name="known_locations_starts">
+        <item quantity="one">%1$d partenza</item>
+        <item quantity="other">%1$d partenze</item>
+    </plurals>
+    <plurals name="known_locations_routes">
+        <item quantity="one">%1$d percorso</item>
+        <item quantity="other">%1$d percorsi</item>
+    </plurals>
+    <string name="source_internet_dem">Internet (DEM)</string>
+    <string name="source_manual_user">Manuale</string>
+    <string name="source_auto_learned">Automatico</string>
+    <string name="source_gps_fallback">GPS</string>
+    <string name="source_legacy_raw">Preesistente</string>
+    <string name="known_location_edit_title">Modifica luogo preferito</string>
+    <string name="known_location_fetch_dem">Scarica da Internet (DEM)</string>
+    <string name="known_location_show_map">Mostra sulla mappa</string>
+    <string name="known_location_hide_map">Nascondi mappa</string>
+    <string name="sort_altitude">Altitudine</string>
+    <string name="known_location_radius_label">Raggio di copertura</string>
+    <string name="known_location_radius_format">%1$s: %2$s</string>
+    <string name="phone_battery">Batteria del telefono</string>
+    <string name="phone_battery_short">Batteria</string>
+    <string name="battery_remaining_time">Tempo residuo batteria</string>
+    <string name="battery_remaining_time_short">Residuo</string>
+    <string name="battery_charging">In carica</string>
+    <string name="workout_name_run_from">Corsa da %1$s</string>
+    <string name="workout_name_ride_from">Uscita da %1$s</string>
+    <string name="workout_name_activity_from">Attività da %1$s</string>
+    <string name="workout_name_round_trip">Giro da %1$s</string>
+    <string name="workout_name_run_from_to">Corsa da %1$s a %2$s</string>
+    <string name="workout_name_ride_from_to">Uscita da %1$s a %2$s</string>
+    <string name="workout_name_activity_from_to">Attività da %1$s a %2$s</string>
+    <string name="workout_name_run_to">Corsa verso %1$s</string>
+    <string name="workout_name_ride_to">Uscita verso %1$s</string>
+    <string name="workout_name_activity_to">Attività verso %1$s</string>
+    <string name="cluster_seed_name_loop_format">Giro da %1$s</string>
+    <string name="prefs_lieblingsort_feedback_title">Luogo preferito e feedback di calibrazione</string>
+    <string name="prefs_lieblingsort_feedback_summary">Conferma il punto di partenza riconosciuto e la calibrazione del barometro nella cabina di pilotaggio</string>
+    <string name="location_calibrated_format">%1$s (%2$s calibrato)</string>
+    <string name="location_detected_format">%1$s rilevato</string>
+    <string name="workout_start_location">Partenza: %s</string>
+    <string name="workout_destination_location">Arrivo: %s</string>
+    <string name="workout_start_and_destination">Partenza e arrivo: %s</string>
+    <string name="filter_start_location">Luogo di partenza</string>
+    <string name="known_locations_view_workouts">Visualizza allenamenti</string>
+    <string name="known_locations_view_routes">Visualizza percorsi</string>
+    <string name="cluster_start_location">Partenza: %s</string>
+    <string name="known_location_routes_header">Percorsi da qui (%d):</string>
+    <string name="filter_by_start_location">Filtra per luogo di partenza</string>
+
+    <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
+    <string name="drawer__expert_settings">Impostazioni per esperti</string>
+    <string name="advanced_tuning_title">Impostazioni per esperti</string>
+    <string name="advanced_tuning_open">Impostazioni per esperti…</string>
+    <string name="advanced_tuning_warning_title">Impostazioni avanzate</string>
+    <string name="advanced_tuning_warning_desc">La modifica di questi parametri influisce sulle euristiche di tracciamento, sul filtraggio dei sensori e sul risparmio energetico. È possibile ripristinare i valori predefiniti in qualsiasi momento.</string>
+    <string name="tuning_cat_battery_saver">Risparmio batteria AMOLED</string>
+    <string name="tuning_cat_gps">Filtraggio GPS e posizione</string>
+    <string name="tuning_cat_elevation">Dinamica di altitudine e pendenza</string>
+    <string name="tuning_full_dim_factor_title">Luminosità attenuazione completa</string>
+    <string name="tuning_full_dim_factor_desc">Luminosità dello schermo su terreno pianeggiante e sforzi leggeri (limitata &gt;= 5%).</string>
+    <string name="tuning_medium_dim_factor_title">Luminosità attenuazione media</string>
+    <string name="tuning_medium_dim_factor_desc">Luminosità dello schermo su pendenze moderate o zone ritmo.</string>
+    <string name="tuning_slope_flat_title">Soglia terreno pianeggiante</string>
+    <string name="tuning_slope_flat_desc">Percentuale di pendenza al di sotto della quale è consentita l\'attenuazione completa.</string>
+    <string name="tuning_slope_steep_title">Soglia salita ripida</string>
+    <string name="tuning_slope_steep_desc">Percentuale di pendenza oltre la quale viene forzata la massima luminosità.</string>
+    <string name="tuning_wakeup_duration_title">Durata risveglio</string>
+    <string name="tuning_wakeup_duration_desc">Tempo durante il quale lo schermo rimane acceso dopo un tocco o un gesto di prossimità.</string>
+    <string name="tuning_downward_delay_title">Ritardo di attenuazione graduale</string>
+    <string name="tuning_downward_delay_desc">Ritardo di isteresi prima di attenuare lo schermo per evitare sfarfallii durante variazioni rapide di pendenza.</string>
+    <string name="tuning_gps_accuracy_title">Soglia precisione GPS</string>
+    <string name="tuning_gps_accuracy_desc">Errore orizzontale massimo accettabile; le posizioni con precisione inferiore verranno scartate.</string>
+    <string name="tuning_altitude_window_title">Finestra di smussamento altitudine</string>
+    <string name="tuning_altitude_window_desc">Finestra temporale della media mobile per altitudine istantanea e velocità verticale.</string>
+    <string name="tuning_slope_min_speed_title">Velocità minima per pendenza</string>
+    <string name="tuning_slope_min_speed_desc">Velocità minima necessaria per calcolare la pendenza in tempo reale.</string>
+    <string name="tuning_cat_aftermath">Aftermath e analisi profilo</string>
+    <string name="tuning_profile_x_axis_title">Asse X del profilo altimetrico</string>
+    <string name="tuning_profile_x_axis_desc">Seleziona la metrica dell\'asse orizzontale per i grafici altimetrici.</string>
+    <string name="tuning_profile_x_axis_distance">Distanza</string>
+    <string name="tuning_profile_x_axis_time">Tempo</string>
+    <string name="tuning_telemetry_x_axis_title">Asse X dei grafici di telemetria</string>
+    <string name="tuning_telemetry_x_axis_desc">Seleziona il dominio dell\'asse orizzontale per i grafici di telemetria (frequenza cardiaca, passo/velocità, potenza).</string>
+    <string name="tuning_pace_ceiling_title">Limite massimo di passo</string>
+    <string name="tuning_pace_ceiling_desc">Filtra i picchi GPS nel grafico del passo. Le andature più veloci di questo limite vengono tagliate.</string>
+
+    <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
+    <string name="tuning_cat_cockpit_typography">Tipografia cockpit</string>
+    <string name="tuning_cockpit_font_family_title">Famiglia di caratteri</string>
+    <string name="tuning_font_system_default">Predefinito di sistema</string>
+    <string name="tuning_font_seven_segment">Digitale a 7 segmenti</string>
+    <string name="tuning_font_modern_athletic">Sportivo moderno</string>
+    <string name="tuning_font_monospace">Monospazio</string>
+    <string name="tuning_font_playful">Giocoso</string>
+    <string name="tuning_font_bebas_neue">Bebas Neue</string>
+    <string name="tuning_font_teko">Teko</string>
+    <string name="tuning_font_barlow_condensed">Barlow Condensed</string>
+    <string name="tuning_font_oswald">Oswald</string>
+    <string name="tuning_font_chakra_petch">Chakra Petch</string>
+    <string name="tuning_font_oxanium">Oxanium</string>
+    <string name="tuning_font_rajdhani">Rajdhani</string>
+    <string name="tuning_font_montserrat">Montserrat</string>
+    <string name="tuning_cockpit_font_weight_title">Spessore carattere</string>
+    <string name="tuning_weight_normal">Normale</string>
+    <string name="tuning_weight_semi_bold">Semigrassetto</string>
+    <string name="tuning_weight_bold">Grassetto</string>
+    <string name="tuning_cockpit_preview_title">Anteprima dal vivo</string>
+    <string name="tuning_default_format">Predefinito: %1$s</string>
+    <string name="reset_to_defaults">Ripristina impostazioni predefinite</string>
+    <string name="reset_to_defaults_success">Impostazioni di regolazione ripristinate ai valori di fabbrica.</string>
+    <string name="tuning_cat_sensors_gps">Sensori, GPS e filtri</string>
+    <string name="tuning_cat_workout_masks_cards">Schede e dettagli allenamento</string>
+    <string name="tuning_summary_masks_cards_format">%1$d/8 schede</string>
+    <string name="tuning_matrix_col_list">In elenco</string>
+    <string name="tuning_matrix_col_details">Nei dettagli</string>
+    <string name="tuning_matrix_feature">Elemento</string>
+    <string name="tuning_summary_matrix_format">%1$d/8 in elenco, %2$d/8 nei dettagli</string>
+    <string name="map_splitter_content_description">Barra di divisione mappa e telemetria. Trascina verticalmente per ridimensionare, tocca due volte per ripristinare.</string>
+
+    <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
+    <string name="move_tile_banner_instruction">Riquadro selezionato: Tocca un altro riquadro per scambiare o \'+\' per spostare.</string>
+    <string name="move_tile_cancel">Annulla</string>
+
+    <!-- Heart Rate 5-Zone Distribution Bar (ATT-1389 / REQ-UI-202) -->
+    <string name="aftermath_hr_zones_title">Zone di frequenza cardiaca</string>
+
+    <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
+    <string name="aftermath_power_zones_title">Zone di potenza</string>
+    <!-- Telemetry Frequency Histogram (ATT-1845 / REQ-UI-231) -->
+    <string name="zone_mode_5_zones">5 zone</string>
+    <string name="zone_mode_histogram">Istogramma</string>
+    <string name="aftermath_laps_splits_title">Giri e tempi parziali</string>
+    <string name="split_badge_best">Migliore</string>
+    <!-- Continuous Metric Graphs & Headings (ATT-1740 / REQ-UI-206) -->
+    <string name="graph_heading_elevation">Profilo altimetrico</string>
+    <string name="graph_heading_heart_rate">Frequenza cardiaca</string>
+    <string name="graph_heading_speed">Velocità</string>
+    <string name="graph_heading_pace">Passo</string>
+    <string name="graph_heading_power">Potenza</string>
+
+    <!-- Persistent Sticky Global Zoom Toolbar (ATT-1876 / REQ-UI-225) -->
+    <string name="zoom_in">Ingrandisci</string>
+    <string name="zoom_out">Rimpicciolisci</string>
+    <string name="zoom_reset">Reimposta zoom</string>
+    <string name="zoom_pan_mode">Modalità panoramica</string>
+    <string name="zoom_scrub_mode">Modalità scorrimento</string>
+
+    <!-- Configurable Lap Display Mode (ATT-1870 / REQ-UI-229) -->
+    <string name="settings_lap_display_mode_title">Modalità visualizzazione giri</string>
+    <string name="settings_lap_display_mode_table">Tabella</string>
+    <string name="settings_lap_display_mode_visualizer">Visualizzatore</string>
+    <string name="settings_lap_display_mode_both">Entrambi</string>
 </resources>

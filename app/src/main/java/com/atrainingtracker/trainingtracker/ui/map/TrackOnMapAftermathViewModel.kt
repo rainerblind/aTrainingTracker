@@ -32,6 +32,8 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -48,10 +50,16 @@ data class AftermathMapUIState(
     val routes: List<MapRoute> = emptyList(),
     val markers: List<LocationMarker> = emptyList(),
     val bSportType: BSportType = BSportType.UNKNOWN,
-    val zoomFocus: MapZoomFocus = MapZoomFocus.FIT_PRIMARY
+    val zoomFocus: MapZoomFocus = MapZoomFocus.FIT_PRIMARY,
+    val hrZoneDistribution: ZoneDistributionData? = null,
+    val powerZoneDistribution: ZoneDistributionData? = null,
+    val telemetryPath: List<PathPoint> = emptyList()
 )
 
-class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(application) {
+class TrackOnMapAftermathViewModel @JvmOverloads constructor(
+    application: Application,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(AftermathMapUIState())
     val uiState = _uiState.asStateFlow()
@@ -84,7 +92,7 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
     }
 
     fun loadAftermathData(workoutData: WorkoutData) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val workoutId = workoutData.id
             val bSportType = workoutData.bSportType
 
@@ -194,6 +202,13 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
                         availableTrackTypes = fullTracks.map { it.type }.toSet()
                     )
                 }
+            } else {
+                val telemetryPoints = workoutRepository.getWorkoutTelemetryPoints(workoutId)
+                withContext(Dispatchers.Main) {
+                    _uiState.value = _uiState.value.copy(
+                        telemetryPath = telemetryPoints
+                    )
+                }
             }
 
             // --- PHASE 5: Segments (All for spatial context) ---
@@ -223,6 +238,16 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
             withContext(Dispatchers.Main) {
                 _uiState.value = _uiState.value.copy(
                     routes = mapRoutes
+                )
+            }
+
+            // --- PHASE 7: Zone Analytics (Heart Rate & Power 5-Zone Distribution) ---
+            val hrDistribution = workoutRepository.getHeartRateZoneDistribution(workoutId, bSportType)
+            val powerDistribution = workoutRepository.getPowerZoneDistribution(workoutId)
+            withContext(Dispatchers.Main) {
+                _uiState.value = _uiState.value.copy(
+                    hrZoneDistribution = hrDistribution,
+                    powerZoneDistribution = powerDistribution
                 )
             }
         }

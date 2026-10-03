@@ -77,6 +77,7 @@ data class WorkoutData(
     val equipmentId: Long,
     val commute: Boolean,
     val trainer: Boolean,
+    val race: Boolean = false,
     val mapPolyline: String,
     val encodedAltitudes: String,
     val encodedDistances: String,
@@ -107,6 +108,8 @@ data class WorkoutData(
     val stravaActivityData: String? = null,
     val clusterId: Long = -1,
     val clusterName: String? = null,
+    val startLocationName: String? = null,
+    val endLocationName: String? = null,
 
     // --- 2. Persisted Spatial Bounds (ATT-352) ---
     val minLat: Double? = null,
@@ -136,11 +139,15 @@ data class WorkoutData(
             equipmentName = equipmentName,
             commute = commute,
             trainer = trainer,
+            race = race,
             uploadToStrava = uploadToStrava,
             stravaSportName = stravaSportName,
             clusterId = clusterId,
-            clusterName = clusterName
+            clusterName = clusterName,
+            startLocationName = startLocationName,
+            endLocationName = endLocationName
         )
+
 
     val detailsData: WorkoutDetailsData
         get() = WorkoutDetailsData(

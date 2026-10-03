@@ -36,6 +36,7 @@ import android.location.Location;
 import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
+import java.util.concurrent.CompletableFuture;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -47,6 +48,8 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.app.PendingIntent;
 import android.content.pm.PackageManager;
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
+import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
+import com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelper;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
@@ -176,8 +179,15 @@ public class TrackerService extends Service {
 
     public static final int TRACKING_INTERRUPTED_NOTIFICATION_ID = 2;
     private boolean mTrackingInterrupted = false;
-    private long mWorkoutID;
+    private volatile long mWorkoutID;
     private LiveWorkoutSession mLiveSession;
+    private volatile CompletableFuture<Void> mTableInitializationFuture = CompletableFuture.completedFuture(null);
+    private StartType mStartType;
+    private boolean mWorkoutStartLocationRecorded = false;
+
+    public CompletableFuture<Void> getTableInitializationFuture() {
+        return mTableInitializationFuture;
+    }
     final BroadcastReceiver mLapSummaryReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, @NonNull Intent intent) {
             if (DEBUG) Log.i(TAG, "received lap summary intent");
@@ -207,13 +217,19 @@ public class TrackerService extends Service {
     // private String mSport;  
     // private String mGCDataString;
     // private String[] mSensorNames;
-    private String mSamplesTableName;
+    private volatile String mSamplesTableName;
     private final BroadcastReceiver mAltitudeCorrectionReceiver = new BroadcastReceiver() {
 
         @Override
         public void onReceive(Context context, @NonNull Intent intent) {
             double altitudeCorrection = intent.getDoubleExtra(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE, 0.0);
             if (altitudeCorrection == 0.0) return;
+
+            // REQ-CON-017: Reject runaway retroactive shifts exceeding 500m
+            if (Math.abs(altitudeCorrection) > 500.0) {
+                Log.w(TAG, "Rejecting non-physical altitude correction shift: " + altitudeCorrection + " m");
+                return;
+            }
 
             if (DEBUG)
                 Log.i(TAG, "Triggering atomic altitude correction by " + altitudeCorrection);
@@ -226,21 +242,31 @@ public class TrackerService extends Service {
                 mLiveSession.applyAltitudeCorrection(altitudeCorrection);
             }
 
-            // 2. Database Synchronization (offloaded to DB executor)
-            mDbExecutor.submit(() -> {
+            // 2. Database Synchronization (offloaded to DB executor via non-blocking barrier)
+            mTableInitializationFuture.thenAcceptAsync(v -> {
                 WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(TrackerService.this);
                 WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(TrackerService.this);
 
-                // 2a. Raw Samples shift
-                String operator = altitudeCorrection >= 0 ? " + " : " - ";
-                samplesManager.getDatabase().execSQL("UPDATE " + samplesTable
-                        + " set " + SensorType.ALTITUDE.name() + " = " + SensorType.ALTITUDE.name() + operator + Math.abs(altitudeCorrection));
+                // 2a. Raw Samples shift in explicit atomic SQLite transaction (REQ-CON-017)
+                android.database.sqlite.SQLiteDatabase db = samplesManager.getDatabase();
+                db.beginTransaction();
+                try {
+                    String operator = altitudeCorrection >= 0 ? " + " : " - ";
+                    db.execSQL("UPDATE " + samplesTable
+                            + " set " + SensorType.ALTITUDE.name() + " = " + SensorType.ALTITUDE.name() + operator + Math.abs(altitudeCorrection));
+                    db.setTransactionSuccessful();
+                } finally {
+                    db.endTransaction();
+                }
 
                 // 2b. Summary Extrema and Elevation Stream shift (ATT-38)
                 summariesManager.shiftAltitudeData(workoutId, altitudeCorrection);
 
                 // 3. Notify UI/Repository to refresh from DB
                 LocalBroadcastManager.getInstance(TrackerService.this).sendBroadcast(new Intent(WORKOUT_UPDATED_INTENT).putExtra(WORKOUT_ID, workoutId));
+            }, mDbExecutor).exceptionally(ex -> {
+                Log.e(TAG, "Altitude shift skipped due to initialization failure: " + ex.getMessage());
+                return null;
             });
         }
     };
@@ -404,18 +430,46 @@ public class TrackerService extends Service {
         } else {
             startType = StartType.valueOf(intent.getStringExtra(START_TYPE));
         }
+        mStartType = startType;
+        mWorkoutStartLocationRecorded = (startType != StartType.START_NORMAL);
         switch (startType) {
             case START_NORMAL:
                 if (DEBUG) Log.d(TAG, "starting a new workout");
                 // The workout name is just the date+time
                 mBaseFileName = (new SimpleDateFormat("yyyy-MM-dd_HHmmss", Locale.US)).format(new Date());
-                mWorkoutID = createNewWorkout();
-                mLiveSession = new LiveWorkoutSession(mWorkoutID, IMPORTANT_SENSOR_TYPES);
-                WorkoutSamplesDatabaseManager.getInstance(this).createNewTable(mBaseFileName, Arrays.asList(SensorType.values()));       // create a new table with a column for each possible sensor
+                mSamplesTableName = WorkoutSamplesDatabaseManager.getTableName(mBaseFileName);
+                mLiveSession = new LiveWorkoutSession(0, IMPORTANT_SENSOR_TYPES);
+
+                final CompletableFuture<Void> initFuture = new CompletableFuture<>();
+                mTableInitializationFuture = initFuture;
+
+                mDbExecutor.submit(() -> {
+                    try {
+                        mWorkoutID = createNewWorkout();
+                        if (mLiveSession != null) {
+                            mLiveSession.setWorkoutId(mWorkoutID);
+                        }
+                        WorkoutSamplesDatabaseManager.getInstance(TrackerService.this)
+                                .createNewTable(mBaseFileName, Arrays.asList(SensorType.values()));
+                        initFuture.complete(null);
+                        notifyTrackingStarted(mWorkoutID);
+                    } catch (Throwable t) {
+                        Log.e(TAG, "Fatal error initializing workout database asynchronously", t);
+                        initFuture.completeExceptionally(t);
+                        mTrackingInterrupted = true;
+                        if (mTrackerHandle != null) {
+                            mTrackerHandle.cancel(true);
+                            mTrackerHandle = null;
+                        }
+                        showTrackingInterruptedNotification();
+                        performStopSelf();
+                    }
+                });
                 break;
 
             case RESUME_BY_USER:
                 Log.d(TAG, "resuming by user request");
+                mTableInitializationFuture = CompletableFuture.completedFuture(null);
                 if (mBanalService != null) {
                     recreateValuesWhenResuming();
                     // mBanalService.resumeFromPaused();  already started by broadcast?
@@ -426,6 +480,7 @@ public class TrackerService extends Service {
 
             case RESUME_SERVICE_RECREATION:
                 Log.d(TAG, "resuming after killed service");
+                mTableInitializationFuture = CompletableFuture.completedFuture(null);
                 if (mTrainingApplication != null) {
                     mTrainingApplication.setTracking();
                 }
@@ -438,7 +493,9 @@ public class TrackerService extends Service {
                 break;
         }
 
-        mSamplesTableName = WorkoutSamplesDatabaseManager.getTableName(mBaseFileName);
+        if (startType != StartType.START_NORMAL) {
+            mSamplesTableName = WorkoutSamplesDatabaseManager.getTableName(mBaseFileName);
+        }
 
         if (mBanalService != null && !BANALService.isSearching()) {
             onSearchingFinished();
@@ -449,8 +506,10 @@ public class TrackerService extends Service {
                 1, // sampling time
                 TimeUnit.SECONDS);
 
-        // notify others
-        notifyTrackingStarted(mWorkoutID);
+        // notify others (for resume types; START_NORMAL emits upon table creation)
+        if (startType != StartType.START_NORMAL) {
+            notifyTrackingStarted(mWorkoutID);
+        }
 
         Notification notification = mTrainingApplication != null ? mTrainingApplication.getSearchingAndTrackingNotification() : null;
         if (notification != null) {
@@ -748,28 +807,38 @@ public class TrackerService extends Service {
         values.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getInstance(this).getBSportType(sportTypeId).name());
         values.put(WorkoutSummaries.GC_DATA, mBanalService.getGCDataString());
 
-        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
-        SQLiteDatabase summariesDb = databaseManager.getDatabase();
-        summariesDb.update(WorkoutSummaries.TABLE,
-                values,
-                WorkoutSummaries.C_ID + "=?",
-                new String[]{Long.toString(mWorkoutID)});
+        mTableInitializationFuture.thenAcceptAsync(v -> {
+            try {
+                WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(TrackerService.this);
+                SQLiteDatabase summariesDb = databaseManager.getDatabase();
+                summariesDb.update(WorkoutSummaries.TABLE,
+                        values,
+                        WorkoutSummaries.C_ID + "=?",
+                        new String[]{Long.toString(mWorkoutID)});
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to update summaries DB on searching finished", e);
+            }
+        }, mDbExecutor);
     }
 
     private void onUserSelectedSportTypeChanged() {
         long sportTypeId = getSportTypeId();
-
-        // when the user changes the sport type, we update the summaries DB
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.SPORT_ID, sportTypeId);
         values.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getInstance(this).getBSportType(sportTypeId).name());
 
-        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
-        SQLiteDatabase summariesDb = databaseManager.getDatabase();
-        summariesDb.update(WorkoutSummaries.TABLE,
-                values,
-                WorkoutSummaries.C_ID + "=?",
-                new String[]{Long.toString(mWorkoutID)});
+        mTableInitializationFuture.thenAcceptAsync(v -> {
+            try {
+                WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(TrackerService.this);
+                SQLiteDatabase summariesDb = databaseManager.getDatabase();
+                summariesDb.update(WorkoutSummaries.TABLE,
+                        values,
+                        WorkoutSummaries.C_ID + "=?",
+                        new String[]{Long.toString(mWorkoutID)});
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to update sport type in summaries DB", e);
+            }
+        }, mDbExecutor);
     }
 
 
@@ -877,7 +946,7 @@ public class TrackerService extends Service {
             final long workoutId = mWorkoutID;
             final int timeTotal = mTimeTotal_s;
             
-            mDbExecutor.submit(() -> {
+            mTableInitializationFuture.thenAcceptAsync(v -> {
                 WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(TrackerService.this);
                 SQLiteDatabase summariesDb = summariesManager.getDatabase();
                 
@@ -896,7 +965,7 @@ public class TrackerService extends Service {
                 
                 // Notify UI to refresh the card
                 LocalBroadcastManager.getInstance(TrackerService.this).sendBroadcast(new Intent(WORKOUT_UPDATED_INTENT).putExtra("WORKOUT_ID", workoutId));
-            });
+            }, mDbExecutor);
             return;
         }
 
@@ -914,6 +983,17 @@ public class TrackerService extends Service {
             }
         }
         final LatLng currentPos = currentPosTemp;
+
+        // ATT-1447 / REQ-DAT-015: Record workout start location atomically on first valid GPS fix
+        if (mStartType == StartType.START_NORMAL && !mWorkoutStartLocationRecorded && currentPos != null) {
+            mWorkoutStartLocationRecorded = true;
+            final LatLng startPos = currentPos;
+            SensorData<Number> altData = (mBanalService != null) ? mBanalService.getBestSensorData(SensorType.ALTITUDE) : null;
+            final Double startAlt = (altData != null && altData.getValue() != null) ? altData.getValue().doubleValue() : null;
+            mDbExecutor.execute(() -> {
+                KnownLocationsDatabaseManager.getInstance(TrackerService.this).recordWorkoutStart(startPos, startAlt);
+            });
+        }
 
         Map<String, SensorValueType> sensorName2Type = new HashMap<>();
 
@@ -1034,11 +1114,12 @@ public class TrackerService extends Service {
         }
 
         final Map<String, SensorValueType> finalSensorName2Type = sensorName2Type;
-        final String tableName = mSamplesTableName;
-        final long workoutId = mWorkoutID;
 
-        // 2. Offload all DB work to the dedicated executor
-        mDbExecutor.submit(() -> {
+        // 2. Offload all DB work to the dedicated executor via non-blocking reactive barrier
+        mTableInitializationFuture.thenAcceptAsync(v -> {
+            final String tableName = mSamplesTableName;
+            final long workoutId = mWorkoutID;
+
             WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(TrackerService.this);
             WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(TrackerService.this);
             SQLiteDatabase samplesDb = samplesManager.getDatabase();
@@ -1081,6 +1162,9 @@ public class TrackerService extends Service {
 
             // Notify UI
             LocalBroadcastManager.getInstance(TrackerService.this).sendBroadcast(new Intent(WORKOUT_UPDATED_INTENT).putExtra("WORKOUT_ID", workoutId));
+        }, mDbExecutor).exceptionally(ex -> {
+            Log.e(TAG, "Sample write skipped due to initialization failure: " + ex.getMessage());
+            return null;
         });
     }
 
@@ -1243,6 +1327,27 @@ public class TrackerService extends Service {
             } else {
                 // No cluster match -> use hardware identity
                 summariesManager.applyInferredIdentity(mWorkoutID, identity);
+
+                // ATT-1398: Intelligent Workout Auto-Naming based on recognized start/destination Lieblingsorte
+                KnownLocationsDatabaseManager knownLocationsManager = KnownLocationsDatabaseManager.getInstance(this);
+                KnownLocationsDatabaseManager.MyLocation startLoc = knownLocationsManager.getMyLocation(startPosRaw);
+                KnownLocationsDatabaseManager.MyLocation endLoc = knownLocationsManager.getMyLocation(endPosRaw);
+                float endpointDist = engine.distanceBetween(startPosRaw, endPosRaw);
+                BSportType resolvedSport = (identity != null && identity.getBSportType() != null && identity.getBSportType() != BSportType.UNKNOWN)
+                    ? identity.getBSportType()
+                    : mBanalService.getBSportType();
+                String autoName = WorkoutAutoNamingHelper.generateWorkoutName(
+                    this,
+                    resolvedSport,
+                    startLoc,
+                    endLoc,
+                    endpointDist
+                );
+                if (autoName != null && !autoName.trim().isEmpty()) {
+                    ContentValues nameValues = new ContentValues();
+                    nameValues.put(WorkoutSummaries.WORKOUT_NAME, autoName);
+                    summariesManager.getDatabase().update(WorkoutSummaries.TABLE, nameValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(mWorkoutID)});
+                }
             }
         } else {
             // No spatial data -> use hardware identity

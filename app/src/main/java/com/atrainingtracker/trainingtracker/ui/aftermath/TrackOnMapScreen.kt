@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -34,7 +35,21 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneDistributionCard
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitCalculator
+import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitVisualizerCard
+import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
 import com.atrainingtracker.trainingtracker.ui.map.*
+import androidx.compose.ui.platform.LocalContext
+import com.atrainingtracker.trainingtracker.MyPreferenceManager
+import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
+import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.WorkoutDescription
+import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
+import com.atrainingtracker.trainingtracker.ui.components.strava.StravaActivitySection
 
 @Composable
 fun TrackOnMapScreen(
@@ -52,21 +67,93 @@ fun TrackOnMapScreen(
     showMap: Boolean = true,
     onClusterClick: ((Long) -> Unit)? = null,
     onEditWorkout: ((Long) -> Unit)? = null,
-    headerActions: @Composable RowScope.() -> Unit = {}
+    headerActions: @Composable RowScope.() -> Unit = {},
+    hrZoneDistribution: ZoneDistributionData? = null,
+    powerZoneDistribution: ZoneDistributionData? = null,
+    analyticsContent: (@Composable ColumnScope.() -> Unit)? = null,
+    metadataContent: (@Composable ColumnScope.() -> Unit)? = null,
+    telemetryPath: List<PathPoint> = emptyList(),
+    detailPreferences: WorkoutDetailPreferences? = null
 ) {
+    val context = LocalContext.current
+    val preferenceManager = remember { MyPreferenceManager(context.applicationContext) }
+    val persistedDetailPrefs by preferenceManager.workoutDetailPreferencesFlow.collectAsState(initial = WorkoutDetailPreferences())
+    val activeDetailPrefs = detailPreferences ?: persistedDetailPrefs
+
     // PERFORMANCE: Memoize the filtered tracks list
     val filteredTracks = remember(tracks, enabledTrackTypes) {
         tracks.filter { it.type in enabledTrackTypes }
     }
 
+    val hasGpsTrack = remember(tracks) {
+        tracks.any { track ->
+            track.path.isNotEmpty() && track.latLngs.any { it.latitude != 0.0 || it.longitude != 0.0 }
+        }
+    }
+
+    var selectedLapNr by rememberSaveable { mutableStateOf<Long?>(null) }
+
+    val formatters = LocalMetricFormatter.current
+    val splitChartData = remember(workoutData.laps, workoutData.bSportType, formatters) {
+        LapSplitCalculator.calculateSplitData(
+            laps = workoutData.laps,
+            bSportType = workoutData.bSportType,
+            paceFormatter = { formatters.pace.format_with_units(it) },
+            speedFormatter = { formatters.speed.format_with_units(it) }
+        )
+    }
+
+    val bestTrack = remember(tracks) {
+        tracks.find { it.type == TrackType.BEST } ?: tracks.firstOrNull()
+    }
+    val allPoints = remember(bestTrack) {
+        bestTrack?.latLngs ?: emptyList()
+    }
+    val allDistances = remember(bestTrack) {
+        bestTrack?.path?.map { it.distance } ?: emptyList()
+    }
+
+    val activeScrubPath = remember(hasGpsTrack, bestTrack, tracks, telemetryPath) {
+        if (hasGpsTrack) {
+            bestTrack?.path ?: tracks.firstOrNull()?.path
+        } else {
+            telemetryPath.ifEmpty { null }
+        }
+    }
+
+    val (startDistM, endDistM) = remember(workoutData.laps, selectedLapNr) {
+        if (selectedLapNr != null) {
+            LapSegmentUtils.calculateLapDistanceRange(workoutData.laps, selectedLapNr!!)
+        } else {
+            0.0 to 0.0
+        }
+    }
+
+    val lapSegment = remember(allPoints, allDistances, startDistM, endDistM, selectedLapNr) {
+        if (selectedLapNr != null && allPoints.isNotEmpty() && allDistances.isNotEmpty()) {
+            LapSegmentUtils.sliceLapSegment(allPoints, allDistances, startDistM, endDistM)
+        } else {
+            emptyList()
+        }
+    }
+
+    var hrZoneDisplayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }
+    var powerZoneDisplayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }
+
     MapDetailLayout(
         bSportType = workoutData.bSportType,
         zoomFocus = MapZoomFocus.FIT_PRIMARY,
-        activeScrubPath = tracks.find { it.type == TrackType.BEST }?.path ?: tracks.firstOrNull()?.path,
+        activeScrubPath = activeScrubPath,
         minAltitudeOverride = workoutData.minAltitude,
         maxAltitudeOverride = workoutData.maxAltitude,
         useStatusBarsPadding = useStatusBarsPadding,
-        showMap = showMap,
+        showMap = showMap && hasGpsTrack && activeDetailPrefs.showMap,
+        showElevationProfile = hasGpsTrack && activeDetailPrefs.showElevationProfile && (workoutData.minAltitude != null || (activeScrubPath?.any { it.altitude != 0.0 } == true)),
+        showTelemetryCharts = activeDetailPrefs.showTelemetryCharts,
+        hrZoneDistribution = hrZoneDistribution,
+        powerZoneDistribution = powerZoneDistribution,
+        hrZoneDisplayMode = hrZoneDisplayMode,
+        powerZoneDisplayMode = powerZoneDisplayMode,
         header = {
             WorkoutHeader(
                 modifier = Modifier.fillMaxWidth(),
@@ -88,7 +175,19 @@ fun TrackOnMapScreen(
             tracks(filteredTracks)
             contextualPaths(segments)
             contextualPaths(routes)
-            markers(markers)
+            if (lapSegment.isNotEmpty()) {
+                val lapMarkers = mutableListOf<LocationMarker>()
+                lapSegment.firstOrNull()?.let { startPoint ->
+                    lapMarkers.add(LocationMarker(position = startPoint, iconResId = R.drawable.control_start, title = "Lap Start"))
+                }
+                lapSegment.lastOrNull()?.let { endPoint ->
+                    lapMarkers.add(LocationMarker(position = endPoint, iconResId = R.drawable.control_stop, title = "Lap End"))
+                }
+                markers(markers + lapMarkers)
+                lapHighlight(lapSegment)
+            } else {
+                markers(markers)
+            }
         },
         modifier = modifier,
         overlay = {
@@ -161,6 +260,78 @@ fun TrackOnMapScreen(
                                 }
                             )
                         }
+                    }
+                }
+            }
+        },
+        metadataContent = {
+            if (metadataContent != null) {
+                metadataContent()
+            } else {
+                if (activeDetailPrefs.showDescription) {
+                    WorkoutDescription(
+                        data = workoutData.descriptionData,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
+                if (activeDetailPrefs.showExtrema && workoutData.extremaData.dataRows.isNotEmpty()) {
+                    WorkoutExtrema(
+                        data = workoutData.extremaData,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
+                if (activeDetailPrefs.showLaps) {
+                    splitChartData?.let { splits ->
+                        LapSplitVisualizerCard(
+                            splitData = splits,
+                            selectedLapNr = selectedLapNr,
+                            onLapClick = { tappedLapNr ->
+                                selectedLapNr = if (selectedLapNr == tappedLapNr) null else tappedLapNr
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+                if (activeDetailPrefs.showStrava && !workoutData.stravaActivityData.isNullOrBlank()) {
+                    StravaActivitySection(
+                        rawActivityJson = workoutData.stravaActivityData,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        },
+        analyticsContent = {
+            if (analyticsContent != null) {
+                analyticsContent()
+            } else {
+                if (activeDetailPrefs.showZoneAnalysis) {
+                    hrZoneDistribution?.let { distribution ->
+                        HeartRateZoneDistributionCard(
+                            distribution = distribution,
+                            displayMode = hrZoneDisplayMode,
+                            onDisplayModeChange = { hrZoneDisplayMode = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
+                    powerZoneDistribution?.let { distribution ->
+                        PowerZoneDistributionCard(
+                            distribution = distribution,
+                            displayMode = powerZoneDisplayMode,
+                            onDisplayModeChange = { powerZoneDisplayMode = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
                     }
                 }
             }

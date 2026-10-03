@@ -86,7 +86,8 @@ data class MapStyle(
     val routeGapLength: Float = 15f,
     val segmentWidth: Float = 10f,
     val segmentZIndex: Float = 30f,
-    val segmentUnselectedAlpha: Float = 0.3f
+    val segmentUnselectedAlpha: Float = 0.3f,
+    val isDark: Boolean = false
 )
 
 val LocalMapStyle = androidx.compose.runtime.staticCompositionLocalOf { MapStyle() }
@@ -126,11 +127,19 @@ data class LocationMarker(
     val onClick: () -> Boolean = { false }
 )
 
-/* Data class to encapsulate a single point in a track */
-data class PathPoint(
+/**
+ * Data class to encapsulate a single point in a track with optional synchronized telemetry.
+ * (REQ-UI-201 / ATT-1391)
+ */
+data class PathPoint @JvmOverloads constructor(
     val distance: Double,
     val latLng: LatLng,
-    val altitude: Double
+    val altitude: Double,
+    val timeSec: Long = 0L,
+    val hr: Int? = null,
+    val power: Int? = null,
+    val speedMps: Double? = null,
+    val slope: Double? = null
 )
 
 /**

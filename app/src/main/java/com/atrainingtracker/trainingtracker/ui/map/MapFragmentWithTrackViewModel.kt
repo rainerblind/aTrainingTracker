@@ -23,7 +23,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.google.android.gms.maps.model.LatLng
@@ -33,26 +36,35 @@ import kotlinx.coroutines.launch
 data class MapFragmentUIState(
     val segments: List<MapSegment> = emptyList(),
     val routes: List<MapRoute> = emptyList(),
+    val knownLocations: List<KnownLocationItem> = emptyList(),
     val markers: List<LocationMarker> = emptyList(),
     val currentTrack: List<LatLng> = emptyList(),
     val bSportType: BSportType = BSportType.UNKNOWN
 )
 
-class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel(application) {
+class MapFragmentWithTrackViewModel @JvmOverloads constructor(
+    application: Application,
+    private val knownLocationsRepository: KnownLocationsRepository = KnownLocationsRepository.getInstance(application),
+    banalRepo: BANALServiceRepository? = null,
+    segmentsRepo: SegmentsRepository? = null,
+    routesRepo: RoutesRepository? = null
+) : AndroidViewModel(application) {
 
-    private val banalRepository = BANALServiceRepository.getInstance(application)
-    private val segmentsRepository = SegmentsRepository.getInstance(application)
-    private val routesRepository = RoutesRepository.getInstance(application)
+    private val banalRepository = banalRepo ?: BANALServiceRepository.getInstance(application)
+    private val segmentsRepository = segmentsRepo ?: SegmentsRepository.getInstance(application)
+    private val routesRepository = routesRepo ?: RoutesRepository.getInstance(application)
 
     val liveSegments = segmentsRepository.allSegmentsWithPath
     val allRoutes = routesRepository.allRoutes
+    val knownLocations = knownLocationsRepository.locationsFlow
 
     val uiState: StateFlow<MapFragmentUIState> = combine(
         banalRepository.bSportType,
         banalRepository.currentTrack,
         segmentsRepository.allSegmentsWithPath,
-        routesRepository.allRoutes
-    ) { bSportType, currentTrack, liveSegments, allRoutes ->
+        routesRepository.allRoutes,
+        knownLocationsRepository.locationsFlow
+    ) { bSportType, currentTrack, liveSegments, allRoutes, knownLocations ->
 
         // Logic for Start Marker
         val markers = if (currentTrack.isNotEmpty()) {
@@ -78,6 +90,7 @@ class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel
                 )
             },
             routes = allRoutes.map { it.toMapRoute() },
+            knownLocations = knownLocations,
             bSportType = bSportType,
             currentTrack = currentTrack,
             markers = markers
@@ -93,6 +106,12 @@ class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel
     fun onToggleRoute(id: Long, selected: Boolean) {
         viewModelScope.launch {
             routesRepository.toggleRouteSelection(routeId = id, isSelected = selected)
+        }
+    }
+
+    fun updateKnownLocation(id: Long, name: String, altitude: Double, radius: Int, source: ElevationSource) {
+        viewModelScope.launch {
+            knownLocationsRepository.updateLocation(id, name, altitude, radius, source)
         }
     }
 }

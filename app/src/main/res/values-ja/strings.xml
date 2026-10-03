@@ -311,10 +311,13 @@
     <string name="prefsStartLocationsSummary">地点の高度を設定</string>
     <string name="updateStravaEquipment">Strava 装備を更新</string>
     <string name="lastUpdateOfEquipmentNever">未更新</string>
+    <string name="lastUpdateOfEquipmentNow">今</string>
     <string name="updateStravaRoutes">Strava ルートを更新</string>
     <string name="lastUpdateOfRoutesNever">未更新</string>
+    <string name="lastUpdateOfRoutesNow">今</string>
     <string name="updateStravaSegments">Strava セグメントを更新</string>
     <string name="lastUpdateOfSegmentsNever">未更新</string>
+    <string name="lastUpdateOfSegmentsNow">今</string>
     <string name="automated_strava_segments_sync">セグメントの自動同期</string>
     <string name="automated_strava_segments_sync_summary">Strava から定期的にお気に入りセグメントを取得</string>
     <string name="strava_segments_sync_interval">同期の間隔</string>
@@ -322,9 +325,6 @@
     <string name="automated_strava_routes_sync_summary">Strava から定期的にルートを取得</string>
     <string name="strava_routes_sync_interval">同期の間隔</string>
 
-    <string name="getting_equipment_from_strava">Strava から装備を取得中…\nお待ちください</string>
-    <string name="got_shoe">シューズを取得完了\n取得: %1$s</string>
-    <string name="got_bike">バイクを取得完了\n取得: %1$s</string>
     <string name="strava_success_but_must_check">Strava アップロード完了、結果を確認中 …</string>
     <string name="strava_success_waiting_for_result">Strava アップロード完了、結果待ち …</string>
 
@@ -482,6 +482,22 @@
     <string name="check_ANT_installation">ANTのインストール状況を確認</string>
     <string name="forcePortrait">縦向き固定</string>
     <string name="Display">画面</string>
+    <string name="settings_category_savings">バッテリー節約</string>
+    <string name="settings_category_savings_desc">バッテリー駆動時間を延ばし、より長時間のトラッキングを可能にします</string>
+    <string name="prefs_battery_saver_title">動的画面減光</string>
+    <string name="prefs_battery_saver_summary">勾配とトレーニングゾーンに基づいて画面の明るさを動的に調整します</string>
+    <string name="cockpit_theme_title">コックピットテーマ（ワークアウト中）</string>
+    <string name="cockpit_theme_description">アクティブなワークアウト中のテレメトリとセンサー画面にのみ適用されます。メインメニューと「Control Tracking」は標準テーマのままです。</string>
+    <string name="cockpit_theme_system">システム</string>
+    <string name="cockpit_theme_always_dark">常にダーク</string>
+    <string name="display_brightness_title">画面の明るさ（ワークアウト中）</string>
+    <string name="display_brightness_system">システム</string>
+    <string name="display_brightness_auto">自動</string>
+    <string name="display_brightness_custom">手動</string>
+    <string name="display_brightness_system_desc">システムの標準画面の明るさを使用します</string>
+    <string name="display_brightness_auto_desc">勾配とトレーニングゾーンに基づいて画面の明るさを動的に調整します</string>
+    <string name="display_brightness_custom_desc">ワークアウト全体で一定の明るさを維持します</string>
+    <string name="display_brightness_slider_format">明るさ: %1$d%%</string>
     <string name="smoothing">表示値の平滑化</string>
     <string name="powerSmoothingTitle">パワー平滑化係数 α</string>
     <string name="powerSmoothingTitle_format">パワー平滑化: α=%1$f</string>
@@ -592,7 +608,15 @@
     <string name="label_min">最小</string>
     <string name="label_max">最大</string>
 
+    <string name="zone_display_title">ゾーン表示</string>
+    <string name="zone_display_background">明るい背景</string>
+    <string name="zone_display_left_bar">左バー</string>
+    <string name="zone_display_right_bar">右バー</string>
+    <string name="zone_display_text_color">文字色</string>
+    <string name="zone_display_preview_title">プレビュー</string>
+
     <string name="prefEmailExport">eメール</string>
+
 
 <!-- 2026 -->
     <!-- StringUtils -->
@@ -727,7 +751,9 @@
     <string name="view_size_large">大</string>
     <string name="view_size_xlarge">特大</string>
     <string name="view_size_huge">巨大</string>
-    <string name="view_size_xhuge">最大</string>
+    <string name="view_size_xhuge">超巨大</string>
+    <string name="view_size_xxhuge">極大</string>
+    <string name="view_size_xxxhuge">最大</string>
     <string name="configure">設定</string>
     <string name="tab_name">名前</string>
 
@@ -858,6 +884,9 @@
         <item quantity="other">%1$d 回のトレーニング</item>
     </plurals>
     <string name="workout_periods__longest_workout">最長セッション</string>
+    <string name="workout_periods__region_format">地域 %1$d (%2$d)</string>
+    <string name="workout_periods__primary_region_format">主要地域: 地域 %1$d (%2$d)</string>
+    <string name="workout_periods__all_regions_format">すべての地域 (%1$d)</string>
     <string name="workout_periods__migration_querying">トレーニング履歴を読み込み中…</string>
     <string name="workout_periods__migration_reading">トレーニング %1$d / %2$d を読み込み中…</string>
     <string name="workout_periods__migration_syncing">%1$s を同期中…</string>
@@ -1085,8 +1114,29 @@
     <string name="filter_section_equipment">装備</string>
     <string name="filter_section_attributes">属性</string>
     <string name="filter_section_thresholds">距離と時間</string>
+    <string name="filter_section_start_at">開始地点</string>
+    <string name="settings_workout_card_title">ワークアウト一覧（詳細カード）</string>
+    <string name="settings_workout_card_map">マッププレビュー</string>
+    <string name="settings_workout_card_elevation">高度プロファイル</string>
+    <string name="settings_workout_card_extrema">極値データ</string>
+    <string name="settings_workout_card_laps">ラップ概要</string>
+    <string name="settings_workout_card_strava">Stravaアクティビティ</string>
+    <string name="settings_workout_card_description">説明とメモ</string>
+    <string name="settings_workout_card_charts">テレメトリグラフ</string>
+    <string name="settings_workout_card_zones">ゾーン分析（心拍数＆パワー）</string>
+    <string name="settings_edit_workout_title">ワークアウトの編集</string>
+    <string name="settings_edit_workout_cluster">ルート / クラスター</string>
+    <string name="settings_edit_workout_commute_trainer">通勤・通学＆ローラートレーナー</string>
+    <string name="settings_edit_workout_race">レース</string>
+    <string name="settings_edit_workout_strava">Stravaアップロード</string>
+    <string name="settings_edit_workout_description">説明とメモ</string>
+    <string name="settings_edit_workout_goal">目標</string>
+    <string name="settings_edit_workout_method">方法</string>
     <string name="filter_commute">通勤・通学</string>
     <string name="filter_trainer">インドア / ローラー台</string>
+    <string name="filter_race_only">レースのみ</string>
+    <string name="race">レース</string>
+    <string name="race_badge">レース</string>
     <string name="filter_has_gps">GPSログあり</string>
     <string name="filter_min_distance_format">&gt; %1$s km</string>
     <string name="filter_max_distance_format">&lt; %1$s km</string>
@@ -1184,4 +1234,167 @@
     <string name="lap_table_header_lap">ラップ</string>
     <string name="lap_table_header_time">時間</string>
     <string name="lap_table_header_distance">距離</string>
+
+    <!-- ATT-919 / ATT-1382: Known Start Locations (Favorite Locations) Management & Altitude Lock UI -->
+    <string name="drawer_start_locations">お気に入りの場所</string>
+    <string name="known_locations_title">お気に入りの場所</string>
+    <string name="known_locations_tab_list">リスト</string>
+    <string name="known_locations_tab_map">地図</string>
+    <string name="known_locations_search_hint">お気に入りの場所を検索…</string>
+    <string name="known_locations_empty_title">記録されたお気に入りの場所はありません</string>
+    <string name="known_locations_empty_desc">ワークアウト開始時にお気に入りの場所が自動的に学習されるか、手動で調整できます。</string>
+    <string name="known_location_unnamed_format">開始地点 (%1$.5f, %2$.5f)</string>
+    <string name="known_locations_starts_count">%1$d 回開始</string>
+    <string name="known_locations_sort_starts">開始数</string>
+    <plurals name="known_locations_starts">
+        <item quantity="other">%1$d 回開始</item>
+    </plurals>
+    <plurals name="known_locations_routes">
+        <item quantity="other">%1$d件のルート</item>
+    </plurals>
+    <string name="source_internet_dem">インターネット (DEM)</string>
+    <string name="source_manual_user">手動</string>
+    <string name="source_auto_learned">自動学習</string>
+    <string name="source_gps_fallback">GPS</string>
+    <string name="source_legacy_raw">レガシー</string>
+    <string name="known_location_edit_title">お気に入りの場所を編集</string>
+    <string name="known_location_fetch_dem">インターネットから取得 (DEM)</string>
+    <string name="known_location_show_map">地図上に表示</string>
+    <string name="known_location_hide_map">地図を非表示</string>
+    <string name="sort_altitude">標高</string>
+    <string name="known_location_radius_label">検知半径</string>
+    <string name="known_location_radius_format">%1$s: %2$s</string>
+    <string name="phone_battery">スマホのバッテリー</string>
+    <string name="phone_battery_short">バッテリー</string>
+    <string name="battery_remaining_time">バッテリー残量時間</string>
+    <string name="battery_remaining_time_short">残量時間</string>
+    <string name="battery_charging">充電中</string>
+    <string name="workout_name_run_from">%1$s からのラン</string>
+    <string name="workout_name_ride_from">%1$s からのライド</string>
+    <string name="workout_name_activity_from">%1$s からのアクティビティ</string>
+    <string name="workout_name_round_trip">%1$s からの周回</string>
+    <string name="workout_name_run_from_to">%1$s から %2$s へのラン</string>
+    <string name="workout_name_ride_from_to">%1$s から %2$s へのライド</string>
+    <string name="workout_name_activity_from_to">%1$s から %2$s へのアクティビティ</string>
+    <string name="workout_name_run_to">%1$s へのラン</string>
+    <string name="workout_name_ride_to">%1$s へのライド</string>
+    <string name="workout_name_activity_to">%1$s へのアクティビティ</string>
+    <string name="cluster_seed_name_loop_format">%1$s からの周回</string>
+    <string name="prefs_lieblingsort_feedback_title">お気に入りの場所とキャリブレーションフィードバック</string>
+    <string name="prefs_lieblingsort_feedback_summary">コックピットに認識された開始位置と気圧計の校正を確認表示します</string>
+    <string name="location_calibrated_format">%1$s (%2$s 校正済み)</string>
+    <string name="location_detected_format">%1$s を検出</string>
+    <string name="workout_start_location">スタート: %s</string>
+    <string name="workout_destination_location">ゴール: %s</string>
+    <string name="workout_start_and_destination">スタート＆ゴール: %s</string>
+    <string name="filter_start_location">開始地点</string>
+    <string name="known_locations_view_workouts">ワークアウトを表示</string>
+    <string name="known_locations_view_routes">ルートを表示</string>
+    <string name="cluster_start_location">開始: %s</string>
+    <string name="known_location_routes_header">ここからのルート (%d):</string>
+    <string name="filter_by_start_location">開始地点で絞り込む</string>
+
+    <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
+    <string name="drawer__expert_settings">エキスパート設定</string>
+    <string name="advanced_tuning_title">エキスパート設定</string>
+    <string name="advanced_tuning_open">エキスパート設定…</string>
+    <string name="advanced_tuning_warning_title">エキスパート設定</string>
+    <string name="advanced_tuning_warning_desc">これらのパラメータを変更すると、トラッキングのヒューリスティック、センサーフィルタリング、およびバッテリー節約動作が変更されます。いつでも工場出荷時のデフォルトに戻すことができます。</string>
+    <string name="tuning_cat_battery_saver">AMOLEDバッテリーセーバー</string>
+    <string name="tuning_cat_gps">GPS・位置フィルタリング</string>
+    <string name="tuning_cat_elevation">高度・勾配ダイナミクス</string>
+    <string name="tuning_full_dim_factor_title">完全減光時の明るさ</string>
+    <string name="tuning_full_dim_factor_desc">平坦な地形および低負荷時の目標画面輝度（5%以上に制限）。</string>
+    <string name="tuning_medium_dim_factor_title">中間減光時の明るさ</string>
+    <string name="tuning_medium_dim_factor_desc">中程度の勾配またはテンポゾーンでの目標画面輝度。</string>
+    <string name="tuning_slope_flat_title">平坦地形のしきい値</string>
+    <string name="tuning_slope_flat_desc">完全減光が有効になる勾配割合。</string>
+    <string name="tuning_slope_steep_title">急坂のしきい値</string>
+    <string name="tuning_slope_steep_desc">画面が最大輝度で点灯する勾配割合。</string>
+    <string name="tuning_wakeup_duration_title">点灯保持時間</string>
+    <string name="tuning_wakeup_duration_desc">タッチまたは近接ジェスチャー後に画面が最大輝度を維持する時間。</string>
+    <string name="tuning_downward_delay_title">減光遅延ダンピング</string>
+    <string name="tuning_downward_delay_desc">急激な勾配変化による画面のチラつきを防ぐための減光遅延時間。</string>
+    <string name="tuning_gps_accuracy_title">GPS精度しきい値</string>
+    <string name="tuning_gps_accuracy_desc">許容される最大水平誤差。これより粗い位置情報は除外されます。</string>
+    <string name="tuning_altitude_window_title">高度スムージングウィンドウ</string>
+    <string name="tuning_altitude_window_desc">瞬間高度および垂直速度の移動平均時間枠。</string>
+    <string name="tuning_slope_min_speed_title">勾配計算の最低速度</string>
+    <string name="tuning_slope_min_speed_desc">リアルタイム勾配を計算するために必要な最低移動速度。</string>
+    <string name="tuning_cat_aftermath">アフターマス＆プロファイル分析</string>
+    <string name="tuning_profile_x_axis_title">高度プロファイルX軸</string>
+    <string name="tuning_profile_x_axis_desc">高度プロファイルグラフの横軸メトリクスを選択します。</string>
+    <string name="tuning_profile_x_axis_distance">距離</string>
+    <string name="tuning_profile_x_axis_time">時間</string>
+    <string name="tuning_telemetry_x_axis_title">テレメトリグラフX軸</string>
+    <string name="tuning_telemetry_x_axis_desc">テレメトリグラフ（心拍数、ペース/速度、パワー）の水平軸ドメインを選択します。</string>
+    <string name="tuning_pace_ceiling_title">ペース上限（最速値）</string>
+    <string name="tuning_pace_ceiling_desc">ペースグラフのGPS異常値を抑制します。この上限を超える速度はクランプされます。</string>
+
+    <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
+    <string name="tuning_cat_cockpit_typography">コックピットのフォント</string>
+    <string name="tuning_cockpit_font_family_title">フォントファミリー</string>
+    <string name="tuning_font_system_default">システムデフォルト</string>
+    <string name="tuning_font_seven_segment">7セグメントデジタル</string>
+    <string name="tuning_font_modern_athletic">モダンアスレチック</string>
+    <string name="tuning_font_monospace">等幅フォント (Monospace)</string>
+    <string name="tuning_font_playful">カジュアル (Playful)</string>
+    <string name="tuning_font_bebas_neue">Bebas Neue</string>
+    <string name="tuning_font_teko">Teko</string>
+    <string name="tuning_font_barlow_condensed">Barlow Condensed</string>
+    <string name="tuning_font_oswald">Oswald</string>
+    <string name="tuning_font_chakra_petch">Chakra Petch</string>
+    <string name="tuning_font_oxanium">Oxanium</string>
+    <string name="tuning_font_rajdhani">Rajdhani</string>
+    <string name="tuning_font_montserrat">Montserrat</string>
+    <string name="tuning_cockpit_font_weight_title">太さ</string>
+    <string name="tuning_weight_normal">標準</string>
+    <string name="tuning_weight_semi_bold">中太</string>
+    <string name="tuning_weight_bold">太字</string>
+    <string name="tuning_cockpit_preview_title">ライブプレビュー</string>
+    <string name="tuning_default_format">デフォルト: %1$s</string>
+    <string name="reset_to_defaults">デフォルトに戻す</string>
+    <string name="reset_to_defaults_success">チューニング設定が工場出荷時のデフォルトに戻りました。</string>
+    <string name="tuning_cat_sensors_gps">センサー、GPS、フィルター</string>
+    <string name="tuning_cat_workout_masks_cards">ワークアウトカードと詳細</string>
+    <string name="tuning_summary_masks_cards_format">%1$d/8 カード</string>
+    <string name="tuning_matrix_col_list">一覧</string>
+    <string name="tuning_matrix_col_details">詳細</string>
+    <string name="tuning_matrix_feature">項目</string>
+    <string name="tuning_summary_matrix_format">%1$d/8 一覧, %2$d/8 詳細</string>
+    <string name="map_splitter_content_description">マップとテレメトリの分割バー。上下にドラッグしてサイズ変更、ダブルタップでリセット。</string>
+
+    <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
+    <string name="move_tile_banner_instruction">タイルを選択中: 別のタイルをタップして入れ替え、または「+」をタップして移動します。</string>
+    <string name="move_tile_cancel">キャンセル</string>
+
+    <!-- Heart Rate 5-Zone Distribution Bar (ATT-1389 / REQ-UI-202) -->
+    <string name="aftermath_hr_zones_title">心拍ゾーン</string>
+
+    <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
+    <string name="aftermath_power_zones_title">パワーゾーン</string>
+    <!-- Telemetry Frequency Histogram (ATT-1845 / REQ-UI-231) -->
+    <string name="zone_mode_5_zones">5ゾーン</string>
+    <string name="zone_mode_histogram">ヒストグラム</string>
+    <string name="aftermath_laps_splits_title">ラップとスプリット</string>
+    <string name="split_badge_best">ベスト</string>
+    <!-- Continuous Metric Graphs & Headings (ATT-1740 / REQ-UI-206) -->
+    <string name="graph_heading_elevation">標高プロファイル</string>
+    <string name="graph_heading_heart_rate">心拍数</string>
+    <string name="graph_heading_speed">速度</string>
+    <string name="graph_heading_pace">ペース</string>
+    <string name="graph_heading_power">パワー</string>
+
+    <!-- Persistent Sticky Global Zoom Toolbar (ATT-1876 / REQ-UI-225) -->
+    <string name="zoom_in">拡大</string>
+    <string name="zoom_out">縮小</string>
+    <string name="zoom_reset">ズームをリセット</string>
+    <string name="zoom_pan_mode">パンモード</string>
+    <string name="zoom_scrub_mode">スクラブモード</string>
+
+    <!-- Configurable Lap Display Mode (ATT-1870 / REQ-UI-229) -->
+    <string name="settings_lap_display_mode_title">ラップ表示モード</string>
+    <string name="settings_lap_display_mode_table">テーブル</string>
+    <string name="settings_lap_display_mode_visualizer">ビジュアライザー</string>
+    <string name="settings_lap_display_mode_both">両方</string>
 </resources>

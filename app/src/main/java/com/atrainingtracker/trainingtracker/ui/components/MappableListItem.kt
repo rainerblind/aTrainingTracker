@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.ui.components
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -41,12 +43,17 @@ fun MappableListItem(
     alpha: Float = 1.0f,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val shape = RoundedCornerShape(16.dp)
     ElevatedCard(
         modifier = modifier
             .fillMaxWidth()
+            .border(
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                shape = shape
+            )
             .graphicsLayer { this.alpha = alpha },
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+        shape = shape,
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = if (onLongClick != null || onClick != null) {

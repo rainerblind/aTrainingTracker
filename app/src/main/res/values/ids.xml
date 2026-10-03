@@ -12,6 +12,7 @@
     <item name="drawer_map" type="id" />
     <item name="drawer_segments" type="id" />
     <item name="drawer_routes" type="id" />
+    <item name="drawer_start_locations" type="id" />
     <item name="drawer_my_locations" type="id" />
 
     <!-- Equipment / My Stuff -->
@@ -29,6 +30,7 @@
     <!-- Settings -->
     <item name="drawer_units" type="id" />
     <item name="drawer_display_settings" type="id" />
+    <item name="drawer_advanced_tuning" type="id" />
     <item name="drawer_tracking_layouts" type="id" />
     <item name="drawer_search_settings" type="id" />
     <item name="drawer_backup_restore" type="id" />
