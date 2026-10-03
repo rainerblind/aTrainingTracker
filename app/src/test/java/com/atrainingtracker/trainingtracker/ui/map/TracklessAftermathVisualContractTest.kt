@@ -111,7 +111,8 @@ class TracklessAftermathVisualContractTest {
 
         assertTrue(
             "MapDetailLayout must compute isTrackless when activeScrubPath has 0 distance and >0 time",
-            content.contains("val isTrackless = (activeScrubPath?.lastOrNull()?.distance ?: 0.0) == 0.0 && (activeScrubPath?.lastOrNull()?.timeSec ?: 0) > 0")
+            content.contains("ProfileDomainMath.isTracklessWorkout(activeScrubPath)") ||
+                    content.contains("val isTrackless = (activeScrubPath?.lastOrNull()?.distance ?: 0.0) == 0.0 && (activeScrubPath?.lastOrNull()?.timeSec ?: 0) > 0")
         )
 
         assertTrue(

@@ -138,15 +138,13 @@ fun TelemetryMetricGraph(
     }
 
     val isTrackless = remember(pathPoints) {
-        (pathPoints.lastOrNull()?.distance ?: 0.0) == 0.0 && (pathPoints.lastOrNull()?.timeSec ?: 0L) > 0L
+        ProfileDomainMath.isTracklessWorkout(pathPoints)
     }
-    val isTimeDomain = xAxisDomain == ProfileXAxisDomain.TIME || isTrackless
-    val totalSpan = remember(pathPoints, isTimeDomain) {
-        if (isTimeDomain) {
-            (pathPoints.lastOrNull()?.timeSec ?: 0L).toDouble().coerceAtLeast(1.0)
-        } else {
-            (pathPoints.lastOrNull()?.distance ?: 0.0).coerceAtLeast(1.0)
-        }
+    val isTimeDomain = remember(xAxisDomain, pathPoints) {
+        ProfileDomainMath.isEffectiveTimeDomain(xAxisDomain, pathPoints)
+    }
+    val totalSpan = remember(xAxisDomain, pathPoints) {
+        ProfileDomainMath.calculateTotalSpan(xAxisDomain, pathPoints)
     }
     val visibleSpan = remember(totalSpan, zoomScale) {
         ElevationProfileZoomMath.calculateVisibleDistance(totalSpan, zoomScale)
@@ -304,8 +302,11 @@ fun TelemetryMetricGraph(
                                         totalDist = totalSpan
                                     )
                                     if (isTimeDomain) {
-                                        val targetTimeSec = selectedVal.toLong()
-                                        val nearest = pathPoints.minByOrNull { abs(it.timeSec - targetTimeSec) }
+                                        val nearest = TelemetryMetricUtils.findNearestPoint(
+                                            points = pathPoints,
+                                            targetValue = selectedVal,
+                                            isTimeDomain = true
+                                        )
                                         if (isTrackless) {
                                             currentOnDistanceSelectedState(nearest?.timeSec?.toDouble())
                                         } else {
@@ -342,8 +343,11 @@ fun TelemetryMetricGraph(
                                 totalDist = totalSpan
                             )
                             if (isTimeDomain) {
-                                val targetTimeSec = selectedVal.toLong()
-                                val nearest = pathPoints.minByOrNull { abs(it.timeSec - targetTimeSec) }
+                                val nearest = TelemetryMetricUtils.findNearestPoint(
+                                    points = pathPoints,
+                                    targetValue = selectedVal,
+                                    isTimeDomain = true
+                                )
                                 if (isTrackless) {
                                     currentOnDistanceSelectedState(nearest?.timeSec?.toDouble())
                                 } else {
@@ -708,7 +712,11 @@ fun TelemetryMetricGraph(
                     if (isTrackless) {
                         currentDistance
                     } else {
-                        val nearestPt = pathPoints.minByOrNull { abs(it.distance - currentDistance) }
+                        val nearestPt = TelemetryMetricUtils.findNearestPoint(
+                            points = pathPoints,
+                            targetValue = currentDistance,
+                            isTimeDomain = false
+                        )
                         (nearestPt?.timeSec ?: 0L).toDouble()
                     }
                 } else {

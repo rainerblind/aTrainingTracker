@@ -124,12 +124,13 @@ fun MapDetailLayout(
     var splitFraction by rememberSaveable { mutableFloatStateOf(SplitPaneMath.DEFAULT_SPLIT_FRACTION) }
     val noLocation = remember { MutableStateFlow<LatLng?>(null) }
 
-    val isTrackless = (activeScrubPath?.lastOrNull()?.distance ?: 0.0) == 0.0 && (activeScrubPath?.lastOrNull()?.timeSec ?: 0) > 0
+    val isTrackless = ProfileDomainMath.isTracklessWorkout(activeScrubPath)
+    val isElevationTimeDomain = ProfileDomainMath.isEffectiveTimeDomain(tuningConfig.elevationXAxisDomain, activeScrubPath)
+    val isTelemetryTimeDomain = ProfileDomainMath.isEffectiveTimeDomain(tuningConfig.telemetryXAxisDomain, activeScrubPath)
     val activeTelemetryDomain = if (isTrackless) ProfileXAxisDomain.TIME else tuningConfig.telemetryXAxisDomain
-    val isElevationTimeDomain = (tuningConfig.elevationXAxisDomain == ProfileXAxisDomain.TIME || isTrackless) && (activeScrubPath?.lastOrNull()?.timeSec ?: 0) > 0
-    val elevationTotalSpan = if (isElevationTimeDomain) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
-    val telemetryTotalSpan = if (activeTelemetryDomain == ProfileXAxisDomain.TIME) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
-    val totalSpan = if (isElevationTimeDomain || isTrackless) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
+    val elevationTotalSpan = ProfileDomainMath.calculateTotalSpan(tuningConfig.elevationXAxisDomain, activeScrubPath)
+    val telemetryTotalSpan = ProfileDomainMath.calculateTotalSpan(tuningConfig.telemetryXAxisDomain, activeScrubPath)
+    val totalSpan = if (showElevationProfile) elevationTotalSpan else telemetryTotalSpan
 
     val hasTelemetryGraphs = showZoomControls && showTelemetryCharts && activeScrubPath != null && (
         TelemetryMetricUtils.hasHeartRateData(activeScrubPath) ||
@@ -153,12 +154,7 @@ fun MapDetailLayout(
 
     val activeScrubPoint = remember(selectedDistance, activeScrubPath, isTrackless) {
         if (selectedDistance != null && !activeScrubPath.isNullOrEmpty()) {
-            if (isTrackless) {
-                TelemetryMetricUtils.findNearestPoint(activeScrubPath, selectedDistance!!, isTimeDomain = true)
-            } else {
-                val activeIndex = activeScrubPath.indexOfLast { it.distance <= selectedDistance!! }.coerceAtLeast(0)
-                activeScrubPath.getOrNull(activeIndex) ?: activeScrubPath.firstOrNull()
-            }
+            TelemetryMetricUtils.findNearestPoint(activeScrubPath, selectedDistance!!, isTimeDomain = isTrackless)
         } else null
     }
 
@@ -195,9 +191,11 @@ fun MapDetailLayout(
                 bSportType = bSportType,
                 altitude = activeScrubAltitude,
                 unit = unit,
-                xAxisDomain = if (isTrackless) ProfileXAxisDomain.TIME
-                              else if (showElevationProfile) tuningConfig.elevationXAxisDomain
-                              else tuningConfig.telemetryXAxisDomain,
+                xAxisDomain = if (showElevationProfile) {
+                    if (isElevationTimeDomain) ProfileXAxisDomain.TIME else ProfileXAxisDomain.DISTANCE
+                } else {
+                    if (isTelemetryTimeDomain) ProfileXAxisDomain.TIME else ProfileXAxisDomain.DISTANCE
+                },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = 2.dp, end = 8.dp),

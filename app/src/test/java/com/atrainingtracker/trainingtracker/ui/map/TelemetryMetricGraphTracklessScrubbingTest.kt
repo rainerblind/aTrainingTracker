@@ -52,13 +52,15 @@ class TelemetryMetricGraphTracklessScrubbingTest {
         // 1. isTrackless detection
         assertTrue(
             "TelemetryMetricGraph must evaluate isTrackless checking last point distance == 0.0 and timeSec > 0",
-            content.contains("(pathPoints.lastOrNull()?.distance ?: 0.0) == 0.0 && (pathPoints.lastOrNull()?.timeSec ?: 0L) > 0L")
+            content.contains("ProfileDomainMath.isTracklessWorkout(pathPoints)") ||
+                    content.contains("(pathPoints.lastOrNull()?.distance ?: 0.0) == 0.0 && (pathPoints.lastOrNull()?.timeSec ?: 0L) > 0L")
         )
 
         // 2. isTimeDomain includes isTrackless
         assertTrue(
-            "TelemetryMetricGraph must enforce isTimeDomain = xAxisDomain == ProfileXAxisDomain.TIME || isTrackless",
-            content.contains("val isTimeDomain = xAxisDomain == ProfileXAxisDomain.TIME || isTrackless")
+            "TelemetryMetricGraph must enforce isTimeDomain = ProfileDomainMath.isEffectiveTimeDomain(xAxisDomain, pathPoints)",
+            content.contains("ProfileDomainMath.isEffectiveTimeDomain(xAxisDomain, pathPoints)") ||
+                    content.contains("val isTimeDomain = xAxisDomain == ProfileXAxisDomain.TIME || isTrackless")
         )
 
         // 3. Drag gesture dispatches timeSec directly when isTrackless
