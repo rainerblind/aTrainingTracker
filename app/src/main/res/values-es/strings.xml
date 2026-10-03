@@ -1509,4 +1509,7 @@
     <string name="google_drive_never_synced">Aún no sincronizado</string>
     <string name="restore_from_google_drive">Restaurar desde Google Drive</string>
     <string name="upload_to_google_drive">Hacer copia en Google Drive</string>
+    <string name="gpx_enriching_elevation">Obteniendo datos de elevación…</string>
+    <string name="gpx_elevation_enriched">Datos de elevación añadidos con éxito</string>
+    <string name="gpx_elevation_enrichment_failed">Error al obtener elevación, ruta 2D importada</string>
 </resources>

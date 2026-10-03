@@ -21,9 +21,12 @@ package com.atrainingtracker.trainingtracker.routes
 import android.content.Context
 import android.location.Location
 import android.net.Uri
+import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
+import com.atrainingtracker.trainingtracker.elevation.ElevationResult
+import com.atrainingtracker.trainingtracker.elevation.ElevationService
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
@@ -33,13 +36,32 @@ import kotlinx.coroutines.withContext
 import io.ticofab.androidgpxparser.parser.GPXParser
 import io.ticofab.androidgpxparser.parser.domain.Gpx
 
+/**
+ * Importer for GPX files with automatic DEM elevation enrichment for routes lacking altitude data.
+ *
+ * Traceability:
+ * - REQ-MAP-025: Automatic DEM Elevation Enrichment for Imported GPX Routes Lacking Altitude Data.
+ * - TST-MAP-027: Automatic DEM Elevation Enrichment for Imported GPX Routes Lacking Altitude Verification.
+ */
+class GpxRouteImporter @JvmOverloads constructor(
+    private val context: Context,
+    private val elevationService: ElevationService = ElevationService.getInstance()
+) {
 
-class GpxRouteImporter(private val context: Context) {
+    companion object {
+        private const val TAG = "GpxRouteImporter"
+        const val MAX_BATCH_SIZE = 100
+    }
 
     /**
-     * Parses a GPX file from a Uri and return the RouteSummary and PathPoints
+     * Parses a GPX file from a Uri and return the RouteSummary and PathPoints.
+     * If the imported track lacks elevation data, it automatically enriches coordinates
+     * with DEM elevations from Open-Meteo.
      */
-    suspend fun importRouteFromGpx(uri: Uri): Result<Pair<RouteSummary, List<PathPoint>>> = withContext(Dispatchers.IO) {
+    suspend fun importRouteFromGpx(
+        uri: Uri,
+        onProgress: ((completed: Int, total: Int) -> Unit)? = null
+    ): Result<Pair<RouteSummary, List<PathPoint>>> = withContext(Dispatchers.IO) {
         try {
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 val parser = GPXParser()
@@ -56,8 +78,15 @@ class GpxRouteImporter(private val context: Context) {
                     ?: parsedGpx.routes.firstOrNull()?.routePoints
                     ?: emptyList()
 
+                if (trackPoints.isEmpty()) {
+                    return@withContext Result.failure(Exception("Track contains no points"))
+                }
+
+                // Check whether valid non-zero altitude data is present
+                val hasExistingElevation = trackPoints.any { it.elevation != null && it.elevation != 0.0 }
+
                 // Convert library points to PathPoint
-                val pathPoints = trackPoints.mapIndexed { index, pt ->
+                val pathPoints = trackPoints.map { pt ->
                     PathPoint(
                         latLng = LatLng(pt.latitude, pt.longitude),
                         altitude = pt.elevation ?: 0.0,
@@ -74,6 +103,11 @@ class GpxRouteImporter(private val context: Context) {
                     Location.distanceBetween(p1.latitude, p1.longitude, p2.latitude, p2.longitude, results)
                     totalDist += results[0]
                     pathPoints[i] = pathPoints[i].copy(distance = totalDist)
+                }
+
+                // If no elevation data exists, perform chunked DEM elevation enrichment
+                if (!hasExistingElevation && pathPoints.isNotEmpty()) {
+                    enrichElevations(pathPoints, onProgress)
                 }
 
                 val summary = RouteSummary(
@@ -96,8 +130,59 @@ class GpxRouteImporter(private val context: Context) {
         }
     }
 
+    private suspend fun enrichElevations(
+        pathPoints: MutableList<PathPoint>,
+        onProgress: ((completed: Int, total: Int) -> Unit)?
+    ) {
+        val totalPoints = pathPoints.size
+        val chunkIndices = (0 until totalPoints step MAX_BATCH_SIZE)
+
+        for (startIndex in chunkIndices) {
+            val endIndex = minOf(startIndex + MAX_BATCH_SIZE, totalPoints)
+            val batchCoords = pathPoints.subList(startIndex, endIndex).map { it.latLng }
+
+            onProgress?.invoke(startIndex, totalPoints)
+
+            try {
+                when (val result = elevationService.getBatchElevationsAsync(batchCoords)) {
+                    is ElevationResult.BatchSuccess -> {
+                        val batchElevations = result.elevations
+                        for (i in batchElevations.indices) {
+                            val elev = batchElevations[i]
+                            if (elev != null) {
+                                pathPoints[startIndex + i] = pathPoints[startIndex + i].copy(altitude = elev)
+                            }
+                        }
+                    }
+                    is ElevationResult.RateLimited -> {
+                        Log.w(TAG, "DEM API rate limit hit during route enrichment. Backoff: ${result.retryAfterSeconds}s. Stopping further queries.")
+                        break
+                    }
+                    is ElevationResult.CircuitBreakerOpen -> {
+                        Log.w(TAG, "DEM API circuit breaker is open. Skipping remaining enrichment.")
+                        break
+                    }
+                    is ElevationResult.ServerError -> {
+                        Log.w(TAG, "DEM API server error (${result.statusCode}). Stopping further queries.")
+                        break
+                    }
+                    is ElevationResult.NetworkError -> {
+                        Log.w(TAG, "DEM API network error (${result.message}). Stopping further queries.")
+                        break
+                    }
+                    is ElevationResult.Success -> {
+                        pathPoints[startIndex] = pathPoints[startIndex].copy(altitude = result.elevationMeters)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Exception during elevation batch query: ${e.message}", e)
+                break
+            }
+        }
+        onProgress?.invoke(totalPoints, totalPoints)
+    }
+
     private fun calculateElevationGain(points: List<PathPoint>): Double {
-        // TODO: Might be too noisy. -> Implement some filtering.
         var gain = 0.0
         for (i in 1 until points.size) {
             val diff = points[i].altitude - points[i - 1].altitude

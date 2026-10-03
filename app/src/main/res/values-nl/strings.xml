@@ -1507,4 +1507,7 @@
     <string name="google_drive_never_synced">Nog niet gesynchroniseerd</string>
     <string name="restore_from_google_drive">Herstellen vanaf Google Drive</string>
     <string name="upload_to_google_drive">Back-up maken naar Google Drive</string>
+    <string name="gpx_enriching_elevation">Hoogtegegevens ophalen…</string>
+    <string name="gpx_elevation_enriched">Hoogtegegevens succesvol toegevoegd</string>
+    <string name="gpx_elevation_enrichment_failed">Hoogte ophalen mislukt, 2D-route geïmporteerd</string>
 </resources>
