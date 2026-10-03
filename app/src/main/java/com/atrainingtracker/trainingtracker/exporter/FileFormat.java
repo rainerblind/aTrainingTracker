@@ -26,6 +26,7 @@ public enum FileFormat {
     GC("GC", ".json", R.string.GC),// new GCFileExporter(),            null),
     TCX("TCX", ".tcx", R.string.TCX),//                 new TCXFileExporter(),           null),
     GPX("GPX", ".gpx", R.string.GPX),//                 new GPXFileExporter(),           null),
+    FIT("FIT", ".fit", R.string.FIT),
 
     // not the best solution but should work.
     STRAVA("Strava", ".tcx", R.string.Strava); //              new TCXFileExporter(),           new StravaUploader()),
@@ -33,7 +34,7 @@ public enum FileFormat {
     // TRAINING_PEAKS("TrainingPeaks", ".tcx", R.string.TrainingPeaks);//       new TrainingPeaksFileExporter(), new TrainingPeaksUploader());
     // TRAINING_PEAKS("TrainingPeaks", ".pwx",  "TrainingPeaks");//       new TrainingPeaksFileExporter(), new TrainingPeaksUploader());
 
-    public static final FileFormat[] STANDARD_FILE_FORMATS = new FileFormat[]{CSV, GC, TCX, GPX};
+    public static final FileFormat[] STANDARD_FILE_FORMATS = new FileFormat[]{CSV, GC, TCX, GPX, FIT};
     public static final FileFormat[] ONLINE_COMMUNITIES = new FileFormat[]{STRAVA /*, RUNKEEPER, TRAINING_PEAKS*/};
 
     private final String mDirName;

@@ -25,7 +25,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 public enum ExportType {
     FILE(R.string.SD_card, FileFormat.values()),
-    DROPBOX(R.string.Dropbox, new FileFormat[]{FileFormat.CSV, FileFormat.GC, FileFormat.GPX, FileFormat.TCX}),
+    DROPBOX(R.string.Dropbox, new FileFormat[]{FileFormat.CSV, FileFormat.GC, FileFormat.GPX, FileFormat.TCX, FileFormat.FIT}),
     COMMUNITY(R.string.Community, new FileFormat[]{FileFormat.STRAVA, /* FileFormat.RUNKEEPER, FileFormat.TRAINING_PEAKS */});
 
     private final int uiId;

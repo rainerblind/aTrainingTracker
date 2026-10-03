@@ -83,6 +83,7 @@
     <string name="TCX" translatable="false">TCX</string>
     <string name="GPX" translatable="false">GPX</string>
     <string name="GC" translatable="false">GC</string>
+    <string name="FIT" translatable="false">FIT</string>
     <string name="TrainingPeaks" translatable="false">TrainingPeaks</string>
     <string name="unknown_manufacturer">Unknown</string>
     <string name="unknown_last_seen_date">never seen</string>
