@@ -104,10 +104,21 @@ class AdvancedTuningVisualContractTest {
         )
     }
 
+    private fun findTuningSourceFiles(): List<File> {
+        val rootCandidates = listOf(
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning"),
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning")
+        )
+        val dir = rootCandidates.firstOrNull { it.exists() && it.isDirectory }
+            ?: return emptyList()
+        return dir.walkTopDown().filter { it.extension == "kt" }.toList()
+    }
+
     @Test
     fun testDecoupledSubsections_existAsIndividualComposables() {
-        val dialogFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
-        val content = dialogFile.readText()
+        val tuningFiles = findTuningSourceFiles()
+        val content = tuningFiles.joinToString("\n") { it.readText() }
 
         // Verify each decoupled subsection composable function signature
         assertTrue(
@@ -170,8 +181,17 @@ class AdvancedTuningVisualContractTest {
 
     @Test
     fun testWorkoutMasksAndCardsSection_lapDisplayModeUsesSegmentedButton() {
-        val dialogFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
-        val content = dialogFile.readText()
+        val candidates = listOf(
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt"),
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt"),
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt"),
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
+        )
+        val targetFile = candidates.firstOrNull { it.exists() }
+            ?: error("Target file not found in candidates: $candidates")
+        val content = targetFile.readText()
 
         val sectionStartIndex = content.indexOf("fun WorkoutMasksAndCardsSection(")
         assertTrue("WorkoutMasksAndCardsSection must exist", sectionStartIndex >= 0)

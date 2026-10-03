@@ -30,14 +30,15 @@ import java.io.File
  */
 class WorkoutSectionReorderContractTest {
 
-    private fun findAdvancedTuningDialogFile(): File {
+    private fun findTuningSourceContent(): String {
         val candidates = listOf(
-            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt"),
-            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt"),
-            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning"),
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning")
         )
-        return candidates.firstOrNull { it.exists() }
-            ?: error("AdvancedTuningDialog.kt not found in candidates: $candidates")
+        val dir = candidates.firstOrNull { it.exists() && it.isDirectory }
+            ?: return ""
+        return dir.walkTopDown().filter { it.extension == "kt" }.joinToString("\n") { it.readText() }
     }
 
     private fun moveSection(order: List<WorkoutSectionType>, fromIndex: Int, toIndex: Int): List<WorkoutSectionType> {
@@ -78,8 +79,7 @@ class WorkoutSectionReorderContractTest {
 
     @Test
     fun testAdvancedTuningDialog_structuralContract() {
-        val file = findAdvancedTuningDialogFile()
-        val content = file.readText()
+        val content = findTuningSourceContent()
 
         // 1. References WorkoutSectionType
         assertTrue(
