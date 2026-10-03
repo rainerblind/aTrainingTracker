@@ -1445,4 +1445,17 @@
     <string name="import_fit_progress">FITファイルをインポート中 (%1$d / %2$d)…</string>
     <string name="import_fit_summary_success">%1$d 件のワークアウトを正常にインポートしました (%2$d 件の重複をスキップ)。</string>
     <string name="import_fit_summary_with_errors">%1$d 件のワークアウトをインポート、%2$d 件の重複をスキップ、%3$d 件失敗。</string>
+    <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
+    <string name="route_select_title">ルートを選択</string>
+    <string name="route_action_select">ルートを選択</string>
+    <string name="route_action_stop">ルートを終了</string>
+    <string name="route_auto_detect_title">ルート検出</string>
+    <string name="route_auto_detect_prompt">「%1$s」を走行中ですか？</string>
+    <string name="route_auto_detect_activate">有効化</string>
+    <string name="route_auto_detect_dismiss">閉じる</string>
+    <string name="route_filter_near">近く</string>
+    <string name="route_filter_recent">最近走行</string>
+    <string name="route_filter_length">長さ</string>
+    <string name="route_empty_title">利用可能なルートがありません</string>
+    <string name="route_empty_desc">GPXファイルをインポートするかStravaと同期してください。</string>
 </resources>
