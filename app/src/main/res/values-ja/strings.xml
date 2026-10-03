@@ -1425,4 +1425,16 @@
     <string name="permission_rationale_open_settings">設定を開く</string>
     <string name="permission_rationale_settings_explanation">位置情報の権限が拒否されました。位置情報へのアクセスがない場合、GPSルートの記録は利用できません。アプリの設定で権限を付与できます。</string>
     <string name="permission_warning_badge_desc">位置情報の権限がありません</string>
+
+    <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
+    <string name="unfinished_workout_title">トレーニングが中断されました</string>
+    <string name="kill_reason_battery_title">バッテリー最適化により停止しました</string>
+    <string name="kill_reason_battery_stage1">忠告を聞かないと… 😉 でも失われた距離は本当に残念です！バッテリー最適化が有効なため、Androidがバックグラウンド記録を停止しました。</string>
+    <string name="kill_reason_battery_stage1_strava">ご存知の通り、「Stravaになければ起こらなかったのと同じ」… 悔しさ倍増です！ 🙈</string>
+    <string name="kill_reason_battery_stage2">またですか… これで2回目の中断です！何キロ失えば納得しますか？aTrainingTrackerのバッテリー最適化を解除してください。</string>
+    <string name="kill_reason_battery_stage3">二度あることは三度ある… 今月の最も頑固なアスリート賞！🏆 例外を設定するまで、OSは記録を強制終了し続けます。</string>
+    <string name="kill_reason_low_memory">メモリ不足（カメラや3Dナビなど高負荷アプリの使用）のため、Androidにより記録が停止されました。それまでのデータは保存されています。</string>
+    <string name="kill_reason_permission_revoked">トレーニング中に位置情報または通知の権限が取り消されたため、記録が中断されました。</string>
+    <string name="action_disable_battery_optimization">バッテリー最適化を解除</string>
+    <string name="battery_optimization_exempt_celebration">ついに完了！トレーニングデータを制限なく記録できます 🎉</string>
 </resources>

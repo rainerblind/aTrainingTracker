@@ -1633,6 +1633,18 @@
     <string name="permission_rationale_open_settings">Open Settings</string>
     <string name="permission_rationale_settings_explanation">Location permission was denied. Without location access, GPS trackpoints and route recording are unavailable. You can grant permission in App Settings.</string>
     <string name="permission_warning_badge_desc">Location permission missing</string>
+
+    <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
+    <string name="unfinished_workout_title">Workout Interrupted</string>
+    <string name="kill_reason_battery_title">Terminated by Battery Optimization</string>
+    <string name="kill_reason_battery_stage1">Well, who won\'t listen must feel… 😉 But we\'re genuinely sorry about your lost kilometers! Android killed the tracking service in the background because battery optimization is enabled.</string>
+    <string name="kill_reason_battery_stage1_strava">And as you know: \'If it\'s not on Strava, it didn\'t happen\'… double bitter! 🙈</string>
+    <string name="kill_reason_battery_stage2">Not again… Already the 2nd kill! How many lost kilometers do you need as proof? Please disable battery optimization for aTrainingTracker.</string>
+    <string name="kill_reason_battery_stage3">Bad things come in threes… Advice-resistant athlete of the month! 🏆 The system keeps killing your workout until you exempt the app in battery settings.</string>
+    <string name="kill_reason_low_memory">Tracking was terminated by Android due to acute memory pressure (e.g. high-resolution camera or 3D navigation in foreground). Your workout metrics up to that point were safely preserved.</string>
+    <string name="kill_reason_permission_revoked">Tracking was interrupted because location or notification permissions were revoked during your workout.</string>
+    <string name="action_disable_battery_optimization">Disable Battery Optimization</string>
+    <string name="battery_optimization_exempt_celebration">Finally! Unrestricted recording for your training data 🎉</string>
 </resources>
 
 

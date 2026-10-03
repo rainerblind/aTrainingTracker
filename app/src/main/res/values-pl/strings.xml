@@ -1435,4 +1435,16 @@
     <string name="permission_rationale_open_settings">Otwórz ustawienia</string>
     <string name="permission_rationale_settings_explanation">Uprawnienie do lokalizacji zostało odrzucone. Bez dostępu do lokalizacji rejestrowanie trasy GPS jest niedostępne. Możesz przyznać uprawnienie w ustawieniach aplikacji.</string>
     <string name="permission_warning_badge_desc">Brak uprawnienia do lokalizacji</string>
+
+    <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
+    <string name="unfinished_workout_title">Trening przerwany</string>
+    <string name="kill_reason_battery_title">Zakończono przez optymalizację baterii</string>
+    <string name="kill_reason_battery_stage1">Kto nie słucha… 😉 Ale naprawdę szkoda Twoich utraconych kilometrów! Android zamknął usługę rejestrowania w tle z powodu optymalizacji baterii.</string>
+    <string name="kill_reason_battery_stage1_strava">A przecież wiesz: \'If it\'s not on Strava, it didn\'t happen\'… podwójnie przykro! 🙈</string>
+    <string name="kill_reason_battery_stage2">Znowu to samo… Już 2. zamknięcie! Ilu straconych kilometrów potrzebujesz jako dowodu? Wyłącz optymalizację baterii dla aTrainingTracker.</string>
+    <string name="kill_reason_battery_stage3">Do trzech razy sztuka… Najbardziej uparty atleta miesiąca! 🏆 System będzie zamykać trening tak długo, aż dodasz aplikację do wyjątków.</string>
+    <string name="kill_reason_low_memory">Rejestrowanie zostało zatrzymane przez Androida z powodu braku pamięci RAM (np. aparat lub nawigacja 3D na pierwszym planie). Dotychczasowe dane zostały zapisane.</string>
+    <string name="kill_reason_permission_revoked">Rejestrowanie zostało przerwane, ponieważ w trakcie treningu cofnięto uprawnienia do lokalizacji lub powiadomień.</string>
+    <string name="action_disable_battery_optimization">Wyłącz optymalizację baterii</string>
+    <string name="battery_optimization_exempt_celebration">Wreszcie! Pełna swoboda dla Twoich danych treningowych 🎉</string>
 </resources>
