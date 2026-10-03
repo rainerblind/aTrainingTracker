@@ -121,12 +121,12 @@ fun MapDetailLayout(
     val telemetryTotalSpan = if (activeTelemetryDomain == ProfileXAxisDomain.TIME) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
     val totalSpan = if (isElevationTimeDomain || isTrackless) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
 
-    val hasZoomToolbar = showZoomControls && activeScrubPath != null && activeScrubPath.isNotEmpty()
     val hasTelemetryGraphs = showZoomControls && showTelemetryCharts && activeScrubPath != null && (
         TelemetryMetricUtils.hasHeartRateData(activeScrubPath) ||
         TelemetryMetricUtils.hasSpeedData(activeScrubPath) ||
         TelemetryMetricUtils.hasPowerData(activeScrubPath)
     )
+    val hasZoomToolbar = showZoomControls && (showElevationProfile || hasTelemetryGraphs) && !activeScrubPath.isNullOrEmpty()
     val hasScrollableContent = metadataContent != null || analyticsContent != null || hasTelemetryGraphs
 
     val unit = remember { TrainingApplication.getUnit() }
