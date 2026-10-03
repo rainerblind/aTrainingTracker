@@ -284,6 +284,20 @@ fun TrackOnMapScreen(
                             .padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                 }
+                if (activeDetailPrefs.showLaps) {
+                    splitChartData?.let { splits ->
+                        LapSplitVisualizerCard(
+                            splitData = splits,
+                            selectedLapNr = selectedLapNr,
+                            onLapClick = { tappedLapNr ->
+                                selectedLapNr = if (selectedLapNr == tappedLapNr) null else tappedLapNr
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
+                }
                 if (activeDetailPrefs.showStrava && !workoutData.stravaActivityData.isNullOrBlank()) {
                     StravaActivitySection(
                         rawActivityJson = workoutData.stravaActivityData,
@@ -314,20 +328,6 @@ fun TrackOnMapScreen(
                             distribution = distribution,
                             displayMode = powerZoneDisplayMode,
                             onDisplayModeChange = { powerZoneDisplayMode = it },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-                if (activeDetailPrefs.showLaps) {
-                    splitChartData?.let { splits ->
-                        LapSplitVisualizerCard(
-                            splitData = splits,
-                            selectedLapNr = selectedLapNr,
-                            onLapClick = { tappedLapNr ->
-                                selectedLapNr = if (selectedLapNr == tappedLapNr) null else tappedLapNr
-                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 4.dp)
