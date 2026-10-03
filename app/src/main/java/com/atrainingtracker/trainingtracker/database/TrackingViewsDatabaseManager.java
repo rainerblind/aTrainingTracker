@@ -551,10 +551,25 @@ public class TrackingViewsDatabaseManager {
                 null,
                 null, null, null);
         while (cursor.moveToNext()) {
-            SensorType sensorType = SensorType.valueOf(cursor.getString(cursor.getColumnIndex(TrackingViewsDbHelper.SENSOR_TYPE)));
+            String sensorTypeStr = cursor.getString(cursor.getColumnIndex(TrackingViewsDbHelper.SENSOR_TYPE));
+            SensorType sensorType;
+            try {
+                sensorType = sensorTypeStr != null ? SensorType.valueOf(sensorTypeStr) : SensorType.TIME_ACTIVE;
+            } catch (IllegalArgumentException e) {
+                sensorType = SensorType.TIME_ACTIVE;
+            }
+
             int sourceDeviceId = cursor.getInt(cursor.getColumnIndex(TrackingViewsDbHelper.SOURCE_DEVICE_ID));
             String deviceName = devicesDatabaseManager.getDeviceName(sourceDeviceId);
-            FilterType filterType = FilterType.valueOf(cursor.getString(cursor.getColumnIndex(TrackingViewsDbHelper.FILTER_TYPE)));
+
+            String filterTypeStr = cursor.getString(cursor.getColumnIndex(TrackingViewsDbHelper.FILTER_TYPE));
+            FilterType filterType;
+            try {
+                filterType = filterTypeStr != null ? FilterType.valueOf(filterTypeStr) : FilterType.INSTANTANEOUS;
+            } catch (IllegalArgumentException e) {
+                filterType = FilterType.INSTANTANEOUS;
+            }
+
             double filterConstant = cursor.getDouble(cursor.getColumnIndex(TrackingViewsDbHelper.FILTER_CONSTANT));
 
             result.add(new FilterData(deviceName, sensorType, filterType, filterConstant));
@@ -578,7 +593,8 @@ public class TrackingViewsDatabaseManager {
         // public static final int DB_VERSION = 7;       // upgraded to version 7 at 15.10.2019
         // public version 8 at 25.02.2026
         // public static final int DB_VERSION = 9;  // upgraded to version 9 at 12.04.2026: Adding Live Segments
-        public static final int DB_VERSION = 10; // upgraded to version 10 at 08.06.2026: Adding Elevation Profile
+        // public static final int DB_VERSION = 10; // upgraded to version 10 at 08.06.2026: Adding Elevation Profile
+        public static final int DB_VERSION = 11; // upgraded to version 11 at 03.10.2026: Repair missing ViewSize defaults in rows
         public static final String VIEWS_TABLE = "ViewsTable";                // the table for the different 'tabs'
         public static final String ROWS_TABLE = "LayoutRowsTable";            // the table for the sensor fields within each tab
         public static final String C_ID = BaseColumns._ID;
@@ -809,6 +825,7 @@ public class TrackingViewsDatabaseManager {
                 values.put(COL_NR, rowData.col);
                 values.put(SENSOR_TYPE, rowData.sensorType.name());
                 values.put(TEXT_SIZE, 0);                              // no longer needed in version 8
+                values.put(VIEW_SIZE, rowData.viewSize.name());
                 DefaultFilterConfig filterConfig = SensorFilterDefaults.getDefaultFilterConfig(rowData.sensorType);
                 values.put(FILTER_TYPE, filterConfig.getFilterType().name());
                 values.put(FILTER_CONSTANT, filterConfig.getFilterConstant());
@@ -928,6 +945,15 @@ public class TrackingViewsDatabaseManager {
                 }
                 // Synchronize elevation profile default with map visibility
                 db.execSQL("UPDATE " + VIEWS_TABLE + " SET " + SHOW_ELEVATION_PROFILE + " = " + SHOW_MAP);
+            }
+
+            if (oldVersion < 11) {
+                Log.i(TAG, "Upgrading database to version 11: repairing null VIEW_SIZE values");
+                try {
+                    db.execSQL("UPDATE " + ROWS_TABLE + " SET " + VIEW_SIZE + " = 'NORMAL' WHERE " + VIEW_SIZE + " IS NULL;");
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to repair null VIEW_SIZE", e);
+                }
             }
         }
 
