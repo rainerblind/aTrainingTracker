@@ -256,6 +256,35 @@ public class DevicesDatabaseManager {
         return result;
     }
 
+    /**
+     * Checks if at least one real, paired remote device (protocol ANT+ or Bluetooth LE with paired > 0)
+     * exists in the database (REQ-UI-259).
+     *
+     * @return true if at least one paired remote device is registered in SQLite, false otherwise.
+     */
+    public boolean hasPairedRemoteDevices() {
+        if (DEBUG) Log.d(TAG, "hasPairedRemoteDevices()");
+        SQLiteDatabase db = getDatabase();
+        if (db == null || !db.isOpen()) {
+            return false;
+        }
+        try (Cursor cursor = db.query(
+                DevicesDbHelper.DEVICES,
+                new String[]{DevicesDbHelper.C_ID},
+                DevicesDbHelper.PAIRED + " > 0 AND (" + DevicesDbHelper.PROTOCOL + "=? OR " + DevicesDbHelper.PROTOCOL + "=?)",
+                new String[]{Protocol.ANT_PLUS.name(), Protocol.BLUETOOTH_LE.name()},
+                null,
+                null,
+                null,
+                "1"
+        )) {
+            return cursor != null && cursor.moveToFirst();
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking paired remote devices", e);
+            return false;
+        }
+    }
+
     public DeviceIdAndNameLists getDeviceIdAndNameLists(SensorType sensorType) {
         if (DEBUG) Log.i(TAG, "getDeviceIdAndNameLists(" + sensorType + ")");
 
