@@ -99,5 +99,7 @@ These rules are strictly binding on all AI assistants and agent instances operat
 * **Minimal Scope Check Only**: At most, perform a 1-2 sentence sanity check or scope boundary if strictly required to formulate the ticket title and acceptance criteria.
 * **Defer Deep Investigation**: Root-cause analysis, forensic file inspection, and architectural refactoring belong exclusively to Stage 1 (Analysis) of the subsequent sprint.
 
-
-
+## 18. Clean Ticket Summaries (Prohibition of Category & Epic Prefixes in Summary)
+* **Rule**: Ticket summaries (titles) MUST NOT contain the ticket category (e.g. `[Bug]`, `[Feature]`, `[Verbesserung]`, `[Improvement]`) nor the Epic name (e.g. `[Aftermath]`, `[Import/TCX]`, `[Aftermath/Details]`) (`"The Ticket name should not contain the ticket category since this is redundant. The same holds for the epic. The Epic should also be not part of the ticket name."`).
+* Ticket type/category and Epic link are first-class, structured attributes rendered natively by Jira. Prepending them in brackets to the summary text causes duplicate labels and clutters backlogs, agile boards, and git commit logs.
+* Ticket summaries must directly, concisely describe the observable issue or feature objective (e.g. *"Ensure Description and Extrema Cards Render in Detailed Workout View"* or *"Prevent Map Squashing by Large Upper Metadata in Workout Details"*).

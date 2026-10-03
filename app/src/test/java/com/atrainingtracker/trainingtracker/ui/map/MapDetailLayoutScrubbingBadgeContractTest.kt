@@ -78,7 +78,7 @@ class MapDetailLayoutScrubbingBadgeContractTest {
     }
 
     @Test
-    fun testMapDetailLayout_hostsScrubbingTelemetryBadgeOverlayAtTopCenter() {
+    fun testMapDetailLayout_anchorsScrubbingTelemetryBadgeAtTopEnd() {
         assertTrue("MapDetailLayout.kt must exist", mapDetailLayoutFile.exists())
         val content = mapDetailLayoutFile.readText()
 
@@ -88,14 +88,33 @@ class MapDetailLayoutScrubbingBadgeContractTest {
         )
 
         assertTrue(
-            "MapDetailLayout must anchor ScrubbingTelemetryBadge at Alignment.TopCenter with 4.dp padding",
-            content.contains(".align(Alignment.TopCenter)") &&
-                    content.contains(".padding(top = 4.dp)")
+            "MapDetailLayout must anchor ScrubbingTelemetryBadge at Alignment.TopEnd with 2.dp top and 8.dp end padding (REQ-UI-246 / TST-UI-205.1)",
+            content.contains(".align(Alignment.TopEnd)") &&
+                    content.contains(".padding(top = 2.dp, end = 8.dp)")
         )
 
         assertTrue(
             "MapDetailLayout must gate overlay badge with showZoomControls, selectedDistance != null, and activeScrubPoint != null",
             content.contains("if (showZoomControls && selectedDistance != null && activeScrubPoint != null)")
+        )
+    }
+
+    @Test
+    fun testMapDetailLayout_unifiesToolbarAndLowerColumnInSharedBox() {
+        assertTrue("MapDetailLayout.kt must exist", mapDetailLayoutFile.exists())
+        val content = mapDetailLayoutFile.readText()
+
+        assertTrue(
+            "MapDetailLayout must encapsulate GlobalTelemetryZoomToolbar and lowerColumn in a shared Box with scrubbingOverlay (REQ-UI-246 / TST-UI-205.2)",
+            content.contains("GlobalTelemetryZoomToolbar(") &&
+                    content.contains("lowerColumn(") &&
+                    content.contains("scrubbingOverlay()")
+        )
+
+        val countSharedBox = Regex("""Box\(\s*modifier\s*=\s*Modifier\s*\.weight\([^\)]+\)\s*\.fillMaxWidth\(\)\s*\)\s*\{\s*Column\(modifier\s*=\s*Modifier\.fillMaxSize\(\)\)""").findAll(content).count()
+        assertTrue(
+            "MapDetailLayout must instantiate shared Box container with internal fillMaxSize Column for both split-pane and non-map layouts (found $countSharedBox)",
+            countSharedBox >= 2
         )
     }
 

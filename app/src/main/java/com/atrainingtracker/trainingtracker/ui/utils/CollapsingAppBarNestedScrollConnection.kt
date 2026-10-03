@@ -27,8 +27,10 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 
 class CollapsingAppBarNestedScrollConnection(
-    val appBarMaxHeight: Int
+    initialAppBarMaxHeight: Int = 0
 ) : NestedScrollConnection {
+
+    var appBarMaxHeight by mutableIntStateOf(initialAppBarMaxHeight)
 
     // This holds the current translation of the bar in Pixels
     var appBarOffset by mutableIntStateOf(0)

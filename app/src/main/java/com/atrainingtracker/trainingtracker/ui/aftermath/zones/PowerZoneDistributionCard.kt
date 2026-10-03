@@ -38,9 +38,19 @@ import com.atrainingtracker.R
 @Composable
 fun PowerZoneDistributionCard(
     distribution: ZoneDistributionData,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    displayMode: ZoneCardDisplayMode? = null,
+    onDisplayModeChange: ((ZoneCardDisplayMode) -> Unit)? = null
 ) {
-    var displayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }
+    var internalDisplayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }
+    val effectiveDisplayMode = displayMode ?: internalDisplayMode
+    val setDisplayMode: (ZoneCardDisplayMode) -> Unit = { newMode ->
+        if (onDisplayModeChange != null) {
+            onDisplayModeChange(newMode)
+        } else {
+            internalDisplayMode = newMode
+        }
+    }
 
     Card(
         modifier = modifier,
@@ -82,7 +92,7 @@ fun PowerZoneDistributionCard(
             }
 
             // Body: 5-Column Vertical Histogram or Fine-Grained Telemetry Frequency Histogram
-            when (displayMode) {
+            when (effectiveDisplayMode) {
                 ZoneCardDisplayMode.FIVE_ZONES -> {
                     ZoneDistributionColumnChart(
                         distribution = distribution,
@@ -108,8 +118,8 @@ fun PowerZoneDistributionCard(
                         modifier = Modifier.height(28.dp)
                     ) {
                         SegmentedButton(
-                            selected = displayMode == ZoneCardDisplayMode.FIVE_ZONES,
-                            onClick = { displayMode = ZoneCardDisplayMode.FIVE_ZONES },
+                            selected = effectiveDisplayMode == ZoneCardDisplayMode.FIVE_ZONES,
+                            onClick = { setDisplayMode(ZoneCardDisplayMode.FIVE_ZONES) },
                             shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
                             icon = {},
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
@@ -120,8 +130,8 @@ fun PowerZoneDistributionCard(
                             )
                         }
                         SegmentedButton(
-                            selected = displayMode == ZoneCardDisplayMode.HISTOGRAM,
-                            onClick = { displayMode = ZoneCardDisplayMode.HISTOGRAM },
+                            selected = effectiveDisplayMode == ZoneCardDisplayMode.HISTOGRAM,
+                            onClick = { setDisplayMode(ZoneCardDisplayMode.HISTOGRAM) },
                             shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
                             icon = {},
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)

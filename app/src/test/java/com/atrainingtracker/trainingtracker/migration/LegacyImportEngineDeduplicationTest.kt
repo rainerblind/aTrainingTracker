@@ -14,6 +14,7 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
@@ -150,12 +151,53 @@ class LegacyImportEngineDeduplicationTest {
         assertTrue("Expected existing workout to return true", exists)
         val expectedSelection = "${WorkoutSummaries.FILE_BASE_NAME} = ? OR " +
                 "${WorkoutSummaries.TIME_START} = ? OR " +
-                "(${WorkoutSummaries.TIME_START} IS NOT NULL AND ABS(strftime('%s', ${WorkoutSummaries.TIME_START}) - strftime('%s', ?)) <= 30)"
+                "(${WorkoutSummaries.TIME_START} IS NOT NULL AND ABS(strftime('%s', ${WorkoutSummaries.TIME_START}) - strftime('%s', ?)) <= 180)"
         assertEquals(expectedSelection, capturedSelection.captured)
         assertEquals(3, capturedArgs.captured.size)
         assertEquals(fileBaseName, capturedArgs.captured[0])
         assertEquals(timeStart, capturedArgs.captured[1])
         assertEquals(timeStart, capturedArgs.captured[2])
+    }
+
+    @Test
+    fun testDeduplicationWithTimeStartAndSport_constructsSportAwareQuery() {
+        val capturedSelection = slot<String>()
+        val capturedArgs = slot<Array<String>>()
+
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        every { mockCursor.count } returns 1
+
+        every {
+            mockSqlDb.query(
+                WorkoutSummaries.TABLE,
+                any(),
+                capture(capturedSelection),
+                capture(capturedArgs),
+                null, null, null
+            )
+        } returns mockCursor
+
+        val fileBaseName = "2015-06-09_065821"
+        val timeStart = "2015-06-09 06:58:21"
+        val sport = BSportType.BIKE
+
+        val exists = LegacyImportEngine.isWorkoutExisting(
+            mockSummariesDb,
+            fileBaseName = fileBaseName,
+            timeStart = timeStart,
+            bSportType = sport
+        )
+
+        assertTrue("Expected existing workout to return true", exists)
+        val expectedSelection = "${WorkoutSummaries.FILE_BASE_NAME} = ? OR " +
+                "${WorkoutSummaries.TIME_START} = ? OR " +
+                "(${WorkoutSummaries.B_SPORT} = ? AND ${WorkoutSummaries.TIME_START} IS NOT NULL AND ABS(strftime('%s', ${WorkoutSummaries.TIME_START}) - strftime('%s', ?)) <= 180)"
+        assertEquals(expectedSelection, capturedSelection.captured)
+        assertEquals(4, capturedArgs.captured.size)
+        assertEquals(fileBaseName, capturedArgs.captured[0])
+        assertEquals(timeStart, capturedArgs.captured[1])
+        assertEquals(sport.name, capturedArgs.captured[2])
+        assertEquals(timeStart, capturedArgs.captured[3])
     }
 
     @Test
