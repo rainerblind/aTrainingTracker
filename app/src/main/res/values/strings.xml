@@ -492,6 +492,9 @@
     <string name="equipment_type_shoe">Shoes</string>
     <string name="equipment_no_bikes">No Bikes</string>
     <string name="equipment_no_shoes">No Shoes</string>
+    <string name="equipment_tab_sensor_matrix">Sensor Matrix</string>
+    <string name="equipment_matrix_no_sensors">No paired sensors found. Pair external sensors first in Settings.</string>
+    <string name="equipment_matrix_no_equipment">No equipment found. Add bikes or shoes first.</string>
 
     <!-- dialogs -->
     <string name="SD_card_not_available">Sorry, the SD Card is not available.</string>

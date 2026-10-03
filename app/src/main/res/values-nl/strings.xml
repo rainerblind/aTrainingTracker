@@ -390,6 +390,9 @@
     <string name="equipment_type_shoe">Schoenen</string>
     <string name="equipment_no_bikes">Geen fietsen</string>
     <string name="equipment_no_shoes">Geen schoenen</string>
+    <string name="equipment_tab_sensor_matrix">Sensormatrix</string>
+    <string name="equipment_matrix_no_sensors">Geen gekoppelde sensoren gevonden. Koppel eerst sensoren in Instellingen.</string>
+    <string name="equipment_matrix_no_equipment">Geen uitrusting gevonden. Voeg eerst fietsen of schoenen toe.</string>
 
     <string name="SD_card_not_available">SD-kaart niet beschikbaar.</string>
 

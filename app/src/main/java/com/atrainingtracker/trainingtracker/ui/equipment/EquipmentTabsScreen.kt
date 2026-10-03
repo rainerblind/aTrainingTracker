@@ -74,6 +74,7 @@ fun EquipmentTabsScreen(
 ) {
     val bikes by viewModel.bikes.collectAsState()
     val shoes by viewModel.shoes.collectAsState()
+    val allSensors by viewModel.allRemoteSensors.collectAsState()
 
     // State to track which item is being edited or having stats viewed
     var itemToConfigure by remember { mutableStateOf<EquipmentItem?>(null) }
@@ -85,7 +86,11 @@ fun EquipmentTabsScreen(
     // State for creating new equipment
     var isAddingNew by remember { mutableStateOf(false) }
 
-    val tabs = listOf(stringResource(R.string.equipment_type_bike), stringResource(R.string.equipment_type_shoe))
+    val tabs = listOf(
+        stringResource(R.string.equipment_type_bike),
+        stringResource(R.string.equipment_type_shoe),
+        stringResource(R.string.equipment_tab_sensor_matrix)
+    )
     val pagerState = rememberPagerState(
         initialPage = initialTab,
         pageCount = { tabs.size }
@@ -109,22 +114,50 @@ fun EquipmentTabsScreen(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize()
             ) { page ->
-                val currentList = if (page == 0) bikes else shoes
-
-                EquipmentList(
-                    items = currentList,
-                    emptyMessage = if (page == 0) stringResource(R.string.equipment_no_bikes)
-                    else stringResource(R.string.equipment_no_shoes),
-                    onConfigClick = { itemToConfigure = it },
-                    onStatsClick = { item ->
-                        val periods = viewModel.getDetailedStats(item.name, item.id, item.firstUsed)
-                        val allStats = listOf(item.statsData) + periods
-                        statsToShow = Pair(item.name, allStats)
-                    },
-                    onDelete = { itemToDelete = it },
-                    appBarOffsetPx = connection.appBarOffset,
-                    headerHeightPx = appBarMaxHeightPx.toFloat()
-                )
+                when (page) {
+                    0 -> {
+                        EquipmentList(
+                            items = bikes,
+                            emptyMessage = stringResource(R.string.equipment_no_bikes),
+                            onConfigClick = { itemToConfigure = it },
+                            onStatsClick = { item ->
+                                val periods = viewModel.getDetailedStats(item.name, item.id, item.firstUsed)
+                                val allStats = listOf(item.statsData) + periods
+                                statsToShow = Pair(item.name, allStats)
+                            },
+                            onDelete = { itemToDelete = it },
+                            appBarOffsetPx = connection.appBarOffset,
+                            headerHeightPx = appBarMaxHeightPx.toFloat()
+                        )
+                    }
+                    1 -> {
+                        EquipmentList(
+                            items = shoes,
+                            emptyMessage = stringResource(R.string.equipment_no_shoes),
+                            onConfigClick = { itemToConfigure = it },
+                            onStatsClick = { item ->
+                                val periods = viewModel.getDetailedStats(item.name, item.id, item.firstUsed)
+                                val allStats = listOf(item.statsData) + periods
+                                statsToShow = Pair(item.name, allStats)
+                            },
+                            onDelete = { itemToDelete = it },
+                            appBarOffsetPx = connection.appBarOffset,
+                            headerHeightPx = appBarMaxHeightPx.toFloat()
+                        )
+                    }
+                    2 -> {
+                        EquipmentSensorMatrixScreen(
+                            bikes = bikes,
+                            shoes = shoes,
+                            sensors = allSensors,
+                            onToggleLink = { equipmentId, sensorId, isLinked ->
+                                viewModel.setSensorLink(equipmentId, sensorId, isLinked)
+                            },
+                            appBarOffsetPx = connection.appBarOffset,
+                            headerHeightPx = appBarMaxHeightPx.toFloat()
+                        )
+                    }
+                }
             }
 
             // 2. THE COLLAPSING HEADER (Matches Segments Style)
@@ -165,15 +198,17 @@ fun EquipmentTabsScreen(
             }
 
             // 3. THE FLOATING ACTION BUTTON
-            // Since we aren't using Scaffold, we align it manually to the bottom-right
-            FloatingActionButton(
-                onClick = { isAddingNew = true },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp)
-                    .navigationBarsPadding() // Ensure it stays above nav bar
-            ) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.text_new))
+            // Rendered only on Bikes (0) and Shoes (1) tabs; suppressed on Sensor Matrix (2)
+            if (pagerState.currentPage != 2) {
+                FloatingActionButton(
+                    onClick = { isAddingNew = true },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(16.dp)
+                        .navigationBarsPadding() // Ensure it stays above nav bar
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.text_new))
+                }
             }
         }
     }

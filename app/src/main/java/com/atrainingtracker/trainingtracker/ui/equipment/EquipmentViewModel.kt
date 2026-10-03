@@ -89,6 +89,9 @@ class EquipmentViewModel @JvmOverloads constructor(
     private val _shoes = MutableStateFlow<List<EquipmentItem>>(emptyList())
     val shoes: StateFlow<List<EquipmentItem>> = _shoes
 
+    private val _allRemoteSensors = MutableStateFlow<List<DevicesDatabaseManager.SimpleSensorInfo>>(emptyList())
+    val allRemoteSensors: StateFlow<List<DevicesDatabaseManager.SimpleSensorInfo>> = _allRemoteSensors
+
     val bikeSensors = dbDevicesHelper.getSensorsForSportType(BSportType.BIKE)
     val runSensors = dbDevicesHelper.getSensorsForSportType(BSportType.RUN)
 
@@ -174,6 +177,22 @@ class EquipmentViewModel @JvmOverloads constructor(
 
             _bikes.value = fetchItems(BSportType.BIKE)
             _shoes.value = fetchItems(BSportType.RUN)
+            _allRemoteSensors.value = dbDevicesHelper.allRemoteSensors
+        }
+    }
+
+    /**
+     * Atomically toggles a link between an equipment item and a remote sensor (REQ-UI-256).
+     * Updates SQLite LINKS table immediately and reactively refreshes equipment state.
+     *
+     * @param equipmentId ID of the equipment (bike or shoe)
+     * @param sensorId ID of the sensor device
+     * @param isLinked True to establish link, false to unlink
+     */
+    fun setSensorLink(equipmentId: Long, sensorId: Long, isLinked: Boolean) {
+        viewModelScope.launch(ioDispatcher) {
+            dbEquipmentHelper.setDeviceLink(equipmentId, sensorId, isLinked)
+            loadEquipment()
         }
     }
 

@@ -392,6 +392,9 @@
     <string name="equipment_type_shoe">Zapatillas</string>
     <string name="equipment_no_bikes">Sin bicis</string>
     <string name="equipment_no_shoes">Sin zapatillas</string>
+    <string name="equipment_tab_sensor_matrix">Matriz de sensores</string>
+    <string name="equipment_matrix_no_sensors">No se encontraron sensores emparejados. Empareje sensores en Ajustes primero.</string>
+    <string name="equipment_matrix_no_equipment">No se encontró equipamiento. Añada bicicletas o zapatillas primero.</string>
 
     <string name="SD_card_not_available">Lo siento, la tarjeta SD no está disponible.</string>
 

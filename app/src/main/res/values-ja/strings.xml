@@ -390,6 +390,9 @@
     <string name="equipment_type_shoe">シューズ</string>
     <string name="equipment_no_bikes">バイクなし</string>
     <string name="equipment_no_shoes">シューズなし</string>
+    <string name="equipment_tab_sensor_matrix">センサーマトリックス</string>
+    <string name="equipment_matrix_no_sensors">ペアリングされたセンサーが見つかりません。設定で最初にセンサーをペアリングしてください。</string>
+    <string name="equipment_matrix_no_equipment">ギアが見つかりません。最初にバイクやシューズを追加してください。</string>
 
     <string name="SD_card_not_available">SDカードが利用できません。</string>
 
