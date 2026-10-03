@@ -1437,4 +1437,12 @@
     <string name="kill_reason_permission_revoked">トレーニング中に位置情報または通知の権限が取り消されたため、記録が中断されました。</string>
     <string name="action_disable_battery_optimization">バッテリー最適化を解除</string>
     <string name="battery_optimization_exempt_celebration">ついに完了！トレーニングデータを制限なく記録できます 🎉</string>
+
+    <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
+    <string name="import_fit_title">FITファイルをインポート</string>
+    <string name="import_fit_description">Garmin、Wahoo、Hammerhead、スマートウォッチからワークアウトをインポート (.fit)。</string>
+    <string name="import_fit_button">FITファイルを選択</string>
+    <string name="import_fit_progress">FITファイルをインポート中 (%1$d / %2$d)…</string>
+    <string name="import_fit_summary_success">%1$d 件のワークアウトを正常にインポートしました (%2$d 件の重複をスキップ)。</string>
+    <string name="import_fit_summary_with_errors">%1$d 件のワークアウトをインポート、%2$d 件の重複をスキップ、%3$d 件失敗。</string>
 </resources>

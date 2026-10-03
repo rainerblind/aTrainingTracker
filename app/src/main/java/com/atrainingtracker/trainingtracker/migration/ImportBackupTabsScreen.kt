@@ -141,6 +141,14 @@ fun ImportBackupTabsScreen(
         }
     }
 
+    val pickFitFilesLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            viewModel.importFitFiles(context, uris)
+        }
+    }
+
     LaunchedEffect(uiState) {
         val state = uiState
         if (state is BackupRestoreViewModel.UiState.MappingRequired) {
@@ -210,7 +218,8 @@ fun ImportBackupTabsScreen(
                                 showDropboxDisconnectedDialog = true
                             }
                         },
-                        onSingleLegacyImportClick = { pickLegacyFileLauncher.launch(arrayOf("*/*")) }
+                        onSingleLegacyImportClick = { pickLegacyFileLauncher.launch(arrayOf("*/*")) },
+                        onFitImportClick = { pickFitFilesLauncher.launch(arrayOf("*/*")) }
                     )
                     1 -> BackupTabContent(
                         viewModel = viewModel,
@@ -906,7 +915,8 @@ private fun ImportTabContent(
     isBusy: Boolean,
     isDropboxConnected: Boolean,
     onBulkRecoverClick: () -> Unit,
-    onSingleLegacyImportClick: () -> Unit
+    onSingleLegacyImportClick: () -> Unit,
+    onFitImportClick: () -> Unit
 ) {
     val scanButtonColors = if (isDropboxConnected) {
         ButtonDefaults.outlinedButtonColors()
@@ -925,6 +935,37 @@ private fun ImportTabContent(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // --- FIT Importer Card (ATT-1828 / REQ-DAT-019) ---
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = stringResource(R.string.import_fit_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.import_fit_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onFitImportClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isBusy
+                ) {
+                    Icon(Icons.Default.CloudUpload, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.import_fit_button))
+                }
+            }
+        }
+
         // --- Legacy Recovery Card ---
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
