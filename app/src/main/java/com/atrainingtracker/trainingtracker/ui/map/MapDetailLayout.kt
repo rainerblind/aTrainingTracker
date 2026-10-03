@@ -534,11 +534,13 @@ fun MapDetailLayout(
                 .offset { IntOffset(0, connection.appBarOffset) }
                 .onGloballyPositioned { coordinates ->
                     val measured = coordinates.size.height
-                    headerHeightPx = measured
-                    connection.appBarMaxHeight = measured
-                    if (!useStatusBarsPadding && onHeaderHeightMeasured != null) {
-                        val heightDp = with(density) { measured.toDp() }
-                        onHeaderHeightMeasured(heightDp)
+                    if (measured != headerHeightPx) {
+                        headerHeightPx = measured
+                        connection.appBarMaxHeight = measured
+                        if (!useStatusBarsPadding && onHeaderHeightMeasured != null) {
+                            val heightDp = with(density) { measured.toDp() }
+                            onHeaderHeightMeasured(heightDp)
+                        }
                     }
                 }
         ) {
