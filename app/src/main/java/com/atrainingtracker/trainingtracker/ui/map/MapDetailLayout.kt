@@ -209,8 +209,8 @@ fun MapDetailLayout(
                               else if (showElevationProfile) tuningConfig.elevationXAxisDomain
                               else tuningConfig.telemetryXAxisDomain,
                 modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 4.dp),
+                    .align(Alignment.TopEnd)
+                    .padding(top = 2.dp, end = 8.dp),
                 hrZoneThresholds = hrThresholds,
                 powerZoneThresholds = powerThresholds
             )
@@ -592,32 +592,34 @@ fun MapDetailLayout(
                         }
                     )
 
-                    // PERSISTENT STICKY GLOBAL ZOOM TOOLBAR (REQ-UI-225 / ATT-1876)
-                    if (hasZoomToolbar) {
-                        GlobalTelemetryZoomToolbar(
-                            zoomScale = profileZoomScale,
-                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
-                            totalSpan = totalSpan,
-                            onZoomChanged = { z, s ->
-                                profileZoomScale = z
-                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
-                            },
-                            isPanMode = isPanMode,
-                            onPanModeToggle = { isPanMode = !isPanMode },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-
+                    // PERSISTENT STICKY LOWER VIEWPORT CONTAINER (REQ-UI-246 / ATT-2113)
                     Box(
                         modifier = Modifier
                             .weight(1f - splitFraction)
                             .fillMaxWidth()
                     ) {
-                        lowerColumn(
-                            Modifier
-                                .fillMaxSize()
-                                .verticalScroll(rememberScrollState())
-                        )
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            if (hasZoomToolbar) {
+                                GlobalTelemetryZoomToolbar(
+                                    zoomScale = profileZoomScale,
+                                    startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
+                                    totalSpan = totalSpan,
+                                    onZoomChanged = { z, s ->
+                                        profileZoomScale = z
+                                        viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
+                                    },
+                                    isPanMode = isPanMode,
+                                    onPanModeToggle = { isPanMode = !isPanMode },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            lowerColumn(
+                                Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth()
+                                    .verticalScroll(rememberScrollState())
+                            )
+                        }
                         scrubbingOverlay()
                     }
                 }
@@ -632,35 +634,51 @@ fun MapDetailLayout(
                 )
             }
 
-            if (hasZoomToolbar) {
-                GlobalTelemetryZoomToolbar(
-                    zoomScale = profileZoomScale,
-                    startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
-                    totalSpan = totalSpan,
-                    onZoomChanged = { z, s ->
-                        profileZoomScale = z
-                        viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
-                    },
-                    isPanMode = isPanMode,
-                    onPanModeToggle = { isPanMode = !isPanMode },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
             if (!showMap && hasScrollableContent) {
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
                 ) {
-                    lowerColumn(
-                        Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                    )
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        if (hasZoomToolbar) {
+                            GlobalTelemetryZoomToolbar(
+                                zoomScale = profileZoomScale,
+                                startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
+                                totalSpan = totalSpan,
+                                onZoomChanged = { z, s ->
+                                    profileZoomScale = z
+                                    viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
+                                },
+                                isPanMode = isPanMode,
+                                onPanModeToggle = { isPanMode = !isPanMode },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        lowerColumn(
+                            Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState())
+                        )
+                    }
                     scrubbingOverlay()
                 }
             } else {
+                if (hasZoomToolbar) {
+                    GlobalTelemetryZoomToolbar(
+                        zoomScale = profileZoomScale,
+                        startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
+                        totalSpan = totalSpan,
+                        onZoomChanged = { z, s ->
+                            profileZoomScale = z
+                            viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
+                        },
+                        isPanMode = isPanMode,
+                        onPanModeToggle = { isPanMode = !isPanMode },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
