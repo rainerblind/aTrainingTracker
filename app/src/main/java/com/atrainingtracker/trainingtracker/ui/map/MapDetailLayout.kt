@@ -144,39 +144,17 @@ fun MapDetailLayout(
     var headerHeightPx by remember { mutableIntStateOf(0) }
 
     val hrThresholds = remember(bSportType, context) {
-        runCatching {
-            val zoneType = if (bSportType == BSportType.BIKE) {
-                com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType.HR_BIKE
-            } else {
-                com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType.HR_RUN
-            }
-            val z1 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
-            val z2 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
-            val z3 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
-            val z4 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
-            if (z1 > 0 && z2 > 0 && z3 > 0 && z4 > 0) {
-                HeartRateZoneThresholds(z1, z2, z3, z4)
-            } else null
-        }.getOrNull()
+        TelemetryZoneMath.loadHeartRateThresholds(context, bSportType)
     }
 
     val powerThresholds = remember(context) {
-        runCatching {
-            val zoneType = com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType.PWR_BIKE
-            val z1 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
-            val z2 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
-            val z3 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
-            val z4 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
-            if (z1 > 0 && z2 > 0 && z3 > 0 && z4 > 0) {
-                PowerZoneThresholds(z1, z2, z3, z4)
-            } else null
-        }.getOrNull()
+        TelemetryZoneMath.loadPowerThresholds(context)
     }
 
     val activeScrubPoint = remember(selectedDistance, activeScrubPath, isTrackless) {
         if (selectedDistance != null && !activeScrubPath.isNullOrEmpty()) {
             if (isTrackless) {
-                activeScrubPath.minByOrNull { abs(it.timeSec - selectedDistance!!) }
+                TelemetryMetricUtils.findNearestPoint(activeScrubPath, selectedDistance!!, isTimeDomain = true)
             } else {
                 val activeIndex = activeScrubPath.indexOfLast { it.distance <= selectedDistance!! }.coerceAtLeast(0)
                 activeScrubPath.getOrNull(activeIndex) ?: activeScrubPath.firstOrNull()
@@ -352,6 +330,8 @@ fun MapDetailLayout(
                                         },
                                         isPanMode = isPanMode,
                                         showScrubbingBadge = false,
+                                        hrZoneThresholds = hrThresholds,
+                                        powerZoneThresholds = powerThresholds,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
@@ -392,11 +372,11 @@ fun MapDetailLayout(
                                     if (TelemetryMetricUtils.hasHeartRateData(path)) {
                                         Spacer(modifier = Modifier.height(8.dp))
                                         val activeHrPoint = if (selectedDistance != null) {
-                                            if (isTrackless) {
-                                                path.minByOrNull { abs(it.timeSec - selectedDistance!!) }
-                                            } else {
-                                                path.minByOrNull { abs(it.distance - selectedDistance!!) }
-                                            }
+                                            TelemetryMetricUtils.findNearestPoint(
+                                                points = path,
+                                                targetValue = selectedDistance!!,
+                                                isTimeDomain = isTrackless
+                                            )
                                         } else null
                                         val activeHr = activeHrPoint?.hr
                                         val hrHeaderText = if (activeHr != null) {
@@ -429,6 +409,7 @@ fun MapDetailLayout(
                                                 profileZoomScale = z
                                                 viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
                                             },
+                                            hrZoneThresholds = hrThresholds,
                                             zoneDistribution = hrZoneDistribution,
                                             zoneDisplayMode = hrZoneDisplayMode,
                                             modifier = Modifier.fillMaxWidth()
@@ -439,11 +420,11 @@ fun MapDetailLayout(
                                     if (TelemetryMetricUtils.hasPowerData(path)) {
                                         Spacer(modifier = Modifier.height(8.dp))
                                         val activePowerPoint = if (selectedDistance != null) {
-                                            if (isTrackless) {
-                                                path.minByOrNull { abs(it.timeSec - selectedDistance!!) }
-                                            } else {
-                                                path.minByOrNull { abs(it.distance - selectedDistance!!) }
-                                            }
+                                            TelemetryMetricUtils.findNearestPoint(
+                                                points = path,
+                                                targetValue = selectedDistance!!,
+                                                isTimeDomain = isTrackless
+                                            )
                                         } else null
                                         val activePower = activePowerPoint?.power
                                         val powerHeaderText = if (activePower != null) {
@@ -476,6 +457,7 @@ fun MapDetailLayout(
                                                 profileZoomScale = z
                                                 viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
                                             },
+                                            powerZoneThresholds = powerThresholds,
                                             zoneDistribution = powerZoneDistribution,
                                             zoneDisplayMode = powerZoneDisplayMode,
                                             modifier = Modifier.fillMaxWidth()
