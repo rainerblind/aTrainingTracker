@@ -133,15 +133,15 @@ class TracklessAftermathVisualContractTest {
         assertTrue(
             "MapDetailLayout must compute active instantaneous metric readout during scrubbing for Heart Rate",
             content.contains("val activeHrPoint = if (selectedDistance != null) {") &&
-                    content.contains("if (isTrackless) {") &&
-                    content.contains("path.minByOrNull { abs(it.timeSec - selectedDistance!!) }")
+                    content.contains("TelemetryMetricUtils.findNearestPoint(") &&
+                    content.contains("isTimeDomain = isTrackless")
         )
 
         assertTrue(
             "MapDetailLayout must compute active instantaneous metric readout during scrubbing for Power",
             content.contains("val activePowerPoint = if (selectedDistance != null) {") &&
-                    content.contains("if (isTrackless) {") &&
-                    content.contains("path.minByOrNull { abs(it.timeSec - selectedDistance!!) }")
+                    content.contains("TelemetryMetricUtils.findNearestPoint(") &&
+                    content.contains("isTimeDomain = isTrackless")
         )
     }
 

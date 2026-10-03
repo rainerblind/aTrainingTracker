@@ -93,8 +93,8 @@ class TelemetryMetricGraphTracklessScrubbingTest {
         // 2. Marker dot lookup compares p.timeSec directly against currentDistance when isTrackless
         assertTrue(
             "Marker dot lookup must compare timeSec against currentDistance when isTrackless",
-            content.contains("val nearestPoint = if (isTrackless && isTimeDomain) {") &&
-                    content.contains("pathPoints.minByOrNull { abs(it.timeSec - currentDistance.toLong()) }")
+            content.contains("val nearestPoint = TelemetryMetricUtils.findNearestPoint(") &&
+                    content.contains("isTimeDomain = isTrackless && isTimeDomain")
         )
     }
 
