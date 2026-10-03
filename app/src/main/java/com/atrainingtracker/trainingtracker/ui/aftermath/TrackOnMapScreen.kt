@@ -163,8 +163,8 @@ fun TrackOnMapScreen(
         maxAltitudeOverride = workoutData.maxAltitude,
         useStatusBarsPadding = useStatusBarsPadding,
         showMap = showMap && hasGpsTrack && activeDetailPrefs.showMap,
-        showElevationProfile = isElevationPostMap && hasGpsTrack && activeDetailPrefs.showElevationProfile && (workoutData.minAltitude != null || (activeScrubPath?.any { it.altitude != 0.0 } == true)),
-        showTelemetryCharts = isChartsPostMap && activeDetailPrefs.showTelemetryCharts,
+        showElevationProfile = hasGpsTrack && activeDetailPrefs.showElevationProfile && isElevationPostMap && (workoutData.minAltitude != null || (activeScrubPath?.any { it.altitude != 0.0 } == true)),
+        showTelemetryCharts = activeDetailPrefs.showTelemetryCharts && isChartsPostMap,
         hrZoneDistribution = hrZoneDistribution,
         powerZoneDistribution = powerZoneDistribution,
         hrZoneDisplayMode = hrZoneDisplayMode,
@@ -452,79 +452,26 @@ fun TrackOnMapScreen(
             if (analyticsContent != null) {
                 analyticsContent()
             } else {
-                postMapSections.filter { it != WorkoutSectionType.ELEVATION && it != WorkoutSectionType.CHARTS }.forEach { section ->
-                    when (section) {
-                        WorkoutSectionType.DESCRIPTION -> {
-                            if (activeDetailPrefs.showDescription) {
-                                WorkoutDescription(
-                                    data = workoutData.descriptionData,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-                        WorkoutSectionType.EXTREMA -> {
-                            if (activeDetailPrefs.showExtrema && workoutData.extremaData.dataRows.isNotEmpty()) {
-                                WorkoutExtrema(
-                                    data = workoutData.extremaData,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-                        WorkoutSectionType.LAPS -> {
-                            if (activeDetailPrefs.showLaps) {
-                                splitChartData?.let { splits ->
-                                    LapSplitVisualizerCard(
-                                        splitData = splits,
-                                        selectedLapNr = selectedLapNr,
-                                        onLapClick = { tappedLapNr ->
-                                            selectedLapNr = if (selectedLapNr == tappedLapNr) null else tappedLapNr
-                                        },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    )
-                                }
-                            }
-                        }
-                        WorkoutSectionType.STRAVA -> {
-                            if (activeDetailPrefs.showStrava && !workoutData.stravaActivityData.isNullOrBlank()) {
-                                StravaActivitySection(
-                                    rawActivityJson = workoutData.stravaActivityData,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-                        WorkoutSectionType.ZONES -> {
-                            if (activeDetailPrefs.showZoneAnalysis) {
-                                hrZoneDistribution?.let { distribution ->
-                                    HeartRateZoneDistributionCard(
-                                        distribution = distribution,
-                                        displayMode = hrZoneDisplayMode,
-                                        onDisplayModeChange = { hrZoneDisplayMode = it },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    )
-                                }
-                                powerZoneDistribution?.let { distribution ->
-                                    PowerZoneDistributionCard(
-                                        distribution = distribution,
-                                        displayMode = powerZoneDisplayMode,
-                                        onDisplayModeChange = { powerZoneDisplayMode = it },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    )
-                                }
-                            }
-                        }
-                        else -> {}
+                if (activeDetailPrefs.showZoneAnalysis && postMapSections.contains(WorkoutSectionType.ZONES)) {
+                    hrZoneDistribution?.let { distribution ->
+                        HeartRateZoneDistributionCard(
+                            distribution = distribution,
+                            displayMode = hrZoneDisplayMode,
+                            onDisplayModeChange = { hrZoneDisplayMode = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
+                    powerZoneDistribution?.let { distribution ->
+                        PowerZoneDistributionCard(
+                            distribution = distribution,
+                            displayMode = powerZoneDisplayMode,
+                            onDisplayModeChange = { powerZoneDisplayMode = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
                     }
                 }
             }

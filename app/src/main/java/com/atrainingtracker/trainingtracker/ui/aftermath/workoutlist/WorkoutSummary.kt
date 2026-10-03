@@ -281,6 +281,7 @@ fun WorkoutSummary(
                     }
                 }
                 WorkoutSectionType.CHARTS -> {
+                    // 8. Telemetry Metric Graphs
                     if (preferences.showTelemetryCharts && telemetryPoints.isNotEmpty()) {
                         if (TelemetryMetricUtils.hasSpeedData(telemetryPoints)) {
                             HorizontalDivider(
@@ -377,6 +378,7 @@ fun WorkoutSummary(
                     }
                 }
                 WorkoutSectionType.ZONES -> {
+                    // 9. Zone Distribution Cards
                     if (preferences.showZoneAnalysis && (hrZoneDistribution != null || powerZoneDistribution != null)) {
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
