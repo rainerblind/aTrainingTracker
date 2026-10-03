@@ -304,6 +304,17 @@ fun EquipmentTabsScreen(
     }
 }
 
+object EquipmentLayoutConstants {
+    val CARD_SPACING = 6.dp
+    val CARD_HORIZONTAL_MARGIN = 4.dp
+    val CARD_VERTICAL_MARGIN = 0.dp
+    val COMPACT_INNER_VERTICAL_PADDING = 8.dp
+    val STANDARD_INNER_VERTICAL_PADDING = 12.dp
+    val SUBTITLE_SPACING = 4.dp
+    const val RETIRED_ALPHA = 0.75f
+    val MIN_TOUCH_TARGET_HEIGHT = 48.dp
+}
+
 @Composable
 fun EquipmentList(
     items: List<EquipmentItem>,
@@ -346,7 +357,7 @@ fun EquipmentList(
                     start = 4.dp,
                     end = 4.dp
                 ),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(EquipmentLayoutConstants.CARD_SPACING)
             ) {
                 if (activeItems.isNotEmpty() && retiredItems.isNotEmpty()) {
                     item(key = "header_active") {
@@ -411,16 +422,28 @@ fun EquipmentItem(
         else -> ""
     }
 
+    val isCompact = item.statsData.totalWorkouts == 0
+    val cardAlpha = if (item.isRetired) EquipmentLayoutConstants.RETIRED_ALPHA else 1.0f
+
     Box {
         MappableListItem(
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+            modifier = Modifier
+                .padding(
+                    horizontal = EquipmentLayoutConstants.CARD_HORIZONTAL_MARGIN,
+                    vertical = EquipmentLayoutConstants.CARD_VERTICAL_MARGIN
+                )
+                .defaultMinSize(minHeight = EquipmentLayoutConstants.MIN_TOUCH_TARGET_HEIGHT),
+            alpha = cardAlpha,
             onClick = { onConfigClick(item) },
             onLongClick = { showMenu = true }
         ) {
             // ZONE 1: CONFIGURATION (Top part)
             Column(modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp)
+                .padding(
+                    horizontal = 12.dp,
+                    vertical = if (isCompact) EquipmentLayoutConstants.COMPACT_INNER_VERTICAL_PADDING else EquipmentLayoutConstants.STANDARD_INNER_VERTICAL_PADDING
+                )
             ) {
                 // Header Row
                 Row(
@@ -434,7 +457,7 @@ fun EquipmentItem(
                     ) {
                         Text(
                             text = item.name,
-                            style = MaterialTheme.typography.titleLarge
+                            style = if (isCompact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge
                         )
 
                         if (item.isRetired) {
@@ -464,7 +487,7 @@ fun EquipmentItem(
 
                 // Strava Line (with Original Logo)
                 if (!item.stravaName.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(EquipmentLayoutConstants.SUBTITLE_SPACING))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         StravaOriginalLogo()
                         Spacer(modifier = Modifier.width(8.dp))
@@ -478,7 +501,7 @@ fun EquipmentItem(
 
                 // --- Linked Sport Types Line ---
                 if (item.linkedSportTypeNames.isNotBlank()) {
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.height(EquipmentLayoutConstants.SUBTITLE_SPACING))
                     Text(
                         text = "${stringResource(R.string.equipment_sport_types)} ${item.linkedSportTypeNames}",
                         style = MaterialTheme.typography.bodyMedium,
@@ -488,7 +511,7 @@ fun EquipmentItem(
 
                 // Sensors Line
                 if (item.linkedDeviceNames.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(EquipmentLayoutConstants.SUBTITLE_SPACING))
                     Text(
                         text = "${stringResource(R.string.SensorTypes)} ${item.linkedDeviceNames}",
                         style = MaterialTheme.typography.bodyMedium,
@@ -707,6 +730,41 @@ fun PreviewEquipmentCardEmpty() {
                         timeWithUnits = "00:00:00",
                         ascent = "0 m"
                     )
+                ),
+                onConfigClick = { },
+                onStatsClick = { },
+                onDelete = { }
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "Equipment Card - Retired Bike")
+@Composable
+fun PreviewEquipmentCardRetired() {
+    ATrainingTrackerTheme {
+        Box(modifier = Modifier.padding(16.dp)) {
+            EquipmentItem(
+                item = EquipmentItem(
+                    id = 4,
+                    name = "Old Mountain Bike",
+                    linkedDeviceIds = emptyList(),
+                    linkedDeviceNames = "",
+                    linkedSportTypeIds = listOf(1),
+                    linkedSportTypeNames = "Mountain Bike",
+                    frameType = 1,
+                    stravaName = null,
+                    stravaId = null,
+                    firstUsed = "2020-05-01",
+                    lastUsed = "2023-09-15",
+                    statsData = mockStats(
+                        title = "All Time Stats",
+                        dist = "2500 km",
+                        workouts = 120,
+                        timeWithUnits = "98:00:00",
+                        ascent = "15000 m"
+                    ),
+                    isRetired = true
                 ),
                 onConfigClick = { },
                 onStatsClick = { },
