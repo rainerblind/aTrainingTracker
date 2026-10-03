@@ -1421,4 +1421,8 @@
     <string name="workout_source_tcx">TCX</string>
     <string name="workout_source_gpx">GPX</string>
     <string name="workout_source_fit">FIT</string>
+
+    <!-- Workout Section Reordering (ATT-2176 / REQ-UI-255) -->
+    <string name="action_move_up">Mover hacia arriba</string>
+    <string name="action_move_down">Mover hacia abajo</string>
 </resources>

@@ -26,6 +26,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.BrightnessMedium
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.TextFields
@@ -50,6 +52,7 @@ import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
@@ -82,6 +85,7 @@ fun AdvancedTuningDialog(
     val preferenceManager = remember { MyPreferenceManager(context.applicationContext) }
     val persistedWorkoutCardPrefs by preferenceManager.workoutCardPreferencesFlow.collectAsState(initial = null)
     val persistedWorkoutDetailPrefs by preferenceManager.workoutDetailPreferencesFlow.collectAsState(initial = null)
+    val persistedWorkoutSectionsOrder by preferenceManager.workoutSectionsOrderFlow.collectAsState(initial = null)
 
     var elevationXAxisDomain by remember { mutableStateOf(TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN) }
     var telemetryXAxisDomain by remember { mutableStateOf(TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN) }
@@ -103,6 +107,9 @@ fun AdvancedTuningDialog(
 
     var workoutDetailPrefs by remember { mutableStateOf(WorkoutDetailPreferences()) }
     var isDetailPrefsInitialized by remember { mutableStateOf(false) }
+
+    var workoutSectionsOrder by remember { mutableStateOf(WorkoutSectionType.DEFAULT_ORDER) }
+    var isSectionsOrderInitialized by remember { mutableStateOf(false) }
 
     // Multi-section expansion state tracked across configuration changes via string identifiers
     // Initially all sections are collapsed (emptySet) providing a clean, compact overview (ATT-1957)
@@ -131,6 +138,14 @@ fun AdvancedTuningDialog(
         if (!isDetailPrefsInitialized && detailPrefs != null) {
             workoutDetailPrefs = detailPrefs
             isDetailPrefsInitialized = true
+        }
+    }
+
+    LaunchedEffect(persistedWorkoutSectionsOrder) {
+        val order = persistedWorkoutSectionsOrder
+        if (!isSectionsOrderInitialized && order != null) {
+            workoutSectionsOrder = order
+            isSectionsOrderInitialized = true
         }
     }
 
@@ -178,6 +193,7 @@ fun AdvancedTuningDialog(
                         tuningDataStore.saveTuningConfig(newConfig)
                         preferenceManager.setWorkoutCardPreferences(workoutCardPrefs)
                         preferenceManager.setWorkoutDetailPreferences(workoutDetailPrefs)
+                        preferenceManager.setWorkoutSectionsOrder(workoutSectionsOrder)
                         onSettingsChanged?.invoke()
                         onDismiss()
                     }
@@ -315,7 +331,9 @@ fun AdvancedTuningDialog(
                     workoutCardPrefs = workoutCardPrefs,
                     onWorkoutCardPrefsChange = { workoutCardPrefs = it },
                     workoutDetailPrefs = workoutDetailPrefs,
-                    onWorkoutDetailPrefsChange = { workoutDetailPrefs = it }
+                    onWorkoutDetailPrefsChange = { workoutDetailPrefs = it },
+                    workoutSectionsOrder = workoutSectionsOrder,
+                    onWorkoutSectionsOrderChange = { workoutSectionsOrder = it }
                 )
             }
 
@@ -328,8 +346,10 @@ fun AdvancedTuningDialog(
                         tuningDataStore.resetToDefaults()
                         preferenceManager.setWorkoutCardPreferences(WorkoutCardSectionPreferences())
                         preferenceManager.setWorkoutDetailPreferences(WorkoutDetailPreferences())
+                        preferenceManager.setWorkoutSectionsOrder(WorkoutSectionType.DEFAULT_ORDER)
                         workoutCardPrefs = WorkoutCardSectionPreferences()
                         workoutDetailPrefs = WorkoutDetailPreferences()
+                        workoutSectionsOrder = WorkoutSectionType.DEFAULT_ORDER
                         elevationXAxisDomain = TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN
                         telemetryXAxisDomain = TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN
                         cockpitFontFamily = TuningPreferencesDefaults.COCKPIT_FONT_FAMILY
@@ -822,6 +842,7 @@ fun AftermathAnalysisSection(
 }
 
 private data class MatrixFeatureRow(
+    val sectionType: WorkoutSectionType,
     val titleRes: Int,
     val listChecked: Boolean,
     val onListChange: (Boolean) -> Unit,
@@ -835,8 +856,24 @@ fun WorkoutMasksAndCardsSection(
     workoutCardPrefs: WorkoutCardSectionPreferences,
     onWorkoutCardPrefsChange: (WorkoutCardSectionPreferences) -> Unit,
     workoutDetailPrefs: WorkoutDetailPreferences = WorkoutDetailPreferences(),
-    onWorkoutDetailPrefsChange: (WorkoutDetailPreferences) -> Unit = {}
+    onWorkoutDetailPrefsChange: (WorkoutDetailPreferences) -> Unit = {},
+    workoutSectionsOrder: List<WorkoutSectionType> = WorkoutSectionType.DEFAULT_ORDER,
+    onWorkoutSectionsOrderChange: (List<WorkoutSectionType>) -> Unit = {}
 ) {
+    val resolvedOrder = remember(workoutSectionsOrder) {
+        val present = workoutSectionsOrder.distinct()
+        val missing = WorkoutSectionType.values().filter { !present.contains(it) }
+        present + missing
+    }
+
+    fun moveSection(index: Int, targetIndex: Int) {
+        if (index !in resolvedOrder.indices || targetIndex !in resolvedOrder.indices) return
+        val mutable = resolvedOrder.toMutableList()
+        val item = mutable.removeAt(index)
+        mutable.add(targetIndex, item)
+        onWorkoutSectionsOrderChange(mutable)
+    }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -848,13 +885,14 @@ fun WorkoutMasksAndCardsSection(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        // Matrix Table Column Headers (REQ-UI-240-E)
+        // Matrix Table Column Headers (REQ-UI-240-E / REQ-UI-255)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Spacer(modifier = Modifier.width(64.dp))
             Text(
                 text = stringResource(R.string.tuning_matrix_feature),
                 style = MaterialTheme.typography.labelMedium,
@@ -889,65 +927,75 @@ fun WorkoutMasksAndCardsSection(
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
         // 8 Feature Matrix Rows with Alternating Backgrounds & 48dp Touch Targets
-        val features = listOf(
-            MatrixFeatureRow(
-                titleRes = R.string.settings_workout_card_description,
-                listChecked = workoutCardPrefs.showDescription,
-                onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showDescription = it)) },
-                detailChecked = workoutDetailPrefs.showDescription,
-                onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showDescription = it)) }
-            ),
-            MatrixFeatureRow(
-                titleRes = R.string.settings_workout_card_extrema,
-                listChecked = workoutCardPrefs.showExtrema,
-                onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showExtrema = it)) },
-                detailChecked = workoutDetailPrefs.showExtrema,
-                onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showExtrema = it)) }
-            ),
-            MatrixFeatureRow(
-                titleRes = R.string.settings_workout_card_laps,
-                listChecked = workoutCardPrefs.showLaps,
-                onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showLaps = it)) },
-                detailChecked = workoutDetailPrefs.showLaps,
-                onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showLaps = it)) },
-                isLaps = true
-            ),
-            MatrixFeatureRow(
-                titleRes = R.string.settings_workout_card_strava,
-                listChecked = workoutCardPrefs.showStrava,
-                onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showStrava = it)) },
-                detailChecked = workoutDetailPrefs.showStrava,
-                onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showStrava = it)) }
-            ),
-            MatrixFeatureRow(
-                titleRes = R.string.settings_workout_card_map,
-                listChecked = workoutCardPrefs.showMapPreview,
-                onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showMapPreview = it)) },
-                detailChecked = workoutDetailPrefs.showMap,
-                onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showMap = it)) }
-            ),
-            MatrixFeatureRow(
-                titleRes = R.string.settings_workout_card_elevation,
-                listChecked = workoutCardPrefs.showElevationProfile,
-                onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showElevationProfile = it)) },
-                detailChecked = workoutDetailPrefs.showElevationProfile,
-                onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showElevationProfile = it)) }
-            ),
-            MatrixFeatureRow(
-                titleRes = R.string.settings_workout_card_charts,
-                listChecked = workoutCardPrefs.showTelemetryCharts,
-                onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showTelemetryCharts = it)) },
-                detailChecked = workoutDetailPrefs.showTelemetryCharts,
-                onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showTelemetryCharts = it)) }
-            ),
-            MatrixFeatureRow(
-                titleRes = R.string.settings_workout_card_zones,
-                listChecked = workoutCardPrefs.showZoneAnalysis,
-                onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showZoneAnalysis = it)) },
-                detailChecked = workoutDetailPrefs.showZoneAnalysis,
-                onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showZoneAnalysis = it)) }
-            )
-        )
+        val features = resolvedOrder.map { type ->
+            when (type) {
+                WorkoutSectionType.DESCRIPTION -> MatrixFeatureRow(
+                    sectionType = type,
+                    titleRes = R.string.settings_workout_card_description,
+                    listChecked = workoutCardPrefs.showDescription,
+                    onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showDescription = it)) },
+                    detailChecked = workoutDetailPrefs.showDescription,
+                    onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showDescription = it)) }
+                )
+                WorkoutSectionType.EXTREMA -> MatrixFeatureRow(
+                    sectionType = type,
+                    titleRes = R.string.settings_workout_card_extrema,
+                    listChecked = workoutCardPrefs.showExtrema,
+                    onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showExtrema = it)) },
+                    detailChecked = workoutDetailPrefs.showExtrema,
+                    onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showExtrema = it)) }
+                )
+                WorkoutSectionType.LAPS -> MatrixFeatureRow(
+                    sectionType = type,
+                    titleRes = R.string.settings_workout_card_laps,
+                    listChecked = workoutCardPrefs.showLaps,
+                    onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showLaps = it)) },
+                    detailChecked = workoutDetailPrefs.showLaps,
+                    onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showLaps = it)) },
+                    isLaps = true
+                )
+                WorkoutSectionType.STRAVA -> MatrixFeatureRow(
+                    sectionType = type,
+                    titleRes = R.string.settings_workout_card_strava,
+                    listChecked = workoutCardPrefs.showStrava,
+                    onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showStrava = it)) },
+                    detailChecked = workoutDetailPrefs.showStrava,
+                    onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showStrava = it)) }
+                )
+                WorkoutSectionType.MAP -> MatrixFeatureRow(
+                    sectionType = type,
+                    titleRes = R.string.settings_workout_card_map,
+                    listChecked = workoutCardPrefs.showMapPreview,
+                    onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showMapPreview = it)) },
+                    detailChecked = workoutDetailPrefs.showMap,
+                    onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showMap = it)) }
+                )
+                WorkoutSectionType.ELEVATION -> MatrixFeatureRow(
+                    sectionType = type,
+                    titleRes = R.string.settings_workout_card_elevation,
+                    listChecked = workoutCardPrefs.showElevationProfile,
+                    onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showElevationProfile = it)) },
+                    detailChecked = workoutDetailPrefs.showElevationProfile,
+                    onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showElevationProfile = it)) }
+                )
+                WorkoutSectionType.CHARTS -> MatrixFeatureRow(
+                    sectionType = type,
+                    titleRes = R.string.settings_workout_card_charts,
+                    listChecked = workoutCardPrefs.showTelemetryCharts,
+                    onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showTelemetryCharts = it)) },
+                    detailChecked = workoutDetailPrefs.showTelemetryCharts,
+                    onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showTelemetryCharts = it)) }
+                )
+                WorkoutSectionType.ZONES -> MatrixFeatureRow(
+                    sectionType = type,
+                    titleRes = R.string.settings_workout_card_zones,
+                    listChecked = workoutCardPrefs.showZoneAnalysis,
+                    onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showZoneAnalysis = it)) },
+                    detailChecked = workoutDetailPrefs.showZoneAnalysis,
+                    onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showZoneAnalysis = it)) }
+                )
+            }
+        }
 
         features.forEachIndexed { index, feature ->
             val rowBg = if (index % 2 == 0) {
@@ -967,6 +1015,35 @@ fun WorkoutMasksAndCardsSection(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Row(
+                        modifier = Modifier.width(64.dp),
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = { moveSection(index, index - 1) },
+                            enabled = index > 0,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowUp,
+                                contentDescription = stringResource(R.string.action_move_up),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = { moveSection(index, index + 1) },
+                            enabled = index < features.size - 1,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowDown,
+                                contentDescription = stringResource(R.string.action_move_down),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
                     Text(
                         text = stringResource(feature.titleRes),
                         style = MaterialTheme.typography.bodyMedium,
