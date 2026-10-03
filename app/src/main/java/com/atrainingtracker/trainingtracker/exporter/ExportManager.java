@@ -42,6 +42,7 @@ import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseMana
 import com.atrainingtracker.trainingtracker.exporter.uploader.DropboxUploader;
 import com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploader;
 import com.atrainingtracker.trainingtracker.exporter.writer.CSVFileWriter;
+import com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriter;
 import com.atrainingtracker.trainingtracker.exporter.writer.GCFileWriter;
 import com.atrainingtracker.trainingtracker.exporter.writer.GPXFileWriter;
 import com.atrainingtracker.trainingtracker.exporter.writer.TCXFileWriter;
@@ -75,6 +76,7 @@ public class ExportManager {
                     case GC -> new GCFileWriter(context);
                     case TCX -> new TCXFileWriter(context);
                     case GPX -> new GPXFileWriter(context);
+                    case FIT -> new FitFileWriter(context);
                     case STRAVA -> new TCXFileWriter(context);
                     /* case RUNKEEPER:
                         return  new RunkeeperFileExporter(mContext);
