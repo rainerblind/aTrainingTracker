@@ -1540,4 +1540,12 @@
     <string name="kill_reason_permission_revoked">Die Aufzeichnung wurde abgebrochen, weil der App während des Trainings die Standort- oder Benachrichtigungsberechtigung entzogen wurde.</string>
     <string name="action_disable_battery_optimization">Akku-Optimierung deaktivieren</string>
     <string name="battery_optimization_exempt_celebration">Endlich! Freie Fahrt für deine Trainingsdaten 🎉</string>
+
+    <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
+    <string name="import_fit_title">FIT-Dateien importieren</string>
+    <string name="import_fit_description">Aktivitäten von Garmin, Wahoo, Hammerhead oder Smartwatches importieren (.fit).</string>
+    <string name="import_fit_button">FIT-Dateien wählen</string>
+    <string name="import_fit_progress">Importiere FIT-Dateien (%1$d von %2$d)…</string>
+    <string name="import_fit_summary_success">%1$d Aktivitäten erfolgreich importiert (%2$d Duplikate übersprungen).</string>
+    <string name="import_fit_summary_with_errors">%1$d Aktivitäten importiert, %2$d Duplikate übersprungen, %3$d fehlgeschlagen.</string>
 </resources>

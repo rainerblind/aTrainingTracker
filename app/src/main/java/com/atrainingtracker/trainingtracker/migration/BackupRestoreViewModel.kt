@@ -36,6 +36,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
@@ -116,7 +117,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
     var automatedBackupsEnabled by mutableStateOf(prefs.getBoolean("automated_backups", true))
         private set
 
-    var backupIntervalDays by mutableIntStateOf(prefs.getString("backup_interval_days", "1")?.toInt() ?: 1)
+    var backupIntervalDays by mutableIntStateOf(prefs.getString("backup_interval_days", "1")?.toIntOrNull() ?: 1)
         private set
 
     // Clustering Tolerances (ATT-315/350/502)
@@ -335,6 +336,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             val success = when (fileExt) {
                 "tcx" -> LegacyImportEngine.importFromTcx(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
                 "gpx" -> LegacyImportEngine.importFromGpx(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
+                "fit" -> LegacyImportEngine.importFromFit(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
                 else -> false
             }
             Log.i("BackupRestoreVM", "importLegacyFile execution result: fileExt=$fileExt, success=$success")
@@ -352,6 +354,89 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
                 _uiState.value = UiState.Success("Successfully imported workout from ${fileExt.uppercase()} file.")
             } else {
                 _uiState.value = UiState.Error("Failed to import workout. It might already exist or the file format is invalid.")
+            }
+        }
+    }
+
+    /**
+     * Imports multiple Garmin FIT workout files sequentially with duplicate skipping (REQ-DAT-019).
+     */
+    fun importFitFiles(
+        context: Context,
+        uris: List<Uri>,
+        dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
+    ): Job {
+        if (uris.isEmpty()) return Job().apply { complete() }
+        saveClusteringTolerances()
+        return viewModelScope.launch(dispatcher) {
+            val totalFiles = uris.size
+            var importedCount = 0
+            var skippedCount = 0
+            var failedCount = 0
+
+            _uiState.value = UiState.Loading(context.getString(R.string.import_fit_progress, 0, totalFiles))
+
+            uris.forEachIndexed { index, uri ->
+                _uiState.value = UiState.Loading(context.getString(R.string.import_fit_progress, index + 1, totalFiles))
+
+                val displayName = try {
+                    context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                            if (idx != -1) cursor.getString(idx) else null
+                        } else null
+                    }
+                } catch (e: Exception) {
+                    null
+                }
+                val fileName = displayName?.takeIf { it.isNotBlank() } ?: "fit_import_${System.currentTimeMillis()}_$index.fit"
+                val tempFile = File(context.cacheDir, fileName)
+                try {
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        tempFile.outputStream().use { output -> input.copyTo(output) }
+                    }
+
+                    val status = LegacyImportEngine.importFromFitInternal(
+                        context,
+                        tempFile,
+                        createLegacyListener(),
+                        uploadToStravaOnImport
+                    )
+
+                    when (status) {
+                        LegacyImportEngine.ImportStatus.SUCCESS -> importedCount++
+                        LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED -> skippedCount++
+                        LegacyImportEngine.ImportStatus.FAILED -> failedCount++
+                    }
+                } catch (e: Exception) {
+                    Log.e("BackupRestoreVM", "Failed to import FIT URI $uri: ${e.message}", e)
+                    failedCount++
+                } finally {
+                    tempFile.delete()
+                }
+            }
+
+            if (importedCount > 0) {
+                try {
+                    val app = getApplication<Application>()
+                    WorkoutRepository.getInstance(app).loadAllWorkouts()
+                    PeriodsRepository.getInstance(app).syncPeriodsIfDiscrepancy()
+                    WorkoutClusterRepository.getInstance(app).refreshClusters()
+                } catch (e: Exception) {
+                    Log.w("BackupRestoreVM", "Post-import reconciliation failed: ${e.message}")
+                }
+            }
+
+            val resultMsg = if (failedCount > 0) {
+                context.getString(R.string.import_fit_summary_with_errors, importedCount, skippedCount, failedCount)
+            } else {
+                context.getString(R.string.import_fit_summary_success, importedCount, skippedCount)
+            }
+
+            if (importedCount > 0 || skippedCount > 0) {
+                _uiState.value = UiState.Success(resultMsg)
+            } else {
+                _uiState.value = UiState.Error(resultMsg)
             }
         }
     }

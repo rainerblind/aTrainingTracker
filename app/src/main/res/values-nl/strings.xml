@@ -1453,4 +1453,12 @@
     <string name="kill_reason_permission_revoked">De registratie is onderbroken omdat locatie- of meldingsmachtigingen tijdens de training zijn ingetrokken.</string>
     <string name="action_disable_battery_optimization">Batterijoptimalisatie uitschakelen</string>
     <string name="battery_optimization_exempt_celebration">Eindelijk! Vrij baan voor je trainingsgegevens 🎉</string>
+
+    <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
+    <string name="import_fit_title">FIT-bestanden importeren</string>
+    <string name="import_fit_description">Importeer trainingen van Garmin, Wahoo, Hammerhead of smartwatches (.fit).</string>
+    <string name="import_fit_button">Selecteer FIT-bestanden</string>
+    <string name="import_fit_progress">FIT-bestanden importeren (%1$d van %2$d)…</string>
+    <string name="import_fit_summary_success">Succesvol %1$d trainingen geïmporteerd (%2$d duplicaten overgeslagen).</string>
+    <string name="import_fit_summary_with_errors">%1$d trainingen geïmporteerd, %2$d duplicaten overgeslagen, %3$d mislukt.</string>
 </resources>

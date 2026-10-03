@@ -1454,4 +1454,12 @@
     <string name="kill_reason_permission_revoked">L\'enregistrement a été interrompu car les autorisations de localisation ou de notification ont été révoquées pendant votre entraînement.</string>
     <string name="action_disable_battery_optimization">Désactiver l\'optimisation de batterie</string>
     <string name="battery_optimization_exempt_celebration">Enfin ! Voie libre pour vos données d\'entraînement 🎉</string>
+
+    <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
+    <string name="import_fit_title">Importer des fichiers FIT</string>
+    <string name="import_fit_description">Importer des entraînements depuis Garmin, Wahoo, Hammerhead ou montres connectées (.fit).</string>
+    <string name="import_fit_button">Sélectionner des fichiers FIT</string>
+    <string name="import_fit_progress">Importation des fichiers FIT (%1$d sur %2$d)…</string>
+    <string name="import_fit_summary_success">%1$d entraînements importés avec succès (%2$d doublons ignorés).</string>
+    <string name="import_fit_summary_with_errors">%1$d entraînements importés, %2$d doublons ignorés, %3$d échecs.</string>
 </resources>
