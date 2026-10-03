@@ -52,6 +52,7 @@ import com.atrainingtracker.banalservice.ui.devices.DeviceTypeSelectionDialog
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun ControlTrackingScreen(
     trackingMode: TrackingMode,
@@ -74,6 +75,83 @@ fun ControlTrackingScreen(
     locationCalibrationStatus: com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.LocationCalibrationStatus? = null,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+
+    val checkHasLocation = {
+        androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.ACCESS_FINE_LOCATION
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED ||
+        androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
+    var hasLocationPermission by remember {
+        mutableStateOf(checkHasLocation())
+    }
+
+    var showRationaleSheet by remember { mutableStateOf(false) }
+    var isPermanentlyDenied by remember { mutableStateOf(false) }
+
+    val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        val fineGranted = results[android.Manifest.permission.ACCESS_FINE_LOCATION] == true
+        val coarseGranted = results[android.Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        val granted = fineGranted || coarseGranted
+        hasLocationPermission = granted
+        showRationaleSheet = false
+        if (granted) {
+            onStart()
+        } else {
+            val activity = context as? android.app.Activity
+            if (activity != null) {
+                val showRationale = androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(
+                    activity,
+                    android.Manifest.permission.ACCESS_FINE_LOCATION
+                )
+                isPermanentlyDenied = !showRationale
+            }
+        }
+    }
+
+    // Observe lifecycle changes to re-check when user returns to the app (e.g. from Settings)
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                val permitted = checkHasLocation()
+                hasLocationPermission = permitted
+                if (permitted) {
+                    isPermanentlyDenied = false
+                    showRationaleSheet = false
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    val handleStartClick = {
+        if (hasLocationPermission) {
+            onStart()
+        } else {
+            val activity = context as? android.app.Activity
+            if (activity != null) {
+                val showRationale = androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(
+                    activity,
+                    android.Manifest.permission.ACCESS_FINE_LOCATION
+                )
+                isPermanentlyDenied = !showRationale && !hasLocationPermission
+            }
+            showRationaleSheet = true
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -117,40 +195,13 @@ fun ControlTrackingScreen(
         // Pushes the main control buttons to the center
         Spacer(modifier = Modifier.weight(1f))
 
-        val context = LocalContext.current
-        val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-
-        // 1. Create a state that holds the current permission status
-        var hasLocationPermission by remember {
-            mutableStateOf(
-                androidx.core.content.ContextCompat.checkSelfPermission(
-                    context,
-                    android.Manifest.permission.ACCESS_COARSE_LOCATION
-                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-            )
-        }
-
-        // 2. Observe lifecycle changes to re-check when user returns to the app
-        androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
-            val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-                if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                    hasLocationPermission = androidx.core.content.ContextCompat.checkSelfPermission(
-                        context,
-                        android.Manifest.permission.ACCESS_COARSE_LOCATION
-                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                }
-            }
-            lifecycleOwner.lifecycle.addObserver(observer)
-            onDispose {
-                lifecycleOwner.lifecycle.removeObserver(observer)
-            }
-        }
         // Large Control Buttons (Start/Pause/Stop)
         ControlTrackingButton(
             modifier = Modifier.fillMaxWidth(),
             mode = trackingMode,
-            enabled = hasLocationPermission,
-            onStart = onStart,
+            enabled = true,
+            hasPermissionWarning = !hasLocationPermission,
+            onStart = handleStartClick,
             onPause = onPause,
             onResume = onResume,
             onStop = onStop
@@ -172,6 +223,41 @@ fun ControlTrackingScreen(
             isAntSupported = isAntSupported,
             isBluetoothSupported = isBluetoothSupported,
             onPairingClicked = onPairingClicked
+        )
+    }
+
+    // Material 3 Permission Rationale Sheet (REQ-PRI-003)
+    if (showRationaleSheet) {
+        val permissionsToRequest = remember {
+            val perms = mutableListOf(
+                android.Manifest.permission.ACCESS_FINE_LOCATION,
+                android.Manifest.permission.ACCESS_COARSE_LOCATION
+            )
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                perms.add(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                perms.add(android.Manifest.permission.BLUETOOTH_CONNECT)
+                perms.add(android.Manifest.permission.BLUETOOTH_SCAN)
+            }
+            perms.toTypedArray()
+        }
+
+        PermissionRationaleSheet(
+            isPermanentlyDenied = isPermanentlyDenied,
+            onContinue = {
+                permissionLauncher.launch(permissionsToRequest)
+            },
+            onOpenSettings = {
+                val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = android.net.Uri.fromParts("package", context.packageName, null)
+                }
+                context.startActivity(intent)
+                showRationaleSheet = false
+            },
+            onDismissRequest = {
+                showRationaleSheet = false
+            }
         )
     }
 

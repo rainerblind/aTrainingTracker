@@ -1426,4 +1426,19 @@
     <!-- Workout Section Reordering (ATT-2176 / REQ-UI-255) -->
     <string name="action_move_up">Omhoog verplaatsen</string>
     <string name="action_move_down">Omlaag verplaatsen</string>
+
+    <!-- Contextual JIT Permission Flow (ATT-2075 / REQ-PRI-003) -->
+    <string name="permission_rationale_title">Machtigingen voor naadloze tracking</string>
+    <string name="permission_rationale_subtitle">Om je trainingsgegevens nauwkeurig vast te leggen, zijn de volgende machtigingen vereist:</string>
+    <string name="permission_rationale_location_title">Locatie en GPS</string>
+    <string name="permission_rationale_location_desc">Legt continue route, tempo en hoogte vast terwijl de telefoon vergrendeld in je fietsshirt of hardloopriem zit.</string>
+    <string name="permission_rationale_bluetooth_title">Bluetooth &amp; sensoren</string>
+    <string name="permission_rationale_bluetooth_desc">Verbindt met hartslagmeters, vermogensmeters, cadanssensoren en smart trainers.</string>
+    <string name="permission_rationale_notification_title">Trainingsbediening &amp; meldingen</string>
+    <string name="permission_rationale_notification_desc">Toont live trainingsgegevens en pauze/hervat-knoppen direct op het vergrendelscherm.</string>
+    <string name="permission_rationale_continue">Doorgaan</string>
+    <string name="permission_rationale_not_now">Niet nu</string>
+    <string name="permission_rationale_open_settings">Instellingen openen</string>
+    <string name="permission_rationale_settings_explanation">Locatietoestemming is geweigerd. Zonder locatietoegang kunnen er geen GPS-routegegevens worden vastgelegd. Je kunt toestemming geven in de app-instellingen.</string>
+    <string name="permission_warning_badge_desc">Locatietoestemming ontbreekt</string>
 </resources>
