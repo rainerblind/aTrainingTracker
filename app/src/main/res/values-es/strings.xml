@@ -1463,4 +1463,17 @@
     <string name="import_fit_progress">Importando archivos FIT (%1$d de %2$d)…</string>
     <string name="import_fit_summary_success">%1$d entrenamientos importados con éxito (%2$d duplicados omitidos).</string>
     <string name="import_fit_summary_with_errors">%1$d entrenamientos importados, %2$d duplicados omitidos, %3$d fallidos.</string>
+    <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
+    <string name="route_select_title">Seleccionar ruta</string>
+    <string name="route_action_select">Seleccionar ruta</string>
+    <string name="route_action_stop">Finalizar ruta</string>
+    <string name="route_auto_detect_title">Detección de ruta</string>
+    <string name="route_auto_detect_prompt">¿Estás siguiendo \'%1$s\'?</string>
+    <string name="route_auto_detect_activate">Activar</string>
+    <string name="route_auto_detect_dismiss">Rechazar</string>
+    <string name="route_filter_near">Cercano</string>
+    <string name="route_filter_recent">Recientemente recorrido</string>
+    <string name="route_filter_length">Longitud</string>
+    <string name="route_empty_title">No hay rutas disponibles</string>
+    <string name="route_empty_desc">Importa archivos GPX o sincroniza con Strava.</string>
 </resources>

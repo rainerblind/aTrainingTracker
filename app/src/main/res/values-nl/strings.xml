@@ -1461,4 +1461,17 @@
     <string name="import_fit_progress">FIT-bestanden importeren (%1$d van %2$d)…</string>
     <string name="import_fit_summary_success">Succesvol %1$d trainingen geïmporteerd (%2$d duplicaten overgeslagen).</string>
     <string name="import_fit_summary_with_errors">%1$d trainingen geïmporteerd, %2$d duplicaten overgeslagen, %3$d mislukt.</string>
+    <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
+    <string name="route_select_title">Route selecteren</string>
+    <string name="route_action_select">Route selecteren</string>
+    <string name="route_action_stop">Route beëindigen</string>
+    <string name="route_auto_detect_title">Routedetectie</string>
+    <string name="route_auto_detect_prompt">Volg je \'%1$s\'?</string>
+    <string name="route_auto_detect_activate">Activeren</string>
+    <string name="route_auto_detect_dismiss">Afwijzen</string>
+    <string name="route_filter_near">Dichtbij</string>
+    <string name="route_filter_recent">Onlangs gereden</string>
+    <string name="route_filter_length">Lengte</string>
+    <string name="route_empty_title">Geen routes beschikbaar</string>
+    <string name="route_empty_desc">Importeer GPX-bestanden of synchroniseer met Strava.</string>
 </resources>
