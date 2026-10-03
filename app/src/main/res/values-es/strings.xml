@@ -1428,4 +1428,19 @@
     <!-- Workout Section Reordering (ATT-2176 / REQ-UI-255) -->
     <string name="action_move_up">Mover hacia arriba</string>
     <string name="action_move_down">Mover hacia abajo</string>
+
+    <!-- Contextual JIT Permission Flow (ATT-2075 / REQ-PRI-003) -->
+    <string name="permission_rationale_title">Permisos para un seguimiento sin interrupciones</string>
+    <string name="permission_rationale_subtitle">Para registrar con precisión las métricas de tu entrenamiento, se necesitan los siguientes permisos:</string>
+    <string name="permission_rationale_location_title">Ubicación y GPS</string>
+    <string name="permission_rationale_location_desc">Registra la ruta continua, el ritmo y el desnivel mientras el teléfono está bloqueado en el bolsillo del maillot o cinturón de correr.</string>
+    <string name="permission_rationale_bluetooth_title">Bluetooth y sensores</string>
+    <string name="permission_rationale_bluetooth_desc">Conecta con pulsómetros, potenciómetros de bicicleta, sensores de cadencia y rodillos inteligentes.</string>
+    <string name="permission_rationale_notification_title">Control del entrenamiento y notificaciones</string>
+    <string name="permission_rationale_notification_desc">Muestra métricas en tiempo real y botones de pausa/reanudación directamente en la pantalla de bloqueo.</string>
+    <string name="permission_rationale_continue">Continuar</string>
+    <string name="permission_rationale_not_now">Ahora no</string>
+    <string name="permission_rationale_open_settings">Abrir ajustes</string>
+    <string name="permission_rationale_settings_explanation">Se denegó el permiso de ubicación. Sin acceso a la ubicación, no se pueden registrar rutas ni puntos GPS. Puedes conceder el permiso en los Ajustes de la aplicación.</string>
+    <string name="permission_warning_badge_desc">Falta el permiso de ubicación</string>
 </resources>

@@ -381,15 +381,10 @@ class MainActivityWithNavigation :
             }
         }
 
-        // getPermissions
-        getPermissions(true)
-
         // check ANT+ installation
         if (TrainingApplication.checkANTInstallation() && !BANALService.areAllANTServicesInstalled(this)) {
             showInstallANTShitDialog()
         }
-
-        checkBatteryOptimizations()
 
         handleIntent(intent)
 
@@ -507,7 +502,8 @@ class MainActivityWithNavigation :
             .show()
     }
 
-    private fun getPermissions(popup: Boolean) {
+    fun getPermissions(popup: Boolean) {
+        if (!popup) return
         var missingAnyPermission = false
         val requiredPerms = getPermissions()
         val requestPerms = ArrayList<String>()

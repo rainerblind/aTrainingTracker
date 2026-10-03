@@ -1420,4 +1420,19 @@
     <!-- Workout Section Reordering (ATT-2176 / REQ-UI-255) -->
     <string name="action_move_up">Przenieś w górę</string>
     <string name="action_move_down">Przenieś w dół</string>
+
+    <!-- Contextual JIT Permission Flow (ATT-2075 / REQ-PRI-003) -->
+    <string name="permission_rationale_title">Uprawnienia do płynnego śledzenia</string>
+    <string name="permission_rationale_subtitle">Aby precyzyjnie rejestrować parametry treningu, wymagane są następujące uprawnienia:</string>
+    <string name="permission_rationale_location_title">Lokalizacja i GPS</string>
+    <string name="permission_rationale_location_desc">Rejestruje ciągłą trasę, tempo i wysokość, gdy telefon jest zablokowany w kieszeni koszulki kolarskiej lub pasie biegowym.</string>
+    <string name="permission_rationale_bluetooth_title">Bluetooth i czujniki</string>
+    <string name="permission_rationale_bluetooth_desc">Łączy z monitorami tętna, miernikami mocy, czujnikami kadencji i trenażerami rowerowymi.</string>
+    <string name="permission_rationale_notification_title">Sterowanie treningiem i powiadomienia</string>
+    <string name="permission_rationale_notification_desc">Wyświetla statystyki na żywo oraz przyciski pauza/wznów bezpośrednio na ekranie blokady.</string>
+    <string name="permission_rationale_continue">Dalej</string>
+    <string name="permission_rationale_not_now">Nie teraz</string>
+    <string name="permission_rationale_open_settings">Otwórz ustawienia</string>
+    <string name="permission_rationale_settings_explanation">Uprawnienie do lokalizacji zostało odrzucone. Bez dostępu do lokalizacji rejestrowanie trasy GPS jest niedostępne. Możesz przyznać uprawnienie w ustawieniach aplikacji.</string>
+    <string name="permission_warning_badge_desc">Brak uprawnienia do lokalizacji</string>
 </resources>

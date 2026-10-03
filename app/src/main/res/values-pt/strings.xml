@@ -1426,4 +1426,19 @@
     <!-- Workout Section Reordering (ATT-2176 / REQ-UI-255) -->
     <string name="action_move_up">Mover para cima</string>
     <string name="action_move_down">Mover para baixo</string>
+
+    <!-- Contextual JIT Permission Flow (ATT-2075 / REQ-PRI-003) -->
+    <string name="permission_rationale_title">Permissões para rastreamento sem interrupções</string>
+    <string name="permission_rationale_subtitle">Para registrar com precisão as métricas do seu treino, são necessárias as seguintes permissões:</string>
+    <string name="permission_rationale_location_title">Localização e GPS</string>
+    <string name="permission_rationale_location_desc">Registra continuamente a rota, o ritmo e a elevação enquanto o telefone está bloqueado no bolso da camisa de ciclismo ou cinto de corrida.</string>
+    <string name="permission_rationale_bluetooth_title">Bluetooth e sensores</string>
+    <string name="permission_rationale_bluetooth_desc">Conecta a monitores de frequência cardíaca, medidores de potência, sensores de cadência e rolos inteligentes.</string>
+    <string name="permission_rationale_notification_title">Controles de treino e notificações</string>
+    <string name="permission_rationale_notification_desc">Exibe métricas em tempo real e botões de pausa/retomada diretamente na tela de bloqueio.</string>
+    <string name="permission_rationale_continue">Continuar</string>
+    <string name="permission_rationale_not_now">Agora não</string>
+    <string name="permission_rationale_open_settings">Abrir configurações</string>
+    <string name="permission_rationale_settings_explanation">A permissão de localização foi negada. Sem acesso à localização, a gravação de rotas e pontos GPS não fica disponível. Você pode conceder a permissão nas configurações do app.</string>
+    <string name="permission_warning_badge_desc">Permissão de localização ausente</string>
 </resources>

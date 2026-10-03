@@ -1427,4 +1427,19 @@
     <!-- Workout Section Reordering (ATT-2176 / REQ-UI-255) -->
     <string name="action_move_up">Monter</string>
     <string name="action_move_down">Descendre</string>
+
+    <!-- Contextual JIT Permission Flow (ATT-2075 / REQ-PRI-003) -->
+    <string name="permission_rationale_title">Autorisations pour un suivi sans interruption</string>
+    <string name="permission_rationale_subtitle">Pour enregistrer précisément les métriques de votre entraînement, les autorisations suivantes sont nécessaires :</string>
+    <string name="permission_rationale_location_title">Localisation et GPS</string>
+    <string name="permission_rationale_location_desc">Enregistre l\'itinéraire continu, l\'allure et l\'altitude pendant que votre téléphone est verrouillé dans votre maillot ou ceinture de course.</string>
+    <string name="permission_rationale_bluetooth_title">Bluetooth et capteurs</string>
+    <string name="permission_rationale_bluetooth_desc">Se connecte aux moniteurs de fréquence cardiaque, capteurs de puissance, capteurs de cadence et home-trainers connectés.</string>
+    <string name="permission_rationale_notification_title">Contrôles d\'entraînement et notifications</string>
+    <string name="permission_rationale_notification_desc">Affiche les données en direct et les boutons pause/reprise directement sur l\'écran de verrouillage.</string>
+    <string name="permission_rationale_continue">Continuer</string>
+    <string name="permission_rationale_not_now">Pas maintenant</string>
+    <string name="permission_rationale_open_settings">Ouvrir les paramètres</string>
+    <string name="permission_rationale_settings_explanation">L\'autorisation de localisation a été refusée. Sans accès à la localisation, l\'enregistrement de l\'itinéraire GPS est indisponible. Vous pouvez activer l\'autorisation dans les paramètres de l\'application.</string>
+    <string name="permission_warning_badge_desc">Autorisation de localisation manquante</string>
 </resources>
