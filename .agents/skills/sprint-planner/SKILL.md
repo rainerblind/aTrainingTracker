@@ -105,9 +105,9 @@ Jointly review all completed sprint tickets with the human user against expectat
    * **Evaluation Decision**:
      * **In Ordnung (i.O. / Accepted)**:
        1. Human user transitions ticket from `Final Review (Human)` to `Erledigt` in Jira.
-     * **User Feedback / Refinements ("No Code Changes During Review")**:
+     * **User Feedback / Refinements ("No Code Changes During Review & Lean Defect Recording")**:
        * **Mandate**: Under NO circumstances may code be modified during Ceremony 2 (`"No code changes during the Sprint Review!"`).
-       * Immediately create a dedicated backlog ticket for the next sprint via `tools/jira_util.py create-issue`.
+       * **Lean Defect Recording**: Do NOT conduct a deep technical root-cause or code analysis during review (`"Während des Sprint Reviews soll es noch keine detaillierte Analyse der Auffälligkeit geben. Es soll eigentlich nur ein Ticket zur Aufnahme der Auffälligkeit erstellt werden. Dabei ist es jedoch wichtig, den Kontext der Beanstandung nicht zu verlieren. Falls erforderlich ist natürlich auch eine kurze Analyse notwendig."`). Only perform a brief sanity check if strictly required to frame the issue. Focus on capturing the exact human observation, steps to reproduce, user intent, and context without loss into a dedicated Jira follow-up ticket via `tools/jira_util.py create-issue`.
        * Rank the new ticket at the top of the backlog via Jira Agile API.
        * Transition the current sprint ticket to `Erledigt`.
        * Proceed strictly to the next ticket.

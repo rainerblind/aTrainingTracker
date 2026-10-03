@@ -93,4 +93,11 @@ These rules are strictly binding on all AI assistants and agent instances operat
 * **Rule**: Ceremony 2 (Sprint Review) MUST begin with compiling and installing the latest integrated sprint build directly onto the attached physical test device (e.g. Google Pixel 10) via `./gradlew installDebug` (`"Sprint Review session must start with installing the latest sprint version on the phone."`).
 * Reviewing tickets against outdated device binaries or presenting walkthroughs before on-device deployment is strictly forbidden. The agent must verify successful APK installation prior to querying and presenting tickets in `Final Review (Human)`.
 
+## 17. Lean Defect Recording During Sprint Review (No Detailed Analysis in Review)
+* **Rule**: During Ceremony 2 (Joint Review), when the human tester or developer discovers an anomaly, cosmetic defect, or regression, the agent **MUST NOT** conduct an extensive technical root-cause or code analysis on the spot (`"Während des Sprint Reviews soll es noch keine detaillierte Analyse der Auffälligkeit geben. Es soll eigentlich nur ein Ticket zur Aufnahme der Auffälligkeit erstellt werden. Dabei ist es jedoch wichtig, den Kontext der Beanstandung nicht zu verlieren. Falls erforderlich ist natürlich auch eine kurze Analyse notwendig."`).
+* **Preserve Full User Context**: Focus completely on capturing the exact complaint, user intent, device/reproduction context, and observable symptoms into a dedicated Jira follow-up ticket (or bounced ticket) without losing critical details.
+* **Minimal Scope Check Only**: At most, perform a 1-2 sentence sanity check or scope boundary if strictly required to formulate the ticket title and acceptance criteria.
+* **Defer Deep Investigation**: Root-cause analysis, forensic file inspection, and architectural refactoring belong exclusively to Stage 1 (Analysis) of the subsequent sprint.
+
+
 
