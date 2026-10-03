@@ -664,6 +664,11 @@ def create_issue(summary, description, issuetype_id="10008", parent_key=None, ro
         with open(description[1:], "r", encoding="utf-8") as f:
             description = f.read()
 
+    # Mandate (Rule 18): Ticket summaries must not contain ticket category or epic in summary
+    clean_summary = re.sub(r'^\s*(\[[^\]]+\]\s*)+', '', summary).strip()
+    if clean_summary:
+        summary = clean_summary
+
     config = get_config()
     url = f"{config['JIRA_URL']}/rest/api/2/issue"
     fields = {
