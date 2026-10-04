@@ -129,7 +129,10 @@ Jointly review all completed sprint tickets with the human user against expectat
    git checkout develop
    git pull origin develop
    git merge --no-ff sprint/<SPRINT_NAME> -m "Merge branch 'sprint/<SPRINT_NAME>' into develop"
+   git push origin develop
    git branch -d sprint/<SPRINT_NAME>
+   # Post-condition verification: ensure no merged sprint branches remain locally
+   git branch --list 'sprint/*'
    ```
    * Transition the sprint's `Review & Retro` ticket to `Erledigt` with the human user.
    * Post final integration notice to Jira.
