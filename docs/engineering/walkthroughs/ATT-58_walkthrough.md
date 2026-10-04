@@ -108,11 +108,38 @@ override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
 
 ## 4. Test Suite Execution Results
 
+### Targeted Unit Test Executions
 ```text
+> Task :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.routes.WaypointDistanceCalculatorTest"
+BUILD SUCCESSFUL in 12s (3 tests completed, 0 failed, 0 skipped)
+
+> Task :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.gpx.GpxRouteImporterWaypointTest"
+BUILD SUCCESSFUL in 13s (5 tests completed, 0 failed, 0 skipped)
+
+> Task :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.tcx.TcxCourseParserTest"
+BUILD SUCCESSFUL in 14s (4 tests completed, 0 failed, 0 skipped)
+
+> Task :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerWaypointTest"
+BUILD SUCCESSFUL in 14s (5 tests completed, 0 failed, 0 skipped)
+
+> Task :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerTTLTest"
+BUILD SUCCESSFUL in 14s (1 test completed, 0 failed, 0 skipped)
+
+> Task :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.TranslationParityTest"
+BUILD SUCCESSFUL in 15s (10 tests completed, 0 failed, 0 skipped)
+```
+
+### Full Clean-Room Regression Execution
+```text
+> Task :app:compileDebugKotlin
+> Task :app:compileDebugJavaWithJavac
+> Task :app:compileDebugUnitTestKotlin
+> Task :app:compileDebugUnitTestJavaWithJavac
 > Task :app:testDebugUnitTest
 
 1656 tests completed, 0 failed, 0 skipped
 BUILD SUCCESSFUL in 5m 3s
 ```
 
-All 1,656 unit tests passing cleanly with zero regressions.
+All 1,656 unit tests across the entire application pass cleanly with 0 failures, 0 skipped, and zero regressions.
+Parent ticket Fix Version is confirmed set to `V4.9.39`.
