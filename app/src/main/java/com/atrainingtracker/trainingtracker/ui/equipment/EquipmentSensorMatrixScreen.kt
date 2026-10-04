@@ -37,18 +37,26 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.annotation.VisibleForTesting
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.SimpleSensorInfo
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
 import com.atrainingtracker.trainingtracker.ui.components.FastScrollableBox
 
-private val STICKY_COLUMN_WIDTH = 156.dp
-private val SENSOR_COLUMN_WIDTH = 88.dp
-private val ROW_HEIGHT = 56.dp
-private val HEADER_ROW_HEIGHT = 60.dp
+@VisibleForTesting
+internal val STICKY_COLUMN_WIDTH = 184.dp
+@VisibleForTesting
+internal val SENSOR_COLUMN_WIDTH = 88.dp
+@VisibleForTesting
+internal val ROW_HEIGHT = 56.dp
+@VisibleForTesting
+internal val SECTION_HEADER_HEIGHT = 36.dp
+@VisibleForTesting
+internal val HEADER_ROW_HEIGHT = 60.dp
 
 /**
  * Screen providing a centralized, interactive equipment-to-sensor mapping matrix with checkboxes
@@ -136,7 +144,7 @@ fun EquipmentSensorMatrixScreen(
                             contentAlignment = Alignment.CenterStart
                         ) {
                             Text(
-                                text = stringResource(R.string.equipment_tab_sensor_matrix),
+                                text = stringResource(R.string.Equipment),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -163,8 +171,7 @@ fun EquipmentSensorMatrixScreen(
                                 Box(
                                     modifier = Modifier
                                         .width(SENSOR_COLUMN_WIDTH)
-                                        .fillMaxHeight()
-                                        .padding(horizontal = 4.dp, vertical = 6.dp),
+                                        .fillMaxHeight(),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
@@ -174,7 +181,16 @@ fun EquipmentSensorMatrixScreen(
                                         textAlign = TextAlign.Center,
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
+                                    )
+                                    // Subtle vertical guide aligned to column edge
+                                    Box(
+                                        modifier = Modifier
+                                            .width(1.dp)
+                                            .fillMaxHeight()
+                                            .align(Alignment.CenterEnd)
+                                            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
                                     )
                                 }
                             }
@@ -249,21 +265,46 @@ private fun MatrixSectionHeader(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .height(SECTION_HEADER_HEIGHT),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                painter = painterResource(id = iconRes),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
+            // Sticky section title and icon aligned with equipment column
+            Row(
+                modifier = Modifier
+                    .width(STICKY_COLUMN_WIDTH)
+                    .fillMaxHeight()
+                    .padding(horizontal = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "$title ($count)",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            // Continuous vertical divider matching header and row dividers
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "$title ($count)",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+
+            // Surface container covering the sensor column area
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
             )
         }
     }
@@ -312,9 +353,9 @@ private fun MatrixEquipmentRow(
             ) {
                 Text(
                     text = item.name,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 18.sp),
                     fontWeight = FontWeight.Medium,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     color = if (item.isRetired) MaterialTheme.colorScheme.outline
                             else MaterialTheme.colorScheme.onSurface
@@ -363,6 +404,14 @@ private fun MatrixEquipmentRow(
                             checkedColor = MaterialTheme.colorScheme.primary,
                             checkmarkColor = MaterialTheme.colorScheme.onPrimary
                         )
+                    )
+                    // Subtle vertical column guide on the right
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .fillMaxHeight()
+                            .align(Alignment.CenterEnd)
+                            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
                     )
                 }
             }
