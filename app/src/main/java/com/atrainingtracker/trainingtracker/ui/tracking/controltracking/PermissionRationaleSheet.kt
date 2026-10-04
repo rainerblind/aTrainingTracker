@@ -55,13 +55,23 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
+ * Types of permission and setup rationale supported by the Just-in-Time flow (REQ-PRI-003, ATT-2075).
+ */
+enum class RationaleType {
+    FOREGROUND,
+    BACKGROUND_LOCATION,
+    BATTERY_OPTIMIZATION
+}
+
+/**
  * Modern Material 3 permission rationale bottom sheet educating the athlete on the athletic
- * necessity of location, bluetooth sensors, and workout controls (REQ-PRI-003, TST-PRI-002, ATT-2075).
+ * necessity of location, bluetooth sensors, background recording, and battery optimization (REQ-PRI-003, TST-PRI-002, ATT-2075).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PermissionRationaleSheet(
     modifier: Modifier = Modifier,
+    rationaleType: RationaleType = RationaleType.FOREGROUND,
     isPermanentlyDenied: Boolean = false,
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     onContinue: () -> Unit,
@@ -76,6 +86,7 @@ fun PermissionRationaleSheet(
         contentColor = MaterialTheme.colorScheme.onSurface
     ) {
         PermissionRationaleContent(
+            rationaleType = rationaleType,
             isPermanentlyDenied = isPermanentlyDenied,
             onContinue = onContinue,
             onOpenSettings = onOpenSettings,
@@ -87,6 +98,7 @@ fun PermissionRationaleSheet(
 @Composable
 fun PermissionRationaleContent(
     modifier: Modifier = Modifier,
+    rationaleType: RationaleType = RationaleType.FOREGROUND,
     isPermanentlyDenied: Boolean = false,
     onContinue: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -100,8 +112,14 @@ fun PermissionRationaleContent(
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        val headerIconRes = when (rationaleType) {
+            RationaleType.FOREGROUND -> R.drawable.my_locations
+            RationaleType.BACKGROUND_LOCATION -> R.drawable.ic_location
+            RationaleType.BATTERY_OPTIMIZATION -> R.drawable.ic_battery_full
+        }
+
         Icon(
-            painter = painterResource(id = R.drawable.my_locations),
+            painter = painterResource(id = headerIconRes),
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(48.dp)
@@ -109,8 +127,14 @@ fun PermissionRationaleContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
+        val titleText = when (rationaleType) {
+            RationaleType.FOREGROUND -> stringResource(id = R.string.permission_rationale_title)
+            RationaleType.BACKGROUND_LOCATION -> stringResource(id = R.string.background_location_permission_title)
+            RationaleType.BATTERY_OPTIMIZATION -> stringResource(id = R.string.battery_optimization_title)
+        }
+
         Text(
-            text = stringResource(id = R.string.permission_rationale_title),
+            text = titleText,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
@@ -118,10 +142,20 @@ fun PermissionRationaleContent(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        val subtitleText = if (isPermanentlyDenied) {
-            stringResource(id = R.string.permission_rationale_settings_explanation)
-        } else {
-            stringResource(id = R.string.permission_rationale_subtitle)
+        val subtitleText = when (rationaleType) {
+            RationaleType.FOREGROUND -> {
+                if (isPermanentlyDenied) {
+                    stringResource(id = R.string.permission_rationale_settings_explanation)
+                } else {
+                    stringResource(id = R.string.permission_rationale_subtitle)
+                }
+            }
+            RationaleType.BACKGROUND_LOCATION -> {
+                stringResource(id = R.string.background_location_permission_text)
+            }
+            RationaleType.BATTERY_OPTIMIZATION -> {
+                stringResource(id = R.string.battery_optimization_text)
+            }
         }
 
         Text(
@@ -132,30 +166,48 @@ fun PermissionRationaleContent(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Card 1: GPS & Location
-        RationaleValueItem(
-            iconRes = R.drawable.ic_location,
-            title = stringResource(id = R.string.permission_rationale_location_title),
-            description = stringResource(id = R.string.permission_rationale_location_desc)
-        )
+        when (rationaleType) {
+            RationaleType.FOREGROUND -> {
+                // Card 1: GPS & Location
+                RationaleValueItem(
+                    iconRes = R.drawable.ic_location,
+                    title = stringResource(id = R.string.permission_rationale_location_title),
+                    description = stringResource(id = R.string.permission_rationale_location_desc)
+                )
 
-        Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-        // Card 2: Bluetooth & Sensors
-        RationaleValueItem(
-            iconRes = R.drawable.ic_my_paired_devices,
-            title = stringResource(id = R.string.permission_rationale_bluetooth_title),
-            description = stringResource(id = R.string.permission_rationale_bluetooth_desc)
-        )
+                // Card 2: Bluetooth & Sensors
+                RationaleValueItem(
+                    iconRes = R.drawable.ic_my_paired_devices,
+                    title = stringResource(id = R.string.permission_rationale_bluetooth_title),
+                    description = stringResource(id = R.string.permission_rationale_bluetooth_desc)
+                )
 
-        Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-        // Card 3: Workout Controls & Notifications
-        RationaleValueItem(
-            iconRes = R.drawable.ic_lap_timer,
-            title = stringResource(id = R.string.permission_rationale_notification_title),
-            description = stringResource(id = R.string.permission_rationale_notification_desc)
-        )
+                // Card 3: Workout Controls & Notifications
+                RationaleValueItem(
+                    iconRes = R.drawable.ic_lap_timer,
+                    title = stringResource(id = R.string.permission_rationale_notification_title),
+                    description = stringResource(id = R.string.permission_rationale_notification_desc)
+                )
+            }
+            RationaleType.BACKGROUND_LOCATION -> {
+                RationaleValueItem(
+                    iconRes = R.drawable.my_locations,
+                    title = stringResource(id = R.string.background_location_permission_title),
+                    description = stringResource(id = R.string.background_location_permission_text)
+                )
+            }
+            RationaleType.BATTERY_OPTIMIZATION -> {
+                RationaleValueItem(
+                    iconRes = R.drawable.ic_battery_full,
+                    title = stringResource(id = R.string.battery_optimization_title),
+                    description = stringResource(id = R.string.battery_optimization_text)
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -246,6 +298,7 @@ fun PreviewPermissionRationaleContentLight() {
     ATrainingTrackerTheme(darkTheme = false) {
         Surface {
             PermissionRationaleContent(
+                rationaleType = RationaleType.FOREGROUND,
                 isPermanentlyDenied = false,
                 onContinue = {},
                 onOpenSettings = {},
@@ -261,6 +314,39 @@ fun PreviewPermissionRationaleContentDark() {
     ATrainingTrackerTheme(darkTheme = true) {
         Surface {
             PermissionRationaleContent(
+                rationaleType = RationaleType.FOREGROUND,
+                isPermanentlyDenied = false,
+                onContinue = {},
+                onOpenSettings = {},
+                onDismissRequest = {}
+            )
+        }
+    }
+}
+
+@Preview(name = "Background Location Rationale", showBackground = true)
+@Composable
+fun PreviewPermissionRationaleContentBgLocation() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        Surface {
+            PermissionRationaleContent(
+                rationaleType = RationaleType.BACKGROUND_LOCATION,
+                isPermanentlyDenied = false,
+                onContinue = {},
+                onOpenSettings = {},
+                onDismissRequest = {}
+            )
+        }
+    }
+}
+
+@Preview(name = "Battery Optimization Rationale", showBackground = true)
+@Composable
+fun PreviewPermissionRationaleContentBattery() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        Surface {
+            PermissionRationaleContent(
+                rationaleType = RationaleType.BATTERY_OPTIMIZATION,
                 isPermanentlyDenied = false,
                 onContinue = {},
                 onOpenSettings = {},
@@ -276,6 +362,7 @@ fun PreviewPermissionRationaleContentDenied() {
     ATrainingTrackerTheme(darkTheme = false) {
         Surface {
             PermissionRationaleContent(
+                rationaleType = RationaleType.FOREGROUND,
                 isPermanentlyDenied = true,
                 onContinue = {},
                 onOpenSettings = {},

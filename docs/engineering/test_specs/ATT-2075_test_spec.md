@@ -1,118 +1,85 @@
-# Stage 2: Requirement & Test Specification - ATT-2075: Modernize Permission Flow: Contextual Just-in-Time Prompts & Graceful Settings Return Handling
+# Stage 2 Requirement & Test Specification: ATT-2075 - Modernize Permission Flow: Contextual Just-in-Time Prompts & Graceful Settings Return Handling (Rework Cycle)
 
 **Ticket**: [ATT-2075](https://rainerblind.atlassian.net/browse/ATT-2075)  
-**Sub-task**: [ATT-2211](https://rainerblind.atlassian.net/browse/ATT-2211) (`[Req & Test Spec]`)  
+**Sub-task**: [ATT-2378](https://rainerblind.atlassian.net/browse/ATT-2378) (`[Test-Spec]`)  
 **Parent Epic**: [ATT-355](https://rainerblind.atlassian.net/browse/ATT-355) (*Good and consistent UI*)  
-**Target Release**: `V4.9.39`  
-**Active Sprint**: `Sprint 2026-40.14`  
-**Branch**: `feature/ATT-2075`  
+**Target Release**: `V4.9.40` (per ASPICE Rule 19: Lösungsversion added upon final acceptance)  
+**Active Sprint**: `2026-40.15`  
 **Author**: AI Agent 1 (Implementer)  
-**Date**: 2026-10-03  
+**Date**: 2026-10-04  
 
 ---
 
-## 1. Requirement Specification (`REQ-PRI-003`)
+## 1. Formal Requirement: REQ-PRI-003 (Refined for Rework Cycle)
 
-| Field | Specification |
-| :--- | :--- |
-| **Requirement ID** | `REQ-PRI-003` |
-| **Title** | **Contextual Just-in-Time Permission Flow, Zero-Friction Cold Start & Graceful Settings Return Handling.** |
-| **Category** | Functional / Privacy / User Experience |
-| **Scope** | `MainActivityWithNavigation.kt`, `ControlTrackingScreen.kt`, `ControlTrackingButton.kt`, `ControlTrackingViewModel.kt`, `PermissionRationaleSheet.kt` |
-| **Status** | Specified |
+### REQ-PRI-003: Contextual Just-in-Time Permission Flow, Zero-Friction Cold Start, Background Location Escalation, Battery Optimization Exemption & Graceful Settings Return Handling
 
-### Clause Breakdown & Architectural Constraints
+The system SHALL NOT present modal permission dialogs or battery optimization popups during cold start; it SHALL evaluate permissions contextually when the athlete expresses tracking intent (tapping Start or searching sensors), display educational Material 3 rationale sheets highlighting athletic benefits, enforce the Android 11+ two-step background location cascade, handle battery optimization exemption with fail-safe OEM fallback, and handle denied permissions or returns from settings gracefully with an amber warning badge on the Start button and actionable feedback without infinite loops (ATT-2075):
 
 1. **Zero-Friction Cold Start (`MainActivityWithNavigation.kt`)**:
-   - `MainActivityWithNavigation.onCreate()` SHALL NOT present modal `AlertDialog` popups for location permissions, background location, or battery optimizations during application cold start.
-   - The athlete SHALL be granted immediate, unobstructed access to the Cockpit and all peripheral screens (Workouts, Equipment, Routes, Settings).
-2. **Contextual Just-in-Time Request Trigger (Moment of Intent)**:
-   - The permission evaluation SHALL be triggered when the athlete expresses explicit tracking intent: tapping "Start Tracking" (`ControlTrackingButton`) or initiating sensor search in `ControlTrackingScreen`.
-   - `ControlTrackingButton` SHALL remain clickable when permissions are missing, rather than being disabled without explanation.
-3. **Athletic Educational Rationale (`PermissionRationaleSheet.kt`)**:
-   - When permissions are required, the system SHALL display a modern Material 3 `ModalBottomSheet` explaining the sport-specific utility:
-     - **Location & Background Location**: Logging continuous GPS trackpoints, pace, and elevation while the phone is stowed in a cycling jersey pocket or running belt with screen locked.
-     - **Bluetooth (Nearby Devices)**: Connecting to heart rate monitors, bike speed/cadence sensors, power meters, and smart trainers.
-     - **Notifications**: Posting real-time workout stats and pause/resume controls on the lock screen.
-   - The sheet SHALL offer explicit actions: "Continue" (launching system permission request) and "Not Now" (dismissing cleanly).
-4. **Graceful Settings Return & Bad Choice Feedback**:
-   - When the athlete returns from Android Settings or if permissions were permanently denied, the app SHALL NOT enter continuous popup loops.
-   - An accessible visual indicator (amber warning badge on the Start button) SHALL signal that location permissions are missing.
-   - Tapping the Start button in this state SHALL provide transparent feedback explaining the consequence (training cannot record GPS trackpoints without location permission) and offer a direct shortcut to open App Settings.
-5. **9-Language Localization Parity (`REQ-LOC-001`)**:
-   - All newly introduced user-facing strings SHALL be translated with 100% parity across EN, DE, ES, FR, IT, JA, NL, PL, PT.
-6. **Preserved Invariants**:
-   - Location provider safety (`REQ-STB-008`): Invocations of `LocationManager` must remain permission-gated and shielded against `SecurityException`.
-   - FGS lifecycle integrity (`REQ-STB-002`): Background location requirement on Android 14+ preserved.
-   - Clean-room test suite 100% pass rate.
+   - `MainActivityWithNavigation.onCreate()` SHALL NOT trigger blocking permission dialogs (`AlertDialog.show()`) or battery optimization requests upon cold startup, allowing athletes immediate, unhindered access to explore the cockpit, workout history, equipment, and routes.
+2. **Progressive 3-Stage Just-in-Time Setup Flow (`ControlTrackingScreen.kt`)**:
+   - When the athlete taps **Start Tracking** (`handleStartClick`):
+     - **Stage A (Foreground Permissions)**: If foreground location (`ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION`), Bluetooth (`BLUETOOTH_CONNECT` / `BLUETOOTH_SCAN` on API 31+), or notification (`POST_NOTIFICATIONS` on API 33+) permissions are missing, the system SHALL display `PermissionRationaleSheet(RationaleType.FOREGROUND)`. Tapping Continue SHALL launch the foreground permissions request.
+     - **Stage B (Background Location Escalation - API 29+)**: On Android 10+ (API 29+), if foreground location is granted but `ACCESS_BACKGROUND_LOCATION` is missing, the system SHALL display `PermissionRationaleSheet(RationaleType.BACKGROUND_LOCATION)` explaining why "Allow all the time" ("Immer zulassen") is required for tracking in a jersey pocket or with locked screen. Tapping Continue SHALL request `ACCESS_BACKGROUND_LOCATION` (or direct to App Settings if permanently denied / required by API 30+).
+     - **Stage C (Battery Optimization Exemption - API 23+)**: If `PowerManager.isIgnoringBatteryOptimizations(packageName)` returns `false`, the system SHALL display `PermissionRationaleSheet(RationaleType.BATTERY_OPTIMIZATION)` explaining that Android kills background services during long workouts unless set to "Unrestricted" ("Nicht eingeschränkt"). Tapping Continue SHALL launch `Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`.
+     - **Stage D (Active Recording Dispatch)**: Once required permissions and prompts are handled (or acknowledged/skipped by the athlete), the system SHALL invoke `onStart()` to commence active recording via `TrackerService`.
+3. **Fail-Safe OEM Intent Cascading (`ControlTrackingScreen.kt`)**:
+   - Attempting to launch `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` SHALL be wrapped in a fail-safe cascade: if `ActivityNotFoundException` or `SecurityException` is caught on customized OEM ROMs (MIUI, EMUI, OneUI), the system SHALL catch the exception and fall back to `Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS`, and if that fails, fall back to `Settings.ACTION_APPLICATION_DETAILS_SETTINGS`, preventing app crashes.
+4. **Reactive Lifecycle Synchronization & Warning Badge (`ControlTrackingScreen.kt`)**:
+   - On `Lifecycle.Event.ON_RESUME`, the screen SHALL reactively re-evaluate foreground location, background location, and battery optimization states.
+   - If location permissions are missing, `ControlTrackingButton` SHALL render an amber warning badge.
+   - Tapping Start when permissions are permanently denied SHALL direct the athlete to Settings with clear feedback rather than leaving the button dead or triggering crash loops.
+5. **Chesterton's Fence Archaeology & Invariant Preservation**:
+   - Refines `REQ-PRI-003` and preserves `REQ-STB-008` (GPS crash immunity), `REQ-STB-002` (FGS resilience), and `REQ-LOC-001` (100% 9-language localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT).
+
+#### Acceptance Criteria (Given-When-Then)
+* **AC-1 (Zero Cold-Start Friction)**:
+  - *Given* a fresh install or revoked permissions,
+  - *When* `MainActivityWithNavigation` is launched,
+  - *Then* zero modal permission or battery dialogs SHALL appear.
+* **AC-2 (Foreground JIT Rationale)**:
+  - *Given* missing foreground location,
+  - *When* the athlete taps Start Tracking,
+  - *Then* `PermissionRationaleSheet` with foreground rationale SHALL be displayed.
+* **AC-3 (Background Location Escalation)**:
+  - *Given* foreground location granted but background location missing on Android 10+,
+  - *When* the athlete proceeds from foreground permissions or taps Start,
+  - *Then* `PermissionRationaleSheet` with background location rationale ("Allow all the time" / "Immer zulassen") SHALL be displayed before tracking starts.
+* **AC-4 (Battery Optimization Prompt & Fail-Safe Intent)**:
+  - *Given* battery optimization active on device,
+  - *When* location permissions are granted,
+  - *Then* `PermissionRationaleSheet` with battery optimization rationale ("Unrestricted" / "Nicht eingeschränkt") SHALL be displayed, and launching the intent SHALL never throw an uncaught exception.
+* **AC-5 (Graceful Settings Return Handling)**:
+  - *Given* returning from Settings (`ON_RESUME`),
+  - *Then* permission states and the Start button warning badge SHALL update reactively.
 
 ---
 
-## 2. Requirement Archaeology & Chesterton's Fence Audit
+## 2. Test Specification: TST-PRI-002 (Refined for Rework Cycle)
 
-1. **Original Requirement ID & Target**:
-   - Refines and modernizes `REQ-PRI-001` (*Permission Transparency*), while strictly preserving `REQ-STB-008` (*Resilient Permission-Gated Location Provider Access & Startup Crash Immunity*) under Epic `ATT-355` (*Good and consistent UI*).
-2. **Historical Origin & Commit Trace**:
-   - Commit `ac493d2bdf` (June 2026), initial ASPICE baseline establishment.
-3. **Root Reason for Existing Formulation**:
-   - `REQ-PRI-001` called for transparent information before requesting permissions. It was originally implemented as synchronous `AlertDialog.Builder` popup chains in `MainActivityWithNavigation.onCreate()`. This created a "popup wall" that frustrated users who merely wanted to inspect their gear, view past activities, or check app settings.
-4. **Preservation of Core Invariants**:
-   - **Startup Crash Immunity (`REQ-STB-008`)**: All `LocationManager` and GPS queries remain shielded against `SecurityException` when permissions are missing.
-   - **Foreground Service Android 14+ Compliance (`REQ-STB-002`)**: `TrackerService` requirements for `ACCESS_BACKGROUND_LOCATION` during lock-screen tracking remain strictly maintained.
-   - **9-Language Parity (`REQ-LOC-001`)**: Complete multi-language coverage across all 9 supported locales.
+### TST-PRI-002: Contextual Just-in-Time Permission Flow, Background Location Escalation & Battery Optimization Verification
 
----
-
-## 3. Acceptance Criteria (Given-When-Then)
-
-### AC-1: Zero-Friction Cold Start
-- **Given** a fresh application install where runtime permissions (location, notifications, bluetooth) have not yet been granted,
-- **When** the athlete opens the app (`MainActivityWithNavigation.onCreate()`),
-- **Then** the application launches directly into the Cockpit without presenting modal permission dialogs or battery optimization popups, allowing free navigation across all tabs.
-
-### AC-2: Contextual Just-in-Time Request Trigger (Moment of Intent)
-- **Given** an athlete in the Cockpit with ungranted location permissions,
-- **When** the athlete taps the "Start Tracking" button,
-- **Then** the app displays the Material 3 `PermissionRationaleSheet` explaining the athletic necessity of location tracking (route recording in jersey pocket) and providing "Continue" and "Not Now" options.
-
-### AC-3: Permission Acquisition & Tracking Launch
-- **Given** the `PermissionRationaleSheet` presented,
-- **When** the athlete taps "Continue" and grants the requested permissions in the system dialog,
-- **Then** the sheet dismisses and tracking starts immediately or the Start button reflects ready state.
-
-### AC-4: Graceful Settings Return & Bad Choice Feedback
-- **Given** an athlete who denied permissions or returned from Android App Settings without granting permissions,
-- **When** the application resumes (`onResume`),
-- **Then** no automatic modal popups appear, an amber warning badge is displayed on the Start button, and tapping Start presents a clear explanatory dialog with a direct button to open App Settings.
+1. **Cold-Start Freedom Test (`MainActivityStartupPermissionContractTest.kt`)**:
+   - Verify `MainActivityWithNavigation.onCreate()` does not invoke blocking `AlertDialog.show()` for permissions or battery optimizations on cold start.
+   - Verify GPS provider access remains shielded per `REQ-STB-008`.
+2. **Progressive JIT State Machine & Escalation Tests (`ControlTrackingPermissionTest.kt`)**:
+   - *Test 2.1*: Verify tapping Start when foreground location is missing triggers foreground rationale sheet.
+   - *Test 2.2*: Verify granting foreground location on API 29+ transitions to background location rationale sheet when `ACCESS_BACKGROUND_LOCATION` is missing.
+   - *Test 2.3*: Verify when location permissions are granted but battery optimization is active, system transitions to battery optimization rationale sheet.
+   - *Test 2.4*: Verify `ControlTrackingButton` displays amber warning badge when location permissions are missing.
+   - *Test 2.5*: Verify `ON_RESUME` re-evaluates all permission states reactively.
+3. **Fail-Safe OEM Intent Contract Test (`ControlTrackingPermissionTest.kt` / `PermissionRationaleSheetContractTest.kt`)**:
+   - Verify battery optimization intent launch handles `ActivityNotFoundException` and `SecurityException` with fallback to settings without crashing.
+4. **9-Language Localization Audit**:
+   - Verify background location and battery optimization titles and descriptions exist across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+5. **Clean-Room Full Suite Regression Execution**:
+   - Run `./gradlew testDebugUnitTest` asserting 100% pass rate.
 
 ---
 
-## 4. Test Specification (`TST-PRI-002`)
+## 3. Traceability Matrix
 
-### 1. Cold-Start Freedom Test (`MainActivityStartupPermissionContractTest.kt`)
-- Verify `MainActivityWithNavigation.onCreate()` does not invoke blocking `AlertDialog.show()` for permissions or battery optimizations.
-- Verify GPS provider access remains shielded per `REQ-STB-008`.
-
-### 2. ViewModel Permission State & JIT Request Test (`ControlTrackingPermissionTest.kt`)
-- Verify `ControlTrackingViewModel` evaluates permission status reactively.
-- Verify tapping Start when permissions are missing triggers rationale sheet display instead of silent failure or crash.
-- Verify tapping Start when permissions are granted dispatches `onStartTracking()`.
-
-### 3. UI Rationale & Badge Contract Test (`PermissionRationaleSheetContractTest.kt`)
-- Verify `PermissionRationaleSheet` renders title, athletic explanations for location and bluetooth, and action buttons.
-- Verify `ControlTrackingButton` renders warning badge when location permissions are missing.
-
-### 4. 9-Language Localization Audit
-- Verify all new permission rationale strings, badge labels, and settings guidance exist across all 9 locales:
-  - `values/strings.xml` (EN)
-  - `values-de/strings.xml` (DE)
-  - `values-es/strings.xml` (ES)
-  - `values-fr/strings.xml` (FR)
-  - `values-it/strings.xml` (IT)
-  - `values-ja/strings.xml` (JA)
-  - `values-nl/strings.xml` (NL)
-  - `values-pl/strings.xml` (PL)
-  - `values-pt/strings.xml` (PT)
-
-### 5. Full Clean-Room Regression Suite
-- Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
+| Requirement | Test ID | Target Component | Status |
+| :--- | :--- | :--- | :--- |
+| **REQ-PRI-003** | `TST-PRI-002` | `ControlTrackingScreen.kt`, `PermissionRationaleSheet.kt`, `ControlTrackingButton.kt` | Specified |
