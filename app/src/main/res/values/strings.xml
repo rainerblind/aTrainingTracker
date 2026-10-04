@@ -1790,6 +1790,13 @@
     <string name="pref_corridor_grouping_desc">Group routes in the list by their departure direction and gateway</string>
     <string name="pref_focused_thumbnail_title">Focused thumbnail zoom</string>
     <string name="pref_focused_thumbnail_desc">Zoom route thumbnails into the unique middle loop instead of common entry/exit corridors</string>
+    <string name="fork_alert_title">Fork Ahead</string>
+    <string name="fork_approaching_in_m">in %1$d m</string>
+    <string name="fork_direction_left">Left</string>
+    <string name="fork_direction_straight">Straight</string>
+    <string name="fork_direction_right">Right</string>
+    <string name="fork_dismiss">Dismiss</string>
+    <string name="fork_select_hint">Tap to select route</string>
 </resources>
 
 

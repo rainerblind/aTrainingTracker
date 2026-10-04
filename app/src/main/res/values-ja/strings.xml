@@ -1577,4 +1577,11 @@
     <string name="pref_corridor_grouping_desc">リスト内のルートを出発方向と回廊ごとにグループ化します</string>
     <string name="pref_focused_thumbnail_title">フォーカスされたサムネイルズーム</string>
     <string name="pref_focused_thumbnail_desc">ルートサムネイルを共通の出入り回廊ではなく、特徴的な中央ループにズームします</string>
+    <string name="fork_alert_title">分岐接近</string>
+    <string name="fork_approaching_in_m">%1$d m先</string>
+    <string name="fork_direction_left">左</string>
+    <string name="fork_direction_straight">直進</string>
+    <string name="fork_direction_right">右</string>
+    <string name="fork_dismiss">閉じる</string>
+    <string name="fork_select_hint">タップして選択</string>
 </resources>

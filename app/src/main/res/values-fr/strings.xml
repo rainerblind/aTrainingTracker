@@ -1598,4 +1598,11 @@
     <string name="pref_corridor_grouping_desc">Regroupe les itinéraires de la liste selon leur direction de départ et leur corridor</string>
     <string name="pref_focused_thumbnail_title">Zoom d\'aperçu focalisé</string>
     <string name="pref_focused_thumbnail_desc">Zoome les aperçus d\'itinéraires sur la boucle centrale distinctive au lieu des corridors d\'entrée/sortie communs</string>
+    <string name="fork_alert_title">Bifurcation à venir</string>
+    <string name="fork_approaching_in_m">dans %1$d m</string>
+    <string name="fork_direction_left">Gauche</string>
+    <string name="fork_direction_straight">Tout droit</string>
+    <string name="fork_direction_right">Droite</string>
+    <string name="fork_dismiss">Fermer</string>
+    <string name="fork_select_hint">Appuyez pour choisir</string>
 </resources>
