@@ -1520,4 +1520,24 @@
     <string name="climb_category_uc">UC</string>
     <string name="tuning_show_live_climbs_title">ライブクライム (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">ルートおよびフリー走行中にリアルタイム登坂コックピットを表示</string>
+
+    <string name="turn_cue_left">左折</string>
+    <string name="turn_cue_right">右折</string>
+    <string name="turn_cue_slight_left">左斜め方向</string>
+    <string name="turn_cue_slight_right">右斜め方向</string>
+    <string name="turn_cue_sharp_left">左へ急カーブ</string>
+    <string name="turn_cue_sharp_right">右へ急カーブ</string>
+    <string name="turn_cue_straight">直進</string>
+    <string name="turn_cue_u_turn">Uターン</string>
+    <string name="turn_cue_now">今すぐ</string>
+    <string name="turn_cue_off_route">コースアウト (%1$d m)</string>
+    <string name="turn_cue_back_on_route">コース復帰</string>
+    <string name="turn_prompts_title">ターンバイターン案内</string>
+    <string name="turn_prompts_summary">ルートナビゲーション中に進行方向案内を表示します</string>
+    <string name="turn_audio_alerts_title">方向転換アラーム音</string>
+    <string name="turn_audio_alerts_summary">方向転換前およびコースアウト時にビープ音を再生します</string>
+    <string name="turn_cue_countdown_distance_title">案内開始距離</string>
+    <string name="turn_cue_countdown_distance_summary">曲がり角の手前での事前警告距離（メートル）</string>
+    <string name="off_route_corridor_threshold_title">コースアウト判定閾値</string>
+    <string name="off_route_corridor_threshold_summary">警告を発するまでの最大逸脱距離（メートル）</string>
 </resources>

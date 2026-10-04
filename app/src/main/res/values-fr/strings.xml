@@ -1541,4 +1541,24 @@
     <string name="climb_category_uc">UC</string>
     <string name="tuning_show_live_climbs_title">Montées en direct (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Afficher le cockpit de montée en temps réel sur les parcours et en conduite libre</string>
+
+    <string name="turn_cue_left">Tourner à gauche</string>
+    <string name="turn_cue_right">Tourner à droite</string>
+    <string name="turn_cue_slight_left">Légèrement à gauche</string>
+    <string name="turn_cue_slight_right">Légèrement à droite</string>
+    <string name="turn_cue_sharp_left">Serrer à gauche</string>
+    <string name="turn_cue_sharp_right">Serrer à droite</string>
+    <string name="turn_cue_straight">Tout droit</string>
+    <string name="turn_cue_u_turn">Faire demi-tour</string>
+    <string name="turn_cue_now">MAINTENANT</string>
+    <string name="turn_cue_off_route">Hors itinéraire (%1$d m)</string>
+    <string name="turn_cue_back_on_route">De retour sur l\'itinéraire</string>
+    <string name="turn_prompts_title">Indications de direction</string>
+    <string name="turn_prompts_summary">Afficher les instructions de guidage pendant la navigation d\'itinéraire</string>
+    <string name="turn_audio_alerts_title">Alertes sonores de direction</string>
+    <string name="turn_audio_alerts_summary">Émettre des signaux sonores avant les virages et en cas d\'écart de route</string>
+    <string name="turn_cue_countdown_distance_title">Distance d\'alerte de virage</string>
+    <string name="turn_cue_countdown_distance_summary">Distance de préavis avant les virages (mètres)</string>
+    <string name="off_route_corridor_threshold_title">Tolérance d\'écart de route</string>
+    <string name="off_route_corridor_threshold_summary">Écart maximal avant l\'alerte hors itinéraire (mètres)</string>
 </resources>

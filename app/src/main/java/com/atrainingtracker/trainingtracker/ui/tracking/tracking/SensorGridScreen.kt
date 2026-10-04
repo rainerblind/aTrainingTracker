@@ -74,7 +74,9 @@ import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
+import com.atrainingtracker.trainingtracker.routes.TurnByTurnNavigationRepository
 import com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbSheet
+import com.atrainingtracker.trainingtracker.ui.routes.TurnPromptBanner
 import com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheet
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import com.atrainingtracker.trainingtracker.ui.components.core.sheetContour
@@ -137,6 +139,9 @@ fun SensorGridScreen(
     val liveClimbsRepo = remember { LiveClimbsRepository.getInstance(context) }
     val activeLiveClimb by liveClimbsRepo.activeLiveClimb.collectAsState()
     val showLiveClimbs = !showLiveSegments && tuningConfig.showLiveClimbs && activeLiveClimb != null
+
+    val navRepo = remember { TurnByTurnNavigationRepository.getInstance(context) }
+    val navState by navRepo.navigationState.collectAsState()
 
     // Control the sheet state
     val scaffoldState = rememberBottomSheetScaffoldState(
@@ -228,6 +233,12 @@ fun SensorGridScreen(
                     }
                 }
             }
+
+            // Turn-by-Turn Navigation Prompt HUD Banner (REQ-MAP-028 / ATT-1450)
+            TurnPromptBanner(
+                navigationState = navState,
+                promptsEnabled = tuningConfig.turnPromptsEnabled
+            )
 
             // 1. The Sensor Grid (Scrollable)
             // This Column will only take as much space as the sensors need.

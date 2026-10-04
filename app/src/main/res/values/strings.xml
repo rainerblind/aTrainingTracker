@@ -1733,6 +1733,26 @@
     <string name="climb_category_uc">UC</string>
     <string name="tuning_show_live_climbs_title">Live Climbs (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Show real-time climb cockpit sheet during routes and free riding</string>
+
+    <string name="turn_cue_left">Turn left</string>
+    <string name="turn_cue_right">Turn right</string>
+    <string name="turn_cue_slight_left">Slight left</string>
+    <string name="turn_cue_slight_right">Slight right</string>
+    <string name="turn_cue_sharp_left">Sharp left</string>
+    <string name="turn_cue_sharp_right">Sharp right</string>
+    <string name="turn_cue_straight">Straight ahead</string>
+    <string name="turn_cue_u_turn">U-turn</string>
+    <string name="turn_cue_now">NOW</string>
+    <string name="turn_cue_off_route">Off Route (%1$d m)</string>
+    <string name="turn_cue_back_on_route">Back on Route</string>
+    <string name="turn_prompts_title">Turn Prompts</string>
+    <string name="turn_prompts_summary">Show turn-by-turn prompts during active navigation</string>
+    <string name="turn_audio_alerts_title">Turn Audio Alerts</string>
+    <string name="turn_audio_alerts_summary">Play chimes on upcoming turns and off-route deviations</string>
+    <string name="turn_cue_countdown_distance_title">Turn Warning Distance</string>
+    <string name="turn_cue_countdown_distance_summary">Advance warning distance before turns (meters)</string>
+    <string name="off_route_corridor_threshold_title">Off-Route Threshold</string>
+    <string name="off_route_corridor_threshold_summary">Maximum deviation distance before off-route warning (meters)</string>
 </resources>
 
 

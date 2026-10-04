@@ -1627,4 +1627,24 @@
     <string name="climb_category_uc">UC</string>
     <string name="tuning_show_live_climbs_title">Live-Anstiege (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Echtzeit-Anstiegs-Cockpit bei Strecken und freier Fahrt einblenden</string>
+
+    <string name="turn_cue_left">Links abbiegen</string>
+    <string name="turn_cue_right">Rechts abbiegen</string>
+    <string name="turn_cue_slight_left">Halb links</string>
+    <string name="turn_cue_slight_right">Halb rechts</string>
+    <string name="turn_cue_sharp_left">Scharf links</string>
+    <string name="turn_cue_sharp_right">Scharf rechts</string>
+    <string name="turn_cue_straight">Geradeaus</string>
+    <string name="turn_cue_u_turn">Wenden</string>
+    <string name="turn_cue_now">JETZT</string>
+    <string name="turn_cue_off_route">Route verlassen (%1$d m)</string>
+    <string name="turn_cue_back_on_route">Zurück auf der Strecke</string>
+    <string name="turn_prompts_title">Abbiegehinweise</string>
+    <string name="turn_prompts_summary">Abbiegehinweise während der aktiven Streckennavigation anzeigen</string>
+    <string name="turn_audio_alerts_title">Akustische Abbiegehinweise</string>
+    <string name="turn_audio_alerts_summary">Signaltöne vor Abbiegungen und bei Routenabweichung abspielen</string>
+    <string name="turn_cue_countdown_distance_title">Abbiegehinweis-Distanz</string>
+    <string name="turn_cue_countdown_distance_summary">Vorwarnstrecke vor Abbiegungen (Meter)</string>
+    <string name="off_route_corridor_threshold_title">Routenabweichungs-Toleranz</string>
+    <string name="off_route_corridor_threshold_summary">Maximale Abweichung vor Routenwarnung (Meter)</string>
 </resources>

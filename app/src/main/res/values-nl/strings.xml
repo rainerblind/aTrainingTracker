@@ -1540,4 +1540,24 @@
     <string name="climb_category_uc">UC</string>
     <string name="tuning_show_live_climbs_title">Live beklimmingen (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Toon realtime klimcockpit tijdens routes en vrij rijden</string>
+
+    <string name="turn_cue_left">Linksaf slaan</string>
+    <string name="turn_cue_right">Rechtsaf slaan</string>
+    <string name="turn_cue_slight_left">Flauwe bocht naar links</string>
+    <string name="turn_cue_slight_right">Flauwe bocht naar rechts</string>
+    <string name="turn_cue_sharp_left">Scherpe bocht naar links</string>
+    <string name="turn_cue_sharp_right">Scherpe bocht naar rechts</string>
+    <string name="turn_cue_straight">Rechtdoor</string>
+    <string name="turn_cue_u_turn">U-bocht</string>
+    <string name="turn_cue_now">NU</string>
+    <string name="turn_cue_off_route">Van de route af (%1$d m)</string>
+    <string name="turn_cue_back_on_route">Terug op de route</string>
+    <string name="turn_prompts_title">Aanwijzingen</string>
+    <string name="turn_prompts_summary">Toon afslag-voor-afslag aanwijzingen tijdens actieve routenavigatie</string>
+    <string name="turn_audio_alerts_title">Geluidssignalen bij afslagen</string>
+    <string name="turn_audio_alerts_summary">Speel waarschuwingstonen af voor afslagen en bij afwijking van de route</string>
+    <string name="turn_cue_countdown_distance_title">Afstand vooraankondiging afslag</string>
+    <string name="turn_cue_countdown_distance_summary">Afstand voor tijdige waarschuwing voor een afslag (meter)</string>
+    <string name="off_route_corridor_threshold_title">Drempelwaarde routeafwijking</string>
+    <string name="off_route_corridor_threshold_summary">Maximale afwijking voor waarschuwing buiten de route (meter)</string>
 </resources>
