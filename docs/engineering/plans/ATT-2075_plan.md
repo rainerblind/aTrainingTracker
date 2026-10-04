@@ -1,124 +1,99 @@
-# Stage 3 Implementation Plan: ATT-2075 - Modernize Permission Flow: Contextual Just-in-Time Prompts & Graceful Settings Return Handling (Rework Cycle)
+# Stage 3: Implementation Plan - ATT-2075: Modernize Permission Flow (Rework Cycle 2: Direct Platform Intents)
 
 **Ticket**: [ATT-2075](https://rainerblind.atlassian.net/browse/ATT-2075)  
-**Sub-task**: [ATT-2379](https://rainerblind.atlassian.net/browse/ATT-2379) (`[Impl-Plan]`)  
+**Sub-task**: [ATT-2392](https://rainerblind.atlassian.net/browse/ATT-2392) (`[Impl-Plan]`)  
 **Parent Epic**: [ATT-355](https://rainerblind.atlassian.net/browse/ATT-355) (*Good and consistent UI*)  
 **Target Release**: `V4.9.40` (per ASPICE Rule 19: Lösungsversion added upon final acceptance)  
-**Active Sprint**: `2026-40.15`  
+**Active Sprint**: `2026-40.16`  
+**Requirement Mapping**: `REQ-PRI-003` (*Contextual Just-in-Time Permission Flow*)  
+**Test Mapping**: `TST-PRI-002`  
+**Branch**: `feature/ATT-2075`  
 **Author**: AI Agent 1 (Implementer)  
 **Date**: 2026-10-04  
 
 ---
 
-## 1. Architectural Design & Component Decomposition (SWE.2)
+## 1. Problem Description & Background
 
-```
-                                  +---------------------------------------+
-                                  |    ControlTrackingScreen.kt (UI)      |
-                                  | - handleStartClick                    |
-                                  | - DisposableEffect(ON_RESUME)         |
-                                  | - Progressive RationaleStep State     |
-                                  +---------------------------------------+
-                                         |                         |
-               +-------------------------+                         +--------------------------+
-               |                                                                              |
-               v                                                                              v
-+-------------------------------+                                              +-------------------------------+
-| PermissionRationaleSheet.kt   |                                              | ControlTrackingButton.kt      |
-| - RationaleType.FOREGROUND    |                                              | - hasPermissionWarning:       |
-| - RationaleType.BACKGROUND    |                                              |   !hasLocationPermission      |
-| - RationaleType.BATTERY       |                                              | - Warning Badge (Amber)       |
-+-------------------------------+                                              +-------------------------------+
-               |
-               v
-+-------------------------------------------------------------------------------------------------------------+
-| Android Platform Intents & Contracts:                                                                       |
-| 1. ActivityResultContracts.RequestMultiplePermissions (Fine/Coarse Location, BLE, Notifications)           |
-| 2. ActivityResultContracts.RequestPermission (ACCESS_BACKGROUND_LOCATION on API 29/30+)                      |
-| 3. Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS (with fail-safe cascading to Settings fallback)      |
-+-------------------------------------------------------------------------------------------------------------+
-```
-
-### 1.1 State Machine: Progressive Setup Steps
-```kotlin
-enum class RationaleStep {
-    NONE,
-    FOREGROUND,
-    BACKGROUND_LOCATION,
-    BATTERY_OPTIMIZATION
-}
-```
-* **Step Progression**:
-  1. If `!checkHasLocation()`: `rationaleStep = RationaleStep.FOREGROUND`
-  2. Else if `!checkHasBackgroundLocation()` (API 29+): `rationaleStep = RationaleStep.BACKGROUND_LOCATION`
-  3. Else if `!checkIsIgnoringBatteryOptimizations()` (API 23+): `rationaleStep = RationaleStep.BATTERY_OPTIMIZATION`
-  4. Else: `onStart()`
+Sprint Review testing on Pixel 10 (Android 16) revealed that tapping setup buttons routed athletes to the top-level generic Application Details screen (`Settings.ACTION_APPLICATION_DETAILS_SETTINGS`), forcing athletes to click through nested submenus to configure permissions and battery optimizations.
+In compliance with **ASPICE Rule 21**, this implementation plan details the atomic construction sequence to restore direct platform intents:
+1. `Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` for battery optimization exemption.
+2. `bgLocationLauncher.launch(ACCESS_BACKGROUND_LOCATION)` for direct OS background location escalation.
+3. Strict containment of `ACTION_APPLICATION_DETAILS_SETTINGS` as an exceptional fallback only.
 
 ---
 
-## 2. Step-by-Step Atomic Construction Sequence
+## 2. Traceability & Requirements Mapping
 
-### Step 1: Extend `PermissionRationaleSheet.kt` with Progressive Variants
-* Define `enum class RationaleType { FOREGROUND, BACKGROUND_LOCATION, BATTERY_OPTIMIZATION }`.
-* Enhance `PermissionRationaleSheet` and `PermissionRationaleContent` to accept `rationaleType: RationaleType`.
-* Render appropriate titles, descriptions, and icons:
-  * `FOREGROUND`: `R.string.permission_rationale_title`, 3 value cards (GPS, Bluetooth, Notifications).
-  * `BACKGROUND_LOCATION`: `R.string.background_location_permission_title`, `R.string.background_location_permission_text`, `R.drawable.my_locations`.
-  * `BATTERY_OPTIMIZATION`: `R.string.battery_optimization_title`, `R.string.battery_optimization_text`, `R.drawable.battery_full`.
-* Target: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/PermissionRationaleSheet.kt`
+* **Requirement**: `REQ-PRI-003` (*Contextual Just-in-Time Permission Flow, Zero-Friction Cold Start, Background Location Escalation, Battery Optimization Exemption & Graceful Settings Return Handling*)
+* **Test Mapping**: `TST-PRI-002` (Unit, Composable Contract, Localization Parity, Full Suite Regression)
+* **Governance**: ASPICE Rule 21 (Specific Direct Platform Intents Over Generic App Settings)
 
-### Step 2: Implement Fail-Safe OEM Battery Optimization Dispatcher
-* In a dedicated utility function or companion object in `ControlTrackingScreen.kt`:
-  ```kotlin
-  fun launchBatteryOptimizationIntent(context: Context) {
-      try {
-          val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-              data = Uri.parse("package:${context.packageName}")
-          }
-          context.startActivity(intent)
-      } catch (e: Exception) {
-          try {
-              val fallback = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-              context.startActivity(fallback)
-          } catch (e2: Exception) {
-              val details = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                  data = Uri.fromParts("package", context.packageName, null)
-              }
-              context.startActivity(details)
-          }
-      }
-  }
-  ```
-* Target: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/ControlTrackingScreen.kt`
+---
 
-### Step 3: Implement Progressive State Machine & Dedicated Launchers in `ControlTrackingScreen.kt`
-* Add `var rationaleStep by rememberSaveable { mutableStateOf(RationaleStep.NONE) }`.
-* Add `bgLocationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> ... }`.
-* Update `permissionLauncher` (foreground): on grant, transition to `checkHasBackgroundLocation()` or `checkIsIgnoringBatteryOptimizations()`.
-* Update `handleStartClick` to evaluate the 3-step sequence.
-* In `DisposableEffect(lifecycleOwner)` on `Lifecycle.Event.ON_RESUME`:
-  * Re-evaluate `checkHasLocation()`, `checkHasBackgroundLocation()`, `checkIsIgnoringBatteryOptimizations()`.
-  * Update `hasLocationPermission`.
-  * If the active rationale step has been satisfied, advance to next step or dismiss.
-* Target: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/ControlTrackingScreen.kt`
+## 3. System Invariants & Preserved Behavior
+
+1. **Zero Unintended Regressions**: Existing sensor grid, tracking, and export features continue to function without degradation.
+2. **Cold-Start Decoupling (`REQ-STB-008`)**: `MainActivityWithNavigation.onCreate()` remains free of modal dialogs.
+3. **Android 11+ Two-Step Cascade**: Background location is never requested simultaneously with foreground location.
+4. **Human Gate Invariance (Rule 1)**: Moving ATT-2075 to `Erledigt` is reserved for human review; agent terminates at `Final Review (Human)`.
+5. **No Version Assignment on Subtasks (Rule 6 & Rule 19)**: Subtasks have empty `fixVersions`; parent fixVersion is deferred until final acceptance.
+
+---
+
+## 4. Proposed Architectural Changes
+
+### Component 1: `ControlTrackingScreen.kt`
+* **Step-Specific Denial Evaluation**:
+  - Replace the single global `isPermanentlyDenied` with step-specific logic:
+    - `FOREGROUND`: Evaluates whether missing foreground permissions (`ACCESS_FINE_LOCATION`, etc.) were denied without rationale.
+    - `BACKGROUND_LOCATION`: Only marks permanently denied if background permission was specifically denied after prompt.
+    - `BATTERY_OPTIMIZATION`: Never permanently denied (always direct intent).
+* **Battery Optimization Dispatch Clean-up**:
+  - Ensure `launchBatteryOptimizationIntent` is triggered without immediate premature `onStart()`, allowing the athlete to review the platform dialog and returning gracefully via `ON_RESUME`.
+
+### Component 2: `PermissionRationaleSheet.kt`
+* **Action Button Disentanglement**:
+  - Ensure `onContinue` is invoked when `isPermanentlyDenied == false` for each specific step.
+  - When in `RationaleType.BATTERY_OPTIMIZATION`, the button always offers the direct continue action (*"Akku-Optimierung anpassen"* / *"Continue"*) mapping directly to `Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`.
+
+---
+
+## 5. Step-by-Step Implementation Sequence (Stage 4 Construction)
+
+### Step 1: Decouple Permanent Denial & Recalibrate Intent Dispatch in `ControlTrackingScreen.kt`
+* File: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/ControlTrackingScreen.kt`
+* Changes:
+  - Separate `isPermanentlyDenied` calculation per active `rationaleStep`.
+  - Ensure `RationaleStep.BACKGROUND_LOCATION` invokes `bgLocationLauncher.launch(ACCESS_BACKGROUND_LOCATION)`.
+  - Ensure `RationaleStep.BATTERY_OPTIMIZATION` invokes `launchBatteryOptimizationIntent(context)`.
+
+### Step 2: Validate Direct Fallback Hierarchy in `launchBatteryOptimizationIntent`
+* File: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/ControlTrackingScreen.kt`
+* Changes:
+  - Tier 1: `Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` with `package:$packageName`.
+  - Tier 2 (Catch `ActivityNotFoundException` / `SecurityException`): `Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS`.
+  - Tier 3 (Last resort fallback per Rule 21): `Settings.ACTION_APPLICATION_DETAILS_SETTINGS`.
+
+### Step 3: Align `PermissionRationaleSheet.kt` Button Logic
+* File: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/PermissionRationaleSheet.kt`
+* Changes:
+  - Ensure button label and click routing accurately reflect direct intent availability for each rationale type.
 
 ### Step 4: Update Unit & Contract Tests
-* Update `ControlTrackingPermissionTest.kt`:
-  * Verify progressive step transitions: Foreground -> Background -> Battery Optimization -> `onStart()`.
-  * Verify fail-safe battery intent execution without throwing.
-  * Verify `ON_RESUME` lifecycle observer updates state reactively.
-* Update `PermissionRationaleSheetContractTest.kt`:
-  * Verify UI content rendering for `FOREGROUND`, `BACKGROUND_LOCATION`, and `BATTERY_OPTIMIZATION`.
-  * Audit all 9 locales for string presence.
-* Run targeted tests:
-  * `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.tracking.controltracking.*"`
+* Files:
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/ControlTrackingPermissionTest.kt`
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/PermissionRationaleSheetContractTest.kt`
+* Changes:
+  - Add tests validating direct intent generation and button actions for battery optimization and background location.
+* Command:
+  ```bash
+  ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.tracking.controltracking.*"
+  ```
 
 ---
 
-## 3. Invariant Protection & Verification Mapping
+## 6. Verification & Rollback Plan
 
-* **Invariant 1 (Cold Start Cleanliness)**: `MainActivityWithNavigation.onCreate()` remains 100% free of modal dialogs.
-* **Invariant 2 (Android 11+ Two-Step Cascade)**: Background location is NEVER requested simultaneously with foreground location.
-* **Invariant 3 (OEM Crash Immunity)**: Battery intent launch wrapped in 3-tier try-catch.
-* **Invariant 4 (Localization Parity)**: 100% parity across all 9 languages.
-* **Invariant 5 (Graceful Refusal)**: Athletes can dismiss rationales ("Not now") and start tracking or configure sensors without app lockups.
+* **Verification**: Run targeted unit tests during Stage 4 construction, followed by full regression `./gradlew testDebugUnitTest` and APK assembly `./gradlew assembleDebug` in Stage 5.
+* **Rollback**: Branch isolation on `feature/ATT-2075` permits clean revert to `sprint/2026-40.16` if regressions arise.
