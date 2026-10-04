@@ -96,6 +96,9 @@ object TuningPreferencesDefaults {
     const val OFF_ROUTE_CORRIDOR_THRESHOLD_METERS = 50.0f
     const val MIN_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS = 20.0f
     const val MAX_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS = 200.0f
+
+    const val CORRIDOR_GROUPING_ENABLED = true
+    const val FOCUSED_THUMBNAIL_ZOOM_ENABLED = true
 }
 
 /**
@@ -123,7 +126,9 @@ data class TuningConfig(
     val turnPromptsEnabled: Boolean = TuningPreferencesDefaults.TURN_PROMPTS_ENABLED,
     val turnAudioAlertsEnabled: Boolean = TuningPreferencesDefaults.TURN_AUDIO_ALERTS_ENABLED,
     val turnCueCountdownDistanceMeters: Float = TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS,
-    val offRouteCorridorThresholdMeters: Float = TuningPreferencesDefaults.OFF_ROUTE_CORRIDOR_THRESHOLD_METERS
+    val offRouteCorridorThresholdMeters: Float = TuningPreferencesDefaults.OFF_ROUTE_CORRIDOR_THRESHOLD_METERS,
+    val corridorGroupingEnabled: Boolean = TuningPreferencesDefaults.CORRIDOR_GROUPING_ENABLED,
+    val focusedThumbnailZoomEnabled: Boolean = TuningPreferencesDefaults.FOCUSED_THUMBNAIL_ZOOM_ENABLED
 ) {
     @Deprecated("Use elevationXAxisDomain or telemetryXAxisDomain", ReplaceWith("elevationXAxisDomain"))
     val profileXAxisDomain: ProfileXAxisDomain
@@ -193,6 +198,8 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_TURN_AUDIO_ALERTS_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_turn_audio_alerts_enabled")
         val KEY_TURN_CUE_COUNTDOWN_DISTANCE: Preferences.Key<Float> = floatPreferencesKey("tuning_turn_cue_countdown_distance")
         val KEY_OFF_ROUTE_CORRIDOR_THRESHOLD: Preferences.Key<Float> = floatPreferencesKey("tuning_off_route_corridor_threshold")
+        val KEY_CORRIDOR_GROUPING_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_corridor_grouping_enabled")
+        val KEY_FOCUSED_THUMBNAIL_ZOOM_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_focused_thumbnail_zoom_enabled")
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -217,7 +224,9 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_TURN_PROMPTS_ENABLED,
             KEY_TURN_AUDIO_ALERTS_ENABLED,
             KEY_TURN_CUE_COUNTDOWN_DISTANCE,
-            KEY_OFF_ROUTE_CORRIDOR_THRESHOLD
+            KEY_OFF_ROUTE_CORRIDOR_THRESHOLD,
+            KEY_CORRIDOR_GROUPING_ENABLED,
+            KEY_FOCUSED_THUMBNAIL_ZOOM_ENABLED
         )
     }
 
@@ -327,6 +336,9 @@ class TuningPreferencesDataStore(private val context: Context) {
             TuningPreferencesDefaults.MAX_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS
         )
 
+        val corridorGroupingEnabled = prefs[KEY_CORRIDOR_GROUPING_ENABLED] ?: TuningPreferencesDefaults.CORRIDOR_GROUPING_ENABLED
+        val focusedThumbnailZoomEnabled = prefs[KEY_FOCUSED_THUMBNAIL_ZOOM_ENABLED] ?: TuningPreferencesDefaults.FOCUSED_THUMBNAIL_ZOOM_ENABLED
+
         TuningConfig(
             elevationXAxisDomain = elevationDomain,
             telemetryXAxisDomain = telemetryDomain,
@@ -349,7 +361,9 @@ class TuningPreferencesDataStore(private val context: Context) {
             turnPromptsEnabled = turnPromptsEnabled,
             turnAudioAlertsEnabled = turnAudioAlertsEnabled,
             turnCueCountdownDistanceMeters = clampedTurnCountdown,
-            offRouteCorridorThresholdMeters = clampedOffRoute
+            offRouteCorridorThresholdMeters = clampedOffRoute,
+            corridorGroupingEnabled = corridorGroupingEnabled,
+            focusedThumbnailZoomEnabled = focusedThumbnailZoomEnabled
         )
     }
 
@@ -425,6 +439,20 @@ class TuningPreferencesDataStore(private val context: Context) {
                 TuningPreferencesDefaults.MIN_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS,
                 TuningPreferencesDefaults.MAX_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS
             )
+            prefs[KEY_CORRIDOR_GROUPING_ENABLED] = config.corridorGroupingEnabled
+            prefs[KEY_FOCUSED_THUMBNAIL_ZOOM_ENABLED] = config.focusedThumbnailZoomEnabled
+        }
+    }
+
+    suspend fun updateCorridorGroupingEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_CORRIDOR_GROUPING_ENABLED] = enabled
+        }
+    }
+
+    suspend fun updateFocusedThumbnailZoomEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_FOCUSED_THUMBNAIL_ZOOM_ENABLED] = enabled
         }
     }
 

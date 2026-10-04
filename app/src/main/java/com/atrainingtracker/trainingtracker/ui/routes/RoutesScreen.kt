@@ -79,6 +79,7 @@ fun RoutesScreen(
     val isLocationAvailable by viewModel.isLocationAvailable.collectAsStateWithLifecycle()
     val isSyncingStrava by viewModel.isSyncingStrava.collectAsStateWithLifecycle()
     val syncStravaStatus by viewModel.syncStravaStatus.collectAsStateWithLifecycle()
+    val tuningConfig by viewModel.tuningConfig.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -200,6 +201,7 @@ fun RoutesScreen(
                     scrollToTop = viewModel.shouldScrollToTop(sortOrder),
                     isLocationAvailable = isLocationAvailable,
                     filterCriteria = filterCriteria,
+                    tuningConfig = tuningConfig,
                     onApplyFilterCriteria = { viewModel.setFilterCriteria(it) },
                     onClearAllFilters = { viewModel.clearFilterCriteria() },
                     onUpdateFilterCriteria = { viewModel.updateFilterCriteria(it) }

@@ -57,6 +57,7 @@ fun PathPreviewMap(
     apex: LatLng? = null,
     startTitle: String? = null,
     endTitle: String? = null,
+    targetBounds: LatLngBounds? = null,
     onMapClick: () -> Unit = {}
 ) {
     val cameraPositionState = rememberCameraPositionState()
@@ -122,18 +123,21 @@ fun PathPreviewMap(
                 }
 
                 // Auto-zoom to fit the segment whenever pathPoints change
-                LaunchedEffect(path, actualStart, actualEnd, actualApex, isMapLoaded) {
+                LaunchedEffect(path, actualStart, actualEnd, actualApex, isMapLoaded, targetBounds) {
                     if (isMapLoaded && path.latLngs.isNotEmpty()) {
-                        val boundsBuilder = LatLngBounds.Builder()
-                        path.latLngs.forEach { boundsBuilder.include(it) }
-                        actualStart?.let { boundsBuilder.include(it) }
-                        actualEnd?.let { boundsBuilder.include(it) }
-                        actualApex?.let { boundsBuilder.include(it) }
+                        val bounds = targetBounds ?: run {
+                            val boundsBuilder = LatLngBounds.Builder()
+                            path.latLngs.forEach { boundsBuilder.include(it) }
+                            actualStart?.let { boundsBuilder.include(it) }
+                            actualEnd?.let { boundsBuilder.include(it) }
+                            actualApex?.let { boundsBuilder.include(it) }
+                            boundsBuilder.build()
+                        }
 
                         try {
                             cameraPositionState.move(
                                 CameraUpdateFactory.newLatLngBounds(
-                                    boundsBuilder.build(),
+                                    bounds,
                                     20 // padding in px
                                 )
                             )

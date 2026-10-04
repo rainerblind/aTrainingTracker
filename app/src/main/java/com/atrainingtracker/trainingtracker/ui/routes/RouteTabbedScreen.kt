@@ -73,6 +73,9 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.routes.GatewayDirection
+import com.atrainingtracker.trainingtracker.routes.RouteCorridorClassifier
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterActionButton
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
@@ -100,6 +103,7 @@ fun RouteTabbedScreen(
     scrollToTop: Boolean,
     isLocationAvailable: Boolean,
     filterCriteria: RouteFilterCriteria = RouteFilterCriteria(),
+    tuningConfig: TuningConfig = TuningConfig(),
     onApplyFilterCriteria: (RouteFilterCriteria) -> Unit = {},
     onClearAllFilters: () -> Unit = {},
     onUpdateFilterCriteria: ((RouteFilterCriteria) -> RouteFilterCriteria) -> Unit = {}
@@ -126,9 +130,30 @@ fun RouteTabbedScreen(
         )
     }
 
+    var selectedGateway by rememberSaveable { mutableStateOf(GatewayDirection.ALL) }
+
+    // Identify which routes are in the current tab
+    val currentTabSport = tabs[pagerState.currentPage].second
+    val routesInCurrentTab = remember(routesWithPath, currentTabSport) {
+        if (currentTabSport == null) {
+            routesWithPath
+        } else {
+            routesWithPath.filter { it.summary.bSportType == currentTabSport }
+        }
+    }
+
+    val availableGateways = remember(routesInCurrentTab) {
+        val grouped = RouteCorridorClassifier.groupRoutesByCorridor(routesInCurrentTab)
+        grouped.keys.filter { it != GatewayDirection.UNKNOWN }.sortedBy { it.ordinal }
+    }
+
+    val hasGatewayChips = tuningConfig.corridorGroupingEnabled && availableGateways.size > 1
+    val gatewayChipsHeight = if (hasGatewayChips) 48.dp else 0.dp
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val chipsRowHeight = if (filterCriteria.isNotEmpty) 40.dp else 0.dp
-    val appBarMaxHeightPx = with(density) { (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT + chipsRowHeight).roundToPx() }
+    val appBarMaxHeightPx = with(density) {
+        (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT + chipsRowHeight + gatewayChipsHeight).roundToPx()
+    }
 
     val connection = remember(appBarMaxHeightPx) {
         CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
@@ -159,15 +184,20 @@ fun RouteTabbedScreen(
                     BSportType.UNKNOWN -> otherListState
                     else -> allSportsListState
                 }
-                val filteredRoutesWithPath = if (currentSport == null) {
+                val baseFiltered = if (currentSport == null) {
                     routesWithPath
-                }
-                else {
+                } else {
                     routesWithPath.filter { it.summary.bSportType == currentSport }
                 }
 
+                val finalFilteredRoutes = if (tuningConfig.corridorGroupingEnabled && selectedGateway != GatewayDirection.ALL) {
+                    baseFiltered.filter { RouteCorridorClassifier.classifyGatewayHeading(it.path) == selectedGateway }
+                } else {
+                    baseFiltered
+                }
+
                 RouteList(
-                    routes = filteredRoutesWithPath,
+                    routes = finalFilteredRoutes,
                     bSportType = currentSport,
                     scrollState = listState,
                     onMapClick = onMapClick,
@@ -177,16 +207,9 @@ fun RouteTabbedScreen(
                     onDuplicateAsLocal = onDuplicateAsLocal,
                     appBarOffsetPx = connection.appBarOffset,
                     headerHeightPx = appBarMaxHeightPx.toFloat(),
-                    isFilterActive = filterCriteria.isNotEmpty,
+                    isFilterActive = filterCriteria.isNotEmpty || selectedGateway != GatewayDirection.ALL,
+                    focusedThumbnailZoomEnabled = tuningConfig.focusedThumbnailZoomEnabled
                 )
-            }
-
-            // Identify which routes are in the current tab
-            val currentTabSport = tabs[pagerState.currentPage].second
-            val routesInCurrentTab = if (currentTabSport == null) {
-                routesWithPath
-            } else {
-                routesWithPath.filter { it.summary.bSportType == currentTabSport }
             }
 
             // Check if all visible routes are currently selected
@@ -396,6 +419,15 @@ fun RouteTabbedScreen(
                                 onClearAll = onClearAllFilters
                             )
                         }
+                    }
+
+                    // Gateway Corridor Filter Chips (ATT-1954)
+                    if (hasGatewayChips) {
+                        GatewayFilterChipsRow(
+                            availableGateways = listOf(GatewayDirection.ALL) + availableGateways,
+                            selectedGateway = selectedGateway,
+                            onGatewaySelected = { selectedGateway = it }
+                        )
                     }
                 }
             }

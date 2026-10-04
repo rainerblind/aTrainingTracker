@@ -1668,4 +1668,20 @@
     <string name="nav_destination_home">Zu Hause</string>
     <string name="nav_stop_return">Heimweg beenden</string>
     <string name="nav_route_reverse">Route zurückkehren</string>
+
+    <!-- Corridor Grouping & Differentiating Thumbnail Zoom (ATT-1954) -->
+    <string name="gateway_all">Alle</string>
+    <string name="gateway_north">Norden</string>
+    <string name="gateway_northeast">Nordosten</string>
+    <string name="gateway_east">Osten</string>
+    <string name="gateway_southeast">Südosten</string>
+    <string name="gateway_south">Süden</string>
+    <string name="gateway_southwest">Südwesten</string>
+    <string name="gateway_west">Westen</string>
+    <string name="gateway_northwest">Nordwesten</string>
+    <string name="gateway_unknown">Sonstige</string>
+    <string name="pref_corridor_grouping_title">Korridor-basierte Streckengruppierung</string>
+    <string name="pref_corridor_grouping_desc">Gruppiert Strecken in der Liste nach ihrer Ausfallrichtung und ihrem Korridor</string>
+    <string name="pref_focused_thumbnail_title">Fokussierter Vorschau-Zoom</string>
+    <string name="pref_focused_thumbnail_desc">Zoomt Vorschau-Miniaturkarten auf die charakteristische mittlere Schleife statt auf gemeinsame Ein-/Ausfallkorridore</string>
 </resources>
