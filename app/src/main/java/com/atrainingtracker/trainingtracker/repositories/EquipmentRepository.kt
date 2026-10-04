@@ -19,13 +19,18 @@
 package com.atrainingtracker.trainingtracker.repositories
 
 import android.app.Application
+import android.util.Log
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class EquipmentRepository private constructor(private val application: Application) :
@@ -64,6 +69,36 @@ class EquipmentRepository private constructor(private val application: Applicati
             _isSyncing.value = false
         }
 
+        @Volatile
+        private var _equipmentLinksChanged = MutableSharedFlow<Long?>(
+            extraBufferCapacity = 64,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST
+        )
+
+        /**
+         * Reactive event stream emitting the device ID of affected sensors whenever
+         * equipment-to-sensor mappings are modified in SQLite (REQ-UI-257).
+         * Emits null when a bulk or equipment-level modification occurs.
+         */
+        @JvmStatic
+        val equipmentLinksChanged: SharedFlow<Long?>
+            get() = _equipmentLinksChanged.asSharedFlow()
+
+        /**
+         * Dispatches an equipment link mutation event across the application (REQ-UI-257).
+         *
+         * @param affectedDeviceId Optional ID of the specific sensor whose links changed,
+         * or null for bulk equipment updates/deletions.
+         */
+        @JvmStatic
+        fun notifyEquipmentLinksChanged(affectedDeviceId: Long? = null) {
+            try {
+                _equipmentLinksChanged.tryEmit(affectedDeviceId)
+            } catch (t: Throwable) {
+                if (DEBUG) Log.w(TAG, "Failed to emit equipmentLinksChanged event: ${t.message}")
+            }
+        }
+
         // The single, volatile instance of the repository.
         // @Volatile guarantees that writes to this field are immediately visible to other threads.
         @Volatile
@@ -92,6 +127,10 @@ class EquipmentRepository private constructor(private val application: Applicati
         @androidx.annotation.VisibleForTesting
         fun resetForTesting(newInstance: EquipmentRepository? = null) {
             INSTANCE = newInstance
+            _equipmentLinksChanged = MutableSharedFlow(
+                extraBufferCapacity = 64,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST
+            )
         }
     }
 }
