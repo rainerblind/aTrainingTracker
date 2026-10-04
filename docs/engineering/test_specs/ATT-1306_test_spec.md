@@ -1,10 +1,10 @@
 # Stage 2 Test Specification: ATT-1306 - Google Drive Integration for Automated Workout Export and Backup Synchronization
 
 **Ticket**: [ATT-1306](https://rainerblind.atlassian.net/browse/ATT-1306)  
-**Sub-task**: [ATT-2278](https://rainerblind.atlassian.net/browse/ATT-2278) (`[Req & Test Spec]`)  
+**Sub-task**: [ATT-2407](https://rainerblind.atlassian.net/browse/ATT-2407) (`[Req & Test Spec]`)  
 **Parent Epic**: [ATT-162](https://rainerblind.atlassian.net/browse/ATT-162) (*Cloud integration*)  
-**Target Release**: `V4.9.39`  
-**Active Sprint**: `Sprint 2026-40.14`  
+**Target Release**: `V4.9.40`  
+**Active Sprint**: `Sprint 2026-40.16`  
 **Branch**: `feature/ATT-1306`  
 **Author**: AI Agent 1 (Implementer)  
 **Date**: 2026-10-04  
@@ -13,59 +13,87 @@
 
 ## 1. Overview & Verification Strategy
 
-This test specification defines the verification procedures for `REQ-DAT-020` under ticket [ATT-1306](https://rainerblind.atlassian.net/browse/ATT-1306).
+This test specification defines the verification procedures for `REQ-DAT-020` under ticket [ATT-1306](https://rainerblind.atlassian.net/browse/ATT-1306) (Rework Cycle 2).
+
+During the physical Google Pixel 10 evaluation of Cycle 1, the PO rejected the mock manual text-input dialog for email/token and dummy fallback token (`"gdrive_oauth_token"`). Cycle 2 mandates authentic, native Google Sign-In via Google Play Services (`com.google.android.gms:play-services-auth:21.3.0`) and genuine OAuth2 Bearer token retrieval via `GoogleAuthUtil.getToken(...)` on `Dispatchers.IO` with least-privilege `drive.file` scope.
 
 The verification strategy ensures that:
-1. **Google Drive REST Client (`GoogleDriveClient`)**:
+1. **Native Google Sign-In & Verified OAuth2 Token Retrieval (`GoogleDriveAuthManager`, `TrainingApplication`)**:
+   - `GoogleDriveAuthManager` configures `GoogleSignInOptions` requesting strictly `Scope("https://www.googleapis.com/auth/drive.file")` and athlete email.
+   - `GoogleAuthUtil.getToken(context, account, "oauth2:https://www.googleapis.com/auth/drive.file")` executes on `Dispatchers.IO` and yields a verified Bearer token.
+   - Manual text input dialogs for credentials or tokens are completely eliminated.
+   - Credentials and `uploadToGoogleDrive = true` are stored IF AND ONLY IF Google Play Services authentication and token retrieval succeed.
+   - Disconnecting executes `signOut()`, `revokeAccess()`, `GoogleAuthUtil.clearToken`, and wipes credentials cleanly.
+   - Unlinked safety: reading tokens when unlinked returns `null` safely without `NullPointerException`.
+2. **Google Drive REST Client (`GoogleDriveClient`)**:
    - Interacts with Google Drive API v3 using lightweight `OkHttp 5.5.0` without heavy GMS Drive dependencies.
    - Enforces the least-privilege `https://www.googleapis.com/auth/drive.file` OAuth scope.
    - Resolves and creates folder hierarchies (`aTrainingTracker/Workouts/` and `aTrainingTracker/Backups/`) idempotently.
    - Handles multipart upload, file overwriting, and streaming downloads with full resilience.
-2. **Automated Workout Export (`GoogleDriveUploader`, `ExportManager`)**:
+3. **Automated Workout Export (`GoogleDriveUploader`, `ExportManager`)**:
    - `GoogleDriveUploader` extends `BaseExporter` parallel to `DropboxUploader.java`.
    - `ExportType.GOOGLE_DRIVE` supports standard export formats (`CSV`, `GC`, `GPX`, `TCX`, `FIT`).
    - WorkManager jobs respect the configurable Wi-Fi only constraint (`NetworkType.UNMETERED` vs `NetworkType.CONNECTED`).
-3. **Database Backup & Restore (`GoogleDriveBackupManager`, `BackupWorker`, `BackupRestoreViewModel`)**:
+4. **Database Backup & Restore (`GoogleDriveBackupManager`, `BackupWorker`, `BackupRestoreViewModel`)**:
    - Periodic background backups upload `aTrainingTracker_backup.attbackup` to `aTrainingTracker/Backups/`.
    - Manual backup and restore operations execute smoothly via `BackupRestoreViewModel`.
    - Google Drive and Dropbox operate completely independently without mutual interference.
-4. **Settings Dialog & Navigation Architecture (`GoogleDriveSettingsDialog`)**:
+5. **Settings Dialog & Navigation Architecture (`GoogleDriveSettingsDialog`)**:
    - Modal bottom sheet complies with `AppBottomSheetContent` and `AppDialogActions.SaveCancel`.
+   - Tapping "Verbinden" launches the native Google Sign-In activity result contract instead of any text input dialog.
    - Navigation drawer item `R.id.drawer_google_drive` and `SettingsBottomSheetType.GOOGLE_DRIVE` dispatch accurately.
-5. **Localization & Full Suite Regression**:
+6. **Localization & Full Suite Regression**:
    - 100% translation and plural parity across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
    - Zero regressions across the existing test suite (`./gradlew testDebugUnitTest`).
 
 ---
 
-## 2. Requirement Traceability Matrix
+## 2. Requirement Archaeology & Chesterton's Fence Audit (`REQ-PRO-022`)
 
-| Requirement Clause | Test Specification ID | Test Classes / Suites | Verification Method | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| `REQ-DAT-020` (1: Auth & Credential Safety) | `TST-DAT-015` (Group 1) | `GoogleDriveAuthSafetyTest.kt` | JUnit 4 Unit Test | Defined |
-| `REQ-DAT-020` (2: REST Client & Folders) | `TST-DAT-015` (Group 2) | `GoogleDriveClientTest.kt` | MockWebServer / Unit Test | Defined |
-| `REQ-DAT-020` (3: Workout Uploader) | `TST-DAT-015` (Group 3) | `GoogleDriveUploaderTest.kt` | JUnit 4 Unit Test | Defined |
-| `REQ-DAT-020` (4: Backup & Restore Manager) | `TST-DAT-015` (Group 4) | `GoogleDriveBackupManagerTest.kt` | Coroutines / Unit Test | Defined |
-| `REQ-DAT-020` (5: ExportManager & Wi-Fi Constraints) | `TST-DAT-015` (Group 5) | `ExportManagerGoogleDriveTest.kt` | Unit / WorkManager Test | Defined |
-| `REQ-DAT-020` (6: BackupWorker & ViewModel) | `TST-DAT-015` (Group 6) | `BackupWorkerGoogleDriveTest.kt`, `BackupRestoreViewModelGoogleDriveTest.kt` | Coroutines / ViewModel Test | Defined |
-| `REQ-DAT-020` (7: UI Dialog & Navigation) | `TST-DAT-015` (Group 7) | `ModalBottomSheetDialogsIntegrityTest.kt`, `NavRoutesGoogleDriveTest.kt` | Reflection & Unit Test | Defined |
-| `REQ-DAT-020` (8: Localization Parity) | `TST-DAT-015` (Group 8) | `TranslationParityTest.kt` | JUnit 4 Resource Test | Defined |
-| `REQ-ALL` (Regression Invariant) | `TST-DAT-015` (Group 9) | Full `./gradlew testDebugUnitTest` | Clean-Room CI Suite | Defined |
+### Requirement Archaeology & Chesterton's Fence Audit
+1. **Original Requirement ID & Target**: `REQ-DAT-020` (*Google Drive Integration for Automated Workout Export and Database Backup*), targeting `GoogleDriveClient.kt`, `GoogleDriveUploader.kt`, `GoogleDriveBackupManager.kt`, `GoogleDriveSettingsDialog.kt`, `GoogleDriveAuthManager.kt`, `ExportManager.java`, `BackupWorker.kt`, `BackupRestoreViewModel.kt`.
+2. **Historical Origin & Commit Trace**: Introduced in `ATT-1306` (commit `931bf45d`) during Sprint 2026-40.14. Evaluated on physical Google Pixel 10 during Sprint 2026-40.15 Joint Review where mock text input dialog was rejected.
+3. **Root Reason for Existing Formulation**: Initial cycle implemented the REST transport and export pipelines, but relied on a mock manual text-input dialog for email/auth token with a dummy fallback token (`"gdrive_oauth_token"`), failing production validation.
+4. **Preservation of Core Invariants**: 
+   - Least-privilege OAuth scope `https://www.googleapis.com/auth/drive.file` is strictly enforced.
+   - Unlinked safety (reading credentials when unlinked returns `null` safely without `NullPointerException`) is preserved.
+   - Existing cloud storage integrations (Dropbox, Strava) and local SQLite tables remain 100% independent and unaffected.
 
 ---
 
-## 3. Concrete Test Cases (`TST-DAT-015`)
+## 3. Requirement Traceability Matrix
 
-### Group 1: Authentication & Credential Safety
-* **Test Class**: `com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthSafetyTest`
+| Requirement Clause | Test Specification ID | Test Classes / Suites | Verification Method | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| `REQ-DAT-020` (1: Native Auth & Token Exchange) | `TST-DAT-015` (Group 1) | `GoogleDriveAuthSafetyTest.kt`, `GoogleDriveAuthManagerTest.kt` | JUnit 4 Unit Test | Specified |
+| `REQ-DAT-020` (2: REST Client & Folders) | `TST-DAT-015` (Group 2) | `GoogleDriveClientTest.kt` | MockWebServer / Unit Test | Specified |
+| `REQ-DAT-020` (3: Workout Uploader) | `TST-DAT-015` (Group 3) | `GoogleDriveUploaderTest.kt` | JUnit 4 Unit Test | Specified |
+| `REQ-DAT-020` (4: Backup & Restore Manager) | `TST-DAT-015` (Group 4) | `GoogleDriveBackupManagerTest.kt` | Coroutines / Unit Test | Specified |
+| `REQ-DAT-020` (5: ExportManager & Wi-Fi Constraints) | `TST-DAT-015` (Group 5) | `ExportManagerGoogleDriveTest.kt` | Unit / WorkManager Test | Specified |
+| `REQ-DAT-020` (6: BackupWorker & ViewModel) | `TST-DAT-015` (Group 6) | `BackupWorkerGoogleDriveTest.kt`, `BackupRestoreViewModelGoogleDriveTest.kt` | Coroutines / ViewModel Test | Specified |
+| `REQ-DAT-020` (7: UI Dialog & Native Launcher) | `TST-DAT-015` (Group 7) | `ModalBottomSheetDialogsIntegrityTest.kt`, `NavRoutesGoogleDriveTest.kt` | Reflection & Unit Test | Specified |
+| `REQ-DAT-020` (8: Localization Parity) | `TST-DAT-015` (Group 8) | `TranslationParityTest.kt` | JUnit 4 Resource Test | Specified |
+| `REQ-ALL` (Regression Invariant) | `TST-DAT-015` (Group 9) | Full `./gradlew testDebugUnitTest` | Clean-Room CI Suite | Specified |
+
+---
+
+## 4. Concrete Test Cases (`TST-DAT-015`)
+
+### Group 1: Native Google Sign-In & Verified OAuth2 Token Acquisition
+* **Test Class**: `com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthSafetyTest` & `GoogleDriveAuthManagerTest`
 * **Test Cases**:
   1. `testReadCredential_whenUnlinked_returnsNullSafely`:
      - Given unconfigured SharedPreferences.
      - Asserts `TrainingApplication.getGoogleDriveAuthToken()` and `getGoogleDriveAccountEmail()` return null without throwing `NullPointerException`.
-  2. `testStoreAndDisconnect_managesPreferencesAndTokens`:
+  2. `testGoogleSignInOptions_requestsDriveFileScopeAndEmail`:
+     - Verifies `GoogleDriveAuthManager.getSignInOptions()` configures `GoogleSignInOptions.DEFAULT_SIGN_IN` with `.requestEmail()` and `Scope("https://www.googleapis.com/auth/drive.file")`.
+  3. `testAcquireBearerToken_executesOnIO_returnsVerifiedToken`:
+     - Given a valid `GoogleSignInAccount`, executes `GoogleDriveAuthManager.acquireBearerToken(context, account)`.
+     - Asserts token is retrieved and stored only upon successful exchange.
+  4. `testStoreAndDisconnect_managesPreferencesAndTokens`:
      - Given user links account `athlete@gmail.com` with token `ya29.xyz`.
      - Asserts `uploadToGoogleDrive()` returns true and email matches.
-     - When `disconnectGoogleDrive()` is invoked, credentials are wiped and `uploadToGoogleDrive()` returns false.
+     - When `disconnectGoogleDrive()` is invoked, `GoogleSignInClient.signOut()`, `revokeAccess()`, and `GoogleAuthUtil.clearToken` are called, credentials are wiped, and `uploadToGoogleDrive()` returns false.
 
 ### Group 2: Google Drive REST Client & Folder Hierarchy
 * **Test Class**: `com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveClientTest`

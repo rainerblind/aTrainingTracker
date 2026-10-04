@@ -1,10 +1,12 @@
-# Stage 1 Analysis: ATT-1306 - Google Drive Integration for Automated Workout Export and Backup Synchronization
+# Stage 1 Analysis: ATT-1306 - Google Drive Integration for Automated Workout Export and Backup Synchronization (Rework Cycle 2: Real Google Sign-In & OAuth2 Authorization)
 
 **Ticket**: [ATT-1306](https://rainerblind.atlassian.net/browse/ATT-1306)  
-**Sub-task**: [ATT-2277](https://rainerblind.atlassian.net/browse/ATT-2277) (`[Analysis]`)  
+**Sub-task**: [ATT-2406](https://rainerblind.atlassian.net/browse/ATT-2406) (`[Analysis]`)  
 **Parent Epic**: [ATT-162](https://rainerblind.atlassian.net/browse/ATT-162) (*Cloud integration*)  
-**Target Release**: `V4.9.39`  
-**Active Sprint**: `Sprint 2026-40.14`  
+**Target Release**: `V4.9.40` (assigned upon completion per Rule 19)  
+**Active Sprint**: `2026-40.16`  
+**Requirement Mapping**: `REQ-DAT-020` (*Automated Activity Export and Database Backup via Google Drive Cloud Service*)  
+**Test Spec ID**: `TST-DAT-015`  
 **Branch**: `feature/ATT-1306`  
 **Author**: AI Agent 1 (Implementer)  
 **Date**: 2026-10-04  
@@ -13,181 +15,139 @@
 
 ## 1. Problem Statement & Motivation
 
-aTrainingTracker currently provides automated cloud synchronization and database backup exclusively through Dropbox (`DropboxUploader.java`, `DropboxBackupManager.kt`, `DropboxSettingsDialog.kt`). However, user adoption of cloud features is bottlenecked by account requirements:
-1. **Third-Party Dependency Friction**: Virtually all Android athletes maintain an active Google account with 15 GB of bundled cloud storage. Requiring athletes to create and link an external Dropbox account creates a significant barrier to entry, leaving many users without automated off-device backup or desktop activity export.
-2. **Disaster Recovery Vulnerability**: Athletes without Dropbox who drop, lose, or replace their Android smartphone risk catastrophic data loss of their entire training history, sensor calibrations, gear profiles, and custom tracking layouts.
-3. **Desktop Analysis Workflow**: Athletes who analyze their recorded workouts in desktop training platforms (such as GoldenCheetah, WKO5, or training log spreadsheets) require immediate, zero-friction access to FIT, TCX, GPX, and CSV files in their personal cloud drive without manual USB cables or email exports.
+During Sprint 2026-40.15 Joint Review testing on physical hardware (Google Pixel 10), the initial Google Drive integration implementation was rejected due to a critical defect in the authentication and connection flow:
 
-Introducing a native **Google Drive Integration** alongside the existing Dropbox and Strava integrations resolves this gap. By utilizing the least-privilege `drive.file` scope, aTrainingTracker can securely create and synchronize to dedicated directories (`aTrainingTracker/Workouts/` and `aTrainingTracker/Backups/`) without exposing or requesting broader access to the athlete's personal files.
+1. **Mock Manual Input Dialog instead of Real Native Google Sign-In**:
+   - Tapping "Verbinden" (`R.string.google_drive_connect`) opened an `AlertDialog` with manual text input fields for "Google Account Email" and "Auth Token", rather than launching the standard Android Google Sign-In account selector.
+2. **Zero Input Validation & Static Dummy Fallback**:
+   - Entering arbitrary placeholder text (e.g. `"foobar"`) with an empty token was silently accepted without validation, immediately claiming *"Du bist mit Google Drive verbunden: foobar"*.
+   - In `GoogleDriveSettingsDialog.kt`, an empty token automatically fell back to a hardcoded string (`"gdrive_oauth_token"`), resulting in non-functional 401 Unauthorized errors during actual upload/download requests.
+
+### Objective for Rework Cycle 2
+Eliminate the manual text input mock dialog and implement the official Google Play Services Sign-In and OAuth2 authorization flow. Athletes must be able to select their device's Google account via the native system picker, authorize the least-privilege `drive.file` scope, and receive a verified OAuth2 Bearer token for seamless automated workout uploads and database backups.
 
 ---
 
-## 2. Root Cause & Gap Analysis (Forensic Investigation)
+## 2. Forensic Investigation & Root Cause Analysis
 
-### 2.1 Current Export and Backup Architectural State
-The application's export and backup subsystems are structured around clean abstraction layers:
-- **Workout File Exporters (`ExportManager.java`, `BaseExporter.java`)**:
-  - `ExportType` enum currently enumerates `FILE`, `DROPBOX`, and `COMMUNITY`.
-  - `ExportManager.newWorkout(fileBaseName)` and `exportWorkout(workoutData)` orchestrate export jobs via `WorkManager`.
-  - `DropboxUploader.java` handles uploading generated files to Dropbox.
-- **Database Backup & Migration (`BackupManager.kt`, `BackupWorker.kt`, `BackupRestoreViewModel.kt`)**:
-  - `BackupManager.createBackup(context)` generates an atomic `.attbackup` zip archive of databases, shared preferences, and datastores.
-  - `DropboxBackupManager.kt` provides `uploadBackup` and `downloadBackup` to `/Backups/aTrainingTracker_backup.attbackup`.
-  - `BackupWorker.kt` periodically triggers backups on Wi-Fi via `PeriodicWorkRequestBuilder`.
-  - `BackupRestoreViewModel.kt` provides reactive states and triggers for manual backup creation, upload, and download restore.
-- **UI & Navigation (`AppNavigationDrawer.kt`, `NavRoutes.kt`, `ATrainingTrackerApp.kt`)**:
-  - Bottom sheet dialogs inherit from `AppBottomSheetContent` and `AppBottomSheetDialogFragment` using `AppDialogActions.SaveCancel`.
+### 2.1 Why Did Cycle 1 Introduce a Mock Input Dialog?
+In Cycle 1, engineering focused extensively on the export pipeline, background `WorkManager` constraints, and REST client abstractions (`GoogleDriveClient.kt`, `GoogleDriveUploader.kt`, `GoogleDriveBackupManager.kt`). To simulate authenticated state without configuring Google Play Services Auth dependencies, a temporary developer shortcut was implemented in `GoogleDriveSettingsDialog.kt`. However, this mock dialog remained in place and broke end-to-end user testing on physical hardware.
 
-### 2.2 Architectural Gaps for Google Drive Integration
-1. **Enum & Data Mapping Gap**:
-   - `ExportType` lacks `GOOGLE_DRIVE` with associated formats (`CSV`, `GC`, `GPX`, `TCX`, `FIT`).
-   - `ExportStatusDataProvider.kt` has an exhaustive `when (exportType)` requiring plural IDs for Google Drive status strings.
-   - `WorkoutRepository.kt` lists `orderedExportTypes` without Google Drive.
-2. **Transport & Client Gap**:
-   - No Google Drive client or uploader currently exists in `com.atrainingtracker.trainingtracker.exporter.uploader`.
-   - The app does not include heavy Google Drive Java SDK dependencies to avoid library bloat, DEX limits, and Guava/Android 14 compatibility risks. A direct, lightweight REST client utilizing the existing `OkHttp 5.5.0` runtime provides maximum stability, full multipart/resumable upload support, and effortless unit testability with mock responses.
-3. **Folder Architecture & Idempotence**:
-   - Unlike Dropbox which can implicitly create directories on file write, Google Drive requires hierarchical folder resolution:
-     - Query root for folder `aTrainingTracker` (`mimeType = 'application/vnd.google-apps.folder' and trashed = false`).
-     - Query / create subfolder `Workouts` or `Backups` under parent `aTrainingTracker`.
-     - Query / create or overwrite target file inside the subfolder.
-4. **Network Constraint Enforcement (Wi-Fi Only)**:
-   - Athletes frequently request mobile data preservation. `ExportManager` currently enforces `NetworkType.CONNECTED` for cloud uploaders. Google Drive must respect an independent `googleDriveOnlyWifi` preference (`NetworkType.UNMETERED` vs `NetworkType.CONNECTED`).
-5. **Independent Service Coexistence**:
-   - Athletes must be able to use Dropbox, Google Drive, or both simultaneously without blocking or cross-service interference. Failure in one cloud provider must not abort export or backup to the other.
+### 2.2 Google Play Services Auth Architecture & Token Retrieval
+To authenticate and authorize Google Drive REST API calls on Android:
+1. **Dependency Requirement**:
+   - `com.google.android.gms:play-services-auth:21.3.0` provides the modern, rock-solid Google Sign-In client and `GoogleAuthUtil` token retrieval APIs.
+2. **Scopes**:
+   - `Scope("https://www.googleapis.com/auth/drive.file")`: Least-privilege scope that grants read/write access solely to files and folders created by aTrainingTracker (`aTrainingTracker/Workouts/` and `aTrainingTracker/Backups/`).
+3. **Interactive Sign-In Flow**:
+   - Configured via `GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)` requesting email and `Scope("https://www.googleapis.com/auth/drive.file")`.
+   - Launched in Jetpack Compose via `rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult())`.
+   - Upon successful account selection, `GoogleSignIn.getSignedInAccountFromIntent(result.data)` returns the authenticated `GoogleSignInAccount`.
+4. **OAuth2 Bearer Token Resolution**:
+   - Using the selected `Account` object, the OAuth2 access token must be fetched via `GoogleAuthUtil.getToken(context, account, "oauth2:https://www.googleapis.com/auth/drive.file")`.
+   - Because `GoogleAuthUtil.getToken` performs network I/O, it must execute on a background coroutine dispatcher (`Dispatchers.IO`).
+5. **Disconnect & Token Invalidation**:
+   - On Disconnect: Invokes `GoogleSignIn.getClient(context, gso).signOut()` and `revokeAccess()`, clears credentials in `TrainingApplication.deleteGoogleDriveCredential()`, and invalidates cached tokens via `GoogleAuthUtil.clearToken(context, token)`.
 
 ---
 
 ## 3. User Scope Grounding (ATT-1250)
 
 ### In-Scope Goals
-1. **Google Drive Authentication & Credential Storage**:
-   - Manage connection state via `TrainingApplication` (`uploadToGoogleDrive()`, `uploadWorkoutsToGoogleDrive()`, `uploadBackupToGoogleDrive()`, `uploadToGoogleDriveOnlyOnWifi()`).
-   - Store Google account email and OAuth token / credentials securely in SharedPreferences.
-   - Support seamless connect and disconnect (revocation & local token wipe).
-2. **Google Drive REST Client (`GoogleDriveClient.kt`)**:
-   - Lightweight, robust HTTP client based on `OkHttp 5.5.0`.
-   - Least-privilege `https://www.googleapis.com/auth/drive.file` scope.
-   - Idempotent directory creation and caching for `aTrainingTracker/Workouts/` and `aTrainingTracker/Backups/`.
-   - Multipart file upload and overwrite capability for activity files and backup bundles.
-   - Streaming file download for database restore operations.
-3. **Automated Workout Export (`GoogleDriveUploader.kt`)**:
-   - Subclass `BaseExporter` parallel to `DropboxUploader.java`.
-   - Respect user's active export format selections (`FIT`, `TCX`, `GPX`, `CSV`).
-   - Support background WorkManager execution with optional Wi-Fi constraint.
-4. **Database Backup & Restore (`GoogleDriveBackupManager.kt`)**:
-   - `uploadBackup(context, backupFile)` and `downloadBackup(context, destinationFile)`.
-   - Integrated into `BackupWorker.kt` for scheduled automatic backups.
-   - Integrated into `BackupRestoreViewModel.kt` for manual backup and cloud restore.
-5. **Settings Bottom Sheet Dialog (`GoogleDriveSettingsDialog.kt`)**:
-   - Compose bottom sheet conforming to `AppBottomSheetContent` and `AppDialogActions.SaveCancel`.
-   - Authentic Google Drive branding icon and header displaying connected account email.
-   - Feature toggles:
-     - *"Workouts automatisch exportieren"*
-     - *"Datenbank-Backup automatisch synchronisieren"*
-     - *"Nur über WLAN hochladen"*
-   - Display timestamp and status of last sync.
-6. **Navigation & Navigation Drawer Integration**:
-   - `R.id.drawer_google_drive` in navigation drawer and `SettingsBottomSheetType.GOOGLE_DRIVE` in `NavRoutes.kt` / `ATrainingTrackerApp.kt`.
-7. **9-Language Localization Parity**:
-   - Complete translations across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+1. **Dependency Integration**:
+   - Add `implementation 'com.google.android.gms:play-services-auth:21.3.0'` to `app/build.gradle`.
+2. **Native Authentication Flow (`GoogleDriveAuthManager.kt` / `GoogleDriveSettingsDialog.kt`)**:
+   - Completely remove the manual text input `AlertDialog` (`inputEmail`, `inputToken`).
+   - Launch native Google Sign-In intent requesting `drive.file` scope.
+   - Asynchronously acquire verified OAuth2 Bearer token via `GoogleAuthUtil.getToken` on `Dispatchers.IO`.
+   - Provide visual progress indicator (e.g. `CircularProgressIndicator`) while acquiring credentials.
+   - Display informative error feedback (e.g. Snackbar / Toast) if user cancels or authentication fails.
+3. **Credential Storage & Lifecycle**:
+   - Persist genuine Google account email and OAuth token in `TrainingApplication.storeGoogleDriveCredential(email, token)`.
+   - Support proper Disconnect: invoke `signOut()` and `revokeAccess()`, wipe credentials from preferences, and clear tokens.
+4. **Token Refresh & Expiration Resilience**:
+   - In `GoogleDriveClient.kt`, when encountering a `401 Unauthorized` response, attempt token invalidation via `GoogleAuthUtil.clearToken` and re-acquire a fresh token before failing the upload.
+5. **9-Language Localization Parity**:
+   - Maintain 100% parity across all 9 supported locales for auth failure messages and progress states.
 
 ### Out-of-Scope Non-Goals (Scope Bounding)
-- Automatic background polling of remote Google Drive changes (export/backup is push-based and pull-on-demand).
-- Modifying underlying SQLite schema or `.attbackup` format (retains existing verified bundle format).
-- Google Fit / Health Connect fitness data synchronization (Google Drive is used for file and backup storage).
+- Broad Drive scopes (e.g. full `drive` or `drive.readonly` access) — strictly prohibited to preserve athlete privacy.
+- Changing existing folder structures (`aTrainingTracker/Workouts/` and `aTrainingTracker/Backups/`).
+- Google Fit or Health Connect data synchronizations.
 
 ---
 
-## 4. Requirement Archaeology & Chesterton's Fence Audit
+## 4. Requirement Archaeology & Chesterton's Fence Audit (`REQ-PRO-022`)
 
-### Requirement Archaeology
-- **Original Requirement ID & Target**: Net-new requirement (`REQ-DAT-020` / `TST-DAT-015`), extending the cloud export framework (`REQ-DAT-006`, `REQ-DAT-018`, `REQ-MIG-023`) under Epic `ATT-162` (*Cloud integration*).
-- **Historical Origin & Precedents**:
-  - `REQ-MIG-023` established unlinked cloud feature deactivation and credential safety invariants (`DropboxCredentialSafetyTest.kt`).
-  - `REQ-UI-152` established standard bottom sheet modal contracts for cloud dialogs (`DropboxSettingsDialog.kt`, `ModalBottomSheetDialogsIntegrityTest.kt`).
-  - `REQ-DAT-018` integrated multi-format activity exports (`FitFileWriter.java`, `ExportManagerFitTest.kt`).
-- **Chesterton's Fence Findings**:
-  - `ExportManager` and `ExportStatusDatabaseManager` use string keys in SQLite (`TYPE = "DROPBOX"`). Adding `GOOGLE_DRIVE` is fully non-destructive and requires zero database migration.
-  - `ExportStatusDataProvider.kt` uses an exhaustive `when (exportType)`. Adding `GOOGLE_DRIVE` requires matching plural strings in `strings.xml`.
-  - `BackupWorker` currently exits early if `!dropboxConnected`. It must be adapted so that if *either* Dropbox or Google Drive (with backup enabled) is connected, the backup is produced and dispatched to each enabled service independently.
-
----
-
-## 5. Architectural Strategy & High-Level Solution
-
-### 5.1 System Architecture Diagram
-```
-+-----------------------------------------------------------------------------------+
-|                              User Interface Layer                                 |
-|  [AppNavigationDrawer] -> [GoogleDriveSettingsDialog] (Compose ModalBottomSheet)  |
-|  [BackupRestoreScreen] -> BackupRestoreViewModel (upload/restore Google Drive)    |
-|  [WorkoutSummary]      -> ExportStatus indicator (Google Drive status)            |
-+-----------------------------------------+-----------------------------------------+
-                                          |
-+-----------------------------------------v-----------------------------------------+
-|                              Application Core Layer                               |
-|  TrainingApplication: google_drive_account_email, auth token, toggles             |
-|  BackupRestoreViewModel: uploadToGoogleDrive(), restoreFromGoogleDrive()          |
-|  BackupWorker: parallel backup upload to Dropbox & Google Drive                   |
-+--------------------+------------------------------------+-------------------------+
-                     |                                    |
-+--------------------v--------------------+ +-------------v-------------------------+
-|      Workout Export Subsystem           | |         Backup Subsystem              |
-|  ExportType.GOOGLE_DRIVE                | |  GoogleDriveBackupManager.kt          |
-|  ExportManager.java                     | |  - uploadBackup(backupFile)           |
-|  GoogleDriveUploader.kt (BaseExporter)  | |  - downloadBackup(destinationFile)    |
-+--------------------+--------------------+ +-------------+-------------------------+
-                     |                                    |
-                     +-----------------+------------------+
-                                       |
-+--------------------------------------v--------------------------------------------+
-|                       GoogleDriveClient (OkHttp 5.5.0)                            |
-|  - Scope: https://www.googleapis.com/auth/drive.file                              |
-|  - ensureFolderHierarchy("aTrainingTracker", "Workouts" / "Backups")              |
-|  - uploadOrOverwriteFile(folderId, fileName, mimeType, file)                      |
-|  - downloadFile(folderId, fileName, destinationFile)                              |
-+--------------------------------------+--------------------------------------------+
-                                       |
-+--------------------------------------v--------------------------------------------+
-|                         Google Drive REST API v3                                  |
-|  https://www.googleapis.com/drive/v3/files                                        |
-|  https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart            |
-+-----------------------------------------------------------------------------------+
+```markdown
+### Requirement Archaeology & Chesterton's Fence Audit
+1. **Original Requirement ID & Target**: `REQ-DAT-020` (*Automated Activity Export and Database Backup via Google Drive Cloud Service*), targeting `GoogleDriveSettingsDialog.kt`, `GoogleDriveClient.kt`, `TrainingApplication.java`, and `app/build.gradle`.
+2. **Historical Origin & Commit Trace**: Introduced in `ATT-1306` (Sprint 2026-40.14) to provide native Google cloud backup and export alongside Dropbox.
+3. **Root Reason for Existing Formulation**: The original requirement specified Google Drive cloud integration with `drive.file` scope, but lacked explicit verification constraints against developer mock fallbacks in UI dialogs.
+4. **Preservation of Core Invariants**: 
+   - Least-privilege privacy principle: Only `drive.file` scope is requested; no access to athlete's personal files.
+   - Offline resilience and Wi-Fi only constraints: Background WorkManager queues uploads until valid network is available.
+   - Coexistence invariant: Athletes can use Dropbox and Google Drive simultaneously without mutual interference.
 ```
 
-### 5.2 Key Components
-1. **`GoogleDriveClient.kt` (`com.atrainingtracker.trainingtracker.cloud.googledrive`)**:
-   - Encapsulates Google Drive v3 REST interactions using `OkHttpClient`.
-   - Handles Bearer authorization header injection.
-   - Resolves folder ID by path, caching IDs to minimize roundtrips.
-   - Handles multi-part upload and overwrite logic.
-2. **`GoogleDriveUploader.kt` (`com.atrainingtracker.trainingtracker.exporter.uploader`)**:
-   - Extends `BaseExporter`.
-   - Resolves exported file from `getBaseDirFile(mContext)`.
-   - Uploads to `aTrainingTracker/Workouts/` via `GoogleDriveClient`.
-3. **`GoogleDriveBackupManager.kt` (`com.atrainingtracker.trainingtracker.migration`)**:
-   - `uploadBackup`: uploads `.attbackup` to `aTrainingTracker/Backups/`.
-   - `downloadBackup`: downloads `.attbackup` from `aTrainingTracker/Backups/` to local target.
-4. **`ExportType.java` & `ExportManager.java`**:
-   - Add `GOOGLE_DRIVE` enum value.
-   - Update `getExporter` switch.
-   - Update `newWorkout` and `startFullExportProcess`.
-   - Configure WorkManager constraints (`NetworkType.UNMETERED` if `googleDriveOnlyWifi`).
-5. **`GoogleDriveSettingsDialog.kt` & `GoogleDriveSettingsDialogFragment.kt`**:
-   - Composable bottom sheet modal dialog and fragment wrapper.
-   - Account connection header with brand styling.
-   - Toggles and sync metadata.
+---
+
+## 5. Architectural Strategy & Component Flow
+
+### 5.1 Component Interaction Diagram
+
+```
++-------------------------------------------------------------+
+|                GoogleDriveSettingsDialog                    |
+|  - Renders GoogleDriveConnectionHeader                     |
+|  - Triggers GoogleSignIn client via ActivityResultLauncher |
+|  - Displays connection progress and error states            |
++------------------------------+------------------------------+
+                               |
+                               | (1) StartActivityForResult(signInIntent)
+                               v
++-------------------------------------------------------------+
+|             Google Play Services (Sign-In UI)               |
+|  - Athlete selects Google Account                           |
+|  - Athlete consents to drive.file scope                     |
+|  - Returns GoogleSignInAccount                              |
++------------------------------+------------------------------+
+                               |
+                               | (2) GoogleSignInAccount.account
+                               v
++-------------------------------------------------------------+
+|                   GoogleDriveAuthManager                    |
+|  - Executes on Dispatchers.IO                               |
+|  - Calls GoogleAuthUtil.getToken(context, account, scope)   |
+|  - Resolves verified OAuth2 Bearer token                    |
+|  - Refreshes expired tokens on 401                          |
++------------------------------+------------------------------+
+                               |
+                               | (3) storeGoogleDriveCredential(email, token)
+                               v
++-------------------------------------------------------------+
+|                     TrainingApplication                     |
+|  - Persists validated email and token in Encrypted/Prefs    |
+|  - Sets uploadToGoogleDrive = true                          |
++------------------------------+------------------------------+
+                               |
+                               | (4) Bearer token provider
+                               v
++-------------------------------------------------------------+
+|                      GoogleDriveClient                      |
+|  - HTTPS OkHttp requests with Authorization: Bearer <token> |
+|  - Interacts with Google Drive API v3                       |
+|  - Uploads / Downloads to aTrainingTracker/Workouts|Backups |
++-------------------------------------------------------------+
+```
 
 ---
 
-## 6. System Invariants & Risk Assessment
+## 6. Verification Criteria for Gate 1 Sign-Off
 
-### Core Invariants
-1. **Least Privilege (`drive.file`)**: The app must never request broader Drive scopes (`drive` or `drive.readonly`). Only app-created files within `aTrainingTracker/` are manipulated.
-2. **Non-Interference with Dropbox & Community**: Failures, timeouts, or disconnection of Google Drive must not affect Dropbox or Strava exports or backups.
-3. **Resilience & Offline Handling**: Network failures trigger standard WorkManager exponential backoff without application crashes or database corruption.
-4. **9-Language Parity**: All newly introduced string and plural resources must be translated and validated across 9 languages.
-
-### Risk Rating: LOW-MEDIUM
-- **Justification**: The export and backup subsystems are already cleanly abstracted behind `BaseExporter` and `BackupWorker`. OkHttp is a mature dependency with zero additional APK footprint. The REST approach prevents third-party SDK conflicts.
+| Check | Description | Status |
+| :--- | :--- | :--- |
+| **Forensic RCA** | Identified root cause of physical device rejection (mock input dialog, dummy token fallback) | **PASS** |
+| **Architectural Solution** | Designed native `play-services-auth` integration with `GoogleAuthUtil` token retrieval | **PASS** |
+| **Scope Bounding** | In-scope and out-of-scope boundaries strictly defined (`drive.file` scope only) | **PASS** |
+| **Chesterton's Fence Audit** | All 4 mandatory fields documented for `REQ-DAT-020` | **PASS** |
