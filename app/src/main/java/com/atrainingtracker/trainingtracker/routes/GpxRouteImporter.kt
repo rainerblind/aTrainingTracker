@@ -75,11 +75,30 @@ class GpxRouteImporter @JvmOverloads constructor(
         onProgress: ((completed: Int, total: Int) -> Unit)? = null
     ): Result<RouteImportResult> = withContext(Dispatchers.IO) {
         try {
+            val isTcx = uri.lastPathSegment?.endsWith(".tcx", ignoreCase = true) == true ||
+                    uri.toString().endsWith(".tcx", ignoreCase = true)
+            if (isTcx) {
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    return@withContext TcxCourseParser.parse(stream, uri.lastPathSegment ?: "tcx_course")
+                } ?: return@withContext Result.failure(Exception("Cannot open stream for TCX"))
+            }
+
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 val parser = GPXParser()
-                val parsedGpx: Gpx? = parser.parse(inputStream)
+                val parsedGpx: Gpx? = try {
+                    parser.parse(inputStream)
+                } catch (e: Exception) {
+                    null
+                }
 
                 if (parsedGpx == null || (parsedGpx.tracks.isEmpty() && parsedGpx.routes.isEmpty())) {
+                    // Fallback attempt to TCX course parser
+                    val tcxResult = context.contentResolver.openInputStream(uri)?.use { tcxStream ->
+                        TcxCourseParser.parse(tcxStream, uri.lastPathSegment ?: "course")
+                    }
+                    if (tcxResult != null && tcxResult.isSuccess) {
+                        return@withContext tcxResult
+                    }
                     return@withContext Result.failure(Exception("No tracks or routes found"))
                 }
 
@@ -129,7 +148,7 @@ class GpxRouteImporter @JvmOverloads constructor(
                         altitude = wpt.elevation ?: 0.0,
                         name = wpt.name ?: "",
                         description = wpt.desc ?: wpt.cmt ?: "",
-                        type = WaypointType.fromGpx(wpt.sym, wpt.type, wpt.name)
+                        type = WaypointType.fromGpx(wpt.sym, wpt.type, wpt.name, wpt.desc ?: wpt.cmt)
                     )
                 }
                 val waypoints = WaypointDistanceCalculator.projectWaypoints(rawWaypoints, pathPoints)
