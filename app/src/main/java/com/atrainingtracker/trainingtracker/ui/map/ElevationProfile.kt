@@ -384,8 +384,8 @@ fun ElevationProfile(
         CachedProfileData(segments, min, max, totalDist, totalTimeSec, range, distStep, altStep, adaptiveHeight)
     }
 
-    val isTimeDomain = xAxisDomain == ProfileXAxisDomain.TIME && cachedData.totalTimeSec > 0
-    val totalSpan = if (isTimeDomain) cachedData.totalTimeSec.toDouble() else cachedData.totalDist
+    val isTimeDomain = ProfileDomainMath.isEffectiveTimeDomain(xAxisDomain, totalDistance = cachedData.totalDist, totalTimeSec = cachedData.totalTimeSec)
+    val totalSpan = ProfileDomainMath.calculateTotalSpan(xAxisDomain, totalDistance = cachedData.totalDist, totalTimeSec = cachedData.totalTimeSec)
     val visibleSpan = ElevationProfileZoomMath.calculateVisibleDistance(totalSpan, currentZoomScale)
 
     val altitudeFormatter = remember(unit) { AltitudeFormatter() }
@@ -785,29 +785,11 @@ fun ScrubbingTelemetryBadge(
 ) {
     val context = LocalContext.current
     val effectiveHrThresholds = remember(hrZoneThresholds, bSportType, context) {
-        hrZoneThresholds ?: runCatching {
-            val zoneType = if (bSportType == BSportType.BIKE) SettingsDataStore.ZoneType.HR_BIKE else SettingsDataStore.ZoneType.HR_RUN
-            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
-            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
-            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
-            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
-            if (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3) {
-                HeartRateZoneThresholds(z1, z2, z3, z4)
-            } else null
-        }.getOrNull()
+        hrZoneThresholds ?: TelemetryZoneMath.loadHeartRateThresholds(context, bSportType)
     }
 
     val effectivePowerThresholds = remember(powerZoneThresholds, context) {
-        powerZoneThresholds ?: runCatching {
-            val zoneType = SettingsDataStore.ZoneType.PWR_BIKE
-            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
-            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
-            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
-            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
-            if (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3) {
-                PowerZoneThresholds(z1, z2, z3, z4)
-            } else null
-        }.getOrNull()
+        powerZoneThresholds ?: TelemetryZoneMath.loadPowerThresholds(context)
     }
 
     val distanceFormatter = remember(unit) { DistanceFormatter() }

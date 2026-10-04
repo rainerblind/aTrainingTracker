@@ -50,6 +50,7 @@ import android.content.pm.PackageManager;
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelper;
+import com.atrainingtracker.trainingtracker.database.WorkoutSource;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
@@ -773,6 +774,7 @@ public class TrackerService extends Service {
         values.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getInstance(this).getBSportType(sportTypeId).name());
         values.put(WorkoutSummaries.WORKOUT_NAME, mBaseFileName);
         values.put(WorkoutSummaries.FILE_BASE_NAME, mBaseFileName);
+        values.put(WorkoutSummaries.SOURCE, WorkoutSource.TRACKED.name());
 
         WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
         SQLiteDatabase summariesDb = databaseManager.getDatabase();

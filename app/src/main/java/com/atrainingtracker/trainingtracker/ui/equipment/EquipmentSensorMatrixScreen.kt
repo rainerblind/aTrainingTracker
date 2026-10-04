@@ -1,0 +1,371 @@
+/*
+ * aTrainingTracker (ANT+ BTLE)
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+ */
+
+package com.atrainingtracker.trainingtracker.ui.equipment
+
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.SimpleSensorInfo
+import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
+import com.atrainingtracker.trainingtracker.ui.components.FastScrollableBox
+
+private val STICKY_COLUMN_WIDTH = 156.dp
+private val SENSOR_COLUMN_WIDTH = 88.dp
+private val ROW_HEIGHT = 56.dp
+private val HEADER_ROW_HEIGHT = 60.dp
+
+/**
+ * Screen providing a centralized, interactive equipment-to-sensor mapping matrix with checkboxes
+ * for bikes and shoes (REQ-UI-256, TST-UI-215, ATT-2126).
+ *
+ * Features:
+ * - Sticky left column showing equipment icon, name, and retirement status during horizontal scroll.
+ * - Sticky top header row showing paired sensor names during vertical scroll.
+ * - Horizontal synchronization across sensor column cells and headers.
+ * - Categorization into Bikes and Shoes sections.
+ * - Responsive 1-tap Material 3 Checkbox persistence.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun EquipmentSensorMatrixScreen(
+    bikes: List<EquipmentItem>,
+    shoes: List<EquipmentItem>,
+    sensors: List<SimpleSensorInfo>,
+    onToggleLink: (equipmentId: Long, sensorId: Long, isLinked: Boolean) -> Unit,
+    appBarOffsetPx: Int,
+    headerHeightPx: Float,
+    modifier: Modifier = Modifier,
+    scrollState: LazyListState = rememberLazyListState()
+) {
+    val density = LocalDensity.current
+    val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
+
+    if (sensors.isEmpty()) {
+        EmptyStatePlaceholder(
+            modifier = modifier.padding(top = topPadding + 16.dp),
+            iconRes = R.drawable.ic_equipment_bike,
+            message = stringResource(R.string.equipment_matrix_no_sensors)
+        )
+        return
+    }
+
+    if (bikes.isEmpty() && shoes.isEmpty()) {
+        EmptyStatePlaceholder(
+            modifier = modifier.padding(top = topPadding + 16.dp),
+            iconRes = R.drawable.ic_equipment_bike,
+            message = stringResource(R.string.equipment_matrix_no_equipment)
+        )
+        return
+    }
+
+    val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
+    val horizontalScrollState = rememberScrollState()
+
+    FastScrollableBox(
+        state = scrollState,
+        modifier = modifier.fillMaxSize(),
+        topPadding = topPadding,
+        bottomPadding = bottomPadding
+    ) {
+        LazyColumn(
+            state = scrollState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                top = topPadding + 8.dp,
+                bottom = bottomPadding + 16.dp,
+                start = 0.dp,
+                end = 0.dp
+            )
+        ) {
+            // STICKY HEADER: Top sensor names row
+            stickyHeader(key = "matrix_sensor_header") {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    shadowElevation = 2.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(HEADER_ROW_HEIGHT),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Top-left corner cell (sticky)
+                        Box(
+                            modifier = Modifier
+                                .width(STICKY_COLUMN_WIDTH)
+                                .fillMaxHeight()
+                                .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                                .padding(horizontal = 12.dp),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            Text(
+                                text = stringResource(R.string.equipment_tab_sensor_matrix),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        // Vertical separator
+                        Box(
+                            modifier = Modifier
+                                .width(1.dp)
+                                .fillMaxHeight()
+                                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                        )
+
+                        // Horizontally scrollable sensor name headers
+                        Row(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .horizontalScroll(horizontalScrollState),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            sensors.forEach { sensor ->
+                                Box(
+                                    modifier = Modifier
+                                        .width(SENSOR_COLUMN_WIDTH)
+                                        .fillMaxHeight()
+                                        .padding(horizontal = 4.dp, vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = sensor.name,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Medium,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // BIKES SECTION
+            if (bikes.isNotEmpty()) {
+                item(key = "section_header_bikes") {
+                    MatrixSectionHeader(
+                        title = stringResource(R.string.equipment_type_bike),
+                        count = bikes.size,
+                        iconRes = R.drawable.ic_equipment_bike
+                    )
+                }
+
+                items(bikes, key = { "bike_${it.id}" }) { bike ->
+                    MatrixEquipmentRow(
+                        item = bike,
+                        isBike = true,
+                        sensors = sensors,
+                        horizontalScrollState = horizontalScrollState,
+                        onToggleLink = onToggleLink
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                        thickness = 0.5.dp
+                    )
+                }
+            }
+
+            // SHOES SECTION
+            if (shoes.isNotEmpty()) {
+                item(key = "section_header_shoes") {
+                    MatrixSectionHeader(
+                        title = stringResource(R.string.equipment_type_shoe),
+                        count = shoes.size,
+                        iconRes = R.drawable.ic_equipment_shoe
+                    )
+                }
+
+                items(shoes, key = { "shoe_${it.id}" }) { shoe ->
+                    MatrixEquipmentRow(
+                        item = shoe,
+                        isBike = false,
+                        sensors = sensors,
+                        horizontalScrollState = horizontalScrollState,
+                        onToggleLink = onToggleLink
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                        thickness = 0.5.dp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MatrixSectionHeader(
+    title: String,
+    count: Int,
+    iconRes: Int
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "$title ($count)",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+@Composable
+private fun MatrixEquipmentRow(
+    item: EquipmentItem,
+    isBike: Boolean,
+    sensors: List<SimpleSensorInfo>,
+    horizontalScrollState: androidx.compose.foundation.ScrollState,
+    onToggleLink: (equipmentId: Long, sensorId: Long, isLinked: Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(ROW_HEIGHT)
+            .background(
+                if (item.isRetired) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                else MaterialTheme.colorScheme.surface
+            ),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Sticky Equipment Info Column
+        Row(
+            modifier = Modifier
+                .width(STICKY_COLUMN_WIDTH)
+                .fillMaxHeight()
+                .padding(horizontal = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(
+                    id = if (isBike) R.drawable.ic_equipment_bike else R.drawable.ic_equipment_shoe
+                ),
+                contentDescription = null,
+                tint = if (item.isRetired) MaterialTheme.colorScheme.outline
+                       else if (isBike) MaterialTheme.colorScheme.primary
+                       else MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(22.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = item.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = if (item.isRetired) MaterialTheme.colorScheme.outline
+                            else MaterialTheme.colorScheme.onSurface
+                )
+                if (item.isRetired) {
+                    Text(
+                        text = stringResource(R.string.equipment_retired),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+
+        // Vertical separator line
+        Box(
+            modifier = Modifier
+                .width(1.dp)
+                .fillMaxHeight()
+                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+        )
+
+        // Horizontally scrollable row cells
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .horizontalScroll(horizontalScrollState),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            sensors.forEach { sensor ->
+                val isLinked = item.linkedDeviceIds.contains(sensor.id)
+                Box(
+                    modifier = Modifier
+                        .width(SENSOR_COLUMN_WIDTH)
+                        .fillMaxHeight(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Checkbox(
+                        checked = isLinked,
+                        onCheckedChange = { checked ->
+                            onToggleLink(item.id, sensor.id, checked)
+                        },
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = MaterialTheme.colorScheme.primary,
+                            checkmarkColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    )
+                }
+            }
+        }
+    }
+}

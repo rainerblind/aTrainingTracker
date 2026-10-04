@@ -21,9 +21,12 @@ package com.atrainingtracker.trainingtracker.routes
 import android.content.Context
 import android.location.Location
 import android.net.Uri
+import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
+import com.atrainingtracker.trainingtracker.elevation.ElevationResult
+import com.atrainingtracker.trainingtracker.elevation.ElevationService
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
@@ -33,13 +36,44 @@ import kotlinx.coroutines.withContext
 import io.ticofab.androidgpxparser.parser.GPXParser
 import io.ticofab.androidgpxparser.parser.domain.Gpx
 
+/**
+ * Result data class for route file imports (GPX / TCX).
+ */
+data class RouteImportResult(
+    val summary: RouteSummary,
+    val pathPoints: List<PathPoint>,
+    val waypoints: List<RouteWaypoint> = emptyList()
+)
 
-class GpxRouteImporter(private val context: Context) {
+/**
+ * Importer for GPX files with automatic DEM elevation enrichment for routes lacking altitude data,
+ * and POI waypoint extraction (REQ-MAP-026).
+ *
+ * Traceability:
+ * - REQ-MAP-025: Automatic DEM Elevation Enrichment for Imported GPX Routes Lacking Altitude Data.
+ * - REQ-MAP-026: Support Waypoints, POIs (Benches, Water, Summits) and TCX Course Points.
+ * - TST-MAP-027: Automatic DEM Elevation Enrichment for Imported GPX Routes Lacking Altitude Verification.
+ * - TST-MAP-028: Waypoint extraction, classification, and visualization verification.
+ */
+class GpxRouteImporter @JvmOverloads constructor(
+    private val context: Context,
+    private val elevationService: ElevationService = ElevationService.getInstance()
+) {
+
+    companion object {
+        private const val TAG = "GpxRouteImporter"
+        const val MAX_BATCH_SIZE = 100
+    }
 
     /**
-     * Parses a GPX file from a Uri and return the RouteSummary and PathPoints
+     * Parses a GPX file from a Uri and returns the RouteSummary, PathPoints, and Waypoints.
+     * If the imported track lacks elevation data, it automatically enriches coordinates
+     * with DEM elevations from Open-Meteo.
      */
-    suspend fun importRouteFromGpx(uri: Uri): Result<Pair<RouteSummary, List<PathPoint>>> = withContext(Dispatchers.IO) {
+    suspend fun importRouteFromGpx(
+        uri: Uri,
+        onProgress: ((completed: Int, total: Int) -> Unit)? = null
+    ): Result<RouteImportResult> = withContext(Dispatchers.IO) {
         try {
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 val parser = GPXParser()
@@ -56,8 +90,15 @@ class GpxRouteImporter(private val context: Context) {
                     ?: parsedGpx.routes.firstOrNull()?.routePoints
                     ?: emptyList()
 
+                if (trackPoints.isEmpty()) {
+                    return@withContext Result.failure(Exception("Track contains no points"))
+                }
+
+                // Check whether valid non-zero altitude data is present
+                val hasExistingElevation = trackPoints.any { it.elevation != null && it.elevation != 0.0 }
+
                 // Convert library points to PathPoint
-                val pathPoints = trackPoints.mapIndexed { index, pt ->
+                val pathPoints = trackPoints.map { pt ->
                     PathPoint(
                         latLng = LatLng(pt.latitude, pt.longitude),
                         altitude = pt.elevation ?: 0.0,
@@ -76,6 +117,23 @@ class GpxRouteImporter(private val context: Context) {
                     pathPoints[i] = pathPoints[i].copy(distance = totalDist)
                 }
 
+                // If no elevation data exists, perform chunked DEM elevation enrichment
+                if (!hasExistingElevation && pathPoints.isNotEmpty()) {
+                    enrichElevations(pathPoints, onProgress)
+                }
+
+                // Parse waypoints (<wpt>) if present (REQ-MAP-026)
+                val rawWaypoints = (parsedGpx.wayPoints ?: emptyList()).map { wpt ->
+                    RouteWaypoint(
+                        latLng = LatLng(wpt.latitude, wpt.longitude),
+                        altitude = wpt.elevation ?: 0.0,
+                        name = wpt.name ?: "",
+                        description = wpt.desc ?: wpt.cmt ?: "",
+                        type = WaypointType.fromGpx(wpt.sym, wpt.type, wpt.name)
+                    )
+                }
+                val waypoints = WaypointDistanceCalculator.projectWaypoints(rawWaypoints, pathPoints)
+
                 val summary = RouteSummary(
                     id = 0,
                     externalId = uri.lastPathSegment ?: "unknown",
@@ -89,15 +147,66 @@ class GpxRouteImporter(private val context: Context) {
                     source = RouteSource.LOCAL_GPX
                 )
 
-                Result.success(Pair(summary, pathPoints))
+                Result.success(RouteImportResult(summary, pathPoints, waypoints))
             } ?: Result.failure(Exception("Stream null"))
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
+    private suspend fun enrichElevations(
+        pathPoints: MutableList<PathPoint>,
+        onProgress: ((completed: Int, total: Int) -> Unit)?
+    ) {
+        val totalPoints = pathPoints.size
+        val chunkIndices = (0 until totalPoints step MAX_BATCH_SIZE)
+
+        for (startIndex in chunkIndices) {
+            val endIndex = minOf(startIndex + MAX_BATCH_SIZE, totalPoints)
+            val batchCoords = pathPoints.subList(startIndex, endIndex).map { it.latLng }
+
+            onProgress?.invoke(startIndex, totalPoints)
+
+            try {
+                when (val result = elevationService.getBatchElevationsAsync(batchCoords)) {
+                    is ElevationResult.BatchSuccess -> {
+                        val batchElevations = result.elevations
+                        for (i in batchElevations.indices) {
+                            val elev = batchElevations[i]
+                            if (elev != null) {
+                                pathPoints[startIndex + i] = pathPoints[startIndex + i].copy(altitude = elev)
+                            }
+                        }
+                    }
+                    is ElevationResult.RateLimited -> {
+                        Log.w(TAG, "DEM API rate limit hit during route enrichment. Backoff: ${result.retryAfterSeconds}s. Stopping further queries.")
+                        break
+                    }
+                    is ElevationResult.CircuitBreakerOpen -> {
+                        Log.w(TAG, "DEM API circuit breaker is open. Skipping remaining enrichment.")
+                        break
+                    }
+                    is ElevationResult.ServerError -> {
+                        Log.w(TAG, "DEM API server error (${result.statusCode}). Stopping further queries.")
+                        break
+                    }
+                    is ElevationResult.NetworkError -> {
+                        Log.w(TAG, "DEM API network error (${result.message}). Stopping further queries.")
+                        break
+                    }
+                    is ElevationResult.Success -> {
+                        pathPoints[startIndex] = pathPoints[startIndex].copy(altitude = result.elevationMeters)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Exception during elevation batch query: ${e.message}", e)
+                break
+            }
+        }
+        onProgress?.invoke(totalPoints, totalPoints)
+    }
+
     private fun calculateElevationGain(points: List<PathPoint>): Double {
-        // TODO: Might be too noisy. -> Implement some filtering.
         var gain = 0.0
         for (i in 1 until points.size) {
             val diff = points[i].altitude - points[i - 1].altitude

@@ -381,15 +381,10 @@ class MainActivityWithNavigation :
             }
         }
 
-        // getPermissions
-        getPermissions(true)
-
         // check ANT+ installation
         if (TrainingApplication.checkANTInstallation() && !BANALService.areAllANTServicesInstalled(this)) {
             showInstallANTShitDialog()
         }
-
-        checkBatteryOptimizations()
 
         handleIntent(intent)
 
@@ -507,7 +502,8 @@ class MainActivityWithNavigation :
             .show()
     }
 
-    private fun getPermissions(popup: Boolean) {
+    fun getPermissions(popup: Boolean) {
+        if (!popup) return
         var missingAnyPermission = false
         val requiredPerms = getPermissions()
         val requestPerms = ArrayList<String>()
@@ -591,6 +587,10 @@ class MainActivityWithNavigation :
         ContextCompat.registerReceiver(this, mTrackingStoppedReceiver, IntentFilter(TrackerService.TRACKING_FINISHED_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED)
         ContextCompat.registerReceiver(this, mAntDependencyReceiver, IntentFilter("com.atrainingtracker.ANT_DEPENDENCY_MISSING"), ContextCompat.RECEIVER_NOT_EXPORTED)
         ContextCompat.registerReceiver(this, mAntAdapterMissingReceiver, IntentFilter("com.atrainingtracker.ADAPTER_NOT_DETECTED"), ContextCompat.RECEIVER_NOT_EXPORTED)
+
+        if (com.atrainingtracker.trainingtracker.helpers.ProcessExitReasonHelper.isIgnoringBatteryOptimizations(this)) {
+            com.atrainingtracker.trainingtracker.helpers.ProcessExitReasonHelper.resetBatteryKillCount(this)
+        }
 
         checkUnfinishedWorkout()
     }

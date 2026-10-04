@@ -390,6 +390,9 @@
     <string name="equipment_type_shoe">Scarpe</string>
     <string name="equipment_no_bikes">Nessuna bici</string>
     <string name="equipment_no_shoes">Nessuna scarpa</string>
+    <string name="equipment_tab_sensor_matrix">Matrice sensori</string>
+    <string name="equipment_matrix_no_sensors">Nessun sensore associato trovato. Associa prima i sensori nelle Impostazioni.</string>
+    <string name="equipment_matrix_no_equipment">Nessun equipaggiamento trovato. Aggiungi prima bici o scarpe.</string>
 
     <string name="SD_card_not_available">Scheda SD non disponibile.</string>
 
@@ -692,6 +695,23 @@
     <plurals name="export_notification__detail__Dropbox_failed">
         <item quantity="one">❌ Errore upload %1$s su Dropbox.</item>
         <item quantity="other">❌ Errore upload %1$s su Dropbox.</item>
+    </plurals>
+
+<plurals name="export_notification__detail__GoogleDrive_waiting">
+        <item quantity="one">⏳ In attesa di caricare il file %1$s su Google Drive.</item>
+        <item quantity="other">⏳ In attesa di caricare i file %1$s su Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_ongoing">
+        <item quantity="one">📤 Caricamento del file %1$s su Google Drive.</item>
+        <item quantity="other">📤 Caricamento dei file %1$s su Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_success">
+        <item quantity="one">✅ File %1$s caricato con successo su Google Drive.</item>
+        <item quantity="other">✅ File %1$s caricati con successo su Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_failed">
+        <item quantity="one">❌ Caricamento del file %1$s su Google Drive non riuscito.</item>
+        <item quantity="other">❌ Caricamento dei file %1$s su Google Drive non riuscito.</item>
     </plurals>
 
     <plurals name="export_notification__detail__Community_failed">
@@ -1413,4 +1433,131 @@
     <string name="settings_lap_display_mode_table">Tabella</string>
     <string name="settings_lap_display_mode_visualizer">Visualizzatore</string>
     <string name="settings_lap_display_mode_both">Entrambi</string>
+
+    <!-- Workout Origin Source (ATT-2186 / REQ-DAT-017) -->
+    <string name="workout_source_tracked">Registrato</string>
+    <string name="workout_source_tcx">TCX</string>
+    <string name="workout_source_gpx">GPX</string>
+    <string name="workout_source_fit">FIT</string>
+
+    <!-- Workout Section Reordering (ATT-2176 / REQ-UI-255) -->
+    <string name="action_move_up">Sposta su</string>
+    <string name="action_move_down">Sposta giù</string>
+
+    <!-- Contextual JIT Permission Flow (ATT-2075 / REQ-PRI-003) -->
+    <string name="permission_rationale_title">Autorizzazioni per un tracciamento senza interruzioni</string>
+    <string name="permission_rationale_subtitle">Per registrare con precisione le metriche del tuo allenamento, sono necessarie le seguenti autorizzazioni:</string>
+    <string name="permission_rationale_location_title">Posizione e GPS</string>
+    <string name="permission_rationale_location_desc">Registra continuamente percorso, andatura e dislivello mentre il telefono è bloccato nella tasca della maglia o nella cintura da corsa.</string>
+    <string name="permission_rationale_bluetooth_title">Bluetooth e sensori</string>
+    <string name="permission_rationale_bluetooth_desc">Si connette a fasce cardio, misuratori di potenza, sensori di cadenza e rulli smart.</string>
+    <string name="permission_rationale_notification_title">Controlli di allenamento e notifiche</string>
+    <string name="permission_rationale_notification_desc">Mostra metriche in tempo reale e pulsanti pausa/riprendi direttamente sulla schermata di blocco.</string>
+    <string name="permission_rationale_continue">Continua</string>
+    <string name="permission_rationale_not_now">Non ora</string>
+    <string name="permission_rationale_open_settings">Apri impostazioni</string>
+    <string name="permission_rationale_settings_explanation">L\'autorizzazione alla posizione è stata negata. Senza accesso alla posizione, la registrazione del percorso GPS non è disponibile. Puoi concedere l\'autorizzazione nelle impostazioni dell\'app.</string>
+    <string name="permission_warning_badge_desc">Autorizzazione di posizione mancante</string>
+
+    <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
+    <string name="unfinished_workout_title">Allenamento interrotto</string>
+    <string name="kill_reason_battery_title">Terminato dall\'ottimizzazione batteria</string>
+    <string name="kill_reason_battery_stage1">Chi non ascolta… 😉 Ma siamo davvero dispiaciuti per i tuoi chilometri persi! Android ha interrotto il monitoraggio in background a causa dell\'ottimizzazione batteria.</string>
+    <string name="kill_reason_battery_stage1_strava">E come ben sai: \'If it\'s not on Strava, it didn\'t happen\'… doppiamente amaro! 🙈</string>
+    <string name="kill_reason_battery_stage2">Non di nuovo… Già la seconda volta! Di quanti chilometri persi hai bisogno come prova? Disattiva l\'ottimizzazione della batteria per aTrainingTracker.</string>
+    <string name="kill_reason_battery_stage3">Non c\'è due senza tre… Atleta più resistente ai consigli del mese! 🏆 Il sistema continuerà a chiudere l\'allenamento finché non imposti l\'eccezione.</string>
+    <string name="kill_reason_low_memory">La registrazione è stata interrotta da Android per carenza di memoria RAM (ad es. fotocamera o navigazione 3D in primo piano). I dati registrati fino a quel momento sono al sicuro.</string>
+    <string name="kill_reason_permission_revoked">La registrazione è stata interrotta perché le autorizzazioni di posizione o notifica sono state revocate durante l\'allenamento.</string>
+    <string name="action_disable_battery_optimization">Disattiva ottimizzazione batteria</string>
+    <string name="battery_optimization_exempt_celebration">Finalmente! Via libera per i tuoi dati di allenamento 🎉</string>
+
+    <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
+    <string name="import_fit_title">Importa file FIT</string>
+    <string name="import_fit_description">Importa allenamenti da Garmin, Wahoo, Hammerhead o smartwatch (.fit).</string>
+    <string name="import_fit_button">Seleziona file FIT</string>
+    <string name="import_fit_progress">Importazione dei file FIT (%1$d di %2$d)…</string>
+    <string name="import_fit_summary_success">%1$d allenamenti importati con successo (%2$d duplicati ignorati).</string>
+    <string name="import_fit_summary_with_errors">%1$d allenamenti importati, %2$d duplicati ignorati, %3$d non riusciti.</string>
+    <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
+    <string name="route_select_title">Seleziona percorso</string>
+    <string name="route_action_select">Seleziona percorso</string>
+    <string name="route_action_stop">Termina percorso</string>
+    <string name="route_auto_detect_title">Rilevamento percorso</string>
+    <string name="route_auto_detect_prompt">Stai seguendo \'%1$s\'?</string>
+    <string name="route_auto_detect_activate">Attiva</string>
+    <string name="route_auto_detect_dismiss">Rifiuta</string>
+    <string name="route_filter_near">Nelle vicinanze</string>
+    <string name="route_filter_recent">Percorso di recente</string>
+    <string name="route_filter_length">Lunghezza</string>
+    <string name="route_empty_title">Nessun percorso disponibile</string>
+    <string name="route_empty_desc">Importa file GPX o sincronizza con Strava.</string>
+    <string name="google_drive">Google Drive</string>
+    <string name="google_drive_connect">Connetti a Google Drive</string>
+    <string name="google_drive_disconnect">Disconnetti da Google Drive</string>
+    <string name="google_drive_connected_status">Sei connesso a Google Drive</string>
+    <string name="google_drive_disconnected_status">Non sei connesso a Google Drive</string>
+    <string name="google_drive_account_email_label">Account: %1$s</string>
+    <string name="upload_workouts_to_google_drive">Esporta automaticamente gli allenamenti</string>
+    <string name="upload_workouts_to_google_drive_summary">Carica le attività (FIT, TCX, GPX, CSV) su Google Drive dopo il salvataggio</string>
+    <string name="upload_backup_to_google_drive">Sincronizza automaticamente il backup</string>
+    <string name="upload_backup_to_google_drive_summary">Esegue periodicamente il backup del database su Google Drive</string>
+    <string name="google_drive_only_wifi">Carica solo tramite Wi-Fi</string>
+    <string name="google_drive_only_wifi_summary">Risparmia i dati mobili</string>
+    <string name="google_drive_last_sync">Ultimo caricamento: %1$s</string>
+    <string name="google_drive_never_synced">Non ancora sincronizzato</string>
+    <string name="restore_from_google_drive">Ripristina da Google Drive</string>
+    <string name="upload_to_google_drive">Esegui backup su Google Drive</string>
+    <string name="gpx_enriching_elevation">Recupero dei dati di altitudine…</string>
+    <string name="gpx_elevation_enriched">Dati di altitudine aggiunti con successo</string>
+    <string name="gpx_elevation_enrichment_failed">Recupero altitudine fallito, tracciato 2D importato</string>
+    <string name="waypoint_type_bench">Panchina / Sosta</string>
+    <string name="waypoint_type_water">Fonte d\'acqua</string>
+    <string name="waypoint_type_summit">Vetta / Passo</string>
+    <string name="waypoint_type_food">Ristoro / Bar</string>
+    <string name="waypoint_type_viewpoint">Punto panoramico</string>
+    <string name="waypoint_type_first_aid">Pronto soccorso</string>
+    <string name="waypoint_type_danger">Pericolo</string>
+    <string name="waypoint_type_turn_left">Gira a sinistra</string>
+    <string name="waypoint_type_turn_right">Gira a destra</string>
+    <string name="waypoint_type_turn_straight">Prosegui dritto</string>
+    <string name="waypoint_type_generic">Punto di passaggio</string>
+    <string name="route_cue_sheet_title">Tabella di marcia</string>
+    <string name="route_waypoints_header">Punti di passaggio e POI (%1$d)</string>
+
+    <string name="climb_title">Salita</string>
+    <string name="climb_approaching">In avvicinamento</string>
+    <string name="climb_on_climb">In salita</string>
+    <string name="climb_summit">Vetta</string>
+    <string name="climb_remaining_dist">Rimanente</string>
+    <string name="climb_remaining_elevation">Dislivello</string>
+    <string name="climb_grade">Pendenza</string>
+    <string name="climb_route_counter">Salita %1$d di %2$d</string>
+    <string name="climb_category_hc">HC</string>
+    <string name="climb_category_cat1">Cat 1</string>
+    <string name="climb_category_cat2">Cat 2</string>
+    <string name="climb_category_cat3">Cat 3</string>
+    <string name="climb_category_cat4">Cat 4</string>
+    <string name="climb_category_uc">UC</string>
+    <string name="tuning_show_live_climbs_title">Salite in tempo reale (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_summary">Mostra il pannello salita in tempo reale durante i percorsi e la pedalata libera</string>
+
+    <string name="turn_cue_left">Svolta a sinistra</string>
+    <string name="turn_cue_right">Svolta a destra</string>
+    <string name="turn_cue_slight_left">Leggermente a sinistra</string>
+    <string name="turn_cue_slight_right">Leggermente a destra</string>
+    <string name="turn_cue_sharp_left">Svolta decisa a sinistra</string>
+    <string name="turn_cue_sharp_right">Svolta decisa a destra</string>
+    <string name="turn_cue_straight">Dritto</string>
+    <string name="turn_cue_u_turn">Inversione a U</string>
+    <string name="turn_cue_now">ORA</string>
+    <string name="turn_cue_off_route">Fuori percorso (%1$d m)</string>
+    <string name="turn_cue_back_on_route">Di nuovo sul percorso</string>
+    <string name="turn_prompts_title">Istruzioni di svolta</string>
+    <string name="turn_prompts_summary">Mostra indicazioni svolta per svolta durante la navigazione del percorso</string>
+    <string name="turn_audio_alerts_title">Avvisi acustici di svolta</string>
+    <string name="turn_audio_alerts_summary">Riproduci segnali acustici prima delle svolte e fuori rotta</string>
+    <string name="turn_cue_countdown_distance_title">Distanza di preavviso svolta</string>
+    <string name="turn_cue_countdown_distance_summary">Distanza di preavviso prima delle svolte (metri)</string>
+    <string name="off_route_corridor_threshold_title">Tolleranza fuori rotta</string>
+    <string name="off_route_corridor_threshold_summary">Deviazione massima prima dell\'avviso fuori rotta (metri)</string>
 </resources>

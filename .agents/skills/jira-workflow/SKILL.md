@@ -57,4 +57,5 @@ python3 tools/jira_util.py check-gate <IMPL_PLAN_SUBTASK_KEY>
    - Add explicit question comment: `python3 tools/jira_util.py comment <SUBTASK_KEY> "Question for Human: ..."`
    - Immediately switch context to the next available sprint ticket without pausing the terminal.
    - When the user answers and reassigns to coordinator, coordinator assigns to `agent1` to resume.
+9. **Fix Version Timing ("Add version when ticket is finished, not when started")**: Parent tickets must ONLY receive a `Lösungsversion` (`fixVersions`) when they are FINISHED and accepted during review or release, NEVER when created, started, or in progress (`"Add version when ticket is finished, not when started."`). Setting Fix Version prematurely distorts release metrics and creates stale tags if tickets are rejected or postponed across sprints.
 

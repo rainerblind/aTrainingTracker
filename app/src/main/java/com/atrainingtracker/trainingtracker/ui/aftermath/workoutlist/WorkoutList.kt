@@ -38,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
@@ -63,7 +64,8 @@ fun WorkoutList(
     headerHeightPx: Float,
     onClusterClick: ((Long) -> Unit)? = null,
     onMarkFinished: (Long) -> Unit = {},
-    workoutCardPreferences: WorkoutCardSectionPreferences = WorkoutCardSectionPreferences()
+    workoutCardPreferences: WorkoutCardSectionPreferences = WorkoutCardSectionPreferences(),
+    workoutSectionsOrder: List<WorkoutSectionType> = WorkoutSectionType.DEFAULT_ORDER
 ) {
     val density = LocalDensity.current
     val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
@@ -118,7 +120,8 @@ fun WorkoutList(
                             onMapClick = { onMapClick(workoutData) },
                             onClusterClick = onClusterClick,
                             onMarkFinished = { onMarkFinished(workoutData.id) },
-                            preferences = workoutCardPreferences
+                            preferences = workoutCardPreferences,
+                            workoutSectionsOrder = workoutSectionsOrder
                         )
                     }
                 }

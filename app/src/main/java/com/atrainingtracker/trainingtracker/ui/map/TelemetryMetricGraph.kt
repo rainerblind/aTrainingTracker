@@ -75,177 +75,6 @@ enum class TelemetryMetricType {
     POWER
 }
 
-/**
- * Helper object providing metric availability verification and data processing.
- * (REQ-UI-206 / ATT-1740)
- */
-object TelemetryMetricUtils {
-    /**
-     * Checks whether valid heart rate samples exist in [path].
-     */
-    fun hasHeartRateData(path: List<PathPoint>?): Boolean {
-        if (path.isNullOrEmpty()) return false
-        return path.any { it.hr != null && it.hr > 0 }
-    }
-
-    /**
-     * Checks whether valid speed samples exist in [path].
-     */
-    fun hasSpeedData(path: List<PathPoint>?): Boolean {
-        if (path.isNullOrEmpty()) return false
-        return path.any { it.speedMps != null && it.speedMps > 0.0 }
-    }
-
-    /**
-     * Checks whether valid cycling power samples exist in [path].
-     */
-    fun hasPowerData(path: List<PathPoint>?): Boolean {
-        if (path.isNullOrEmpty()) return false
-        return path.any { it.power != null && it.power > 0 }
-    }
-
-    /**
-     * Extracts scalar value for a given [PathPoint] according to [metricType] and [unit].
-     * Returns null if sample is invalid or unrecorded.
-     */
-    fun extractMetricValue(
-        point: PathPoint,
-        metricType: TelemetryMetricType,
-        unit: MyUnits,
-        paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM
-    ): Double? {
-        return when (metricType) {
-            TelemetryMetricType.HEART_RATE -> {
-                point.hr?.takeIf { it > 0 }?.toDouble()
-            }
-            TelemetryMetricType.SPEED -> {
-                point.speedMps?.takeIf { it > 0.0 }?.let { mps ->
-                    if (unit == MyUnits.METRIC) mps * 3.6 else mps * 2.236936
-                }
-            }
-            TelemetryMetricType.PACE -> {
-                point.speedMps?.takeIf { it >= 0.55 }?.let { mps ->
-                    val secPerKm = 1000.0 / mps
-                    val secPerUnit = if (unit == MyUnits.METRIC) {
-                        secPerKm
-                    } else {
-                        secPerKm * (BANALService.METER_PER_MILE / 1000.0)
-                    }
-                    val effectiveCeiling = if (unit == MyUnits.METRIC) {
-                        paceCeilingMinKm.toDouble()
-                    } else {
-                        paceCeilingMinKm.toDouble() * (BANALService.METER_PER_MILE / 1000.0)
-                    }
-                    (secPerUnit / 60.0).coerceIn(effectiveCeiling, 20.0)
-                }
-            }
-            TelemetryMetricType.POWER -> {
-                point.power?.takeIf { it >= 0 }?.toDouble()
-            }
-        }
-    }
-
-    /**
-     * Formats a pace value in decimal minutes (e.g. 4.5) to athletic "mm:ss" format (e.g. "4:30").
-     * (REQ-UI-219 / ATT-1818)
-     */
-    fun formatPaceMinutes(paceMinutes: Double): String {
-        val totalSec = kotlin.math.round(paceMinutes * 60.0).toInt().coerceAtLeast(0)
-        val min = totalSec / 60
-        val sec = totalSec % 60
-        return String.format(Locale.US, "%d:%02d", min, sec)
-    }
-
-    /**
-     * Formats instantaneous or extreme metric value for display.
-     */
-    fun formatValue(
-        value: Double?,
-        metricType: TelemetryMetricType,
-        unit: MyUnits,
-        speedFormatter: SpeedFormatter,
-        paceFormatter: PaceFormatter,
-        hrZoneThresholds: HeartRateZoneThresholds? = null,
-        powerZoneThresholds: PowerZoneThresholds? = null
-    ): String {
-        if (value == null) return "--"
-        return when (metricType) {
-            TelemetryMetricType.HEART_RATE -> {
-                val base = "${value.toInt()} bpm"
-                if (hrZoneThresholds != null) {
-                    val zone = TelemetryZoneMath.determineHeartRateZone(value, hrZoneThresholds)
-                    "$base • Z$zone"
-                } else {
-                    base
-                }
-            }
-            TelemetryMetricType.SPEED -> {
-                val mps = if (unit == MyUnits.METRIC) value / 3.6 else value / 2.236936
-                speedFormatter.format_with_units(mps)
-            }
-            TelemetryMetricType.PACE -> {
-                val secPerUnit = value * 60.0
-                val spm = if (unit == MyUnits.METRIC) {
-                    secPerUnit / 1000.0
-                } else {
-                    secPerUnit / BANALService.METER_PER_MILE
-                }
-                paceFormatter.format_with_units(spm)
-            }
-            TelemetryMetricType.POWER -> {
-                val base = "${value.toInt()} W"
-                if (powerZoneThresholds != null) {
-                    val zone = TelemetryZoneMath.determinePowerZone(value, powerZoneThresholds)
-                    "$base • Z$zone"
-                } else {
-                    base
-                }
-            }
-        }
-    }
-
-    /**
-     * Formats an intermediate milestone distance label without repeating units.
-     * (REQ-UI-220 / ATT-1819)
-     */
-    fun formatMilestoneLabel(dist: Double, visibleSpan: Double, unit: MyUnits): String {
-        return if (unit == MyUnits.METRIC) {
-            if (visibleSpan < 1500) {
-                "${dist.toInt()}m"
-            } else if (dist % 1000.0 != 0.0) {
-                String.format(Locale.US, "%.1f", dist / 1000.0)
-            } else {
-                "${(dist / 1000.0).toInt()}"
-            }
-        } else {
-            val miles = dist / BANALService.METER_PER_MILE
-            if (miles % 1.0 != 0.0) {
-                String.format(Locale.US, "%.1f", miles)
-            } else {
-                "${miles.toInt()}"
-            }
-        }
-    }
-
-    /**
-     * Determines whether an intermediate milestone label satisfies boundary clearance
-     * and minimum spacing clearance from the previously rendered label.
-     * (REQ-UI-220 / ATT-1819)
-     */
-    fun shouldRenderMilestoneLabel(
-        labelLeft: Float,
-        labelRight: Float,
-        lastDrawnRightX: Float,
-        startBoundaryThreshold: Float,
-        endBoundaryThreshold: Float,
-        minSpacing: Float = 36f
-    ): Boolean {
-        val startClearance = labelLeft >= startBoundaryThreshold
-        val endClearance = labelRight <= endBoundaryThreshold
-        val spacingClearance = labelLeft >= lastDrawnRightX + minSpacing
-        return startClearance && endClearance && spacingClearance
-    }
-}
 
 /**
  * High-performance, aesthetic continuous telemetry graph composable for Heart Rate,
@@ -279,29 +108,11 @@ fun TelemetryMetricGraph(
 
     val context = LocalContext.current
     val effectiveHrThresholds = remember(hrZoneThresholds, bSportType, context) {
-        hrZoneThresholds ?: runCatching {
-            val zoneType = if (bSportType == BSportType.BIKE) SettingsDataStore.ZoneType.HR_BIKE else SettingsDataStore.ZoneType.HR_RUN
-            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
-            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
-            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
-            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
-            if (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3) {
-                HeartRateZoneThresholds(z1, z2, z3, z4)
-            } else null
-        }.getOrNull()
+        hrZoneThresholds ?: TelemetryZoneMath.loadHeartRateThresholds(context, bSportType)
     }
 
     val effectivePowerThresholds = remember(powerZoneThresholds, context) {
-        powerZoneThresholds ?: runCatching {
-            val zoneType = SettingsDataStore.ZoneType.PWR_BIKE
-            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
-            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
-            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
-            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
-            if (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3) {
-                PowerZoneThresholds(z1, z2, z3, z4)
-            } else null
-        }.getOrNull()
+        powerZoneThresholds ?: TelemetryZoneMath.loadPowerThresholds(context)
     }
 
     val unit = remember {
@@ -327,15 +138,13 @@ fun TelemetryMetricGraph(
     }
 
     val isTrackless = remember(pathPoints) {
-        (pathPoints.lastOrNull()?.distance ?: 0.0) == 0.0 && (pathPoints.lastOrNull()?.timeSec ?: 0L) > 0L
+        ProfileDomainMath.isTracklessWorkout(pathPoints)
     }
-    val isTimeDomain = xAxisDomain == ProfileXAxisDomain.TIME || isTrackless
-    val totalSpan = remember(pathPoints, isTimeDomain) {
-        if (isTimeDomain) {
-            (pathPoints.lastOrNull()?.timeSec ?: 0L).toDouble().coerceAtLeast(1.0)
-        } else {
-            (pathPoints.lastOrNull()?.distance ?: 0.0).coerceAtLeast(1.0)
-        }
+    val isTimeDomain = remember(xAxisDomain, pathPoints) {
+        ProfileDomainMath.isEffectiveTimeDomain(xAxisDomain, pathPoints)
+    }
+    val totalSpan = remember(xAxisDomain, pathPoints) {
+        ProfileDomainMath.calculateTotalSpan(xAxisDomain, pathPoints)
     }
     val visibleSpan = remember(totalSpan, zoomScale) {
         ElevationProfileZoomMath.calculateVisibleDistance(totalSpan, zoomScale)
@@ -493,8 +302,11 @@ fun TelemetryMetricGraph(
                                         totalDist = totalSpan
                                     )
                                     if (isTimeDomain) {
-                                        val targetTimeSec = selectedVal.toLong()
-                                        val nearest = pathPoints.minByOrNull { abs(it.timeSec - targetTimeSec) }
+                                        val nearest = TelemetryMetricUtils.findNearestPoint(
+                                            points = pathPoints,
+                                            targetValue = selectedVal,
+                                            isTimeDomain = true
+                                        )
                                         if (isTrackless) {
                                             currentOnDistanceSelectedState(nearest?.timeSec?.toDouble())
                                         } else {
@@ -531,8 +343,11 @@ fun TelemetryMetricGraph(
                                 totalDist = totalSpan
                             )
                             if (isTimeDomain) {
-                                val targetTimeSec = selectedVal.toLong()
-                                val nearest = pathPoints.minByOrNull { abs(it.timeSec - targetTimeSec) }
+                                val nearest = TelemetryMetricUtils.findNearestPoint(
+                                    points = pathPoints,
+                                    targetValue = selectedVal,
+                                    isTimeDomain = true
+                                )
                                 if (isTrackless) {
                                     currentOnDistanceSelectedState(nearest?.timeSec?.toDouble())
                                 } else {
@@ -897,7 +712,11 @@ fun TelemetryMetricGraph(
                     if (isTrackless) {
                         currentDistance
                     } else {
-                        val nearestPt = pathPoints.minByOrNull { abs(it.distance - currentDistance) }
+                        val nearestPt = TelemetryMetricUtils.findNearestPoint(
+                            points = pathPoints,
+                            targetValue = currentDistance,
+                            isTimeDomain = false
+                        )
                         (nearestPt?.timeSec ?: 0L).toDouble()
                     }
                 } else {
@@ -918,11 +737,11 @@ fun TelemetryMetricGraph(
                     )
 
                     // 2. Highlight circle on the curve
-                    val nearestPoint = if (isTrackless && isTimeDomain) {
-                        pathPoints.minByOrNull { abs(it.timeSec - currentDistance.toLong()) }
-                    } else {
-                        pathPoints.minByOrNull { abs(it.distance - currentDistance) }
-                    }
+                    val nearestPoint = TelemetryMetricUtils.findNearestPoint(
+                        points = pathPoints,
+                        targetValue = currentDistance,
+                        isTimeDomain = isTrackless && isTimeDomain
+                    )
                     if (nearestPoint != null) {
                         val metricVal = TelemetryMetricUtils.extractMetricValue(nearestPoint, metricType, unit)
                         if (metricVal != null) {

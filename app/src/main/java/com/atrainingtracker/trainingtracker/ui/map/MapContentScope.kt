@@ -287,7 +287,8 @@ internal class MapContentScopeImpl(
         routeData.forEach { data ->
             val style = LocalMapStyle.current
             val route = data.path as MapRoute
-            val highlightRoute = zoomFocus != MapZoomFocus.FOLLOW_ME 
+            val highlightRoute = route.isActiveNavigation
+                    || zoomFocus != MapZoomFocus.FOLLOW_ME 
                     || (route.isSelected && route.bSportType == bSportType)
 
             MappablePathLayer(

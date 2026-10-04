@@ -22,11 +22,15 @@ import android.content.Context
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.climbs.Climb
+import com.atrainingtracker.trainingtracker.climbs.ClimbDetector
+import com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.database.RoutesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
+import com.atrainingtracker.trainingtracker.routes.RouteWaypoint
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaRoute
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaStream
@@ -36,6 +40,7 @@ import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -73,6 +78,18 @@ class RoutesRepository internal constructor(
     // StateFlow to track active route synchronization (ATT-1230)
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+
+    // StateFlow to track actively navigated route ID (REQ-MAP-023 / ATT-1841)
+    private val _activeNavigatedRouteId = MutableStateFlow<Long?>(null)
+    val activeNavigatedRouteId: StateFlow<Long?> = _activeNavigatedRouteId.asStateFlow()
+
+    /**
+     * Sets or clears the actively navigated route.
+     * When set, this route is visually highlighted with high prominence and directional chevrons.
+     */
+    fun setActiveNavigatedRoute(routeId: Long?) {
+        _activeNavigatedRouteId.value = routeId
+    }
 
     init {
         // Prune any expired cached Strava routes on initialization (Section 6.2 compliance)
@@ -139,13 +156,17 @@ class RoutesRepository internal constructor(
     }
 
     /**
-     * Inserts a new route (from GPX import or API) and refreshes the flow.
+     * Inserts a new route (from GPX/TCX import or API) and refreshes the flow.
      */
-    suspend fun insertRoute(summary: RouteSummary, path: List<PathPoint>): Long = withContext(Dispatchers.IO) {
-        val newId = routesDb.insertRoute(summary, path)
+    suspend fun insertRoute(
+        summary: RouteSummary,
+        path: List<PathPoint>,
+        waypoints: List<RouteWaypoint> = emptyList()
+    ): Long = withContext(Dispatchers.IO) {
+        val newId = routesDb.insertRoute(summary, path, waypoints)
         
         // Seed the cluster database (SCRUM-207)
-        val routeWithPath = RouteWithPath(summary.copy(id = newId), path)
+        val routeWithPath = RouteWithPath(summary.copy(id = newId), path, waypoints)
         val clusterId = WorkoutClusterEngine.getInstance(context)
             .learnFromRoute(routeWithPath)
 
@@ -154,8 +175,32 @@ class RoutesRepository internal constructor(
             routesDb.updateRouteSummary(summary.copy(id = newId, clusterId = clusterId))
         }
 
+        // Detect and persist climbs (ATT-1281 / REQ-MAP-027)
+        try {
+            val detectedClimbs = ClimbDetector.detectClimbs(path, routeId = newId)
+            if (detectedClimbs.isNotEmpty()) {
+                ClimbsDatabaseManager.getInstance(context).insertClimbsWithDeduplicationBatch(detectedClimbs)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to extract climbs for route $newId", e)
+        }
+
         refreshRoutes() // Notify observers that a new route is available
         newId
+    }
+
+    /**
+     * Retrieves all waypoints for a specific route ID.
+     */
+    suspend fun getWaypointsForRoute(routeId: Long): List<RouteWaypoint> = withContext(Dispatchers.IO) {
+        routesDb.getWaypointsForRoute(routeId)
+    }
+
+    /**
+     * Retrieves all climbs for a specific route ID (REQ-MAP-027).
+     */
+    suspend fun getClimbsForRoute(routeId: Long): List<Climb> = withContext(Dispatchers.IO) {
+        ClimbsDatabaseManager.getInstance(context).getClimbsForRoute(routeId)
     }
 
     /**
@@ -334,6 +379,16 @@ class RoutesRepository internal constructor(
                     if (clusterId != -1L) {
                         routesDb.updateRouteSummary(summary.copy(id = newId, clusterId = clusterId))
                     }
+
+                    // Detect and persist climbs for Strava route (ATT-1281 / REQ-MAP-027)
+                    try {
+                        val detectedClimbs = ClimbDetector.detectClimbs(pathPoints, routeId = newId)
+                        if (detectedClimbs.isNotEmpty()) {
+                            ClimbsDatabaseManager.getInstance(context).insertClimbsWithDeduplicationBatch(detectedClimbs)
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to extract climbs for Strava route $newId", e)
+                    }
                 }
 
                 // 4b. Prune orphan Strava routes that were deleted or unstarred on Strava
@@ -433,7 +488,10 @@ class RoutesRepository internal constructor(
         return@withContext pathPoints
     }
 
-
+    @androidx.annotation.VisibleForTesting
+    fun cancelScope() {
+        repositoryScope.cancel()
+    }
 
     companion object {
         private val TAG = RoutesRepository::class.java.simpleName
@@ -449,6 +507,7 @@ class RoutesRepository internal constructor(
 
         @androidx.annotation.VisibleForTesting
         fun resetForTesting(newInstance: RoutesRepository? = null) {
+            instance?.repositoryScope?.cancel()
             instance = newInstance
         }
     }

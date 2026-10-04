@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.settings
 
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -80,6 +81,19 @@ object TuningPreferencesDefaults {
     const val DEFAULT_PACE_CEILING_MIN_KM = 3.0f
     const val MIN_PACE_CEILING_MIN_KM = 2.0f
     const val MAX_PACE_CEILING_MIN_KM = 6.0f
+
+    const val SHOW_LIVE_CLIMBS = true
+    const val CLIMB_MIN_LENGTH_METERS = 500.0f
+    const val CLIMB_MIN_GRADIENT_PERCENT = 3.0f
+
+    const val TURN_PROMPTS_ENABLED = true
+    const val TURN_AUDIO_ALERTS_ENABLED = true
+    const val TURN_CUE_COUNTDOWN_DISTANCE_METERS = 100.0f
+    const val MIN_TURN_CUE_COUNTDOWN_DISTANCE_METERS = 30.0f
+    const val MAX_TURN_CUE_COUNTDOWN_DISTANCE_METERS = 300.0f
+    const val OFF_ROUTE_CORRIDOR_THRESHOLD_METERS = 50.0f
+    const val MIN_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS = 20.0f
+    const val MAX_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS = 200.0f
 }
 
 /**
@@ -99,7 +113,14 @@ data class TuningConfig(
     val gpsAccuracyThresholdMeters: Float = TuningPreferencesDefaults.GPS_ACCURACY_THRESHOLD_M,
     val altitudeFilterWindowSec: Int = TuningPreferencesDefaults.ALTITUDE_FILTER_WINDOW_SEC,
     val slopeMinSpeedMps: Float = TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS,
-    val paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM
+    val paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM,
+    val showLiveClimbs: Boolean = TuningPreferencesDefaults.SHOW_LIVE_CLIMBS,
+    val climbMinLengthMeters: Float = TuningPreferencesDefaults.CLIMB_MIN_LENGTH_METERS,
+    val climbMinGradientPercent: Float = TuningPreferencesDefaults.CLIMB_MIN_GRADIENT_PERCENT,
+    val turnPromptsEnabled: Boolean = TuningPreferencesDefaults.TURN_PROMPTS_ENABLED,
+    val turnAudioAlertsEnabled: Boolean = TuningPreferencesDefaults.TURN_AUDIO_ALERTS_ENABLED,
+    val turnCueCountdownDistanceMeters: Float = TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS,
+    val offRouteCorridorThresholdMeters: Float = TuningPreferencesDefaults.OFF_ROUTE_CORRIDOR_THRESHOLD_METERS
 ) {
     @Deprecated("Use elevationXAxisDomain or telemetryXAxisDomain", ReplaceWith("elevationXAxisDomain"))
     val profileXAxisDomain: ProfileXAxisDomain
@@ -161,6 +182,13 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_ALTITUDE_FILTER_WINDOW: Preferences.Key<Int> = intPreferencesKey("tuning_altitude_filter_window")
         val KEY_SLOPE_MIN_SPEED: Preferences.Key<Float> = floatPreferencesKey("tuning_slope_min_speed")
         val KEY_PACE_CEILING_MIN_KM: Preferences.Key<Float> = floatPreferencesKey("tuning_pace_ceiling_min_km")
+        val KEY_SHOW_LIVE_CLIMBS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_live_climbs")
+        val KEY_CLIMB_MIN_LENGTH_METERS: Preferences.Key<Float> = floatPreferencesKey("tuning_climb_min_length_meters")
+        val KEY_CLIMB_MIN_GRADIENT_PERCENT: Preferences.Key<Float> = floatPreferencesKey("tuning_climb_min_gradient_percent")
+        val KEY_TURN_PROMPTS_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_turn_prompts_enabled")
+        val KEY_TURN_AUDIO_ALERTS_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_turn_audio_alerts_enabled")
+        val KEY_TURN_CUE_COUNTDOWN_DISTANCE: Preferences.Key<Float> = floatPreferencesKey("tuning_turn_cue_countdown_distance")
+        val KEY_OFF_ROUTE_CORRIDOR_THRESHOLD: Preferences.Key<Float> = floatPreferencesKey("tuning_off_route_corridor_threshold")
 
         private val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -177,7 +205,14 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_GPS_ACCURACY_THRESHOLD,
             KEY_ALTITUDE_FILTER_WINDOW,
             KEY_SLOPE_MIN_SPEED,
-            KEY_PACE_CEILING_MIN_KM
+            KEY_PACE_CEILING_MIN_KM,
+            KEY_SHOW_LIVE_CLIMBS,
+            KEY_CLIMB_MIN_LENGTH_METERS,
+            KEY_CLIMB_MIN_GRADIENT_PERCENT,
+            KEY_TURN_PROMPTS_ENABLED,
+            KEY_TURN_AUDIO_ALERTS_ENABLED,
+            KEY_TURN_CUE_COUNTDOWN_DISTANCE,
+            KEY_OFF_ROUTE_CORRIDOR_THRESHOLD
         )
     }
 
@@ -267,6 +302,23 @@ class TuningPreferencesDataStore(private val context: Context) {
             TuningPreferencesDefaults.MAX_PACE_CEILING_MIN_KM
         )
 
+        val showLiveClimbs = prefs[KEY_SHOW_LIVE_CLIMBS] ?: TuningPreferencesDefaults.SHOW_LIVE_CLIMBS
+        val climbMinLength = prefs[KEY_CLIMB_MIN_LENGTH_METERS] ?: TuningPreferencesDefaults.CLIMB_MIN_LENGTH_METERS
+        val climbMinGradient = prefs[KEY_CLIMB_MIN_GRADIENT_PERCENT] ?: TuningPreferencesDefaults.CLIMB_MIN_GRADIENT_PERCENT
+
+        val turnPromptsEnabled = prefs[KEY_TURN_PROMPTS_ENABLED] ?: TuningPreferencesDefaults.TURN_PROMPTS_ENABLED
+        val turnAudioAlertsEnabled = prefs[KEY_TURN_AUDIO_ALERTS_ENABLED] ?: TuningPreferencesDefaults.TURN_AUDIO_ALERTS_ENABLED
+        val rawTurnCountdown = prefs[KEY_TURN_CUE_COUNTDOWN_DISTANCE] ?: TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS
+        val clampedTurnCountdown = rawTurnCountdown.coerceIn(
+            TuningPreferencesDefaults.MIN_TURN_CUE_COUNTDOWN_DISTANCE_METERS,
+            TuningPreferencesDefaults.MAX_TURN_CUE_COUNTDOWN_DISTANCE_METERS
+        )
+        val rawOffRoute = prefs[KEY_OFF_ROUTE_CORRIDOR_THRESHOLD] ?: TuningPreferencesDefaults.OFF_ROUTE_CORRIDOR_THRESHOLD_METERS
+        val clampedOffRoute = rawOffRoute.coerceIn(
+            TuningPreferencesDefaults.MIN_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS,
+            TuningPreferencesDefaults.MAX_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS
+        )
+
         TuningConfig(
             elevationXAxisDomain = elevationDomain,
             telemetryXAxisDomain = telemetryDomain,
@@ -281,7 +333,14 @@ class TuningPreferencesDataStore(private val context: Context) {
             gpsAccuracyThresholdMeters = clampedAccuracy,
             altitudeFilterWindowSec = clampedAltWindow,
             slopeMinSpeedMps = clampedSlopeSpeed,
-            paceCeilingMinKm = clampedPaceCeiling
+            paceCeilingMinKm = clampedPaceCeiling,
+            showLiveClimbs = showLiveClimbs,
+            climbMinLengthMeters = climbMinLength,
+            climbMinGradientPercent = climbMinGradient,
+            turnPromptsEnabled = turnPromptsEnabled,
+            turnAudioAlertsEnabled = turnAudioAlertsEnabled,
+            turnCueCountdownDistanceMeters = clampedTurnCountdown,
+            offRouteCorridorThresholdMeters = clampedOffRoute
         )
     }
 
@@ -343,6 +402,25 @@ class TuningPreferencesDataStore(private val context: Context) {
             prefs[KEY_ALTITUDE_FILTER_WINDOW] = clampedAltWindow
             prefs[KEY_SLOPE_MIN_SPEED] = clampedSlopeSpeed
             prefs[KEY_PACE_CEILING_MIN_KM] = clampedPaceCeiling
+            prefs[KEY_SHOW_LIVE_CLIMBS] = config.showLiveClimbs
+            prefs[KEY_CLIMB_MIN_LENGTH_METERS] = config.climbMinLengthMeters
+            prefs[KEY_CLIMB_MIN_GRADIENT_PERCENT] = config.climbMinGradientPercent
+            prefs[KEY_TURN_PROMPTS_ENABLED] = config.turnPromptsEnabled
+            prefs[KEY_TURN_AUDIO_ALERTS_ENABLED] = config.turnAudioAlertsEnabled
+            prefs[KEY_TURN_CUE_COUNTDOWN_DISTANCE] = config.turnCueCountdownDistanceMeters.coerceIn(
+                TuningPreferencesDefaults.MIN_TURN_CUE_COUNTDOWN_DISTANCE_METERS,
+                TuningPreferencesDefaults.MAX_TURN_CUE_COUNTDOWN_DISTANCE_METERS
+            )
+            prefs[KEY_OFF_ROUTE_CORRIDOR_THRESHOLD] = config.offRouteCorridorThresholdMeters.coerceIn(
+                TuningPreferencesDefaults.MIN_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS,
+                TuningPreferencesDefaults.MAX_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS
+            )
+        }
+    }
+
+    suspend fun updateShowLiveClimbs(show: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_SHOW_LIVE_CLIMBS] = show
         }
     }
 

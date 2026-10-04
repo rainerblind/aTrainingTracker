@@ -52,13 +52,15 @@ class TelemetryMetricGraphTracklessScrubbingTest {
         // 1. isTrackless detection
         assertTrue(
             "TelemetryMetricGraph must evaluate isTrackless checking last point distance == 0.0 and timeSec > 0",
-            content.contains("(pathPoints.lastOrNull()?.distance ?: 0.0) == 0.0 && (pathPoints.lastOrNull()?.timeSec ?: 0L) > 0L")
+            content.contains("ProfileDomainMath.isTracklessWorkout(pathPoints)") ||
+                    content.contains("(pathPoints.lastOrNull()?.distance ?: 0.0) == 0.0 && (pathPoints.lastOrNull()?.timeSec ?: 0L) > 0L")
         )
 
         // 2. isTimeDomain includes isTrackless
         assertTrue(
-            "TelemetryMetricGraph must enforce isTimeDomain = xAxisDomain == ProfileXAxisDomain.TIME || isTrackless",
-            content.contains("val isTimeDomain = xAxisDomain == ProfileXAxisDomain.TIME || isTrackless")
+            "TelemetryMetricGraph must enforce isTimeDomain = ProfileDomainMath.isEffectiveTimeDomain(xAxisDomain, pathPoints)",
+            content.contains("ProfileDomainMath.isEffectiveTimeDomain(xAxisDomain, pathPoints)") ||
+                    content.contains("val isTimeDomain = xAxisDomain == ProfileXAxisDomain.TIME || isTrackless")
         )
 
         // 3. Drag gesture dispatches timeSec directly when isTrackless
@@ -93,8 +95,8 @@ class TelemetryMetricGraphTracklessScrubbingTest {
         // 2. Marker dot lookup compares p.timeSec directly against currentDistance when isTrackless
         assertTrue(
             "Marker dot lookup must compare timeSec against currentDistance when isTrackless",
-            content.contains("val nearestPoint = if (isTrackless && isTimeDomain) {") &&
-                    content.contains("pathPoints.minByOrNull { abs(it.timeSec - currentDistance.toLong()) }")
+            content.contains("val nearestPoint = TelemetryMetricUtils.findNearestPoint(") &&
+                    content.contains("isTimeDomain = isTrackless && isTimeDomain")
         )
     }
 

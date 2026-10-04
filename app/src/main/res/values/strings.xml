@@ -83,6 +83,7 @@
     <string name="TCX" translatable="false">TCX</string>
     <string name="GPX" translatable="false">GPX</string>
     <string name="GC" translatable="false">GC</string>
+    <string name="FIT" translatable="false">FIT</string>
     <string name="TrainingPeaks" translatable="false">TrainingPeaks</string>
     <string name="unknown_manufacturer">Unknown</string>
     <string name="unknown_last_seen_date">never seen</string>
@@ -492,6 +493,9 @@
     <string name="equipment_type_shoe">Shoes</string>
     <string name="equipment_no_bikes">No Bikes</string>
     <string name="equipment_no_shoes">No Shoes</string>
+    <string name="equipment_tab_sensor_matrix">Sensor Matrix</string>
+    <string name="equipment_matrix_no_sensors">No paired sensors found. Pair external sensors first in Settings.</string>
+    <string name="equipment_matrix_no_equipment">No equipment found. Add bikes or shoes first.</string>
 
     <!-- dialogs -->
     <string name="SD_card_not_available">Sorry, the SD Card is not available.</string>
@@ -888,6 +892,23 @@
     <plurals name="export_notification__detail__Dropbox_failed">
         <item quantity="one">❌ Uploading the %1$s file to Dropbox failed.</item>     <!-- Uploading the TCX file to Dropbox failed. -->
         <item quantity="other">❌ Uploading the %1$s files to Dropbox failed.</item>  <!-- Uploading the TCX and CSV files to Dropbox failed. -->
+    </plurals>
+
+<plurals name="export_notification__detail__GoogleDrive_waiting">
+        <item quantity="one">⏳ Waiting to upload the %1$s file to Google Drive.</item>
+        <item quantity="other">⏳ Waiting to upload the %1$s files to Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_ongoing">
+        <item quantity="one">📤 Uploading the %1$s file to Google Drive.</item>
+        <item quantity="other">📤 Uploading the %1$s files to Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_success">
+        <item quantity="one">✅ Successfully uploaded the %1$s file to Google Drive.</item>
+        <item quantity="other">✅ Successfully uploaded the %1$s files to Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_failed">
+        <item quantity="one">❌ Uploading the %1$s file to Google Drive failed.</item>
+        <item quantity="other">❌ Uploading the %1$s files to Google Drive failed.</item>
     </plurals>
 
     <!-- writing to Community failed
@@ -1605,5 +1626,133 @@
     <string name="settings_lap_display_mode_table">Table</string>
     <string name="settings_lap_display_mode_visualizer">Visualizer</string>
     <string name="settings_lap_display_mode_both">Both</string>
+
+    <!-- Workout Origin Source (ATT-2186 / REQ-DAT-017) -->
+    <string name="workout_source_tracked">Tracked</string>
+    <string name="workout_source_tcx">TCX</string>
+    <string name="workout_source_gpx">GPX</string>
+    <string name="workout_source_fit">FIT</string>
+
+    <!-- Workout Section Reordering (ATT-2176 / REQ-UI-255) -->
+    <string name="action_move_up">Move up</string>
+    <string name="action_move_down">Move down</string>
+
+    <!-- Contextual JIT Permission Flow (ATT-2075 / REQ-PRI-003) -->
+    <string name="permission_rationale_title">Permissions for Seamless Tracking</string>
+    <string name="permission_rationale_subtitle">To accurately record your workout metrics, the following permissions are needed:</string>
+    <string name="permission_rationale_location_title">Location &amp; GPS</string>
+    <string name="permission_rationale_location_desc">Records continuous route, pace, and elevation while your phone is locked in your cycling jersey or running belt.</string>
+    <string name="permission_rationale_bluetooth_title">Bluetooth &amp; Nearby Devices</string>
+    <string name="permission_rationale_bluetooth_desc">Connects to heart rate monitors, bike power meters, cadence sensors, and smart trainers.</string>
+    <string name="permission_rationale_notification_title">Workout Controls &amp; Notifications</string>
+    <string name="permission_rationale_notification_desc">Shows live workout metrics and pause/resume buttons directly on your lock screen.</string>
+    <string name="permission_rationale_continue">Continue</string>
+    <string name="permission_rationale_not_now">Not Now</string>
+    <string name="permission_rationale_open_settings">Open Settings</string>
+    <string name="permission_rationale_settings_explanation">Location permission was denied. Without location access, GPS trackpoints and route recording are unavailable. You can grant permission in App Settings.</string>
+    <string name="permission_warning_badge_desc">Location permission missing</string>
+
+    <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
+    <string name="unfinished_workout_title">Workout Interrupted</string>
+    <string name="kill_reason_battery_title">Terminated by Battery Optimization</string>
+    <string name="kill_reason_battery_stage1">Well, who won\'t listen must feel… 😉 But we\'re genuinely sorry about your lost kilometers! Android killed the tracking service in the background because battery optimization is enabled.</string>
+    <string name="kill_reason_battery_stage1_strava">And as you know: \'If it\'s not on Strava, it didn\'t happen\'… double bitter! 🙈</string>
+    <string name="kill_reason_battery_stage2">Not again… Already the 2nd kill! How many lost kilometers do you need as proof? Please disable battery optimization for aTrainingTracker.</string>
+    <string name="kill_reason_battery_stage3">Bad things come in threes… Advice-resistant athlete of the month! 🏆 The system keeps killing your workout until you exempt the app in battery settings.</string>
+    <string name="kill_reason_low_memory">Tracking was terminated by Android due to acute memory pressure (e.g. high-resolution camera or 3D navigation in foreground). Your workout metrics up to that point were safely preserved.</string>
+    <string name="kill_reason_permission_revoked">Tracking was interrupted because location or notification permissions were revoked during your workout.</string>
+    <string name="action_disable_battery_optimization">Disable Battery Optimization</string>
+    <string name="battery_optimization_exempt_celebration">Finally! Unrestricted recording for your training data 🎉</string>
+
+    <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
+    <string name="import_fit_title">Import FIT files</string>
+    <string name="import_fit_description">Import workouts from Garmin, Wahoo, Hammerhead, or smartwatches (.fit).</string>
+    <string name="import_fit_button">Select FIT Files</string>
+    <string name="import_fit_progress">Importing FIT files (%1$d of %2$d)…</string>
+    <string name="import_fit_summary_success">Successfully imported %1$d workouts (%2$d duplicates skipped).</string>
+    <string name="import_fit_summary_with_errors">Imported %1$d workouts, %2$d duplicates skipped, %3$d failed.</string>
+    <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
+    <string name="route_select_title">Select Route</string>
+    <string name="route_action_select">Select Route</string>
+    <string name="route_action_stop">Stop Route</string>
+    <string name="route_auto_detect_title">Route Detection</string>
+    <string name="route_auto_detect_prompt">Are you following \'%1$s\'?</string>
+    <string name="route_auto_detect_activate">Activate</string>
+    <string name="route_auto_detect_dismiss">Dismiss</string>
+    <string name="route_filter_near">Nearby</string>
+    <string name="route_filter_recent">Recently Ridden</string>
+    <string name="route_filter_length">Length</string>
+    <string name="route_empty_title">No routes available</string>
+    <string name="route_empty_desc">Import GPX files or sync with Strava.</string>
+    <string name="google_drive">Google Drive</string>
+    <string name="google_drive_connect">Connect to Google Drive</string>
+    <string name="google_drive_disconnect">Disconnect from Google Drive</string>
+    <string name="google_drive_connected_status">You are connected to Google Drive</string>
+    <string name="google_drive_disconnected_status">You are not connected to Google Drive</string>
+    <string name="google_drive_account_email_label">Account: %1$s</string>
+    <string name="upload_workouts_to_google_drive">Automatically export workouts</string>
+    <string name="upload_workouts_to_google_drive_summary">Uploads activities (FIT, TCX, GPX, CSV) to Google Drive after saving</string>
+    <string name="upload_backup_to_google_drive">Automatically synchronize database backup</string>
+    <string name="upload_backup_to_google_drive_summary">Periodically backs up the database to Google Drive</string>
+    <string name="google_drive_only_wifi">Upload over Wi-Fi only</string>
+    <string name="google_drive_only_wifi_summary">Conserves mobile cellular data</string>
+    <string name="google_drive_last_sync">Last upload: %1$s</string>
+    <string name="google_drive_never_synced">Not synchronized yet</string>
+    <string name="restore_from_google_drive">Restore from Google Drive</string>
+    <string name="upload_to_google_drive">Back up to Google Drive</string>
+    <string name="gpx_enriching_elevation">Fetching elevation data…</string>
+    <string name="gpx_elevation_enriched">Elevation data successfully added</string>
+    <string name="gpx_elevation_enrichment_failed">Elevation lookup failed, imported 2D route</string>
+    <string name="waypoint_type_bench">Bench / Rest Spot</string>
+    <string name="waypoint_type_water">Water Source</string>
+    <string name="waypoint_type_summit">Summit / Pass</string>
+    <string name="waypoint_type_food">Food / Cafe</string>
+    <string name="waypoint_type_viewpoint">Viewpoint</string>
+    <string name="waypoint_type_first_aid">First Aid</string>
+    <string name="waypoint_type_danger">Danger / Hazard</string>
+    <string name="waypoint_type_turn_left">Turn Left</string>
+    <string name="waypoint_type_turn_right">Turn Right</string>
+    <string name="waypoint_type_turn_straight">Continue Straight</string>
+    <string name="waypoint_type_generic">Waypoint</string>
+    <string name="route_cue_sheet_title">Cue Sheet</string>
+    <string name="route_waypoints_header">Waypoints &amp; POIs (%1$d)</string>
+
+    <string name="climb_title">Climb</string>
+    <string name="climb_approaching">Approaching</string>
+    <string name="climb_on_climb">On Climb</string>
+    <string name="climb_summit">Summit</string>
+    <string name="climb_remaining_dist">Remaining</string>
+    <string name="climb_remaining_elevation">Elevation</string>
+    <string name="climb_grade">Grade</string>
+    <string name="climb_route_counter">Climb %1$d of %2$d</string>
+    <string name="climb_category_hc">HC</string>
+    <string name="climb_category_cat1">Cat 1</string>
+    <string name="climb_category_cat2">Cat 2</string>
+    <string name="climb_category_cat3">Cat 3</string>
+    <string name="climb_category_cat4">Cat 4</string>
+    <string name="climb_category_uc">UC</string>
+    <string name="tuning_show_live_climbs_title">Live Climbs (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_summary">Show real-time climb cockpit sheet during routes and free riding</string>
+
+    <string name="turn_cue_left">Turn left</string>
+    <string name="turn_cue_right">Turn right</string>
+    <string name="turn_cue_slight_left">Slight left</string>
+    <string name="turn_cue_slight_right">Slight right</string>
+    <string name="turn_cue_sharp_left">Sharp left</string>
+    <string name="turn_cue_sharp_right">Sharp right</string>
+    <string name="turn_cue_straight">Straight ahead</string>
+    <string name="turn_cue_u_turn">U-turn</string>
+    <string name="turn_cue_now">NOW</string>
+    <string name="turn_cue_off_route">Off Route (%1$d m)</string>
+    <string name="turn_cue_back_on_route">Back on Route</string>
+    <string name="turn_prompts_title">Turn Prompts</string>
+    <string name="turn_prompts_summary">Show turn-by-turn prompts during active navigation</string>
+    <string name="turn_audio_alerts_title">Turn Audio Alerts</string>
+    <string name="turn_audio_alerts_summary">Play chimes on upcoming turns and off-route deviations</string>
+    <string name="turn_cue_countdown_distance_title">Turn Warning Distance</string>
+    <string name="turn_cue_countdown_distance_summary">Advance warning distance before turns (meters)</string>
+    <string name="off_route_corridor_threshold_title">Off-Route Threshold</string>
+    <string name="off_route_corridor_threshold_summary">Maximum deviation distance before off-route warning (meters)</string>
 </resources>
+
 

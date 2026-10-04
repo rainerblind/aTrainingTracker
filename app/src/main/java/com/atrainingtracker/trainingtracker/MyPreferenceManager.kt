@@ -29,6 +29,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilt
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterMarkerType
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
 import com.atrainingtracker.trainingtracker.ui.routes.RouteFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.SegmentFilterCriteria
 import kotlinx.coroutines.CoroutineScope
@@ -116,6 +117,7 @@ class MyPreferenceManager(context: Context) {
         val WORKOUT_DETAIL_SHOW_ELEVATION = booleanPreferencesKey("workout_detail_show_elevation")
         val WORKOUT_DETAIL_SHOW_CHARTS = booleanPreferencesKey("workout_detail_show_charts")
         val WORKOUT_DETAIL_SHOW_ZONES = booleanPreferencesKey("workout_detail_show_zones")
+        val WORKOUT_SECTIONS_ORDER = stringPreferencesKey("workout_sections_order")
 
         val EDIT_WORKOUT_SHOW_CLUSTER = booleanPreferencesKey("edit_workout_show_cluster")
         val EDIT_WORKOUT_SHOW_COMMUTE_TRAINER = booleanPreferencesKey("edit_workout_show_commute_trainer")
@@ -186,6 +188,16 @@ class MyPreferenceManager(context: Context) {
             preferences[WORKOUT_DETAIL_SHOW_ELEVATION] = prefs.showElevationProfile
             preferences[WORKOUT_DETAIL_SHOW_CHARTS] = prefs.showTelemetryCharts
             preferences[WORKOUT_DETAIL_SHOW_ZONES] = prefs.showZoneAnalysis
+        }
+    }
+
+    val workoutSectionsOrderFlow: Flow<List<WorkoutSectionType>> = dataStore.data.map { preferences ->
+        WorkoutSectionType.fromSerializedString(preferences[WORKOUT_SECTIONS_ORDER])
+    }
+
+    suspend fun setWorkoutSectionsOrder(order: List<WorkoutSectionType>) {
+        dataStore.edit { preferences ->
+            preferences[WORKOUT_SECTIONS_ORDER] = WorkoutSectionType.toSerializedString(order)
         }
     }
 

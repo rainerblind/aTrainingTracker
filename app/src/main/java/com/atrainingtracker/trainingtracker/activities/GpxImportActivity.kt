@@ -23,8 +23,21 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.routes.EditRouteScreen
 import com.atrainingtracker.trainingtracker.ui.routes.GpxImportViewModel
 import com.atrainingtracker.trainingtracker.ui.routes.GpxImportViewModelFactory
@@ -47,7 +60,23 @@ class GpxImportActivity : ComponentActivity() {
             ATrainingTrackerTheme {
                 when (val state = viewModel.uiState) {
                     is GpxImportViewModel.ImportState.Loading -> {
-                        CircularProgressIndicator()
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                CircularProgressIndicator()
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = stringResource(R.string.gpx_enriching_elevation),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                     is GpxImportViewModel.ImportState.Editing -> {
                         EditRouteScreen(
@@ -59,7 +88,12 @@ class GpxImportActivity : ComponentActivity() {
                         )
                     }
                     is GpxImportViewModel.ImportState.Saving -> {
-                        CircularProgressIndicator()
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     }
                     is GpxImportViewModel.ImportState.Success -> {
                         LaunchedEffect(Unit) {

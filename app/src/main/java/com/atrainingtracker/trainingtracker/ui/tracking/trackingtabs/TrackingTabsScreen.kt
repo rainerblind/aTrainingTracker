@@ -75,6 +75,7 @@ import com.atrainingtracker.trainingtracker.batterysaver.TelemetrySnapshot
 import com.atrainingtracker.trainingtracker.batterysaver.DisplayBrightnessMode
 import com.atrainingtracker.trainingtracker.batterysaver.calculateZoneIndex
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.routes.TurnByTurnNavigationRepository
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode
@@ -165,6 +166,7 @@ fun TrackingTabsScreen(
     val activeSensors by controlViewModel.activeSensors.collectAsState()
     val bSportType by controlViewModel.bSportType.collectAsState()
     val selectingProtocol by controlViewModel.selectingProtocol.collectAsState()
+    val hasPairedRemoteDevices by controlViewModel.hasPairedRemoteDevices.collectAsState()
     val locationCalibrationStatus by trackingTabsViewModel.locationCalibrationStatus.collectAsState()
 
     // Battery Saver Telemetry & Event Subscriptions
@@ -251,6 +253,18 @@ fun TrackingTabsScreen(
         if (hasRelevantTransition) {
             batterySaverController.onWakeupEvent()
         }
+    }
+
+    val navRepo = remember { TurnByTurnNavigationRepository.getInstance(context) }
+    val navState by navRepo.navigationState.collectAsState()
+    var lastTurnApproaching by remember { mutableStateOf(false) }
+    var lastOffRoute by remember { mutableStateOf(false) }
+    LaunchedEffect(navState.isApproaching, navState.isOffRoute) {
+        if ((!lastTurnApproaching && navState.isApproaching) || (!lastOffRoute && navState.isOffRoute)) {
+            batterySaverController.onWakeupEvent()
+        }
+        lastTurnApproaching = navState.isApproaching
+        lastOffRoute = navState.isOffRoute
     }
 
 
@@ -613,6 +627,7 @@ fun TrackingTabsScreen(
                             selectingProtocol = selectingProtocol,
                             onDeviceTypeSelected = { controlViewModel.onDeviceTypeSelected(it) },
                             onCancelDeviceTypeSelection = { controlViewModel.onCancelDeviceTypeSelection() },
+                            showResearchButton = hasPairedRemoteDevices,
                             locationCalibrationStatus = locationCalibrationStatus
                         )
                     } else {

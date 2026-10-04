@@ -40,8 +40,10 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager;
 import com.atrainingtracker.trainingtracker.exporter.uploader.DropboxUploader;
+import com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploader;
 import com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploader;
 import com.atrainingtracker.trainingtracker.exporter.writer.CSVFileWriter;
+import com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriter;
 import com.atrainingtracker.trainingtracker.exporter.writer.GCFileWriter;
 import com.atrainingtracker.trainingtracker.exporter.writer.GPXFileWriter;
 import com.atrainingtracker.trainingtracker.exporter.writer.TCXFileWriter;
@@ -75,6 +77,7 @@ public class ExportManager {
                     case GC -> new GCFileWriter(context);
                     case TCX -> new TCXFileWriter(context);
                     case GPX -> new GPXFileWriter(context);
+                    case FIT -> new FitFileWriter(context);
                     case STRAVA -> new TCXFileWriter(context);
                     /* case RUNKEEPER:
                         return  new RunkeeperFileExporter(mContext);
@@ -84,6 +87,8 @@ public class ExportManager {
                 };
             case DROPBOX:
                 return new DropboxUploader(context);
+            case GOOGLE_DRIVE:
+                return new GoogleDriveUploader(context);
             case COMMUNITY:
                 return switch (exportInfo.getFileFormat()) {
                     case STRAVA -> new StravaUploader(context);
@@ -146,6 +151,14 @@ public class ExportManager {
                 // Ein Upload zu Dropbox macht nur Sinn, wenn das Dateiformat prinzipiell auch generiert wird.
                 if (TrainingApplication.exportToFile(fileFormat)) {
                     exportStatusDatabaseManager.updateExportStatus(TRACKING, fileBaseName, ExportType.DROPBOX, fileFormat);
+                }
+            }
+        }
+
+        if (TrainingApplication.uploadToGoogleDrive() && TrainingApplication.uploadWorkoutsToGoogleDrive()) {
+            for (FileFormat fileFormat : ExportType.GOOGLE_DRIVE.getExportToFileFormats()) {
+                if (TrainingApplication.exportToFile(fileFormat)) {
+                    exportStatusDatabaseManager.updateExportStatus(TRACKING, fileBaseName, ExportType.GOOGLE_DRIVE, fileFormat);
                 }
             }
         }
@@ -251,6 +264,15 @@ public class ExportManager {
                 Log.i(TAG, "Scheduled Dropbox upload work for " + fileBaseName);
             }
 
+            // Google Drive-Upload (when requested)
+            if (TrainingApplication.uploadToGoogleDrive() && TrainingApplication.uploadWorkoutsToGoogleDrive()
+                    && Arrays.asList(ExportType.GOOGLE_DRIVE.getExportToFileFormats()).contains(fileFormat)) {
+                ExportInfo googleDriveExportInfo = new ExportInfo(fileBaseName, fileFormat, ExportType.GOOGLE_DRIVE);
+                uploadWorks.add(createWorkRequest(googleDriveExportInfo));
+                updateStatus(googleDriveExportInfo, ExportStatus.WAITING, null); // set state to WAITING
+                Log.i(TAG, "Scheduled Google Drive upload work for " + fileBaseName + " (" + fileFormat + ")");
+            }
+
             // Community-Upload, (when requested)
             if (TrainingApplication.uploadToCommunity(fileFormat)) {
                 ExportInfo communityExportInfo = new ExportInfo(fileBaseName, fileFormat, ExportType.COMMUNITY);
@@ -322,8 +344,15 @@ public class ExportManager {
                 .build();
 
 
+        NetworkType networkType = NetworkType.CONNECTED;
+        if (exportInfo.getExportType() == ExportType.FILE) {
+            networkType = NetworkType.NOT_REQUIRED;
+        } else if (exportInfo.getExportType() == ExportType.GOOGLE_DRIVE && TrainingApplication.uploadToGoogleDriveOnlyOnWifi()) {
+            networkType = NetworkType.UNMETERED;
+        }
+
         Constraints constraints = new Constraints.Builder()
-                .setRequiredNetworkType(exportInfo.getExportType() == ExportType.FILE ? NetworkType.NOT_REQUIRED : NetworkType.CONNECTED)
+                .setRequiredNetworkType(networkType)
                 .build();
 
         return new OneTimeWorkRequest.Builder(ExportWorker.class)

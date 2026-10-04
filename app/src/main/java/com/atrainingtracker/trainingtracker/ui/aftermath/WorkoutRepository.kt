@@ -745,7 +745,7 @@ class WorkoutRepository private constructor(private val application: Application
 
 
     val exportStatusDataProvider = ExportStatusDataProvider(application)
-    val orderedExportTypes = listOf(ExportType.FILE, ExportType.DROPBOX, ExportType.COMMUNITY)
+    val orderedExportTypes = listOf(ExportType.FILE, ExportType.DROPBOX, ExportType.GOOGLE_DRIVE, ExportType.COMMUNITY)
 
     private var isListLoading = false
 
@@ -1178,6 +1178,7 @@ class WorkoutRepository private constructor(private val application: Application
                             commute = userEditedWorkout.commute,
                             trainer = userEditedWorkout.trainer,
                             race = userEditedWorkout.race,
+                            source = current.source,
                             uploadToStrava = userEditedWorkout.uploadToStrava
                         )
                     } else current

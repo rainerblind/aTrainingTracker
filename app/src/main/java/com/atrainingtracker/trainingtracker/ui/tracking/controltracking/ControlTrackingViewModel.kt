@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -97,6 +98,21 @@ class ControlTrackingViewModel(
      */
     // 1. Repository StateFlow (Single Source of Truth)
     private val allDevicesFromDb = devicesRepository.allDevices
+
+    /**
+     * Emits true if at least one real, paired remote sensor (ANT+ or Bluetooth LE with isPaired == true)
+     * exists in the database, false otherwise (REQ-UI-259).
+     * Seeded synchronously from SQLite on cold start to prevent UI flicker.
+     */
+    val hasPairedRemoteDevices: StateFlow<Boolean> = allDevicesFromDb
+        .map { devices ->
+            devices.any { it.isPaired && (it.protocol == Protocol.ANT_PLUS || it.protocol == Protocol.BLUETOOTH_LE) }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = devicesDatabaseManager.hasPairedRemoteDevices()
+        )
 
     // 2. Combine the IDs from the BANALService with the Data from the Database
     val remoteDevices: StateFlow<List<RemoteDeviceUIData>> = banalServiceRepository.activeRemoteDevicesIds

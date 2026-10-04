@@ -390,6 +390,9 @@
     <string name="equipment_type_shoe">Schoenen</string>
     <string name="equipment_no_bikes">Geen fietsen</string>
     <string name="equipment_no_shoes">Geen schoenen</string>
+    <string name="equipment_tab_sensor_matrix">Sensormatrix</string>
+    <string name="equipment_matrix_no_sensors">Geen gekoppelde sensoren gevonden. Koppel eerst sensoren in Instellingen.</string>
+    <string name="equipment_matrix_no_equipment">Geen uitrusting gevonden. Voeg eerst fietsen of schoenen toe.</string>
 
     <string name="SD_card_not_available">SD-kaart niet beschikbaar.</string>
 
@@ -692,6 +695,23 @@
     <plurals name="export_notification__detail__Dropbox_failed">
         <item quantity="one">❌ Fout bij Dropbox upload %1$s.</item>
         <item quantity="other">❌ Fout bij Dropbox upload %1$s.</item>
+    </plurals>
+
+<plurals name="export_notification__detail__GoogleDrive_waiting">
+        <item quantity="one">⏳ Wachten op uploaden van het %1$s-bestand naar Google Drive.</item>
+        <item quantity="other">⏳ Wachten op uploaden van de %1$s-bestanden naar Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_ongoing">
+        <item quantity="one">📤 %1$s-bestand wordt geüpload naar Google Drive.</item>
+        <item quantity="other">📤 %1$s-bestanden worden geüpload naar Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_success">
+        <item quantity="one">✅ %1$s-bestand succesvol geüpload naar Google Drive.</item>
+        <item quantity="other">✅ %1$s-bestanden succesvol geüpload naar Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_failed">
+        <item quantity="one">❌ Uploaden van het %1$s-bestand naar Google Drive mislukt.</item>
+        <item quantity="other">❌ Uploaden van de %1$s-bestanden naar Google Drive mislukt.</item>
     </plurals>
 
     <plurals name="export_notification__detail__Community_failed">
@@ -1413,4 +1433,131 @@
     <string name="settings_lap_display_mode_table">Tabel</string>
     <string name="settings_lap_display_mode_visualizer">Visualizer</string>
     <string name="settings_lap_display_mode_both">Beide</string>
+
+    <!-- Workout Origin Source (ATT-2186 / REQ-DAT-017) -->
+    <string name="workout_source_tracked">Opgenomen</string>
+    <string name="workout_source_tcx">TCX</string>
+    <string name="workout_source_gpx">GPX</string>
+    <string name="workout_source_fit">FIT</string>
+
+    <!-- Workout Section Reordering (ATT-2176 / REQ-UI-255) -->
+    <string name="action_move_up">Omhoog verplaatsen</string>
+    <string name="action_move_down">Omlaag verplaatsen</string>
+
+    <!-- Contextual JIT Permission Flow (ATT-2075 / REQ-PRI-003) -->
+    <string name="permission_rationale_title">Machtigingen voor naadloze tracking</string>
+    <string name="permission_rationale_subtitle">Om je trainingsgegevens nauwkeurig vast te leggen, zijn de volgende machtigingen vereist:</string>
+    <string name="permission_rationale_location_title">Locatie en GPS</string>
+    <string name="permission_rationale_location_desc">Legt continue route, tempo en hoogte vast terwijl de telefoon vergrendeld in je fietsshirt of hardloopriem zit.</string>
+    <string name="permission_rationale_bluetooth_title">Bluetooth &amp; sensoren</string>
+    <string name="permission_rationale_bluetooth_desc">Verbindt met hartslagmeters, vermogensmeters, cadanssensoren en smart trainers.</string>
+    <string name="permission_rationale_notification_title">Trainingsbediening &amp; meldingen</string>
+    <string name="permission_rationale_notification_desc">Toont live trainingsgegevens en pauze/hervat-knoppen direct op het vergrendelscherm.</string>
+    <string name="permission_rationale_continue">Doorgaan</string>
+    <string name="permission_rationale_not_now">Niet nu</string>
+    <string name="permission_rationale_open_settings">Instellingen openen</string>
+    <string name="permission_rationale_settings_explanation">Locatietoestemming is geweigerd. Zonder locatietoegang kunnen er geen GPS-routegegevens worden vastgelegd. Je kunt toestemming geven in de app-instellingen.</string>
+    <string name="permission_warning_badge_desc">Locatietoestemming ontbreekt</string>
+
+    <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
+    <string name="unfinished_workout_title">Training onderbroken</string>
+    <string name="kill_reason_battery_title">Beëindigd door batterijoptimalisatie</string>
+    <string name="kill_reason_battery_stage1">Tja, wie niet horen wil… 😉 Maar we vinden het echt zonde van je verloren kilometers! Android heeft de tracking op de achtergrond gestopt vanwege actieve batterijoptimalisatie.</string>
+    <string name="kill_reason_battery_stage1_strava">En je weet: \'If it\'s not on Strava, it didn\'t happen\'… dubbel pijnlijk! 🙈</string>
+    <string name="kill_reason_battery_stage2">Niet weer… Al de 2e kill! Hoeveel verloren kilometers heb je nog nodig als bewijs? Schakel batterijoptimalisatie voor aTrainingTracker uit.</string>
+    <string name="kill_reason_battery_stage3">Drie keer is scheepsrecht… Meest eigenwijze atleet van de maand! 🏆 Het systeem blijft je training afsluiten totdat je de uitzondering instelt.</string>
+    <string name="kill_reason_low_memory">De registratie is door Android gestopt wegens acuut geheugentekort (bijv. camera of 3D-navigatie op de voorgrond). Je gegevens tot dat moment zijn bewaard.</string>
+    <string name="kill_reason_permission_revoked">De registratie is onderbroken omdat locatie- of meldingsmachtigingen tijdens de training zijn ingetrokken.</string>
+    <string name="action_disable_battery_optimization">Batterijoptimalisatie uitschakelen</string>
+    <string name="battery_optimization_exempt_celebration">Eindelijk! Vrij baan voor je trainingsgegevens 🎉</string>
+
+    <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
+    <string name="import_fit_title">FIT-bestanden importeren</string>
+    <string name="import_fit_description">Importeer trainingen van Garmin, Wahoo, Hammerhead of smartwatches (.fit).</string>
+    <string name="import_fit_button">Selecteer FIT-bestanden</string>
+    <string name="import_fit_progress">FIT-bestanden importeren (%1$d van %2$d)…</string>
+    <string name="import_fit_summary_success">Succesvol %1$d trainingen geïmporteerd (%2$d duplicaten overgeslagen).</string>
+    <string name="import_fit_summary_with_errors">%1$d trainingen geïmporteerd, %2$d duplicaten overgeslagen, %3$d mislukt.</string>
+    <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
+    <string name="route_select_title">Route selecteren</string>
+    <string name="route_action_select">Route selecteren</string>
+    <string name="route_action_stop">Route beëindigen</string>
+    <string name="route_auto_detect_title">Routedetectie</string>
+    <string name="route_auto_detect_prompt">Volg je \'%1$s\'?</string>
+    <string name="route_auto_detect_activate">Activeren</string>
+    <string name="route_auto_detect_dismiss">Afwijzen</string>
+    <string name="route_filter_near">Dichtbij</string>
+    <string name="route_filter_recent">Onlangs gereden</string>
+    <string name="route_filter_length">Lengte</string>
+    <string name="route_empty_title">Geen routes beschikbaar</string>
+    <string name="route_empty_desc">Importeer GPX-bestanden of synchroniseer met Strava.</string>
+    <string name="google_drive">Google Drive</string>
+    <string name="google_drive_connect">Verbinden met Google Drive</string>
+    <string name="google_drive_disconnect">Verbinding met Google Drive verbreken</string>
+    <string name="google_drive_connected_status">Je bent verbonden met Google Drive</string>
+    <string name="google_drive_disconnected_status">Je bent niet verbonden met Google Drive</string>
+    <string name="google_drive_account_email_label">Account: %1$s</string>
+    <string name="upload_workouts_to_google_drive">Workouts automatisch exporteren</string>
+    <string name="upload_workouts_to_google_drive_summary">Uploadt activiteiten (FIT, TCX, GPX, CSV) naar Google Drive na opslaan</string>
+    <string name="upload_backup_to_google_drive">Database-back-up automatisch synchroniseren</string>
+    <string name="upload_backup_to_google_drive_summary">Maakt periodiek een back-up van de database naar Google Drive</string>
+    <string name="google_drive_only_wifi">Alleen uploaden via wifi</string>
+    <string name="google_drive_only_wifi_summary">Bespaart mobiele data</string>
+    <string name="google_drive_last_sync">Laatste upload: %1$s</string>
+    <string name="google_drive_never_synced">Nog niet gesynchroniseerd</string>
+    <string name="restore_from_google_drive">Herstellen vanaf Google Drive</string>
+    <string name="upload_to_google_drive">Back-up maken naar Google Drive</string>
+    <string name="gpx_enriching_elevation">Hoogtegegevens ophalen…</string>
+    <string name="gpx_elevation_enriched">Hoogtegegevens succesvol toegevoegd</string>
+    <string name="gpx_elevation_enrichment_failed">Hoogte ophalen mislukt, 2D-route geïmporteerd</string>
+    <string name="waypoint_type_bench">Bank / Rustpunt</string>
+    <string name="waypoint_type_water">Waterpunt</string>
+    <string name="waypoint_type_summit">Top / Pas</string>
+    <string name="waypoint_type_food">Eten / Café</string>
+    <string name="waypoint_type_viewpoint">Uitzichtpunt</string>
+    <string name="waypoint_type_first_aid">EHBO</string>
+    <string name="waypoint_type_danger">Gevaar</string>
+    <string name="waypoint_type_turn_left">Links afslaan</string>
+    <string name="waypoint_type_turn_right">Rechts afslaan</string>
+    <string name="waypoint_type_turn_straight">Rechtdoor vervolgen</string>
+    <string name="waypoint_type_generic">Routepunt</string>
+    <string name="route_cue_sheet_title">Routebeschrijving</string>
+    <string name="route_waypoints_header">Routepunten en POI\'s (%1$d)</string>
+
+    <string name="climb_title">Klim</string>
+    <string name="climb_approaching">Benaderen</string>
+    <string name="climb_on_climb">Op de klim</string>
+    <string name="climb_summit">Top</string>
+    <string name="climb_remaining_dist">Resterend</string>
+    <string name="climb_remaining_elevation">Hoogtemeters</string>
+    <string name="climb_grade">Stijging</string>
+    <string name="climb_route_counter">Klim %1$d van %2$d</string>
+    <string name="climb_category_hc">HC</string>
+    <string name="climb_category_cat1">Cat 1</string>
+    <string name="climb_category_cat2">Cat 2</string>
+    <string name="climb_category_cat3">Cat 3</string>
+    <string name="climb_category_cat4">Cat 4</string>
+    <string name="climb_category_uc">UC</string>
+    <string name="tuning_show_live_climbs_title">Live beklimmingen (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_summary">Toon realtime klimcockpit tijdens routes en vrij rijden</string>
+
+    <string name="turn_cue_left">Linksaf slaan</string>
+    <string name="turn_cue_right">Rechtsaf slaan</string>
+    <string name="turn_cue_slight_left">Flauwe bocht naar links</string>
+    <string name="turn_cue_slight_right">Flauwe bocht naar rechts</string>
+    <string name="turn_cue_sharp_left">Scherpe bocht naar links</string>
+    <string name="turn_cue_sharp_right">Scherpe bocht naar rechts</string>
+    <string name="turn_cue_straight">Rechtdoor</string>
+    <string name="turn_cue_u_turn">U-bocht</string>
+    <string name="turn_cue_now">NU</string>
+    <string name="turn_cue_off_route">Van de route af (%1$d m)</string>
+    <string name="turn_cue_back_on_route">Terug op de route</string>
+    <string name="turn_prompts_title">Aanwijzingen</string>
+    <string name="turn_prompts_summary">Toon afslag-voor-afslag aanwijzingen tijdens actieve routenavigatie</string>
+    <string name="turn_audio_alerts_title">Geluidssignalen bij afslagen</string>
+    <string name="turn_audio_alerts_summary">Speel waarschuwingstonen af voor afslagen en bij afwijking van de route</string>
+    <string name="turn_cue_countdown_distance_title">Afstand vooraankondiging afslag</string>
+    <string name="turn_cue_countdown_distance_summary">Afstand voor tijdige waarschuwing voor een afslag (meter)</string>
+    <string name="off_route_corridor_threshold_title">Drempelwaarde routeafwijking</string>
+    <string name="off_route_corridor_threshold_summary">Maximale afwijking voor waarschuwing buiten de route (meter)</string>
 </resources>

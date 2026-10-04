@@ -18,7 +18,11 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
+import android.content.Context
 import androidx.compose.ui.graphics.Color
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
@@ -177,5 +181,49 @@ object TelemetryZoneMath {
             power <= thresholds.z4Max -> 4
             else -> 5
         }
+    }
+
+    /**
+     * Standardized factory method to load heart rate training zone thresholds from user preferences
+     * for the given [bSportType] (REQ-UI-260 / ATT-2031).
+     *
+     * Validates that thresholds are strictly ascending and positive (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3).
+     * Returns null if unconfigured or invalid.
+     */
+    fun loadHeartRateThresholds(context: Context, bSportType: BSportType): HeartRateZoneThresholds? {
+        return runCatching {
+            val zoneType = if (bSportType == BSportType.BIKE) {
+                SettingsDataStore.ZoneType.HR_BIKE
+            } else {
+                SettingsDataStore.ZoneType.HR_RUN
+            }
+            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
+            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
+            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
+            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+            if (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3) {
+                HeartRateZoneThresholds(z1, z2, z3, z4)
+            } else null
+        }.getOrNull()
+    }
+
+    /**
+     * Standardized factory method to load cycling power zone thresholds from user preferences
+     * (REQ-UI-260 / ATT-2031).
+     *
+     * Validates that thresholds are strictly ascending and positive (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3).
+     * Returns null if unconfigured or invalid.
+     */
+    fun loadPowerThresholds(context: Context): PowerZoneThresholds? {
+        return runCatching {
+            val zoneType = SettingsDataStore.ZoneType.PWR_BIKE
+            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
+            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
+            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
+            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+            if (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3) {
+                PowerZoneThresholds(z1, z2, z3, z4)
+            } else null
+        }.getOrNull()
     }
 }

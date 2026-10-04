@@ -25,6 +25,7 @@
     <!-- Online Communities / Ecosystem -->
     <item name="drawer_strava" type="id" />
     <item name="drawer_dropbox" type="id" />
+    <item name="drawer_google_drive" type="id" />
     <item name="drawer_export" type="id" />
 
     <!-- Settings -->

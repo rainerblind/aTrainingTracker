@@ -24,6 +24,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -37,8 +38,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CardElevation
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -148,6 +152,13 @@ fun SensorFieldView(
     modifier: Modifier = Modifier,
     screenMode: ScreenMode,
     isSelectedForMove: Boolean = false,
+    shape: Shape = RectangleShape,
+    cardElevation: CardElevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    border: BorderStroke? = if (isSelectedForMove) {
+        BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+    } else {
+        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    },
     onStartMove: () -> Unit = {},
     onEdit: () -> Unit = {},
     onDelete: () -> Unit = {}
@@ -206,7 +217,8 @@ fun SensorFieldView(
                     }
                 }
             ),
-        shape = RectangleShape,
+        shape = shape,
+        elevation = cardElevation,
         colors = CardDefaults.cardColors(
             containerColor = if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showBackground) {
                 fieldState.zoneColor.copy(alpha = 0.12f).compositeOver(MaterialTheme.colorScheme.surface)
@@ -214,11 +226,7 @@ fun SensorFieldView(
                 MaterialTheme.colorScheme.surface
             }
         ),
-        border = if (isSelectedForMove) {
-            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-        } else {
-            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-        }
+        border = border
     ) {
         Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             // 1. Left Indicator Strip
@@ -505,5 +513,170 @@ private fun SensorFieldViewZone5Preview() {
             fieldState = mockSensorFieldStateInZone,
             screenMode = ScreenMode.TRACKING // Default preview to tracking mode
         )
+    }
+}
+
+//================================================================================
+// PROTOTYPING VARIANTS PREVIEW SUITE (REQ-UI-258, ATT-2058)
+//================================================================================
+
+@Composable
+private fun MockCockpitGrid(style: SensorFieldStyle) {
+    val heartRate = SensorFieldState(
+        configHash = 1,
+        sensorFieldId = 1,
+        rowNr = 1,
+        colNr = 1,
+        viewSize = ViewSize.NORMAL,
+        label = "Heart Rate",
+        filterDescription = "Inst.",
+        value = "168",
+        units = "bpm",
+        zoneColor = TTColor.Zone4
+    )
+    val speed = SensorFieldState(
+        configHash = 2,
+        sensorFieldId = 2,
+        rowNr = 1,
+        colNr = 2,
+        viewSize = ViewSize.NORMAL,
+        label = "Speed",
+        filterDescription = "3 s avg",
+        value = "32.4",
+        units = "km/h",
+        zoneColor = Color.Transparent
+    )
+    val cadence = SensorFieldState(
+        configHash = 3,
+        sensorFieldId = 3,
+        rowNr = 2,
+        colNr = 1,
+        viewSize = ViewSize.NORMAL,
+        label = "Cadence",
+        filterDescription = "Inst.",
+        value = "92",
+        units = "rpm",
+        zoneColor = Color.Transparent
+    )
+    val time = SensorFieldState(
+        configHash = 4,
+        sensorFieldId = 4,
+        rowNr = 2,
+        colNr = 2,
+        viewSize = ViewSize.NORMAL,
+        label = "Time",
+        filterDescription = "Active",
+        value = "1:24:35",
+        units = "h:m:s",
+        zoneColor = Color.Transparent
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(if (style.gridSpacing > 0.dp) 8.dp else 0.dp),
+        verticalArrangement = if (style.gridSpacing > 0.dp) Arrangement.spacedBy(style.gridSpacing) else Arrangement.Top
+    ) {
+        // Row 1
+        Row(
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+            horizontalArrangement = if (style.gridSpacing > 0.dp) Arrangement.spacedBy(style.gridSpacing) else Arrangement.Start
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                SensorFieldView(
+                    fieldState = heartRate,
+                    screenMode = ScreenMode.TRACKING,
+                    shape = style.shape,
+                    cardElevation = CardDefaults.cardElevation(defaultElevation = style.defaultElevation)
+                )
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                SensorFieldView(
+                    fieldState = speed,
+                    screenMode = ScreenMode.TRACKING,
+                    shape = style.shape,
+                    cardElevation = CardDefaults.cardElevation(defaultElevation = style.defaultElevation)
+                )
+            }
+        }
+        // Row 2
+        Row(
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+            horizontalArrangement = if (style.gridSpacing > 0.dp) Arrangement.spacedBy(style.gridSpacing) else Arrangement.Start
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                SensorFieldView(
+                    fieldState = cadence,
+                    screenMode = ScreenMode.TRACKING,
+                    shape = style.shape,
+                    cardElevation = CardDefaults.cardElevation(defaultElevation = style.defaultElevation)
+                )
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                SensorFieldView(
+                    fieldState = time,
+                    screenMode = ScreenMode.TRACKING,
+                    shape = style.shape,
+                    cardElevation = CardDefaults.cardElevation(defaultElevation = style.defaultElevation)
+                )
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "Cockpit V0: Baseline (Status Quo)", widthDp = 360)
+@Composable
+fun PreviewCockpitVariant0_Baseline() {
+    MaterialTheme {
+        MockCockpitGrid(style = SensorFieldStyle.Variant0_Baseline)
+    }
+}
+
+@Preview(showBackground = true, name = "Cockpit V1: Modern Outlined Sport Tiles", widthDp = 360)
+@Composable
+fun PreviewCockpitVariant1_OutlinedTiles() {
+    MaterialTheme {
+        MockCockpitGrid(style = SensorFieldStyle.Variant1_OutlinedTiles)
+    }
+}
+
+@Preview(showBackground = true, name = "Cockpit V2: Elevated Sports Cards", widthDp = 360)
+@Composable
+fun PreviewCockpitVariant2_ElevatedCards() {
+    MaterialTheme {
+        MockCockpitGrid(style = SensorFieldStyle.Variant2_ElevatedCards)
+    }
+}
+
+@Preview(showBackground = true, name = "Cockpit V3: Soft Accent Capsules", widthDp = 360)
+@Composable
+fun PreviewCockpitVariant3_Capsules() {
+    MaterialTheme {
+        MockCockpitGrid(style = SensorFieldStyle.Variant3_Capsules)
+    }
+}
+
+@Preview(showBackground = true, name = "Cockpit Variants Comparison", widthDp = 360, heightDp = 1000)
+@Composable
+fun PreviewCockpitVariantsComparison() {
+    MaterialTheme {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(text = "Variant 0: Baseline (Status Quo)", style = MaterialTheme.typography.titleSmall)
+            MockCockpitGrid(style = SensorFieldStyle.Variant0_Baseline)
+
+            Text(text = "Variant 1: Outlined Sport Tiles (6dp radius, 4dp gap)", style = MaterialTheme.typography.titleSmall)
+            MockCockpitGrid(style = SensorFieldStyle.Variant1_OutlinedTiles)
+
+            Text(text = "Variant 2: Elevated Sports Cards (8dp radius, 6dp gap)", style = MaterialTheme.typography.titleSmall)
+            MockCockpitGrid(style = SensorFieldStyle.Variant2_ElevatedCards)
+
+            Text(text = "Variant 3: Soft Accent Capsules (12dp radius, 8dp gap)", style = MaterialTheme.typography.titleSmall)
+            MockCockpitGrid(style = SensorFieldStyle.Variant3_Capsules)
+        }
     }
 }

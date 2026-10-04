@@ -28,6 +28,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.routes.RouteWaypoint
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
@@ -79,6 +80,11 @@ data class MapStyle(
     val routeWidth: Float = 10f,
     val routeBaseZIndex: Float = 20f,
     val routeOverlayZIndex: Float = 40f,
+    val routeActiveNavigationWidth: Float = 16f,
+    val routeActiveBaseZIndex: Float = 25f,
+    val routeActiveOverlayZIndex: Float = 45f,
+    val routeActiveDashLength: Float = 30f,
+    val routeActiveGapLength: Float = 15f,
     val routeUnselectedZIndex: Float = 5f,
     val routeUnselectedWidth: Float = 6f,
     val routeUnselectedAlpha: Float = 0.3f,
@@ -102,6 +108,12 @@ object MapVisualization {
     const val ROUTE_WIDTH = 10f
     const val ROUTE_BASE_Z_INDEX = 20.0f
     const val ROUTE_OVERLAY_Z_INDEX = 40.0f
+    const val ROUTE_ACTIVE_NAVIGATION_WIDTH = 16f
+    const val ROUTE_ACTIVE_BASE_Z_INDEX = 25.0f
+    const val ROUTE_ACTIVE_OVERLAY_Z_INDEX = 45.0f
+    const val ROUTE_ACTIVE_DASH_LENGTH = 30f
+    const val ROUTE_ACTIVE_GAP_LENGTH = 15f
+    const val ROUTE_ACTIVE_OVERLAY_WIDTH = 8f
     const val ROUTE_UNSELECTED_Z_INDEX = 5.0f
     const val ROUTE_UNSELECTED_WIDTH = 6f
     const val ROUTE_UNSELECTED_ALPHA = TTAlpha.Disabled
@@ -159,6 +171,8 @@ interface MappablePath {
     val width: Float
     val zIndex: Float
     val overlayZIndex: Float?
+    val overlayColor: Color? get() = null
+    val overlayWidth: Float? get() = null
     val pattern: List<com.google.android.gms.maps.model.PatternItem>?
     val onClick: ((Long) -> Unit)?
 }
@@ -225,22 +239,60 @@ data class MapRoute(
     override val minLng: Double? = null,
     override val maxLat: Double? = null,
     override val maxLng: Double? = null,
+    val isActiveNavigation: Boolean = false,
+    val waypoints: List<RouteWaypoint> = emptyList(),
     override val onClick: ((Long) -> Unit)? = null
 ) : MappablePath {
     override val latLngs: List<LatLng> by lazy { path.map { it.latLng } }
-    override val color: Color get() = if (isSelected) TTColor.RouteSelected else TTColor.RouteUnselected
-    override val width: Float get() = if (isSelected) MapVisualization.ROUTE_WIDTH else MapVisualization.ROUTE_UNSELECTED_WIDTH
-    override val zIndex: Float get() = if (isSelected) MapVisualization.ROUTE_BASE_Z_INDEX else MapVisualization.ROUTE_UNSELECTED_Z_INDEX
+    override val color: Color get() = when {
+        isActiveNavigation -> TTColor.RouteActiveNavigation
+        isSelected -> TTColor.RouteSelected
+        else -> TTColor.RouteUnselected
+    }
+    override val width: Float get() = when {
+        isActiveNavigation -> MapVisualization.ROUTE_ACTIVE_NAVIGATION_WIDTH
+        isSelected -> MapVisualization.ROUTE_WIDTH
+        else -> MapVisualization.ROUTE_UNSELECTED_WIDTH
+    }
+    override val zIndex: Float get() = when {
+        isActiveNavigation -> MapVisualization.ROUTE_ACTIVE_BASE_Z_INDEX
+        isSelected -> MapVisualization.ROUTE_BASE_Z_INDEX
+        else -> MapVisualization.ROUTE_UNSELECTED_Z_INDEX
+    }
 
-    override val overlayZIndex: Float get() = MapVisualization.ROUTE_OVERLAY_Z_INDEX
+    override val overlayZIndex: Float get() = if (isActiveNavigation) {
+        MapVisualization.ROUTE_ACTIVE_OVERLAY_Z_INDEX
+    } else {
+        MapVisualization.ROUTE_OVERLAY_Z_INDEX
+    }
+    override val overlayColor: Color get() = if (isActiveNavigation) {
+        TTColor.RouteActiveNavigationOverlay
+    } else {
+        color
+    }
+    override val overlayWidth: Float get() = if (isActiveNavigation) {
+        MapVisualization.ROUTE_ACTIVE_OVERLAY_WIDTH
+    } else {
+        width
+    }
     override val pattern: List<com.google.android.gms.maps.model.PatternItem>
-        get() = listOf(com.google.android.gms.maps.model.Dash(MapVisualization.ROUTE_DASH_LENGTH), com.google.android.gms.maps.model.Gap(MapVisualization.ROUTE_GAP_LENGTH))
+        get() = if (isActiveNavigation) {
+            listOf(
+                com.google.android.gms.maps.model.Dash(MapVisualization.ROUTE_ACTIVE_DASH_LENGTH),
+                com.google.android.gms.maps.model.Gap(MapVisualization.ROUTE_ACTIVE_GAP_LENGTH)
+            )
+        } else {
+            listOf(
+                com.google.android.gms.maps.model.Dash(MapVisualization.ROUTE_DASH_LENGTH),
+                com.google.android.gms.maps.model.Gap(MapVisualization.ROUTE_GAP_LENGTH)
+            )
+        }
 }
 /**
  * Extension function to convert a Database Route (RouteWithPath)
  * into a Map-ready Route (MapRoute).
  */
-fun RouteWithPath.toMapRoute(): MapRoute {
+fun RouteWithPath.toMapRoute(isActiveNavigation: Boolean = false): MapRoute {
     return MapRoute(
         id = this.summary.id,
         name = this.summary.name,
@@ -250,7 +302,9 @@ fun RouteWithPath.toMapRoute(): MapRoute {
         minLat = this.summary.minLat,
         minLng = this.summary.minLng,
         maxLat = this.summary.maxLat,
-        maxLng = this.summary.maxLng
+        maxLng = this.summary.maxLng,
+        isActiveNavigation = isActiveNavigation,
+        waypoints = this.waypoints
     )
 }
 

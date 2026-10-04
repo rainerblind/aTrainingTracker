@@ -82,8 +82,8 @@ class WorkoutSummariesDatabaseRaceMigrationTest {
     }
 
     @Test
-    fun testDbVersion_is23() {
-        assertEquals("DB_VERSION must be 23", 23, WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper.DB_VERSION)
+    fun testDbVersion_isAtLeast23() {
+        assertTrue("DB_VERSION must be at least 23", WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper.DB_VERSION >= 23)
     }
 
     @Test

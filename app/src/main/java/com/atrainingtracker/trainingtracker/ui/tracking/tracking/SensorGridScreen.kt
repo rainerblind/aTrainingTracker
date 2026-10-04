@@ -57,6 +57,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.material3.CardElevation
+import androidx.compose.material3.CardDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -68,6 +73,10 @@ import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
+import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
+import com.atrainingtracker.trainingtracker.routes.TurnByTurnNavigationRepository
+import com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbSheet
+import com.atrainingtracker.trainingtracker.ui.routes.TurnPromptBanner
 import com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheet
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import com.atrainingtracker.trainingtracker.ui.components.core.sheetContour
@@ -106,6 +115,9 @@ fun SensorGridScreen(
     currentLocationFlow: StateFlow<LatLng?>,
     liveSegments: StateFlow<List<LiveSegment>>,
     selectedFieldForMove: SensorFieldState? = null,
+    gridSpacing: Dp = 0.dp,
+    fieldShape: Shape = RectangleShape,
+    fieldElevation: CardElevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
 ) {
     val context = LocalContext.current
     val tuningDataStore = remember { TuningPreferencesDataStore(context) }
@@ -124,11 +136,18 @@ fun SensorGridScreen(
 
     val showLiveSegments = state.showLiveSegments && activeSegment != null
 
+    val liveClimbsRepo = remember { LiveClimbsRepository.getInstance(context) }
+    val activeLiveClimb by liveClimbsRepo.activeLiveClimb.collectAsState()
+    val showLiveClimbs = !showLiveSegments && tuningConfig.showLiveClimbs && activeLiveClimb != null
+
+    val navRepo = remember { TurnByTurnNavigationRepository.getInstance(context) }
+    val navState by navRepo.navigationState.collectAsState()
+
     // Control the sheet state
     val scaffoldState = rememberBottomSheetScaffoldState(
         bottomSheetState = rememberStandardBottomSheetState(
             initialValue = SheetValue.PartiallyExpanded,
-            skipHiddenState = false // Allow it to hide if no segment
+            skipHiddenState = false // Allow it to hide if no segment or climb
         )
     )
 
@@ -142,10 +161,10 @@ fun SensorGridScreen(
             sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
             sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
         sheetDragHandle = null,
-        sheetPeekHeight = if (showLiveSegments && screenMode == ScreenMode.TRACKING) BottomSheetDesign.PeekHeightLiveSegment + navBarHeight else 0.dp,
-        sheetSwipeEnabled = showLiveSegments,
+        sheetPeekHeight = if ((showLiveSegments || showLiveClimbs) && screenMode == ScreenMode.TRACKING) BottomSheetDesign.PeekHeightLiveSegment + navBarHeight else 0.dp,
+        sheetSwipeEnabled = showLiveSegments || showLiveClimbs,
         sheetContent = {
-            if (showLiveSegments) {
+            if (showLiveSegments && activeSegment != null) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -154,6 +173,17 @@ fun SensorGridScreen(
                 ) {
                     LiveSegmentSheet(
                         liveSegment = activeSegment
+                    )
+                }
+            } else if (showLiveClimbs && activeLiveClimb != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .sheetContour()
+                        .background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)
+                ) {
+                    LiveClimbSheet(
+                        liveClimb = activeLiveClimb!!
                     )
                 }
             } else {
@@ -204,13 +234,20 @@ fun SensorGridScreen(
                 }
             }
 
+            // Turn-by-Turn Navigation Prompt HUD Banner (REQ-MAP-028 / ATT-1450)
+            TurnPromptBanner(
+                navigationState = navState,
+                promptsEnabled = tuningConfig.turnPromptsEnabled
+            )
+
             // 1. The Sensor Grid (Scrollable)
             // This Column will only take as much space as the sensors need.
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = if (gridSpacing > 0.dp) Arrangement.spacedBy(gridSpacing) else Arrangement.Top
             ) {
                 val fieldsByRow = state.fields.groupBy { it.rowNr }
                 val sortedRows = fieldsByRow.keys.sorted()
@@ -231,7 +268,8 @@ fun SensorGridScreen(
                     val fieldsInThisRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.height(IntrinsicSize.Min)
+                        modifier = Modifier.height(IntrinsicSize.Min),
+                        horizontalArrangement = if (gridSpacing > 0.dp) Arrangement.spacedBy(gridSpacing) else Arrangement.Start
                     ) {
                         var maxColNr = 0
                         fieldsInThisRow.forEach { fieldState ->
@@ -251,6 +289,8 @@ fun SensorGridScreen(
                                     fieldState = fieldState,
                                     screenMode = screenMode,
                                     isSelectedForMove = isSelected,
+                                    shape = fieldShape,
+                                    cardElevation = fieldElevation,
                                     onStartMove = { gridActions.onSelectFieldForMove(fieldState) },
                                     onEdit = {
                                         if (screenMode == ScreenMode.CONFIGURATION && selectedFieldForMove != null) {
