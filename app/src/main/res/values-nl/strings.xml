@@ -1147,6 +1147,7 @@
     <string name="filter_section_sport">Sporttype</string>
     <string name="filter_section_equipment">Uitrusting</string>
     <string name="filter_section_attributes">Kenmerken</string>
+    <string name="filter_section_origin_source">Gegevensbron</string>
     <string name="filter_section_thresholds">Afstand &amp; tijdsduur</string>
     <string name="filter_section_start_at">Start bij</string>
     <string name="settings_workout_card_title">Trainingslijst (gedetailleerde kaarten)</string>

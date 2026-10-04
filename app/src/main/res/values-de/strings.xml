@@ -1234,6 +1234,7 @@
     <string name="filter_section_sport">Sportart</string>
     <string name="filter_section_equipment">Ausrüstung</string>
     <string name="filter_section_attributes">Eigenschaften</string>
+    <string name="filter_section_origin_source">Datenquelle</string>
     <string name="filter_section_thresholds">Distanz &amp; Dauer</string>
     <string name="filter_section_start_at">Startet bei</string>
     <string name="settings_workout_card_title">Trainingsliste (Detail-Karten)</string>
