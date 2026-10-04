@@ -1464,15 +1464,18 @@
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">Entraînement interrompu</string>
+    <string name="unfinished_workout_title_battery">Entraînement interrompu : Optimisation de la batterie</string>
+    <string name="unfinished_workout_title_memory">Entraînement interrompu : Mémoire insuffisante</string>
+    <string name="unfinished_workout_title_permission">Entraînement interrompu : Autorisation révoquée</string>
     <string name="kill_reason_battery_title">Arrêté par l\'optimisation de batterie</string>
-    <string name="kill_reason_battery_stage1">Qui ne veut rien entendre… 😉 Mais nous sommes vraiment désolés pour vos kilomètres perdus ! Android a arrêté le suivi en arrière-plan en raison de l\'optimisation de batterie.</string>
-    <string name="kill_reason_battery_stage1_strava">Et vous connaissez le dicton : \'If it\'s not on Strava, it didn\'t happen\'… doublement amer ! 🙈</string>
-    <string name="kill_reason_battery_stage2">Pas encore… Déjà le 2e arrêt forcé ! Combien de kilomètres perdus vous faut-il comme preuve ? Veuillez désactiver l\'optimisation de batterie pour aTrainingTracker.</string>
-    <string name="kill_reason_battery_stage3">Jamais deux sans trois… Athlète le plus réfractaire aux conseils du mois ! 🏆 Le système continuera de couper votre suivi tant que vous n\'aurez pas configuré l\'exception.</string>
+    <string name="kill_reason_battery_stage1">Android a interrompu l\'enregistrement en arrière-plan car l\'optimisation de la batterie est activée pour cette application. Pour garantir un suivi continu de vos kilomètres et du dénivelé, veuillez désactiver l\'optimisation de la batterie pour aTrainingTracker.</string>
+    <string name="kill_reason_battery_stage1_strava">Nous savons à quel point des données d\'entraînement complètes sont importantes pour vos activités Strava.</string>
+    <string name="kill_reason_battery_stage2">L\'enregistrement a de nouveau été interrompu par la gestion de la batterie. Sans exclusion, Android continuera d\'arrêter l\'enregistrement en arrière-plan. Veuillez prendre un moment pour désactiver l\'optimisation de la batterie.</string>
+    <string name="kill_reason_battery_stage3">Interruptions répétées en arrière-plan détectées. Les versions récentes d\'Android arrêtent strictement les services en arrière-plan sans exception. Appuyez sur le bouton ci-dessous pour exclure aTrainingTracker et protéger vos séances.</string>
     <string name="kill_reason_low_memory">L\'enregistrement a été interrompu par Android en raison d\'un manque aigu de mémoire vive (ex. appareil photo ou navigation 3D au premier plan). Vos données enregistrées jusque-là ont été préservées.</string>
     <string name="kill_reason_permission_revoked">L\'enregistrement a été interrompu car les autorisations de localisation ou de notification ont été révoquées pendant votre entraînement.</string>
     <string name="action_disable_battery_optimization">Désactiver l\'optimisation de batterie</string>
-    <string name="battery_optimization_exempt_celebration">Enfin ! Voie libre pour vos données d\'entraînement 🎉</string>
+    <string name="battery_optimization_exempt_celebration">Enregistrement sans restriction actif pour vos données d\'entraînement</string>
 
     <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
     <string name="import_fit_title">Importer des fichiers FIT</string>

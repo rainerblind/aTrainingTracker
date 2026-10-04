@@ -64,14 +64,27 @@ class ProcessKillEscalationTest {
             prefStorage[key] = value
             editor
         }
+        every { editor.putLong(any(), any()) } answers {
+            val key = firstArg<String>()
+            val value = secondArg<Long>()
+            prefStorage[key] = value
+            editor
+        }
         val prefs = mockk<android.content.SharedPreferences>(relaxed = true)
         every { prefs.getInt(any(), any()) } answers {
             val key = firstArg<String>()
             val default = secondArg<Int>()
             (prefStorage[key] as? Int) ?: default
         }
+        every { prefs.getLong(any(), any()) } answers {
+            val key = firstArg<String>()
+            val default = secondArg<Long>()
+            (prefStorage[key] as? Long) ?: default
+        }
         every { prefs.edit() } returns editor
         every { PreferenceManager.getDefaultSharedPreferences(any()) } returns prefs
+
+        ProcessExitReasonHelper.resetSessionForTesting()
 
         mockkStatic(TrainingApplication::class)
         every { TrainingApplication.uploadToStrava() } returns false
@@ -80,6 +93,7 @@ class ProcessKillEscalationTest {
     @After
     fun tearDown() {
         unmockkAll()
+        ProcessExitReasonHelper.resetSessionForTesting()
     }
 
     @Test
@@ -137,6 +151,9 @@ class ProcessKillEscalationTest {
     fun testRequiredStringResourcesExist() {
         val requiredIds = listOf(
             R.string.unfinished_workout_title,
+            R.string.unfinished_workout_title_battery,
+            R.string.unfinished_workout_title_memory,
+            R.string.unfinished_workout_title_permission,
             R.string.kill_reason_battery_title,
             R.string.kill_reason_battery_stage1,
             R.string.kill_reason_battery_stage1_strava,

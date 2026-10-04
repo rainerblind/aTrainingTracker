@@ -1465,15 +1465,18 @@
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">Trening przerwany</string>
+    <string name="unfinished_workout_title_battery">Trening przerwany: Optymalizacja baterii</string>
+    <string name="unfinished_workout_title_memory">Trening przerwany: Brak pamięci</string>
+    <string name="unfinished_workout_title_permission">Trening przerwany: Uprawnienie cofnięte</string>
     <string name="kill_reason_battery_title">Zakończono przez optymalizację baterii</string>
-    <string name="kill_reason_battery_stage1">Kto nie słucha… 😉 Ale naprawdę szkoda Twoich utraconych kilometrów! Android zamknął usługę rejestrowania w tle z powodu optymalizacji baterii.</string>
-    <string name="kill_reason_battery_stage1_strava">A przecież wiesz: \'If it\'s not on Strava, it didn\'t happen\'… podwójnie przykro! 🙈</string>
-    <string name="kill_reason_battery_stage2">Znowu to samo… Już 2. zamknięcie! Ilu straconych kilometrów potrzebujesz jako dowodu? Wyłącz optymalizację baterii dla aTrainingTracker.</string>
-    <string name="kill_reason_battery_stage3">Do trzech razy sztuka… Najbardziej uparty atleta miesiąca! 🏆 System będzie zamykać trening tak długo, aż dodasz aplikację do wyjątków.</string>
+    <string name="kill_reason_battery_stage1">System Android przerwał rejestrowanie w tle, ponieważ optymalizacja baterii jest włączona dla tej aplikacji. Aby zapewnić ciągłe rejestrowanie kilometrów i przewyższeń, wyłącz optymalizację baterii dla aTrainingTracker.</string>
+    <string name="kill_reason_battery_stage1_strava">Wiemy, jak ważna jest pełna telemetria treningowa dla Twoich aktywności w Strava.</string>
+    <string name="kill_reason_battery_stage2">Rejestrowanie zostało ponownie przerwane przez systemowe zarządzanie baterią. Bez wykluczenia aplikacji system Android będzie nadal zatrzymywać rejestrowanie w tle. Poświęć chwilę na wyłączenie optymalizacji baterii.</string>
+    <string name="kill_reason_battery_stage3">Wykryto powtarzające się przerwania w tle. Nowoczesne wersje Androida bezwzględnie zamykają usługi działające w tle, które nie są wyłączone z optymalizacji. Dotknij przycisku poniżej, aby dodać wyjątek dla aTrainingTracker i chronić swoje treningi.</string>
     <string name="kill_reason_low_memory">Rejestrowanie zostało zatrzymane przez Androida z powodu braku pamięci RAM (np. aparat lub nawigacja 3D na pierwszym planie). Dotychczasowe dane zostały zapisane.</string>
     <string name="kill_reason_permission_revoked">Rejestrowanie zostało przerwane, ponieważ w trakcie treningu cofnięto uprawnienia do lokalizacji lub powiadomień.</string>
     <string name="action_disable_battery_optimization">Wyłącz optymalizację baterii</string>
-    <string name="battery_optimization_exempt_celebration">Wreszcie! Pełna swoboda dla Twoich danych treningowych 🎉</string>
+    <string name="battery_optimization_exempt_celebration">Rejestrowanie bez ograniczeń aktywne dla Twoich danych treningowych</string>
 
     <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
     <string name="import_fit_title">Importuj pliki FIT</string>

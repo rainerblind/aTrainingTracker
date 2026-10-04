@@ -1550,15 +1550,18 @@
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">Training unterbrochen</string>
+    <string name="unfinished_workout_title_battery">Training unterbrochen: Akku-Optimierung</string>
+    <string name="unfinished_workout_title_memory">Training unterbrochen: Speicherengpass</string>
+    <string name="unfinished_workout_title_permission">Training unterbrochen: Berechtigung entzogen</string>
     <string name="kill_reason_battery_title">Durch Akku-Optimierung beendet</string>
-    <string name="kill_reason_battery_stage1">Tja, wer nicht hören will… 😉 Aber es tut uns wirklich leid um deine verlorenen Kilometer! Android hat den Tracking-Dienst im Hintergrund wegen aktiver Akku-Optimierung beendet.</string>
-    <string name="kill_reason_battery_stage1_strava">Und du weißt ja: \'If it\'s not on Strava, it didn\'t happen\'… doppelt bitter! 🙈</string>
-    <string name="kill_reason_battery_stage2">Nicht schon wieder… Schon der 2. Kill! Wie viele verlorene Kilometer brauchst du noch als Beweis? Bitte deaktiviere die Akku-Optimierung für aTrainingTracker.</string>
-    <string name="kill_reason_battery_stage3">Aller schlechten Dinge sind drei… Beratungsresistenter Athlet des Monats! 🏆 Das System wird dein Training immer wieder beenden, bis du die Ausnahme einrichtest.</string>
+    <string name="kill_reason_battery_stage1">Android hat die Hintergrundaufzeichnung unterbrochen, weil die Akku-Optimierung für diese App aktiv ist. Damit deine Kilometer und Höhenmeter zuverlässig erfasst werden, deaktiviere bitte die Akku-Optimierung für aTrainingTracker.</string>
+    <string name="kill_reason_battery_stage1_strava">Wir wissen, wie wichtig lückenlose Trainingsaufzeichnungen für deine Strava-Aktivitäten sind.</string>
+    <string name="kill_reason_battery_stage2">Die Aufzeichnung wurde erneut durch das System-Akkumanagement beendet. Ohne Ausnahme wird Android das Tracking bei längeren Einheiten immer wieder stoppen. Bitte nimm dir kurz Zeit, um die Akku-Optimierung zu deaktivieren.</string>
+    <string name="kill_reason_battery_stage3">Wiederholte Unterbrechungen durch das Betriebssystem erkannt. Aktuelle Android-Versionen beenden Hintergrunddienste ohne Ausnahme zwingend, um Energie zu sparen. Bitte tippe unten auf den Button, um aTrainingTracker auszunehmen und deine Trainings zu schützen.</string>
     <string name="kill_reason_low_memory">Die Aufzeichnung wurde vom Betriebssystem wegen akutem Arbeitsspeichermangel beendet (z. B. durch Kamera oder 3D-Navigation im Vordergrund). Dein bisheriger Streckenteil wurde gesichert.</string>
     <string name="kill_reason_permission_revoked">Die Aufzeichnung wurde abgebrochen, weil der App während des Trainings die Standort- oder Benachrichtigungsberechtigung entzogen wurde.</string>
     <string name="action_disable_battery_optimization">Akku-Optimierung deaktivieren</string>
-    <string name="battery_optimization_exempt_celebration">Endlich! Freie Fahrt für deine Trainingsdaten 🎉</string>
+    <string name="battery_optimization_exempt_celebration">Uneingeschränkte Aufzeichnung aktiv für deine Trainingsdaten</string>
 
     <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
     <string name="import_fit_title">FIT-Dateien importieren</string>

@@ -1463,15 +1463,18 @@
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">Training onderbroken</string>
+    <string name="unfinished_workout_title_battery">Training onderbroken: Batterijoptimalisatie</string>
+    <string name="unfinished_workout_title_memory">Training onderbroken: Geheugentekort</string>
+    <string name="unfinished_workout_title_permission">Training onderbroken: Toestemming ingetrokken</string>
     <string name="kill_reason_battery_title">Beëindigd door batterijoptimalisatie</string>
-    <string name="kill_reason_battery_stage1">Tja, wie niet horen wil… 😉 Maar we vinden het echt zonde van je verloren kilometers! Android heeft de tracking op de achtergrond gestopt vanwege actieve batterijoptimalisatie.</string>
-    <string name="kill_reason_battery_stage1_strava">En je weet: \'If it\'s not on Strava, it didn\'t happen\'… dubbel pijnlijk! 🙈</string>
-    <string name="kill_reason_battery_stage2">Niet weer… Al de 2e kill! Hoeveel verloren kilometers heb je nog nodig als bewijs? Schakel batterijoptimalisatie voor aTrainingTracker uit.</string>
-    <string name="kill_reason_battery_stage3">Drie keer is scheepsrecht… Meest eigenwijze atleet van de maand! 🏆 Het systeem blijft je training afsluiten totdat je de uitzondering instelt.</string>
+    <string name="kill_reason_battery_stage1">Android heeft de achtergrondregistratie onderbroken omdat batterijoptimalisatie is ingeschakeld voor deze app. Schakel batterijoptimalisatie uit voor aTrainingTracker om continue registratie van je kilometers en hoogtemeters te garanderen.</string>
+    <string name="kill_reason_battery_stage1_strava">We weten hoe belangrijk volledige trainingsgegevens zijn voor je Strava-activiteiten.</string>
+    <string name="kill_reason_battery_stage2">De opname is opnieuw onderbroken door het batterijbeheer van het systeem. Zonder uitzondering zal Android achtergrondopnames blijven stoppen. Neem even de tijd om batterijoptimalisatie uit te schakelen.</string>
+    <string name="kill_reason_battery_stage3">Herhaalde onderbrekingen op de achtergrond gedetecteerd. Moderne Android-versies beëindigen achtergronddiensten zonder uitzondering strikt. Tik op de onderstaande knop om aTrainingTracker uit te zonderen en je trainingen te beschermen.</string>
     <string name="kill_reason_low_memory">De registratie is door Android gestopt wegens acuut geheugentekort (bijv. camera of 3D-navigatie op de voorgrond). Je gegevens tot dat moment zijn bewaard.</string>
     <string name="kill_reason_permission_revoked">De registratie is onderbroken omdat locatie- of meldingsmachtigingen tijdens de training zijn ingetrokken.</string>
     <string name="action_disable_battery_optimization">Batterijoptimalisatie uitschakelen</string>
-    <string name="battery_optimization_exempt_celebration">Eindelijk! Vrij baan voor je trainingsgegevens 🎉</string>
+    <string name="battery_optimization_exempt_celebration">Onbeperkte registratie actief voor je trainingsgegevens</string>
 
     <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
     <string name="import_fit_title">FIT-bestanden importeren</string>
