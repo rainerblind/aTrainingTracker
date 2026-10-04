@@ -148,6 +148,67 @@ class ClimbsDatabaseManager(
     }
 
     /**
+     * Inserts a collection of climbs in a single atomic SQLite transaction with spatial deduplication (REQ-MAP-027).
+     * Eliminates transaction overhead and SQLite lock contention on batch route imports.
+     */
+    suspend fun insertClimbsWithDeduplicationBatch(
+        climbs: List<Climb>,
+        thresholdMeters: Float = 50.0f
+    ): List<Long> = withContext(dbDispatcher) {
+        if (climbs.isEmpty()) return@withContext emptyList()
+        val db = dbHelper.writableDatabase
+        val existingClimbs = getAllClimbsInternal().toMutableList()
+        val results = FloatArray(1)
+        val resultIds = mutableListOf<Long>()
+
+        db.beginTransaction()
+        try {
+            for (climb in climbs) {
+                var matchedId: Long? = null
+                for (cand in existingClimbs) {
+                    Location.distanceBetween(climb.startLat, climb.startLng, cand.startLat, cand.startLng, results)
+                    if (results[0] <= thresholdMeters) {
+                        Location.distanceBetween(climb.endLat, climb.endLng, cand.endLat, cand.endLng, results)
+                        if (results[0] <= thresholdMeters) {
+                            matchedId = cand.id
+                            break
+                        }
+                    }
+                }
+                if (matchedId != null) {
+                    resultIds.add(matchedId)
+                } else {
+                    val values = ContentValues().apply {
+                        put(ClimbsDbHelper.COLUMN_NAME, climb.name)
+                        if (climb.routeId != null) {
+                            put(ClimbsDbHelper.COLUMN_ROUTE_ID, climb.routeId)
+                        } else {
+                            putNull(ClimbsDbHelper.COLUMN_ROUTE_ID)
+                        }
+                        put(ClimbsDbHelper.COLUMN_START_LAT, climb.startLat)
+                        put(ClimbsDbHelper.COLUMN_START_LNG, climb.startLng)
+                        put(ClimbsDbHelper.COLUMN_END_LAT, climb.endLat)
+                        put(ClimbsDbHelper.COLUMN_END_LNG, climb.endLng)
+                        put(ClimbsDbHelper.COLUMN_DISTANCE_M, climb.distanceMeters)
+                        put(ClimbsDbHelper.COLUMN_ELEVATION_GAIN_M, climb.elevationGainMeters)
+                        put(ClimbsDbHelper.COLUMN_AVG_GRADE, climb.avgGradePercent)
+                        put(ClimbsDbHelper.COLUMN_MAX_GRADE, climb.maxGradePercent)
+                        put(ClimbsDbHelper.COLUMN_CATEGORY, climb.category.name)
+                        put(ClimbsDbHelper.COLUMN_PATH_POLYLINE, serializePathPoints(climb.pathPoints))
+                    }
+                    val newId = db.insert(ClimbsDbHelper.TABLE_CLIMBS, null, values)
+                    resultIds.add(newId)
+                    existingClimbs.add(climb.copy(id = newId))
+                }
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        resultIds
+    }
+
+    /**
      * Retrieves all stored climbs.
      */
     suspend fun getAllClimbs(): List<Climb> = withContext(dbDispatcher) {

@@ -179,10 +179,7 @@ class RoutesRepository internal constructor(
         try {
             val detectedClimbs = ClimbDetector.detectClimbs(path, routeId = newId)
             if (detectedClimbs.isNotEmpty()) {
-                val climbsDb = ClimbsDatabaseManager.getInstance(context)
-                for (climb in detectedClimbs) {
-                    climbsDb.insertClimbWithDeduplication(climb)
-                }
+                ClimbsDatabaseManager.getInstance(context).insertClimbsWithDeduplicationBatch(detectedClimbs)
             }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to extract climbs for route $newId", e)
@@ -381,6 +378,16 @@ class RoutesRepository internal constructor(
                     // Store the persistent link
                     if (clusterId != -1L) {
                         routesDb.updateRouteSummary(summary.copy(id = newId, clusterId = clusterId))
+                    }
+
+                    // Detect and persist climbs for Strava route (ATT-1281 / REQ-MAP-027)
+                    try {
+                        val detectedClimbs = ClimbDetector.detectClimbs(pathPoints, routeId = newId)
+                        if (detectedClimbs.isNotEmpty()) {
+                            ClimbsDatabaseManager.getInstance(context).insertClimbsWithDeduplicationBatch(detectedClimbs)
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to extract climbs for Strava route $newId", e)
                     }
                 }
 

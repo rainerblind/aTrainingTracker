@@ -200,4 +200,49 @@ class ClimbsDatabaseManagerTest {
         assertEquals(1, deleted)
         verify { mockDb.delete(ClimbsDbHelper.TABLE_CLIMBS, "${ClimbsDbHelper.COLUMN_ID} = ?", arrayOf("42")) }
     }
+
+    @Test
+    fun insertClimbsWithDeduplicationBatch_executesInTransaction() = runBlocking {
+        every { mockDb.beginTransaction() } just Runs
+        every { mockDb.setTransactionSuccessful() } just Runs
+        every { mockDb.endTransaction() } just Runs
+
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        every { mockCursor.moveToNext() } returns false
+        every { mockDb.query(ClimbsDbHelper.TABLE_CLIMBS, null, null, null, null, null, any()) } returns mockCursor
+        every { mockDb.insert(any(), any(), any()) } returns 101L andThen 102L
+
+        val climbs = listOf(
+            Climb(
+                name = "Hill 1",
+                startLat = 48.0,
+                startLng = 11.0,
+                endLat = 48.01,
+                endLng = 11.02,
+                distanceMeters = 1500.0,
+                elevationGainMeters = 90.0,
+                avgGradePercent = 6.0,
+                maxGradePercent = 9.0,
+                category = ClimbCategory.CAT_4
+            ),
+            Climb(
+                name = "Hill 2",
+                startLat = 48.1,
+                startLng = 11.1,
+                endLat = 48.11,
+                endLng = 11.12,
+                distanceMeters = 2000.0,
+                elevationGainMeters = 120.0,
+                avgGradePercent = 6.0,
+                maxGradePercent = 10.0,
+                category = ClimbCategory.CAT_3
+            )
+        )
+
+        val ids = manager.insertClimbsWithDeduplicationBatch(climbs)
+        assertEquals(listOf(101L, 102L), ids)
+        verify { mockDb.beginTransaction() }
+        verify { mockDb.setTransactionSuccessful() }
+        verify { mockDb.endTransaction() }
+    }
 }
