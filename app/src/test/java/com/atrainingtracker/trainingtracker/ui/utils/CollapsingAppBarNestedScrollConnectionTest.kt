@@ -76,53 +76,72 @@ class CollapsingAppBarNestedScrollConnectionTest {
     }
 
     @Test
-    fun testDownwardScroll_doesNotConsumeInPreScroll_defersToChild() {
+    fun testDownwardScroll_consumesInPreScroll_andExpandsImmediately() {
         // First collapse partially
         connection.onPreScroll(Offset(0f, -200f), NestedScrollSource.UserInput)
         assertEquals(-200, connection.appBarOffset)
 
-        // Downward scroll in onPreScroll must return Offset.Zero so child view can scroll
+        // Downward scroll in onPreScroll must immediately consume and expand header (Quick Return - REQ-UI-266)
         val preConsumed = connection.onPreScroll(
             available = Offset(0f, 50f),
             source = NestedScrollSource.UserInput
         )
 
-        assertEquals(Offset.Zero, preConsumed)
-        assertEquals(-200, connection.appBarOffset) // Offset remains unchanged
+        assertEquals(50f, preConsumed.y, 0.001f)
+        assertEquals(-150, connection.appBarOffset)
     }
 
     @Test
-    fun testDownwardScroll_expandsInPostScroll_whenChildReachedBoundary() {
-        // Collapse fully
-        connection.onPreScroll(Offset(0f, -300f), NestedScrollSource.UserInput)
-        assertEquals(-300, connection.appBarOffset)
-
-        // Child reaches top, leftover delta passed to onPostScroll
-        val postConsumed = connection.onPostScroll(
-            consumed = Offset.Zero,
-            available = Offset(0f, 120f),
-            source = NestedScrollSource.UserInput
-        )
-
-        assertEquals(120f, postConsumed.y, 0.001f)
-        assertEquals(-180, connection.appBarOffset)
-    }
-
-    @Test
-    fun testDownwardScroll_clampsAtZeroInPostScroll() {
-        // Partially collapsed
+    fun testDownwardScroll_clampsAtZero_andDefersExcessToChild() {
+        // Partially collapsed to -100
         connection.onPreScroll(Offset(0f, -100f), NestedScrollSource.UserInput)
         assertEquals(-100, connection.appBarOffset)
 
-        // Downward scroll exceeds remaining offset
-        val postConsumed = connection.onPostScroll(
-            consumed = Offset.Zero,
+        // Downward scroll of 250f exceeds remaining range (100f)
+        val preConsumed = connection.onPreScroll(
             available = Offset(0f, 250f),
             source = NestedScrollSource.UserInput
         )
 
-        assertEquals(100f, postConsumed.y, 0.001f)
+        // Consumes exactly 100f to reach 0; leaves remaining 150f unconsumed for child
+        assertEquals(100f, preConsumed.y, 0.001f)
         assertEquals(0, connection.appBarOffset)
+
+        // Further downward scroll when fully expanded must return Offset.Zero
+        val nextConsumed = connection.onPreScroll(
+            available = Offset(0f, 150f),
+            source = NestedScrollSource.UserInput
+        )
+        assertEquals(Offset.Zero, nextConsumed)
+        assertEquals(0, connection.appBarOffset)
+    }
+
+    @Test
+    fun testDownwardScroll_whenQuickReturnDisabled_defersToPostScroll() {
+        val nonQuickConnection = CollapsingAppBarNestedScrollConnection(
+            initialAppBarMaxHeight = 300,
+            quickReturn = false
+        )
+        // Collapse fully
+        nonQuickConnection.onPreScroll(Offset(0f, -300f), NestedScrollSource.UserInput)
+        assertEquals(-300, nonQuickConnection.appBarOffset)
+
+        // Downward scroll in onPreScroll returns Zero when quickReturn is false
+        val preConsumed = nonQuickConnection.onPreScroll(
+            available = Offset(0f, 50f),
+            source = NestedScrollSource.UserInput
+        )
+        assertEquals(Offset.Zero, preConsumed)
+        assertEquals(-300, nonQuickConnection.appBarOffset)
+
+        // Child reaches top, unconsumed delta passed to onPostScroll
+        val postConsumed = nonQuickConnection.onPostScroll(
+            consumed = Offset.Zero,
+            available = Offset(0f, 120f),
+            source = NestedScrollSource.UserInput
+        )
+        assertEquals(120f, postConsumed.y, 0.001f)
+        assertEquals(-180, nonQuickConnection.appBarOffset)
     }
 
     @Test
