@@ -210,6 +210,26 @@ class ControlTrackingPermissionTest {
     }
 
     @Test
+    fun testBatteryOptimization_launchesDirectActionRequestIgnoreBatteryOptimizations() {
+        mockkStatic(android.net.Uri::class)
+        val mockUri = mockk<android.net.Uri>()
+        every { android.net.Uri.parse("package:com.atrainingtracker") } returns mockUri
+
+        val mockContext = mockk<Context>(relaxed = true)
+        every { mockContext.packageName } returns "com.atrainingtracker"
+        val intentSlot = slot<Intent>()
+        every { mockContext.startActivity(capture(intentSlot)) } returns Unit
+        every { anyConstructed<Intent>().action } returns android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+        every { anyConstructed<Intent>().data } returns mockUri
+
+        launchBatteryOptimizationIntent(mockContext)
+
+        verify(exactly = 1) { mockContext.startActivity(any()) }
+        assertEquals(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, intentSlot.captured.action)
+        assertEquals(mockUri, intentSlot.captured.data)
+    }
+
+    @Test
     fun testFailSafeBatteryOptimizationLaunch_doesNotCrashOnActivityNotFoundException() {
         val mockContext = mockk<Context>(relaxed = true)
         every { mockContext.packageName } returns "com.atrainingtracker"

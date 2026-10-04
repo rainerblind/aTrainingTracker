@@ -121,19 +121,24 @@ fun ControlTrackingScreen(
 
     val proceedAfterPermissions: () -> Unit = {
         if (!checkHasBackgroundLocation()) {
+            val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+            val hasRequestedBg = prefs.getBoolean("pref_has_requested_bg_perms", false)
             val activity = context as? android.app.Activity
-            if (activity != null) {
+            if (activity != null && hasRequestedBg) {
                 val showRationale = androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(
                     activity,
                     android.Manifest.permission.ACCESS_BACKGROUND_LOCATION
                 )
                 isPermanentlyDenied = !showRationale && !checkHasBackgroundLocation()
+            } else {
+                isPermanentlyDenied = false
             }
             rationaleStep = RationaleStep.BACKGROUND_LOCATION
         } else if (!checkIsIgnoringBatteryOptimizations()) {
             isPermanentlyDenied = false
             rationaleStep = RationaleStep.BATTERY_OPTIMIZATION
         } else {
+            isPermanentlyDenied = false
             rationaleStep = RationaleStep.NONE
             onStart()
         }
@@ -142,6 +147,8 @@ fun ControlTrackingScreen(
     val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
+        val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+        prefs.edit().putBoolean("pref_has_requested_foreground_perms", true).apply()
         val fineGranted = results[android.Manifest.permission.ACCESS_FINE_LOCATION] == true
         val coarseGranted = results[android.Manifest.permission.ACCESS_COARSE_LOCATION] == true
         val granted = fineGranted || coarseGranted
@@ -164,6 +171,8 @@ fun ControlTrackingScreen(
     val bgLocationLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
     ) { granted ->
+        val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+        prefs.edit().putBoolean("pref_has_requested_bg_perms", true).apply()
         if (granted || checkHasBackgroundLocation()) {
             isPermanentlyDenied = false
             if (!checkIsIgnoringBatteryOptimizations()) {
@@ -198,6 +207,7 @@ fun ControlTrackingScreen(
                     proceedAfterPermissions()
                 } else if (checkIsIgnoringBatteryOptimizations() && rationaleStep == RationaleStep.BATTERY_OPTIMIZATION) {
                     rationaleStep = RationaleStep.NONE
+                    onStart()
                 }
             }
         }
@@ -209,13 +219,17 @@ fun ControlTrackingScreen(
 
     val handleStartClick = {
         if (!checkHasLocation()) {
+            val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+            val hasRequestedForeground = prefs.getBoolean("pref_has_requested_foreground_perms", false)
             val activity = context as? android.app.Activity
-            if (activity != null) {
+            if (activity != null && hasRequestedForeground) {
                 val showRationale = androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(
                     activity,
                     android.Manifest.permission.ACCESS_FINE_LOCATION
                 )
                 isPermanentlyDenied = !showRationale && !hasLocationPermission
+            } else {
+                isPermanentlyDenied = false
             }
             rationaleStep = RationaleStep.FOREGROUND
         } else {
@@ -337,6 +351,8 @@ fun ControlTrackingScreen(
             onContinue = {
                 when (rationaleStep) {
                     RationaleStep.FOREGROUND -> {
+                        val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+                        prefs.edit().putBoolean("pref_has_requested_foreground_perms", true).apply()
                         permissionLauncher.launch(permissionsToRequest)
                     }
                     RationaleStep.BACKGROUND_LOCATION -> {
@@ -344,6 +360,8 @@ fun ControlTrackingScreen(
                             openSettingsAction()
                         } else {
                             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                                val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+                                prefs.edit().putBoolean("pref_has_requested_bg_perms", true).apply()
                                 bgLocationLauncher.launch(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION)
                             } else {
                                 proceedAfterPermissions()
@@ -353,7 +371,6 @@ fun ControlTrackingScreen(
                     RationaleStep.BATTERY_OPTIMIZATION -> {
                         launchBatteryOptimizationIntent(context)
                         rationaleStep = RationaleStep.NONE
-                        onStart()
                     }
                     RationaleStep.NONE -> {}
                 }
