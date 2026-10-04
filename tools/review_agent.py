@@ -293,8 +293,8 @@ def get_git_diff():
     """Returns complete ticket diff against sprint or develop merge-base, including uncommitted changes."""
     try:
         branches = subprocess.check_output(["git", "branch", "--list", "sprint/*"], stderr=subprocess.DEVNULL).decode("utf-8").strip().splitlines()
-        for b in branches:
-            clean_b = b.replace("*", "").strip()
+        branches = sorted([b.replace("*", "").strip() for b in branches if b.strip()], reverse=True)
+        for clean_b in branches:
             if clean_b:
                 base = subprocess.check_output(["git", "merge-base", clean_b, "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
                 diff = subprocess.check_output(["git", "diff", base], stderr=subprocess.DEVNULL).decode("utf-8")
