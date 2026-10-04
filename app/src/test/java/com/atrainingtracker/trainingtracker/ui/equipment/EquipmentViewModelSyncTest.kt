@@ -83,6 +83,7 @@ class EquipmentViewModelSyncTest {
     @After
     fun tearDown() {
         setStaticField(com.atrainingtracker.trainingtracker.TrainingApplication::class.java, "cSharedPreferences", null)
+        EquipmentRepository.resetForTesting(null)
         Dispatchers.resetMain()
         unmockkAll()
     }

@@ -39,8 +39,10 @@ import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -53,7 +55,10 @@ import kotlinx.coroutines.withContext
  * It abstracts the data source (database) from the ViewModels.
  */
 
-class DeviceDataRepository private constructor(private val application: Application) {
+class DeviceDataRepository @androidx.annotation.VisibleForTesting internal constructor(
+    private val application: Application,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) {
     companion object {
         private val TAG = DeviceDataRepository::class.java.simpleName
         private val DEBUG = BANALService.getDebug(true)
@@ -77,11 +82,17 @@ class DeviceDataRepository private constructor(private val application: Applicat
 
         @androidx.annotation.VisibleForTesting
         fun resetForTesting(newInstance: DeviceDataRepository? = null) {
+            INSTANCE?.repositoryScope?.cancel()
             INSTANCE = newInstance
         }
     }
 
     private val repositoryScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
+    @androidx.annotation.VisibleForTesting
+    fun cancelScopeForTesting() {
+        repositoryScope.cancel()
+    }
 
     // access to the databases
     private val devicesDatabaseManager by lazy { DevicesDatabaseManager.getInstance(application) }
@@ -134,7 +145,7 @@ class DeviceDataRepository private constructor(private val application: Applicat
      * from the database, translates it and updates it in the main list.
      */
     suspend fun refreshDeviceFromDb(id: Long) {
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             val refreshedRawDeviceData = devicesDatabaseManager.getDeviceCursor(id)?.use { cursor ->
                 if (cursor.moveToFirst()) mapper.getDeviceData(cursor) else null
             }
@@ -156,7 +167,7 @@ class DeviceDataRepository private constructor(private val application: Applicat
      * Loads or reloads all devices from the database and updates the LiveData.
      */
     suspend fun loadAllDevices() {
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             val uiDeviceDataList = mutableListOf<DeviceUiData>()
             devicesDatabaseManager.getCursorForAllDevices()?.use { c ->
                 if (c.moveToFirst()) {
@@ -195,7 +206,7 @@ class DeviceDataRepository private constructor(private val application: Applicat
      */
     suspend fun updateDevice(finalState: DeviceUiData) {
         // It's safer to run this logic on a background thread.
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             // We need to compare the finalState with the original state to see what changed.
             val originalState = getDeviceSnapshotById(finalState.id) ?: return@withContext
 

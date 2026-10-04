@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.repositories
 
 import android.app.Application
+import android.util.Log
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import kotlinx.coroutines.CoroutineScope
@@ -68,7 +69,8 @@ class EquipmentRepository private constructor(private val application: Applicati
             _isSyncing.value = false
         }
 
-        private val _equipmentLinksChanged = MutableSharedFlow<Long?>(
+        @Volatile
+        private var _equipmentLinksChanged = MutableSharedFlow<Long?>(
             extraBufferCapacity = 64,
             onBufferOverflow = BufferOverflow.DROP_OLDEST
         )
@@ -79,7 +81,8 @@ class EquipmentRepository private constructor(private val application: Applicati
          * Emits null when a bulk or equipment-level modification occurs.
          */
         @JvmStatic
-        val equipmentLinksChanged: SharedFlow<Long?> = _equipmentLinksChanged.asSharedFlow()
+        val equipmentLinksChanged: SharedFlow<Long?>
+            get() = _equipmentLinksChanged.asSharedFlow()
 
         /**
          * Dispatches an equipment link mutation event across the application (REQ-UI-257).
@@ -89,7 +92,11 @@ class EquipmentRepository private constructor(private val application: Applicati
          */
         @JvmStatic
         fun notifyEquipmentLinksChanged(affectedDeviceId: Long? = null) {
-            _equipmentLinksChanged.tryEmit(affectedDeviceId)
+            try {
+                _equipmentLinksChanged.tryEmit(affectedDeviceId)
+            } catch (t: Throwable) {
+                if (DEBUG) Log.w(TAG, "Failed to emit equipmentLinksChanged event: ${t.message}")
+            }
         }
 
         // The single, volatile instance of the repository.
@@ -120,6 +127,10 @@ class EquipmentRepository private constructor(private val application: Applicati
         @androidx.annotation.VisibleForTesting
         fun resetForTesting(newInstance: EquipmentRepository? = null) {
             INSTANCE = newInstance
+            _equipmentLinksChanged = MutableSharedFlow(
+                extraBufferCapacity = 64,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST
+            )
         }
     }
 }

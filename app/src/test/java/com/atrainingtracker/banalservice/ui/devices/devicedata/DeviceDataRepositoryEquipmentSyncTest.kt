@@ -58,6 +58,7 @@ class DeviceDataRepositoryEquipmentSyncTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        DeviceDataRepository.resetForTesting(null)
 
         mockkStatic(Log::class)
         every { Log.d(any<String>(), any<String>()) } returns 0
@@ -84,6 +85,7 @@ class DeviceDataRepositoryEquipmentSyncTest {
     @After
     fun tearDown() {
         DeviceDataRepository.resetForTesting(null)
+        EquipmentRepository.resetForTesting(null)
         EquipmentAndSportTypeDiscoveryManager.resetForTesting(null)
         Dispatchers.resetMain()
         unmockkAll()
@@ -142,8 +144,9 @@ class DeviceDataRepositoryEquipmentSyncTest {
         )
         every { anyConstructed<RawDeviceDataProvider>().getDeviceData(mockCursor) } returns mockRawData
 
-        // Initialize repository
-        val repository = DeviceDataRepository.getInstance(mockApplication)
+        // Initialize repository with testDispatcher
+        val repository = DeviceDataRepository(mockApplication, testDispatcher)
+        DeviceDataRepository.resetForTesting(repository)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Act: Equipment links changed for device 42
