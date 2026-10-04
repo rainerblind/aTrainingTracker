@@ -371,6 +371,7 @@
     <string name="jsonWrite">exporter en JSON Golden Cheetah</string>
     <string name="tcxWrite">exporter en TCX</string>
     <string name="gpxWrite">exporter en GPX</string>
+    <string name="fitWrite">exporter en FIT</string>
     <string name="stravaUpload">téléverser sur Strava</string>
     <string name="runkeeperUpload">téléverser sur Runkeeper</string>
     <string name="trainingPeaksUpload">téléverser sur TrainingPeaks</string>
@@ -1148,6 +1149,7 @@
     <string name="filter_section_sport">Type de sport</string>
     <string name="filter_section_equipment">Équipement</string>
     <string name="filter_section_attributes">Attributs</string>
+    <string name="filter_section_origin_source">Source de données</string>
     <string name="filter_section_thresholds">Distance et durée</string>
     <string name="filter_section_start_at">Départ à</string>
     <string name="settings_workout_card_title">Liste d\'entraînements (cartes détaillées)</string>
@@ -1222,7 +1224,7 @@
     <string name="cluster_info_what_title">Que sont les Parcours favoris ?</string>
     <string name="cluster_info_what_desc">Lorsque vous vous entraînez plusieurs fois sur le même itinéraire, l\'application le détecte automatiquement et regroupe ces séances au sein d\'un Parcours favori (cluster). Cela permet un nommage automatique (ex. « Tour du Lac d\'Annecy #5 »), le suivi de l\'équipement et la comparaison des performances sur des trajets identiques.</string>
     <string name="cluster_info_fingerprint_title">Empreinte topologique 3D</string>
-    <string name="cluster_info_fingerprint_desc">Les itinéraires sont comparés à l\'aide d\'un algorithme simple mais étonnamment efficace, basé sur une signature spatiale multidimensionnelle plutôt que sur des tracés GPS point par point. Cet algorithme tolère de petites variations, mais sépare nettement les entraînements lorsqu\'ils sont réellement différents :&#10;• Départ &amp; Arrivée : Coordonnées géographiques de départ et d\'arrivée (tolérance : 200 m).&#10;• Apex (Point le plus éloigné) : Le point le plus distant du départ (tolérance : 400 m).&#10;• Distance totale : Longueur totale du parcours (tolérance : 20 %).&#10;• Altitude min. et max. : Emplacements géographiques des altitudes minimale et maximale (tolérance : 400 m, facultatif). Cela sépare nettement les vallées des crêtes aux tracés comparables.</string>
+    <string name="cluster_info_fingerprint_desc">Les itinéraires sont comparés à l\'aide d\'un algorithme simple mais étonnamment efficace, basé sur une signature spatiale multidimensionnelle plutôt que sur des tracés GPS point par point. Cet algorithme tolère de petites variations, mais sépare nettement les entraînements lorsqu\'ils sont réellement différents :\n• Départ &amp; Arrivée : Coordonnées géographiques de départ et d\'arrivée (tolérance : 200 m).\n• Apex (Point le plus éloigné) : Le point le plus distant du départ (tolérance : 400 m).\n• Distance totale : Longueur totale du parcours (tolérance : 20 %).\n• Altitude min. et max. : Emplacements géographiques des altitudes minimale et maximale (tolérance : 400 m, facultatif). Cela sépare nettement les vallées des crêtes aux tracés comparables.</string>
     <string name="cluster_info_sports_title">Séparation par sport et centroïde adaptatif</string>
     <string name="cluster_info_sports_desc">Les parcours favoris peuvent séparer les sports, garantissant que sorties vélo et courses à pied ne se mélangent pas. Au fil de vos entraînements, le cluster ajuste dynamiquement ses coordonnées de référence via un centroïde pondéré.</string>
     <string name="cluster_info_tuning_title">Sensibilité et réglage des paramètres</string>

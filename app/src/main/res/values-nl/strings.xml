@@ -371,6 +371,7 @@
     <string name="jsonWrite">naar Golden Cheetah JSON exporteren</string>
     <string name="tcxWrite">naar TCX exporteren</string>
     <string name="gpxWrite">naar GPX exporteren</string>
+    <string name="fitWrite">naar FIT exporteren</string>
     <string name="stravaUpload">naar Strava uploaden</string>
     <string name="runkeeperUpload">naar Runkeeper uploaden</string>
     <string name="trainingPeaksUpload">naar TrainingPeaks uploaden</string>
@@ -1147,6 +1148,7 @@
     <string name="filter_section_sport">Sporttype</string>
     <string name="filter_section_equipment">Uitrusting</string>
     <string name="filter_section_attributes">Kenmerken</string>
+    <string name="filter_section_origin_source">Gegevensbron</string>
     <string name="filter_section_thresholds">Afstand &amp; tijdsduur</string>
     <string name="filter_section_start_at">Start bij</string>
     <string name="settings_workout_card_title">Trainingslijst (gedetailleerde kaarten)</string>
@@ -1221,7 +1223,7 @@
     <string name="cluster_info_what_title">Wat zijn Favoriete routes?</string>
     <string name="cluster_info_what_desc">Wanneer je herhaaldelijk dezelfde route aflegt, herkent de app dit automatisch en groepeert de sessies in een Favoriete route (cluster). Dit maakt automatische naamgeving mogelijk (bijv. „Rondje IJsselmeer #5”), evenals uitrustingsregistratie en directe prestatievergelijkingen over identieke trajecten.</string>
     <string name="cluster_info_fingerprint_title">3D Topologische vingerafdruk</string>
-    <string name="cluster_info_fingerprint_desc">Routes worden vergeleken met een eenvoudig maar verrassend goed algoritme op basis van een multidimensionale ruimtelijke handtekening in plaats van punt-voor-punt GPS-sporen. Dit algoritme biedt tolerantie voor kleine variaties, maar scheidt trainingen betrouwbaar wanneer ze echt verschillend zijn:&#10;• Start &amp; Finish: Geografische begin- en eindpunten (tolerantie: 200 m).&#10;• Apex (Verste punt): Het punt op de route dat het verst van de start ligt (tolerantie: 400 m).&#10;• Totale afstand: Totale routelengte (tolerantie: 20%).&#10;• Min &amp; Max hoogte: Geografische locaties van het laagste en hoogste punt (tolerantie: 400 m, optioneel). Dit onderscheidt dalroutes betrouwbaar van bergkammen met vergelijkbare omtrekken.</string>
+    <string name="cluster_info_fingerprint_desc">Routes worden vergeleken met een eenvoudig maar verrassend goed algoritme op basis van een multidimensionale ruimtelijke handtekening in plaats van punt-voor-punt GPS-sporen. Dit algoritme biedt tolerantie voor kleine variaties, maar scheidt trainingen betrouwbaar wanneer ze echt verschillend zijn:\n• Start &amp; Finish: Geografische begin- en eindpunten (tolerantie: 200 m).\n• Apex (Verste punt): Het punt op de route dat het verst van de start ligt (tolerantie: 400 m).\n• Totale afstand: Totale routelengte (tolerantie: 20%).\n• Min &amp; Max hoogte: Geografische locaties van het laagste en hoogste punt (tolerantie: 400 m, optioneel). Dit onderscheidt dalroutes betrouwbaar van bergkammen met vergelijkbare omtrekken.</string>
     <string name="cluster_info_sports_title">Sportonderscheid &amp; Lerend zwaartepunt</string>
     <string name="cluster_info_sports_desc">Favoriete routes kunnen sporttypes scheiden, zodat fietstochten en hardloopsessies op hetzelfde pad niet worden samengevoegd. Naarmate er meer trainingen worden toegevoegd, past het cluster zijn referentiecoördinaten dynamisch aan via een gewogen zwaartepunt (centroid).</string>
     <string name="cluster_info_tuning_title">Gevoeligheid &amp; Parameterinstellingen</string>

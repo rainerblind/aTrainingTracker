@@ -470,6 +470,7 @@
     <string name="jsonWrite">export to Golden Cheetah json</string>
     <string name="tcxWrite">export to TCX</string>
     <string name="gpxWrite">export to GPX</string>
+    <string name="fitWrite">export to FIT</string>
     <!--     <string name="gpxShow">show GPX data in other application</string>  -->
     <!-- 	<string name="deleteWorkout">delete Workout</string> -->
     <string name="stravaUpload">upload to Strava</string>
@@ -1340,6 +1341,7 @@
     <string name="filter_section_sport">Sport Type</string>
     <string name="filter_section_equipment">Equipment</string>
     <string name="filter_section_attributes">Attributes</string>
+    <string name="filter_section_origin_source">Origin Source</string>
     <string name="filter_section_thresholds">Distance &amp; Duration</string>
     <string name="filter_section_start_at">Start at</string>
     <string name="settings_workout_card_title">Workout List (Detailed Cards)</string>
@@ -1414,7 +1416,7 @@
     <string name="cluster_info_what_title">What are Favorite Tracks?</string>
     <string name="cluster_info_what_desc">When you record multiple activities along the same route, the app automatically recognizes and groups them into a Favorite Track (Workout Cluster). This allows automatic naming (e.g. \"Lake Tahoe Loop #5\"), gear tracking, and comparing your performance across repeated efforts on identical courses.</string>
     <string name="cluster_info_fingerprint_title">3D Topological Fingerprint</string>
-    <string name="cluster_info_fingerprint_desc">Routes are compared using a simple but surprisingly good algorithm based on a multidimensional spatial signature rather than point-by-point GPS traces. This algorithm gives some tolerance to small variations, but separates the workouts when they are really different:&#10;• Start &amp; End: Geographical start and finish locations (default tolerance: 200 m).&#10;• Apex (Furthest Point): The point along the route furthest away from the start (default tolerance: 400 m).&#10;• Total Distance: Overall route length (default tolerance: 20%).&#10;• Min &amp; Max Altitude: Geographical locations of lowest and highest elevation (default tolerance: 400 m, optional). This reliably separates valley routes from mountain ridges with otherwise similar footprints.</string>
+    <string name="cluster_info_fingerprint_desc">Routes are compared using a simple but surprisingly good algorithm based on a multidimensional spatial signature rather than point-by-point GPS traces. This algorithm gives some tolerance to small variations, but separates the workouts when they are really different:\n• Start &amp; End: Geographical start and finish locations (default tolerance: 200 m).\n• Apex (Furthest Point): The point along the route furthest away from the start (default tolerance: 400 m).\n• Total Distance: Overall route length (default tolerance: 20%).\n• Min &amp; Max Altitude: Geographical locations of lowest and highest elevation (default tolerance: 400 m, optional). This reliably separates valley routes from mountain ridges with otherwise similar footprints.</string>
     <string name="cluster_info_sports_title">Sport Awareness &amp; Adaptive Centroid</string>
     <string name="cluster_info_sports_desc">Favorite Tracks can enforce sport-type matching, ensuring bike rides and runs along the same trail are kept in distinct clusters. As you record more workouts on a route, the cluster automatically refines its reference coordinates by computing a weighted running average (centroid).</string>
     <string name="cluster_info_tuning_title">Sensitivity &amp; Parameter Tuning</string>

@@ -382,6 +382,7 @@ fun WorkoutHeader(
                             val standardFormats = listOf(
                                 FileFormat.TCX to R.string.tcxWrite,
                                 FileFormat.GPX to R.string.gpxWrite,
+                                FileFormat.FIT to R.string.fitWrite,
                                 FileFormat.CSV to R.string.csvWrite,
                                 FileFormat.GC to R.string.jsonWrite
                             )

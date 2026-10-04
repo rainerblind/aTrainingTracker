@@ -33,7 +33,28 @@ class ExportStatusDataProvider(private val context: Context) {
      */
     fun createGroupData(fileBaseName: String, exportType: ExportType): ExportStatusGroupData {
         val allRows = ExportStatusDatabaseManager.getInstance(context).getExportRows(fileBaseName)
-        val rows = allRows.filter { it.type == exportType }
+        val rawRows = allRows.filter { it.type == exportType }
+
+        // If this exportType has any activity/rows for this workout, synthesize missing supported formats (e.g. FIT on legacy workouts)
+        val rows = if (rawRows.isNotEmpty()) {
+            val existingFormats = rawRows.map { it.format }.toSet()
+            val missingRows = exportType.exportToFileFormats
+                .filter { it !in existingFormats }
+                .map { format ->
+                    ExportStatusDatabaseManager.ExportRow(
+                        exportType,
+                        format,
+                        ExportStatus.UNWANTED,
+                        null
+                    )
+                }
+            (rawRows + missingRows).sortedBy {
+                val idx = exportType.exportToFileFormats.indexOf(it.format)
+                if (idx >= 0) idx else Int.MAX_VALUE
+            }
+        } else {
+            rawRows
+        }
         
         val jobs = rows.associate { it.format to it.status }
 

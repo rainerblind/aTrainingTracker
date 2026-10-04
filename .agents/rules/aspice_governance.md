@@ -109,3 +109,9 @@ These rules are strictly binding on all AI assistants and agent instances operat
 * Setting Fix Version prematurely distorts sprint metrics, pollutes release changelogs, and creates stale version tags if a ticket is rejected, postponed, or shifted across sprints.
 * Sub-tasks must NEVER receive a `Lösungsversion` (Rule 6). For parent tickets, `fixVersions` must remain unset until final acceptance and completion.
 
+## 20. Database & DTO Mapping Symmetry
+* **Rule**: When adding or altering entity/database fields, all mapping pathways (single-item `fromCursor`, batch `fromCursor(cursor, batch)`, and repository cache updaters) MUST map the fields symmetrically. Relying on default constructor arguments without explicitly mapping in all cursor overloads is prohibited, and must be guarded by architectural contract tests.
+
+## 21. Specific Direct Platform Intents Over Generic App Settings
+* **Rule**: User prompts for system permissions, battery optimization, or hardware settings must target the most specific direct intent (e.g. direct system permission request, `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`). Navigating to generic Application Details Settings (`ACTION_APPLICATION_DETAILS_SETTINGS`) is only permissible as a last-resort fallback when direct intents are unavailable or permissions permanently blocked.
+

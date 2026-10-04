@@ -33,7 +33,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
@@ -46,8 +48,7 @@ private data class MatrixFeatureRow(
     val listChecked: Boolean,
     val onListChange: (Boolean) -> Unit,
     val detailChecked: Boolean,
-    val onDetailChange: (Boolean) -> Unit,
-    val isLaps: Boolean = false
+    val onDetailChange: (Boolean) -> Unit
 )
 
 /**
@@ -95,16 +96,18 @@ fun WorkoutMasksAndCardsSection(
                 .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Spacer(modifier = Modifier.width(64.dp))
+            Spacer(modifier = Modifier.width(32.dp))
             Text(
                 text = stringResource(R.string.tuning_matrix_feature),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 4.dp)
             )
             Box(
-                modifier = Modifier.width(64.dp),
+                modifier = Modifier.width(50.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -115,7 +118,7 @@ fun WorkoutMasksAndCardsSection(
                 )
             }
             Box(
-                modifier = Modifier.width(64.dp),
+                modifier = Modifier.width(50.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -154,8 +157,7 @@ fun WorkoutMasksAndCardsSection(
                     listChecked = workoutCardPrefs.showLaps,
                     onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showLaps = it)) },
                     detailChecked = workoutDetailPrefs.showLaps,
-                    onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showLaps = it)) },
-                    isLaps = true
+                    onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showLaps = it)) }
                 )
                 WorkoutSectionType.STRAVA -> MatrixFeatureRow(
                     sectionType = type,
@@ -218,43 +220,47 @@ fun WorkoutMasksAndCardsSection(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.width(64.dp),
-                        horizontalArrangement = Arrangement.Start,
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier.width(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
                         IconButton(
                             onClick = { moveSection(index, index - 1) },
                             enabled = index > 0,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(22.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.KeyboardArrowUp,
                                 contentDescription = stringResource(R.string.action_move_up),
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                         IconButton(
                             onClick = { moveSection(index, index + 1) },
                             enabled = index < features.size - 1,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(22.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.KeyboardArrowDown,
                                 contentDescription = stringResource(R.string.action_move_down),
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
 
                     Text(
                         text = stringResource(feature.titleRes),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 18.sp),
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 4.dp)
                     )
                     Box(
-                        modifier = Modifier.size(64.dp, 48.dp),
+                        modifier = Modifier.size(50.dp, 44.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Checkbox(
@@ -263,7 +269,7 @@ fun WorkoutMasksAndCardsSection(
                         )
                     }
                     Box(
-                        modifier = Modifier.size(64.dp, 48.dp),
+                        modifier = Modifier.size(50.dp, 44.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Checkbox(
@@ -272,37 +278,43 @@ fun WorkoutMasksAndCardsSection(
                         )
                     }
                 }
+            }
+        }
 
-                if (feature.isLaps && (workoutCardPrefs.showLaps || workoutDetailPrefs.showLaps)) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 8.dp, end = 8.dp, bottom = 8.dp, top = 2.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+        // Dedicated Lap Display Mode Sub-Setting Section (Decoupled from reorderable rows)
+        if (workoutCardPrefs.showLaps || workoutDetailPrefs.showLaps) {
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 4.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_lap_display_mode_title),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    SegmentedButton(
+                        selected = workoutCardPrefs.lapDisplayMode == LapDisplayMode.TABLE_ONLY,
+                        onClick = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(lapDisplayMode = LapDisplayMode.TABLE_ONLY)) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
                     ) {
-                        Text(
-                            text = stringResource(R.string.settings_lap_display_mode_title),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        SingleChoiceSegmentedButtonRow(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            SegmentedButton(
-                                selected = workoutCardPrefs.lapDisplayMode == LapDisplayMode.TABLE_ONLY,
-                                onClick = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(lapDisplayMode = LapDisplayMode.TABLE_ONLY)) },
-                                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
-                            ) {
-                                Text(stringResource(R.string.settings_lap_display_mode_table))
-                            }
-                            SegmentedButton(
-                                selected = workoutCardPrefs.lapDisplayMode == LapDisplayMode.VISUALIZER_ONLY,
-                                onClick = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(lapDisplayMode = LapDisplayMode.VISUALIZER_ONLY)) },
-                                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
-                            ) {
-                                Text(stringResource(R.string.settings_lap_display_mode_visualizer))
-                            }
-                        }
+                        Text(stringResource(R.string.settings_lap_display_mode_table))
+                    }
+                    SegmentedButton(
+                        selected = workoutCardPrefs.lapDisplayMode == LapDisplayMode.VISUALIZER_ONLY,
+                        onClick = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(lapDisplayMode = LapDisplayMode.VISUALIZER_ONLY)) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                    ) {
+                        Text(stringResource(R.string.settings_lap_display_mode_visualizer))
                     }
                 }
             }

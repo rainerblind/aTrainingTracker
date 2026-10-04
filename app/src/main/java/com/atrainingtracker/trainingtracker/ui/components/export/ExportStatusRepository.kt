@@ -121,7 +121,27 @@ class ExportStatusRepository private constructor(context: Context) {
     }
 
     fun createGroupData(exportType: ExportType, rows: List<ExportStatusDatabaseManager.ExportRow>): ExportStatusGroupData {
-        val jobs = rows.associate { it.format to it.status }
+        val effectiveRows = if (rows.isNotEmpty()) {
+            val existingFormats = rows.map { it.format }.toSet()
+            val missingRows = exportType.exportToFileFormats
+                .filter { it !in existingFormats }
+                .map { format ->
+                    ExportStatusDatabaseManager.ExportRow(
+                        exportType,
+                        format,
+                        ExportStatus.UNWANTED,
+                        null
+                    )
+                }
+            (rows + missingRows).sortedBy {
+                val idx = exportType.exportToFileFormats.indexOf(it.format)
+                if (idx >= 0) idx else Int.MAX_VALUE
+            }
+        } else {
+            rows
+        }
+
+        val jobs = effectiveRows.associate { it.format to it.status }
 
         val waitingJobsList = getWaitingJobsList(jobs)
         val runningJobsList = getRunningJobsList(jobs)
@@ -142,7 +162,7 @@ class ExportStatusRepository private constructor(context: Context) {
         val succeededLine = succeededJobsList.takeIf { it.isNotEmpty() }?.let { getResultLine(it, pluralsSuccessID) }
         val failedLine = failedJobsList.takeIf { it.isNotEmpty() }?.let { getResultLine(it, pluralsFailedID) }
 
-        val details = rows.map { row ->
+        val details = effectiveRows.map { row ->
             ExportDetail(
                 formatName = appContext.getString(row.format.uiNameId),
                 status = row.status.name,

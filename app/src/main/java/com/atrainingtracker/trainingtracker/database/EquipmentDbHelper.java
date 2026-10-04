@@ -30,6 +30,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.atrainingtracker.banalservice.BSportType;
+import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -229,6 +230,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         } finally {
             db.endTransaction();
         }
+        EquipmentRepository.notifyEquipmentLinksChanged(null);
     }
 
     public void updateEquipment(long id, String name, int frameType, @NonNull List<Long> linkedDeviceIds) {
@@ -280,6 +282,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
                 values.put(ANT_DEVICE_ID, deviceId);
                 db.insert(LINKS, null, values);
                 if (DEBUG) Log.d(TAG, "addDeviceLink: linked eq " + equipmentId + " to device " + deviceId);
+                EquipmentRepository.notifyEquipmentLinksChanged(deviceId);
             }
         } catch (Exception e) {
             Log.e(TAG, "Error adding device link: eq=" + equipmentId + ", dev=" + deviceId, e);
@@ -298,9 +301,12 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         }
         SQLiteDatabase db = this.getWritableDatabase();
         try {
-            db.delete(LINKS, EQUIPMENT_ID + "=? AND " + ANT_DEVICE_ID + "=?",
+            int deleted = db.delete(LINKS, EQUIPMENT_ID + "=? AND " + ANT_DEVICE_ID + "=?",
                     new String[]{String.valueOf(equipmentId), String.valueOf(deviceId)});
             if (DEBUG) Log.d(TAG, "removeDeviceLink: unlinked eq " + equipmentId + " from device " + deviceId);
+            if (deleted > 0) {
+                EquipmentRepository.notifyEquipmentLinksChanged(deviceId);
+            }
         } catch (Exception e) {
             Log.e(TAG, "Error removing device link: eq=" + equipmentId + ", dev=" + deviceId, e);
         }
@@ -337,6 +343,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         } finally {
             db.endTransaction();
         }
+        EquipmentRepository.notifyEquipmentLinksChanged(null);
     }
 
 
@@ -596,6 +603,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         }
 
         if (DEBUG) Log.d(TAG, "inserted");
+        EquipmentRepository.notifyEquipmentLinksChanged((long) antDeviceId);
     }
 
     private long getEquipmentId(@NonNull SQLiteDatabase db, @NonNull String equipmentName) {

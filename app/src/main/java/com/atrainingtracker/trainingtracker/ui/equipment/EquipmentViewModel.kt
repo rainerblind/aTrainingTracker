@@ -104,6 +104,19 @@ class EquipmentViewModel @JvmOverloads constructor(
     init {
         loadEquipment()
         observeSyncStatus()
+        observeExternalEquipmentLinks()
+    }
+
+    /**
+     * Observes external equipment link changes (e.g. from Sensor Settings / EditDeviceDialog)
+     * and reactively reloads equipment data (REQ-UI-257).
+     */
+    private fun observeExternalEquipmentLinks() {
+        viewModelScope.launch(ioDispatcher) {
+            EquipmentRepository.equipmentLinksChanged.collect {
+                loadEquipment()
+            }
+        }
     }
 
     /**
