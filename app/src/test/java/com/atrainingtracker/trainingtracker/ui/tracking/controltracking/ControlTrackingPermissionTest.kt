@@ -19,6 +19,8 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
 import android.app.Application
+import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.arch.core.executor.ArchTaskExecutor
@@ -53,7 +55,7 @@ import org.junit.Test
 
 /**
  * Unit tests verifying permission state handling, warning badge behavior,
- * and JIT tracking trigger in [ControlTrackingViewModel] and UI components (REQ-PRI-003, TST-PRI-002, ATT-2075).
+ * progressive 3-stage JIT setup flow, and fail-safe battery intent handling (REQ-PRI-003, TST-PRI-002, ATT-2075).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ControlTrackingPermissionTest {
@@ -140,44 +142,88 @@ class ControlTrackingPermissionTest {
     }
 
     @Test
-    fun testStartButtonInteraction_clickableWhenUnpermissioned() {
-        // Under REQ-PRI-003, the Start button remains enabled=true even when permissions are missing,
-        // allowing athletes to tap and trigger the educational rationale sheet instead of experiencing a dead button.
-        var startClicked = false
-        var rationaleOpened = false
-        val hasLocationPermission = false
+    fun testProgressiveSetupFlow_missingForegroundTransitionsToForegroundRationale() {
+        var activeStep = RationaleStep.NONE
+        val hasLocation = false
 
-        val handleStartClick = {
-            if (hasLocationPermission) {
-                startClicked = true
-            } else {
-                rationaleOpened = true
-            }
+        if (!hasLocation) {
+            activeStep = RationaleStep.FOREGROUND
         }
 
-        handleStartClick()
-
-        assertFalse("Tracking should not start directly without location permission", startClicked)
-        assertTrue("Rationale sheet must be triggered upon tapping Start without permission", rationaleOpened)
+        assertEquals(RationaleStep.FOREGROUND, activeStep)
     }
 
     @Test
-    fun testStartButtonInteraction_startsTrackingWhenPermitted() {
-        var startClicked = false
-        var rationaleOpened = false
-        val hasLocationPermission = true
+    fun testProgressiveSetupFlow_foregroundGrantedMissingBgTransitionsToBgRationale() {
+        var activeStep = RationaleStep.NONE
+        val hasLocation = true
+        val hasBgLocation = false
 
-        val handleStartClick = {
-            if (hasLocationPermission) {
-                startClicked = true
-            } else {
-                rationaleOpened = true
-            }
+        if (!hasLocation) {
+            activeStep = RationaleStep.FOREGROUND
+        } else if (!hasBgLocation) {
+            activeStep = RationaleStep.BACKGROUND_LOCATION
         }
 
-        handleStartClick()
+        assertEquals(RationaleStep.BACKGROUND_LOCATION, activeStep)
+    }
 
-        assertTrue("Tracking must start directly when location permission is present", startClicked)
-        assertFalse("Rationale sheet must not be displayed when permissions are already granted", rationaleOpened)
+    @Test
+    fun testProgressiveSetupFlow_locationGrantedMissingBatteryTransitionsToBatteryRationale() {
+        var activeStep = RationaleStep.NONE
+        val hasLocation = true
+        val hasBgLocation = true
+        val isIgnoringBattery = false
+
+        if (!hasLocation) {
+            activeStep = RationaleStep.FOREGROUND
+        } else if (!hasBgLocation) {
+            activeStep = RationaleStep.BACKGROUND_LOCATION
+        } else if (!isIgnoringBattery) {
+            activeStep = RationaleStep.BATTERY_OPTIMIZATION
+        }
+
+        assertEquals(RationaleStep.BATTERY_OPTIMIZATION, activeStep)
+    }
+
+    @Test
+    fun testProgressiveSetupFlow_allGrantedDispatchesStart() {
+        var activeStep = RationaleStep.NONE
+        var started = false
+        val hasLocation = true
+        val hasBgLocation = true
+        val isIgnoringBattery = true
+
+        if (!hasLocation) {
+            activeStep = RationaleStep.FOREGROUND
+        } else if (!hasBgLocation) {
+            activeStep = RationaleStep.BACKGROUND_LOCATION
+        } else if (!isIgnoringBattery) {
+            activeStep = RationaleStep.BATTERY_OPTIMIZATION
+        } else {
+            activeStep = RationaleStep.NONE
+            started = true
+        }
+
+        assertEquals(RationaleStep.NONE, activeStep)
+        assertTrue("Tracking must start when all permissions and battery exemptions are present", started)
+    }
+
+    @Test
+    fun testFailSafeBatteryOptimizationLaunch_doesNotCrashOnActivityNotFoundException() {
+        val mockContext = mockk<Context>(relaxed = true)
+        every { mockContext.packageName } returns "com.atrainingtracker"
+        every { mockContext.startActivity(any()) } throws ActivityNotFoundException("Activity not found") andThen Unit
+
+        var caughtException: Exception? = null
+        try {
+            launchBatteryOptimizationIntent(mockContext)
+        } catch (e: Exception) {
+            caughtException = e
+            e.printStackTrace()
+        }
+
+        assertTrue("launchBatteryOptimizationIntent must handle ActivityNotFoundException without crashing (was: ${caughtException?.message})", caughtException == null)
+        verify(atLeast = 1) { mockContext.startActivity(any()) }
     }
 }

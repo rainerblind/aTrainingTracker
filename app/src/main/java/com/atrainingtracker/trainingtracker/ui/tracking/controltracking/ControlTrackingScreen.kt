@@ -90,12 +90,54 @@ fun ControlTrackingScreen(
         ) == android.content.pm.PackageManager.PERMISSION_GRANTED
     }
 
+    val checkHasBackgroundLocation = {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.ACCESS_BACKGROUND_LOCATION
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+    }
+
+    val checkIsIgnoringBatteryOptimizations = {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            val pm = context.getSystemService(android.content.Context.POWER_SERVICE) as? android.os.PowerManager
+            pm?.isIgnoringBatteryOptimizations(context.packageName) == true
+        } else {
+            true
+        }
+    }
+
     var hasLocationPermission by remember {
         mutableStateOf(checkHasLocation())
     }
 
-    var showRationaleSheet by remember { mutableStateOf(false) }
+    var rationaleStep by androidx.compose.runtime.saveable.rememberSaveable {
+        mutableStateOf(RationaleStep.NONE)
+    }
     var isPermanentlyDenied by remember { mutableStateOf(false) }
+
+    val proceedAfterPermissions: () -> Unit = {
+        if (!checkHasBackgroundLocation()) {
+            val activity = context as? android.app.Activity
+            if (activity != null) {
+                val showRationale = androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(
+                    activity,
+                    android.Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                )
+                isPermanentlyDenied = !showRationale && !checkHasBackgroundLocation()
+            }
+            rationaleStep = RationaleStep.BACKGROUND_LOCATION
+        } else if (!checkIsIgnoringBatteryOptimizations()) {
+            isPermanentlyDenied = false
+            rationaleStep = RationaleStep.BATTERY_OPTIMIZATION
+        } else {
+            rationaleStep = RationaleStep.NONE
+            onStart()
+        }
+    }
 
     val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
@@ -104,9 +146,9 @@ fun ControlTrackingScreen(
         val coarseGranted = results[android.Manifest.permission.ACCESS_COARSE_LOCATION] == true
         val granted = fineGranted || coarseGranted
         hasLocationPermission = granted
-        showRationaleSheet = false
         if (granted) {
-            onStart()
+            isPermanentlyDenied = false
+            proceedAfterPermissions()
         } else {
             val activity = context as? android.app.Activity
             if (activity != null) {
@@ -119,15 +161,43 @@ fun ControlTrackingScreen(
         }
     }
 
+    val bgLocationLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted || checkHasBackgroundLocation()) {
+            isPermanentlyDenied = false
+            if (!checkIsIgnoringBatteryOptimizations()) {
+                rationaleStep = RationaleStep.BATTERY_OPTIMIZATION
+            } else {
+                rationaleStep = RationaleStep.NONE
+                onStart()
+            }
+        } else {
+            val activity = context as? android.app.Activity
+            if (activity != null) {
+                val showRationale = androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(
+                    activity,
+                    android.Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                )
+                isPermanentlyDenied = !showRationale
+            }
+        }
+    }
+
     // Observe lifecycle changes to re-check when user returns to the app (e.g. from Settings)
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 val permitted = checkHasLocation()
                 hasLocationPermission = permitted
-                if (permitted) {
+                if (permitted && rationaleStep == RationaleStep.FOREGROUND) {
                     isPermanentlyDenied = false
-                    showRationaleSheet = false
+                    proceedAfterPermissions()
+                } else if (checkHasBackgroundLocation() && rationaleStep == RationaleStep.BACKGROUND_LOCATION) {
+                    isPermanentlyDenied = false
+                    proceedAfterPermissions()
+                } else if (checkIsIgnoringBatteryOptimizations() && rationaleStep == RationaleStep.BATTERY_OPTIMIZATION) {
+                    rationaleStep = RationaleStep.NONE
                 }
             }
         }
@@ -138,9 +208,7 @@ fun ControlTrackingScreen(
     }
 
     val handleStartClick = {
-        if (hasLocationPermission) {
-            onStart()
-        } else {
+        if (!checkHasLocation()) {
             val activity = context as? android.app.Activity
             if (activity != null) {
                 val showRationale = androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(
@@ -149,7 +217,9 @@ fun ControlTrackingScreen(
                 )
                 isPermanentlyDenied = !showRationale && !hasLocationPermission
             }
-            showRationaleSheet = true
+            rationaleStep = RationaleStep.FOREGROUND
+        } else {
+            proceedAfterPermissions()
         }
     }
 
@@ -229,8 +299,8 @@ fun ControlTrackingScreen(
         )
     }
 
-    // Material 3 Permission Rationale Sheet (REQ-PRI-003)
-    if (showRationaleSheet) {
+    // Material 3 Permission Rationale Sheet (REQ-PRI-003, ATT-2075)
+    if (rationaleStep != RationaleStep.NONE) {
         val permissionsToRequest = remember {
             val perms = mutableListOf(
                 android.Manifest.permission.ACCESS_FINE_LOCATION,
@@ -246,20 +316,70 @@ fun ControlTrackingScreen(
             perms.toTypedArray()
         }
 
+        val rationaleType = when (rationaleStep) {
+            RationaleStep.FOREGROUND -> RationaleType.FOREGROUND
+            RationaleStep.BACKGROUND_LOCATION -> RationaleType.BACKGROUND_LOCATION
+            RationaleStep.BATTERY_OPTIMIZATION -> RationaleType.BATTERY_OPTIMIZATION
+            RationaleStep.NONE -> RationaleType.FOREGROUND
+        }
+
+        val openSettingsAction = {
+            val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = android.net.Uri.fromParts("package", context.packageName, null)
+            }
+            context.startActivity(intent)
+            rationaleStep = RationaleStep.NONE
+        }
+
         PermissionRationaleSheet(
+            rationaleType = rationaleType,
             isPermanentlyDenied = isPermanentlyDenied,
             onContinue = {
-                permissionLauncher.launch(permissionsToRequest)
-            },
-            onOpenSettings = {
-                val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                    data = android.net.Uri.fromParts("package", context.packageName, null)
+                when (rationaleStep) {
+                    RationaleStep.FOREGROUND -> {
+                        permissionLauncher.launch(permissionsToRequest)
+                    }
+                    RationaleStep.BACKGROUND_LOCATION -> {
+                        if (isPermanentlyDenied) {
+                            openSettingsAction()
+                        } else {
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                                bgLocationLauncher.launch(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                            } else {
+                                proceedAfterPermissions()
+                            }
+                        }
+                    }
+                    RationaleStep.BATTERY_OPTIMIZATION -> {
+                        launchBatteryOptimizationIntent(context)
+                        rationaleStep = RationaleStep.NONE
+                        onStart()
+                    }
+                    RationaleStep.NONE -> {}
                 }
-                context.startActivity(intent)
-                showRationaleSheet = false
             },
+            onOpenSettings = openSettingsAction,
             onDismissRequest = {
-                showRationaleSheet = false
+                when (rationaleStep) {
+                    RationaleStep.FOREGROUND -> {
+                        rationaleStep = RationaleStep.NONE
+                    }
+                    RationaleStep.BACKGROUND_LOCATION -> {
+                        // User chose "Not now" for background location; proceed gracefully
+                        if (!checkIsIgnoringBatteryOptimizations()) {
+                            rationaleStep = RationaleStep.BATTERY_OPTIMIZATION
+                        } else {
+                            rationaleStep = RationaleStep.NONE
+                            onStart()
+                        }
+                    }
+                    RationaleStep.BATTERY_OPTIMIZATION -> {
+                        // User chose "Not now" for battery optimization; start tracking
+                        rationaleStep = RationaleStep.NONE
+                        onStart()
+                    }
+                    RationaleStep.NONE -> {}
+                }
             }
         )
     }
@@ -271,6 +391,42 @@ fun ControlTrackingScreen(
             onSelected = onDeviceTypeSelected,
             onDismiss = onCancelDeviceTypeSelection
         )
+    }
+}
+
+/**
+ * Step states for progressive Just-in-Time permission and power setup flow (REQ-PRI-003, ATT-2075).
+ */
+enum class RationaleStep {
+    NONE,
+    FOREGROUND,
+    BACKGROUND_LOCATION,
+    BATTERY_OPTIMIZATION
+}
+
+/**
+ * Fail-safe battery optimization intent launcher with 3-tier fallback cascading (ATT-2075).
+ */
+fun launchBatteryOptimizationIntent(context: android.content.Context) {
+    try {
+        val intent = android.content.Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+            data = android.net.Uri.parse("package:${context.packageName}")
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        try {
+            val fallback = android.content.Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+            context.startActivity(fallback)
+        } catch (e2: Exception) {
+            try {
+                val details = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = android.net.Uri.fromParts("package", context.packageName, null)
+                }
+                context.startActivity(details)
+            } catch (e3: Exception) {
+                // Safeguard against extreme OEM ROM restrictions
+            }
+        }
     }
 }
 
