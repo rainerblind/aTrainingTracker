@@ -1,199 +1,181 @@
-# Stage 1 Analysis: ATT-2079 - Inform Athlete on Process Kill Reasons (Battery Saver, LMK, Permission Revocation) via ApplicationExitInfo
+# Stage 1 Analysis: ATT-2079 - Inform Athlete on Process Kill Reasons (Battery Saver, LMK, Permission Revocation) via ApplicationExitInfo (Rework Cycle 2)
 
 **Ticket**: [ATT-2079](https://rainerblind.atlassian.net/browse/ATT-2079)  
-**Sub-task**: [ATT-2215](https://rainerblind.atlassian.net/browse/ATT-2215) (`[Analysis]`)  
+**Sub-task**: [ATT-2395](https://rainerblind.atlassian.net/browse/ATT-2395) (`[Analysis]`)  
 **Parent Epic**: [ATT-355](https://rainerblind.atlassian.net/browse/ATT-355) (*Good and consistent UI*)  
-**Target Release**: `V4.9.39`  
-**Active Sprint**: `Sprint 2026-40.14`  
+**Target Release**: `V4.9.40` (per Rule 19: Lösungsversion assigned upon completion)  
+**Active Sprint**: `Sprint 2026-40.16`  
 **Branch**: `feature/ATT-2079`  
 **Author**: AI Agent 1 (Implementer)  
-**Date**: 2026-10-03  
+**Date**: 2026-10-04  
 
 ---
 
 ## 1. Problem Statement & Motivation
 
-During active sports tracking (cycling, long-distance running), the Android operating system may terminate the background tracking process (`TrackerService`) unexpectedly due to aggressive platform resource management. Common termination triggers include:
-1. **Aggressive Battery Optimizations / Doze Mode**: OEM firmware (e.g. Samsung, Xiaomi, Huawei) and Android standard battery management killing background services holding partial wakelocks.
-2. **Low Memory Killer (LMK)**: When the athlete opens resource-intensive foreground applications during their workout (e.g., high-resolution camera to take landscape photos, 3D navigation, streaming music).
-3. **Runtime Permission Revocation**: The operating system or user revoking location or notification permissions while tracking is running.
+During active sports tracking (cycling, running, hiking), the Android operating system may terminate the background tracking process (`TrackerService`) unexpectedly due to aggressive platform resource management. Common termination triggers include:
+1. **Aggressive Battery Optimizations / Doze Mode**: OEM firmware and Android standard battery management killing background services holding partial wakelocks.
+2. **Low Memory Killer (LMK)**: When the athlete opens resource-intensive foreground applications during their workout (e.g., high-resolution camera, 3D navigation, streaming music).
+3. **Runtime Permission Revocation**: The operating system or user revoking location or notification permissions while tracking is active.
 
-### The Current User Experience Deficiency
-When an athlete re-opens the app following such an unexpected process kill, `MainActivityWithNavigation.checkUnfinishedWorkout()` detects the unfinalized workout in SQLite (`hasUnfinishedWorkout() == true`) and launches `StartOrResumeDialog.java`.
+### Sprint 2026-40.15 Joint Review Findings (Rework Cycle 2 Drivers)
+During live verification on the physical Pixel 10 test device in Sprint 2026-40.15 Review, the Cycle 1 implementation was rejected due to three critical usability and behavioral defects:
 
-However, the existing dialog displays a generic, uninformative prompt:
-> *"The previous workout was not finished properly. Do you want to start a new workout or resume the previous one?"*
+1. **Generic Dialog Title**:
+   - The dialog title always displayed generic `unfinished_workout_title` (*"Training unterbrochen"* / *"Workout Interrupted"*).
+   - The concrete termination reason was hidden in the message body, forcing the athlete to read long explanatory paragraphs to understand why tracking stopped.
+   - **Requirement**: The concrete termination cause MUST be visible directly in the dialog title (e.g. *"Training unterbrochen: Akku-Optimierung"* or *"Training unterbrochen: Speicherengpass"*).
 
-This causes severe user frustration:
-- **Misattributed App Bugs**: The athlete assumes aTrainingTracker is buggy and crashed, even though the Android operating system intentionally terminated the process.
-- **Zero Preventative Action**: The athlete is not advised how to prevent future occurrences (e.g. exempting the app from battery optimization in Android settings).
-- **Missed Opportunity for Athletic Empathy**: Process kills during high-effort workouts are deeply disappointing (loss of GPS distance, speed telemetry, elevation). Transparent, human, and humorous communication turns a frustrating platform limitation into trust and user empowerment.
+2. **Overly Sarcastic Tone**:
+   - The escalation copy in Cycle 1 was criticized as patronizing and sarcastic (*"Wer nicht hören will..."*, *"Beratungsresistenter Athlet des Monats 🏆"*, *"doppelt bitter 🙈"*).
+   - **Requirement**: Tone must be de-escalated to an empathetic, sportingly constructive, and objective athletic-partnership tone across all escalation stages and all 9 supported languages.
 
----
+3. **Hyper-Aggressive Escalation Counter (Rapid Jump to Stage 3)**:
+   - In practical testing, the counter jumped directly to Stage 3.
+   - **Root Cause Identified**: `resolveKillReason(context)` in `ProcessExitReasonHelper.kt` invoked `incrementBatteryKillCount(context)` unconditionally on every execution. Because `StartOrResumeDialog.onCreateDialog()` calls `resolveKillReason(context)`, any configuration change (e.g. screen rotation, dark/light theme switch, split screen) immediately triggered multiple increments within seconds. Furthermore, `incrementBatteryKillCount` was called even if the athlete had already granted battery optimization exemption or if `ApplicationExitInfo` had not changed.
+   - **Requirement**: Decouple evaluation from incrementation. Ensure idempotent, session-bound incrementation (incrementing at most once per distinct process exit event, and never on configuration changes). Reset the counter automatically when the athlete grants battery optimization exemption.
 
-## 2. Forensic Investigation & Current Call Hierarchy
-
-### Current Call Sequence in `MainActivityWithNavigation.kt`
-1. **`onResume()`**:
-   - `checkUnfinishedWorkout()` is executed on every activity resume (unless resuming directly from the interrupted notification pending intent).
-2. **`checkUnfinishedWorkout()`**:
-   ```kotlin
-   if (!TrainingApplication.isTracking()) {
-       if (WorkoutSummariesDatabaseManager.getInstance(this).hasUnfinishedWorkout()) {
-           if (supportFragmentManager.findFragmentByTag(StartOrResumeDialog.TAG) == null) {
-               showStartOrResumeDialog()
-           }
-       }
-   }
-   ```
-3. **`StartOrResumeDialog.java`**:
-   - Simple legacy `DialogFragment` showing `R.string.start_or_resume_dialog_message`.
-   - Offers only two buttons:
-     - `R.string.resume_workout` -> `mStartOrResumeInterface.chooseResume()`
-     - `R.string.start_new_workout` -> `mStartOrResumeInterface.chooseStart()`
-   - No diagnostic context, no kill reason, no settings shortcut.
+4. **Direct Intent Governance (Rule 21)**:
+   - When the athlete taps the battery optimization button in the recovery dialog, the app must launch `Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` with package URI directly, avoiding unnecessary hops through generic settings.
 
 ---
 
-## 3. Android Platform Forensics: `ApplicationExitInfo` & `PowerManager`
+## 2. Forensic Investigation & Root Cause Analysis
 
-### 1. `ApplicationExitInfo` API (Android 11+ / API 30+)
-Android 11 introduced `ActivityManager.getHistoricalProcessExitReasons(packageName, pid, maxNum)`:
+### Forensic Cause of Counter Race Condition
+In `ProcessExitReasonHelper.kt`:
 ```kotlin
-if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-    val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-    val exitInfos = am.getHistoricalProcessExitReasons(context.packageName, 0, 1)
-    val exitInfo = exitInfos.firstOrNull()
-    // Evaluates exitInfo.reason, exitInfo.status, exitInfo.description, exitInfo.timestamp
+// Defective Cycle 1 implementation:
+fun resolveKillReason(context: Context, sdkInt: Int = Build.VERSION.SDK_INT): KillDiagnosis {
+    ...
+    if (detectedReason == KillReason.BATTERY_KILL) {
+        escalationLevel = incrementBatteryKillCount(context) // <-- CALLED ON EVERY RESOLUTION!
+        shouldShowBatteryButton = !isIgnoringBattery
+    }
+    ...
 }
 ```
+In Android's fragment lifecycle:
+1. `MainActivityWithNavigation.checkUnfinishedWorkout()` creates `StartOrResumeDialog`.
+2. `StartOrResumeDialog.onCreateDialog()` calls `resolveKillReason(context)`.
+3. If the user rotates the device, Android destroys and recreates the DialogFragment, calling `onCreateDialog()` again.
+4. If the user dismisses or background/foregrounds the app, `checkUnfinishedWorkout()` runs again.
+5. In just 2 seconds of handling the device, the kill count increments 1 -> 2 -> 3, presenting the highest escalation stage immediately on the very first real incident!
 
-Key exit reason codes relevant to workout tracking:
-- `ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE`:
-  - Process killed due to exceeding system resource limits (e.g. CPU, Wakelock timeout).
-  - Sub-reasons include `SUBREASON_WAKELOCK_TIMEOUT`, `SUBREASON_EXCESSIVE_CPU`.
-- `ApplicationExitInfo.REASON_LOW_MEMORY`:
-  - Process killed by the Linux Low Memory Killer daemon (`lmkd`) because system-wide RAM was exhausted.
-- `ApplicationExitInfo.REASON_PERMISSION_CHANGE`:
-  - Process killed because runtime permissions were modified while running.
-- `ApplicationExitInfo.REASON_USER_REQUESTED` / `REASON_USER_ACTION`:
-  - User explicitly swiped app from Recents or stopped it via Task Manager.
-- `ApplicationExitInfo.REASON_CRASH` / `REASON_CRASH_NATIVE`:
-  - Uncaught exception or native signal (SIGSEGV, SIGABRT).
-
-### 2. `PowerManager.isIgnoringBatteryOptimizations` (Android 6+ / API 23+)
-```kotlin
-val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-val isIgnoring = pm.isIgnoringBatteryOptimizations(context.packageName)
-```
-- If an unfinished workout is found and `!isIgnoring`, aggressive battery saving / Doze is a primary kill suspect.
-- When `isIgnoring == false`, the app can launch an action intent to allow the user to exempt aTrainingTracker:
-  ```kotlin
-  Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-  ```
-  or directly prompt via `Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` with `data = Uri.parse("package:$packageName")`.
+### Idempotent Incrementation Solution
+To fix this permanently:
+1. Store `PREF_LAST_EVALUATED_EXIT_TIMESTAMP` in SharedPreferences.
+2. When evaluating `ApplicationExitInfo` on API 30+, compare `exitInfo.timestamp` with `lastEvaluatedTimestamp`.
+3. Only increment `PREF_BATTERY_KILL_COUNT` if `exitInfo.timestamp > lastEvaluatedTimestamp` (or on first detection of an unrecorded session termination).
+4. Store `exitInfo.timestamp` as evaluated.
+5. Subsequent calls to `resolveKillReason(context)` within the same app session or across screen rotations will read `getBatteryKillCount(context)` without re-incrementing.
+6. When `isIgnoringBatteryOptimizations(context)` is `true`, reset `PREF_BATTERY_KILL_COUNT = 0`.
 
 ---
 
-## 4. Chesterton's Fence Requirement Archaeology
+## 3. Dynamic Dialog Title Design
 
-* **Original Requirement ID & Target**: `REQ-STB-003` (*Interrupted Workout Resumption & Unfinished Workout Recovery*).
-* **Historical Origin & Commit Trace**: Established in commit `5a47e7bc` for `ATT-635`.
-* **Root Reason for Existing Formulation**: `REQ-STB-003` ensures that workouts interrupted by process crashes or restarts can be recovered from SQLite without data loss (`FINISHED == 0`) and prompts `StartOrResumeDialog`.
-* **Preservation of Core Invariants**:
-  - The resumption contract (`chooseResume()` and `chooseStart()`) must remain 100% intact.
-  - Recovery of unfinalized workout metrics (`WorkoutSummariesDatabaseManager.discardOrFinishUnfinishedWorkout()`, `TrackerService.StartType.RESUME_BY_USER`) must NOT be corrupted.
-  - Resumption from the interrupted notification extra (`EXTRA_RESUME_INTERRUPTED_WORKOUT`) continues to bypass the dialog and immediately resume.
-  - New requirement `REQ-STB-012` enriches the recovery dialog with forensic diagnosis and escalation without breaking backward compatibility or crash recovery.
+The dialog title in `StartOrResumeDialog.kt` will dynamically adapt to the diagnosed kill reason:
 
----
+| Kill Reason | English Title (`values/strings.xml`) | German Title (`values-de/strings.xml`) |
+| :--- | :--- | :--- |
+| `BATTERY_KILL` | `Workout Interrupted: Battery Optimization` | `Training unterbrochen: Akku-Optimierung` |
+| `LOW_MEMORY` | `Workout Interrupted: Low Memory` | `Training unterbrochen: Speicherengpass` |
+| `PERMISSION_REVOKED` | `Workout Interrupted: Permission Revoked` | `Training unterbrochen: Berechtigung entzogen` |
+| `GENERIC_UNFINISHED` | `Workout Interrupted` | `Training unterbrochen` |
 
-## 5. Architectural Design: Progressive Escalation Ladder & Forensics
-
-```mermaid
-flowchart TD
-    START["App Startup / onResume()"] --> CHECK{"hasUnfinishedWorkout()?"}
-    CHECK -->|No| NORMAL["Normal Cockpit Flow"]
-    CHECK -->|Yes| FORENSICS["ProcessExitReasonHelper.resolveKillReason()"]
-    
-    FORENSICS --> API_CHECK{"API Level >= 30?"}
-    API_CHECK -->|No| CHECK_BATTERY{"!isIgnoringBatteryOptimizations?"}
-    API_CHECK -->|Yes| EVAL_EXIT["Query getHistoricalProcessExitReasons()"]
-    
-    EVAL_EXIT --> REASON{"Exit Reason"}
-    REASON -->|EXCESSIVE_RESOURCE_USAGE or Battery Unexempt| BATTERY_KILL["Battery / Doze Kill"]
-    REASON -->|LOW_MEMORY| LMK_KILL["Low Memory Killer (LMK)"]
-    REASON -->|PERMISSION_CHANGE| PERM_KILL["Permission Revoked Mid-Workout"]
-    REASON -->|Other / None| CHECK_BATTERY
-    
-    CHECK_BATTERY -->|True| BATTERY_KILL
-    CHECK_BATTERY -->|False| GENERIC["Standard Recovery"]
-    
-    BATTERY_KILL --> ESCALATE["Increment battery_kill_count"]
-    ESCALATE --> STAGE{"Kill Count"}
-    STAGE -->|Count == 1| STAGE1["Stage 1: Sympathetic reminder + Strava caveat"]
-    STAGE -->|Count == 2| STAGE2["Stage 2: Elevated sarcasm + Kilometers lost"]
-    STAGE -->|Count >= 3| STAGE3["Stage 3: Satirical resignation 'Athlete of the month'"]
-    
-    STAGE1 --> DIALOG["Render Enhanced Material 3 StartOrResumeDialog"]
-    STAGE2 --> DIALOG
-    STAGE3 --> DIALOG
-    LMK_KILL --> DIALOG
-    PERM_KILL --> DIALOG
-    GENERIC --> DIALOG
-    
-    DIALOG --> ACTION_OPT["Button: 'Disable Battery Optimization'"]
-    ACTION_OPT --> SETTINGS["Open System Battery Settings"]
-    SETTINGS --> RESET["Reset battery_kill_count = 0 on Success"]
-    
-    DIALOG --> ACTION_RESUME["Button: 'Resume Workout'"]
-    DIALOG --> ACTION_DISCARD["Button: 'Start New'"]
-```
-
-### The Progressive Escalation Counter
-- **Storage**: Key `PREF_BATTERY_KILL_COUNT` stored persistently.
-- **Escalation Rules**:
-  1. **Stage 1 (`count == 1`)**:
-     - *Tone*: Sportliches Mitgefühl & augenzwinkernde Rüge.
-     - *Strava Addition* (if `TrainingApplication.uploadToStrava()`): *"Und du weißt ja: 'If it's not on Strava, it didn't happen'... doppelt bitter! 🙈"*
-  2. **Stage 2 (`count == 2`)**:
-     - *Tone*: Gesteigerte Fassungslosigkeit & sportlicher Sarkasmus (*"Nicht schon wieder... Schon der 2. Kill! Wie viele verlorene Kilometer brauchst du noch als Beweis?"*).
-  3. **Stage 3+ (`count >= 3`)**:
-     - *Tone*: Satirische Resignation (*"Aller schlechten Dinge sind drei... Beratungsresistenter Athlet des Monats 🏆"*).
-- **Reset Logic**:
-  - Whenever `isIgnoringBatteryOptimizations` evaluates to `true` (either on resume or after returning from settings), `battery_kill_count` is reset to `0`.
+This gives the athlete immediate clarity within the first 100 milliseconds of seeing the dialog.
 
 ---
 
-## 6. Scope Bounding (In-Scope vs Out-of-Scope per ATT-1250)
+## 4. De-Escalated Tone & Copy Architecture (All 9 Locales)
+
+### Philosophy: Constructive Athletic Partnership
+Instead of mocking the user, we position aTrainingTracker as a reliable training partner navigating the aggressive background limits of modern Android together with the athlete.
+
+### Stage 1 (Initial Battery Interruption):
+- **EN**: *"Android interrupted background tracking because battery optimization is currently enabled for this app. To ensure uninterrupted recording of your kilometers and elevation, please disable battery optimization for aTrainingTracker."*
+- **DE**: *"Android hat die Hintergrundaufzeichnung unterbrochen, weil die Akku-Optimierung für diese App aktiv ist. Damit deine Kilometer und Höhenmeter zuverlässig erfasst werden, deaktiviere bitte die Akku-Optimierung für aTrainingTracker."*
+- **Strava Add-on**:
+  - **EN**: *"We know how important complete workout telemetry is for your Strava activities."*
+  - **DE**: *"Wir wissen, wie wichtig lückenlose Trainingsaufzeichnungen für deine Strava-Aktivitäten sind."*
+
+### Stage 2 (Repeated Battery Interruption):
+- **EN**: *"Tracking was interrupted again by system battery management. Without exempting the app, Android will continue stopping background recordings during your workouts. Please take a moment to disable battery optimization."*
+- **DE**: *"Die Aufzeichnung wurde erneut durch das System-Akkumanagement beendet. Ohne Ausnahme wird Android das Tracking bei längeren Einheiten immer wieder stoppen. Bitte nimm dir kurz Zeit, um die Akku-Optimierung zu deaktivieren."*
+
+### Stage 3 (Persistent Interruption / High Escalation):
+- **EN**: *"Repeated background interruptions detected. Modern Android versions strictly terminate tracking services that are not exempted from battery restrictions. Please tap the button below to exempt aTrainingTracker and protect your workouts."*
+- **DE**: *"Wiederholte Unterbrechungen durch das Betriebssystem erkannt. Aktuelle Android-Versionen beenden Hintergrunddienste ohne Ausnahme zwingend, um Energie zu sparen. Bitte tippe unten auf den Button, um aTrainingTracker auszunehmen und deine Trainings zu schützen."*
+
+### 9-Language Parity Coverage
+All new and updated copy will be synchronized across:
+- `values/` (English)
+- `values-de/` (German)
+- `values-es/` (Spanish)
+- `values-fr/` (French)
+- `values-it/` (Italian)
+- `values-ja/` (Japanese)
+- `values-nl/` (Dutch)
+- `values-pl/` (Polish)
+- `values-pt/` (Portuguese)
+
+---
+
+## 5. Direct Platform Intent Dispatching (Rule 21)
+
+In `ProcessExitReasonHelper.openBatteryOptimizationSettings(context)`:
+1. Primary dispatch:
+   ```kotlin
+   Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+       data = Uri.parse("package:${context.packageName}")
+       addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+   }
+   ```
+2. Fallback on restricted OEM skins (`ActivityNotFoundException` / `SecurityException`):
+   ```kotlin
+   Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+   ```
+3. Terminal fallback:
+   ```kotlin
+   Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+   ```
+
+---
+
+## 6. Chesterton's Fence & Invariant Preservation
+
+* **Original Requirement**: `REQ-STB-003` (*Interrupted Workout Resumption & Unfinished Workout Recovery*).
+* **Enhanced Requirement**: `REQ-STB-012` (*Forensic Process Kill Diagnosis, Progressive Escalation & Battery Optimization Guidance*).
+* **Core Invariants Preserved**:
+  - Resumption options (`chooseResume()`, `chooseStart()`) remain unchanged.
+  - Recovery from `EXTRA_RESUME_INTERRUPTED_WORKOUT` continues to bypass the dialog cleanly.
+  - No crash data is lost in SQLite.
+
+---
+
+## 7. Scope Bounding (ATT-1250)
 
 ### In-Scope
-1. **`ProcessExitReasonHelper.kt`**:
-   - Encapsulates `ApplicationExitInfo` query, `PowerManager` check, and exit categorization.
-   - Computes structured `ProcessKillDiagnosis` (type: `BATTERY_KILL`, `LOW_MEMORY`, `PERMISSION_REVOKED`, `GENERIC_UNFINISHED`).
-2. **Persistent Counter & Reset Handling**:
-   - `battery_kill_count` tracking and reset on battery optimization exemption.
-3. **Enhanced `StartOrResumeDialog`**:
-   - Modernized styling with diagnostic header, reason-specific explanation, progressive escalation text, and shortcut button to battery optimization settings when applicable.
-4. **9-Language Parity (`REQ-LOC-001`)**:
-   - Full translation coverage across EN, DE, ES, FR, IT, JA, NL, PL, PT for all escalation stages and LMK/permission messages.
-5. **Unit & Contract Tests**:
-   - Verification of exit reason classification, escalation counter increment/reset, Strava conditional formatting, and backward compatibility fallback on API < 30.
+1. `ProcessExitReasonHelper.kt`: Idempotent session-bound counter incrementation, timestamp tracking, reset when exempted, direct Rule 21 intent dispatching.
+2. `StartOrResumeDialog.kt`: Dynamic title binding based on `KillReason`, updated constructive copy display.
+3. String resources: 9-language parity for dynamic titles and revised empathetic escalation copy.
+4. Unit tests: Verification of idempotent counter handling, rotation resilience, dynamic title mapping, and intent fallbacks.
 
 ### Out-of-Scope
-- Changing SQLite database schemas or `WorkoutSummariesDatabaseManager`.
-- Modifying `TrackerService` internal GPS collection or notification logic.
-- Automated system settings manipulation (Android security disallows toggling battery optimization without user intent).
+- Modifying `TrackerService` internal tracking logic or GPS recording loops.
+- Altering SQLite workout schemas.
 
 ---
 
-## 7. ASPICE Traceability & Verification Plan
+## 8. Verification Strategy
 
-- **Requirement ID**: `REQ-STB-012` (*Forensic Process Kill Diagnosis, Progressive Escalation & Battery Optimization Guidance*).
-- **Test Spec ID**: `TST-STB-012` (*Forensic Process Kill Diagnosis & Progressive Escalation Verification*).
-- **Deliverables Roadmap**:
-  - Stage 1: `docs/engineering/analysis/ATT-2079_analysis.md` (this document).
-  - Stage 2: `docs/engineering/test_specs/ATT-2079_test_spec.md`, update `docs/requirements.md` and `docs/tests.md`.
-  - Stage 3: `docs/engineering/plans/ATT-2079_plan.md`.
-  - Stage 4: Implementation in `ProcessExitReasonHelper.kt`, `StartOrResumeDialog.kt`, string parity, and unit test suites.
-  - Stage 5: Full regression suite execution and walkthrough deliverable.
+1. **Targeted Unit Tests (`ProcessExitReasonHelperTest`, `StartOrResumeDialogTest`)**:
+   - Verify screen rotation simulation does not increment kill count.
+   - Verify dynamic title resolution matches detected `KillReason`.
+   - Verify reset to 0 when `isIgnoringBatteryOptimizations == true`.
+   - Verify direct platform intent construction per Rule 21.
+2. **Localization Audit**:
+   - Ensure all title and copy keys exist and match formatting across 9 language XML files.
+3. **Clean-Room Regression**:
+   - Execute `./gradlew testDebugUnitTest` and assemble debug APK.
