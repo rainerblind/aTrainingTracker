@@ -1504,6 +1504,10 @@
     <string name="workout_name_ride_from">Ride from %1$s</string>
     <string name="workout_name_activity_from">Activity from %1$s</string>
     <string name="workout_name_round_trip">Loop from %1$s</string>
+    <string name="workout_name_run_from_with_distance">Run from %1$s (%2$s)</string>
+    <string name="workout_name_ride_from_with_distance">Ride from %1$s (%2$s)</string>
+    <string name="workout_name_activity_from_with_distance">Activity from %1$s (%2$s)</string>
+    <string name="workout_name_round_trip_with_distance">Loop from %1$s (%2$s)</string>
     <string name="workout_name_run_from_to">Run from %1$s to %2$s</string>
     <string name="workout_name_ride_from_to">Ride from %1$s to %2$s</string>
     <string name="workout_name_activity_from_to">Activity from %1$s to %2$s</string>

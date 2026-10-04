@@ -1343,7 +1343,8 @@ public class TrackerService extends Service {
                     resolvedSport,
                     startLoc,
                     endLoc,
-                    endpointDist
+                    endpointDist,
+                    mDistanceTotal_m
                 );
                 if (autoName != null && !autoName.trim().isEmpty()) {
                     ContentValues nameValues = new ContentValues();

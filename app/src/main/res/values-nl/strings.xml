@@ -1311,6 +1311,10 @@
     <string name="workout_name_ride_from">Rit vanaf %1$s</string>
     <string name="workout_name_activity_from">Activiteit vanaf %1$s</string>
     <string name="workout_name_round_trip">Ronde vanaf %1$s</string>
+    <string name="workout_name_run_from_with_distance">Hardlopen vanaf %1$s (%2$s)</string>
+    <string name="workout_name_ride_from_with_distance">Rit vanaf %1$s (%2$s)</string>
+    <string name="workout_name_activity_from_with_distance">Activiteit vanaf %1$s (%2$s)</string>
+    <string name="workout_name_round_trip_with_distance">Ronde vanaf %1$s (%2$s)</string>
     <string name="workout_name_run_from_to">Hardlopen van %1$s naar %2$s</string>
     <string name="workout_name_ride_from_to">Rit van %1$s naar %2$s</string>
     <string name="workout_name_activity_from_to">Activiteit van %1$s naar %2$s</string>
