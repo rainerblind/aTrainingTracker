@@ -1147,6 +1147,7 @@
     <string name="filter_section_sport">Tipo di sport</string>
     <string name="filter_section_equipment">Attrezzatura</string>
     <string name="filter_section_attributes">Attributi</string>
+    <string name="filter_section_origin_source">Origine dati</string>
     <string name="filter_section_thresholds">Distanza e durata</string>
     <string name="filter_section_start_at">Partenza da</string>
     <string name="settings_workout_card_title">Elenco allenamenti (schede dettagliate)</string>

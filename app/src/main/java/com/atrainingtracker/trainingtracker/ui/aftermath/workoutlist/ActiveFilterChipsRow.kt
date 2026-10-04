@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.ui.common.filters.RemovableFilterChip
 import java.text.DateFormat
 import java.util.Date
@@ -63,6 +64,7 @@ fun ActiveFilterChipsRow(
     onRemoveCommute: () -> Unit,
     onRemoveTrainer: () -> Unit,
     onRemoveRace: () -> Unit = {},
+    onRemoveSource: () -> Unit = {},
     onRemoveGpsTrack: () -> Unit,
     onRemoveDistanceRange: () -> Unit = {},
     onRemoveDurationRange: () -> Unit = {},
@@ -220,6 +222,22 @@ fun ActiveFilterChipsRow(
                 RemovableFilterChip(
                     label = stringResource(R.string.filter_has_gps),
                     onRemove = onRemoveGpsTrack
+                )
+            }
+        }
+
+        // Origin Source Chip (REQ-UI-265)
+        if (criteria.source != null) {
+            item("source") {
+                val labelRes = when (criteria.source) {
+                    WorkoutSource.TRACKED -> R.string.workout_source_tracked
+                    WorkoutSource.TCX -> R.string.workout_source_tcx
+                    WorkoutSource.GPX -> R.string.workout_source_gpx
+                    WorkoutSource.FIT -> R.string.workout_source_fit
+                }
+                RemovableFilterChip(
+                    label = stringResource(labelRes),
+                    onRemove = onRemoveSource
                 )
             }
         }

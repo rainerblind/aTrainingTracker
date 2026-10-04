@@ -23,10 +23,11 @@ import androidx.arch.core.executor.ArchTaskExecutor
 import androidx.arch.core.executor.TaskExecutor
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
+import com.atrainingtracker.trainingtracker.database.WorkoutSource
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
-import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
-import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.every
@@ -79,7 +80,8 @@ class WorkoutSummariesViewModelFilterTest {
         totalDistance: Double,
         activeTimeSec: Long,
         commute: Boolean = false,
-        trainer: Boolean = false
+        trainer: Boolean = false,
+        source: WorkoutSource = WorkoutSource.TRACKED
     ): WorkoutData {
         return WorkoutData(
             id = id,
@@ -113,7 +115,8 @@ class WorkoutSummariesViewModelFilterTest {
             description = "Description for $workoutName",
             goal = null,
             method = null,
-            stravaSportName = null
+            stravaSportName = null,
+            source = source
         )
     }
 
@@ -259,5 +262,57 @@ class WorkoutSummariesViewModelFilterTest {
         assertEquals(2, result.size)
         assertEquals("Long Ride", result[0].workoutName)
         assertEquals("Short Ride", result[1].workoutName)
+    }
+
+    @Test
+    fun testWorkoutsFlow_FilteredByOriginSource() = runTest(testDispatcher) {
+        val wTracked = createWorkout(1L, "Tracked Ride", 10L, "Road Cycling", BSportType.BIKE, 2025, 50000.0, 3600L, source = WorkoutSource.TRACKED)
+        val wTcx = createWorkout(2L, "TCX Import", 10L, "Road Cycling", BSportType.BIKE, 2025, 50000.0, 3600L, source = WorkoutSource.TCX)
+        val wGpx = createWorkout(3L, "GPX Trail", 10L, "Road Cycling", BSportType.BIKE, 2025, 50000.0, 3600L, source = WorkoutSource.GPX)
+        val wFit = createWorkout(4L, "FIT Workout", 10L, "Road Cycling", BSportType.BIKE, 2025, 50000.0, 3600L, source = WorkoutSource.FIT)
+        allWorkoutsFlow.value = listOf(wTracked, wTcx, wGpx, wFit)
+
+        val viewModel = WorkoutSummariesViewModel(mockApplication)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.workouts.collect()
+        }
+        advanceUntilIdle()
+
+        // Filter by GPX
+        viewModel.setFilterCriteria(WorkoutFilterCriteria(source = WorkoutSource.GPX))
+        advanceUntilIdle()
+        assertEquals(1, viewModel.workouts.value.size)
+        assertEquals("GPX Trail", viewModel.workouts.value[0].workoutName)
+
+        // Filter by FIT
+        viewModel.setFilterCriteria(WorkoutFilterCriteria(source = WorkoutSource.FIT))
+        advanceUntilIdle()
+        assertEquals(1, viewModel.workouts.value.size)
+        assertEquals("FIT Workout", viewModel.workouts.value[0].workoutName)
+
+        // Clear filter
+        viewModel.clearFilterCriteria()
+        advanceUntilIdle()
+        assertEquals(4, viewModel.workouts.value.size)
+    }
+
+    @Test
+    fun testWorkoutsFlow_FilteredByOriginSourceAndSportConjunction() = runTest(testDispatcher) {
+        val wTcxBike = createWorkout(1L, "TCX Bike", 10L, "Road Cycling", BSportType.BIKE, 2025, 50000.0, 3600L, source = WorkoutSource.TCX)
+        val wTcxRun = createWorkout(2L, "TCX Run", 20L, "Running", BSportType.RUN, 2025, 10000.0, 3600L, source = WorkoutSource.TCX)
+        val wTrackedBike = createWorkout(3L, "Tracked Bike", 10L, "Road Cycling", BSportType.BIKE, 2025, 50000.0, 3600L, source = WorkoutSource.TRACKED)
+        allWorkoutsFlow.value = listOf(wTcxBike, wTcxRun, wTrackedBike)
+
+        val viewModel = WorkoutSummariesViewModel(mockApplication)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.workouts.collect()
+        }
+        advanceUntilIdle()
+
+        // Filter by TCX AND Sport 10L
+        viewModel.setFilterCriteria(WorkoutFilterCriteria(source = WorkoutSource.TCX, sportTypeId = 10L))
+        advanceUntilIdle()
+        assertEquals(1, viewModel.workouts.value.size)
+        assertEquals("TCX Bike", viewModel.workouts.value[0].workoutName)
     }
 }

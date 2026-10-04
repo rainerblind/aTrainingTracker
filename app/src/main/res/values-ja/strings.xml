@@ -1129,6 +1129,7 @@
     <string name="filter_section_sport">スポーツの種類</string>
     <string name="filter_section_equipment">装備</string>
     <string name="filter_section_attributes">属性</string>
+    <string name="filter_section_origin_source">データソース</string>
     <string name="filter_section_thresholds">距離と時間</string>
     <string name="filter_section_start_at">開始地点</string>
     <string name="settings_workout_card_title">ワークアウト一覧（詳細カード）</string>

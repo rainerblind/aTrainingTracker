@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import androidx.compose.runtime.Immutable
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
+import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.google.android.gms.maps.model.LatLng
 import org.json.JSONObject
@@ -55,7 +56,8 @@ data class WorkoutFilterCriteria(
     val startLocationLng: Double? = null,
     val startLocationRadiusM: Double? = null,
     val clusterId: Long? = null,
-    val clusterName: String? = null
+    val clusterName: String? = null,
+    val source: WorkoutSource? = null
 ) {
     /**
      * Total count of distinct active filter dimensions.
@@ -75,6 +77,7 @@ data class WorkoutFilterCriteria(
             if (minDurationSec != null || maxDurationSec != null) count++
             if (startLocationLat != null && startLocationLng != null) count++
             if (clusterId != null) count++
+            if (source != null) count++
             return count
         }
 
@@ -193,6 +196,11 @@ data class WorkoutFilterCriteria(
             return false
         }
 
+        // Origin Source filter (ATT-2303, REQ-UI-265)
+        if (source != null && workout.source != source) {
+            return false
+        }
+
         return true
     }
 
@@ -224,6 +232,7 @@ data class WorkoutFilterCriteria(
         startLocationRadiusM?.let { json.put("startLocationRadiusM", it) }
         clusterId?.let { json.put("clusterId", it) }
         clusterName?.let { json.put("clusterName", it) }
+        source?.let { json.put("source", it.name) }
         return json.toString()
     }
 
@@ -259,7 +268,14 @@ data class WorkoutFilterCriteria(
                     startLocationLng = if (json.has("startLocationLng")) json.optDouble("startLocationLng") else null,
                     startLocationRadiusM = if (json.has("startLocationRadiusM")) json.optDouble("startLocationRadiusM") else null,
                     clusterId = if (json.has("clusterId")) json.optLong("clusterId") else null,
-                    clusterName = if (json.has("clusterName")) json.optString("clusterName") else null
+                    clusterName = if (json.has("clusterName")) json.optString("clusterName") else null,
+                    source = if (json.has("source")) {
+                        try {
+                            WorkoutSource.valueOf(json.optString("source").trim().uppercase())
+                        } catch (_: IllegalArgumentException) {
+                            null
+                        }
+                    } else null
                 )
             } catch (e: Exception) {
                 WorkoutFilterCriteria()

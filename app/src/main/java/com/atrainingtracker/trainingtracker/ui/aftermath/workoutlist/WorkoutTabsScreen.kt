@@ -316,6 +316,7 @@ fun WorkoutTabsScreen(
                                 onRemoveCommute = { onUpdateFilterCriteria { it.copy(isCommute = null) } },
                                 onRemoveTrainer = { onUpdateFilterCriteria { it.copy(isTrainer = null) } },
                                 onRemoveRace = { onUpdateFilterCriteria { it.copy(isRace = null) } },
+                                onRemoveSource = { onUpdateFilterCriteria { it.copy(source = null) } },
                                 onRemoveGpsTrack = { onUpdateFilterCriteria { it.copy(hasGpsTrack = null) } },
                                 onRemoveMinDistance = { onUpdateFilterCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
                                 onRemoveMinDuration = { onUpdateFilterCriteria { it.copy(minDurationSec = null, maxDurationSec = null) } },

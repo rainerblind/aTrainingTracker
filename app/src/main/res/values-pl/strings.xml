@@ -1145,6 +1145,7 @@
     <string name="filter_section_sport">Dyscyplina</string>
     <string name="filter_section_equipment">Sprzęt</string>
     <string name="filter_section_attributes">Atrybuty</string>
+    <string name="filter_section_origin_source">Źródło danych</string>
     <string name="filter_section_thresholds">Dystans i czas trwania</string>
     <string name="filter_section_start_at">Start w</string>
     <string name="settings_workout_card_title">Lista treningów (szczegółowe karty)</string>

@@ -57,6 +57,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterBottomSheetScaffold
@@ -150,6 +151,7 @@ fun WorkoutFilterBottomSheet(
     var localTrainer by remember(criteria.isTrainer) { mutableStateOf(criteria.isTrainer) }
     var localRace by remember(criteria.isRace) { mutableStateOf(criteria.isRace) }
     var localHasGps by remember(criteria.hasGpsTrack) { mutableStateOf(criteria.hasGpsTrack) }
+    var localSource by remember(criteria.source) { mutableStateOf(criteria.source) }
 
     var localStartLocationName by remember(criteria.startLocationName) { mutableStateOf(criteria.startLocationName) }
     var localStartLocationLat by remember(criteria.startLocationLat) { mutableStateOf(criteria.startLocationLat) }
@@ -274,6 +276,7 @@ fun WorkoutFilterBottomSheet(
             localTrainer = null
             localRace = null
             localHasGps = null
+            localSource = null
             localMinDistanceMeters = null
             localMaxDistanceMeters = null
             minDistanceText = ""
@@ -300,6 +303,7 @@ fun WorkoutFilterBottomSheet(
                 isTrainer = localTrainer,
                 isRace = localRace,
                 hasGpsTrack = localHasGps,
+                source = localSource,
                 minDistanceMeters = localMinDistanceMeters,
                 maxDistanceMeters = localMaxDistanceMeters,
                 minDurationSec = localMinDurationSec,
@@ -517,6 +521,34 @@ fun WorkoutFilterBottomSheet(
                     onClick = { localHasGps = if (localHasGps == true) null else true },
                     label = { Text(stringResource(R.string.filter_has_gps)) }
                 )
+            }
+        }
+
+        // 5b. Origin Source Selection (REQ-UI-265)
+        Column {
+            Text(
+                text = stringResource(R.string.filter_section_origin_source),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                val sources = listOf(
+                    WorkoutSource.TRACKED to R.string.workout_source_tracked,
+                    WorkoutSource.TCX to R.string.workout_source_tcx,
+                    WorkoutSource.GPX to R.string.workout_source_gpx,
+                    WorkoutSource.FIT to R.string.workout_source_fit
+                )
+                sources.forEach { (src, labelRes) ->
+                    FilterChip(
+                        selected = (localSource == src),
+                        onClick = { localSource = if (localSource == src) null else src },
+                        label = { Text(stringResource(labelRes)) }
+                    )
+                }
             }
         }
 

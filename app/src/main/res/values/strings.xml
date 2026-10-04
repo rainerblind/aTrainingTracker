@@ -1340,6 +1340,7 @@
     <string name="filter_section_sport">Sport Type</string>
     <string name="filter_section_equipment">Equipment</string>
     <string name="filter_section_attributes">Attributes</string>
+    <string name="filter_section_origin_source">Origin Source</string>
     <string name="filter_section_thresholds">Distance &amp; Duration</string>
     <string name="filter_section_start_at">Start at</string>
     <string name="settings_workout_card_title">Workout List (Detailed Cards)</string>
