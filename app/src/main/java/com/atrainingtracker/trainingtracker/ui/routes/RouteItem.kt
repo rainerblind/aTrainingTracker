@@ -46,6 +46,7 @@ import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.MapRoute
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.PathPreviewMap
+import com.atrainingtracker.trainingtracker.routes.RouteWaypoint
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 @Composable
@@ -57,6 +58,7 @@ fun RouteItem(
     onToggleSelection: (Long, Boolean) -> Unit,
     onDeleteConfirmed: (Long) -> Unit,
     onDuplicateAsLocal: (Long) -> Unit = {},
+    waypoints: List<RouteWaypoint> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
@@ -95,7 +97,8 @@ fun RouteItem(
                             name = summary.name,
                             isSelected = summary.isSelected,
                             bSportType = summary.bSportType,
-                            path = pathPoints
+                            path = pathPoints,
+                            waypoints = waypoints
                         ),
                         modifier = Modifier.fillMaxSize(),
                         start = pathPoints.firstOrNull()?.latLng,
