@@ -1610,4 +1610,21 @@
     <string name="waypoint_type_generic">Wegpunkt</string>
     <string name="route_cue_sheet_title">Wegpunkte-Liste</string>
     <string name="route_waypoints_header">Wegpunkte &amp; POIs (%1$d)</string>
+
+    <string name="climb_title">Anstieg</string>
+    <string name="climb_approaching">Anfahrt</string>
+    <string name="climb_on_climb">Im Anstieg</string>
+    <string name="climb_summit">Gipfel</string>
+    <string name="climb_remaining_dist">Verbleibend</string>
+    <string name="climb_remaining_elevation">Höhenmeter</string>
+    <string name="climb_grade">Steigung</string>
+    <string name="climb_route_counter">Anstieg %1$d von %2$d</string>
+    <string name="climb_category_hc">HC</string>
+    <string name="climb_category_cat1">Kat 1</string>
+    <string name="climb_category_cat2">Kat 2</string>
+    <string name="climb_category_cat3">Kat 3</string>
+    <string name="climb_category_cat4">Kat 4</string>
+    <string name="climb_category_uc">UC</string>
+    <string name="tuning_show_live_climbs_title">Live-Anstiege (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_summary">Echtzeit-Anstiegs-Cockpit bei Strecken und freier Fahrt einblenden</string>
 </resources>

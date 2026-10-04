@@ -1525,4 +1525,21 @@
     <string name="waypoint_type_generic">Punto de paso</string>
     <string name="route_cue_sheet_title">Hoja de ruta</string>
     <string name="route_waypoints_header">Puntos de paso y POIs (%1$d)</string>
+
+    <string name="climb_title">Subida</string>
+    <string name="climb_approaching">Aproximándose</string>
+    <string name="climb_on_climb">En la subida</string>
+    <string name="climb_summit">Cima</string>
+    <string name="climb_remaining_dist">Restante</string>
+    <string name="climb_remaining_elevation">Desnivel</string>
+    <string name="climb_grade">Pendiente</string>
+    <string name="climb_route_counter">Subida %1$d de %2$d</string>
+    <string name="climb_category_hc">HC</string>
+    <string name="climb_category_cat1">Cat 1</string>
+    <string name="climb_category_cat2">Cat 2</string>
+    <string name="climb_category_cat3">Cat 3</string>
+    <string name="climb_category_cat4">Cat 4</string>
+    <string name="climb_category_uc">UC</string>
+    <string name="tuning_show_live_climbs_title">Subidas en vivo (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_summary">Mostrar panel de subida en tiempo real durante rutas y recorrido libre</string>
 </resources>

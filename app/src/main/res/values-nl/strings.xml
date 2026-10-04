@@ -1523,4 +1523,21 @@
     <string name="waypoint_type_generic">Routepunt</string>
     <string name="route_cue_sheet_title">Routebeschrijving</string>
     <string name="route_waypoints_header">Routepunten en POI\'s (%1$d)</string>
+
+    <string name="climb_title">Klim</string>
+    <string name="climb_approaching">Benaderen</string>
+    <string name="climb_on_climb">Op de klim</string>
+    <string name="climb_summit">Top</string>
+    <string name="climb_remaining_dist">Resterend</string>
+    <string name="climb_remaining_elevation">Hoogtemeters</string>
+    <string name="climb_grade">Stijging</string>
+    <string name="climb_route_counter">Klim %1$d van %2$d</string>
+    <string name="climb_category_hc">HC</string>
+    <string name="climb_category_cat1">Cat 1</string>
+    <string name="climb_category_cat2">Cat 2</string>
+    <string name="climb_category_cat3">Cat 3</string>
+    <string name="climb_category_cat4">Cat 4</string>
+    <string name="climb_category_uc">UC</string>
+    <string name="tuning_show_live_climbs_title">Live beklimmingen (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_summary">Toon realtime klimcockpit tijdens routes en vrij rijden</string>
 </resources>

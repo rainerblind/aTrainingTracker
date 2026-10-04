@@ -1523,4 +1523,21 @@
     <string name="waypoint_type_generic">Punto di passaggio</string>
     <string name="route_cue_sheet_title">Tabella di marcia</string>
     <string name="route_waypoints_header">Punti di passaggio e POI (%1$d)</string>
+
+    <string name="climb_title">Salita</string>
+    <string name="climb_approaching">In avvicinamento</string>
+    <string name="climb_on_climb">In salita</string>
+    <string name="climb_summit">Vetta</string>
+    <string name="climb_remaining_dist">Rimanente</string>
+    <string name="climb_remaining_elevation">Dislivello</string>
+    <string name="climb_grade">Pendenza</string>
+    <string name="climb_route_counter">Salita %1$d di %2$d</string>
+    <string name="climb_category_hc">HC</string>
+    <string name="climb_category_cat1">Cat 1</string>
+    <string name="climb_category_cat2">Cat 2</string>
+    <string name="climb_category_cat3">Cat 3</string>
+    <string name="climb_category_cat4">Cat 4</string>
+    <string name="climb_category_uc">UC</string>
+    <string name="tuning_show_live_climbs_title">Salite in tempo reale (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_summary">Mostra il pannello salita in tempo reale durante i percorsi e la pedalata libera</string>
 </resources>
