@@ -86,9 +86,12 @@ import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
+import com.atrainingtracker.trainingtracker.routes.ReturnNavigationRepository
+import com.atrainingtracker.trainingtracker.routes.ReturnNavigationState
 import com.atrainingtracker.trainingtracker.routes.TurnByTurnNavigationRepository
 import com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbSheet
 import com.atrainingtracker.trainingtracker.ui.routes.AutoDetectedRouteBanner
+import com.atrainingtracker.trainingtracker.ui.routes.ReturnNavigationHud
 import com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModel
 import com.atrainingtracker.trainingtracker.ui.routes.TurnPromptBanner
@@ -167,6 +170,9 @@ fun SensorGridScreen(
 
     val navRepo = remember { TurnByTurnNavigationRepository.getInstance(context) }
     val navState by navRepo.navigationState.collectAsState()
+
+    val returnNavRepo = remember { ReturnNavigationRepository.getInstance(context) }
+    val returnNavState by returnNavRepo.navigationState.collectAsState()
 
     val routesRepo = remember { RoutesRepository.getInstance(context) }
     val actualRouteSelectorViewModel = routeSelectorViewModel ?: remember {
@@ -286,6 +292,12 @@ fun SensorGridScreen(
                 promptsEnabled = tuningConfig.turnPromptsEnabled
             )
 
+            // Return Navigation & Dynamic Elevation-Aware ETA HUD Banner (REQ-MAP-029 / ATT-1953)
+            ReturnNavigationHud(
+                navigationState = returnNavState,
+                onDismiss = { returnNavRepo.dismissHud() }
+            )
+
             // Auto-Detected Route Banner (REQ-MAP-024 / ATT-1835)
             if (screenMode == ScreenMode.TRACKING && routeSelectorUiState.isAutoPromptVisible && routeSelectorUiState.autoDetectedCandidate != null) {
                 routeSelectorUiState.autoDetectedCandidate?.let { candidate ->
@@ -305,6 +317,7 @@ fun SensorGridScreen(
             if (screenMode == ScreenMode.TRACKING) {
                 RouteActionChipRow(
                     activeRoute = routeSelectorUiState.activeRoute,
+                    returnNavState = returnNavState,
                     onClick = { showRouteSelectorSheet = true },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                 )
@@ -440,6 +453,9 @@ fun SensorGridScreen(
     if (showRouteSelectorSheet) {
         RouteSelectorModalBottomSheet(
             viewModel = actualRouteSelectorViewModel,
+            onTakeMeHome = {
+                returnNavRepo.startTakeMeHome()
+            },
             onDismiss = { showRouteSelectorSheet = false }
         )
     }
@@ -474,6 +490,7 @@ private fun ColAdder(onClick: () -> Unit) {
 @Composable
 fun RouteActionChipRow(
     activeRoute: RouteWithPath?,
+    returnNavState: ReturnNavigationState? = null,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -519,8 +536,15 @@ fun RouteActionChipRow(
                     )
                 }
             }
+            val statusText = if (returnNavState != null && returnNavState.hasRemainingMetrics) {
+                "${returnNavState.formattedRemainingDistance} (${returnNavState.formattedClockTime})"
+            } else if (activeRoute != null) {
+                stringResource(id = R.string.route_select_title)
+            } else {
+                stringResource(id = R.string.route_action_select)
+            }
             Text(
-                text = if (activeRoute != null) stringResource(id = R.string.route_select_title) else stringResource(id = R.string.route_action_select),
+                text = statusText,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary
             )

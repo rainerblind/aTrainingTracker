@@ -1573,4 +1573,14 @@
     <string name="turn_cue_countdown_distance_summary">Dystans wcześniejszego ostrzeżenia przed skrętem (w metrach)</string>
     <string name="off_route_corridor_threshold_title">Tolerancja zboczenia z trasy</string>
     <string name="off_route_corridor_threshold_summary">Maksymalne odchylenie przed ostrzeżeniem o zejściu z trasy (w metrach)</string>
+
+    <!-- Return Navigation & Take Me Home (ATT-1953) -->
+    <string name="take_me_home_title">Prowadź do domu</string>
+    <string name="take_me_home_desc">Nawigacja powrotna znanymi trasami</string>
+    <string name="nav_remaining_dist">Pozostało</string>
+    <string name="nav_remaining_climb">Wzniesienie</string>
+    <string name="nav_eta_label">Przybycie</string>
+    <string name="nav_destination_home">Dom</string>
+    <string name="nav_stop_return">Zakończ powrót</string>
+    <string name="nav_route_reverse">Powrót tą samą trasą</string>
 </resources>

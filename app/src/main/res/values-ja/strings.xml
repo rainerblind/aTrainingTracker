@@ -1551,4 +1551,14 @@
     <string name="turn_cue_countdown_distance_summary">曲がり角の手前での事前警告距離（メートル）</string>
     <string name="off_route_corridor_threshold_title">コースアウト判定閾値</string>
     <string name="off_route_corridor_threshold_summary">警告を発するまでの最大逸脱距離（メートル）</string>
+
+    <!-- Return Navigation & Take Me Home (ATT-1953) -->
+    <string name="take_me_home_title">家に戻る</string>
+    <string name="take_me_home_desc">よく走るルートに沿った帰り道案内</string>
+    <string name="nav_remaining_dist">残り</string>
+    <string name="nav_remaining_climb">獲得標高</string>
+    <string name="nav_eta_label">到着予想</string>
+    <string name="nav_destination_home">自宅</string>
+    <string name="nav_stop_return">帰り道終了</string>
+    <string name="nav_route_reverse">ルートを逆走して戻る</string>
 </resources>
