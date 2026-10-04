@@ -1392,6 +1392,12 @@
     <string name="tuning_weight_semi_bold">Seminegrita</string>
     <string name="tuning_weight_bold">Negrita</string>
     <string name="tuning_cockpit_preview_title">Vista previa en vivo</string>
+    <!-- Sensor Field Tile Variants & Styling (ATT-2058 / REQ-UI-258) -->
+    <string name="tuning_sensor_field_variant_title">Diseño de fichas y cuadrícula</string>
+    <string name="sensor_field_variant_v0">Cuadrícula clásica continua</string>
+    <string name="sensor_field_variant_v1">Fichas deportivas contorneadas</string>
+    <string name="sensor_field_variant_v2">Tarjetas deportivas elevadas</string>
+    <string name="sensor_field_variant_v3">Cápsulas de acento suave</string>
     <string name="tuning_default_format">Predeterminado: %1$s</string>
     <string name="reset_to_defaults">Restablecer valores predeterminados</string>
     <string name="reset_to_defaults_success">Ajustes restablecidos a los valores predeterminados de fábrica.</string>

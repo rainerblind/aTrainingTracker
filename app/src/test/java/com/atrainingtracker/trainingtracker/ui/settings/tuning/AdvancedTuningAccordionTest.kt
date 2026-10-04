@@ -77,6 +77,32 @@ class AdvancedTuningAccordionTest {
     }
 
     @Test
+    fun testCockpitTypographySubtitle_reflectsFontWeightAndVariant() {
+        val mockContext = mockk<Context>()
+
+        every { mockContext.getString(R.string.tuning_font_system_default) } returns "System Default"
+        every { mockContext.getString(R.string.tuning_weight_semi_bold) } returns "Semi-Bold"
+        every { mockContext.getString(R.string.sensor_field_variant_v0) } returns "Classic Seamless Grid"
+        every { mockContext.getString(R.string.sensor_field_variant_v2) } returns "Elevated Sports Cards"
+
+        val subtitleWithVariant0 = TuningSubtitleFormatter.formatCockpitSubtitle(
+            CockpitFontFamily.SYSTEM_DEFAULT,
+            CockpitFontWeight.SEMI_BOLD,
+            com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant.CLASSIC_SEAMLESS,
+            mockContext
+        )
+        assertEquals("System Default, Semi-Bold · Classic Seamless Grid", subtitleWithVariant0)
+
+        val subtitleWithVariant2 = TuningSubtitleFormatter.formatCockpitSubtitle(
+            CockpitFontFamily.SYSTEM_DEFAULT,
+            CockpitFontWeight.SEMI_BOLD,
+            com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant.ELEVATED_CARDS,
+            mockContext
+        )
+        assertEquals("System Default, Semi-Bold · Elevated Sports Cards", subtitleWithVariant2)
+    }
+
+    @Test
     fun testAmoledBatterySaverSubtitle_reflectsDimFactorsAndSlopes() {
         val defaultLocale = Locale.getDefault()
         try {

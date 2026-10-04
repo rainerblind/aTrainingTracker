@@ -85,6 +85,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
+import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyle
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitTypography
@@ -125,6 +126,14 @@ fun SensorGridScreen(
     val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(
         initial = TuningConfig()
     )
+    val activeVariantStyle = remember(tuningConfig.sensorFieldVariant) {
+        SensorFieldStyle.forVariant(tuningConfig.sensorFieldVariant)
+    }
+    val isDefaultStyling = gridSpacing == 0.dp && fieldShape == RectangleShape
+    val effectiveSpacing = if (isDefaultStyling) activeVariantStyle.gridSpacing else gridSpacing
+    val effectiveShape = if (isDefaultStyling) activeVariantStyle.shape else fieldShape
+    val effectiveElevation = if (isDefaultStyling) activeVariantStyle.elevation else fieldElevation
+
     val cockpitTypography = remember(tuningConfig.cockpitFontFamily, tuningConfig.cockpitFontWeight) {
         CockpitTypography.resolveConfig(
             family = tuningConfig.cockpitFontFamily,
@@ -249,7 +258,7 @@ fun SensorGridScreen(
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = if (gridSpacing > 0.dp) Arrangement.spacedBy(gridSpacing) else Arrangement.Top
+                verticalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Top
             ) {
                 val fieldsByRow = state.fields.groupBy { it.rowNr }
                 val sortedRows = fieldsByRow.keys.sorted()
@@ -271,7 +280,7 @@ fun SensorGridScreen(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.height(IntrinsicSize.Min),
-                        horizontalArrangement = if (gridSpacing > 0.dp) Arrangement.spacedBy(gridSpacing) else Arrangement.Start
+                        horizontalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Start
                     ) {
                         var maxColNr = 0
                         fieldsInThisRow.forEach { fieldState ->
@@ -291,8 +300,8 @@ fun SensorGridScreen(
                                     fieldState = fieldState,
                                     screenMode = screenMode,
                                     isSelectedForMove = isSelected,
-                                    shape = fieldShape,
-                                    cardElevation = fieldElevation,
+                                    shape = effectiveShape,
+                                    cardElevation = effectiveElevation,
                                     onStartMove = { gridActions.onSelectFieldForMove(fieldState) },
                                     onEdit = {
                                         if (screenMode == ScreenMode.CONFIGURATION && selectedFieldForMove != null) {

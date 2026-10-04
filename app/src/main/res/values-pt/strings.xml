@@ -1390,6 +1390,12 @@
     <string name="tuning_weight_semi_bold">Seminegrito</string>
     <string name="tuning_weight_bold">Negrito</string>
     <string name="tuning_cockpit_preview_title">Pré-visualização ao vivo</string>
+    <!-- Sensor Field Tile Variants & Styling (ATT-2058 / REQ-UI-258) -->
+    <string name="tuning_sensor_field_variant_title">Design de blocos e grelha</string>
+    <string name="sensor_field_variant_v0">Grelha clássica contínua</string>
+    <string name="sensor_field_variant_v1">Blocos desportivos com contorno</string>
+    <string name="sensor_field_variant_v2">Cartões desportivos em relevo</string>
+    <string name="sensor_field_variant_v3">Cápsulas de realce suave</string>
     <string name="tuning_default_format">Padrão: %1$s</string>
     <string name="reset_to_defaults">Restaurar padrões</string>
     <string name="reset_to_defaults_success">Configurações de ajuste restauradas para os padrões de fábrica.</string>

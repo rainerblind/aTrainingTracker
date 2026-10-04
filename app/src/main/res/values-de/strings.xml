@@ -1477,6 +1477,12 @@
     <string name="tuning_weight_semi_bold">Halbfett</string>
     <string name="tuning_weight_bold">Fett</string>
     <string name="tuning_cockpit_preview_title">Live-Vorschau</string>
+    <!-- Sensor Field Tile Variants & Styling (ATT-2058 / REQ-UI-258) -->
+    <string name="tuning_sensor_field_variant_title">Kachel-Design &amp; Layout</string>
+    <string name="sensor_field_variant_v0">Klassisch nahtlos</string>
+    <string name="sensor_field_variant_v1">Moderne Sportkacheln (Outline)</string>
+    <string name="sensor_field_variant_v2">Erhabene Sportkarten (Elevation)</string>
+    <string name="sensor_field_variant_v3">Soft-Akzent Kapseln</string>
     <string name="tuning_default_format">Standard: %1$s</string>
     <string name="reset_to_defaults">Auf Werkseinstellungen zurücksetzen</string>
     <string name="reset_to_defaults_success">Abstimmungseinstellungen auf Werkseinstellungen zurückgesetzt.</string>
