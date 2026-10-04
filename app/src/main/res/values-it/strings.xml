@@ -1390,6 +1390,12 @@
     <string name="tuning_weight_semi_bold">Semigrassetto</string>
     <string name="tuning_weight_bold">Grassetto</string>
     <string name="tuning_cockpit_preview_title">Anteprima dal vivo</string>
+    <!-- Sensor Field Tile Variants & Styling (ATT-2058 / REQ-UI-258) -->
+    <string name="tuning_sensor_field_variant_title">Design riquadri e griglia</string>
+    <string name="sensor_field_variant_v0">Griglia classica continua</string>
+    <string name="sensor_field_variant_v1">Riquadri sportivi sagomati</string>
+    <string name="sensor_field_variant_v2">Schede sportive in rilievo</string>
+    <string name="sensor_field_variant_v3">Capsule accento morbido</string>
     <string name="tuning_default_format">Predefinito: %1$s</string>
     <string name="reset_to_defaults">Ripristina impostazioni predefinite</string>
     <string name="reset_to_defaults_success">Impostazioni di regolazione ripristinate ai valori di fabbrica.</string>

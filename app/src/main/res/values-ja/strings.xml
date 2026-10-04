@@ -1370,6 +1370,12 @@
     <string name="tuning_weight_semi_bold">中太</string>
     <string name="tuning_weight_bold">太字</string>
     <string name="tuning_cockpit_preview_title">ライブプレビュー</string>
+    <!-- Sensor Field Tile Variants & Styling (ATT-2058 / REQ-UI-258) -->
+    <string name="tuning_sensor_field_variant_title">タイルデザインとグリッドスタイル</string>
+    <string name="sensor_field_variant_v0">クラシック・シームレスグリッド</string>
+    <string name="sensor_field_variant_v1">モダン・アウトラインスポーツタイル</string>
+    <string name="sensor_field_variant_v2">立体スポーツカード</string>
+    <string name="sensor_field_variant_v3">ソフトアクセント・カプセル</string>
     <string name="tuning_default_format">デフォルト: %1$s</string>
     <string name="reset_to_defaults">デフォルトに戻す</string>
     <string name="reset_to_defaults_success">チューニング設定が工場出荷時のデフォルトに戻りました。</string>

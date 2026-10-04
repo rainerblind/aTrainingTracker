@@ -1583,6 +1583,12 @@
     <string name="tuning_weight_semi_bold">Semi-Bold</string>
     <string name="tuning_weight_bold">Bold</string>
     <string name="tuning_cockpit_preview_title">Live Preview</string>
+    <!-- Sensor Field Tile Variants & Styling (ATT-2058 / REQ-UI-258) -->
+    <string name="tuning_sensor_field_variant_title">Tile Design &amp; Layout</string>
+    <string name="sensor_field_variant_v0">Classic Seamless Grid</string>
+    <string name="sensor_field_variant_v1">Modern Outlined Sport Tiles</string>
+    <string name="sensor_field_variant_v2">Elevated Sports Cards</string>
+    <string name="sensor_field_variant_v3">Soft Accent Capsules</string>
     <string name="tuning_default_format">Default: %1$s</string>
     <string name="reset_to_defaults">Reset to Defaults</string>
     <string name="reset_to_defaults_success">Tuning preferences restored to factory defaults.</string>

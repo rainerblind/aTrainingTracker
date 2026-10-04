@@ -1390,6 +1390,12 @@
     <string name="tuning_weight_semi_bold">Halfvet</string>
     <string name="tuning_weight_bold">Vet</string>
     <string name="tuning_cockpit_preview_title">Live voorbeeld</string>
+    <!-- Sensor Field Tile Variants & Styling (ATT-2058 / REQ-UI-258) -->
+    <string name="tuning_sensor_field_variant_title">Tegelontwerp en rasterstijl</string>
+    <string name="sensor_field_variant_v0">Klassiek naadloos raster</string>
+    <string name="sensor_field_variant_v1">Moderne sporttegels met rand</string>
+    <string name="sensor_field_variant_v2">Verheven sportkaarten</string>
+    <string name="sensor_field_variant_v3">Zachte accentcapsules</string>
     <string name="tuning_default_format">Standaard: %1$s</string>
     <string name="reset_to_defaults">Fabrieksinstellingen herstellen</string>
     <string name="reset_to_defaults_success">Afstemmingsinstellingen hersteld naar fabrieksinstellingen.</string>

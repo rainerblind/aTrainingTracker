@@ -43,6 +43,7 @@ import com.atrainingtracker.trainingtracker.EditWorkoutFieldPreferences
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
+import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
 import java.util.Locale
@@ -61,10 +62,23 @@ enum class TuningSection {
 
 /**
  * Pure, deterministic subtitle formatters generating live active-value summary strings
- * for collapsed and expanded accordion section headers (REQ-UI-222).
+ * for collapsed and expanded accordion section headers (REQ-UI-222, REQ-UI-258).
  */
 object TuningSubtitleFormatter {
 
+    fun formatCockpitSubtitle(
+        family: CockpitFontFamily,
+        weight: CockpitFontWeight,
+        variant: SensorFieldVariant,
+        context: Context
+    ): String {
+        val familyName = context.getString(family.getDisplayNameRes())
+        val weightName = context.getString(weight.getDisplayNameRes())
+        val variantName = context.getString(variant.titleResId)
+        return "$familyName, $weightName · $variantName"
+    }
+
+    @Deprecated("Use formatCockpitSubtitle(family, weight, variant, context)")
     fun formatCockpitSubtitle(
         family: CockpitFontFamily,
         weight: CockpitFontWeight,
