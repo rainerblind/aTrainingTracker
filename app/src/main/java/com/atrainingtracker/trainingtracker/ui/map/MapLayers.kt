@@ -32,6 +32,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.routes.RouteWaypoint
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.Dash
@@ -91,6 +92,15 @@ fun MappablePathLayer(
             alpha = alpha,
             currentZoom = currentZoom,
             directionIcons = directionIcons
+        )
+    }
+
+    // 3. Waypoint / POI Markers (REQ-MAP-026)
+    if (path is MapRoute && path.waypoints.isNotEmpty()) {
+        RouteWaypointsLayer(
+            waypoints = path.waypoints,
+            context = context,
+            alpha = alpha
         )
     }
 }
@@ -405,6 +415,45 @@ private fun XRayPolyline(
             zIndex = overlayZIndex,
             pattern = pattern,
             jointType = jointType
+        )
+    }
+}
+
+/**
+ * Renders route waypoints / POIs as interactive map markers (REQ-MAP-026).
+ *
+ * Requirements:
+ * - Markers are rendered above both base and overlay polylines (zIndex >= 50f).
+ * - Displays vector icon associated with [RouteWaypoint.type.iconResId].
+ * - Supports clicking on a waypoint marker to trigger [onWaypointClick].
+ */
+@Composable
+fun RouteWaypointsLayer(
+    waypoints: List<RouteWaypoint>,
+    context: Context? = null,
+    alpha: Float = 1.0f,
+    onWaypointClick: (RouteWaypoint) -> Unit = {}
+) {
+    if (waypoints.isEmpty()) return
+
+    waypoints.forEach { waypoint ->
+        val iconDescriptor = remember(waypoint.type, context) {
+            context?.let { ctx ->
+                bitmapDescriptorFromVectorInternal(ctx, waypoint.type.iconResId, 32, null)
+            }
+        }
+
+        Marker(
+            state = remember(waypoint.id, waypoint.latLng) { MarkerState(position = waypoint.latLng) },
+            title = waypoint.name,
+            snippet = waypoint.description.ifEmpty { null },
+            icon = iconDescriptor,
+            alpha = alpha,
+            zIndex = 50.0f,
+            onClick = {
+                onWaypointClick(waypoint)
+                true
+            }
         )
     }
 }

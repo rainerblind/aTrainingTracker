@@ -37,11 +37,23 @@ import io.ticofab.androidgpxparser.parser.GPXParser
 import io.ticofab.androidgpxparser.parser.domain.Gpx
 
 /**
- * Importer for GPX files with automatic DEM elevation enrichment for routes lacking altitude data.
+ * Result data class for route file imports (GPX / TCX).
+ */
+data class RouteImportResult(
+    val summary: RouteSummary,
+    val pathPoints: List<PathPoint>,
+    val waypoints: List<RouteWaypoint> = emptyList()
+)
+
+/**
+ * Importer for GPX files with automatic DEM elevation enrichment for routes lacking altitude data,
+ * and POI waypoint extraction (REQ-MAP-026).
  *
  * Traceability:
  * - REQ-MAP-025: Automatic DEM Elevation Enrichment for Imported GPX Routes Lacking Altitude Data.
+ * - REQ-MAP-026: Support Waypoints, POIs (Benches, Water, Summits) and TCX Course Points.
  * - TST-MAP-027: Automatic DEM Elevation Enrichment for Imported GPX Routes Lacking Altitude Verification.
+ * - TST-MAP-028: Waypoint extraction, classification, and visualization verification.
  */
 class GpxRouteImporter @JvmOverloads constructor(
     private val context: Context,
@@ -54,14 +66,14 @@ class GpxRouteImporter @JvmOverloads constructor(
     }
 
     /**
-     * Parses a GPX file from a Uri and return the RouteSummary and PathPoints.
+     * Parses a GPX file from a Uri and returns the RouteSummary, PathPoints, and Waypoints.
      * If the imported track lacks elevation data, it automatically enriches coordinates
      * with DEM elevations from Open-Meteo.
      */
     suspend fun importRouteFromGpx(
         uri: Uri,
         onProgress: ((completed: Int, total: Int) -> Unit)? = null
-    ): Result<Pair<RouteSummary, List<PathPoint>>> = withContext(Dispatchers.IO) {
+    ): Result<RouteImportResult> = withContext(Dispatchers.IO) {
         try {
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 val parser = GPXParser()
@@ -110,6 +122,18 @@ class GpxRouteImporter @JvmOverloads constructor(
                     enrichElevations(pathPoints, onProgress)
                 }
 
+                // Parse waypoints (<wpt>) if present (REQ-MAP-026)
+                val rawWaypoints = (parsedGpx.wayPoints ?: emptyList()).map { wpt ->
+                    RouteWaypoint(
+                        latLng = LatLng(wpt.latitude, wpt.longitude),
+                        altitude = wpt.elevation ?: 0.0,
+                        name = wpt.name ?: "",
+                        description = wpt.desc ?: wpt.cmt ?: "",
+                        type = WaypointType.fromGpx(wpt.sym, wpt.type, wpt.name)
+                    )
+                }
+                val waypoints = WaypointDistanceCalculator.projectWaypoints(rawWaypoints, pathPoints)
+
                 val summary = RouteSummary(
                     id = 0,
                     externalId = uri.lastPathSegment ?: "unknown",
@@ -123,7 +147,7 @@ class GpxRouteImporter @JvmOverloads constructor(
                     source = RouteSource.LOCAL_GPX
                 )
 
-                Result.success(Pair(summary, pathPoints))
+                Result.success(RouteImportResult(summary, pathPoints, waypoints))
             } ?: Result.failure(Exception("Stream null"))
         } catch (e: Exception) {
             Result.failure(e)

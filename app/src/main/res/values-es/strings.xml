@@ -1512,4 +1512,17 @@
     <string name="gpx_enriching_elevation">Obteniendo datos de elevación…</string>
     <string name="gpx_elevation_enriched">Datos de elevación añadidos con éxito</string>
     <string name="gpx_elevation_enrichment_failed">Error al obtener elevación, ruta 2D importada</string>
+    <string name="waypoint_type_bench">Banco / Descanso</string>
+    <string name="waypoint_type_water">Fuente de agua</string>
+    <string name="waypoint_type_summit">Cima / Puerto</string>
+    <string name="waypoint_type_food">Comida / Cafetería</string>
+    <string name="waypoint_type_viewpoint">Mirador</string>
+    <string name="waypoint_type_first_aid">Primeros auxilios</string>
+    <string name="waypoint_type_danger">Peligro</string>
+    <string name="waypoint_type_turn_left">Girar a la izquierda</string>
+    <string name="waypoint_type_turn_right">Girar a la derecha</string>
+    <string name="waypoint_type_turn_straight">Continuar recto</string>
+    <string name="waypoint_type_generic">Punto de paso</string>
+    <string name="route_cue_sheet_title">Hoja de ruta</string>
+    <string name="route_waypoints_header">Puntos de paso y POIs (%1$d)</string>
 </resources>

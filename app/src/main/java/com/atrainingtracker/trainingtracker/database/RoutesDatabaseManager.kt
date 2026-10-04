@@ -27,6 +27,8 @@ import android.util.Log
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.routes.RouteWaypoint
+import com.atrainingtracker.trainingtracker.routes.WaypointType
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
@@ -70,7 +72,8 @@ enum class RouteSource(
 
 data class RouteWithPath(
     val summary: RouteSummary,
-    val path: List<PathPoint>
+    val path: List<PathPoint>,
+    val waypoints: List<RouteWaypoint> = emptyList()
 )
 
 
@@ -124,9 +127,13 @@ class RoutesDatabaseManager private constructor(context: Context) {
     }
 
     /**
-     * Inserts a new route into the database.
+     * Inserts a new route into the database, optionally persisting waypoints.
      */
-    fun insertRoute(summary: RouteSummary, path: List<PathPoint>): Long {
+    fun insertRoute(
+        summary: RouteSummary,
+        path: List<PathPoint>,
+        waypoints: List<RouteWaypoint> = emptyList()
+    ): Long {
         val db = getDatabase()
         db.beginTransaction()
         return try {
@@ -186,6 +193,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
 
             // Prune any legacy duplicate rows if found
             for (dupId in duplicateIds) {
+                db.delete(RouteContract.TABLE_ROUTE_WAYPOINTS, "${RouteContract.COLUMN_WAYPOINT_ROUTE_ID_FK} = ?", arrayOf(dupId.toString()))
                 db.delete(RouteContract.TABLE_ROUTE_POINTS, "${RouteContract.COLUMN_ROUTE_ID_FK} = ?", arrayOf(dupId.toString()))
                 db.delete(RouteContract.TABLE_ROUTES, "${RouteContract.COLUMN_ID} = ?", arrayOf(dupId.toString()))
             }
@@ -201,6 +209,11 @@ class RoutesDatabaseManager private constructor(context: Context) {
                 db.delete(
                     RouteContract.TABLE_ROUTE_POINTS,
                     "${RouteContract.COLUMN_ROUTE_ID_FK} = ?",
+                    arrayOf(existingId.toString())
+                )
+                db.delete(
+                    RouteContract.TABLE_ROUTE_WAYPOINTS,
+                    "${RouteContract.COLUMN_WAYPOINT_ROUTE_ID_FK} = ?",
                     arrayOf(existingId.toString())
                 )
                 routeId = existingId
@@ -220,11 +233,107 @@ class RoutesDatabaseManager private constructor(context: Context) {
                 db.insert(RouteContract.TABLE_ROUTE_POINTS, null, pValues)
             }
 
+            // 4. Insert the route waypoints (REQ-MAP-026)
+            insertWaypointsInternal(db, routeId, waypoints)
+
             db.setTransactionSuccessful()
             routeId
         } finally {
             db.endTransaction()
         }
+    }
+
+    /**
+     * Inserts a list of waypoints for a given route ID.
+     */
+    fun insertWaypoints(routeId: Long, waypoints: List<RouteWaypoint>) {
+        if (waypoints.isEmpty()) return
+        val db = getDatabase()
+        db.beginTransaction()
+        try {
+            insertWaypointsInternal(db, routeId, waypoints)
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    private fun insertWaypointsInternal(db: SQLiteDatabase, routeId: Long, waypoints: List<RouteWaypoint>) {
+        waypoints.forEach { wpt ->
+            val pValues = ContentValues().apply {
+                put(RouteContract.COLUMN_WAYPOINT_ROUTE_ID_FK, routeId)
+                put(RouteContract.COLUMN_WAYPOINT_NAME, wpt.name)
+                put(RouteContract.COLUMN_WAYPOINT_DESCRIPTION, wpt.description)
+                put(RouteContract.COLUMN_WAYPOINT_LAT, wpt.latLng.latitude)
+                put(RouteContract.COLUMN_WAYPOINT_LNG, wpt.latLng.longitude)
+                put(RouteContract.COLUMN_WAYPOINT_ELEVATION, wpt.altitude)
+                put(RouteContract.COLUMN_WAYPOINT_DIST_FROM_START, wpt.distanceFromStart)
+                put(RouteContract.COLUMN_WAYPOINT_TYPE, wpt.type.name)
+            }
+            db.insert(RouteContract.TABLE_ROUTE_WAYPOINTS, null, pValues)
+        }
+    }
+
+    /**
+     * Retrieves all waypoints for a specific route ID, ordered by distance along route.
+     */
+    fun getWaypointsForRoute(routeId: Long): List<RouteWaypoint> {
+        val waypoints = mutableListOf<RouteWaypoint>()
+        val db = getDatabase()
+
+        db.query(
+            RouteContract.TABLE_ROUTE_WAYPOINTS,
+            null,
+            "${RouteContract.COLUMN_WAYPOINT_ROUTE_ID_FK} = ?",
+            arrayOf(routeId.toString()),
+            null,
+            null,
+            "${RouteContract.COLUMN_WAYPOINT_DIST_FROM_START} ASC, ${RouteContract.COLUMN_WAYPOINT_ID} ASC"
+        ).use { cursor ->
+            val idIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_ID)
+            val routeIdIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_ROUTE_ID_FK)
+            val nameIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_NAME)
+            val descIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_DESCRIPTION)
+            val latIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_LAT)
+            val lngIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_LNG)
+            val elevIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_ELEVATION)
+            val distIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_DIST_FROM_START)
+            val typeIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_TYPE)
+
+            while (cursor.moveToNext()) {
+                val typeStr = cursor.getString(typeIdx)
+                val type = try {
+                    WaypointType.valueOf(typeStr)
+                } catch (e: Exception) {
+                    WaypointType.GENERIC
+                }
+                waypoints.add(
+                    RouteWaypoint(
+                        id = cursor.getLong(idIdx),
+                        routeId = cursor.getLong(routeIdIdx),
+                        latLng = LatLng(cursor.getDouble(latIdx), cursor.getDouble(lngIdx)),
+                        altitude = if (cursor.isNull(elevIdx)) 0.0 else cursor.getDouble(elevIdx),
+                        name = cursor.getString(nameIdx) ?: "",
+                        description = cursor.getString(descIdx) ?: "",
+                        type = type,
+                        distanceFromStart = cursor.getDouble(distIdx)
+                    )
+                )
+            }
+        }
+        return waypoints
+    }
+
+    /**
+     * Deletes all waypoints for a specific route ID.
+     */
+    fun deleteWaypointsForRoute(routeId: Long): Int {
+        val db = getDatabase()
+        return db.delete(
+            RouteContract.TABLE_ROUTE_WAYPOINTS,
+            "${RouteContract.COLUMN_WAYPOINT_ROUTE_ID_FK} = ?",
+            arrayOf(routeId.toString())
+        )
     }
 
     /**
@@ -270,8 +379,9 @@ class RoutesDatabaseManager private constructor(context: Context) {
             while (cursor.moveToNext()) {
                 val routeSummary = mapCursorToRouteSummary(cursor)
                 val pathPoints = getRoutePath(routeSummary.id)
+                val waypoints = getWaypointsForRoute(routeSummary.id)
 
-                routes.add(RouteWithPath(routeSummary, pathPoints))
+                routes.add(RouteWithPath(routeSummary, pathPoints, waypoints))
             }
         }
         return routes
@@ -294,7 +404,8 @@ class RoutesDatabaseManager private constructor(context: Context) {
             if (cursor.moveToFirst()) {
                 val routeSummary = mapCursorToRouteSummary(cursor)
                 val pathPoints = getRoutePath(routeSummary.id)
-                return RouteWithPath(routeSummary, pathPoints)
+                val waypoints = getWaypointsForRoute(routeSummary.id)
+                return RouteWithPath(routeSummary, pathPoints, waypoints)
             }
         }
         return null
@@ -343,6 +454,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
             }
 
             for (id in expiredIds) {
+                db.delete(RouteContract.TABLE_ROUTE_WAYPOINTS, "${RouteContract.COLUMN_WAYPOINT_ROUTE_ID_FK} = ?", arrayOf(id.toString()))
                 db.delete(RouteContract.TABLE_ROUTE_POINTS, "${RouteContract.COLUMN_ROUTE_ID_FK} = ?", arrayOf(id.toString()))
                 db.delete(RouteContract.TABLE_ROUTES, "${RouteContract.COLUMN_ID} = ?", arrayOf(id.toString()))
             }
@@ -382,6 +494,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
             }
 
             for (id in orphanIds) {
+                db.delete(RouteContract.TABLE_ROUTE_WAYPOINTS, "${RouteContract.COLUMN_WAYPOINT_ROUTE_ID_FK} = ?", arrayOf(id.toString()))
                 db.delete(RouteContract.TABLE_ROUTE_POINTS, "${RouteContract.COLUMN_ROUTE_ID_FK} = ?", arrayOf(id.toString()))
                 db.delete(RouteContract.TABLE_ROUTES, "${RouteContract.COLUMN_ID} = ?", arrayOf(id.toString()))
             }
@@ -400,6 +513,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
     fun duplicateRouteAsLocal(routeId: Long): Long {
         val route = getRouteById(routeId) ?: return -1L
         val path = getRoutePath(routeId)
+        val waypoints = getWaypointsForRoute(routeId)
         val duplicatedSummary = route.summary.copy(
             id = 0L,
             externalId = "",
@@ -407,7 +521,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
             source = RouteSource.LOCAL_GPX,
             syncedAt = 0L
         )
-        return insertRoute(duplicatedSummary, path)
+        return insertRoute(duplicatedSummary, path, waypoints)
     }
 
     /**
@@ -427,7 +541,8 @@ class RoutesDatabaseManager private constructor(context: Context) {
             if (cursor.moveToFirst()) {
                 val routeSummary = mapCursorToRouteSummary(cursor)
                 val pathPoints = getRoutePath(routeSummary.id)
-                return RouteWithPath(routeSummary, pathPoints)
+                val waypoints = getWaypointsForRoute(routeSummary.id)
+                return RouteWithPath(routeSummary, pathPoints, waypoints)
             }
         }
         return null
@@ -554,6 +669,11 @@ class RoutesDatabaseManager private constructor(context: Context) {
      */
     fun deleteRoute(routeId: Long): Int {
         val db = getDatabase()
+        db.delete(
+            RouteContract.TABLE_ROUTE_WAYPOINTS,
+            "${RouteContract.COLUMN_WAYPOINT_ROUTE_ID_FK} = ?",
+            arrayOf(routeId.toString())
+        )
         return db.delete(RouteContract.TABLE_ROUTES,
             "${RouteContract.COLUMN_ID} = ?",
             arrayOf(routeId.toString())
@@ -608,6 +728,17 @@ class RoutesDatabaseManager private constructor(context: Context) {
         const val COLUMN_DIST_FROM_START = "distance_from_start"
         const val COLUMN_ALTITUDE = "elevation"
 
+        const val TABLE_ROUTE_WAYPOINTS = "route_waypoints"
+        const val COLUMN_WAYPOINT_ID = "id"
+        const val COLUMN_WAYPOINT_ROUTE_ID_FK = "route_id"
+        const val COLUMN_WAYPOINT_NAME = "name"
+        const val COLUMN_WAYPOINT_DESCRIPTION = "description"
+        const val COLUMN_WAYPOINT_LAT = "lat"
+        const val COLUMN_WAYPOINT_LNG = "lng"
+        const val COLUMN_WAYPOINT_ELEVATION = "elevation"
+        const val COLUMN_WAYPOINT_DIST_FROM_START = "distance_from_start"
+        const val COLUMN_WAYPOINT_TYPE = "type"
+
         const val CREATE_TABLE_ROUTES = """
         CREATE TABLE $TABLE_ROUTES (
             $COLUMN_ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -639,6 +770,25 @@ class RoutesDatabaseManager private constructor(context: Context) {
             FOREIGN KEY($COLUMN_ROUTE_ID_FK) REFERENCES $TABLE_ROUTES($COLUMN_ID) ON DELETE CASCADE
         );
     """
+
+        const val CREATE_TABLE_ROUTE_WAYPOINTS = """
+        CREATE TABLE $TABLE_ROUTE_WAYPOINTS (
+            $COLUMN_WAYPOINT_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            $COLUMN_WAYPOINT_ROUTE_ID_FK INTEGER,
+            $COLUMN_WAYPOINT_NAME TEXT,
+            $COLUMN_WAYPOINT_DESCRIPTION TEXT,
+            $COLUMN_WAYPOINT_LAT REAL,
+            $COLUMN_WAYPOINT_LNG REAL,
+            $COLUMN_WAYPOINT_ELEVATION REAL,
+            $COLUMN_WAYPOINT_DIST_FROM_START REAL,
+            $COLUMN_WAYPOINT_TYPE TEXT,
+            FOREIGN KEY($COLUMN_WAYPOINT_ROUTE_ID_FK) REFERENCES $TABLE_ROUTES($COLUMN_ID) ON DELETE CASCADE
+        );
+    """
+
+        const val CREATE_INDEX_ROUTE_WAYPOINTS = """
+        CREATE INDEX IF NOT EXISTS idx_route_waypoints_route_id ON $TABLE_ROUTE_WAYPOINTS ($COLUMN_WAYPOINT_ROUTE_ID_FK);
+    """
     }
 
     class RoutesDbHelper(context: Context) : SQLiteOpenHelper(
@@ -655,7 +805,8 @@ class RoutesDatabaseManager private constructor(context: Context) {
             // const val DB_VERSION = 5    // Added the description
             // const val DB_VERSION = 7    // Added spatial bounds (ATT-352)
             // const val DB_VERSION = 8    // Added synced_at for 7-day TTL cache retention (ATT-1177)
-            const val DB_VERSION = 9    // Ensure valid synced_at timestamp for existing Strava routes
+            // const val DB_VERSION = 9    // Ensure valid synced_at timestamp for existing Strava routes
+            const val DB_VERSION = 10   // Added route_waypoints table (REQ-MAP-026, ATT-58)
 
             private const val TAG = "RoutesDbHelper"
             private val DEBUG = TrainingApplication.getDebug(true)
@@ -665,6 +816,8 @@ class RoutesDatabaseManager private constructor(context: Context) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(RouteContract.CREATE_TABLE_ROUTES)
             db.execSQL(RouteContract.CREATE_TABLE_ROUTE_POINTS)
+            db.execSQL(RouteContract.CREATE_TABLE_ROUTE_WAYPOINTS)
+            db.execSQL(RouteContract.CREATE_INDEX_ROUTE_WAYPOINTS)
         }
 
         override fun onOpen(db: SQLiteDatabase) {
@@ -677,6 +830,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
             Log.i(TAG, "Upgrading Routes database from $oldVersion to $newVersion")
 
             if (oldVersion < 5) {
+                db.execSQL("DROP TABLE IF EXISTS ${RouteContract.TABLE_ROUTE_WAYPOINTS}")
                 db.execSQL("DROP TABLE IF EXISTS ${RouteContract.TABLE_ROUTE_POINTS}")
                 db.execSQL("DROP TABLE IF EXISTS ${RouteContract.TABLE_ROUTES}")
                 onCreate(db)
@@ -714,6 +868,16 @@ class RoutesDatabaseManager private constructor(context: Context) {
                     db.execSQL("UPDATE ${RouteContract.TABLE_ROUTES} SET ${RouteContract.COLUMN_SYNCED_AT} = $now WHERE ${RouteContract.COLUMN_SOURCE} = '${RouteSource.STRAVA.name}' AND (${RouteContract.COLUMN_SYNCED_AT} IS NULL OR ${RouteContract.COLUMN_SYNCED_AT} <= 0)")
                 } catch (e: Exception) {
                     Log.w(TAG, "Error updating synced_at timestamp: ${e.message}")
+                }
+            }
+
+            if (oldVersion < 10) {
+                Log.i(TAG, "Upgrading Routes DB to Version 10 (Adding route_waypoints table)")
+                try {
+                    db.execSQL(RouteContract.CREATE_TABLE_ROUTE_WAYPOINTS)
+                    db.execSQL(RouteContract.CREATE_INDEX_ROUTE_WAYPOINTS)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error creating route_waypoints table: ${e.message}")
                 }
             }
         }

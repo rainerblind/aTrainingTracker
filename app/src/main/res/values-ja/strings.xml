@@ -1490,4 +1490,17 @@
     <string name="gpx_enriching_elevation">標高データを取得中…</string>
     <string name="gpx_elevation_enriched">標高データを正常に追加しました</string>
     <string name="gpx_elevation_enrichment_failed">標高の取得に失敗しました。2Dルートをインポートしました</string>
+    <string name="waypoint_type_bench">ベンチ / 休憩所</string>
+    <string name="waypoint_type_water">給水所 / 水場</string>
+    <string name="waypoint_type_summit">山頂 / 峠</string>
+    <string name="waypoint_type_food">補給所 / カフェ</string>
+    <string name="waypoint_type_viewpoint">展望ポイント</string>
+    <string name="waypoint_type_first_aid">救護所</string>
+    <string name="waypoint_type_danger">危険箇所</string>
+    <string name="waypoint_type_turn_left">左折</string>
+    <string name="waypoint_type_turn_right">右折</string>
+    <string name="waypoint_type_turn_straight">直進</string>
+    <string name="waypoint_type_generic">ウェイポイント</string>
+    <string name="route_cue_sheet_title">キューシート</string>
+    <string name="route_waypoints_header">ウェイポイントとPOI (%1$d)</string>
 </resources>

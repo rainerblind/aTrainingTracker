@@ -32,6 +32,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.routes.GpxRouteImporter
+import com.atrainingtracker.trainingtracker.routes.RouteWaypoint
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import kotlinx.coroutines.launch
 
@@ -44,7 +45,11 @@ class GpxImportViewModel(
 
     sealed class ImportState {
         object Loading : ImportState()
-        data class Editing(val summary: RouteSummary, val points: List<PathPoint>) : ImportState()
+        data class Editing(
+            val summary: RouteSummary,
+            val points: List<PathPoint>,
+            val waypoints: List<RouteWaypoint> = emptyList()
+        ) : ImportState()
         object Saving : ImportState()
         object Success : ImportState()
         data class Error(val message: String) : ImportState()
@@ -57,20 +62,22 @@ class GpxImportViewModel(
         }
 
         viewModelScope.launch {
-            // Using the new ticofab-based parser logic we added to the importer
             importer.importRouteFromGpx(uri).onSuccess { data ->
-                // 'data' is a Pair/Triple containing (RouteSummary, List<PathPoint>)
-                uiState = ImportState.Editing(data.first, data.second)
+                uiState = ImportState.Editing(data.summary, data.pathPoints, data.waypoints)
             }.onFailure {
                 uiState = ImportState.Error(it.message ?: "Failed to parse GPX")
             }
         }
     }
 
-    fun saveRoute(summary: RouteSummary, points: List<PathPoint>) {
+    fun saveRoute(
+        summary: RouteSummary,
+        points: List<PathPoint>,
+        waypoints: List<RouteWaypoint> = emptyList()
+    ) {
         uiState = ImportState.Saving
         viewModelScope.launch {
-            repository.insertRoute(summary, points)
+            repository.insertRoute(summary, points, waypoints)
             uiState = ImportState.Success
         }
     }

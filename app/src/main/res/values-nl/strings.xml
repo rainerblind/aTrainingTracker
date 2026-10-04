@@ -1510,4 +1510,17 @@
     <string name="gpx_enriching_elevation">Hoogtegegevens ophalen…</string>
     <string name="gpx_elevation_enriched">Hoogtegegevens succesvol toegevoegd</string>
     <string name="gpx_elevation_enrichment_failed">Hoogte ophalen mislukt, 2D-route geïmporteerd</string>
+    <string name="waypoint_type_bench">Bank / Rustpunt</string>
+    <string name="waypoint_type_water">Waterpunt</string>
+    <string name="waypoint_type_summit">Top / Pas</string>
+    <string name="waypoint_type_food">Eten / Café</string>
+    <string name="waypoint_type_viewpoint">Uitzichtpunt</string>
+    <string name="waypoint_type_first_aid">EHBO</string>
+    <string name="waypoint_type_danger">Gevaar</string>
+    <string name="waypoint_type_turn_left">Links afslaan</string>
+    <string name="waypoint_type_turn_right">Rechts afslaan</string>
+    <string name="waypoint_type_turn_straight">Rechtdoor vervolgen</string>
+    <string name="waypoint_type_generic">Routepunt</string>
+    <string name="route_cue_sheet_title">Routebeschrijving</string>
+    <string name="route_waypoints_header">Routepunten en POI\'s (%1$d)</string>
 </resources>
