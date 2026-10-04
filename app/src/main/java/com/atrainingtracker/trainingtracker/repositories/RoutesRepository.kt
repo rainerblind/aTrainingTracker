@@ -27,6 +27,7 @@ import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.database.RoutesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
+import com.atrainingtracker.trainingtracker.routes.RouteWaypoint
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaRoute
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaStream
@@ -152,13 +153,17 @@ class RoutesRepository internal constructor(
     }
 
     /**
-     * Inserts a new route (from GPX import or API) and refreshes the flow.
+     * Inserts a new route (from GPX/TCX import or API) and refreshes the flow.
      */
-    suspend fun insertRoute(summary: RouteSummary, path: List<PathPoint>): Long = withContext(Dispatchers.IO) {
-        val newId = routesDb.insertRoute(summary, path)
+    suspend fun insertRoute(
+        summary: RouteSummary,
+        path: List<PathPoint>,
+        waypoints: List<RouteWaypoint> = emptyList()
+    ): Long = withContext(Dispatchers.IO) {
+        val newId = routesDb.insertRoute(summary, path, waypoints)
         
         // Seed the cluster database (SCRUM-207)
-        val routeWithPath = RouteWithPath(summary.copy(id = newId), path)
+        val routeWithPath = RouteWithPath(summary.copy(id = newId), path, waypoints)
         val clusterId = WorkoutClusterEngine.getInstance(context)
             .learnFromRoute(routeWithPath)
 
@@ -169,6 +174,13 @@ class RoutesRepository internal constructor(
 
         refreshRoutes() // Notify observers that a new route is available
         newId
+    }
+
+    /**
+     * Retrieves all waypoints for a specific route ID.
+     */
+    suspend fun getWaypointsForRoute(routeId: Long): List<RouteWaypoint> = withContext(Dispatchers.IO) {
+        routesDb.getWaypointsForRoute(routeId)
     }
 
     /**

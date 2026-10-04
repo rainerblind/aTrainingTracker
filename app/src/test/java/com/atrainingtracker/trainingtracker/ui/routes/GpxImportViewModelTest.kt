@@ -24,6 +24,7 @@ import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.routes.GpxRouteImporter
+import com.atrainingtracker.trainingtracker.routes.RouteImportResult
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
 import io.mockk.coEvery
@@ -99,7 +100,7 @@ class GpxImportViewModelTest {
             PathPoint(distance = 5000.0, latLng = LatLng(48.05, 11.05), altitude = 620.0)
         )
 
-        coEvery { mockImporter.importRouteFromGpx(testUri) } returns Result.success(Pair(summary, points))
+        coEvery { mockImporter.importRouteFromGpx(testUri) } returns Result.success(RouteImportResult(summary, points))
 
         viewModel.handleIntent(testUri)
         advanceUntilIdle()

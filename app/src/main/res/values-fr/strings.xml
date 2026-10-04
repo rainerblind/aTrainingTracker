@@ -1511,4 +1511,17 @@
     <string name="gpx_enriching_elevation">Récupération des données d\'altitude…</string>
     <string name="gpx_elevation_enriched">Données d\'altitude ajoutées avec succès</string>
     <string name="gpx_elevation_enrichment_failed">Échec de récupération d\'altitude, tracé 2D importé</string>
+    <string name="waypoint_type_bench">Banc / Repos</string>
+    <string name="waypoint_type_water">Point d\'eau</string>
+    <string name="waypoint_type_summit">Sommet / Col</string>
+    <string name="waypoint_type_food">Restauration / Café</string>
+    <string name="waypoint_type_viewpoint">Point de vue</string>
+    <string name="waypoint_type_first_aid">Premiers secours</string>
+    <string name="waypoint_type_danger">Danger</string>
+    <string name="waypoint_type_turn_left">Tourner à gauche</string>
+    <string name="waypoint_type_turn_right">Tourner à droite</string>
+    <string name="waypoint_type_turn_straight">Continuer tout droit</string>
+    <string name="waypoint_type_generic">Point de passage</string>
+    <string name="route_cue_sheet_title">Feuille de route</string>
+    <string name="route_waypoints_header">Points de passage et POIs (%1$d)</string>
 </resources>
