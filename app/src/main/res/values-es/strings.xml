@@ -1313,6 +1313,10 @@
     <string name="workout_name_ride_from">Salida desde %1$s</string>
     <string name="workout_name_activity_from">Actividad desde %1$s</string>
     <string name="workout_name_round_trip">Circuito desde %1$s</string>
+    <string name="workout_name_run_from_with_distance">Carrera desde %1$s (%2$s)</string>
+    <string name="workout_name_ride_from_with_distance">Salida desde %1$s (%2$s)</string>
+    <string name="workout_name_activity_from_with_distance">Actividad desde %1$s (%2$s)</string>
+    <string name="workout_name_round_trip_with_distance">Circuito desde %1$s (%2$s)</string>
     <string name="workout_name_run_from_to">Carrera de %1$s a %2$s</string>
     <string name="workout_name_ride_from_to">Salida de %1$s a %2$s</string>
     <string name="workout_name_activity_from_to">Actividad de %1$s a %2$s</string>

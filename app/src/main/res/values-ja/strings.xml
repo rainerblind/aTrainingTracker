@@ -1291,6 +1291,10 @@
     <string name="workout_name_ride_from">%1$s からのライド</string>
     <string name="workout_name_activity_from">%1$s からのアクティビティ</string>
     <string name="workout_name_round_trip">%1$s からの周回</string>
+    <string name="workout_name_run_from_with_distance">%1$s からのラン (%2$s)</string>
+    <string name="workout_name_ride_from_with_distance">%1$s からのライド (%2$s)</string>
+    <string name="workout_name_activity_from_with_distance">%1$s からのアクティビティ (%2$s)</string>
+    <string name="workout_name_round_trip_with_distance">%1$s からの周回 (%2$s)</string>
     <string name="workout_name_run_from_to">%1$s から %2$s へのラン</string>
     <string name="workout_name_ride_from_to">%1$s から %2$s へのライド</string>
     <string name="workout_name_activity_from_to">%1$s から %2$s へのアクティビティ</string>
