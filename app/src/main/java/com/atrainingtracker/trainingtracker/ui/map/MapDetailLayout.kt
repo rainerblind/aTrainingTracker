@@ -139,6 +139,7 @@ fun MapDetailLayout(
     )
     val hasZoomToolbar = showZoomControls && (showElevationProfile || hasTelemetryGraphs) && !activeScrubPath.isNullOrEmpty()
     val hasScrollableContent = metadataContent != null || analyticsContent != null || hasTelemetryGraphs
+    val hasLowerSection = (showElevationProfile || hasTelemetryGraphs) && !activeScrubPath.isNullOrEmpty() || metadataContent != null || analyticsContent != null
 
     val unit = remember { TrainingApplication.getUnit() }
     val connection = remember { CollapsingAppBarNestedScrollConnection(0) }
@@ -580,7 +581,7 @@ fun MapDetailLayout(
                 .fillMaxSize()
                 .padding(top = currentTopPaddingDp)
         ) {
-            if (showMap && hasScrollableContent) {
+            if (showMap && hasLowerSection) {
                 BoxWithConstraints(
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -652,14 +653,12 @@ fun MapDetailLayout(
                 }
             }
         } else {
-            // When hasScrollableContent is false (Routes & Segments), or when showMap is false (LiveSegmentSheet)
+            // When hasLowerSection is false (Heatmap / Empty map), or when showMap is false (LiveSegmentSheet / Trackless)
             if (showMap) {
                 mapBox(
                     Modifier.fillMaxSize()
                 )
-            }
-
-            if (!showMap && hasScrollableContent) {
+            } else if (!showMap && hasScrollableContent) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     Box(
                         modifier = Modifier
@@ -691,32 +690,34 @@ fun MapDetailLayout(
                         scrubbingOverlay()
                     }
                 }
-            } else {
-                if (hasZoomToolbar) {
-                    GlobalTelemetryZoomToolbar(
-                        zoomScale = profileZoomScale,
-                        startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
-                        totalSpan = totalSpan,
-                        onZoomChanged = { z, s ->
-                            profileZoomScale = z
-                            viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
-                        },
-                        isPanMode = isPanMode,
-                        onPanModeToggle = { isPanMode = !isPanMode },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .wrapContentHeight()
-                ) {
-                    lowerColumn(
-                        Modifier
+            } else if (hasLowerSection) {
+                Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
+                    if (hasZoomToolbar) {
+                        GlobalTelemetryZoomToolbar(
+                            zoomScale = profileZoomScale,
+                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
+                            totalSpan = totalSpan,
+                            onZoomChanged = { z, s ->
+                                profileZoomScale = z
+                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
+                            },
+                            isPanMode = isPanMode,
+                            onPanModeToggle = { isPanMode = !isPanMode },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
                             .fillMaxWidth()
                             .wrapContentHeight()
-                    )
-                    scrubbingOverlay()
+                    ) {
+                        lowerColumn(
+                            Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight()
+                        )
+                        scrubbingOverlay()
+                    }
                 }
             }
         }
