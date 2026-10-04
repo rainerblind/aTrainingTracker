@@ -1561,4 +1561,20 @@
     <string name="nav_destination_home">自宅</string>
     <string name="nav_stop_return">帰り道終了</string>
     <string name="nav_route_reverse">ルートを逆走して戻る</string>
+
+    <!-- Corridor Grouping & Differentiating Thumbnail Zoom (ATT-1954) -->
+    <string name="gateway_all">すべて</string>
+    <string name="gateway_north">北</string>
+    <string name="gateway_northeast">北東</string>
+    <string name="gateway_east">東</string>
+    <string name="gateway_southeast">南東</string>
+    <string name="gateway_south">南</string>
+    <string name="gateway_southwest">南西</string>
+    <string name="gateway_west">西</string>
+    <string name="gateway_northwest">北西</string>
+    <string name="gateway_unknown">その他</string>
+    <string name="pref_corridor_grouping_title">回廊ベースのルートグループ化</string>
+    <string name="pref_corridor_grouping_desc">リスト内のルートを出発方向と回廊ごとにグループ化します</string>
+    <string name="pref_focused_thumbnail_title">フォーカスされたサムネイルズーム</string>
+    <string name="pref_focused_thumbnail_desc">ルートサムネイルを共通の出入り回廊ではなく、特徴的な中央ループにズームします</string>
 </resources>

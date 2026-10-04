@@ -1774,6 +1774,22 @@
     <string name="nav_destination_home">Home</string>
     <string name="nav_stop_return">Stop Return</string>
     <string name="nav_route_reverse">Return along route</string>
+
+    <!-- Corridor Grouping & Differentiating Thumbnail Zoom (ATT-1954) -->
+    <string name="gateway_all">All</string>
+    <string name="gateway_north">North</string>
+    <string name="gateway_northeast">Northeast</string>
+    <string name="gateway_east">East</string>
+    <string name="gateway_southeast">Southeast</string>
+    <string name="gateway_south">South</string>
+    <string name="gateway_southwest">Southwest</string>
+    <string name="gateway_west">West</string>
+    <string name="gateway_northwest">Northwest</string>
+    <string name="gateway_unknown">Other</string>
+    <string name="pref_corridor_grouping_title">Corridor-based route grouping</string>
+    <string name="pref_corridor_grouping_desc">Group routes in the list by their departure direction and gateway</string>
+    <string name="pref_focused_thumbnail_title">Focused thumbnail zoom</string>
+    <string name="pref_focused_thumbnail_desc">Zoom route thumbnails into the unique middle loop instead of common entry/exit corridors</string>
 </resources>
 
 

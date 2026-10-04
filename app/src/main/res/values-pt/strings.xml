@@ -1581,4 +1581,20 @@
     <string name="nav_destination_home">Casa</string>
     <string name="nav_stop_return">Parar regresso</string>
     <string name="nav_route_reverse">Regressar pela rota</string>
+
+    <!-- Corridor Grouping & Differentiating Thumbnail Zoom (ATT-1954) -->
+    <string name="gateway_all">Todos</string>
+    <string name="gateway_north">Norte</string>
+    <string name="gateway_northeast">Nordeste</string>
+    <string name="gateway_east">Leste</string>
+    <string name="gateway_southeast">Sudeste</string>
+    <string name="gateway_south">Sul</string>
+    <string name="gateway_southwest">Sudoeste</string>
+    <string name="gateway_west">Oeste</string>
+    <string name="gateway_northwest">Noroeste</string>
+    <string name="gateway_unknown">Outros</string>
+    <string name="pref_corridor_grouping_title">Agrupamento de rotas por corredor</string>
+    <string name="pref_corridor_grouping_desc">Agrupa rotas na lista por sua direção de partida e corredor</string>
+    <string name="pref_focused_thumbnail_title">Zoom de miniatura focado</string>
+    <string name="pref_focused_thumbnail_desc">Aplica zoom às miniaturas de rotas no loop central característico em vez de corredores comuns de entrada/saída</string>
 </resources>
