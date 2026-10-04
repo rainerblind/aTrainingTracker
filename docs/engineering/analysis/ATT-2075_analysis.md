@@ -147,6 +147,8 @@ The state machine executes progressively when the athlete taps **Start Tracking*
 
 ## 5. Chesterton's Fence Archaeology (`REQ-PRO-022`)
 
+### Requirement Archaeology & Chesterton's Fence Audit
+
 1. **Original Requirement ID & Target**:
    * Refines `REQ-PRI-003` (*Modernized Contextual Just-in-Time Permission Flow*) and legacy `REQ-STB-002` (*Uninterrupted Foreground Service Execution*).
 2. **Historical Origin & Commit Trace**:
