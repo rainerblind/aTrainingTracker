@@ -42,7 +42,8 @@ fun DeviceStatusRow(
     modifier: Modifier = Modifier,
     iconSize: Dp = 18.dp,
     textStyle: TextStyle = MaterialTheme.typography.bodyMedium,
-    alpha: Float = TTAlpha.Medium
+    alpha: Float = TTAlpha.Medium,
+    isConnected: Boolean = device.isConnected
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -61,7 +62,7 @@ fun DeviceStatusRow(
 
         // 2. State Information in Brackets
         val relativeTime = getRelativeLastSeen(device.lastSeen)
-        val stateText = if (device.isConnected) {
+        val stateText = if (isConnected) {
             stringResource(R.string.devices_available)
         } else if (relativeTime.isNotEmpty()) {
             relativeTime

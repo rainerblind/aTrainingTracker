@@ -97,8 +97,8 @@ GATE_DEFINITIONS = {
    - Verify ./gradlew testDebugUnitTest executed with 100% success (0 failures, 0 regressions) across all project modules.
 2. Living Documentation Parity:
    - Confirm docs/requirements.md and docs/tests.md status fields are updated to Verified.
-3. Mandatory Lösungsversion (Fix Version/s) Audit:
-   - Check the Parent Lösungsversion field in the header above. If it lists a release version (e.g. V4.9.38), this check PASSES. If it is 'None', flag as CHALLENGED / REVISE.
+3. Mandatory Lösungsversion (Fix Version/s) Governance Audit:
+   - In accordance with ASPICE Rule 19 ("Add version when ticket is finished, not when started") and Rule 6 (sub-tasks must never have fixVersions), active in-sprint tickets legitimately have Parent Lösungsversion as 'None' until final acceptance during Joint Review or release. Verify that the deliverable references the target release version (e.g. V4.9.40) and that sub-tasks have no fix version assigned. This check PASSES when Rule 19 governance is followed.
 4. Recommendation:
    - Issue an explicit recommendation: RECOMMEND PASS or RECOMMEND REVISION."""
     }
