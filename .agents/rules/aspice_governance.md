@@ -103,3 +103,9 @@ These rules are strictly binding on all AI assistants and agent instances operat
 * **Rule**: Ticket summaries (titles) MUST NOT contain the ticket category (e.g. `[Bug]`, `[Feature]`, `[Verbesserung]`, `[Improvement]`) nor the Epic name (e.g. `[Aftermath]`, `[Import/TCX]`, `[Aftermath/Details]`) (`"The Ticket name should not contain the ticket category since this is redundant. The same holds for the epic. The Epic should also be not part of the ticket name."`).
 * Ticket type/category and Epic link are first-class, structured attributes rendered natively by Jira. Prepending them in brackets to the summary text causes duplicate labels and clutters backlogs, agile boards, and git commit logs.
 * Ticket summaries must directly, concisely describe the observable issue or feature objective (e.g. *"Ensure Description and Extrema Cards Render in Detailed Workout View"* or *"Prevent Map Squashing by Large Upper Metadata in Workout Details"*).
+
+## 19. Prohibition of Premature Fix Version Assignment ("Add Version When Ticket is Finished, Not When Started")
+* **Rule**: Parent tickets MUST ONLY receive a `Lösungsversion` (Fix Version/s, e.g. `V4.9.39`) when they are **FINISHED** (accepted during Joint Review / transitioned to `Erledigt` or ready for release), NEVER when work is started, created, or in progress (`"Add version when ticket is finished, not when started."`).
+* Setting Fix Version prematurely distorts sprint metrics, pollutes release changelogs, and creates stale version tags if a ticket is rejected, postponed, or shifted across sprints.
+* Sub-tasks must NEVER receive a `Lösungsversion` (Rule 6). For parent tickets, `fixVersions` must remain unset until final acceptance and completion.
+

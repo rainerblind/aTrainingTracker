@@ -331,6 +331,19 @@ def set_fix_version(issue_key, version_name, role="agent1"):
         print(f"Available active unreleased versions: {', '.join(active_versions)}", file=sys.stderr)
         sys.exit(1)
 
+    # Governance Mandates (Rule 6 & Rule 19)
+    url_issue = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=status,issuetype"
+    issue_data = jira_request(url_issue, role=role)
+    if issue_data.get('fields', {}).get('issuetype', {}).get('subtask', False):
+        print(f"Error: Sub-tasks must not get a solution ('Lösungsversion') assigned! (Rule 6)", file=sys.stderr)
+        sys.exit(1)
+
+    status_name = issue_data.get('fields', {}).get('status', {}).get('name', '')
+    premature_statuses = ["Zu erledigen", "In Arbeit", "Analysis", "Open", "To Do", "In Progress", "In Specification"]
+    if status_name in premature_statuses and role in ("agent1", "agent2", "coordinator"):
+        print(f"Error: Premature Fix Version assignment blocked on {issue_key}! Status is '{status_name}'. Mandate: 'Add version when ticket is finished, not when started' (Rule 19).", file=sys.stderr)
+        sys.exit(1)
+
     url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}"
     payload = {
         "fields": {
@@ -339,6 +352,7 @@ def set_fix_version(issue_key, version_name, role="agent1"):
     }
     jira_request(url, method="PUT", payload=payload, role=role)
     print(f"Lösungsversion (Fix Version) '{version_name}' successfully set on {issue_key}.")
+
 
 def print_status(issue_key, role="agent1"):
     config = get_config()
@@ -783,10 +797,14 @@ if __name__ == "__main__":
                     print("Error: Agents must not move tickets to sprints! Only the human user assigns tickets to sprints during Sprint-Start Screening.", file=sys.stderr)
                     sys.exit(1)
                 add_sprint = True
-            elif arg.startswith("--fixversion="):
+            elif arg.startswith("--fixversion=") or arg.startswith("--fix-version="):
+                if active_role in ("agent1", "agent2", "coordinator"):
+                    print("Error: Tickets must not get a solution ('Lösungsversion') assigned at creation time! Mandate: 'Add version when ticket is finished, not when started' (Rule 19).", file=sys.stderr)
+                    sys.exit(1)
                 fix_ver = arg.split("=", 1)[1]
             else:
                 filtered_args.append(arg)
+
 
         if len(filtered_args) < 2:
             print("Usage: create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY] [--add-to-sprint] [--fixversion=VERSION]", file=sys.stderr)
