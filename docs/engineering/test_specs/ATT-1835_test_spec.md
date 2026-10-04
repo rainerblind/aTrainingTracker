@@ -1,28 +1,32 @@
-# Stage 2 Test Specification: ATT-1835 - Quick Route Selector from Cockpit with GPS Proximity Sorting and Automated Route Detection
+# Stage 2 Test Specification: ATT-1835 - Quick Route Selector from Cockpit with GPS Proximity Sorting and Automated Route Detection (Rework Cycle 2)
 
 **Ticket**: [ATT-1835](https://rainerblind.atlassian.net/browse/ATT-1835)  
-**Sub-task**: [ATT-2269](https://rainerblind.atlassian.net/browse/ATT-2269) (`[Req & Test Spec]`)  
+**Sub-task**: [ATT-2412](https://rainerblind.atlassian.net/browse/ATT-2412) (`[Test-Spec]`)  
 **Parent Epic**: [ATT-66](https://rainerblind.atlassian.net/browse/ATT-66) (*[Epic] Improve Routes*)  
-**Target Release**: `V4.9.39`  
-**Active Sprint**: `Sprint 2026-40.14`  
+**Target Release**: `V4.9.40` (assigned upon completion per Rule 19)  
+**Active Sprint**: `Sprint 2026-40.16`  
+**Requirement Mapping**: `REQ-MAP-024`  
+**Test Spec ID**: `TST-MAP-026`  
 **Branch**: `feature/ATT-1835`  
 **Author**: AI Agent 1 (Implementer)  
-**Date**: 2026-10-03  
+**Date**: 2026-10-04  
 
 ---
 
 ## 1. Overview & Verification Strategy
 
-This test specification defines the verification procedures for `REQ-MAP-024` under ticket [ATT-1835](https://rainerblind.atlassian.net/browse/ATT-1835).
+This test specification defines the verification procedures for `REQ-MAP-024` under ticket [ATT-1835](https://rainerblind.atlassian.net/browse/ATT-1835) for Rework Cycle 2.
 
-The verification strategy ensures that:
-1. Athletes in the tracking cockpit can open an interactive `RouteSelectorBottomSheet` in 1 tap without leaving active tracking.
-2. A deterministic multi-stage proximity ranker (`RouteProximityRanker`) resolves tie-breaking when multiple routes start from the same location (e.g. at home, $d \approx 0\,\text{m}$), prioritizing active sport match, departing heading alignment ($\Delta\text{bearing} \le 45^\circ$), and recency.
-3. Adaptive UI logic cleanly hides filter chips when fewer than 5 routes exist ($< 5$), and displays filter chips (distance, sort) when $\ge 5$ routes exist.
-4. Tapping a route activates navigation immediately; tapping "Route beenden" deselects navigation.
-5. The background `RouteAutoDetector` detects when an athlete is following a saved route without having selected it ($\le 30\,\text{m}$ distance for $\ge 200\,\text{m}$, heading $\Delta\theta \le 35^\circ$), prompting the user or auto-joining according to user settings.
-6. Settings for auto-detection and join mode persist in `TuningPreferencesDataStore`.
-7. All user-facing strings maintain 100% translation parity across all 9 supported application locales.
+During the Sprint 2026-40.15 review, the PO identified that while domain components (`RouteProximityRanker`, `RouteAutoDetector`, `RouteSelectorViewModel`, `RouteSelectorSheet`) were implemented, the UI entry points and HUD banners were never wired into `SensorGridScreen.kt`, leaving the feature uninvoked.
+
+The Rework Cycle 2 verification strategy ensures that:
+1. **Cockpit Route Entry Point (`SensorGridScreen.kt`)**: Athletes in tracking mode can access a prominent 1-tap route action chip/button that displays "Route wählen" (`R.string.route_action_select`) when navigation is inactive, or the active route name + checkmark when active.
+2. **Modal Bottom Sheet Presentation (`RouteSelectorSheet.kt`)**: Tapping the action chip triggers `ModalBottomSheet` displaying `RouteSelectorContent`, supporting dynamic filter chips ($\ge 5$ routes), route selection, and "Route beenden".
+3. **In-Ride Auto-Detection Banner (`AutoDetectedRouteBanner`)**: When `RouteAutoDetector` detects a candidate polyline during active recording, the prompt banner is rendered immediately in the Cockpit above the sensor grid with functional "Aktivieren" and "Ablehnen" callbacks.
+4. **Live GPS Telemetry Integration**: Real-time GPS location, bearing, and speed from `currentLocationFlow` and tracking state are converted and fed continuously into `RouteSelectorViewModel.onLocationChanged(...)`.
+5. **Architectural & Integration Contract Tests**: New test class `SensorGridScreenRouteIntegrationTest.kt` verifies that `SensorGridScreen.kt` explicitly references and renders `RouteSelectorContent` and `AutoDetectedRouteBanner`.
+6. **Multi-Stage Ranking & Auto-Detection Algorithms**: Preserves 100% test pass rate across `RouteProximityRankerTest.kt`, `RouteAutoDetectorTest.kt`, and `RouteSelectorViewModelTest.kt`.
+7. **9-Language Localization Parity**: Verified across EN, DE, ES, FR, IT, JA, NL, PL, PT by `TranslationParityTest.kt`.
 
 ---
 
@@ -30,103 +34,94 @@ The verification strategy ensures that:
 
 | Requirement ID | Test Specification ID | Test Classes / Suites | Verification Method | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| `REQ-MAP-024` (1: Cockpit Entry Point) | `TST-MAP-026` (Group 1) | `RouteSelectorSheetTest.kt` | Robolectric / Compose Test | Defined |
-| `REQ-MAP-024` (2: Multi-Stage Proximity Sorting) | `TST-MAP-026` (Group 2) | `RouteProximityRankerTest.kt` | JUnit 4 Unit Test | Defined |
-| `REQ-MAP-024` (3: Adaptive Filter Chips UI) | `TST-MAP-026` (Group 3) | `RouteSelectorSheetTest.kt` | Robolectric / Compose Test | Defined |
-| `REQ-MAP-024` (4: Automated Route Detection) | `TST-MAP-026` (Group 4) | `RouteAutoDetectorTest.kt` | JUnit 4 Unit Test | Defined |
-| `REQ-MAP-024` (5: Advanced Tuning Preferences) | `TST-MAP-026` (Group 5) | `RouteAutoDetectPreferencesTest.kt` | Robolectric / DataStore Test | Defined |
-| `REQ-MAP-024` (6: Localization Parity) | `TST-MAP-026` (Group 6) | `TranslationParityTest.kt` | JUnit 4 Resource Test | Defined |
-| `REQ-ALL` (Regression Invariant) | `TST-MAP-026` (Group 7) | Full `./gradlew testDebugUnitTest` | Clean-Room CI Suite | Defined |
+| `REQ-MAP-024` (1: Cockpit Entry Point & Wiring) | `TST-MAP-026` (Group 1) | `SensorGridScreenRouteIntegrationTest.kt`, `RouteSelectorSheetTest.kt` | JUnit 4 / Compose Contract Test | Specified |
+| `REQ-MAP-024` (2: Multi-Stage Proximity Sorting) | `TST-MAP-026` (Group 2) | `RouteProximityRankerTest.kt` | JUnit 4 Unit Test | Specified |
+| `REQ-MAP-024` (3: Adaptive Filter Chips UI) | `TST-MAP-026` (Group 3) | `RouteSelectorViewModelTest.kt`, `RouteSelectorSheetTest.kt` | JUnit 4 Unit & Contract Test | Specified |
+| `REQ-MAP-024` (4: In-Ride Auto-Detection HUD) | `TST-MAP-026` (Group 4) | `RouteAutoDetectorTest.kt`, `SensorGridScreenRouteIntegrationTest.kt` | JUnit 4 / Compose Contract Test | Specified |
+| `REQ-MAP-024` (5: Tuning Preferences) | `TST-MAP-026` (Group 5) | `RouteAutoDetectPreferencesTest.kt` | JUnit 4 Unit Test | Specified |
+| `REQ-MAP-024` (6: Localization Parity) | `TST-MAP-026` (Group 6) | `TranslationParityTest.kt` | JUnit 4 Resource Test | Specified |
+| `REQ-ALL` (Regression Invariant) | `TST-MAP-026` (Group 7) | `./gradlew testDebugUnitTest` | Clean-Room Suite (100% pass) | Specified |
 
 ---
 
 ## 3. Concrete Test Cases (`TST-MAP-026`)
 
-### Group 1: 1-Tap Cockpit Entry Point & Sheet Lifecycle
-* **Test Class**: `com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorSheetTest`
+### Group 1: Cockpit Route Entry Point & Sheet Presentation (`SensorGridScreenRouteIntegrationTest.kt`)
+* **Test Class**: `com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenRouteIntegrationTest`
 * **Test Cases**:
-  1. `testRouteActionButton_whenNoActiveRoute_displaysRouteWaehlen`:
-     - Given active navigation is null.
-     - Asserts the cockpit route action button displays the route icon and localized text "Route wählen".
-  2. `testRouteActionButton_whenActiveRoutePresent_displaysRouteNameAndCheckmark`:
-     - Given active navigated route ID 42L with name "Alpen-Runde 65 km".
-     - Asserts the action button displays "Alpen-Runde 65 km" and active indicator.
-  3. `testRouteActionButton_onClick_opensRouteSelectorSheet`:
-     - Tapping the action button triggers bottom sheet presentation without navigating away from the cockpit.
+  1. `testSensorGridScreen_containsRouteActionAffordance`:
+     - Inspects `SensorGridScreen.kt` source code to verify presence of route action button/chip invoking route selector.
+     - Verifies string resource usage `R.string.route_action_select` and route icon.
+  2. `testSensorGridScreen_hostsModalBottomSheet_withRouteSelectorContent`:
+     - Verifies `SensorGridScreen.kt` declares a `ModalBottomSheet` wrapping `RouteSelectorContent`.
+     - Verifies sheet dismisses when a route is selected or dismissed.
+  3. `testSensorGridScreen_displaysActiveRouteState`:
+     - Verifies when `activeRoute != null`, the UI reflects active route name and checkmark affordance.
 
-### Group 2: Multi-Stage Route Ranking & "Home Hub" Tie-Breaking
+### Group 2: Multi-Stage Route Ranking & "Home Hub" Tie-Breaking (`RouteProximityRankerTest.kt`)
 * **Test Class**: `com.atrainingtracker.trainingtracker.ui.routes.RouteProximityRankerTest`
 * **Test Cases**:
   1. `testTier1_proximityGrouping`:
      - Routes starting within 250m form the immediate top group over routes starting > 250m away.
   2. `testTier2_sportProfileMatching`:
-     - Given 4 routes starting at the same coordinates ($d = 0\,\text{m}$), 2 for Road Cycling and 2 for Trail Running.
-     - With active sport Road Cycling, cycling routes rank strictly before running routes.
+     - Given routes starting at the same coordinates ($d = 0\,\text{m}$), routes matching active workout sport rank ahead of non-matching sports.
   3. `testTier3_headingMovementAlignment`:
-     - Given 2 cycling routes starting at the same coordinates ($d = 0\,\text{m}$): Route A departs East ($90^\circ$), Route B departs West ($270^\circ$).
-     - When athlete moves East ($90^\circ \pm 30^\circ$), Route A ranks ahead of Route B.
+     - Given 2 routes starting at $d = 0\,\text{m}$: East ($90^\circ$) vs West ($270^\circ$).
+     - Moving East ($90^\circ \pm 45^\circ$) elevates the eastbound route to the top.
   4. `testTier4_recencyAndFrequency`:
-     - Given 2 routes identical in proximity, sport, and departure heading: Route A was ridden yesterday, Route B was ridden 6 months ago.
-     - Route A ranks ahead of Route B.
+     - Routes identical in tiers 1–3 are ranked by `syncedAt` (most recent first).
   5. `testTier5_fallbackSorting`:
-     - Routes identical across tiers 1-4 are sorted by ascending length, then alphabetically.
+     - Fallback sorting by ascending distance and alphabetical name.
   6. `testNullLocationFallback`:
-     - When GPS fix is null or unavailable, routes sort gracefully by recency, then length/alphabetical without throwing exceptions.
+     - Null GPS coordinates sort gracefully without `NullPointerException`.
 
-### Group 3: Adaptive Filter Chips UI & 1-Tap Action
-* **Test Class**: `com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorSheetTest`
+### Group 3: Adaptive Filter Chips & Route Selection (`RouteSelectorViewModelTest.kt`)
+* **Test Class**: `com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest`
 * **Test Cases**:
-  1. `testAdaptiveFilterChips_whenFewerThan5Routes_hidesFilterChips`:
-     - Given a list of 4 routes.
-     - Asserts filter chips row is not composed / is hidden (`assertDoesNotExist`).
-  2. `testAdaptiveFilterChips_when5OrMoreRoutes_displaysFilterChips`:
-     - Given a list of 5 routes.
-     - Asserts filter chips (Distance brackets, Sort options) are visible and selectable.
-  3. `testRouteCard_onClick_activatesNavigationAndDismisses`:
-     - Tapping a route card calls `RoutesRepository.toggleRouteSelection` / `setActiveNavigatedRoute`, setting the active route and dismissing the sheet.
-  4. `testDeselectAction_clearsActiveRoute`:
-     - Tapping "Route beenden / abwählen" sets active route to null.
+  1. `testShowFilterTabs_whenRoutesLessThan5_isFalse`:
+     - Asserts `uiState.showFilterTabs == false` when total route count $< 5$.
+  2. `testShowFilterTabs_whenRoutes5OrMore_isTrue`:
+     - Asserts `uiState.showFilterTabs == true` when total route count $\ge 5$.
+  3. `testSelectRoute_updatesRepositoryActiveRoute`:
+     - Calling `viewModel.selectRoute(routeId)` delegates to `routesRepository.setActiveNavigatedRoute(routeId)`.
+  4. `testStopRoute_clearsRepositoryActiveRoute`:
+     - Calling `viewModel.stopRoute()` sets active navigated route ID to `null`.
 
-### Group 4: Automated Route Detection Engine
-* **Test Class**: `com.atrainingtracker.trainingtracker.ui.routes.RouteAutoDetectorTest`
+### Group 4: In-Ride Auto-Detection HUD & Geometry (`RouteAutoDetectorTest.kt`, `SensorGridScreenRouteIntegrationTest.kt`)
+* **Test Classes**: `RouteAutoDetectorTest.kt`, `SensorGridScreenRouteIntegrationTest.kt`
 * **Test Cases**:
-  1. `testAutoDetect_whenMatchingPolylineFor200m_detectsRoute`:
-     - Athlete records GPS track following a saved route within 30m distance and $\le 35^\circ$ heading alignment for 200m.
-     - Asserts candidate route is emitted with match confidence.
-  2. `testAutoDetect_whenDivergingHeading_doesNotDetect`:
-     - Athlete is within 30m of a route but traveling in reverse or perpendicular direction ($\Delta\theta > 35^\circ$).
-     - Asserts no detection triggered.
-  3. `testAutoDetect_whenDistanceExceeds30m_doesNotDetect`:
-     - Athlete is parallel but 50m away from the polyline.
-     - Asserts no detection triggered.
-  4. `testAutoDetect_whenUnderThresholdDistance_doesNotDetect`:
-     - Athlete matches route for only 100m (< 200m threshold).
-     - Asserts no detection triggered.
+  1. `testSensorGridScreen_hostsAutoDetectedRouteBanner`:
+     - Verifies `SensorGridScreen.kt` invokes `AutoDetectedRouteBanner` conditionally based on auto-detected candidate visibility.
+     - Verifies banner provides activate and dismiss action hooks.
+  2. `testSensorGridScreen_feedsLocationUpdatesToRouteSelectorViewModel`:
+     - Verifies `SensorGridScreen.kt` passes incoming coordinates from `currentLocationFlow` to `RouteSelectorViewModel.onLocationChanged`.
+  3. `testRouteAutoDetector_matchingPolyline_detectsCandidate`:
+     - Follows polyline within 30m and $\le 35^\circ$ heading for 200m; asserts candidate route returned.
+  4. `testRouteAutoDetector_divergingHeadingOrCrossTrack_doesNotDetect`:
+     - Cross-track $> 50\text{m}$ or reverse heading suppresses detection.
+  5. `testRouteAutoDetector_dismissCooldown_suppressesPromptFor15Minutes`:
+     - Dismissing a candidate suppresses re-detection for 15 minutes.
 
-### Group 5: Advanced Settings & DataStore Persistence
+### Group 5: Advanced Tuning Preferences (`RouteAutoDetectPreferencesTest.kt`)
 * **Test Class**: `com.atrainingtracker.trainingtracker.ui.routes.RouteAutoDetectPreferencesTest`
 * **Test Cases**:
-  1. `testDefaultPreferences`:
-     - Asserts `routeAutoDetectEnabled == true`, `routeAutoJoinMode == PROMPT`, `routeAutoDetectThresholdMeters == 200`.
-  2. `testPreferencesMutationAndPersistence`:
-     - Toggling auto-detect off, changing join mode to `AUTO`, and updating threshold to `300` persists in DataStore and restores correctly across app restart.
+  1. `testPreferences_defaultsAndMutation`:
+     - Verifies `routeAutoDetectEnabled` (default: `true`), `routeAutoJoinMode` (default: `PROMPT`), and `routeAutoDetectThresholdMeters` (default: `200`) persist in `TuningPreferencesDataStore`.
 
-### Group 6: 9-Language Localization Parity
+### Group 6: 9-Language Localization Parity (`TranslationParityTest.kt`)
 * **Test Class**: `com.atrainingtracker.trainingtracker.TranslationParityTest`
 * **Test Cases**:
-  1. `testRouteSelectorStringsParity`:
-     - Verifies string keys (`route_select_title`, `route_action_select`, `route_action_stop`, `route_auto_detect_title`, `route_auto_detect_prompt`, `route_filter_near`, `route_filter_recent`, `route_filter_length`) exist across all 9 locales:
-       `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`.
+  1. `testRouteSelectorStrings_acrossAll9Locales`:
+     - Validates tokens (`route_select_title`, `route_action_select`, `route_action_stop`, `route_auto_detect_title`, `route_auto_detect_prompt`, `route_auto_detect_activate`, `route_auto_detect_dismiss`, `route_filter_near`, `route_filter_recent`, `route_filter_length`, `route_empty_title`, `route_empty_desc`) across EN, DE, ES, FR, IT, JA, NL, PL, PT.
 
-### Group 7: Full Clean-Room Regression Invariant
+### Group 7: Full Clean-Room Regression Suite
 * **Execution**: `./gradlew testDebugUnitTest`
-* **Success Criteria**: 100% of all existing and new unit tests pass with zero regressions.
+* **Assertion**: 100% pass rate with zero test failures across all project modules.
 
 ---
 
 ## 4. Next Steps & Stage 3 Transition
-1. Register `TST-MAP-026` in `docs/tests.md`.
-2. Post this Stage 2 Test Specification to subtask `ATT-2269`.
-3. Move `ATT-2269` to `In Überprüfung`.
-4. Run Gate 2 audit (`python3 tools/review_agent.py audit ATT-2269`).
-5. Upon Gate 2 approval, advance to Stage 3 (`[Impl-Plan]`).
+1. Post this Stage 2 Test Specification to subtask `ATT-2412`.
+2. Move `ATT-2412` to `In Überprüfung`.
+3. Run Gate 2 audit (`python3 tools/review_agent.py audit ATT-2412`).
+4. Upon Gate 2 approval, advance to Stage 3 (`[Impl-Plan]`).
