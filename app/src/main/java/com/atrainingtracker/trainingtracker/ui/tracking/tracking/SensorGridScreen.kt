@@ -86,11 +86,13 @@ import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
+import com.atrainingtracker.trainingtracker.routes.ForkNavigationRepository
 import com.atrainingtracker.trainingtracker.routes.ReturnNavigationRepository
 import com.atrainingtracker.trainingtracker.routes.ReturnNavigationState
 import com.atrainingtracker.trainingtracker.routes.TurnByTurnNavigationRepository
 import com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbSheet
 import com.atrainingtracker.trainingtracker.ui.routes.AutoDetectedRouteBanner
+import com.atrainingtracker.trainingtracker.ui.routes.ForkDecisionCard
 import com.atrainingtracker.trainingtracker.ui.routes.ReturnNavigationHud
 import com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModel
@@ -173,6 +175,9 @@ fun SensorGridScreen(
 
     val returnNavRepo = remember { ReturnNavigationRepository.getInstance(context) }
     val returnNavState by returnNavRepo.navigationState.collectAsState()
+
+    val forkNavRepo = remember { ForkNavigationRepository.getInstance(context) }
+    val forkDecisionState by forkNavRepo.forkDecisionState.collectAsState()
 
     val routesRepo = remember { RoutesRepository.getInstance(context) }
     val actualRouteSelectorViewModel = routeSelectorViewModel ?: remember {
@@ -296,6 +301,17 @@ fun SensorGridScreen(
             ReturnNavigationHud(
                 navigationState = returnNavState,
                 onDismiss = { returnNavRepo.dismissHud() }
+            )
+
+            // In-Ride Fork-in-the-Road Route Selection & Decision Alerts (REQ-MAP-031 / ATT-1955)
+            ForkDecisionCard(
+                decisionState = forkDecisionState,
+                onRouteSelected = { routeId ->
+                    forkNavRepo.selectRouteManually(routeId)
+                },
+                onDismiss = {
+                    forkNavRepo.dismissPrompt()
+                }
             )
 
             // Auto-Detected Route Banner (REQ-MAP-024 / ATT-1835)

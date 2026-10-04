@@ -1597,4 +1597,11 @@
     <string name="pref_corridor_grouping_desc">Groepeer routes in de lijst op basis van hun vertrekrichting en corridor</string>
     <string name="pref_focused_thumbnail_title">Gefocuste miniatuurzoom</string>
     <string name="pref_focused_thumbnail_desc">Zoomt routeminiaturen in op de kenmerkende middelste lus in plaats van gemeenschappelijke in-/uitvalscorridors</string>
+    <string name="fork_alert_title">Splitsing vooruit</string>
+    <string name="fork_approaching_in_m">over %1$d m</string>
+    <string name="fork_direction_left">Links</string>
+    <string name="fork_direction_straight">Rechtdoor</string>
+    <string name="fork_direction_right">Rechts</string>
+    <string name="fork_dismiss">Sluiten</string>
+    <string name="fork_select_hint">Tik om te kiezen</string>
 </resources>

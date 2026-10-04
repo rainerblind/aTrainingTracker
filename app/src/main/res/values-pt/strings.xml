@@ -1597,4 +1597,11 @@
     <string name="pref_corridor_grouping_desc">Agrupa rotas na lista por sua direção de partida e corredor</string>
     <string name="pref_focused_thumbnail_title">Zoom de miniatura focado</string>
     <string name="pref_focused_thumbnail_desc">Aplica zoom às miniaturas de rotas no loop central característico em vez de corredores comuns de entrada/saída</string>
+    <string name="fork_alert_title">Bifurcação à frente</string>
+    <string name="fork_approaching_in_m">a %1$d m</string>
+    <string name="fork_direction_left">Esquerda</string>
+    <string name="fork_direction_straight">Em frente</string>
+    <string name="fork_direction_right">Direita</string>
+    <string name="fork_dismiss">Dispensar</string>
+    <string name="fork_select_hint">Toque para selecionar</string>
 </resources>

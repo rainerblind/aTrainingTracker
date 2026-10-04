@@ -1599,4 +1599,11 @@
     <string name="pref_corridor_grouping_desc">Agrupa rutas en la lista según su dirección de salida y corredor</string>
     <string name="pref_focused_thumbnail_title">Zoom de miniatura enfocado</string>
     <string name="pref_focused_thumbnail_desc">Amplía las miniaturas de las rutas al bucle central característico en lugar de los corredores de entrada/salida comunes</string>
+    <string name="fork_alert_title">Bifurcación más adelante</string>
+    <string name="fork_approaching_in_m">en %1$d m</string>
+    <string name="fork_direction_left">Izquierda</string>
+    <string name="fork_direction_straight">Recto</string>
+    <string name="fork_direction_right">Derecha</string>
+    <string name="fork_dismiss">Descartar</string>
+    <string name="fork_select_hint">Toca para seleccionar</string>
 </resources>

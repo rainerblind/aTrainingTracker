@@ -1684,4 +1684,11 @@
     <string name="pref_corridor_grouping_desc">Gruppiert Strecken in der Liste nach ihrer Ausfallrichtung und ihrem Korridor</string>
     <string name="pref_focused_thumbnail_title">Fokussierter Vorschau-Zoom</string>
     <string name="pref_focused_thumbnail_desc">Zoomt Vorschau-Miniaturkarten auf die charakteristische mittlere Schleife statt auf gemeinsame Ein-/Ausfallkorridore</string>
+    <string name="fork_alert_title">Gabelung voraus</string>
+    <string name="fork_approaching_in_m">in %1$d m</string>
+    <string name="fork_direction_left">Links</string>
+    <string name="fork_direction_straight">Geradeaus</string>
+    <string name="fork_direction_right">Rechts</string>
+    <string name="fork_dismiss">Schließen</string>
+    <string name="fork_select_hint">Tippen zum Auswählen</string>
 </resources>

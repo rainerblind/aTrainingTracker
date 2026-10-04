@@ -1597,4 +1597,11 @@
     <string name="pref_corridor_grouping_desc">Raggruppa i percorsi nell\'elenco in base alla direzione di partenza e al corridoio</string>
     <string name="pref_focused_thumbnail_title">Zoom miniatura focalizzato</string>
     <string name="pref_focused_thumbnail_desc">Ingrandisce le miniature dei percorsi sull\'anello centrale caratteristico anziché sui corridoi comuni di ingresso/uscita</string>
+    <string name="fork_alert_title">Biforcazione avanti</string>
+    <string name="fork_approaching_in_m">in %1$d m</string>
+    <string name="fork_direction_left">Sinistra</string>
+    <string name="fork_direction_straight">Dritto</string>
+    <string name="fork_direction_right">Destra</string>
+    <string name="fork_dismiss">Ignora</string>
+    <string name="fork_select_hint">Tocca per selezionare</string>
 </resources>
