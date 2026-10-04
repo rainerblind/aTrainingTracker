@@ -1463,15 +1463,18 @@
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">Treino interrompido</string>
+    <string name="unfinished_workout_title_battery">Treino interrompido: Otimização da bateria</string>
+    <string name="unfinished_workout_title_memory">Treino interrompido: Memória insuficiente</string>
+    <string name="unfinished_workout_title_permission">Treino interrompido: Permissão revogada</string>
     <string name="kill_reason_battery_title">Encerrado pela otimização de bateria</string>
-    <string name="kill_reason_battery_stage1">Bem, quem não ouve conselhos… 😉 Mas sentimos muito pelos seus quilômetros perdidos! O Android encerrou a gravação em segundo plano devido à otimização de bateria.</string>
-    <string name="kill_reason_battery_stage1_strava">E como você sabe: \'If it\'s not on Strava, it didn\'t happen\'… duplamente amargo! 🙈</string>
-    <string name="kill_reason_battery_stage2">De novo não… Já é o 2º encerramento! De quantos quilômetros perdidos você precisa como prova? Desative a otimização de bateria para o aTrainingTracker.</string>
-    <string name="kill_reason_battery_stage3">Três vezes é demais… Atleta mais resistente a conselhos do mês! 🏆 O sistema continuará encerrando seu treino até que você configure a exceção.</string>
+    <string name="kill_reason_battery_stage1">O Android interrompeu a gravação em segundo plano porque a otimização da bateria está ativada para esta aplicação. Para garantir o registo contínuo dos seus quilómetros e elevação, desative a otimização da bateria para o aTrainingTracker.</string>
+    <string name="kill_reason_battery_stage1_strava">Sabemos como a telemetria de treino completa é importante para as suas atividades no Strava.</string>
+    <string name="kill_reason_battery_stage2">A gravação foi novamente interrompida pela gestão de bateria do sistema. Sem excluir a aplicação, o Android continuará a parar as gravações em segundo plano. Reserve um momento para desativar a otimização da bateria.</string>
+    <string name="kill_reason_battery_stage3">Foram detetadas interrupções repetidas em segundo plano. As versões modernas do Android encerram estritamente os serviços em segundo plano que não estejam isentos. Toque no botão abaixo para isentar o aTrainingTracker e proteger os seus treinos.</string>
     <string name="kill_reason_low_memory">A gravação foi interrompida pelo Android devido à falta de memória RAM (ex.: câmera ou navegação 3D em primeiro plano). Seus dados até esse momento foram salvos.</string>
     <string name="kill_reason_permission_revoked">A gravação foi interrompida porque as permissões de localização ou notificação foram revogadas durante o treino.</string>
     <string name="action_disable_battery_optimization">Desativar otimização de bateria</string>
-    <string name="battery_optimization_exempt_celebration">Finalmente! Caminho livre para seus dados de treino 🎉</string>
+    <string name="battery_optimization_exempt_celebration">Gravação sem restrições ativa para os seus dados de treino</string>
 
     <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
     <string name="import_fit_title">Importar ficheiros FIT</string>

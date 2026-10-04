@@ -60,7 +60,13 @@ class StartOrResumeDialog : DialogFragment() {
         val diagnosis = ProcessExitReasonHelper.resolveKillReason(context)
 
         val builder = AlertDialog.Builder(context)
-        builder.setTitle(R.string.unfinished_workout_title)
+        val titleRes = when (diagnosis.reason) {
+            KillReason.BATTERY_KILL -> R.string.unfinished_workout_title_battery
+            KillReason.LOW_MEMORY -> R.string.unfinished_workout_title_memory
+            KillReason.PERMISSION_REVOKED -> R.string.unfinished_workout_title_permission
+            KillReason.GENERIC_UNFINISHED -> R.string.unfinished_workout_title
+        }
+        builder.setTitle(titleRes)
 
         val message = buildString {
             when (diagnosis.reason) {

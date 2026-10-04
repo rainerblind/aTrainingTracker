@@ -1656,15 +1656,18 @@
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">Workout Interrupted</string>
+    <string name="unfinished_workout_title_battery">Workout Interrupted: Battery Optimization</string>
+    <string name="unfinished_workout_title_memory">Workout Interrupted: Low Memory</string>
+    <string name="unfinished_workout_title_permission">Workout Interrupted: Permission Revoked</string>
     <string name="kill_reason_battery_title">Terminated by Battery Optimization</string>
-    <string name="kill_reason_battery_stage1">Well, who won\'t listen must feel… 😉 But we\'re genuinely sorry about your lost kilometers! Android killed the tracking service in the background because battery optimization is enabled.</string>
-    <string name="kill_reason_battery_stage1_strava">And as you know: \'If it\'s not on Strava, it didn\'t happen\'… double bitter! 🙈</string>
-    <string name="kill_reason_battery_stage2">Not again… Already the 2nd kill! How many lost kilometers do you need as proof? Please disable battery optimization for aTrainingTracker.</string>
-    <string name="kill_reason_battery_stage3">Bad things come in threes… Advice-resistant athlete of the month! 🏆 The system keeps killing your workout until you exempt the app in battery settings.</string>
+    <string name="kill_reason_battery_stage1">Android interrupted background tracking because battery optimization is enabled for this app. To ensure continuous recording of your kilometers and elevation, please disable battery optimization for aTrainingTracker.</string>
+    <string name="kill_reason_battery_stage1_strava">We know how important complete workout telemetry is for your Strava activities.</string>
+    <string name="kill_reason_battery_stage2">Tracking was interrupted again by system battery management. Without exempting the app, Android will continue stopping background recordings during longer workouts. Please take a moment to disable battery optimization.</string>
+    <string name="kill_reason_battery_stage3">Repeated background interruptions detected. Modern Android versions strictly terminate tracking services that are not exempted from battery restrictions. Please tap the button below to exempt aTrainingTracker and protect your workouts.</string>
     <string name="kill_reason_low_memory">Tracking was terminated by Android due to acute memory pressure (e.g. high-resolution camera or 3D navigation in foreground). Your workout metrics up to that point were safely preserved.</string>
     <string name="kill_reason_permission_revoked">Tracking was interrupted because location or notification permissions were revoked during your workout.</string>
     <string name="action_disable_battery_optimization">Disable Battery Optimization</string>
-    <string name="battery_optimization_exempt_celebration">Finally! Unrestricted recording for your training data 🎉</string>
+    <string name="battery_optimization_exempt_celebration">Unrestricted recording active for your training data</string>
 
     <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
     <string name="import_fit_title">Import FIT files</string>

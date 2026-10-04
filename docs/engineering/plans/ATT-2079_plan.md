@@ -1,15 +1,15 @@
-# Stage 3: Implementation Plan - ATT-2079: Inform Athlete on Process Kill Reasons (Battery Saver, LMK, Permission Revocation) via ApplicationExitInfo
+# Stage 3: Implementation Plan - ATT-2079: Inform Athlete on Process Kill Reasons (Battery Saver, LMK, Permission Revocation) via ApplicationExitInfo (Rework Cycle 2)
 
 **Ticket**: [ATT-2079](https://rainerblind.atlassian.net/browse/ATT-2079)  
-**Sub-task**: [ATT-2217](https://rainerblind.atlassian.net/browse/ATT-2217) (`[Impl-Plan]`)  
+**Sub-task**: [ATT-2397](https://rainerblind.atlassian.net/browse/ATT-2397) (`[Impl-Plan]`)  
 **Parent Epic**: [ATT-355](https://rainerblind.atlassian.net/browse/ATT-355) (*Good and consistent UI*)  
-**Target Release**: `V4.9.39`  
-**Active Sprint**: `Sprint 2026-40.14`  
-**Requirement Mapping**: `REQ-STB-012` (*Forensic Process Kill Diagnosis, Progressive Escalation & Battery Optimization Guidance*)  
-**Test Spec Mapping**: `TST-STB-012` (*Forensic Process Kill Diagnosis & Progressive Escalation Verification*)  
+**Target Release**: `V4.9.40` (per Rule 19: Lösungsversion added upon completion)  
+**Active Sprint**: `Sprint 2026-40.16`  
+**Requirement Mapping**: `REQ-STB-012` (*Forensic Process Kill Diagnosis, Dynamic Rationale Titles, Empathetic Escalation & Direct Battery Exemption Guidance*)  
+**Test Spec Mapping**: `TST-STB-012` (*Forensic Process Kill Diagnosis, Dynamic Rationale Titles, Empathetic Escalation & Direct Battery Exemption Guidance Verification*)  
 **Branch**: `feature/ATT-2079`  
 **Author**: AI Agent 1 (Implementer)  
-**Date**: 2026-10-03  
+**Date**: 2026-10-04  
 
 ---
 
@@ -25,7 +25,7 @@ flowchart TD
         OnResume --> CheckUnfinished --> HasUnfinished
     end
 
-    subgraph Forensics["Forensic Investigation (ProcessExitReasonHelper)"]
+    subgraph Forensics["Forensics & Idempotent State Machine (ProcessExitReasonHelper)"]
         HasUnfinished -->|Yes| Resolve["ProcessExitReasonHelper.resolveKillReason(context)"]
         Resolve --> ApiCheck{"SDK >= 30?"}
         
@@ -40,58 +40,72 @@ flowchart TD
         
         CheckPM -->|false| BatteryKill
         CheckPM -->|true| Generic["KillReason.GENERIC_UNFINISHED"]
+        
+        BatteryKill --> IdempotentCheck{"exitInfo.timestamp > lastEvaluatedTimestamp?"}
+        IdempotentCheck -->|Yes| IncCounter["Increment PREF_BATTERY_KILL_COUNT\nUpdate PREF_LAST_EVALUATED_EXIT_TIMESTAMP"]
+        IdempotentCheck -->|No / Rotation| ReadCounter["Read current PREF_BATTERY_KILL_COUNT (no increment)"]
     end
 
-    subgraph Escalation["Progressive Escalation Ladder"]
-        BatteryKill --> ReadCounter["Read & Inkrement PREF_BATTERY_KILL_COUNT"]
-        ReadCounter --> LevelCheck{"Kill Count"}
-        LevelCheck -->|1| Stage1["Stage 1: Sympathetic reminder + Strava bonus"]
-        LevelCheck -->|2| Stage2["Stage 2: Elevated sarcasm + Kilometers lost"]
-        LevelCheck -->|3+| Stage3["Stage 3: Satirical resignation 'Athlete of the month'"]
-    end
-
-    subgraph Presentation["Modernized StartOrResumeDialog"]
-        Stage1 --> BuildDialog["Compose/AlertDialog Builder"]
+    subgraph Presentation["Dynamic Rationale Presentation (StartOrResumeDialog)"]
+        BatteryKill --> TitleBattery["Title: 'Training unterbrochen: Akku-Optimierung'"]
+        LowMem --> TitleMemory["Title: 'Training unterbrochen: Speicherengpass'"]
+        PermRev --> TitlePerm["Title: 'Training unterbrochen: Berechtigung entzogen'"]
+        Generic --> TitleGeneric["Title: 'Training unterbrochen'"]
+        
+        ReadCounter --> StageCheck{"Kill Count"}
+        IncCounter --> StageCheck
+        StageCheck -->|1| Stage1["Stage 1: Empathetic explanation + Strava telemetry value"]
+        StageCheck -->|2| Stage2["Stage 2: Constructive repeated interruption notice"]
+        StageCheck -->|3+| Stage3["Stage 3: Objective explanation of strict modern Android limits"]
+        
+        TitleBattery --> BuildDialog["Compose/AlertDialog Builder"]
+        TitleMemory --> BuildDialog
+        TitlePerm --> BuildDialog
+        TitleGeneric --> BuildDialog
+        Stage1 --> BuildDialog
         Stage2 --> BuildDialog
         Stage3 --> BuildDialog
-        LowMem --> BuildDialog
-        PermRev --> BuildDialog
-        Generic --> BuildDialog
         
-        BuildDialog --> ActionSettings["Button: 'Disable Battery Optimization'\n(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)"]
-        BuildDialog --> ActionResume["Button: 'Resume Workout'\n(chooseResume() -> REQ-STB-003)"]
-        BuildDialog --> ActionStart["Button: 'Start New'\n(chooseStart() -> REQ-STB-003)"]
+        BuildDialog --> ActionSettings["Button: 'Akku-Optimierung deaktivieren'\n(ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS per Rule 21)"]
+        BuildDialog --> ActionResume["Button: 'Training fortsetzen' (chooseResume())"]
+        BuildDialog --> ActionStart["Button: 'Neues Training' (chooseStart())"]
     end
 ```
-
-### Component Boundaries & Clean Architecture
-1. **Helper & Diagnostics Layer (`ProcessExitReasonHelper.kt`)**:
-   - Location: `app/src/main/java/com/atrainingtracker/trainingtracker/helpers/ProcessExitReasonHelper.kt`
-   - Encapsulates Android 11+ `ApplicationExitInfo` query, `PowerManager` queries, and `battery_kill_count` persistence.
-   - Provides pure, testable domain mappings and helper methods (`resolveKillReason()`, `getBatteryKillCount()`, `incrementBatteryKillCount()`, `resetBatteryKillCount()`).
-2. **Presentation & Dialog Layer (`StartOrResumeDialog.kt`)**:
-   - Modernized from legacy Java to clean Kotlin.
-   - Preserves `StartOrResumeInterface` contract (`chooseResume()`, `chooseStart()`).
-   - Dynamically renders diagnostic title, explanation, progressive escalation text, and neutral button to open battery optimization settings when `KillReason.BATTERY_KILL` is detected.
-3. **Activity Coordination (`MainActivityWithNavigation.kt`)**:
-   - In `checkUnfinishedWorkout()`, passes context or invokes `StartOrResumeDialog`.
-   - In `onResume()`, checks `ProcessExitReasonHelper.isIgnoringBatteryOptimizations(this)`; if `true` and `battery_kill_count > 0`, safely resets `battery_kill_count` to `0`.
-4. **Localization Parity (`REQ-LOC-001`)**:
-   - 10 new string keys added with 100% parity across all 9 supported application locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
 
 ---
 
 ## 2. Atomic Implementation Step Sequence
 
-### Step 1: Create `ProcessExitReasonHelper.kt`
+### Step 1: Idempotent Counter & Rule 21 Direct Intents in `ProcessExitReasonHelper.kt`
 - Target file: `app/src/main/java/com/atrainingtracker/trainingtracker/helpers/ProcessExitReasonHelper.kt`
-- Defines:
-  - `enum class KillReason { BATTERY_KILL, LOW_MEMORY, PERMISSION_REVOKED, GENERIC_UNFINISHED }`
-  - `data class KillDiagnosis(val reason: KillReason, val escalationLevel: Int, val isStravaActive: Boolean, val shouldShowBatteryButton: Boolean)`
-  - Methods: `resolveKillReason(Context)`, `getBatteryKillCount(Context)`, `incrementBatteryKillCount(Context)`, `resetBatteryKillCount(Context)`, `isIgnoringBatteryOptimizations(Context)`, `openBatteryOptimizationSettings(Context)`.
-- Targeted verification: Author unit test `ProcessExitReasonHelperTest.kt`.
+- Enhancements:
+  - Add constant `PREF_LAST_EVALUATED_EXIT_TIMESTAMP = "pref_last_evaluated_exit_timestamp"`.
+  - In `resolveKillReason(context)`:
+    - Compare `exitInfo.timestamp` with `prefs.getLong(PREF_LAST_EVALUATED_EXIT_TIMESTAMP, 0L)`.
+    - If `exitInfo != null && exitInfo.timestamp > lastTimestamp`:
+      - Increment `battery_kill_count` and store new `exitInfo.timestamp`.
+    - If `exitInfo == null` and unexempt: only increment if a session flag has not yet been processed in this process lifetime.
+    - If device is already exempted (`isIgnoringBatteryOptimizations == true`): automatically invoke `resetBatteryKillCount(context)`.
+  - In `openBatteryOptimizationSettings(context)`:
+    - First attempt `Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` with `Uri.parse("package:${context.packageName}")` (Rule 21 compliance).
+    - Catch `ActivityNotFoundException` / `SecurityException` and fall back to `ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS`.
+    - Catch secondary exceptions and fall back to `ACTION_APPLICATION_DETAILS_SETTINGS`.
+- Targeted verification:
+  `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.helpers.ProcessExitReasonHelperTest"`
 
-### Step 2: Implement Progressive Escalation Copy & 9-Language Localization
+### Step 2: Dynamic Rationale Titles in `StartOrResumeDialog.kt`
+- Target file: `app/src/main/java/com/atrainingtracker/trainingtracker/dialogs/StartOrResumeDialog.kt`
+- Enhancements:
+  - Dynamically set dialog title based on `diagnosis.reason`:
+    - `KillReason.BATTERY_KILL` -> `R.string.unfinished_workout_title_battery`
+    - `KillReason.LOW_MEMORY` -> `R.string.unfinished_workout_title_memory`
+    - `KillReason.PERMISSION_REVOKED` -> `R.string.unfinished_workout_title_permission`
+    - `KillReason.GENERIC_UNFINISHED` -> `R.string.unfinished_workout_title`
+  - Render constructive, empathetic copy for Stage 1, Stage 2, and Stage 3.
+- Targeted verification:
+  `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialogContractTest"`
+
+### Step 3: De-escalated Copy & 9-Language Localization Parity
 - Target files:
   - `app/src/main/res/values/strings.xml` (EN)
   - `app/src/main/res/values-de/strings.xml` (DE)
@@ -102,35 +116,34 @@ flowchart TD
   - `app/src/main/res/values-nl/strings.xml` (NL)
   - `app/src/main/res/values-pl/strings.xml` (PL)
   - `app/src/main/res/values-pt/strings.xml` (PT)
-- Add 10 keys:
-  - `unfinished_workout_title`
-  - `kill_reason_battery_title`
+- Add new string keys:
+  - `unfinished_workout_title_battery`
+  - `unfinished_workout_title_memory`
+  - `unfinished_workout_title_permission`
+- Update existing keys with constructive, empathetic athletic-partnership copy:
   - `kill_reason_battery_stage1`
   - `kill_reason_battery_stage1_strava`
   - `kill_reason_battery_stage2`
   - `kill_reason_battery_stage3`
-  - `kill_reason_low_memory`
-  - `kill_reason_permission_revoked`
-  - `action_disable_battery_optimization`
-  - `battery_optimization_exempt_celebration`
-- Targeted verification: Run `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.TranslationParityTest"`.
+- Targeted verification:
+  `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.TranslationParityTest"`
 
-### Step 3: Modernize `StartOrResumeDialog` into Kotlin (`StartOrResumeDialog.kt`)
-- Target file: `app/src/main/java/com/atrainingtracker/trainingtracker/dialogs/StartOrResumeDialog.kt` (replacing `.java`)
-- Retrieves `KillDiagnosis` from `ProcessExitReasonHelper`.
-- If `diagnosis.reason == KillReason.BATTERY_KILL`, increments counter and renders corresponding stage text.
-- If `diagnosis.shouldShowBatteryButton`, adds neutral button calling `ProcessExitReasonHelper.openBatteryOptimizationSettings(context)`.
-- Retains positive button ("Start New") and negative button ("Resume") mapped to `mStartOrResumeInterface`.
-- Targeted verification: Author `StartOrResumeDialogContractTest.kt` and `ProcessKillEscalationTest.kt`.
+### Step 4: Unit Test Suite Expansion
+- Target test files:
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/helpers/ProcessExitReasonHelperTest.kt`
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/dialogs/StartOrResumeDialogContractTest.kt`
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/ProcessKillEscalationTest.kt`
+- Test scenarios:
+  - Screen rotation / repeated calls do not increment counter.
+  - New timestamp increments counter.
+  - Dynamic titles resolve to correct resource IDs.
+  - Direct `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` intent constructed.
+  - Reset to 0 when battery optimization is granted.
+- Targeted verification:
+  `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.*"`
 
-### Step 4: Integrate Auto-Reset into `MainActivityWithNavigation.kt`
-- Target file: `app/src/main/java/com/atrainingtracker/trainingtracker/activities/MainActivityWithNavigation.kt`
-- In `onResume()`:
-  - If `ProcessExitReasonHelper.isIgnoringBatteryOptimizations(this)`, reset counter via `resetBatteryKillCount(this)`.
-- Targeted verification: Run `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.activities.*"`.
-
-### Step 5: Full Test Suite Execution & Clean-Room Regression
-- Run `./gradlew testDebugUnitTest` across all 1500+ tests, ensuring 100% pass rate.
+### Step 5: Clean-Room Full Suite Regression
+- Execute `./gradlew testDebugUnitTest` and `./gradlew assembleDebug` ensuring 100% pass rate.
 
 ---
 
@@ -138,9 +151,9 @@ flowchart TD
 
 1. **`REQ-STB-003` Interrupted Workout Resumption Integrity**:
    - `chooseResume()` and `chooseStart()` callbacks, SQLite unfinalized workout handling, and notification extra resumption (`EXTRA_RESUME_INTERRUPTED_WORKOUT`) remain unaltered.
-2. **Crash Immunity on API < 30 (`REQ-STB-008`, `REQ-STB-001`)**:
-   - All invocations of `ActivityManager.getHistoricalProcessExitReasons()` are version-gated with `Build.VERSION.SDK_INT >= Build.VERSION_CODES.R` and enclosed in defensive try-catch blocks.
-3. **No Automatic System Setting Tampering**:
-   - Per Android platform security, the app cannot modify battery optimization settings silently; it opens the standard system intent for the athlete.
-4. **9-Language Localization Parity (`REQ-LOC-001`)**:
-   - Zero missing translations and zero placeholder format discrepancies across all 9 locales.
+2. **Rule 21 Compliance**:
+   - Specific direct intent `Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` with package URI prioritized over generic settings.
+3. **Crash Immunity on API < 30 (`REQ-STB-008`, `REQ-STB-001`)**:
+   - Defensive version gating and try-catch wrappers around all platform service queries.
+4. **9-Language Parity (`REQ-LOC-001`)**:
+   - 100% translation coverage across all 9 application locales.

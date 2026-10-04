@@ -75,6 +75,11 @@ class ProcessExitReasonHelperTest {
             val default = secondArg<Int>()
             (prefStorage[key] as? Int) ?: default
         }
+        every { sharedPreferences.getLong(any(), any()) } answers {
+            val key = firstArg<String>()
+            val default = secondArg<Long>()
+            (prefStorage[key] as? Long) ?: default
+        }
 
         every { sharedPreferences.edit() } returns sharedPreferencesEditor
         every { sharedPreferencesEditor.putInt(any(), any()) } answers {
@@ -83,15 +88,33 @@ class ProcessExitReasonHelperTest {
             prefStorage[key] = value
             sharedPreferencesEditor
         }
+        every { sharedPreferencesEditor.putLong(any(), any()) } answers {
+            val key = firstArg<String>()
+            val value = secondArg<Long>()
+            prefStorage[key] = value
+            sharedPreferencesEditor
+        }
         every { sharedPreferencesEditor.apply() } answers { }
+
+        ProcessExitReasonHelper.resetSessionForTesting()
 
         mockkStatic(TrainingApplication::class)
         every { TrainingApplication.uploadToStrava() } returns false
+
+        mockkStatic(android.util.Log::class)
+        every { android.util.Log.e(any(), any()) } returns 0
+        every { android.util.Log.e(any(), any(), any()) } returns 0
+        every { android.util.Log.w(any(), any<String>()) } returns 0
+        every { android.util.Log.w(any(), any<Throwable>()) } returns 0
+        every { android.util.Log.w(any(), any<String>(), any<Throwable>()) } returns 0
+        every { android.util.Log.d(any(), any()) } returns 0
+        every { android.util.Log.i(any(), any()) } returns 0
     }
 
     @After
     fun tearDown() {
         unmockkAll()
+        ProcessExitReasonHelper.resetSessionForTesting()
     }
 
     @Test
@@ -167,5 +190,70 @@ class ProcessExitReasonHelperTest {
 
         ProcessExitReasonHelper.resetBatteryKillCount(context)
         assertEquals(0, ProcessExitReasonHelper.getBatteryKillCount(context))
+    }
+
+    @Test
+    fun testResolveKillReason_repeatedCalls_doesNotIncrementCounter() {
+        val exitInfo = mockk<ApplicationExitInfo>(relaxed = true)
+        every { exitInfo.reason } returns ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE
+        every { exitInfo.timestamp } returns 1000L
+        every { activityManager.getHistoricalProcessExitReasons("com.atrainingtracker", 0, 1) } returns listOf(exitInfo)
+        every { powerManager.isIgnoringBatteryOptimizations("com.atrainingtracker") } returns false
+
+        // First resolution
+        val diag1 = ProcessExitReasonHelper.resolveKillReason(context, sdkInt = Build.VERSION_CODES.R)
+        assertEquals(KillReason.BATTERY_KILL, diag1.reason)
+        assertEquals(1, diag1.escalationLevel)
+
+        // Second resolution (simulating screen rotation or fragment recreation with same timestamp)
+        val diag2 = ProcessExitReasonHelper.resolveKillReason(context, sdkInt = Build.VERSION_CODES.R)
+        assertEquals(KillReason.BATTERY_KILL, diag2.reason)
+        assertEquals(1, diag2.escalationLevel)
+        assertEquals(1, ProcessExitReasonHelper.getBatteryKillCount(context))
+    }
+
+    @Test
+    fun testResolveKillReason_newExitTimestamp_incrementsCounter() {
+        val exitInfo1 = mockk<ApplicationExitInfo>(relaxed = true)
+        every { exitInfo1.reason } returns ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE
+        every { exitInfo1.timestamp } returns 1000L
+        every { activityManager.getHistoricalProcessExitReasons("com.atrainingtracker", 0, 1) } returns listOf(exitInfo1)
+        every { powerManager.isIgnoringBatteryOptimizations("com.atrainingtracker") } returns false
+
+        val diag1 = ProcessExitReasonHelper.resolveKillReason(context, sdkInt = Build.VERSION_CODES.R)
+        assertEquals(1, diag1.escalationLevel)
+
+        // Subsequent kill event with newer timestamp
+        val exitInfo2 = mockk<ApplicationExitInfo>(relaxed = true)
+        every { exitInfo2.reason } returns ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE
+        every { exitInfo2.timestamp } returns 2000L
+        every { activityManager.getHistoricalProcessExitReasons("com.atrainingtracker", 0, 1) } returns listOf(exitInfo2)
+
+        val diag2 = ProcessExitReasonHelper.resolveKillReason(context, sdkInt = Build.VERSION_CODES.R)
+        assertEquals(2, diag2.escalationLevel)
+        assertEquals(2, ProcessExitReasonHelper.getBatteryKillCount(context))
+    }
+
+    @Test
+    fun testOpenBatteryOptimizationSettings_launchesActionRequestIgnoreBatteryOptimizationsFirst() {
+        mockkStatic(android.net.Uri::class)
+        val mockUri = mockk<android.net.Uri>()
+        every { android.net.Uri.parse("package:com.atrainingtracker") } returns mockUri
+
+        io.mockk.mockkConstructor(android.content.Intent::class)
+        val intentSlot = io.mockk.slot<android.content.Intent>()
+        every { context.startActivity(capture(intentSlot)) } answers { }
+        every { anyConstructed<android.content.Intent>().action } returns android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+        every { anyConstructed<android.content.Intent>().data } returns mockUri
+        every { anyConstructed<android.content.Intent>().addFlags(any()) } returns mockk(relaxed = true)
+        every { anyConstructed<android.content.Intent>().data = any() } answers { }
+        every { anyConstructed<android.content.Intent>().setData(any()) } returns mockk(relaxed = true)
+
+        ProcessExitReasonHelper.openBatteryOptimizationSettings(context)
+
+        assertTrue(intentSlot.isCaptured)
+        val captured = intentSlot.captured
+        assertEquals(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, captured.action)
+        assertEquals(mockUri, captured.data)
     }
 }
