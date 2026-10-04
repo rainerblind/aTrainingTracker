@@ -1764,6 +1764,16 @@
     <string name="turn_cue_countdown_distance_summary">Advance warning distance before turns (meters)</string>
     <string name="off_route_corridor_threshold_title">Off-Route Threshold</string>
     <string name="off_route_corridor_threshold_summary">Maximum deviation distance before off-route warning (meters)</string>
+
+    <!-- Return Navigation & Take Me Home (ATT-1953) -->
+    <string name="take_me_home_title">Take Me Home</string>
+    <string name="take_me_home_desc">Return guidance along familiar routes</string>
+    <string name="nav_remaining_dist">Remaining</string>
+    <string name="nav_remaining_climb">Climb</string>
+    <string name="nav_eta_label">ETA</string>
+    <string name="nav_destination_home">Home</string>
+    <string name="nav_stop_return">Stop Return</string>
+    <string name="nav_route_reverse">Return along route</string>
 </resources>
 
 

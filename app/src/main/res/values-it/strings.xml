@@ -1571,4 +1571,14 @@
     <string name="turn_cue_countdown_distance_summary">Distanza di preavviso prima delle svolte (metri)</string>
     <string name="off_route_corridor_threshold_title">Tolleranza fuori rotta</string>
     <string name="off_route_corridor_threshold_summary">Deviazione massima prima dell\'avviso fuori rotta (metri)</string>
+
+    <!-- Return Navigation & Take Me Home (ATT-1953) -->
+    <string name="take_me_home_title">Portami a casa</string>
+    <string name="take_me_home_desc">Guida di ritorno su percorsi noti</string>
+    <string name="nav_remaining_dist">Rimanente</string>
+    <string name="nav_remaining_climb">Salita</string>
+    <string name="nav_eta_label">Arrivo</string>
+    <string name="nav_destination_home">Casa</string>
+    <string name="nav_stop_return">Interrompi ritorno</string>
+    <string name="nav_route_reverse">Torna sul percorso</string>
 </resources>

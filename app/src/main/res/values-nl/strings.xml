@@ -1571,4 +1571,14 @@
     <string name="turn_cue_countdown_distance_summary">Afstand voor tijdige waarschuwing voor een afslag (meter)</string>
     <string name="off_route_corridor_threshold_title">Drempelwaarde routeafwijking</string>
     <string name="off_route_corridor_threshold_summary">Maximale afwijking voor waarschuwing buiten de route (meter)</string>
+
+    <!-- Return Navigation & Take Me Home (ATT-1953) -->
+    <string name="take_me_home_title">Breng me naar huis</string>
+    <string name="take_me_home_desc">Terugwegbegeleiding langs bekende routes</string>
+    <string name="nav_remaining_dist">Resterend</string>
+    <string name="nav_remaining_climb">Klimmen</string>
+    <string name="nav_eta_label">Aankomst</string>
+    <string name="nav_destination_home">Thuis</string>
+    <string name="nav_stop_return">Terugweg stoppen</string>
+    <string name="nav_route_reverse">Terugkeren langs route</string>
 </resources>
