@@ -67,6 +67,11 @@ public class ExportStatusDatabaseManager {
         return sInstance;
     }
 
+    @androidx.annotation.VisibleForTesting
+    public static synchronized void resetForTesting(ExportStatusDatabaseManager newInstance) {
+        sInstance = newInstance;
+    }
+
     /**
      * Returns a writable database instance and ensures it remains open.
      * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
@@ -120,23 +125,48 @@ public class ExportStatusDatabaseManager {
             Log.e(TAG, "Database is null, cannot update status for " + fileBaseName + ", " + exportType + ", " + fileFormat);
             return;
         }
-        db.update(ExportStatusDbHelper.TABLE,
-                contentValues,
-                WorkoutSummaries.FILE_BASE_NAME + "=? AND " + TYPE + "=? AND " + FORMAT + "=?",
-                new String[]{fileBaseName, exportType.name(), fileFormat.name()});
+        if (exportType == null) {
+            int rows = db.update(ExportStatusDbHelper.TABLE,
+                    contentValues,
+                    WorkoutSummaries.FILE_BASE_NAME + "=? AND " + FORMAT + "=?",
+                    new String[]{fileBaseName, fileFormat.name()});
+            if (rows == 0) {
+                for (ExportType type : ExportType.values()) {
+                    if (java.util.Arrays.asList(type.getExportToFileFormats()).contains(fileFormat)) {
+                        ContentValues insertValues = new ContentValues();
+                        insertValues.putAll(contentValues);
+                        insertValues.put(WorkoutSummaries.FILE_BASE_NAME, fileBaseName);
+                        insertValues.put(TYPE, type.name());
+                        insertValues.put(FORMAT, fileFormat.name());
+                        if (!insertValues.containsKey(EXPORT_STATUS)) {
+                            insertValues.put(EXPORT_STATUS, ExportStatus.UNWANTED.name());
+                        }
+                        db.insert(ExportStatusDbHelper.TABLE, null, insertValues);
+                    }
+                }
+            }
+        } else {
+            int rows = db.update(ExportStatusDbHelper.TABLE,
+                    contentValues,
+                    WorkoutSummaries.FILE_BASE_NAME + "=? AND " + TYPE + "=? AND " + FORMAT + "=?",
+                    new String[]{fileBaseName, exportType.name(), fileFormat.name()});
+            if (rows == 0) {
+                ContentValues insertValues = new ContentValues();
+                insertValues.putAll(contentValues);
+                insertValues.put(WorkoutSummaries.FILE_BASE_NAME, fileBaseName);
+                insertValues.put(TYPE, exportType.name());
+                insertValues.put(FORMAT, fileFormat.name());
+                if (!insertValues.containsKey(EXPORT_STATUS)) {
+                    insertValues.put(EXPORT_STATUS, ExportStatus.UNWANTED.name());
+                }
+                db.insert(ExportStatusDbHelper.TABLE, null, insertValues);
+            }
+        }
     }
 
     public void updateExportStatus(ContentValues contentValues, ExportInfo exportInfo) {
-        SQLiteDatabase db = mDbHelper.getWritableDatabase();
-        if (db == null) {
-            Log.e(TAG, "Database is null, cannot update status for " + exportInfo);
-            return;
-        }
-
-        db.update(ExportStatusDbHelper.TABLE,
-                contentValues,
-                WorkoutSummaries.FILE_BASE_NAME + "=? AND " + TYPE + "=? AND " + FORMAT + "=?",
-                new String[]{exportInfo.getFileBaseName(), exportInfo.getExportType().name(), exportInfo.getFileFormat().name()});
+        if (exportInfo == null) return;
+        updateExportStatus(contentValues, exportInfo.getFileBaseName(), exportInfo.getExportType(), exportInfo.getFileFormat());
     }
 
 

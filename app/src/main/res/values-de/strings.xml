@@ -383,6 +383,7 @@
     <string name="jsonWrite">export nach Golden Cheetah json</string>
     <string name="tcxWrite">export nach TCX</string>
     <string name="gpxWrite">export nach GPX</string>
+    <string name="fitWrite">export nach FIT</string>
     <string name="stravaUpload">hochladen zu Strava</string>
     <string name="runkeeperUpload">hochladen zu Runkeeper</string>
     <string name="trainingPeaksUpload">hochladen zu TrainingPeaks</string>

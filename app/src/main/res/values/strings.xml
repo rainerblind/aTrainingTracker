@@ -470,6 +470,7 @@
     <string name="jsonWrite">export to Golden Cheetah json</string>
     <string name="tcxWrite">export to TCX</string>
     <string name="gpxWrite">export to GPX</string>
+    <string name="fitWrite">export to FIT</string>
     <!--     <string name="gpxShow">show GPX data in other application</string>  -->
     <!-- 	<string name="deleteWorkout">delete Workout</string> -->
     <string name="stravaUpload">upload to Strava</string>

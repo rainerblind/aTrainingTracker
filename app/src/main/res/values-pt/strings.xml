@@ -371,6 +371,7 @@
     <string name="jsonWrite">exportar para JSON Golden Cheetah</string>
     <string name="tcxWrite">exportar para TCX</string>
     <string name="gpxWrite">exportar para GPX</string>
+    <string name="fitWrite">exportar para FIT</string>
     <string name="stravaUpload">carregar para Strava</string>
     <string name="runkeeperUpload">carregar para Runkeeper</string>
     <string name="trainingPeaksUpload">carregar para TrainingPeaks</string>
