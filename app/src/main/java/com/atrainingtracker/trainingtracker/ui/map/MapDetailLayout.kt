@@ -500,7 +500,9 @@ fun MapDetailLayout(
             .then(
                 if (!useStatusBarsPadding) Modifier.background(MaterialTheme.colorScheme.surface) else Modifier
             )
-            .nestedScroll(connection)
+            .then(
+                if (showMap || hasScrollableContent) Modifier.nestedScroll(connection) else Modifier
+            )
     ) {
         val density = LocalDensity.current
         val screenHeightPx = constraints.maxHeight
@@ -576,9 +578,13 @@ fun MapDetailLayout(
         }
 
         // 2. RESIZABLE VIEWPORT (Map + SplitPaneDivider + Scrollable Lower Section)
+        val viewportModifier = if (showMap || hasScrollableContent) {
+            Modifier.fillMaxSize()
+        } else {
+            Modifier.fillMaxWidth().wrapContentHeight()
+        }
         Box(
-            modifier = Modifier
-                .fillMaxSize()
+            modifier = viewportModifier
                 .padding(top = currentTopPaddingDp)
         ) {
             if (showMap && hasLowerSection) {

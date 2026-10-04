@@ -33,9 +33,11 @@ import com.atrainingtracker.banalservice.BSportType
 
 @Composable
 fun LiveSegmentSheet(
-    liveSegment: LiveSegment
+    liveSegment: LiveSegment,
+    modifier: Modifier = Modifier
 ) {
     MapDetailLayout(
+        modifier = modifier.fillMaxWidth().wrapContentHeight(),
         bSportType = liveSegment.staticData.summary.bSportType,
         zoomFocus = MapZoomFocus.FIT_PRIMARY,
         activeScrubPath = liveSegment.staticData.path,
