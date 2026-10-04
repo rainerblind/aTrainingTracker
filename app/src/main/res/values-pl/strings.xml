@@ -1542,4 +1542,24 @@
     <string name="climb_category_uc">UC</string>
     <string name="tuning_show_live_climbs_title">Podjazdy na żywo (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Pokazuj kokpit podjazdu w czasie rzeczywistym na trasach i podczas swobodnej jazdy</string>
+
+    <string name="turn_cue_left">Skręć w lewo</string>
+    <string name="turn_cue_right">Skręć w prawo</string>
+    <string name="turn_cue_slight_left">Lekko w lewo</string>
+    <string name="turn_cue_slight_right">Lekko w prawo</string>
+    <string name="turn_cue_sharp_left">Ostro w lewo</string>
+    <string name="turn_cue_sharp_right">Ostro w prawo</string>
+    <string name="turn_cue_straight">Prosto</string>
+    <string name="turn_cue_u_turn">Zawróć</string>
+    <string name="turn_cue_now">TERAZ</string>
+    <string name="turn_cue_off_route">Poza trasą (%1$d m)</string>
+    <string name="turn_cue_back_on_route">Powrót na trasę</string>
+    <string name="turn_prompts_title">Wskazówki nawigacyjne</string>
+    <string name="turn_prompts_summary">Wyświetlaj wskazówki manewr po manewrze podczas aktywnej nawigacji</string>
+    <string name="turn_audio_alerts_title">Dźwiękowe alerty manewrów</string>
+    <string name="turn_audio_alerts_summary">Odtwarzaj sygnały dźwiękowe przed manewrami i przy zboczeniu z trasy</string>
+    <string name="turn_cue_countdown_distance_title">Dystans ostrzeżenia o manewrze</string>
+    <string name="turn_cue_countdown_distance_summary">Dystans wcześniejszego ostrzeżenia przed skrętem (w metrach)</string>
+    <string name="off_route_corridor_threshold_title">Tolerancja zboczenia z trasy</string>
+    <string name="off_route_corridor_threshold_summary">Maksymalne odchylenie przed ostrzeżeniem o zejściu z trasy (w metrach)</string>
 </resources>

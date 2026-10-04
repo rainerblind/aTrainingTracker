@@ -1540,4 +1540,24 @@
     <string name="climb_category_uc">UC</string>
     <string name="tuning_show_live_climbs_title">Salite in tempo reale (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Mostra il pannello salita in tempo reale durante i percorsi e la pedalata libera</string>
+
+    <string name="turn_cue_left">Svolta a sinistra</string>
+    <string name="turn_cue_right">Svolta a destra</string>
+    <string name="turn_cue_slight_left">Leggermente a sinistra</string>
+    <string name="turn_cue_slight_right">Leggermente a destra</string>
+    <string name="turn_cue_sharp_left">Svolta decisa a sinistra</string>
+    <string name="turn_cue_sharp_right">Svolta decisa a destra</string>
+    <string name="turn_cue_straight">Dritto</string>
+    <string name="turn_cue_u_turn">Inversione a U</string>
+    <string name="turn_cue_now">ORA</string>
+    <string name="turn_cue_off_route">Fuori percorso (%1$d m)</string>
+    <string name="turn_cue_back_on_route">Di nuovo sul percorso</string>
+    <string name="turn_prompts_title">Istruzioni di svolta</string>
+    <string name="turn_prompts_summary">Mostra indicazioni svolta per svolta durante la navigazione del percorso</string>
+    <string name="turn_audio_alerts_title">Avvisi acustici di svolta</string>
+    <string name="turn_audio_alerts_summary">Riproduci segnali acustici prima delle svolte e fuori rotta</string>
+    <string name="turn_cue_countdown_distance_title">Distanza di preavviso svolta</string>
+    <string name="turn_cue_countdown_distance_summary">Distanza di preavviso prima delle svolte (metri)</string>
+    <string name="off_route_corridor_threshold_title">Tolleranza fuori rotta</string>
+    <string name="off_route_corridor_threshold_summary">Deviazione massima prima dell\'avviso fuori rotta (metri)</string>
 </resources>

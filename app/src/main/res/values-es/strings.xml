@@ -1542,4 +1542,24 @@
     <string name="climb_category_uc">UC</string>
     <string name="tuning_show_live_climbs_title">Subidas en vivo (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Mostrar panel de subida en tiempo real durante rutas y recorrido libre</string>
+
+    <string name="turn_cue_left">Girar a la izquierda</string>
+    <string name="turn_cue_right">Girar a la derecha</string>
+    <string name="turn_cue_slight_left">Ligera izquierda</string>
+    <string name="turn_cue_slight_right">Ligera derecha</string>
+    <string name="turn_cue_sharp_left">Giro cerrado a la izquierda</string>
+    <string name="turn_cue_sharp_right">Giro cerrado a la derecha</string>
+    <string name="turn_cue_straight">Continuar recto</string>
+    <string name="turn_cue_u_turn">Cambio de sentido</string>
+    <string name="turn_cue_now">AHORA</string>
+    <string name="turn_cue_off_route">Fuera de ruta (%1$d m)</string>
+    <string name="turn_cue_back_on_route">De vuelta en la ruta</string>
+    <string name="turn_prompts_title">Indicaciones de giro</string>
+    <string name="turn_prompts_summary">Mostrar indicaciones paso a paso durante la navegación de ruta</string>
+    <string name="turn_audio_alerts_title">Alertas audibles de giro</string>
+    <string name="turn_audio_alerts_summary">Reproducir avisos sonoros antes de giros y al desviarse de la ruta</string>
+    <string name="turn_cue_countdown_distance_title">Distancia de aviso de giro</string>
+    <string name="turn_cue_countdown_distance_summary">Distancia de aviso previo antes de girar (metros)</string>
+    <string name="off_route_corridor_threshold_title">Tolerancia de desvío de ruta</string>
+    <string name="off_route_corridor_threshold_summary">Desviación máxima antes del aviso de salida de ruta (metros)</string>
 </resources>

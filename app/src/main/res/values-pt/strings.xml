@@ -1540,4 +1540,24 @@
     <string name="climb_category_uc">UC</string>
     <string name="tuning_show_live_climbs_title">Subidas ao vivo (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Mostrar painel de subida em tempo real durante rotas e pedalada livre</string>
+
+    <string name="turn_cue_left">Vire à esquerda</string>
+    <string name="turn_cue_right">Vire à direita</string>
+    <string name="turn_cue_slight_left">Ligeiramente à esquerda</string>
+    <string name="turn_cue_slight_right">Ligeiramente à direita</string>
+    <string name="turn_cue_sharp_left">Curva apertada à esquerda</string>
+    <string name="turn_cue_sharp_right">Curva apertada à direita</string>
+    <string name="turn_cue_straight">Siga em frente</string>
+    <string name="turn_cue_u_turn">Fazer inversão de marcha</string>
+    <string name="turn_cue_now">AGORA</string>
+    <string name="turn_cue_off_route">Fora da rota (%1$d m)</string>
+    <string name="turn_cue_back_on_route">De volta à rota</string>
+    <string name="turn_prompts_title">Indicações de mudança de direção</string>
+    <string name="turn_prompts_summary">Mostrar indicações passo a passo durante a navegação ativa da rota</string>
+    <string name="turn_audio_alerts_title">Alertas sonoros de direção</string>
+    <string name="turn_audio_alerts_summary">Emitir sinais sonoros antes das mudanças de direção e ao desviar-se da rota</string>
+    <string name="turn_cue_countdown_distance_title">Distância de aviso de curva</string>
+    <string name="turn_cue_countdown_distance_summary">Distância de pré-aviso antes das curvas (metros)</string>
+    <string name="off_route_corridor_threshold_title">Tolerância de desvio de rota</string>
+    <string name="off_route_corridor_threshold_summary">Desvio máximo antes do aviso de saída de rota (metros)</string>
 </resources>
