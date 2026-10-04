@@ -1525,4 +1525,21 @@
     <string name="waypoint_type_generic">Punkt trasy</string>
     <string name="route_cue_sheet_title">Karta trasy</string>
     <string name="route_waypoints_header">Punkty trasy i POI (%1$d)</string>
+
+    <string name="climb_title">Podjazd</string>
+    <string name="climb_approaching">Zbliżanie</string>
+    <string name="climb_on_climb">Na podjeździe</string>
+    <string name="climb_summit">Szczyt</string>
+    <string name="climb_remaining_dist">Pozostało</string>
+    <string name="climb_remaining_elevation">Przewyższenie</string>
+    <string name="climb_grade">Nachylenie</string>
+    <string name="climb_route_counter">Podjazd %1$d z %2$d</string>
+    <string name="climb_category_hc">HC</string>
+    <string name="climb_category_cat1">Kat 1</string>
+    <string name="climb_category_cat2">Kat 2</string>
+    <string name="climb_category_cat3">Kat 3</string>
+    <string name="climb_category_cat4">Kat 4</string>
+    <string name="climb_category_uc">UC</string>
+    <string name="tuning_show_live_climbs_title">Podjazdy na żywo (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_summary">Pokazuj kokpit podjazdu w czasie rzeczywistym na trasach i podczas swobodnej jazdy</string>
 </resources>

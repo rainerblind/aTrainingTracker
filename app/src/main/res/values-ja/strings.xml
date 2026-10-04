@@ -1503,4 +1503,21 @@
     <string name="waypoint_type_generic">ウェイポイント</string>
     <string name="route_cue_sheet_title">キューシート</string>
     <string name="route_waypoints_header">ウェイポイントとPOI (%1$d)</string>
+
+    <string name="climb_title">登坂</string>
+    <string name="climb_approaching">接近中</string>
+    <string name="climb_on_climb">登坂中</string>
+    <string name="climb_summit">山頂</string>
+    <string name="climb_remaining_dist">残り</string>
+    <string name="climb_remaining_elevation">獲得標高</string>
+    <string name="climb_grade">勾配</string>
+    <string name="climb_route_counter">登坂 %1$d / %2$d</string>
+    <string name="climb_category_hc">HC</string>
+    <string name="climb_category_cat1">カテゴリー 1</string>
+    <string name="climb_category_cat2">カテゴリー 2</string>
+    <string name="climb_category_cat3">カテゴリー 3</string>
+    <string name="climb_category_cat4">カテゴリー 4</string>
+    <string name="climb_category_uc">UC</string>
+    <string name="tuning_show_live_climbs_title">ライブクライム (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_summary">ルートおよびフリー走行中にリアルタイム登坂コックピットを表示</string>
 </resources>

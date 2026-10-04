@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.settings
 
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -80,6 +81,10 @@ object TuningPreferencesDefaults {
     const val DEFAULT_PACE_CEILING_MIN_KM = 3.0f
     const val MIN_PACE_CEILING_MIN_KM = 2.0f
     const val MAX_PACE_CEILING_MIN_KM = 6.0f
+
+    const val SHOW_LIVE_CLIMBS = true
+    const val CLIMB_MIN_LENGTH_METERS = 500.0f
+    const val CLIMB_MIN_GRADIENT_PERCENT = 3.0f
 }
 
 /**
@@ -99,7 +104,10 @@ data class TuningConfig(
     val gpsAccuracyThresholdMeters: Float = TuningPreferencesDefaults.GPS_ACCURACY_THRESHOLD_M,
     val altitudeFilterWindowSec: Int = TuningPreferencesDefaults.ALTITUDE_FILTER_WINDOW_SEC,
     val slopeMinSpeedMps: Float = TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS,
-    val paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM
+    val paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM,
+    val showLiveClimbs: Boolean = TuningPreferencesDefaults.SHOW_LIVE_CLIMBS,
+    val climbMinLengthMeters: Float = TuningPreferencesDefaults.CLIMB_MIN_LENGTH_METERS,
+    val climbMinGradientPercent: Float = TuningPreferencesDefaults.CLIMB_MIN_GRADIENT_PERCENT
 ) {
     @Deprecated("Use elevationXAxisDomain or telemetryXAxisDomain", ReplaceWith("elevationXAxisDomain"))
     val profileXAxisDomain: ProfileXAxisDomain
@@ -161,6 +169,9 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_ALTITUDE_FILTER_WINDOW: Preferences.Key<Int> = intPreferencesKey("tuning_altitude_filter_window")
         val KEY_SLOPE_MIN_SPEED: Preferences.Key<Float> = floatPreferencesKey("tuning_slope_min_speed")
         val KEY_PACE_CEILING_MIN_KM: Preferences.Key<Float> = floatPreferencesKey("tuning_pace_ceiling_min_km")
+        val KEY_SHOW_LIVE_CLIMBS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_live_climbs")
+        val KEY_CLIMB_MIN_LENGTH_METERS: Preferences.Key<Float> = floatPreferencesKey("tuning_climb_min_length_meters")
+        val KEY_CLIMB_MIN_GRADIENT_PERCENT: Preferences.Key<Float> = floatPreferencesKey("tuning_climb_min_gradient_percent")
 
         private val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -177,7 +188,10 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_GPS_ACCURACY_THRESHOLD,
             KEY_ALTITUDE_FILTER_WINDOW,
             KEY_SLOPE_MIN_SPEED,
-            KEY_PACE_CEILING_MIN_KM
+            KEY_PACE_CEILING_MIN_KM,
+            KEY_SHOW_LIVE_CLIMBS,
+            KEY_CLIMB_MIN_LENGTH_METERS,
+            KEY_CLIMB_MIN_GRADIENT_PERCENT
         )
     }
 
@@ -267,6 +281,10 @@ class TuningPreferencesDataStore(private val context: Context) {
             TuningPreferencesDefaults.MAX_PACE_CEILING_MIN_KM
         )
 
+        val showLiveClimbs = prefs[KEY_SHOW_LIVE_CLIMBS] ?: TuningPreferencesDefaults.SHOW_LIVE_CLIMBS
+        val climbMinLength = prefs[KEY_CLIMB_MIN_LENGTH_METERS] ?: TuningPreferencesDefaults.CLIMB_MIN_LENGTH_METERS
+        val climbMinGradient = prefs[KEY_CLIMB_MIN_GRADIENT_PERCENT] ?: TuningPreferencesDefaults.CLIMB_MIN_GRADIENT_PERCENT
+
         TuningConfig(
             elevationXAxisDomain = elevationDomain,
             telemetryXAxisDomain = telemetryDomain,
@@ -281,7 +299,10 @@ class TuningPreferencesDataStore(private val context: Context) {
             gpsAccuracyThresholdMeters = clampedAccuracy,
             altitudeFilterWindowSec = clampedAltWindow,
             slopeMinSpeedMps = clampedSlopeSpeed,
-            paceCeilingMinKm = clampedPaceCeiling
+            paceCeilingMinKm = clampedPaceCeiling,
+            showLiveClimbs = showLiveClimbs,
+            climbMinLengthMeters = climbMinLength,
+            climbMinGradientPercent = climbMinGradient
         )
     }
 
@@ -343,6 +364,15 @@ class TuningPreferencesDataStore(private val context: Context) {
             prefs[KEY_ALTITUDE_FILTER_WINDOW] = clampedAltWindow
             prefs[KEY_SLOPE_MIN_SPEED] = clampedSlopeSpeed
             prefs[KEY_PACE_CEILING_MIN_KM] = clampedPaceCeiling
+            prefs[KEY_SHOW_LIVE_CLIMBS] = config.showLiveClimbs
+            prefs[KEY_CLIMB_MIN_LENGTH_METERS] = config.climbMinLengthMeters
+            prefs[KEY_CLIMB_MIN_GRADIENT_PERCENT] = config.climbMinGradientPercent
+        }
+    }
+
+    suspend fun updateShowLiveClimbs(show: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_SHOW_LIVE_CLIMBS] = show
         }
     }
 

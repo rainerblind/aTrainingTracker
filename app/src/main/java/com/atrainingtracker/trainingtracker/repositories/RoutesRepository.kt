@@ -22,6 +22,9 @@ import android.content.Context
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.climbs.Climb
+import com.atrainingtracker.trainingtracker.climbs.ClimbDetector
+import com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
@@ -172,6 +175,19 @@ class RoutesRepository internal constructor(
             routesDb.updateRouteSummary(summary.copy(id = newId, clusterId = clusterId))
         }
 
+        // Detect and persist climbs (ATT-1281 / REQ-MAP-027)
+        try {
+            val detectedClimbs = ClimbDetector.detectClimbs(path, routeId = newId)
+            if (detectedClimbs.isNotEmpty()) {
+                val climbsDb = ClimbsDatabaseManager.getInstance(context)
+                for (climb in detectedClimbs) {
+                    climbsDb.insertClimbWithDeduplication(climb)
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to extract climbs for route $newId", e)
+        }
+
         refreshRoutes() // Notify observers that a new route is available
         newId
     }
@@ -181,6 +197,13 @@ class RoutesRepository internal constructor(
      */
     suspend fun getWaypointsForRoute(routeId: Long): List<RouteWaypoint> = withContext(Dispatchers.IO) {
         routesDb.getWaypointsForRoute(routeId)
+    }
+
+    /**
+     * Retrieves all climbs for a specific route ID (REQ-MAP-027).
+     */
+    suspend fun getClimbsForRoute(routeId: Long): List<Climb> = withContext(Dispatchers.IO) {
+        ClimbsDatabaseManager.getInstance(context).getClimbsForRoute(routeId)
     }
 
     /**

@@ -73,6 +73,8 @@ import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
+import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
+import com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbSheet
 import com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheet
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import com.atrainingtracker.trainingtracker.ui.components.core.sheetContour
@@ -132,11 +134,15 @@ fun SensorGridScreen(
 
     val showLiveSegments = state.showLiveSegments && activeSegment != null
 
+    val liveClimbsRepo = remember { LiveClimbsRepository.getInstance(context) }
+    val activeLiveClimb by liveClimbsRepo.activeLiveClimb.collectAsState()
+    val showLiveClimbs = !showLiveSegments && tuningConfig.showLiveClimbs && activeLiveClimb != null
+
     // Control the sheet state
     val scaffoldState = rememberBottomSheetScaffoldState(
         bottomSheetState = rememberStandardBottomSheetState(
             initialValue = SheetValue.PartiallyExpanded,
-            skipHiddenState = false // Allow it to hide if no segment
+            skipHiddenState = false // Allow it to hide if no segment or climb
         )
     )
 
@@ -150,10 +156,10 @@ fun SensorGridScreen(
             sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
             sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
         sheetDragHandle = null,
-        sheetPeekHeight = if (showLiveSegments && screenMode == ScreenMode.TRACKING) BottomSheetDesign.PeekHeightLiveSegment + navBarHeight else 0.dp,
-        sheetSwipeEnabled = showLiveSegments,
+        sheetPeekHeight = if ((showLiveSegments || showLiveClimbs) && screenMode == ScreenMode.TRACKING) BottomSheetDesign.PeekHeightLiveSegment + navBarHeight else 0.dp,
+        sheetSwipeEnabled = showLiveSegments || showLiveClimbs,
         sheetContent = {
-            if (showLiveSegments) {
+            if (showLiveSegments && activeSegment != null) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -162,6 +168,17 @@ fun SensorGridScreen(
                 ) {
                     LiveSegmentSheet(
                         liveSegment = activeSegment
+                    )
+                }
+            } else if (showLiveClimbs && activeLiveClimb != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .sheetContour()
+                        .background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)
+                ) {
+                    LiveClimbSheet(
+                        liveClimb = activeLiveClimb!!
                     )
                 }
             } else {
