@@ -112,33 +112,24 @@ public class BTSearchForNewDevicesEngine
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
-                    BluetoothGattService btGattService;
                     String address = gatt.getDevice().getAddress();
                     mReadCharacteristicQueue.put(address, new LinkedList<BluetoothGattCharacteristic>());
 
-                    btGattService = gatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION);
-                    if (btGattService != null) {
-                        Log.i(TAG, "go device information service, adding manufacturer name characteristic to the read queue");
-                        mReadCharacteristicQueue.get(address).add(btGattService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_MANUFACTURER_NAME));
-                    }
+                    enqueueCharacteristicIfPresent(address,
+                            gatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION),
+                            BluetoothConstants.UUID_CHARACTERISTIC_MANUFACTURER_NAME);
 
-                    btGattService = gatt.getService(BluetoothConstants.UUID_SERVICE_BATTERY);
-                    if (btGattService != null) {
-                        Log.i(TAG, "go battery service, adding battery characteristic top the read queue");
-                        mReadCharacteristicQueue.get(address).add(btGattService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_BATTERY_LEVEL));
-                    }
+                    enqueueCharacteristicIfPresent(address,
+                            gatt.getService(BluetoothConstants.UUID_SERVICE_BATTERY),
+                            BluetoothConstants.UUID_CHARACTERISTIC_BATTERY_LEVEL);
 
-                    btGattService = gatt.getService(BluetoothConstants.getServiceUUID(DeviceType.BIKE_SPEED_AND_CADENCE));
-                    if (btGattService != null) {
-                        Log.i(TAG, "got cycling speed and cadence service, adding feature characteristic to read queue");
-                        mReadCharacteristicQueue.get(address).add(btGattService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_CYCLING_SPEED_AND_CADENCE_FEATURE));
-                    }
+                    enqueueCharacteristicIfPresent(address,
+                            gatt.getService(BluetoothConstants.getServiceUUID(DeviceType.BIKE_SPEED_AND_CADENCE)),
+                            BluetoothConstants.UUID_CHARACTERISTIC_CYCLING_SPEED_AND_CADENCE_FEATURE);
 
-                    btGattService = gatt.getService(BluetoothConstants.getServiceUUID(DeviceType.BIKE_POWER));
-                    if (btGattService != null) {
-                        Log.i(TAG, "got bike power service, adding feature characteristic to read queue");
-                        mReadCharacteristicQueue.get(address).add(btGattService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_CYCLING_POWER_FEATURE));
-                    }
+                    enqueueCharacteristicIfPresent(address,
+                            gatt.getService(BluetoothConstants.getServiceUUID(DeviceType.BIKE_POWER)),
+                            BluetoothConstants.UUID_CHARACTERISTIC_CYCLING_POWER_FEATURE);
 
                     readNextCharacteristic(address);
                 }
@@ -281,11 +272,56 @@ public class BTSearchForNewDevicesEngine
         return mDeviceType;
     }
 
+    /**
+     * Appends a characteristic to the device's read queue if and only if both the service
+     * and the characteristic exist and are non-null (REQ-CON-018).
+     */
+    protected void enqueueCharacteristicIfPresent(String address, BluetoothGattService service, UUID charUuid) {
+        if (service != null && charUuid != null) {
+            BluetoothGattCharacteristic characteristic = service.getCharacteristic(charUuid);
+            if (characteristic != null) {
+                Queue<BluetoothGattCharacteristic> queue = mReadCharacteristicQueue.get(address);
+                if (queue != null) {
+                    queue.add(characteristic);
+                }
+            }
+        }
+    }
+
+    /**
+     * Resets and clears all internal connection, discovery, and peripheral metadata maps (REQ-CON-018).
+     */
+    protected synchronized void resetTrackingState() {
+        for (final BluetoothGatt btGatt : mBTGatts.values()) {
+            if (btGatt != null) {
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                            return;
+                        }
+                        btGatt.disconnect();
+                        btGatt.close();
+                    }
+                });
+            } else {
+                Log.d(TAG, "WTF: btGatt == null");
+            }
+        }
+        mBTGatts.clear();
+        mReadCharacteristicQueue.clear();
+        mInformedDevices.clear();
+        mNameMap.clear();
+        mManufacturerMap.clear();
+        mBatteryPercentage.clear();
+    }
+
     @Override
     public void startAsyncSearch() {
         if (DEBUG) Log.i(TAG, "startAsyncSearch()");
 
         if (!scanning) {
+            resetTrackingState();
             if (DEBUG) Log.i(TAG, "starting to search for " + getDeviceType().name() + " devices");
             if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                 return;
@@ -332,22 +368,7 @@ public class BTSearchForNewDevicesEngine
             }
         }
 
-        for (final BluetoothGatt btGatt : mBTGatts.values()) {
-            if (btGatt != null) {
-                mHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                            return;
-                        }
-                        btGatt.disconnect();
-                        btGatt.close();
-                    }
-                });
-            } else {
-                Log.d(TAG, "WTF: btGatt == null");
-            }
-        }
+        resetTrackingState();
     }
 
     protected void newDeviceFound(String address) {
@@ -358,7 +379,7 @@ public class BTSearchForNewDevicesEngine
         }
     }
 
-    protected void readNextCharacteristic(String address) {
+    protected void readNextCharacteristic(final String address) {
         if (DEBUG) Log.i(TAG, "readNextCharacteristic: " + address);
 
         final BluetoothGatt gatt = mBTGatts.get(address);
@@ -367,9 +388,10 @@ public class BTSearchForNewDevicesEngine
             return;
         }
 
-        if (!mReadCharacteristicQueue.get(address).isEmpty()) {
+        Queue<BluetoothGattCharacteristic> queue = mReadCharacteristicQueue.get(address);
+        if (queue != null && !queue.isEmpty()) {
             if (DEBUG) Log.i(TAG, "queue is not empty, so we read the next characteristic");
-            final BluetoothGattCharacteristic characteristic = Objects.requireNonNull(mReadCharacteristicQueue.get(address)).poll();
+            final BluetoothGattCharacteristic characteristic = queue.poll();
             if (characteristic != null) {
                 if (DEBUG) Log.i(TAG, "UUID of characteristic: " + characteristic.getUuid());
                 mHandler.post(new Runnable() {
@@ -378,9 +400,15 @@ public class BTSearchForNewDevicesEngine
                         if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                             return;
                         }
-                        gatt.readCharacteristic(characteristic); // the result is reported via the onCharacteristicRead method
+                        boolean success = gatt.readCharacteristic(characteristic); // the result is reported via the onCharacteristicRead method
+                        if (!success) {
+                            if (DEBUG) Log.w(TAG, "readCharacteristic failed to enqueue for: " + characteristic.getUuid());
+                            readNextCharacteristic(address);
+                        }
                     }
                 });
+            } else {
+                readNextCharacteristic(address);
             }
         }
         // queue is empty => everything is read => inform the callback that a device was found
@@ -388,6 +416,12 @@ public class BTSearchForNewDevicesEngine
         else if (mDeviceType == DeviceType.BIKE_CADENCE || mDeviceType == DeviceType.BIKE_SPEED || mDeviceType == DeviceType.BIKE_SPEED_AND_CADENCE
                 || mDeviceType == DeviceType.BIKE_POWER) {
             // the device will be found somewhere else (when reading the csc feature)
+            if (mDeviceType == DeviceType.BIKE_POWER) {
+                BluetoothGattService powerService = gatt.getService(BluetoothConstants.getServiceUUID(DeviceType.BIKE_POWER));
+                if (powerService != null) {
+                    newDeviceFound(address);
+                }
+            }
         } else {
             newDeviceFound(address);
         }
