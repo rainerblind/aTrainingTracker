@@ -1588,4 +1588,13 @@
     <string name="fork_direction_right">右</string>
     <string name="fork_dismiss">閉じる</string>
     <string name="fork_select_hint">タップして選択</string>
+
+    <!-- Modernized Post-Workout Low Sensor Battery Alerting (ATT-2192) -->
+    <string name="notification_channel_name__sensor_battery">センサーのバッテリー</string>
+    <string name="notification_channel_description__sensor_battery">センサーのバッテリー残量が少なくなったときのアラート</string>
+    <string name="sensor_battery_notification_title_1">センサーのバッテリー残量低下</string>
+    <string name="sensor_battery_notification_title_many">複数のセンサーのバッテリー残量低下</string>
+    <string name="sensor_battery_snackbar_single">⚠️ %1$s: バッテリー残量低下 (%2$d%%)</string>
+    <string name="sensor_battery_snackbar_many">⚠️ %1$d 個のセンサー: バッテリー残量低下 (%2$s)</string>
+    <string name="sensor_battery_action_view_sensors">センサーを見る</string>
 </resources>

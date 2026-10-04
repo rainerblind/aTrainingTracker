@@ -29,8 +29,11 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -155,6 +158,23 @@ fun WorkoutSummariesTabbedScreen(
             val message = if (success) successMsg else errorMsg
             snackbarHostState.showSnackbar(message)
             viewModel.resetSaveRouteStatus()
+        }
+    }
+
+    val viewSensorsLabel = stringResource(R.string.sensor_battery_action_view_sensors)
+    LaunchedEffect(Unit) {
+        WorkoutNavigationEvents.lowBatteryAlert.collect { alert ->
+            if (alert != null) {
+                val result = snackbarHostState.showSnackbar(
+                    message = alert.message,
+                    actionLabel = viewSensorsLabel,
+                    duration = SnackbarDuration.Long
+                )
+                if (result == SnackbarResult.ActionPerformed) {
+                    (activity as? MainActivityWithNavigation)?.navigateToDrawerItem(R.id.drawer_my_sensors)
+                }
+                WorkoutNavigationEvents.consumeLowBatteryAlert()
+            }
         }
     }
 

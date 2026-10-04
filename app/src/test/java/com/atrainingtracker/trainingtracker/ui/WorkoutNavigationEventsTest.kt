@@ -118,4 +118,24 @@ class WorkoutNavigationEventsTest {
         assertNull(WorkoutNavigationEvents.navigateToCluster.first())
         assertEquals(77L, WorkoutNavigationEvents.navigateToEdit.first())
     }
+
+    @Test
+    fun triggerLowBatteryAlert_emitsAlertAndClearsOnConsume() = runTest(testDispatcher) {
+        val alert = WorkoutNavigationEvents.LowBatteryAlert(
+            message = "⚠️ HRM-Pro: Akku schwach (15%)",
+            deviceNames = listOf("HRM-Pro")
+        )
+
+        WorkoutNavigationEvents.triggerLowBatteryAlert(alert)
+        testScheduler.advanceUntilIdle()
+
+        val emitted = WorkoutNavigationEvents.lowBatteryAlert.first()
+        assertEquals("⚠️ HRM-Pro: Akku schwach (15%)", emitted?.message)
+        assertEquals(listOf("HRM-Pro"), emitted?.deviceNames)
+
+        WorkoutNavigationEvents.consumeLowBatteryAlert()
+        testScheduler.advanceUntilIdle()
+
+        assertNull(WorkoutNavigationEvents.lowBatteryAlert.first())
+    }
 }

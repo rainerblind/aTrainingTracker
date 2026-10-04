@@ -1608,4 +1608,13 @@
     <string name="fork_direction_right">Rechts</string>
     <string name="fork_dismiss">Sluiten</string>
     <string name="fork_select_hint">Tik om te kiezen</string>
+
+    <!-- Modernized Post-Workout Low Sensor Battery Alerting (ATT-2192) -->
+    <string name="notification_channel_name__sensor_battery">Sensorbatterij</string>
+    <string name="notification_channel_description__sensor_battery">Waarschuwingen wanneer het batterijniveau van de sensor laag is</string>
+    <string name="sensor_battery_notification_title_1">Sensorbatterij bijna leeg</string>
+    <string name="sensor_battery_notification_title_many">Meerdere sensorbatterijen bijna leeg</string>
+    <string name="sensor_battery_snackbar_single">⚠️ %1$s: Batterij bijna leeg (%2$d%%)</string>
+    <string name="sensor_battery_snackbar_many">⚠️ %1$d sensoren: Batterij bijna leeg (%2$s)</string>
+    <string name="sensor_battery_action_view_sensors">Sensoren bekijken</string>
 </resources>
