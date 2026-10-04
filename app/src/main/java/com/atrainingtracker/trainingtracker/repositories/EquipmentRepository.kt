@@ -24,8 +24,12 @@ import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class EquipmentRepository private constructor(private val application: Application) :
@@ -62,6 +66,30 @@ class EquipmentRepository private constructor(private val application: Applicati
         @androidx.annotation.VisibleForTesting
         fun resetSyncingForTesting() {
             _isSyncing.value = false
+        }
+
+        private val _equipmentLinksChanged = MutableSharedFlow<Long?>(
+            extraBufferCapacity = 64,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST
+        )
+
+        /**
+         * Reactive event stream emitting the device ID of affected sensors whenever
+         * equipment-to-sensor mappings are modified in SQLite (REQ-UI-257).
+         * Emits null when a bulk or equipment-level modification occurs.
+         */
+        @JvmStatic
+        val equipmentLinksChanged: SharedFlow<Long?> = _equipmentLinksChanged.asSharedFlow()
+
+        /**
+         * Dispatches an equipment link mutation event across the application (REQ-UI-257).
+         *
+         * @param affectedDeviceId Optional ID of the specific sensor whose links changed,
+         * or null for bulk equipment updates/deletions.
+         */
+        @JvmStatic
+        fun notifyEquipmentLinksChanged(affectedDeviceId: Long? = null) {
+            _equipmentLinksChanged.tryEmit(affectedDeviceId)
         }
 
         // The single, volatile instance of the repository.

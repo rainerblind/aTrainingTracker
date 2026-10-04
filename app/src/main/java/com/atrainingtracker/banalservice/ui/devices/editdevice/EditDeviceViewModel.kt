@@ -80,9 +80,6 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
      * This should be called once when the edit dialog is created.
      */
     fun loadInitialDeviceData(deviceId: Long) {
-        // Only reload if the ID changed or we don't have data yet
-        if (_editingId.value == deviceId && _deviceSnapshot.value != null) return
-
         _deviceSnapshot.value = devicesRepository.getDeviceSnapshotById(deviceId)
         _editingId.value = deviceId
     }

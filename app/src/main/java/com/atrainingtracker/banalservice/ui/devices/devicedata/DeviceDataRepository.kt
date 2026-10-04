@@ -38,6 +38,7 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.RawDeviceDataProv
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
+import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -73,6 +74,11 @@ class DeviceDataRepository private constructor(private val application: Applicat
                 INSTANCE ?: DeviceDataRepository(application).also { INSTANCE = it }
             }
         }
+
+        @androidx.annotation.VisibleForTesting
+        fun resetForTesting(newInstance: DeviceDataRepository? = null) {
+            INSTANCE = newInstance
+        }
     }
 
     private val repositoryScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -90,6 +96,16 @@ class DeviceDataRepository private constructor(private val application: Applicat
         // Automatically load all devices when the repository is first created
         repositoryScope.launch {
             loadAllDevices()
+        }
+        // Reactively observe external equipment link modifications and invalidate cache (REQ-UI-257)
+        repositoryScope.launch {
+            EquipmentRepository.equipmentLinksChanged.collect { affectedDeviceId ->
+                if (affectedDeviceId != null) {
+                    refreshDeviceFromDb(affectedDeviceId)
+                } else {
+                    loadAllDevices()
+                }
+            }
         }
     }
 
@@ -126,7 +142,11 @@ class DeviceDataRepository private constructor(private val application: Applicat
             if (refreshedRawDeviceData != null) {
                 val currentList = _allDevices.value
                 val refreshedUiDeviceData = raw2UiDeviceData(refreshedRawDeviceData, application)
-                val updatedList = currentList.map { if (it.id == id) refreshedUiDeviceData else it }
+                val updatedList = if (currentList.any { it.id == id }) {
+                    currentList.map { if (it.id == id) refreshedUiDeviceData else it }
+                } else {
+                    currentList + refreshedUiDeviceData
+                }
                 _allDevices.value = updatedList
             }
         }
