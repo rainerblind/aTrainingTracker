@@ -19,6 +19,8 @@
 package com.atrainingtracker.trainingtracker.ui.settings.googledrive
 
 import android.text.format.DateFormat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,9 +34,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthManager
 import com.atrainingtracker.trainingtracker.migration.BackupWorker
 import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
+import com.google.android.gms.common.api.ApiException
+import kotlinx.coroutines.launch
 import java.util.Date
 
 /**
@@ -42,9 +49,10 @@ import java.util.Date
  *
  * Architectural Role:
  * - Provides Google Drive cloud integration modal bottom sheet dialog.
- * - Provides connection controls (connect, disconnect, email display).
+ * - Integrates native Google Play Services Sign-In activity result launcher.
+ * - Enforces least-privilege OAuth scope (drive.file) with real Bearer token acquisition.
  * - Provides interactive toggles for automated workout export, database backup, and Wi-Fi only restriction.
- * - Displays last sync timestamp and status.
+ * - Displays last sync timestamp, status, and error states.
  * - Integrates standard [AppDialogActions.SaveCancel] to stage preference changes transactionally.
  *
  * @param onDismiss Callback invoked to dismiss the modal bottom sheet dialog.
@@ -55,13 +63,50 @@ fun GoogleDriveSettingsDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     var isConnected by remember { mutableStateOf(TrainingApplication.uploadToGoogleDrive()) }
     var accountEmail by remember { mutableStateOf(TrainingApplication.getGoogleDriveAccountEmail()) }
     var uploadWorkouts by remember { mutableStateOf(TrainingApplication.uploadWorkoutsToGoogleDrive()) }
     var uploadBackup by remember { mutableStateOf(TrainingApplication.uploadBackupToGoogleDrive()) }
     var wifiOnly by remember { mutableStateOf(TrainingApplication.uploadToGoogleDriveOnlyOnWifi()) }
-    var showConnectDialog by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    val signInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        isLoading = true
+        errorMessage = null
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            if (account != null) {
+                coroutineScope.launch {
+                    val tokenResult = GoogleDriveAuthManager.acquireBearerToken(context, account)
+                    tokenResult.onSuccess {
+                        isConnected = true
+                        accountEmail = account.email ?: account.account?.name
+                        isLoading = false
+                    }.onFailure { ex ->
+                        isLoading = false
+                        errorMessage = ex.localizedMessage ?: "Failed to acquire Google Drive authorization token"
+                    }
+                }
+            } else {
+                isLoading = false
+                errorMessage = "Google Sign-In returned null account"
+            }
+        } catch (e: ApiException) {
+            isLoading = false
+            if (e.statusCode != GoogleSignInStatusCodes.SIGN_IN_CANCELLED) {
+                errorMessage = "Google Sign-In failed (status ${e.statusCode})"
+            }
+        } catch (e: Exception) {
+            isLoading = false
+            errorMessage = e.localizedMessage ?: "Authentication failed"
+        }
+    }
 
     val lastSyncTimestamp = TrainingApplication.getGoogleDriveLastSyncTimestamp()
     val lastSyncText = if (lastSyncTimestamp > 0) {
@@ -70,56 +115,6 @@ fun GoogleDriveSettingsDialog(
         stringResource(R.string.google_drive_last_sync, "$dateStr $timeStr")
     } else {
         stringResource(R.string.google_drive_never_synced)
-    }
-
-    if (showConnectDialog) {
-        var inputEmail by remember { mutableStateOf(accountEmail ?: "") }
-        var inputToken by remember { mutableStateOf(TrainingApplication.getGoogleDriveAuthToken() ?: "") }
-
-        AlertDialog(
-            onDismissRequest = { showConnectDialog = false },
-            title = { Text(text = stringResource(R.string.google_drive_connect)) },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = inputEmail,
-                        onValueChange = { inputEmail = it },
-                        label = { Text("Google Account Email") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = inputToken,
-                        onValueChange = { inputToken = it },
-                        label = { Text("Auth Token") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val email = if (inputEmail.isBlank()) "user@gmail.com" else inputEmail.trim()
-                        val token = if (inputToken.isBlank()) "gdrive_oauth_token" else inputToken.trim()
-                        TrainingApplication.storeGoogleDriveCredential(email, token)
-                        isConnected = true
-                        accountEmail = email
-                        showConnectDialog = false
-                    }
-                ) {
-                    Text(text = stringResource(R.string.save))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showConnectDialog = false }) {
-                    Text(text = stringResource(R.string.Cancel))
-                }
-            }
-        )
     }
 
     AppBottomSheetContent(
@@ -147,17 +142,39 @@ fun GoogleDriveSettingsDialog(
                 .padding(bottom = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            if (isLoading) {
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage!!,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
+            }
+
             // Connection Status & Actions
             GoogleDriveConnectionHeader(
                 isConnected = isConnected,
                 accountEmail = accountEmail,
                 onConnectClick = {
-                    showConnectDialog = true
+                    errorMessage = null
+                    val client = GoogleDriveAuthManager.getClient(context)
+                    signInLauncher.launch(client.signInIntent)
                 },
                 onDisconnectClick = {
-                    TrainingApplication.deleteGoogleDriveCredential()
-                    isConnected = false
-                    accountEmail = null
+                    coroutineScope.launch {
+                        isLoading = true
+                        errorMessage = null
+                        GoogleDriveAuthManager.disconnect(context)
+                        isConnected = false
+                        accountEmail = null
+                        isLoading = false
+                    }
                 }
             )
 
