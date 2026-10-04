@@ -371,6 +371,7 @@
     <string name="jsonWrite">Golden Cheetah JSON出力</string>
     <string name="tcxWrite">TCX出力</string>
     <string name="gpxWrite">GPX出力</string>
+    <string name="fitWrite">FIT出力</string>
     <string name="stravaUpload">Stravaへアップロード</string>
     <string name="runkeeperUpload">Runkeeperへアップロード</string>
     <string name="trainingPeaksUpload">TrainingPeaksへアップロード</string>
