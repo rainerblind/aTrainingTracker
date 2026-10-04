@@ -60,6 +60,40 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import java.util.Locale
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
+
+/**
+ * Modal Bottom Sheet presenting the Quick Route Selector (REQ-MAP-024 / ATT-1835).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RouteSelectorModalBottomSheet(
+    viewModel: RouteSelectorViewModel,
+    onDismiss: () -> Unit,
+    onRouteSelected: (Long) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = BottomSheetDesign.SheetShape,
+        containerColor = MaterialTheme.colorScheme.surface,
+        modifier = modifier
+    ) {
+        RouteSelectorContent(
+            viewModel = viewModel,
+            onRouteSelected = { routeId ->
+                onRouteSelected(routeId)
+                onDismiss()
+            }
+        )
+    }
+}
+
 /**
  * Bottom Sheet content for Quick Route Selector and Route Auto Detection (REQ-MAP-024 / ATT-1835).
  */
