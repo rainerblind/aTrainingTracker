@@ -1610,4 +1610,13 @@
     <string name="fork_direction_right">Prawo</string>
     <string name="fork_dismiss">Odrzuć</string>
     <string name="fork_select_hint">Dotknij, aby wybrać</string>
+
+    <!-- Modernized Post-Workout Low Sensor Battery Alerting (ATT-2192) -->
+    <string name="notification_channel_name__sensor_battery">Bateria czujnika</string>
+    <string name="notification_channel_description__sensor_battery">Ostrzeżenia o niskim poziomie naładowania baterii czujnika</string>
+    <string name="sensor_battery_notification_title_1">Niski poziom baterii czujnika</string>
+    <string name="sensor_battery_notification_title_many">Niski poziom baterii w wielu czujnikach</string>
+    <string name="sensor_battery_snackbar_single">⚠️ %1$s: Niski poziom baterii (%2$d%%)</string>
+    <string name="sensor_battery_snackbar_many">⚠️ %1$d czujników: Niski poziom baterii (%2$s)</string>
+    <string name="sensor_battery_action_view_sensors">Pokaż czujniki</string>
 </resources>

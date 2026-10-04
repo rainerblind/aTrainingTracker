@@ -1695,4 +1695,13 @@
     <string name="fork_direction_right">Rechts</string>
     <string name="fork_dismiss">Schließen</string>
     <string name="fork_select_hint">Tippen zum Auswählen</string>
+
+    <!-- Modernized Post-Workout Low Sensor Battery Alerting (ATT-2192) -->
+    <string name="notification_channel_name__sensor_battery">Sensor-Batterie</string>
+    <string name="notification_channel_description__sensor_battery">Warnungen bei niedrigem Batteriestand von Sensoren</string>
+    <string name="sensor_battery_notification_title_1">Sensor-Batterie schwach</string>
+    <string name="sensor_battery_notification_title_many">Mehrere Sensor-Batterien schwach</string>
+    <string name="sensor_battery_snackbar_single">⚠️ %1$s: Akku schwach (%2$d%%)</string>
+    <string name="sensor_battery_snackbar_many">⚠️ %1$d Sensoren: Akku schwach (%2$s)</string>
+    <string name="sensor_battery_action_view_sensors">Zu Sensoren</string>
 </resources>

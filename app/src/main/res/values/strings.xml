@@ -1801,6 +1801,15 @@
     <string name="fork_direction_right">Right</string>
     <string name="fork_dismiss">Dismiss</string>
     <string name="fork_select_hint">Tap to select route</string>
+
+    <!-- Modernized Post-Workout Low Sensor Battery Alerting (ATT-2192) -->
+    <string name="notification_channel_name__sensor_battery">Sensor battery</string>
+    <string name="notification_channel_description__sensor_battery">Alerts when sensor battery level is low</string>
+    <string name="sensor_battery_notification_title_1">Sensor battery low</string>
+    <string name="sensor_battery_notification_title_many">Low sensor batteries</string>
+    <string name="sensor_battery_snackbar_single">⚠️ %1$s: Low battery (%2$d%%)</string>
+    <string name="sensor_battery_snackbar_many">⚠️ %1$d sensors: Low battery (%2$s)</string>
+    <string name="sensor_battery_action_view_sensors">View Sensors</string>
 </resources>
 
 

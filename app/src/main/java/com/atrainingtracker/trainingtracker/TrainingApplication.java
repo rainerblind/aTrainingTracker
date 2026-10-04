@@ -176,6 +176,7 @@ public class TrainingApplication extends Application {
     protected static final String NOTIFICATION_CHANNEL__TRACKING = "NOTIFICATION_CHANNEL__TRACKING";
     public static final String NOTIFICATION_CHANNEL__TRACKING_2 = "NOTIFICATION_CHANNEL__TRACKING_2";
     public static final String NOTIFICATION_CHANNEL__EXPORT = "NOTIFICATION_CHANNEL__EXPORT";
+    public static final String NOTIFICATION_CHANNEL__SENSOR_BATTERY = "NOTIFICATION_CHANNEL__SENSOR_BATTERY";
     public static final int TRACKING_NOTIFICATION_ID = 1;
 
     public static final double DISTANCE_TO_MAX_THRESHOLD_FOR_TRAINER = 200;
@@ -1534,6 +1535,12 @@ public class TrainingApplication extends Application {
                 getString(R.string.notification_channel_name__export),
                 NotificationManager.IMPORTANCE_LOW);
         channel.setDescription(getString(R.string.notification_channel_description__export));
+        notificationManager.createNotificationChannel(channel);
+
+        channel = new NotificationChannel(NOTIFICATION_CHANNEL__SENSOR_BATTERY,
+                getString(R.string.notification_channel_name__sensor_battery),
+                NotificationManager.IMPORTANCE_DEFAULT);
+        channel.setDescription(getString(R.string.notification_channel_description__sensor_battery));
         notificationManager.createNotificationChannel(channel);
     }
 

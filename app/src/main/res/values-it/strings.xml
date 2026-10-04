@@ -1608,4 +1608,13 @@
     <string name="fork_direction_right">Destra</string>
     <string name="fork_dismiss">Ignora</string>
     <string name="fork_select_hint">Tocca per selezionare</string>
+
+    <!-- Modernized Post-Workout Low Sensor Battery Alerting (ATT-2192) -->
+    <string name="notification_channel_name__sensor_battery">Batteria del sensore</string>
+    <string name="notification_channel_description__sensor_battery">Avvisi quando il livello della batteria del sensore è basso</string>
+    <string name="sensor_battery_notification_title_1">Batteria del sensore scarica</string>
+    <string name="sensor_battery_notification_title_many">Batterie dei sensori scariche</string>
+    <string name="sensor_battery_snackbar_single">⚠️ %1$s: Batteria scarica (%2$d%%)</string>
+    <string name="sensor_battery_snackbar_many">⚠️ %1$d sensori: Batteria scarica (%2$s)</string>
+    <string name="sensor_battery_action_view_sensors">Vedi sensori</string>
 </resources>

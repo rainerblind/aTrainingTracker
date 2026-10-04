@@ -37,8 +37,8 @@ object WorkoutNavigationEvents {
     )
     val navigateToEdit = _navigateToEdit.asSharedFlow()
 
-    @JvmStatic
-    val navigateToEditLiveData: LiveData<Long?> = _navigateToEdit.asLiveData()
+    @get:JvmStatic
+    val navigateToEditLiveData: LiveData<Long?> by lazy { _navigateToEdit.asLiveData() }
 
     @JvmStatic
     fun triggerEdit(workoutId: Long) {
@@ -56,8 +56,8 @@ object WorkoutNavigationEvents {
     )
     val navigateToCluster = _navigateToCluster.asSharedFlow()
 
-    @JvmStatic
-    val navigateToClusterLiveData: LiveData<Long?> = _navigateToCluster.asLiveData()
+    @get:JvmStatic
+    val navigateToClusterLiveData: LiveData<Long?> by lazy { _navigateToCluster.asLiveData() }
 
     /**
      * Triggers navigation to the cluster detail heatmap screen for [clusterId].
@@ -73,5 +73,35 @@ object WorkoutNavigationEvents {
     @JvmStatic
     fun resetCluster() {
         _navigateToCluster.tryEmit(null)
+    }
+
+    /**
+     * Encapsulates low peripheral sensor battery warning data (ATT-2192).
+     */
+    data class LowBatteryAlert(
+        val message: String,
+        val deviceNames: List<String> = emptyList()
+    )
+
+    private val _lowBatteryAlert = MutableSharedFlow<LowBatteryAlert?>(
+        replay = 1, // Sticky event
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val lowBatteryAlert = _lowBatteryAlert.asSharedFlow()
+
+    /**
+     * Triggers a low sensor battery alert across the application.
+     */
+    @JvmStatic
+    fun triggerLowBatteryAlert(alert: LowBatteryAlert) {
+        _lowBatteryAlert.tryEmit(alert)
+    }
+
+    /**
+     * Clears the active low sensor battery alert after consumption.
+     */
+    @JvmStatic
+    fun consumeLowBatteryAlert() {
+        _lowBatteryAlert.tryEmit(null)
     }
 }
