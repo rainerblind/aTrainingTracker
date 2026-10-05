@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
 import android.app.Application
+import android.location.Location
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +34,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -49,9 +52,12 @@ import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -67,16 +73,29 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
+import com.atrainingtracker.trainingtracker.routes.ForkNavigationRepository
+import com.atrainingtracker.trainingtracker.routes.ReturnNavigationRepository
+import com.atrainingtracker.trainingtracker.routes.ReturnNavigationState
 import com.atrainingtracker.trainingtracker.routes.TurnByTurnNavigationRepository
 import com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbSheet
+import com.atrainingtracker.trainingtracker.ui.routes.AutoDetectedRouteBanner
+import com.atrainingtracker.trainingtracker.ui.routes.ForkDecisionCard
+import com.atrainingtracker.trainingtracker.ui.routes.ReturnNavigationHud
+import com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorModalBottomSheet
+import com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModel
 import com.atrainingtracker.trainingtracker.ui.routes.TurnPromptBanner
 import com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheet
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
@@ -85,6 +104,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
+import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyle
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitTypography
@@ -118,13 +138,22 @@ fun SensorGridScreen(
     selectedFieldForMove: SensorFieldState? = null,
     gridSpacing: Dp = 0.dp,
     fieldShape: Shape = RectangleShape,
-    fieldElevation: CardElevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    fieldElevation: CardElevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    routeSelectorViewModel: RouteSelectorViewModel? = null
 ) {
     val context = LocalContext.current
     val tuningDataStore = remember { TuningPreferencesDataStore(context) }
     val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(
         initial = TuningConfig()
     )
+    val activeVariantStyle = remember(tuningConfig.sensorFieldVariant) {
+        SensorFieldStyle.forVariant(tuningConfig.sensorFieldVariant)
+    }
+    val isDefaultStyling = gridSpacing == 0.dp && fieldShape == RectangleShape
+    val effectiveSpacing = if (isDefaultStyling) activeVariantStyle.gridSpacing else gridSpacing
+    val effectiveShape = if (isDefaultStyling) activeVariantStyle.shape else fieldShape
+    val effectiveElevation = if (isDefaultStyling) activeVariantStyle.elevation else fieldElevation
+
     val cockpitTypography = remember(tuningConfig.cockpitFontFamily, tuningConfig.cockpitFontWeight) {
         CockpitTypography.resolveConfig(
             family = tuningConfig.cockpitFontFamily,
@@ -143,6 +172,32 @@ fun SensorGridScreen(
 
     val navRepo = remember { TurnByTurnNavigationRepository.getInstance(context) }
     val navState by navRepo.navigationState.collectAsState()
+
+    val returnNavRepo = remember { ReturnNavigationRepository.getInstance(context) }
+    val returnNavState by returnNavRepo.navigationState.collectAsState()
+
+    val forkNavRepo = remember { ForkNavigationRepository.getInstance(context) }
+    val forkDecisionState by forkNavRepo.forkDecisionState.collectAsState()
+
+    val routesRepo = remember { RoutesRepository.getInstance(context) }
+    val actualRouteSelectorViewModel = routeSelectorViewModel ?: remember {
+        RouteSelectorViewModel(routesRepo)
+    }
+    val routeSelectorUiState by actualRouteSelectorViewModel.uiState.collectAsState()
+    var showRouteSelectorSheet by remember { mutableStateOf(false) }
+
+    val currentLatLng by currentLocationFlow.collectAsState()
+    LaunchedEffect(currentLatLng, state.userBearing, state.userSpeed) {
+        currentLatLng?.let { latLng ->
+            val location = Location("GPS").apply {
+                latitude = latLng.latitude
+                longitude = latLng.longitude
+                bearing = state.userBearing
+                speed = state.userSpeed
+            }
+            actualRouteSelectorViewModel.onLocationChanged(location)
+        }
+    }
 
     // Control the sheet state
     val scaffoldState = rememberBottomSheetScaffoldState(
@@ -242,6 +297,48 @@ fun SensorGridScreen(
                 promptsEnabled = tuningConfig.turnPromptsEnabled
             )
 
+            // Return Navigation & Dynamic Elevation-Aware ETA HUD Banner (REQ-MAP-029 / ATT-1953)
+            ReturnNavigationHud(
+                navigationState = returnNavState,
+                onDismiss = { returnNavRepo.dismissHud() }
+            )
+
+            // In-Ride Fork-in-the-Road Route Selection & Decision Alerts (REQ-MAP-031 / ATT-1955)
+            ForkDecisionCard(
+                decisionState = forkDecisionState,
+                onRouteSelected = { routeId ->
+                    forkNavRepo.selectRouteManually(routeId)
+                },
+                onDismiss = {
+                    forkNavRepo.dismissPrompt()
+                }
+            )
+
+            // Auto-Detected Route Banner (REQ-MAP-024 / ATT-1835)
+            if (screenMode == ScreenMode.TRACKING && routeSelectorUiState.isAutoPromptVisible && routeSelectorUiState.autoDetectedCandidate != null) {
+                routeSelectorUiState.autoDetectedCandidate?.let { candidate ->
+                    AutoDetectedRouteBanner(
+                        route = candidate,
+                        onActivate = {
+                            actualRouteSelectorViewModel.activateCandidate(candidate.summary.id)
+                        },
+                        onDismiss = {
+                            actualRouteSelectorViewModel.dismissCandidate(candidate.summary.id)
+                        }
+                    )
+                }
+            }
+
+            // Quick Route Selector Action Button / Chip (REQ-MAP-024 / ATT-1835)
+            if (screenMode == ScreenMode.TRACKING) {
+                RouteActionChipRow(
+                    activeRoute = routeSelectorUiState.activeRoute,
+                    returnNavState = returnNavState,
+                    onClick = { showRouteSelectorSheet = true },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+            }
+
             // 1. The Sensor Grid (Scrollable)
             // This Column will only take as much space as the sensors need.
             Column(
@@ -249,7 +346,7 @@ fun SensorGridScreen(
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = if (gridSpacing > 0.dp) Arrangement.spacedBy(gridSpacing) else Arrangement.Top
+                verticalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Top
             ) {
                 val fieldsByRow = state.fields.groupBy { it.rowNr }
                 val sortedRows = fieldsByRow.keys.sorted()
@@ -271,7 +368,7 @@ fun SensorGridScreen(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.height(IntrinsicSize.Min),
-                        horizontalArrangement = if (gridSpacing > 0.dp) Arrangement.spacedBy(gridSpacing) else Arrangement.Start
+                        horizontalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Start
                     ) {
                         var maxColNr = 0
                         fieldsInThisRow.forEach { fieldState ->
@@ -291,8 +388,8 @@ fun SensorGridScreen(
                                     fieldState = fieldState,
                                     screenMode = screenMode,
                                     isSelectedForMove = isSelected,
-                                    shape = fieldShape,
-                                    cardElevation = fieldElevation,
+                                    shape = effectiveShape,
+                                    cardElevation = effectiveElevation,
                                     onStartMove = { gridActions.onSelectFieldForMove(fieldState) },
                                     onEdit = {
                                         if (screenMode == ScreenMode.CONFIGURATION && selectedFieldForMove != null) {
@@ -367,6 +464,17 @@ fun SensorGridScreen(
             }
         }
     }
+
+    // Modal Bottom Sheet for Quick Route Selector (REQ-MAP-024 / ATT-1835)
+    if (showRouteSelectorSheet) {
+        RouteSelectorModalBottomSheet(
+            viewModel = actualRouteSelectorViewModel,
+            onTakeMeHome = {
+                returnNavRepo.startTakeMeHome()
+            },
+            onDismiss = { showRouteSelectorSheet = false }
+        )
+    }
     }
 }
 
@@ -391,6 +499,75 @@ private fun ColAdder(onClick: () -> Unit) {
         )
     }
 }
+
+/**
+ * 1-Tap Quick Route Action Chip displayed in the Cockpit HUD (REQ-MAP-024 / ATT-1835).
+ */
+@Composable
+fun RouteActionChipRow(
+    activeRoute: RouteWithPath?,
+    returnNavState: ReturnNavigationState? = null,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(8.dp),
+        color = if (activeRoute != null) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+        tonalElevation = 1.dp,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_route),
+                    contentDescription = null,
+                    tint = if (activeRoute != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                if (activeRoute != null) {
+                    Text(
+                        text = "✓ ${activeRoute.summary.name}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                } else {
+                    Text(
+                        text = stringResource(id = R.string.route_action_select),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            val statusText = if (returnNavState != null && returnNavState.hasRemainingMetrics) {
+                "${returnNavState.formattedRemainingDistance} (${returnNavState.formattedClockTime})"
+            } else if (activeRoute != null) {
+                stringResource(id = R.string.route_select_title)
+            } else {
+                stringResource(id = R.string.route_action_select)
+            }
+            Text(
+                text = statusText,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
 
 
 val dummyLocationFlow = kotlinx.coroutines.flow.MutableStateFlow(

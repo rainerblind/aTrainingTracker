@@ -497,6 +497,8 @@
     <string name="equipment_tab_sensor_matrix">Sensor Matrix</string>
     <string name="equipment_matrix_no_sensors">No paired sensors found. Pair external sensors first in Settings.</string>
     <string name="equipment_matrix_no_equipment">No equipment found. Add bikes or shoes first.</string>
+    <string name="equipment_matrix_no_bike_sensors">No compatible bike sensors found.</string>
+    <string name="equipment_matrix_no_shoe_sensors">No compatible shoe sensors found.</string>
 
     <!-- dialogs -->
     <string name="SD_card_not_available">Sorry, the SD Card is not available.</string>
@@ -1504,6 +1506,10 @@
     <string name="workout_name_ride_from">Ride from %1$s</string>
     <string name="workout_name_activity_from">Activity from %1$s</string>
     <string name="workout_name_round_trip">Loop from %1$s</string>
+    <string name="workout_name_run_from_with_distance">Run from %1$s (%2$s)</string>
+    <string name="workout_name_ride_from_with_distance">Ride from %1$s (%2$s)</string>
+    <string name="workout_name_activity_from_with_distance">Activity from %1$s (%2$s)</string>
+    <string name="workout_name_round_trip_with_distance">Loop from %1$s (%2$s)</string>
     <string name="workout_name_run_from_to">Run from %1$s to %2$s</string>
     <string name="workout_name_ride_from_to">Ride from %1$s to %2$s</string>
     <string name="workout_name_activity_from_to">Activity from %1$s to %2$s</string>
@@ -1583,6 +1589,12 @@
     <string name="tuning_weight_semi_bold">Semi-Bold</string>
     <string name="tuning_weight_bold">Bold</string>
     <string name="tuning_cockpit_preview_title">Live Preview</string>
+    <!-- Sensor Field Tile Variants & Styling (ATT-2058 / REQ-UI-258) -->
+    <string name="tuning_sensor_field_variant_title">Tile Design &amp; Layout</string>
+    <string name="sensor_field_variant_v0">Classic Seamless Grid</string>
+    <string name="sensor_field_variant_v1">Modern Outlined Sport Tiles</string>
+    <string name="sensor_field_variant_v2">Elevated Sports Cards</string>
+    <string name="sensor_field_variant_v3">Soft Accent Capsules</string>
     <string name="tuning_default_format">Default: %1$s</string>
     <string name="reset_to_defaults">Reset to Defaults</string>
     <string name="reset_to_defaults_success">Tuning preferences restored to factory defaults.</string>
@@ -1656,15 +1668,18 @@
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">Workout Interrupted</string>
+    <string name="unfinished_workout_title_battery">Workout Interrupted: Battery Optimization</string>
+    <string name="unfinished_workout_title_memory">Workout Interrupted: Low Memory</string>
+    <string name="unfinished_workout_title_permission">Workout Interrupted: Permission Revoked</string>
     <string name="kill_reason_battery_title">Terminated by Battery Optimization</string>
-    <string name="kill_reason_battery_stage1">Well, who won\'t listen must feel… 😉 But we\'re genuinely sorry about your lost kilometers! Android killed the tracking service in the background because battery optimization is enabled.</string>
-    <string name="kill_reason_battery_stage1_strava">And as you know: \'If it\'s not on Strava, it didn\'t happen\'… double bitter! 🙈</string>
-    <string name="kill_reason_battery_stage2">Not again… Already the 2nd kill! How many lost kilometers do you need as proof? Please disable battery optimization for aTrainingTracker.</string>
-    <string name="kill_reason_battery_stage3">Bad things come in threes… Advice-resistant athlete of the month! 🏆 The system keeps killing your workout until you exempt the app in battery settings.</string>
+    <string name="kill_reason_battery_stage1">Android interrupted background tracking because battery optimization is enabled for this app. To ensure continuous recording of your kilometers and elevation, please disable battery optimization for aTrainingTracker.</string>
+    <string name="kill_reason_battery_stage1_strava">We know how important complete workout telemetry is for your Strava activities.</string>
+    <string name="kill_reason_battery_stage2">Tracking was interrupted again by system battery management. Without exempting the app, Android will continue stopping background recordings during longer workouts. Please take a moment to disable battery optimization.</string>
+    <string name="kill_reason_battery_stage3">Repeated background interruptions detected. Modern Android versions strictly terminate tracking services that are not exempted from battery restrictions. Please tap the button below to exempt aTrainingTracker and protect your workouts.</string>
     <string name="kill_reason_low_memory">Tracking was terminated by Android due to acute memory pressure (e.g. high-resolution camera or 3D navigation in foreground). Your workout metrics up to that point were safely preserved.</string>
     <string name="kill_reason_permission_revoked">Tracking was interrupted because location or notification permissions were revoked during your workout.</string>
     <string name="action_disable_battery_optimization">Disable Battery Optimization</string>
-    <string name="battery_optimization_exempt_celebration">Finally! Unrestricted recording for your training data 🎉</string>
+    <string name="battery_optimization_exempt_celebration">Unrestricted recording active for your training data</string>
 
     <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
     <string name="import_fit_title">Import FIT files</string>
@@ -1755,6 +1770,48 @@
     <string name="turn_cue_countdown_distance_summary">Advance warning distance before turns (meters)</string>
     <string name="off_route_corridor_threshold_title">Off-Route Threshold</string>
     <string name="off_route_corridor_threshold_summary">Maximum deviation distance before off-route warning (meters)</string>
+
+    <!-- Return Navigation & Take Me Home (ATT-1953) -->
+    <string name="take_me_home_title">Take Me Home</string>
+    <string name="take_me_home_desc">Return guidance along familiar routes</string>
+    <string name="nav_remaining_dist">Remaining</string>
+    <string name="nav_remaining_climb">Climb</string>
+    <string name="nav_eta_label">ETA</string>
+    <string name="nav_destination_home">Home</string>
+    <string name="nav_stop_return">Stop Return</string>
+    <string name="nav_route_reverse">Return along route</string>
+
+    <!-- Corridor Grouping & Differentiating Thumbnail Zoom (ATT-1954) -->
+    <string name="gateway_all">All</string>
+    <string name="gateway_north">North</string>
+    <string name="gateway_northeast">Northeast</string>
+    <string name="gateway_east">East</string>
+    <string name="gateway_southeast">Southeast</string>
+    <string name="gateway_south">South</string>
+    <string name="gateway_southwest">Southwest</string>
+    <string name="gateway_west">West</string>
+    <string name="gateway_northwest">Northwest</string>
+    <string name="gateway_unknown">Other</string>
+    <string name="pref_corridor_grouping_title">Corridor-based route grouping</string>
+    <string name="pref_corridor_grouping_desc">Group routes in the list by their departure direction and gateway</string>
+    <string name="pref_focused_thumbnail_title">Focused thumbnail zoom</string>
+    <string name="pref_focused_thumbnail_desc">Zoom route thumbnails into the unique middle loop instead of common entry/exit corridors</string>
+    <string name="fork_alert_title">Fork Ahead</string>
+    <string name="fork_approaching_in_m">in %1$d m</string>
+    <string name="fork_direction_left">Left</string>
+    <string name="fork_direction_straight">Straight</string>
+    <string name="fork_direction_right">Right</string>
+    <string name="fork_dismiss">Dismiss</string>
+    <string name="fork_select_hint">Tap to select route</string>
+
+    <!-- Modernized Post-Workout Low Sensor Battery Alerting (ATT-2192) -->
+    <string name="notification_channel_name__sensor_battery">Sensor battery</string>
+    <string name="notification_channel_description__sensor_battery">Alerts when sensor battery level is low</string>
+    <string name="sensor_battery_notification_title_1">Sensor battery low</string>
+    <string name="sensor_battery_notification_title_many">Low sensor batteries</string>
+    <string name="sensor_battery_snackbar_single">⚠️ %1$s: Low battery (%2$d%%)</string>
+    <string name="sensor_battery_snackbar_many">⚠️ %1$d sensors: Low battery (%2$s)</string>
+    <string name="sensor_battery_action_view_sensors">View Sensors</string>
 </resources>
 
 

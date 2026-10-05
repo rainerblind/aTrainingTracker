@@ -82,7 +82,7 @@ class GpxImportActivity : ComponentActivity() {
                         EditRouteScreen(
                             routeSummary = state.summary,
                             onSave = { updatedSummary ->
-                                viewModel.saveRoute(updatedSummary, state.points)
+                                viewModel.saveRoute(updatedSummary, state.points, state.waypoints)
                             },
                             onCancel = { finish() }
                         )

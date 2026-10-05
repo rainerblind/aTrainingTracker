@@ -34,6 +34,8 @@ import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.util.BaseMappableListViewModel
 import com.atrainingtracker.trainingtracker.ui.util.MappableSortOrder
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,6 +61,14 @@ class RoutesViewModel(application: Application) :
     private val banalServiceRepository = BANALServiceRepository.getInstance(application)
     private val segmentsRepository = SegmentsRepository.getInstance(application)
     private val preferenceManager = MyPreferenceManager(application)
+    private val tuningDataStore = TuningPreferencesDataStore(application)
+
+    val tuningConfig: StateFlow<TuningConfig> = tuningDataStore.tuningConfigFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = TuningConfig()
+        )
 
     private val _isSyncingStrava = MutableStateFlow(false)
     val isSyncingStrava = _isSyncingStrava.asStateFlow()

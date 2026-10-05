@@ -39,6 +39,9 @@ object ProcessExitReasonHelper {
 
     private const val TAG = "ProcessExitReasonHelper"
     const val PREF_BATTERY_KILL_COUNT = "pref_battery_kill_count"
+    const val PREF_LAST_EVALUATED_EXIT_TIMESTAMP = "pref_last_evaluated_exit_timestamp"
+
+    private var sessionEvaluated = false
 
     enum class KillReason {
         BATTERY_KILL,
@@ -57,12 +60,14 @@ object ProcessExitReasonHelper {
     /**
      * Resolves the root cause of the previous process termination when an unfinished workout exists.
      * Evaluates Android 11+ [ApplicationExitInfo] and [PowerManager.isIgnoringBatteryOptimizations].
+     * Idempotently tracks exit timestamps to prevent spurious counter increments during screen rotation.
      */
     fun resolveKillReason(
         context: Context,
         sdkInt: Int = Build.VERSION.SDK_INT
     ): KillDiagnosis {
         var detectedReason = KillReason.GENERIC_UNFINISHED
+        var exitTimestamp: Long? = null
 
         if (sdkInt >= Build.VERSION_CODES.R) {
             try {
@@ -70,6 +75,7 @@ object ProcessExitReasonHelper {
                 val exitInfos = activityManager?.getHistoricalProcessExitReasons(context.packageName, 0, 1)
                 val exitInfo = exitInfos?.firstOrNull()
                 if (exitInfo != null) {
+                    exitTimestamp = exitInfo.timestamp
                     detectedReason = when (exitInfo.reason) {
                         ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> KillReason.BATTERY_KILL
                         ApplicationExitInfo.REASON_LOW_MEMORY -> KillReason.LOW_MEMORY
@@ -83,6 +89,10 @@ object ProcessExitReasonHelper {
         }
 
         val isIgnoringBattery = isIgnoringBatteryOptimizations(context, sdkInt)
+        if (isIgnoringBattery) {
+            resetBatteryKillCount(context)
+        }
+
         if (detectedReason == KillReason.GENERIC_UNFINISHED && !isIgnoringBattery) {
             detectedReason = KillReason.BATTERY_KILL
         }
@@ -90,9 +100,30 @@ object ProcessExitReasonHelper {
         val escalationLevel: Int
         val shouldShowBatteryButton: Boolean
         if (detectedReason == KillReason.BATTERY_KILL) {
-            escalationLevel = incrementBatteryKillCount(context)
+            val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+            val lastEvaluatedTimestamp = prefs.getLong(PREF_LAST_EVALUATED_EXIT_TIMESTAMP, 0L)
+
+            val isNewKill = if (exitTimestamp != null) {
+                exitTimestamp > lastEvaluatedTimestamp
+            } else {
+                !sessionEvaluated
+            }
+
+            if (isNewKill) {
+                escalationLevel = incrementBatteryKillCount(context)
+                if (exitTimestamp != null) {
+                    prefs.edit().putLong(PREF_LAST_EVALUATED_EXIT_TIMESTAMP, exitTimestamp).apply()
+                }
+                sessionEvaluated = true
+            } else {
+                escalationLevel = getBatteryKillCount(context).coerceAtLeast(1)
+            }
             shouldShowBatteryButton = !isIgnoringBattery
         } else {
+            if (exitTimestamp != null) {
+                val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+                prefs.edit().putLong(PREF_LAST_EVALUATED_EXIT_TIMESTAMP, exitTimestamp).apply()
+            }
             escalationLevel = 0
             shouldShowBatteryButton = false
         }
@@ -171,23 +202,39 @@ object ProcessExitReasonHelper {
     }
 
     /**
+     * Resets in-memory session tracking for unit testing.
+     */
+    fun resetSessionForTesting() {
+        sessionEvaluated = false
+    }
+
+    /**
      * Opens system battery optimization settings so the athlete can whitelist the app.
+     * Prioritizes direct specific intent Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS (Rule 21).
      */
     fun openBatteryOptimizationSettings(context: Context) {
         try {
-            val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+            val directIntent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                data = Uri.parse("package:${context.packageName}")
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            context.startActivity(intent)
+            context.startActivity(directIntent)
         } catch (e: Throwable) {
             try {
-                val fallbackIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                    data = Uri.fromParts("package", context.packageName, null)
+                val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-                context.startActivity(fallbackIntent)
+                context.startActivity(intent)
             } catch (e2: Throwable) {
-                Log.e(TAG, "Failed to launch battery settings or application details", e2)
+                try {
+                    val fallbackIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(fallbackIntent)
+                } catch (e3: Throwable) {
+                    Log.e(TAG, "Failed to launch battery settings or application details", e3)
+                }
             }
         }
     }

@@ -81,7 +81,26 @@ class SensorFieldStyleContractTest {
             val style = SensorFieldStyle.forVariant(variant)
             assertNotNull("Each variant must resolve a non-null style", style)
             assertTrue("Display name must not be blank", variant.displayName.isNotBlank())
+            assertTrue("Title string resource ID must be valid", variant.titleResId != 0)
         }
+    }
+
+    @Test
+    fun testSensorFieldVariant_fromStorageDeserialization() {
+        assertEquals(SensorFieldVariant.CLASSIC_SEAMLESS, SensorFieldVariant.fromStorage("CLASSIC_SEAMLESS"))
+        assertEquals(SensorFieldVariant.OUTLINED_TILES, SensorFieldVariant.fromStorage("OUTLINED_TILES"))
+        assertEquals(SensorFieldVariant.ELEVATED_CARDS, SensorFieldVariant.fromStorage("ELEVATED_CARDS"))
+        assertEquals(SensorFieldVariant.SOFT_CAPSULES, SensorFieldVariant.fromStorage("SOFT_CAPSULES"))
+
+        // Legacy compatibility mappings
+        assertEquals(SensorFieldVariant.CLASSIC_SEAMLESS, SensorFieldVariant.fromStorage("VARIANT_0_BASELINE"))
+        assertEquals(SensorFieldVariant.OUTLINED_TILES, SensorFieldVariant.fromStorage("VARIANT_1_OUTLINED_TILES"))
+        assertEquals(SensorFieldVariant.ELEVATED_CARDS, SensorFieldVariant.fromStorage("VARIANT_2_ELEVATED_CARDS"))
+        assertEquals(SensorFieldVariant.SOFT_CAPSULES, SensorFieldVariant.fromStorage("VARIANT_3_CAPSULES"))
+
+        // Fallbacks for unknown or null values
+        assertEquals(SensorFieldVariant.CLASSIC_SEAMLESS, SensorFieldVariant.fromStorage(null))
+        assertEquals(SensorFieldVariant.CLASSIC_SEAMLESS, SensorFieldVariant.fromStorage("UNKNOWN_VARIANT"))
     }
 
     @Test
@@ -141,14 +160,20 @@ class SensorFieldStyleContractTest {
             content.contains("fieldShape: Shape = RectangleShape")
         )
 
-        // 2. Arrangement.spacedBy logic
+        // 2. Dynamic reactive resolution from tuningConfig
         assertTrue(
-            "Column must conditionally apply spacedBy(gridSpacing)",
-            content.contains("if (gridSpacing > 0.dp) Arrangement.spacedBy(gridSpacing) else Arrangement.Top")
+            "SensorGridScreen must resolve active style from tuningConfig.sensorFieldVariant",
+            content.contains("SensorFieldStyle.forVariant(tuningConfig.sensorFieldVariant)")
+        )
+
+        // 3. Arrangement.spacedBy logic with effectiveSpacing
+        assertTrue(
+            "Column must conditionally apply spacedBy(effectiveSpacing)",
+            content.contains("if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Top")
         )
         assertTrue(
-            "Row must conditionally apply spacedBy(gridSpacing)",
-            content.contains("if (gridSpacing > 0.dp) Arrangement.spacedBy(gridSpacing) else Arrangement.Start")
+            "Row must conditionally apply spacedBy(effectiveSpacing)",
+            content.contains("if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Start")
         )
     }
 }

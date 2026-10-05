@@ -394,6 +394,8 @@
     <string name="equipment_tab_sensor_matrix">Sensormatrix</string>
     <string name="equipment_matrix_no_sensors">Geen gekoppelde sensoren gevonden. Koppel eerst sensoren in Instellingen.</string>
     <string name="equipment_matrix_no_equipment">Geen uitrusting gevonden. Voeg eerst fietsen of schoenen toe.</string>
+    <string name="equipment_matrix_no_bike_sensors">Geen compatibele fietssensoren gevonden.</string>
+    <string name="equipment_matrix_no_shoe_sensors">Geen compatibele schoensensoren gevonden.</string>
 
     <string name="SD_card_not_available">SD-kaart niet beschikbaar.</string>
 
@@ -1311,6 +1313,10 @@
     <string name="workout_name_ride_from">Rit vanaf %1$s</string>
     <string name="workout_name_activity_from">Activiteit vanaf %1$s</string>
     <string name="workout_name_round_trip">Ronde vanaf %1$s</string>
+    <string name="workout_name_run_from_with_distance">Hardlopen vanaf %1$s (%2$s)</string>
+    <string name="workout_name_ride_from_with_distance">Rit vanaf %1$s (%2$s)</string>
+    <string name="workout_name_activity_from_with_distance">Activiteit vanaf %1$s (%2$s)</string>
+    <string name="workout_name_round_trip_with_distance">Ronde vanaf %1$s (%2$s)</string>
     <string name="workout_name_run_from_to">Hardlopen van %1$s naar %2$s</string>
     <string name="workout_name_ride_from_to">Rit van %1$s naar %2$s</string>
     <string name="workout_name_activity_from_to">Activiteit van %1$s naar %2$s</string>
@@ -1390,6 +1396,12 @@
     <string name="tuning_weight_semi_bold">Halfvet</string>
     <string name="tuning_weight_bold">Vet</string>
     <string name="tuning_cockpit_preview_title">Live voorbeeld</string>
+    <!-- Sensor Field Tile Variants & Styling (ATT-2058 / REQ-UI-258) -->
+    <string name="tuning_sensor_field_variant_title">Tegelontwerp en rasterstijl</string>
+    <string name="sensor_field_variant_v0">Klassiek naadloos raster</string>
+    <string name="sensor_field_variant_v1">Moderne sporttegels met rand</string>
+    <string name="sensor_field_variant_v2">Verheven sportkaarten</string>
+    <string name="sensor_field_variant_v3">Zachte accentcapsules</string>
     <string name="tuning_default_format">Standaard: %1$s</string>
     <string name="reset_to_defaults">Fabrieksinstellingen herstellen</string>
     <string name="reset_to_defaults_success">Afstemmingsinstellingen hersteld naar fabrieksinstellingen.</string>
@@ -1463,15 +1475,18 @@
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">Training onderbroken</string>
+    <string name="unfinished_workout_title_battery">Training onderbroken: Batterijoptimalisatie</string>
+    <string name="unfinished_workout_title_memory">Training onderbroken: Geheugentekort</string>
+    <string name="unfinished_workout_title_permission">Training onderbroken: Toestemming ingetrokken</string>
     <string name="kill_reason_battery_title">Beëindigd door batterijoptimalisatie</string>
-    <string name="kill_reason_battery_stage1">Tja, wie niet horen wil… 😉 Maar we vinden het echt zonde van je verloren kilometers! Android heeft de tracking op de achtergrond gestopt vanwege actieve batterijoptimalisatie.</string>
-    <string name="kill_reason_battery_stage1_strava">En je weet: \'If it\'s not on Strava, it didn\'t happen\'… dubbel pijnlijk! 🙈</string>
-    <string name="kill_reason_battery_stage2">Niet weer… Al de 2e kill! Hoeveel verloren kilometers heb je nog nodig als bewijs? Schakel batterijoptimalisatie voor aTrainingTracker uit.</string>
-    <string name="kill_reason_battery_stage3">Drie keer is scheepsrecht… Meest eigenwijze atleet van de maand! 🏆 Het systeem blijft je training afsluiten totdat je de uitzondering instelt.</string>
+    <string name="kill_reason_battery_stage1">Android heeft de achtergrondregistratie onderbroken omdat batterijoptimalisatie is ingeschakeld voor deze app. Schakel batterijoptimalisatie uit voor aTrainingTracker om continue registratie van je kilometers en hoogtemeters te garanderen.</string>
+    <string name="kill_reason_battery_stage1_strava">We weten hoe belangrijk volledige trainingsgegevens zijn voor je Strava-activiteiten.</string>
+    <string name="kill_reason_battery_stage2">De opname is opnieuw onderbroken door het batterijbeheer van het systeem. Zonder uitzondering zal Android achtergrondopnames blijven stoppen. Neem even de tijd om batterijoptimalisatie uit te schakelen.</string>
+    <string name="kill_reason_battery_stage3">Herhaalde onderbrekingen op de achtergrond gedetecteerd. Moderne Android-versies beëindigen achtergronddiensten zonder uitzondering strikt. Tik op de onderstaande knop om aTrainingTracker uit te zonderen en je trainingen te beschermen.</string>
     <string name="kill_reason_low_memory">De registratie is door Android gestopt wegens acuut geheugentekort (bijv. camera of 3D-navigatie op de voorgrond). Je gegevens tot dat moment zijn bewaard.</string>
     <string name="kill_reason_permission_revoked">De registratie is onderbroken omdat locatie- of meldingsmachtigingen tijdens de training zijn ingetrokken.</string>
     <string name="action_disable_battery_optimization">Batterijoptimalisatie uitschakelen</string>
-    <string name="battery_optimization_exempt_celebration">Eindelijk! Vrij baan voor je trainingsgegevens 🎉</string>
+    <string name="battery_optimization_exempt_celebration">Onbeperkte registratie actief voor je trainingsgegevens</string>
 
     <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
     <string name="import_fit_title">FIT-bestanden importeren</string>
@@ -1562,4 +1577,46 @@
     <string name="turn_cue_countdown_distance_summary">Afstand voor tijdige waarschuwing voor een afslag (meter)</string>
     <string name="off_route_corridor_threshold_title">Drempelwaarde routeafwijking</string>
     <string name="off_route_corridor_threshold_summary">Maximale afwijking voor waarschuwing buiten de route (meter)</string>
+
+    <!-- Return Navigation & Take Me Home (ATT-1953) -->
+    <string name="take_me_home_title">Breng me naar huis</string>
+    <string name="take_me_home_desc">Terugwegbegeleiding langs bekende routes</string>
+    <string name="nav_remaining_dist">Resterend</string>
+    <string name="nav_remaining_climb">Klimmen</string>
+    <string name="nav_eta_label">Aankomst</string>
+    <string name="nav_destination_home">Thuis</string>
+    <string name="nav_stop_return">Terugweg stoppen</string>
+    <string name="nav_route_reverse">Terugkeren langs route</string>
+
+    <!-- Corridor Grouping & Differentiating Thumbnail Zoom (ATT-1954) -->
+    <string name="gateway_all">Alle</string>
+    <string name="gateway_north">Noord</string>
+    <string name="gateway_northeast">Noordoost</string>
+    <string name="gateway_east">Oost</string>
+    <string name="gateway_southeast">Zuidoost</string>
+    <string name="gateway_south">Zuid</string>
+    <string name="gateway_southwest">Zuidwest</string>
+    <string name="gateway_west">West</string>
+    <string name="gateway_northwest">Noordwest</string>
+    <string name="gateway_unknown">Overig</string>
+    <string name="pref_corridor_grouping_title">Corridor-gebaseerde routegroepering</string>
+    <string name="pref_corridor_grouping_desc">Groepeer routes in de lijst op basis van hun vertrekrichting en corridor</string>
+    <string name="pref_focused_thumbnail_title">Gefocuste miniatuurzoom</string>
+    <string name="pref_focused_thumbnail_desc">Zoomt routeminiaturen in op de kenmerkende middelste lus in plaats van gemeenschappelijke in-/uitvalscorridors</string>
+    <string name="fork_alert_title">Splitsing vooruit</string>
+    <string name="fork_approaching_in_m">over %1$d m</string>
+    <string name="fork_direction_left">Links</string>
+    <string name="fork_direction_straight">Rechtdoor</string>
+    <string name="fork_direction_right">Rechts</string>
+    <string name="fork_dismiss">Sluiten</string>
+    <string name="fork_select_hint">Tik om te kiezen</string>
+
+    <!-- Modernized Post-Workout Low Sensor Battery Alerting (ATT-2192) -->
+    <string name="notification_channel_name__sensor_battery">Sensorbatterij</string>
+    <string name="notification_channel_description__sensor_battery">Waarschuwingen wanneer het batterijniveau van de sensor laag is</string>
+    <string name="sensor_battery_notification_title_1">Sensorbatterij bijna leeg</string>
+    <string name="sensor_battery_notification_title_many">Meerdere sensorbatterijen bijna leeg</string>
+    <string name="sensor_battery_snackbar_single">⚠️ %1$s: Batterij bijna leeg (%2$d%%)</string>
+    <string name="sensor_battery_snackbar_many">⚠️ %1$d sensoren: Batterij bijna leeg (%2$s)</string>
+    <string name="sensor_battery_action_view_sensors">Sensoren bekijken</string>
 </resources>

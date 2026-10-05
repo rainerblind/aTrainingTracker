@@ -75,6 +75,8 @@ fun EquipmentTabsScreen(
     val bikes by viewModel.bikes.collectAsState()
     val shoes by viewModel.shoes.collectAsState()
     val allSensors by viewModel.allRemoteSensors.collectAsState()
+    val bikeSensors by viewModel.bikeSensors.collectAsState()
+    val shoeSensors by viewModel.shoeSensors.collectAsState()
 
     // State to track which item is being edited or having stats viewed
     var itemToConfigure by remember { mutableStateOf<EquipmentItem?>(null) }
@@ -149,6 +151,8 @@ fun EquipmentTabsScreen(
                         EquipmentSensorMatrixScreen(
                             bikes = bikes,
                             shoes = shoes,
+                            bikeSensors = bikeSensors,
+                            shoeSensors = shoeSensors,
                             sensors = allSensors,
                             onToggleLink = { equipmentId, sensorId, isLinked ->
                                 viewModel.setSensorLink(equipmentId, sensorId, isLinked)
@@ -218,7 +222,7 @@ fun EquipmentTabsScreen(
     // ADD NEW EQUIPMENT
     if (isAddingNew) {
         val isBikeTab = pagerState.currentPage == 0
-        val availableSensors = if (isBikeTab) viewModel.bikeSensors else viewModel.runSensors
+        val availableSensors = if (isBikeTab) bikeSensors else shoeSensors
         val availableSportTypes = if (isBikeTab) viewModel.bikeSportTypes else viewModel.runSportTypes
 
         // Create a blank template
@@ -265,9 +269,9 @@ fun EquipmentTabsScreen(
     itemToConfigure?.let { item ->
         // Determine which sensor list to use
         val availableSensors = if (item.frameType > 0) {
-            viewModel.bikeSensors
+            bikeSensors
         } else {
-            viewModel.runSensors
+            shoeSensors
         }
         val availableSportTypes = if (item.frameType > 0) viewModel.bikeSportTypes else viewModel.runSportTypes
 

@@ -408,6 +408,8 @@
     <string name="equipment_tab_sensor_matrix">Sensor-Matrix</string>
     <string name="equipment_matrix_no_sensors">Keine gekoppelten Sensoren gefunden. Koppeln Sie zuerst Sensoren in den Einstellungen.</string>
     <string name="equipment_matrix_no_equipment">Keine Ausrüstung gefunden. Fügen Sie zuerst Räder oder Schuhe hinzu.</string>
+    <string name="equipment_matrix_no_bike_sensors">Keine kompatiblen Rad-Sensoren gefunden.</string>
+    <string name="equipment_matrix_no_shoe_sensors">Keine kompatiblen Schuh-Sensoren gefunden.</string>
 
 
     <!-- dialogs -->
@@ -1398,6 +1400,10 @@
     <string name="workout_name_ride_from">Fahrt ab %1$s</string>
     <string name="workout_name_activity_from">Aktivität ab %1$s</string>
     <string name="workout_name_round_trip">Runde ab %1$s</string>
+    <string name="workout_name_run_from_with_distance">Lauf ab %1$s (%2$s)</string>
+    <string name="workout_name_ride_from_with_distance">Fahrt ab %1$s (%2$s)</string>
+    <string name="workout_name_activity_from_with_distance">Aktivität ab %1$s (%2$s)</string>
+    <string name="workout_name_round_trip_with_distance">Runde ab %1$s (%2$s)</string>
     <string name="workout_name_run_from_to">Lauf von %1$s nach %2$s</string>
     <string name="workout_name_ride_from_to">Fahrt von %1$s nach %2$s</string>
     <string name="workout_name_activity_from_to">Aktivität von %1$s nach %2$s</string>
@@ -1477,6 +1483,12 @@
     <string name="tuning_weight_semi_bold">Halbfett</string>
     <string name="tuning_weight_bold">Fett</string>
     <string name="tuning_cockpit_preview_title">Live-Vorschau</string>
+    <!-- Sensor Field Tile Variants & Styling (ATT-2058 / REQ-UI-258) -->
+    <string name="tuning_sensor_field_variant_title">Kachel-Design &amp; Layout</string>
+    <string name="sensor_field_variant_v0">Klassisch nahtlos</string>
+    <string name="sensor_field_variant_v1">Moderne Sportkacheln (Outline)</string>
+    <string name="sensor_field_variant_v2">Erhabene Sportkarten (Elevation)</string>
+    <string name="sensor_field_variant_v3">Soft-Akzent Kapseln</string>
     <string name="tuning_default_format">Standard: %1$s</string>
     <string name="reset_to_defaults">Auf Werkseinstellungen zurücksetzen</string>
     <string name="reset_to_defaults_success">Abstimmungseinstellungen auf Werkseinstellungen zurückgesetzt.</string>
@@ -1550,15 +1562,18 @@
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">Training unterbrochen</string>
+    <string name="unfinished_workout_title_battery">Training unterbrochen: Akku-Optimierung</string>
+    <string name="unfinished_workout_title_memory">Training unterbrochen: Speicherengpass</string>
+    <string name="unfinished_workout_title_permission">Training unterbrochen: Berechtigung entzogen</string>
     <string name="kill_reason_battery_title">Durch Akku-Optimierung beendet</string>
-    <string name="kill_reason_battery_stage1">Tja, wer nicht hören will… 😉 Aber es tut uns wirklich leid um deine verlorenen Kilometer! Android hat den Tracking-Dienst im Hintergrund wegen aktiver Akku-Optimierung beendet.</string>
-    <string name="kill_reason_battery_stage1_strava">Und du weißt ja: \'If it\'s not on Strava, it didn\'t happen\'… doppelt bitter! 🙈</string>
-    <string name="kill_reason_battery_stage2">Nicht schon wieder… Schon der 2. Kill! Wie viele verlorene Kilometer brauchst du noch als Beweis? Bitte deaktiviere die Akku-Optimierung für aTrainingTracker.</string>
-    <string name="kill_reason_battery_stage3">Aller schlechten Dinge sind drei… Beratungsresistenter Athlet des Monats! 🏆 Das System wird dein Training immer wieder beenden, bis du die Ausnahme einrichtest.</string>
+    <string name="kill_reason_battery_stage1">Android hat die Hintergrundaufzeichnung unterbrochen, weil die Akku-Optimierung für diese App aktiv ist. Damit deine Kilometer und Höhenmeter zuverlässig erfasst werden, deaktiviere bitte die Akku-Optimierung für aTrainingTracker.</string>
+    <string name="kill_reason_battery_stage1_strava">Wir wissen, wie wichtig lückenlose Trainingsaufzeichnungen für deine Strava-Aktivitäten sind.</string>
+    <string name="kill_reason_battery_stage2">Die Aufzeichnung wurde erneut durch das System-Akkumanagement beendet. Ohne Ausnahme wird Android das Tracking bei längeren Einheiten immer wieder stoppen. Bitte nimm dir kurz Zeit, um die Akku-Optimierung zu deaktivieren.</string>
+    <string name="kill_reason_battery_stage3">Wiederholte Unterbrechungen durch das Betriebssystem erkannt. Aktuelle Android-Versionen beenden Hintergrunddienste ohne Ausnahme zwingend, um Energie zu sparen. Bitte tippe unten auf den Button, um aTrainingTracker auszunehmen und deine Trainings zu schützen.</string>
     <string name="kill_reason_low_memory">Die Aufzeichnung wurde vom Betriebssystem wegen akutem Arbeitsspeichermangel beendet (z. B. durch Kamera oder 3D-Navigation im Vordergrund). Dein bisheriger Streckenteil wurde gesichert.</string>
     <string name="kill_reason_permission_revoked">Die Aufzeichnung wurde abgebrochen, weil der App während des Trainings die Standort- oder Benachrichtigungsberechtigung entzogen wurde.</string>
     <string name="action_disable_battery_optimization">Akku-Optimierung deaktivieren</string>
-    <string name="battery_optimization_exempt_celebration">Endlich! Freie Fahrt für deine Trainingsdaten 🎉</string>
+    <string name="battery_optimization_exempt_celebration">Uneingeschränkte Aufzeichnung aktiv für deine Trainingsdaten</string>
 
     <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
     <string name="import_fit_title">FIT-Dateien importieren</string>
@@ -1649,4 +1664,46 @@
     <string name="turn_cue_countdown_distance_summary">Vorwarnstrecke vor Abbiegungen (Meter)</string>
     <string name="off_route_corridor_threshold_title">Routenabweichungs-Toleranz</string>
     <string name="off_route_corridor_threshold_summary">Maximale Abweichung vor Routenwarnung (Meter)</string>
+
+    <!-- Return Navigation & Take Me Home (ATT-1953) -->
+    <string name="take_me_home_title">Heimweg</string>
+    <string name="take_me_home_desc">Rückweg entlang bekannter Strecken</string>
+    <string name="nav_remaining_dist">Verbleibend</string>
+    <string name="nav_remaining_climb">Anstieg</string>
+    <string name="nav_eta_label">Ankunft</string>
+    <string name="nav_destination_home">Zu Hause</string>
+    <string name="nav_stop_return">Heimweg beenden</string>
+    <string name="nav_route_reverse">Route zurückkehren</string>
+
+    <!-- Corridor Grouping & Differentiating Thumbnail Zoom (ATT-1954) -->
+    <string name="gateway_all">Alle</string>
+    <string name="gateway_north">Norden</string>
+    <string name="gateway_northeast">Nordosten</string>
+    <string name="gateway_east">Osten</string>
+    <string name="gateway_southeast">Südosten</string>
+    <string name="gateway_south">Süden</string>
+    <string name="gateway_southwest">Südwesten</string>
+    <string name="gateway_west">Westen</string>
+    <string name="gateway_northwest">Nordwesten</string>
+    <string name="gateway_unknown">Sonstige</string>
+    <string name="pref_corridor_grouping_title">Korridor-basierte Streckengruppierung</string>
+    <string name="pref_corridor_grouping_desc">Gruppiert Strecken in der Liste nach ihrer Ausfallrichtung und ihrem Korridor</string>
+    <string name="pref_focused_thumbnail_title">Fokussierter Vorschau-Zoom</string>
+    <string name="pref_focused_thumbnail_desc">Zoomt Vorschau-Miniaturkarten auf die charakteristische mittlere Schleife statt auf gemeinsame Ein-/Ausfallkorridore</string>
+    <string name="fork_alert_title">Gabelung voraus</string>
+    <string name="fork_approaching_in_m">in %1$d m</string>
+    <string name="fork_direction_left">Links</string>
+    <string name="fork_direction_straight">Geradeaus</string>
+    <string name="fork_direction_right">Rechts</string>
+    <string name="fork_dismiss">Schließen</string>
+    <string name="fork_select_hint">Tippen zum Auswählen</string>
+
+    <!-- Modernized Post-Workout Low Sensor Battery Alerting (ATT-2192) -->
+    <string name="notification_channel_name__sensor_battery">Sensor-Batterie</string>
+    <string name="notification_channel_description__sensor_battery">Warnungen bei niedrigem Batteriestand von Sensoren</string>
+    <string name="sensor_battery_notification_title_1">Sensor-Batterie schwach</string>
+    <string name="sensor_battery_notification_title_many">Mehrere Sensor-Batterien schwach</string>
+    <string name="sensor_battery_snackbar_single">⚠️ %1$s: Akku schwach (%2$d%%)</string>
+    <string name="sensor_battery_snackbar_many">⚠️ %1$d Sensoren: Akku schwach (%2$s)</string>
+    <string name="sensor_battery_action_view_sensors">Zu Sensoren</string>
 </resources>

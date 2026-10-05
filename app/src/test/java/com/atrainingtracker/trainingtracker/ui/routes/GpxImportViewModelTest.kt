@@ -25,6 +25,7 @@ import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.routes.GpxRouteImporter
 import com.atrainingtracker.trainingtracker.routes.RouteImportResult
+import com.atrainingtracker.trainingtracker.routes.RouteWaypoint
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
 import io.mockk.coEvery
@@ -144,12 +145,48 @@ class GpxImportViewModelTest {
             PathPoint(distance = 0.0, latLng = LatLng(48.0, 11.0), altitude = 500.0)
         )
 
-        coEvery { mockRepository.insertRoute(summary, points) } returns 42L
+        coEvery { mockRepository.insertRoute(summary, points, emptyList()) } returns 42L
 
         viewModel.saveRoute(summary, points)
         advanceUntilIdle()
 
-        coVerify(exactly = 1) { mockRepository.insertRoute(summary, points) }
+        coVerify(exactly = 1) { mockRepository.insertRoute(summary, points, emptyList()) }
+        assertTrue(viewModel.uiState is GpxImportViewModel.ImportState.Success)
+    }
+
+    @Test
+    fun testSaveRoute_withWaypoints_delegatesToRepository_andEmitsSuccess() = runTest {
+        val summary = RouteSummary(
+            id = 0,
+            externalId = "jusi.gpx",
+            name = "Gipfelkreuz auf dem Jusi",
+            description = "Schwäbische Alb",
+            isSelected = false,
+            distance = 8500.0,
+            elevationGain = 320.0,
+            bSportType = BSportType.BIKE,
+            source = RouteSource.LOCAL_GPX
+        )
+        val points = listOf(
+            PathPoint(distance = 0.0, latLng = LatLng(48.553, 9.330), altitude = 450.0)
+        )
+        val waypoints = listOf(
+            RouteWaypoint(
+                id = 1L,
+                routeId = 0L,
+                latLng = LatLng(48.5527, 9.3347),
+                altitude = 673.0,
+                name = "Gipfelkreuz auf dem Jusi",
+                type = com.atrainingtracker.trainingtracker.routes.WaypointType.POI_SUMMIT
+            )
+        )
+
+        coEvery { mockRepository.insertRoute(summary, points, waypoints) } returns 100L
+
+        viewModel.saveRoute(summary, points, waypoints)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { mockRepository.insertRoute(summary, points, waypoints) }
         assertTrue(viewModel.uiState is GpxImportViewModel.ImportState.Success)
     }
 }

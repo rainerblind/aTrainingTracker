@@ -60,15 +60,15 @@ enum class WaypointType(
         /**
          * Heuristically classifies GPX symbol, type, and name into a standard [WaypointType].
          */
-        fun fromGpx(sym: String?, type: String?, name: String?): WaypointType {
-            val text = "${sym ?: ""} ${type ?: ""} ${name ?: ""}".lowercase()
+        fun fromGpx(sym: String?, type: String?, name: String?, desc: String? = null): WaypointType {
+            val text = "${sym ?: ""} ${type ?: ""} ${name ?: ""} ${desc ?: ""}".lowercase()
             return when {
                 text.contains("water") || text.contains("wasser") || text.contains("quelle") || text.contains("fountain") || text.contains("trinkwasser") -> POI_WATER
-                text.contains("bench") || text.contains("bank") || text.contains("rast") || text.contains("picnic") || text.contains("picknick") -> POI_BENCH
-                text.contains("summit") || text.contains("gipfel") || text.contains("peak") || text.contains("pass") -> POI_SUMMIT
-                text.contains("food") || text.contains("cafe") || text.contains("café") || text.contains("restaurant") || text.contains("bäcker") || text.contains("bakery") || text.contains("essen") || text.contains("gasthof") || text.contains("hütte") -> POI_FOOD
+                text.contains("bench") || text.contains("bank") || text.contains("rast") || text.contains("picnic") || text.contains("picknick") || text.contains("sitzgelegenheit") || text.contains("unterstand") -> POI_BENCH
+                text.contains("summit") || text.contains("gipfel") || text.contains("peak") || text.contains("pass") || text.contains("kreuz") -> POI_SUMMIT
+                text.contains("food") || text.contains("cafe") || text.contains("café") || text.contains("restaurant") || text.contains("bäcker") || text.contains("bakery") || text.contains("essen") || text.contains("gasthof") || text.contains("hütte") || text.contains("grillplatz") || text.contains("schutzhütte") -> POI_FOOD
                 text.contains("danger") || text.contains("gefahr") || text.contains("hazard") || text.contains("caution") || text.contains("warnung") -> POI_DANGER
-                text.contains("view") || text.contains("aussicht") || text.contains("panorama") || text.contains("lookout") -> POI_VIEWPOINT
+                text.contains("view") || text.contains("aussicht") || text.contains("panorama") || text.contains("lookout") || text.contains("blick") -> POI_VIEWPOINT
                 text.contains("first aid") || text.contains("erste hilfe") || text.contains("hospital") || text.contains("arzt") -> POI_FIRST_AID
                 text.contains("left") || text.contains("links") -> TURN_LEFT
                 text.contains("right") || text.contains("rechts") -> TURN_RIGHT

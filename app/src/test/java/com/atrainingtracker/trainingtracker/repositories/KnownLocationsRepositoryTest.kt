@@ -77,9 +77,10 @@ class KnownLocationsRepositoryTest {
         mockDbManager = mockk(relaxed = true)
         mockElevationService = mockk(relaxed = true)
 
-        every { mockContext.getString(R.string.known_location_unnamed_format, any(), any()) } answers {
-            "Startort (${args[1]}, ${args[2]})"
-        }
+        every { mockDbManager.allLocations } returns emptyList()
+        every { mockDbManager.reconcileHitCountsWithWorkoutSummaries(any()) } returns 0
+        every { mockContext.getString(any<Int>()) } returns "Startort"
+        every { mockContext.getString(any<Int>(), *anyVararg()) } returns "Startort (48.137, 11.576)"
 
         repository = KnownLocationsRepository(
             context = mockContext,

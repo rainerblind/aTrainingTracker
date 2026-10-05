@@ -1,148 +1,94 @@
-# Stage 5: Verification & Walkthrough - ATT-2079: Inform Athlete on Process Kill Reasons (Battery Saver, LMK, Permission Revocation) via ApplicationExitInfo
+# Stage 5: Walkthrough & Verification - ATT-2079: Inform Athlete on Process Kill Reasons (Rework Cycle 2)
 
 **Ticket**: [ATT-2079](https://rainerblind.atlassian.net/browse/ATT-2079)  
-**Sub-task**: [ATT-2219](https://rainerblind.atlassian.net/browse/ATT-2219) (`[Test]`)  
-**Parent Epic**: [ATT-355](https://rainerblind.atlassian.net/browse/ATT-355) (*Good and consistent UI*)  
-**Target Release**: `V4.9.39`  
-**Active Sprint**: `Sprint 2026-40.14`  
-**Requirement Mapping**: `REQ-STB-012` (*Forensic Process Kill Diagnosis, Progressive Escalation & Battery Optimization Guidance*)  
-**Test Spec Mapping**: `TST-STB-012` (*Forensic Process Kill Diagnosis, Progressive Escalation & Battery Optimization Guidance Verification*)  
+**Sub-task**: [ATT-2399](https://rainerblind.atlassian.net/browse/ATT-2399) (`[Test]`)  
+**Parent Epic**: [ATT-354](https://rainerblind.atlassian.net/browse/ATT-354) (*Stability & Resilience*)  
+**Target Release**: `V4.9.40` (assigned upon completion per Rule 19)  
+**Active Sprint**: `2026-40.16`  
+**Requirement Mapping**: `REQ-STB-012` (*Forensic Process Kill Diagnosis, Dynamic Rationale Titles, Empathetic Escalation & Direct Battery Exemption Guidance*)  
+**Test Spec ID**: `TST-STB-012`  
 **Branch**: `feature/ATT-2079`  
 **Author**: AI Agent 1 (Implementer)  
-**Date**: 2026-10-03  
+**Date**: 2026-10-04  
 
 ---
 
-## 1. Executive Summary & Verification Context
+## 1. Executive Summary & Verification Overview
 
-Prior to **ATT-2079**, when an unfinalized workout was interrupted in the background due to aggressive OS battery saver regimes, Doze mode, Low Memory Killer (LMK), or runtime permission changes, the app offered only a generic, unhelpful prompt upon relaunch: *"An unfinished workout was found. Resume or start new?"*. Athletes naturally assumed the app suffered from an internal crash or memory leak, unaware that Android had terminated the process.
+This walkthrough documents the comprehensive verification and release qualification for [ATT-2079](https://rainerblind.atlassian.net/browse/ATT-2079) (Rework Cycle 2).
 
-Under **ATT-2079** and **`REQ-STB-012`**, the recovery flow was transformed into an empathetic, transparent, and progressively escalating dialogue:
-1. **Forensic Root Cause Classification**:
-   - On Android 11+ (API 30+), `ProcessExitReasonHelper.kt` queries `ActivityManager.getHistoricalProcessExitReasons()` to inspect `ApplicationExitInfo.reason`.
-   - Maps `REASON_EXCESSIVE_RESOURCE_USAGE` to `BATTERY_KILL`, `REASON_LOW_MEMORY` to `LOW_MEMORY`, and `REASON_PERMISSION_CHANGE` to `PERMISSION_REVOKED`.
-   - On all versions (API 23+), evaluates `PowerManager.isIgnoringBatteryOptimizations()`. If the app is not exempted, background kills are classified as `BATTERY_KILL`.
-2. **Progressive Escalation Ladder (Akku-Kill Counter)**:
-   - A persistent counter (`PREF_BATTERY_KILL_COUNT`) tracks unexempt battery terminations across app sessions.
-   - **Stage 1 (Count = 1)**: Sympathetic athletic reminder with an optional satirical Strava kicker (*"If it's not on Strava, it didn't happen... doppelt bitter!"* when Strava auto-upload is configured).
-   - **Stage 2 (Count = 2)**: Elevated sarcasm highlighting lost training kilometers.
-   - **Stage 3+ (Count >= 3)**: Satirical resignation citing the athlete as the *"Consultation-Resistant Athlete of the Month"*.
-3. **Direct Remediation Shortcut**:
-   - `StartOrResumeDialog.kt` provides a neutral button *"Disable Battery Optimization"* (`action_disable_battery_optimization`) directing the athlete straight to Android's `ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS` (with fallback to application details).
-4. **Auto-Reset on Exemption**:
-   - In `MainActivityWithNavigation.onResume()`, granting battery optimization immediately resets `battery_kill_count` back to 0.
-5. **Modernized Dialog Implementation**:
-   - Legacy `StartOrResumeDialog.java` was deprecated and replaced with idiomatic Kotlin `StartOrResumeDialog.kt`, strictly preserving the existing `StartOrResumeInterface` contract (`chooseStart()`, `chooseResume()`).
-6. **100% 9-Language Parity (`REQ-LOC-001`)**:
-   - All 10 newly introduced diagnostic and escalation string resources were translated across English, German, Spanish, French, Italian, Japanese, Dutch, Polish, and Portuguese with 100% parity verified by `TranslationParityTest`.
+### Problem Statement & Root Cause (Cycle 2 Rework)
+During Sprint 2026-40.15 Joint Review, the previous implementation was bounced for four specific defects:
+1. **Generic Dialog Title**: `StartOrResumeDialog` statically rendered `"Unfinished Workout Detected"` regardless of whether the workout was interrupted by battery optimization kills, low memory (LMK), or runtime permission revocation.
+2. **Punitive / Sarcastic Copy**: Escalation stages 2 and 3 contained condescending German copy (*"wer nicht hören will, muss fühlen"*, *"Beratungsresistenter Athlet des Monats 🏆"*) that degraded user trust.
+3. **Non-Idempotent Escalation Counter**: The escalation counter incremented on every dialog resolution rather than on distinct process kill events, causing screen rotations, configuration changes, or activity recreations to artificially escalate the warning level. Furthermore, the counter failed to reset when the athlete granted battery exemptions.
+4. **Violation of Rule 21**: Battery optimization settings navigation fell back to generic Application Details Settings (`ACTION_APPLICATION_DETAILS_SETTINGS`) instead of prioritizing specific direct system intent `Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`.
+
+### Implemented Solution
+1. **Dynamic Rationale Titles**:
+   - Added specific dialog title resources across all 9 locales:
+     - `unfinished_workout_title_battery` ("Workout Interrupted by Battery Saver")
+     - `unfinished_workout_title_memory` ("Workout Interrupted by Low Memory")
+     - `unfinished_workout_title_permission` ("Workout Interrupted by Missing Permission")
+     - `unfinished_workout_title` ("Unfinished Workout Detected", generic fallback)
+   - Updated `StartOrResumeDialog.kt` to dynamically select the title based on `KillReason`.
+2. **Empathetic Athletic-Partnership Copy**:
+   - Completely rewrote all 3 escalation tiers across all 9 supported languages (EN, DE, ES, FR, IT, JA, NL, PL, PT) with supportive, sportingly constructive phrasing emphasizing athlete partnership.
+3. **Idempotent Timestamp Tracking & Auto-Reset**:
+   - Added `PREF_LAST_EVALUATED_EXIT_TIMESTAMP` to `ProcessExitReasonHelper.kt`. Repeated evaluations within the same process lifetime or across screen rotations do not re-increment the counter unless a genuinely newer exit timestamp is detected from `ApplicationExitInfo`.
+   - Automatically resets `battery_kill_count` to 0 when `isIgnoringBatteryOptimizations` is true.
+4. **Direct Platform Intent (Rule 21 Compliance)**:
+   - Updated `openBatteryOptimizationSettings` to launch `Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` with `package:$packageName` URI directly, falling back safely to `ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS` and `ACTION_APPLICATION_DETAILS_SETTINGS` only if the direct intent is blocked by OEM ROM restrictions.
 
 ---
 
-## 2. Architecture & Forensic Workflow
+## 2. Requirement & Test Verification Matrix
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Athlete
-    participant Main as MainActivityWithNavigation
-    participant Helper as ProcessExitReasonHelper
-    participant Dialog as StartOrResumeDialog
-    participant OS as Android OS (ActivityManager / PowerManager / Settings)
+| Requirement | Test Spec | Verification Method | Result | Status in Living Docs |
+| :--- | :--- | :--- | :--- | :--- |
+| `REQ-STB-012` | `TST-STB-012.1` | Unit Tests: `ProcessExitReasonHelperTest.kt` (Classification, Idempotency, Timestamp tracking, Auto-reset, Direct intent) | **PASSED** (10/10 tests) | `Verified` |
+| `REQ-STB-012` | `TST-STB-012.2` | Unit Tests: `ProcessKillEscalationTest.kt` (Empathetic tone, escalation tiers, Strava context) & `StartOrResumeDialogContractTest.kt` | **PASSED** (9/9 tests) | `Verified` |
+| `REQ-LOC-001` | `TST-STB-012.3` | 9-Language Localization Parity Audit: Dynamic titles, de-escalated copy, Strava text across all 9 locales | **PASSED** (100% parity) | `Verified` |
+| `REQ-PRO-001` | `TST-STB-012.4` | Clean-Room Full Suite Regression: `./gradlew testDebugUnitTest` | **PASSED** (100% clean) | `Verified` |
 
-    Athlete->>Main: Launch App after unexpected background termination
-    Main->>Main: checkUnfinishedWorkout() (hasUnfinishedWorkout() == true)
-    Main->>Dialog: Show StartOrResumeDialog
-    Dialog->>Helper: resolveKillReason(context)
-    
-    alt API >= 30 (Android 11+)
-        Helper->>OS: ActivityManager.getHistoricalProcessExitReasons(packageName, 0, 1)
-        OS-->>Helper: ApplicationExitInfo
-    end
-    Helper->>OS: PowerManager.isIgnoringBatteryOptimizations(packageName)
-    OS-->>Helper: Boolean
-    
-    Helper-->>Dialog: KillDiagnosis(reason, escalationLevel, isStravaActive, shouldShowBatteryButton)
-    Dialog-->>Athlete: Render forensic diagnostic message + Escalation copy + Action buttons
-    
-    alt Athlete taps "Disable Battery Optimization"
-        Athlete->>Dialog: Tap "Disable Battery Optimization"
-        Dialog->>OS: startActivity(ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-        Athlete->>OS: Grant exemption & Return to App
-        Main->>Main: onResume()
-        Main->>Helper: isIgnoringBatteryOptimizations(this) == true
-        Main->>Helper: resetBatteryKillCount(this) -> counter reset to 0
-    else Athlete taps "Resume Workout"
-        Athlete->>Dialog: Tap "Resume Workout"
-        Dialog->>Main: chooseResume() (REQ-STB-003)
-    else Athlete taps "Start New"
-        Athlete->>Dialog: Tap "Start New"
-        Dialog->>Main: chooseStart() (REQ-STB-003)
-    end
+---
+
+## 3. Automated Test Evidence
+
+### Targeted Unit Tests (`helpers.*` & `dialogs.*`)
+```text
+BUILD SUCCESSFUL in 8s
+32 actionable tasks: 1 executed, 31 up-to-date
+- ProcessExitReasonHelperTest:
+  • testClassify_excessiveResourceUsage_returnsBatteryKill: PASSED
+  • testClassify_lowMemory_returnsLowMemory: PASSED
+  • testClassify_userRequested_returnsGeneric: PASSED
+  • testClassify_permissionRevocation_returnsPermissionRevoked: PASSED
+  • testClassify_emptyHistoricalReasons_returnsGeneric: PASSED
+  • testResolveKillReason_belowAndroidR_returnsGeneric: PASSED
+  • testResolveKillReason_batteryKill_whenAlreadyExempt_returnsGeneric: PASSED
+  • testResolveKillReason_batteryKill_escalatesStages: PASSED
+  • testResolveKillReason_sameExitTimestamp_doesNotIncrementEscalation: PASSED
+  • testOpenBatteryOptimizationSettings_launchesActionRequestIgnoreBatteryOptimizationsFirst: PASSED
+- ProcessKillEscalationTest:
+  • testEscalationTiers_doNotContainSarcasm: PASSED
+  • testEscalationTone_isSportinglyConstructive: PASSED
+  • testStage1_containsStravaAdviceWhenActive: PASSED
+  • testStage1_omitsStravaAdviceWhenInactive: PASSED
+  • testStage2_recommendsDisablingBatterySaver: PASSED
+  • testStage3_warnsOfPersistentKills: PASSED
+  • testEscalationLevel_capsAtThree: PASSED
+  • testEscalationLevel_resetsWhenOptimizationsIgnored: PASSED
+- StartOrResumeDialogContractTest:
+  • testContractCompliance: PASSED
 ```
 
 ---
 
-## 3. Verification Evidence & Test Execution
+## 4. Invariant & Governance Verification
 
-### 1. Targeted Unit & Contract Tests
-All unit and contract tests authored for `ATT-2079` passed with 100% success rate:
-- **`ProcessExitReasonHelperTest.kt`**:
-  - `testClassify_excessiveResourceUsage_returnsBatteryKill`: PASSED
-  - `testClassify_notIgnoringBatteryOptimizations_returnsBatteryKill`: PASSED
-  - `testClassify_lowMemory_returnsLowMemory`: PASSED
-  - `testClassify_permissionChange_returnsPermissionRevoked`: PASSED
-  - `testClassify_normalGeneric_returnsGenericUnfinished`: PASSED
-  - `testBatteryKillCount_incrementsAndResets`: PASSED
-- **`ProcessKillEscalationTest.kt`**:
-  - `testStage1_stravaActive_setsFlagTrue`: PASSED
-  - `testStage1_stravaDisabled_setsFlagFalse`: PASSED
-  - `testStage2_secondKill_escalationLevelTwo`: PASSED
-  - `testStage3_thirdKill_escalationLevelThreeOrMore`: PASSED
-  - `testBatteryOptimizationButton_trueWhenNotIgnoring`: PASSED
-  - `testRequiredStringResourcesExist`: PASSED
-- **`StartOrResumeDialogContractTest.kt`**:
-  - `testStartOrResumeDialog_inheritsDialogFragment`: PASSED
-  - `testStartOrResumeDialog_tagMatchesClassName`: PASSED
-  - `testAttachInterface_throwsClassCastExceptionWhenInterfaceNotImplemented`: PASSED
-  - `testAttachInterface_succeedsWhenInterfaceImplemented`: PASSED
-
-### 2. Localization Parity Audit (`TranslationParityTest.kt`)
-- All 10 string keys verified across all 9 supported application locales (EN, DE, ES, FR, IT, JA, NL, PL, PT):
-  - `unfinished_workout_title`
-  - `kill_reason_battery_title`
-  - `kill_reason_battery_stage1`
-  - `kill_reason_battery_stage1_strava`
-  - `kill_reason_battery_stage2`
-  - `kill_reason_battery_stage3`
-  - `kill_reason_low_memory`
-  - `kill_reason_permission_revoked`
-  - `action_disable_battery_optimization`
-  - `battery_optimization_exempt_celebration`
-- Verification result: PASSED (100% parity, 0 missing translations).
-
-### 3. Full Clean-Room Regression Test Suite
-- Command executed: `./gradlew testDebugUnitTest`
-- Results: 296 test classes executed, 1500+ unit tests executed, 0 failures, BUILD SUCCESSFUL.
-
-### 4. Physical On-Device Verification (Google Pixel 10)
-- Command executed: `./gradlew installDebug`
-- Deployed successfully to Pixel 10 (`66020DLCR002FL`).
-- Cold-start launched via adb launcher intent.
-- Inspection of logcat confirmed zero fatal exceptions, zero regressions in `MainActivityWithNavigation`, and proper package interaction.
-
----
-
-## 4. Invariants & Governance Compliance
-
-| Governance Invariant | Status | Evidence |
-| :--- | :--- | :--- |
-| **REQ-STB-012** | **Verified** | Forensic process kill classification, progressive escalation ladder, battery optimization shortcut, and counter reset fully validated. |
-| **REQ-STB-003** | **Preserved** | `chooseResume()` and `chooseStart()` callbacks in `StartOrResumeInterface` remain 100% functional. |
-| **REQ-LOC-001** | **Verified** | 10 new strings validated across all 9 languages with positional `%1$s` parameter consistency. |
-| **ASPICE Gate 4** | **Passed** | Dual-agent code quality audit approved by Agent 2. |
-| **ASPICE Gate 5** | **Ready** | Full regression pass rate, walkthrough authored, living documentation updated. |
-
----
-
-## 5. Conclusion & Release Readiness
-`ATT-2079` is completely verified, regression-free, and ready for Stage 5 Gate closure and GitFlow integration into `sprint/2026-40.14`.
+1. **Rule 21 Compliance**: Specific direct platform intent (`ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`) with package URI is prioritized over generic application details settings.
+2. **Rule 1 Compliance**: Parent ticket `ATT-2079` is transitioned to `Final Review (Human)` (never `Erledigt`).
+3. **Rule 6 Compliance**: Sub-tasks `ATT-2395`, `ATT-2396`, `ATT-2397`, `ATT-2398`, `ATT-2399` have empty `fixVersions`.
+4. **Living Documentation Synchronized**: `docs/requirements.md` (`REQ-STB-012`) and `docs/tests.md` (`TST-STB-012`) updated and confirmed in state `Verified`.
+5. **Continuous Sprint Branch Integration (Strategy A)**: Feature branch `feature/ATT-2079` merged into `sprint/2026-40.16` via `--no-ff`.

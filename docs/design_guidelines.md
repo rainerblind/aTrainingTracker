@@ -103,6 +103,40 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 ## 4. Spacing, Typography & Localization Parity
 
 * **Design Tokens**:
-  * Always use standardized tokens from `TTDimens`, `TTColor`, and `TTAlpha` rather than hardcoded magic numbers or raw colors.
+  * Always use the existing theme tokens rather than hardcoded raw colors: `MaterialTheme.colorScheme.*`, `MaterialTheme.typography.*`, `TTColor` (domain colors: zones, routes, achievements, branding), `TTAlpha` (opacity levels) and `LayoutConstants` (header heights). There is currently no `TTDimens` object — use the spacing scale in Section 5.2.
 * **Localization Invariant**:
   * Any user-visible string (titles, subtitles, button labels, descriptions) must be localized across all 9 supported application locales (`de`, `en`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`).
+
+---
+
+## 5. Visual Consistency Baseline ("Look Like the Rest of the App")
+
+> Origin: Retro Sprint 2026-40.16 — ATT-1835 (Quick Route Selector), ATT-1953 (Take Me Home HUD) and ATT-2058 (tile variants) were functionally correct but did not look/feel like the rest of the app (follow-ups ATT-2456 … ATT-2462). The values below are the de-facto standard measured across the existing codebase. Binding for every ticket that adds or changes UI (Governance Rule 23).
+
+### 5.1 Reuse Before Create
+* Before designing a new screen, card, sheet, HUD element or button, find the **closest existing equivalent** in the app and copy its structure, shapes, spacing and colors.
+* Prefer shared components from `ui/components/` (e.g. `MetricItem`, `MetricBadge`, `DropdownSelector`, `EmptyStatePlaceholder`, `DeleteConfirmationDialog`, `BottomSheetUtils`, `MappableListItem`) and `ui/common/`.
+* Tabbed screens follow the existing tabbed layout pattern (`RouteTabbedScreen`, `EquipmentTabsScreen`): collapsing header with `LayoutConstants.HEADER_TITLE_ROW_HEIGHT` title row + standard Material 3 tab row. Do not invent alternative tab/segment visuals for top-level navigation.
+* New one-off styles (custom shapes, colors, fonts, icon sets, branding) are only allowed with an explicit justification in the Stage 3 plan (Section "UI Consistency").
+
+### 5.2 Spacing Scale
+* Use only: `4.dp`, `8.dp`, `12.dp`, `16.dp`, `24.dp` (exceptions require justification).
+* Screen / card horizontal content padding: `16.dp` (dominant), compact cards `12.dp`.
+* Vertical spacing between list rows / small elements: `4.dp`–`8.dp`.
+
+### 5.3 Shapes
+* Cards, sheets, panels, HUD overlays: `RoundedCornerShape(12.dp)` (dominant) or `MaterialTheme.shapes.medium`.
+* Small elements (badges, inner tiles, chips): `8.dp`; tiny markers / bars: `4.dp`.
+* Dialogs: Material 3 defaults (`MaterialTheme.shapes.extraLarge`).
+
+### 5.4 Color
+* Surfaces, text and accents come from `MaterialTheme.colorScheme` so that Light, Dark and **AMOLED** themes all render correctly. Verify new UI in all three.
+* Domain semantics come from `TTColor` (zones, routes, start/end points, branding). Add a new `TTColor` entry instead of an inline `Color(0x…)`.
+* Never hardcode `Color.White` / `Color.Black` for text or backgrounds in normal app UI (cockpit tiles follow `CockpitThemeMode`).
+
+### 5.5 Typography & Icons
+* Text styles from `MaterialTheme.typography`; emphasis via `FontWeight.Bold` / `SemiBold` (no custom font families).
+* Icons from Material Icons (`Icons.Default.*`, `Icons.AutoMirrored.*` for directional icons). Map POIs/markers should use a consistent standard icon set (see ATT-2461) rather than ad-hoc drawn shapes.
+
+### 5.6 Placement & Entry Points
+* New features are entered from the screen where the athlete expects them (e.g. route selection on the Control Tracking screen, ATT-2458) using the same button/chip style as neighbouring actions — not via new floating or branded elements.

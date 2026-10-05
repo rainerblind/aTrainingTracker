@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.map
 
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
+import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant
 
 /**
  * Selectable horizontal X-axis domain for Aftermath elevation profile and scrubbing.
@@ -49,6 +50,7 @@ object TuningPreferencesDefaults {
     val PROFILE_X_AXIS_DOMAIN = ELEVATION_X_AXIS_DOMAIN
     val COCKPIT_FONT_FAMILY = CockpitFontFamily.SYSTEM_DEFAULT
     val COCKPIT_FONT_WEIGHT = CockpitFontWeight.SEMI_BOLD
+    val SENSOR_FIELD_VARIANT = SensorFieldVariant.CLASSIC_SEAMLESS
     const val FULL_DIM_FACTOR = 0.25f
     const val MEDIUM_DIM_FACTOR = 0.50f
     const val SLOPE_FLAT_THRESHOLD = 2.0f
@@ -94,6 +96,9 @@ object TuningPreferencesDefaults {
     const val OFF_ROUTE_CORRIDOR_THRESHOLD_METERS = 50.0f
     const val MIN_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS = 20.0f
     const val MAX_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS = 200.0f
+
+    const val CORRIDOR_GROUPING_ENABLED = true
+    const val FOCUSED_THUMBNAIL_ZOOM_ENABLED = true
 }
 
 /**
@@ -104,6 +109,7 @@ data class TuningConfig(
     val telemetryXAxisDomain: ProfileXAxisDomain = TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN,
     val cockpitFontFamily: CockpitFontFamily = TuningPreferencesDefaults.COCKPIT_FONT_FAMILY,
     val cockpitFontWeight: CockpitFontWeight = TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT,
+    val sensorFieldVariant: SensorFieldVariant = TuningPreferencesDefaults.SENSOR_FIELD_VARIANT,
     val fullDimFactor: Float = TuningPreferencesDefaults.FULL_DIM_FACTOR,
     val mediumDimFactor: Float = TuningPreferencesDefaults.MEDIUM_DIM_FACTOR,
     val slopeFlatThreshold: Float = TuningPreferencesDefaults.SLOPE_FLAT_THRESHOLD,
@@ -120,7 +126,9 @@ data class TuningConfig(
     val turnPromptsEnabled: Boolean = TuningPreferencesDefaults.TURN_PROMPTS_ENABLED,
     val turnAudioAlertsEnabled: Boolean = TuningPreferencesDefaults.TURN_AUDIO_ALERTS_ENABLED,
     val turnCueCountdownDistanceMeters: Float = TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS,
-    val offRouteCorridorThresholdMeters: Float = TuningPreferencesDefaults.OFF_ROUTE_CORRIDOR_THRESHOLD_METERS
+    val offRouteCorridorThresholdMeters: Float = TuningPreferencesDefaults.OFF_ROUTE_CORRIDOR_THRESHOLD_METERS,
+    val corridorGroupingEnabled: Boolean = TuningPreferencesDefaults.CORRIDOR_GROUPING_ENABLED,
+    val focusedThumbnailZoomEnabled: Boolean = TuningPreferencesDefaults.FOCUSED_THUMBNAIL_ZOOM_ENABLED
 ) {
     @Deprecated("Use elevationXAxisDomain or telemetryXAxisDomain", ReplaceWith("elevationXAxisDomain"))
     val profileXAxisDomain: ProfileXAxisDomain
@@ -172,6 +180,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_PROFILE_X_AXIS_DOMAIN: Preferences.Key<String> = stringPreferencesKey("tuning_profile_x_axis_domain")
         val KEY_COCKPIT_FONT_FAMILY: Preferences.Key<String> = stringPreferencesKey("tuning_cockpit_font_family")
         val KEY_COCKPIT_FONT_WEIGHT: Preferences.Key<String> = stringPreferencesKey("tuning_cockpit_font_weight")
+        val KEY_SENSOR_FIELD_VARIANT: Preferences.Key<String> = stringPreferencesKey("tuning_sensor_field_variant")
         val KEY_FULL_DIM_FACTOR: Preferences.Key<Float> = floatPreferencesKey("tuning_battery_saver_full_dim")
         val KEY_MEDIUM_DIM_FACTOR: Preferences.Key<Float> = floatPreferencesKey("tuning_battery_saver_medium_dim")
         val KEY_SLOPE_FLAT: Preferences.Key<Float> = floatPreferencesKey("tuning_battery_saver_slope_flat")
@@ -189,13 +198,16 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_TURN_AUDIO_ALERTS_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_turn_audio_alerts_enabled")
         val KEY_TURN_CUE_COUNTDOWN_DISTANCE: Preferences.Key<Float> = floatPreferencesKey("tuning_turn_cue_countdown_distance")
         val KEY_OFF_ROUTE_CORRIDOR_THRESHOLD: Preferences.Key<Float> = floatPreferencesKey("tuning_off_route_corridor_threshold")
+        val KEY_CORRIDOR_GROUPING_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_corridor_grouping_enabled")
+        val KEY_FOCUSED_THUMBNAIL_ZOOM_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_focused_thumbnail_zoom_enabled")
 
-        private val ALL_KEYS = listOf(
+        internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
             KEY_TELEMETRY_X_AXIS_DOMAIN,
             KEY_PROFILE_X_AXIS_DOMAIN,
             KEY_COCKPIT_FONT_FAMILY,
             KEY_COCKPIT_FONT_WEIGHT,
+            KEY_SENSOR_FIELD_VARIANT,
             KEY_FULL_DIM_FACTOR,
             KEY_MEDIUM_DIM_FACTOR,
             KEY_SLOPE_FLAT,
@@ -212,7 +224,9 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_TURN_PROMPTS_ENABLED,
             KEY_TURN_AUDIO_ALERTS_ENABLED,
             KEY_TURN_CUE_COUNTDOWN_DISTANCE,
-            KEY_OFF_ROUTE_CORRIDOR_THRESHOLD
+            KEY_OFF_ROUTE_CORRIDOR_THRESHOLD,
+            KEY_CORRIDOR_GROUPING_ENABLED,
+            KEY_FOCUSED_THUMBNAIL_ZOOM_ENABLED
         )
     }
 
@@ -237,6 +251,9 @@ class TuningPreferencesDataStore(private val context: Context) {
         } catch (e: Exception) {
             TuningPreferencesDefaults.COCKPIT_FONT_FAMILY
         }
+
+        val rawVariantStr = prefs[KEY_SENSOR_FIELD_VARIANT]
+        val sensorFieldVariant = SensorFieldVariant.fromStorage(rawVariantStr)
 
         val rawFontWeightStr = prefs[KEY_COCKPIT_FONT_WEIGHT]
         val cockpitFontWeight = try {
@@ -319,11 +336,15 @@ class TuningPreferencesDataStore(private val context: Context) {
             TuningPreferencesDefaults.MAX_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS
         )
 
+        val corridorGroupingEnabled = prefs[KEY_CORRIDOR_GROUPING_ENABLED] ?: TuningPreferencesDefaults.CORRIDOR_GROUPING_ENABLED
+        val focusedThumbnailZoomEnabled = prefs[KEY_FOCUSED_THUMBNAIL_ZOOM_ENABLED] ?: TuningPreferencesDefaults.FOCUSED_THUMBNAIL_ZOOM_ENABLED
+
         TuningConfig(
             elevationXAxisDomain = elevationDomain,
             telemetryXAxisDomain = telemetryDomain,
             cockpitFontFamily = cockpitFontFamily,
             cockpitFontWeight = cockpitFontWeight,
+            sensorFieldVariant = sensorFieldVariant,
             fullDimFactor = clampedFullDim,
             mediumDimFactor = clampedMediumDim,
             slopeFlatThreshold = clampedSlopeFlat,
@@ -340,7 +361,9 @@ class TuningPreferencesDataStore(private val context: Context) {
             turnPromptsEnabled = turnPromptsEnabled,
             turnAudioAlertsEnabled = turnAudioAlertsEnabled,
             turnCueCountdownDistanceMeters = clampedTurnCountdown,
-            offRouteCorridorThresholdMeters = clampedOffRoute
+            offRouteCorridorThresholdMeters = clampedOffRoute,
+            corridorGroupingEnabled = corridorGroupingEnabled,
+            focusedThumbnailZoomEnabled = focusedThumbnailZoomEnabled
         )
     }
 
@@ -392,6 +415,7 @@ class TuningPreferencesDataStore(private val context: Context) {
             prefs[KEY_PROFILE_X_AXIS_DOMAIN] = config.elevationXAxisDomain.name
             prefs[KEY_COCKPIT_FONT_FAMILY] = config.cockpitFontFamily.name
             prefs[KEY_COCKPIT_FONT_WEIGHT] = config.cockpitFontWeight.name
+            prefs[KEY_SENSOR_FIELD_VARIANT] = config.sensorFieldVariant.name
             prefs[KEY_FULL_DIM_FACTOR] = clampedFullDim
             prefs[KEY_MEDIUM_DIM_FACTOR] = clampedMediumDim
             prefs[KEY_SLOPE_FLAT] = clampedSlopeFlat
@@ -415,12 +439,32 @@ class TuningPreferencesDataStore(private val context: Context) {
                 TuningPreferencesDefaults.MIN_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS,
                 TuningPreferencesDefaults.MAX_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS
             )
+            prefs[KEY_CORRIDOR_GROUPING_ENABLED] = config.corridorGroupingEnabled
+            prefs[KEY_FOCUSED_THUMBNAIL_ZOOM_ENABLED] = config.focusedThumbnailZoomEnabled
+        }
+    }
+
+    suspend fun updateCorridorGroupingEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_CORRIDOR_GROUPING_ENABLED] = enabled
+        }
+    }
+
+    suspend fun updateFocusedThumbnailZoomEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_FOCUSED_THUMBNAIL_ZOOM_ENABLED] = enabled
         }
     }
 
     suspend fun updateShowLiveClimbs(show: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_SHOW_LIVE_CLIMBS] = show
+        }
+    }
+
+    suspend fun updateSensorFieldVariant(variant: SensorFieldVariant) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_SENSOR_FIELD_VARIANT] = variant.name
         }
     }
 

@@ -224,13 +224,15 @@ fun PermissionRationaleContent(
                 Text(text = stringResource(id = R.string.permission_rationale_not_now))
             }
 
+            val showOpenSettings = isPermanentlyDenied && rationaleType != RationaleType.BATTERY_OPTIMIZATION
+
             Button(
-                onClick = if (isPermanentlyDenied) onOpenSettings else onContinue,
+                onClick = if (showOpenSettings) onOpenSettings else onContinue,
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
-                    text = if (isPermanentlyDenied) {
+                    text = if (showOpenSettings) {
                         stringResource(id = R.string.permission_rationale_open_settings)
                     } else {
                         stringResource(id = R.string.permission_rationale_continue)

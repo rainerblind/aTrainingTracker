@@ -89,6 +89,7 @@ fun AdvancedTuningDialog(
     var paceCeilingMinKm by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM) }
     var cockpitFontFamily by remember { mutableStateOf(TuningPreferencesDefaults.COCKPIT_FONT_FAMILY) }
     var cockpitFontWeight by remember { mutableStateOf(TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT) }
+    var sensorFieldVariant by remember { mutableStateOf(TuningPreferencesDefaults.SENSOR_FIELD_VARIANT) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }
     var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
@@ -142,6 +143,7 @@ fun AdvancedTuningDialog(
         telemetryXAxisDomain = persistedConfig.telemetryXAxisDomain
         cockpitFontFamily = persistedConfig.cockpitFontFamily
         cockpitFontWeight = persistedConfig.cockpitFontWeight
+        sensorFieldVariant = persistedConfig.sensorFieldVariant
         fullDimFactor = persistedConfig.fullDimFactor
         mediumDimFactor = persistedConfig.mediumDimFactor
         slopeFlat = persistedConfig.slopeFlatThreshold
@@ -166,6 +168,7 @@ fun AdvancedTuningDialog(
                         telemetryXAxisDomain = telemetryXAxisDomain,
                         cockpitFontFamily = cockpitFontFamily,
                         cockpitFontWeight = cockpitFontWeight,
+                        sensorFieldVariant = sensorFieldVariant,
                         fullDimFactor = fullDimFactor,
                         mediumDimFactor = mediumDimFactor,
                         slopeFlatThreshold = slopeFlat,
@@ -235,7 +238,7 @@ fun AdvancedTuningDialog(
             TuningAccordionSection(
                 icon = Icons.Default.TextFields,
                 title = stringResource(R.string.tuning_cat_cockpit_typography),
-                subtitle = TuningSubtitleFormatter.formatCockpitSubtitle(cockpitFontFamily, cockpitFontWeight, context),
+                subtitle = TuningSubtitleFormatter.formatCockpitSubtitle(cockpitFontFamily, cockpitFontWeight, sensorFieldVariant, context),
                 isExpanded = isSectionExpanded(TuningSection.COCKPIT_TYPOGRAPHY),
                 onToggle = { toggleSection(TuningSection.COCKPIT_TYPOGRAPHY) }
             ) {
@@ -243,7 +246,9 @@ fun AdvancedTuningDialog(
                     cockpitFontFamily = cockpitFontFamily,
                     onFontFamilyChange = { cockpitFontFamily = it },
                     cockpitFontWeight = cockpitFontWeight,
-                    onFontWeightChange = { cockpitFontWeight = it }
+                    onFontWeightChange = { cockpitFontWeight = it },
+                    sensorFieldVariant = sensorFieldVariant,
+                    onSensorFieldVariantChange = { sensorFieldVariant = it }
                 )
             }
 
@@ -342,6 +347,7 @@ fun AdvancedTuningDialog(
                         telemetryXAxisDomain = TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN
                         cockpitFontFamily = TuningPreferencesDefaults.COCKPIT_FONT_FAMILY
                         cockpitFontWeight = TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT
+                        sensorFieldVariant = TuningPreferencesDefaults.SENSOR_FIELD_VARIANT
                         fullDimFactor = TuningPreferencesDefaults.FULL_DIM_FACTOR
                         mediumDimFactor = TuningPreferencesDefaults.MEDIUM_DIM_FACTOR
                         slopeFlat = TuningPreferencesDefaults.SLOPE_FLAT_THRESHOLD

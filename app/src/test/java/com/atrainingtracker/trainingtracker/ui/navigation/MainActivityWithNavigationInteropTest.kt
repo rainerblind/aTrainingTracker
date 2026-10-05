@@ -62,9 +62,9 @@ class MainActivityWithNavigationInteropTest {
 
     @Test
     fun testSelectedFragmentEnumIntegrity() {
-        // Verify enum values used by TrackerService and ExportNotificationManager
+        // Verify enum values used by TrackerService, ExportNotificationManager, and SensorBatteryNotificationManager
         val enumValues = MainActivityWithNavigation.SelectedFragment.values()
-        assertEquals(2, enumValues.size)
+        assertEquals(3, enumValues.size)
 
         assertEquals(
             "START_OR_TRACKING",
@@ -73,6 +73,10 @@ class MainActivityWithNavigationInteropTest {
         assertEquals(
             "WORKOUT_LIST",
             MainActivityWithNavigation.SelectedFragment.WORKOUT_LIST.name
+        )
+        assertEquals(
+            "SENSORS",
+            MainActivityWithNavigation.SelectedFragment.SENSORS.name
         )
 
         // Verify valueOf lookup
@@ -83,6 +87,10 @@ class MainActivityWithNavigationInteropTest {
         assertEquals(
             MainActivityWithNavigation.SelectedFragment.WORKOUT_LIST,
             MainActivityWithNavigation.SelectedFragment.valueOf("WORKOUT_LIST")
+        )
+        assertEquals(
+            MainActivityWithNavigation.SelectedFragment.SENSORS,
+            MainActivityWithNavigation.SelectedFragment.valueOf("SENSORS")
         )
     }
 

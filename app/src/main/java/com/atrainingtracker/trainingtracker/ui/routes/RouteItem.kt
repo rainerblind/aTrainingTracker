@@ -46,7 +46,11 @@ import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.MapRoute
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.PathPreviewMap
+import com.atrainingtracker.trainingtracker.routes.RouteWaypoint
+import com.atrainingtracker.trainingtracker.routes.RouteBoundingBoxCalculator
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 
 @Composable
 fun RouteItem(
@@ -57,6 +61,8 @@ fun RouteItem(
     onToggleSelection: (Long, Boolean) -> Unit,
     onDeleteConfirmed: (Long) -> Unit,
     onDuplicateAsLocal: (Long) -> Unit = {},
+    waypoints: List<RouteWaypoint> = emptyList(),
+    focusedThumbnailZoomEnabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
@@ -89,17 +95,31 @@ fun RouteItem(
                         .fillMaxWidth()
                         .height(180.dp)
                 ) {
+                    val targetBounds = remember(pathPoints, focusedThumbnailZoomEnabled) {
+                        if (focusedThumbnailZoomEnabled && pathPoints.size >= 4) {
+                            val diff = RouteBoundingBoxCalculator.calculateDifferentiatingBounds(pathPoints)
+                            LatLngBounds(
+                                LatLng(diff.minLat, diff.minLng),
+                                LatLng(diff.maxLat, diff.maxLng)
+                            )
+                        } else {
+                            null
+                        }
+                    }
+
                     PathPreviewMap(
                         path = MapRoute(
                             id = summary.id,
                             name = summary.name,
                             isSelected = summary.isSelected,
                             bSportType = summary.bSportType,
-                            path = pathPoints
+                            path = pathPoints,
+                            waypoints = waypoints
                         ),
                         modifier = Modifier.fillMaxSize(),
                         start = pathPoints.firstOrNull()?.latLng,
                         end = pathPoints.lastOrNull()?.latLng,
+                        targetBounds = targetBounds,
                         onMapClick = { onMapClick(summary.id) }
                     )
                 }

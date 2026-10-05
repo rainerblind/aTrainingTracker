@@ -443,16 +443,25 @@ fun RouteWaypointsLayer(
             }
         }
 
+        val snippetText = remember(waypoint.description, waypoint.altitude) {
+            val altText = if (waypoint.altitude > 0.0) "${waypoint.altitude.toInt()} m" else null
+            when {
+                waypoint.description.isNotBlank() && altText != null -> "${waypoint.description} • $altText"
+                waypoint.description.isNotBlank() -> waypoint.description
+                else -> altText
+            }
+        }
+
         Marker(
             state = remember(waypoint.id, waypoint.latLng) { MarkerState(position = waypoint.latLng) },
             title = waypoint.name,
-            snippet = waypoint.description.ifEmpty { null },
+            snippet = snippetText,
             icon = iconDescriptor,
             alpha = alpha,
             zIndex = 50.0f,
             onClick = {
                 onWaypointClick(waypoint)
-                true
+                false // Allow Google Maps to display native InfoWindow
             }
         )
     }

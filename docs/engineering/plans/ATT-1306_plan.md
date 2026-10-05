@@ -1,10 +1,10 @@
 # Stage 3 Implementation Plan: ATT-1306 - Google Drive Integration for Automated Workout Export and Backup Synchronization
 
 **Ticket**: [ATT-1306](https://rainerblind.atlassian.net/browse/ATT-1306)  
-**Sub-task**: [ATT-2279](https://rainerblind.atlassian.net/browse/ATT-2279) (`[Impl-Plan]`)  
+**Sub-task**: [ATT-2408](https://rainerblind.atlassian.net/browse/ATT-2408) (`[Impl-Plan]`)  
 **Parent Epic**: [ATT-162](https://rainerblind.atlassian.net/browse/ATT-162) (*Cloud integration*)  
-**Target Release**: `V4.9.39`  
-**Active Sprint**: `Sprint 2026-40.14`  
+**Target Release**: `V4.9.40`  
+**Active Sprint**: `Sprint 2026-40.16`  
 **Branch**: `feature/ATT-1306`  
 **Author**: AI Agent 1 (Implementer)  
 **Date**: 2026-10-04  
@@ -21,16 +21,27 @@
 |  [ATrainingTrackerApp] -> SettingsBottomSheetType.GOOGLE_DRIVE                    |
 |  [GoogleDriveSettingsDialog] (AppBottomSheetContent + AppDialogActions.SaveCancel)|
 |    - GoogleDriveConnectionHeader: connected status, email, Connect/Disconnect     |
+|    - ActivityResultLauncher: launches native GoogleSignInClient.signInIntent      |
 |    - Toggles: uploadWorkoutsToGoogleDrive, uploadBackupToGoogleDrive, wifiOnly    |
 |    - Last sync timestamp & status                                                 |
 |  [WorkoutSummary] -> ExportStatus display for GOOGLE_DRIVE                        |
 +-----------------------------------------+-----------------------------------------+
                                           |
 +-----------------------------------------v-----------------------------------------+
-| ViewModel / Application Core Layer                                                |
+| Authentication & Credential Management Layer                                      |
+|  GoogleDriveAuthManager (com.google.android.gms:play-services-auth:21.3.0):       |
+|    - getSignInOptions(): GoogleSignInOptions (drive.file scope + email)           |
+|    - getSignInClient(context): GoogleSignInClient                                 |
+|    - acquireBearerToken(context, account): GoogleAuthUtil.getToken() on IO        |
+|    - disconnect(context): signOut(), revokeAccess(), clearToken(), deleteCreds()  |
 |  TrainingApplication:                                                             |
 |    - uploadToGoogleDrive(), uploadWorkoutsToGoogleDrive(), uploadBackup...()       |
 |    - storeGoogleDriveCredential(email, token), deleteGoogleDriveCredential()      |
+|    - Defensive unlinked null-safety                                               |
++-----------------------------------------+-----------------------------------------+
+                                          |
++-----------------------------------------v-----------------------------------------+
+| ViewModel / Application Core Layer                                                |
 |  BackupRestoreViewModel: uploadToGoogleDrive(), restoreFromGoogleDrive()          |
 |  BackupWorker: parallel backup upload to Dropbox & Google Drive                   |
 +--------------------+------------------------------------+-------------------------+
@@ -63,107 +74,48 @@
 
 ## 2. Order-Dependent Construction Steps
 
-### Step 1: Localization & Plurals Parity (9 Locales) + Assets
-* **Target Files**:
-  - `app/src/main/res/values/strings.xml`
-  - `app/src/main/res/values-de/strings.xml`
-  - `app/src/main/res/values-es/strings.xml`
-  - `app/src/main/res/values-fr/strings.xml`
-  - `app/src/main/res/values-it/strings.xml`
-  - `app/src/main/res/values-ja/strings.xml`
-  - `app/src/main/res/values-nl/strings.xml`
-  - `app/src/main/res/values-pl/strings.xml`
-  - `app/src/main/res/values-pt/strings.xml`
-  - `app/src/main/res/values/ids.xml` (`drawer_google_drive`)
-  - `app/src/main/res/drawable/ic_google_drive.xml`
-* **Tokens**:
-  - `google_drive`: "Google Drive"
-  - `google_drive_connect`: "Mit Google Drive verbinden" / "Connect to Google Drive"
-  - `google_drive_disconnect`: "Trennen" / "Disconnect"
-  - `google_drive_connected_status`: "Mit Google Drive verbunden" / "Connected to Google Drive"
-  - `google_drive_disconnected_status`: "Nicht mit Google Drive verbunden" / "Not connected to Google Drive"
-  - `upload_workouts_to_google_drive`: "Workouts automatisch exportieren" / "Automatically export workouts"
-  - `upload_workouts_to_google_drive_summary`: "Lädt Aktivitäten (FIT, TCX, GPX, CSV) nach dem Speichern in Google Drive hoch" / "Uploads activities (FIT, TCX, GPX, CSV) to Google Drive after saving"
-  - `upload_backup_to_google_drive`: "Datenbank-Backup automatisch synchronisieren" / "Automatically synchronize database backup"
-  - `upload_backup_to_google_drive_summary`: "Sichert die Datenbank regelmäßig in Google Drive" / "Periodically backs up the database to Google Drive"
-  - `google_drive_only_wifi`: "Nur über WLAN hochladen" / "Upload over Wi-Fi only"
-  - `google_drive_only_wifi_summary`: "Schont das mobile Datenvolumen" / "Conserves mobile data"
-  - `google_drive_last_sync`: "Letzter Upload: %1$s" / "Last upload: %1$s"
-  - `google_drive_never_synced`: "Bisher keine Synchronisierung" / "Not synchronized yet"
-  - `restore_from_google_drive`: "Aus Google Drive wiederherstellen" / "Restore from Google Drive"
-  - `upload_to_google_drive`: "In Google Drive sichern" / "Back up to Google Drive"
-  - Plurals: `export_notification__detail__GoogleDrive_waiting`, `ongoing`, `success`, `failed`.
+### Step 1: Authentication Architecture & Token Acquisition (`GoogleDriveAuthManager.kt`)
+* **Target File**: `app/src/main/java/com/atrainingtracker/trainingtracker/cloud/googledrive/GoogleDriveAuthManager.kt`
+* **Responsibilities**:
+  - `getSignInOptions()`: Builds `GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)` with `.requestEmail()` and `.requestScopes(Scope("https://www.googleapis.com/auth/drive.file"))`.
+  - `getClient(context: Context)`: Returns `GoogleSignIn.getClient(context, getSignInOptions())`.
+  - `acquireBearerToken(context: Context, account: GoogleSignInAccount): Result<String>`:
+    - Must run on `withContext(Dispatchers.IO)`.
+    - Invokes `GoogleAuthUtil.getToken(context, account.account, "oauth2:https://www.googleapis.com/auth/drive.file")`.
+    - Handles exceptions (`UserRecoverableAuthException`, `GoogleAuthException`, `IOException`).
+    - On success, invokes `TrainingApplication.storeGoogleDriveCredential(account.email, token)` and sets `TrainingApplication.setUploadToGoogleDrive(true)`.
+  - `disconnect(context: Context)`:
+    - Invokes `client.signOut()` and `client.revokeAccess()`.
+    - Clears cached tokens via `GoogleAuthUtil.clearToken(context, token)`.
+    - Calls `TrainingApplication.deleteGoogleDriveCredential()`.
 
-### Step 2: Core Preferences & Credential Management (`TrainingApplication.java`)
-* **Target File**: `app/src/main/java/com/atrainingtracker/trainingtracker/TrainingApplication.java`
+### Step 2: Settings Dialog Refactoring (`GoogleDriveSettingsDialog.kt`)
+* **Target File**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/googledrive/GoogleDriveSettingsDialog.kt`
 * **Changes**:
-  - Add preference keys:
-    - `SP_UPLOAD_TO_GOOGLE_DRIVE = "uploadToGoogleDrive"`
-    - `SP_UPLOAD_WORKOUTS_TO_GOOGLE_DRIVE = "uploadWorkoutsToGoogleDrive"`
-    - `SP_UPLOAD_BACKUP_TO_GOOGLE_DRIVE = "uploadBackupToGoogleDrive"`
-    - `SP_GOOGLE_DRIVE_ONLY_WIFI = "googleDriveOnlyWifi"`
-    - `SP_GOOGLE_DRIVE_ACCOUNT_EMAIL = "googleDriveAccountEmail"`
-    - `SP_GOOGLE_DRIVE_AUTH_TOKEN = "googleDriveAuthToken"`
-    - `SP_GOOGLE_DRIVE_LAST_SYNC = "googleDriveLastSync"`
-    - `SP_GOOGLE_DRIVE_LAST_SYNC_STATUS = "googleDriveLastSyncStatus"`
-  - Add getters/setters with defensive null safety.
-  - Add `storeGoogleDriveCredential(String email, String token)`, `deleteGoogleDriveCredential()`.
+  - Completely eliminate the mock text-input `AlertDialog` (with `manualEmail` and `manualToken` fields).
+  - Register `rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult())`.
+  - On "Verbinden" click: launches `GoogleDriveAuthManager.getClient(context).signInIntent`.
+  - In launcher result callback:
+    - Parses task via `GoogleSignIn.getSignedInAccountFromIntent(result.data)`.
+    - Launches coroutine on `Dispatchers.IO` to execute `acquireBearerToken(...)`.
+    - Displays loading indicator during authentication and provides clear error feedback if cancelled or failed.
+  - On "Trennen" click: executes `GoogleDriveAuthManager.disconnect(context)` and updates UI state to disconnected.
 
-### Step 3: Google Drive REST Client (`GoogleDriveClient.kt`)
+### Step 3: Google Drive REST Client & Token Refresh Verification (`GoogleDriveClient.kt`)
 * **Target File**: `app/src/main/java/com/atrainingtracker/trainingtracker/cloud/googledrive/GoogleDriveClient.kt`
-* **Architecture**:
-  - Uses `OkHttpClient` with connection/read timeouts.
+* **Verification**:
   - Injects `Authorization: Bearer <token>` on all requests.
-  - Implements:
-    - `ensureFolderHierarchy(folderNames: List<String>): String?`: recursive parent-child folder resolution with ID caching.
-    - `uploadOrOverwriteFile(folderId: String, fileName: String, mimeType: String, file: File): Boolean`: multipart upload with metadata + binary content.
-    - `downloadFile(folderId: String, fileName: String, destinationFile: File): Boolean`: streams response directly to destination.
-    - `findFileId(folderId: String, fileName: String): String?`
+  - Returns `401 Unauthorized` handling: if a token expires, returns failure prompting re-authentication or token refresh.
+  - Validates folder hierarchy resolution (`aTrainingTracker/Workouts/` and `aTrainingTracker/Backups/`).
 
-### Step 4: Export Subsystem Integration
+### Step 4: Unit & Contract Tests
 * **Target Files**:
-  - `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/ExportType.java`
-    - Add `GOOGLE_DRIVE(R.string.google_drive, new FileFormat[]{FileFormat.CSV, FileFormat.GC, FileFormat.GPX, FileFormat.TCX, FileFormat.FIT})`
-  - `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/uploader/GoogleDriveUploader.kt`
-    - Subclasses `BaseExporter`
-    - Uploads target file to `aTrainingTracker/Workouts/` via `GoogleDriveClient`.
-  - `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/ExportManager.java`
-    - `getExporter`: return `new GoogleDriveUploader(context)` for `GOOGLE_DRIVE`.
-    - `newWorkout`: set status to `TRACKING` if `uploadToGoogleDrive()` and `uploadWorkoutsToGoogleDrive()`.
-    - `startFullExportProcess`: enqueue Google Drive work request.
-    - `createWorkRequest`: configure `NetworkType.UNMETERED` if `uploadToGoogleDriveOnlyOnWifi()`.
-  - `app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/export/ExportStatusDataProvider.kt`
-    - Handle `ExportType.GOOGLE_DRIVE` in `getPluralIdsFor` mapping to `R.plurals.export_notification__detail__GoogleDrive_*`.
-  - `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt`
-    - Include `ExportType.GOOGLE_DRIVE` in `orderedExportTypes`.
-
-### Step 5: Database Backup & Restore Integration
-* **Target Files**:
-  - `app/src/main/java/com/atrainingtracker/trainingtracker/migration/GoogleDriveBackupManager.kt`
-    - `uploadBackup(context: Context, backupFile: File): Boolean`
-    - `downloadBackup(context: Context, destinationFile: File): Boolean`
-    - Target: `aTrainingTracker/Backups/aTrainingTracker_backup.attbackup`
-  - `app/src/main/java/com/atrainingtracker/trainingtracker/migration/BackupWorker.kt`
-    - Evaluate both Dropbox and Google Drive connections independently:
-      - If `automated_backups` and (`dropboxConnected || googleDriveConnected`), create `.attbackup`.
-      - Upload to Dropbox if connected; upload to Google Drive if connected.
-      - Neither blocks the other.
-  - `app/src/main/java/com/atrainingtracker/trainingtracker/migration/BackupRestoreViewModel.kt`
-    - Add `uploadToGoogleDrive(context: Context)`
-    - Add `restoreFromGoogleDrive(context: Context)`
-
-### Step 6: UI & Navigation Integration
-* **Target Files**:
-  - `app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/googledrive/GoogleDriveConnectionHeader.kt`
-  - `app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/googledrive/GoogleDriveSettingsDialog.kt`
-  - `app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/googledrive/GoogleDriveSettingsDialogFragment.kt`
-  - `app/src/main/java/com/atrainingtracker/trainingtracker/ui/navigation/NavRoutes.kt`
-  - `app/src/main/java/com/atrainingtracker/trainingtracker/ui/navigation/AppNavigationDrawer.kt`
-  - `app/src/main/java/com/atrainingtracker/trainingtracker/ui/navigation/ATrainingTrackerApp.kt`
-
-### Step 7: Unit Testing & CI Verification
-* **Target Files**:
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/cloud/googledrive/GoogleDriveAuthManagerTest.kt` (New)
+    - Verifies `GoogleSignInOptions` scope and email configuration.
+    - Verifies disconnect logic calls `deleteGoogleDriveCredential()`.
   - `app/src/test/java/com/atrainingtracker/trainingtracker/cloud/googledrive/GoogleDriveAuthSafetyTest.kt`
+    - Verifies unlinked null safety.
+    - Verifies preferences storage and wiping.
   - `app/src/test/java/com/atrainingtracker/trainingtracker/cloud/googledrive/GoogleDriveClientTest.kt`
   - `app/src/test/java/com/atrainingtracker/trainingtracker/exporter/uploader/GoogleDriveUploaderTest.kt`
   - `app/src/test/java/com/atrainingtracker/trainingtracker/migration/GoogleDriveBackupManagerTest.kt`
@@ -171,14 +123,23 @@
   - `app/src/test/java/com/atrainingtracker/trainingtracker/migration/BackupWorkerGoogleDriveTest.kt`
   - `app/src/test/java/com/atrainingtracker/trainingtracker/ui/components/core/ModalBottomSheetDialogsIntegrityTest.kt`
   - `app/src/test/java/com/atrainingtracker/trainingtracker/ui/translations/TranslationParityTest.kt`
-* **Full CI Command**: `./gradlew testDebugUnitTest`
+
+### Step 5: Full Suite Clean-Room Regression
+* **Command**: `./gradlew testDebugUnitTest`
+* **Target**: 100% pass rate, 0 failures, 0 regressions.
 
 ---
 
 ## 3. Invariants & Guardrails
 
-1. **Scope Bounding**: Only `https://www.googleapis.com/auth/drive.file` scope is used. The app never accesses user documents, photos, or other folders outside `aTrainingTracker/`.
-2. **Independent Provider Coexistence**: Dropbox and Google Drive must operate independently without shared failures or mutual blocking.
-3. **Data Integrity**: Database backups maintain 100% format compatibility with `.attbackup`.
-4. **Clean Code & Line Limit**: All newly authored UI files stay well under 400 lines of code.
-5. **Human Decision Gate**: The parent ticket `ATT-1306` must only transition to `Final Review (Human)` upon Stage 5 completion.
+1. **Mandatory Programmatic Pre-Check (Rule 3)**:
+   - Before modifying any source files in `app/src/main/...`, verify:
+     `python3 tools/jira_util.py check-gate ATT-2408` exits with code 0 (`GATE_PASSED`).
+2. **Scope Bounding**:
+   - Only `https://www.googleapis.com/auth/drive.file` scope is requested. The app never accesses user documents, photos, or other folders outside `aTrainingTracker/`.
+3. **Zero Developer Mock Dialogs**:
+   - Manual text fields for email or auth tokens are strictly banned. Credentials are only persisted when verified by Google Play Services.
+4. **Independent Provider Coexistence**:
+   - Dropbox and Google Drive operate independently without shared failures or mutual blocking.
+5. **Human Decision Gate (Rule 1)**:
+   - Parent ticket `ATT-1306` must only transition to `Final Review (Human)`.

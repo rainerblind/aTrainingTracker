@@ -83,12 +83,14 @@ import androidx.lifecycle.ViewModelProvider
 import com.atrainingtracker.banalservice.ui.sporttype.SportTypeListFragment
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelper
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface
 import com.atrainingtracker.trainingtracker.migration.BackupRestoreFragment
+import com.atrainingtracker.trainingtracker.notifications.SensorBatteryNotificationManager
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
@@ -98,6 +100,9 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsFragm
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersFragment
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModel
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
@@ -154,6 +159,8 @@ class MainActivityWithNavigation :
         @JvmField
         val EXTRA_RESUME_INTERRUPTED_WORKOUT = "com.atrainingtracker.EXTRA_RESUME_INTERRUPTED_WORKOUT"
 
+        const val EXTRA_DRAWER_ITEM_ID = "com.atrainingtracker.EXTRA_DRAWER_ITEM_ID"
+
         private val DEBUG: Boolean
             get() = TrainingApplication.getDebug(true)
 
@@ -162,12 +169,13 @@ class MainActivityWithNavigation :
         private const val REQUEST_INSTALL_GOOGLE_PLAY_SERVICE = 2
         private const val MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1
         private const val WAITING_TIME_BEFORE_DISCONNECTING = 5L * 60 * 1000 // 5 min
-        private const val CRITICAL_BATTERY_LEVEL = 30
+        const val CRITICAL_BATTERY_LEVEL = 20
     }
 
     enum class SelectedFragment {
         START_OR_TRACKING,
-        WORKOUT_LIST
+        WORKOUT_LIST,
+        SENSORS
     }
 
     protected lateinit var mTrainingApplication: TrainingApplication
@@ -199,7 +207,6 @@ class MainActivityWithNavigation :
     internal val mStopTrackingReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             mDrawerController.startTrackingTitleRes = R.string.Start
-            checkBatteryStatus()
         }
     }
 
@@ -207,6 +214,8 @@ class MainActivityWithNavigation :
         override fun onReceive(context: Context?, intent: Intent?) {
             mSelectedFragmentId = R.id.drawer_workouts
             navigateToDrawerItem(mSelectedFragmentId)
+            val workoutId = intent?.getLongExtra(TrackerService.WORKOUT_ID, -1L) ?: -1L
+            checkSensorBatteryAfterWorkout(workoutId)
         }
     }
 
@@ -289,6 +298,12 @@ class MainActivityWithNavigation :
             mSelectedFragmentId = R.id.drawer_start_tracking
             navigateToDrawerItem(mSelectedFragmentId)
             chooseResume()
+        } else if (intent.hasExtra(EXTRA_DRAWER_ITEM_ID)) {
+            val drawerItemId = intent.getIntExtra(EXTRA_DRAWER_ITEM_ID, -1)
+            if (drawerItemId != -1) {
+                mSelectedFragmentId = drawerItemId
+                navigateToDrawerItem(mSelectedFragmentId)
+            }
         } else if (intent.hasExtra(SELECTED_FRAGMENT)) {
             try {
                 val selectedName = intent.getStringExtra(SELECTED_FRAGMENT)
@@ -299,6 +314,9 @@ class MainActivityWithNavigation :
                         navigateToDrawerItem(mSelectedFragmentId)
                     } else if (selected == SelectedFragment.START_OR_TRACKING) {
                         mSelectedFragmentId = R.id.drawer_start_tracking
+                        navigateToDrawerItem(mSelectedFragmentId)
+                    } else if (selected == SelectedFragment.SENSORS) {
+                        mSelectedFragmentId = R.id.drawer_my_sensors
                         navigateToDrawerItem(mSelectedFragmentId)
                     }
                 }
@@ -869,30 +887,52 @@ class MainActivityWithNavigation :
         navigateToDrawerItem(R.id.drawer_my_sensors)
     }
 
+    @Deprecated("Replaced by non-blocking checkSensorBatteryAfterWorkout (ATT-2192)")
     protected fun checkBatteryStatus() {
-        val criticalBatteryDevices = DevicesDatabaseManager.getInstance(applicationContext).getCriticalBatteryDevices(CRITICAL_BATTERY_LEVEL)
-        if (criticalBatteryDevices.isNotEmpty()) {
-            val stringList = LinkedList<String>()
-            for (device in criticalBatteryDevices) {
-                stringList.add(
-                    getString(
-                        R.string.critical_battery_message_format,
-                        device.name,
-                        getString(BatteryStatusHelper.getBatteryStatusNameId(device.batteryPercentage))
-                    )
-                )
-            }
+        checkSensorBatteryAfterWorkout(-1L)
+    }
 
-            val builder = AlertDialog.Builder(this)
-            builder.setTitle(if (criticalBatteryDevices.size == 1) R.string.check_battery_status_title_1 else R.string.check_battery_status_title_many)
-            builder.setItems(stringList.toTypedArray()) { _, which ->
-                val deviceId = criticalBatteryDevices[which].deviceId
-                val devicesDatabaseManager = DevicesDatabaseManager.getInstance(applicationContext)
-                val deviceType = devicesDatabaseManager.getDeviceType(deviceId)
-                val editDeviceDialogFragment = EditDeviceFragmentFactory.create(deviceId, deviceType)
-                editDeviceDialogFragment.show(supportFragmentManager, "EditDeviceDialogFragment")
+    internal fun checkSensorBatteryAfterWorkout(workoutId: Long) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val activeDeviceIds = if (workoutId > 0) {
+                    ActiveDevicesDbHelper(applicationContext).getDatabaseIdsOfActiveDevices(workoutId)
+                } else {
+                    emptyList()
+                }
+
+                val devDbManager = DevicesDatabaseManager.getInstance(applicationContext)
+                val allCritical = devDbManager.getCriticalBatteryDevices(CRITICAL_BATTERY_LEVEL)
+                val criticalDevices = if (activeDeviceIds.isNotEmpty()) {
+                    allCritical.filter { activeDeviceIds.contains(it.deviceId) }
+                } else if (workoutId <= 0) {
+                    allCritical
+                } else {
+                    emptyList()
+                }
+
+                if (criticalDevices.isNotEmpty()) {
+                    // 1. Post Android System Notification
+                    SensorBatteryNotificationManager(applicationContext).showLowBatteryNotification(criticalDevices)
+
+                    // 2. Emit In-App Material 3 Snackbar Alert
+                    val message = if (criticalDevices.size == 1) {
+                        val dev = criticalDevices[0]
+                        getString(R.string.sensor_battery_snackbar_single, dev.name, dev.batteryPercentage)
+                    } else {
+                        val names = criticalDevices.joinToString(", ") { "${it.name} (${it.batteryPercentage}%)" }
+                        getString(R.string.sensor_battery_snackbar_many, criticalDevices.size, names)
+                    }
+                    WorkoutNavigationEvents.triggerLowBatteryAlert(
+                        WorkoutNavigationEvents.LowBatteryAlert(
+                            message = message,
+                            deviceNames = criticalDevices.map { it.name }
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error checking sensor battery after workout: ${e.message}", e)
             }
-            builder.create().show()
         }
     }
 

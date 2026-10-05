@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -60,6 +61,45 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import java.util.Locale
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
+
+/**
+ * Modal Bottom Sheet presenting the Quick Route Selector (REQ-MAP-024 / ATT-1835).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RouteSelectorModalBottomSheet(
+    viewModel: RouteSelectorViewModel,
+    onDismiss: () -> Unit,
+    onRouteSelected: (Long) -> Unit = {},
+    onTakeMeHome: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = BottomSheetDesign.SheetShape,
+        containerColor = MaterialTheme.colorScheme.surface,
+        modifier = modifier
+    ) {
+        RouteSelectorContent(
+            viewModel = viewModel,
+            onTakeMeHome = {
+                onTakeMeHome()
+                onDismiss()
+            },
+            onRouteSelected = { routeId ->
+                onRouteSelected(routeId)
+                onDismiss()
+            }
+        )
+    }
+}
+
 /**
  * Bottom Sheet content for Quick Route Selector and Route Auto Detection (REQ-MAP-024 / ATT-1835).
  */
@@ -67,6 +107,7 @@ import java.util.Locale
 fun RouteSelectorContent(
     viewModel: RouteSelectorViewModel,
     onRouteSelected: (Long) -> Unit,
+    onTakeMeHome: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -83,6 +124,48 @@ fun RouteSelectorContent(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 8.dp)
         )
+
+        // "Take Me Home" ("Heimweg") 1-Tap Card (REQ-MAP-029 / ATT-1953)
+        Card(
+            onClick = onTakeMeHome,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer
+            ),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_nav_home),
+                    contentDescription = stringResource(id = R.string.take_me_home_title),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(id = R.string.take_me_home_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        text = stringResource(id = R.string.take_me_home_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
 
         // Active Route Banner
         AnimatedVisibility(visible = uiState.activeRoute != null) {

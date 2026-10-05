@@ -241,11 +241,18 @@ class EquipmentDbLinkContractTest {
     fun testGetAllRemoteSensors_queriesWithExpectedSelectionAndSortOrder() {
         val mockCursor = mockk<Cursor>(relaxed = true)
         every { mockCursor.getColumnIndex(any()) } answers {
-            if (firstArg<String>() == "_id") 0 else 1
+            when (firstArg<String>()) {
+                "_id" -> 0
+                "name" -> 1
+                "type" -> 2
+                else -> -1
+            }
         }
+        every { mockCursor.isNull(any()) } returns false
         every { mockCursor.moveToNext() } returnsMany listOf(true, true, false)
         every { mockCursor.getLong(0) } returnsMany listOf(1L, 2L)
         every { mockCursor.getString(1) } returnsMany listOf("Garmin HRM-Pro", "Wahoo KICKR")
+        every { mockCursor.getString(2) } returnsMany listOf("HRM", "BIKE_POWER")
 
         val selectionSlot = slot<String>()
         val sortSlot = slot<String>()

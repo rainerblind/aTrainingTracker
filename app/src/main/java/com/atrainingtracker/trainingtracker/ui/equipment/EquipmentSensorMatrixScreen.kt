@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.SimpleSensorInfo
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
 import com.atrainingtracker.trainingtracker.ui.components.FastScrollableBox
@@ -60,13 +61,13 @@ internal val HEADER_ROW_HEIGHT = 60.dp
 
 /**
  * Screen providing a centralized, interactive equipment-to-sensor mapping matrix with checkboxes
- * for bikes and shoes (REQ-UI-256, TST-UI-215, ATT-2126).
+ * for bikes and shoes, partitioned into sport-specific tables (REQ-UI-256, TST-UI-230, ATT-2126, ATT-2382).
  *
  * Features:
+ * - Table 1 (Bikes): Displays bikes and bike-compatible/shared sensors with independent horizontal scroll.
+ * - Table 2 (Shoes): Displays shoes and run-compatible/shared sensors with independent horizontal scroll.
  * - Sticky left column showing equipment icon, name, and retirement status during horizontal scroll.
- * - Sticky top header row showing paired sensor names during vertical scroll.
- * - Horizontal synchronization across sensor column cells and headers.
- * - Categorization into Bikes and Shoes sections.
+ * - Independent horizontal scroll states ensuring scrolling bikes never affects shoes.
  * - Responsive 1-tap Material 3 Checkbox persistence.
  */
 @OptIn(ExperimentalFoundationApi::class)
@@ -74,17 +75,35 @@ internal val HEADER_ROW_HEIGHT = 60.dp
 fun EquipmentSensorMatrixScreen(
     bikes: List<EquipmentItem>,
     shoes: List<EquipmentItem>,
-    sensors: List<SimpleSensorInfo>,
+    bikeSensors: List<SimpleSensorInfo> = emptyList(),
+    shoeSensors: List<SimpleSensorInfo> = emptyList(),
+    sensors: List<SimpleSensorInfo> = emptyList(),
     onToggleLink: (equipmentId: Long, sensorId: Long, isLinked: Boolean) -> Unit,
     appBarOffsetPx: Int,
     headerHeightPx: Float,
     modifier: Modifier = Modifier,
     scrollState: LazyListState = rememberLazyListState()
 ) {
+    val effectiveBikeSensors = if (bikeSensors.isNotEmpty()) {
+        bikeSensors
+    } else {
+        sensors.filter {
+            DevicesDatabaseManager.isBikeSensor(it.deviceType) || DevicesDatabaseManager.isSharedSensor(it.deviceType)
+        }
+    }
+
+    val effectiveShoeSensors = if (shoeSensors.isNotEmpty()) {
+        shoeSensors
+    } else {
+        sensors.filter {
+            DevicesDatabaseManager.isRunSensor(it.deviceType) || DevicesDatabaseManager.isSharedSensor(it.deviceType)
+        }
+    }
+
     val density = LocalDensity.current
     val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
 
-    if (sensors.isEmpty()) {
+    if (effectiveBikeSensors.isEmpty() && effectiveShoeSensors.isEmpty() && sensors.isEmpty()) {
         EmptyStatePlaceholder(
             modifier = modifier.padding(top = topPadding + 16.dp),
             iconRes = R.drawable.ic_equipment_bike,
@@ -103,7 +122,8 @@ fun EquipmentSensorMatrixScreen(
     }
 
     val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
-    val horizontalScrollState = rememberScrollState()
+    val bikeScrollState = rememberScrollState()
+    val shoeScrollState = rememberScrollState()
 
     FastScrollableBox(
         state = scrollState,
@@ -121,84 +141,6 @@ fun EquipmentSensorMatrixScreen(
                 end = 0.dp
             )
         ) {
-            // STICKY HEADER: Top sensor names row
-            stickyHeader(key = "matrix_sensor_header") {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    shadowElevation = 2.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(HEADER_ROW_HEIGHT),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Top-left corner cell (sticky)
-                        Box(
-                            modifier = Modifier
-                                .width(STICKY_COLUMN_WIDTH)
-                                .fillMaxHeight()
-                                .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                                .padding(horizontal = 12.dp),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            Text(
-                                text = stringResource(R.string.Equipment),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        // Vertical separator
-                        Box(
-                            modifier = Modifier
-                                .width(1.dp)
-                                .fillMaxHeight()
-                                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
-                        )
-
-                        // Horizontally scrollable sensor name headers
-                        Row(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .horizontalScroll(horizontalScrollState),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            sensors.forEach { sensor ->
-                                Box(
-                                    modifier = Modifier
-                                        .width(SENSOR_COLUMN_WIDTH)
-                                        .fillMaxHeight(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = sensor.name,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Medium,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
-                                    )
-                                    // Subtle vertical guide aligned to column edge
-                                    Box(
-                                        modifier = Modifier
-                                            .width(1.dp)
-                                            .fillMaxHeight()
-                                            .align(Alignment.CenterEnd)
-                                            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
             // BIKES SECTION
             if (bikes.isNotEmpty()) {
                 item(key = "section_header_bikes") {
@@ -209,12 +151,21 @@ fun EquipmentSensorMatrixScreen(
                     )
                 }
 
+                stickyHeader(key = "table_header_bikes") {
+                    MatrixTableHeaderRow(
+                        title = stringResource(R.string.Equipment),
+                        sensors = effectiveBikeSensors,
+                        horizontalScrollState = bikeScrollState,
+                        emptySensorsMessage = stringResource(R.string.equipment_matrix_no_bike_sensors)
+                    )
+                }
+
                 items(bikes, key = { "bike_${it.id}" }) { bike ->
                     MatrixEquipmentRow(
                         item = bike,
                         isBike = true,
-                        sensors = sensors,
-                        horizontalScrollState = horizontalScrollState,
+                        sensors = effectiveBikeSensors,
+                        horizontalScrollState = bikeScrollState,
                         onToggleLink = onToggleLink
                     )
                     HorizontalDivider(
@@ -234,18 +185,126 @@ fun EquipmentSensorMatrixScreen(
                     )
                 }
 
+                stickyHeader(key = "table_header_shoes") {
+                    MatrixTableHeaderRow(
+                        title = stringResource(R.string.Equipment),
+                        sensors = effectiveShoeSensors,
+                        horizontalScrollState = shoeScrollState,
+                        emptySensorsMessage = stringResource(R.string.equipment_matrix_no_shoe_sensors)
+                    )
+                }
+
                 items(shoes, key = { "shoe_${it.id}" }) { shoe ->
                     MatrixEquipmentRow(
                         item = shoe,
                         isBike = false,
-                        sensors = sensors,
-                        horizontalScrollState = horizontalScrollState,
+                        sensors = effectiveShoeSensors,
+                        horizontalScrollState = shoeScrollState,
                         onToggleLink = onToggleLink
                     )
                     HorizontalDivider(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
                         thickness = 0.5.dp
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MatrixTableHeaderRow(
+    title: String,
+    sensors: List<SimpleSensorInfo>,
+    horizontalScrollState: androidx.compose.foundation.ScrollState,
+    emptySensorsMessage: String? = null
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        shadowElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(HEADER_ROW_HEIGHT),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Top-left corner cell (sticky)
+            Box(
+                modifier = Modifier
+                    .width(STICKY_COLUMN_WIDTH)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                    .padding(horizontal = 12.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Vertical separator
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+            )
+
+            if (sensors.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Text(
+                        text = emptySensorsMessage ?: "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
+            } else {
+                // Horizontally scrollable sensor name headers
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .horizontalScroll(horizontalScrollState),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    sensors.forEach { sensor ->
+                        Box(
+                            modifier = Modifier
+                                .width(SENSOR_COLUMN_WIDTH)
+                                .fillMaxHeight(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = sensor.name,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Medium,
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
+                            )
+                            // Subtle vertical guide aligned to column edge
+                            Box(
+                                modifier = Modifier
+                                    .width(1.dp)
+                                    .fillMaxHeight()
+                                    .align(Alignment.CenterEnd)
+                                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                            )
+                        }
+                    }
                 }
             }
         }

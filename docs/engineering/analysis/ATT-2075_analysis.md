@@ -1,190 +1,145 @@
-# Stage 1 Analysis: ATT-2075 - Modernize Permission Flow: Contextual Just-in-Time Prompts & Graceful Settings Return Handling (Rework Cycle)
+# Stage 1 Analysis: ATT-2075 - Modernize Permission Flow: Contextual Just-in-Time Prompts & Graceful Settings Return Handling (Rework Cycle 2: Direct Platform Intents)
 
 **Ticket**: [ATT-2075](https://rainerblind.atlassian.net/browse/ATT-2075)  
-**Sub-task**: [ATT-2377](https://rainerblind.atlassian.net/browse/ATT-2377) (`[Analysis]`)  
+**Sub-task**: [ATT-2390](https://rainerblind.atlassian.net/browse/ATT-2390) (`[Analysis]`)  
 **Parent Epic**: [ATT-355](https://rainerblind.atlassian.net/browse/ATT-355) (*Good and consistent UI*)  
 **Target Release**: `V4.9.40` (per ASPICE Rule 19: Lösungsversion added upon final acceptance)  
-**Active Sprint**: `2026-40.15`  
+**Active Sprint**: `2026-40.16`  
 **Branch**: `feature/ATT-2075`  
 **Author**: AI Agent 1 (Implementer)  
 **Date**: 2026-10-04  
 
 ---
 
-## 1. Problem Statement & Sprint Review Defect Analysis
+## 1. Problem Statement & Motivation
 
-During Sprint Review testing on a physical test device (Google Pixel 10 running Android 16), two critical functional defects were identified in the modernized Just-in-Time (JIT) permission flow:
+During the Sprint 2026-40.15 Review of [ATT-2075](https://rainerblind.atlassian.net/browse/ATT-2075) on a physical Google Pixel 10 (Android 16), the human user rejected the implementation with the following feedback:
+> *"In der vorherigen Version wurde ich auf die jeweiligen Einstellungen gestoßen. Jetzt werde ich nur noch zu der Einstellung der App navigiert und muss mich dann dort irgendwie durcklickern. Das ist so n.i.O. (Spezifische Direkt-Intents zu Berechtigungs- und Akku-Optimierungs-Einstellungen wiederherstellen statt allgemeiner App-Details-Einstellungen)."*
 
-1. **Defect 1: Missing Background Location ("Allow all the time" / "Immer zulassen") Navigation**:
-   * For reliable workout tracking while the athlete's phone is stowed in a cycling jersey pocket or running belt with the screen locked, Android strictly mandates `ACCESS_BACKGROUND_LOCATION`.
-   * In the previous iteration of `ControlTrackingScreen.kt`, the launcher only requested foreground location (`ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`), Bluetooth, and Notification permissions.
-   * Upon foreground grant, `ControlTrackingScreen` immediately invoked `onStart()`, completely bypassing background location request. As a result, athletes were never prompted or guided to select "Allow all the time" in Android settings.
-2. **Defect 2: Missing Battery Optimization Exemption Prompt**:
-   * Android power management aggressively terminates background foreground services (`TrackerService`) during extended rides or runs if the app is subjected to standard battery optimization.
-   * `MainActivityWithNavigation.kt` historically defined `checkBatteryOptimizations()`, but this was removed from `onCreate()` to eliminate cold-start popups and was never migrated into the JIT tracking initiation flow.
-   * The athlete was never prompted to grant the "Unrestricted" / "Nicht eingeschränkt" battery exemption (`Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`).
+In response, the retrospective codified **Rule 21 (Specific Direct Platform Intents Over Generic App Settings)** in `aspice_governance.md`:
+> *"User prompts for system permissions, battery optimization, or hardware settings must target the most specific direct intent (e.g. direct system permission request, `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`). Navigating to generic Application Details Settings (`ACTION_APPLICATION_DETAILS_SETTINGS`) is only permissible as a last-resort fallback when direct intents are unavailable or permissions permanently blocked."*
+
+The objective of this Stage 1 analysis is to perform forensic root-cause analysis on why the user was routed to generic App Details Settings, identify all offending codepaths in `ControlTrackingScreen.kt` and `PermissionRationaleSheet.kt`, and design targeted direct platform intent dispatches.
 
 ---
 
-## 2. Technical Forensic Root Cause Analysis & Platform Fragmentation
+## 2. Root Cause Analysis (Forensic Investigation)
 
-### 2.1 Investigation of `ControlTrackingScreen.kt`
-In `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/ControlTrackingScreen.kt`:
+### 2.1 Coupling of `isPermanentlyDenied` across Progressive Setup Steps
+In `ControlTrackingScreen.kt`:
 ```kotlin
-val permissionLauncher = rememberLauncherForActivityResult(
-    ActivityResultContracts.RequestMultiplePermissions()
-) { results ->
-    val fineGranted = results[Manifest.permission.ACCESS_FINE_LOCATION] == true
-    val coarseGranted = results[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-    val granted = fineGranted || coarseGranted
-    hasLocationPermission = granted
-    showRationaleSheet = false
-    if (granted) {
-        onStart() // Immediate start without background location or battery exemption!
-    }
+val isPermanentlyDenied = if (activity != null) {
+    if (isForegroundMissing) {
+        val missingPerms = mutableListOf<String>()
+        if (!(hasFine || hasCoarse)) missingPerms.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (!hasBtScan) missingPerms.add(Manifest.permission.BLUETOOTH_SCAN)
+            if (!hasBtConnect) missingPerms.add(Manifest.permission.BLUETOOTH_CONNECT)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasPostNotifications) {
+            missingPerms.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        missingPerms.any { perm ->
+            !ActivityCompat.shouldShowRequestPermissionRationale(activity, perm) &&
+                ContextCompat.checkSelfPermission(context, perm) != PackageManager.PERMISSION_GRANTED
+        }
+    } else false
+} else false
+```
+And in `PermissionRationaleSheet.kt`:
+```kotlin
+Button(
+    onClick = if (isPermanentlyDenied) onOpenSettings else onContinue,
+    modifier = Modifier.weight(1f),
+    shape = RoundedCornerShape(12.dp)
+) {
+    Text(
+        text = if (isPermanentlyDenied) {
+            stringResource(id = R.string.permission_rationale_open_settings)
+        } else {
+            stringResource(id = R.string.permission_rationale_continue)
+        }
+    )
 }
 ```
 
-### 2.2 Android Version Fragmentation & Escalation Constraints
-1. **Pre-Android 10 (API < 29)**:
-   * Background location does not exist as a separate permission; `ACCESS_FINE_LOCATION` covers background service recording.
-2. **Android 10 (Q, API 29)**:
-   * `ACCESS_BACKGROUND_LOCATION` was introduced. On API 29, it could theoretically be requested with foreground location, but Google guidelines strongly encourage separate, contextual escalation.
-3. **Android 11+ (R, API 30+)**:
-   * **Strict Two-Step Cascade Mandate**: Requesting `ACCESS_BACKGROUND_LOCATION` simultaneously with foreground location (`ACCESS_FINE_LOCATION`) is strictly prohibited by Android OS. The system will silently ignore or immediately reject the background request without showing any UI to the user.
-   * **Escalation Precondition**: Foreground location MUST be granted first. Only after foreground location is actively held can `ACCESS_BACKGROUND_LOCATION` be requested via a separate launcher or settings intent.
-   * On Android 11+, requesting `ACCESS_BACKGROUND_LOCATION` opens the system permission page where the user must select "Allow all the time". If the user denies or dismisses it, subsequent attempts must redirect gracefully to Application Details Settings.
-4. **Android 13+ (Tiramisu, API 33+)**:
-   * `POST_NOTIFICATIONS` is requested during Stage A (Foreground) so that `TrackerService`'s ongoing foreground notification is visible.
+This produced two critical flaws:
+1. **Flaw A (Premature Permanent Denial)**: On fresh installations or unrequested permissions, `shouldShowRequestPermissionRationale()` returns `false` by Android platform design. Computing `!shouldShowRequestPermissionRationale && !isGranted` evaluated to `true`, incorrectly flagging fresh permissions as "permanently denied" and hijacking the button to `onOpenSettings` (`ACTION_APPLICATION_DETAILS_SETTINGS`) instead of triggering system prompts (`onContinue`).
+2. **Flaw B (Global State Bleeding into Step 2 and Step 3)**:
+   - When transitioning to `RationaleStep.BACKGROUND_LOCATION` or `RationaleStep.BATTERY_OPTIMIZATION`, the single boolean `isPermanentlyDenied` was still active.
+   - For `BATTERY_OPTIMIZATION`: Battery optimization is **never** a runtime permission and has no permanent denial state in the Android framework. Passing `isPermanentlyDenied = true` caused the primary button to call `openSettingsAction` (`Settings.ACTION_APPLICATION_DETAILS_SETTINGS`), completely bypassing `launchBatteryOptimizationIntent`!
 
-### 2.3 OEM Battery Optimization Intent Safety & Exception Wrapping
-* **OEM ROM Quirks (MIUI, EMUI, OneUI, ColorOS)**:
-  * Calling `Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` with `data = Uri.parse("package:$packageName")` can throw `ActivityNotFoundException` or `SecurityException` on certain OEM vendor ROMs where the standard Google Intent is stripped or restricted.
-  * **Architectural Mitigation (Fail-Safe Intent Cascading)**:
-    ```kotlin
-    try {
-        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-            data = Uri.parse("package:${context.packageName}")
-        }
-        context.startActivity(intent)
-    } catch (e: Exception) {
-        try {
-            val fallbackIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-            context.startActivity(fallbackIntent)
-        } catch (e2: Exception) {
-            val appDetailsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                data = Uri.fromParts("package", context.packageName, null)
-            }
-            context.startActivity(appDetailsIntent)
-        }
-    }
-    ```
-  * This guarantees 100% crash immunity across all device manufacturers (*dontkillmyapp.com* compliance).
+### 2.2 Background Location Direct Platform Intent on Android 11+
+* Under Android 11+ (API 30+), launching `bgLocationLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)` causes the Android OS to show its dedicated, direct system prompt with choices ("While using the app", "Keep while using", "Change in settings").
+* Tapping "Change in settings" in the OS dialog navigates the user **directly to the Location Permissions sub-screen** with the radio buttons ("Allow all the time", "Allow only while using the app", "Don't allow").
+* In the previous implementation, if `isPermanentlyDenied` was true, the app bypassed `bgLocationLauncher.launch` and dumped the athlete on the top-level Application Details page (`ACTION_APPLICATION_DETAILS_SETTINGS`), forcing the athlete to navigate through multiple nested menus ("Berechtigungen" -> "Standort" -> "Immer zulassen").
+
+### 2.3 Battery Optimization Direct Platform Intent
+* The historical implementation in `MainActivityWithNavigation.kt` directly invoked:
+  ```kotlin
+  Intent().apply {
+      action = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+      data = Uri.parse("package:$packageName")
+  }
+  ```
+  This immediately opens the native, focused system dialog:
+  *"Akkuoptimierung ignorieren? Möchtest du, dass die App im Hintergrund ausgeführt wird? [Zulassen] [Abbrechen]"*.
+* The direct intent was obscured because the bottom sheet was delegating to `onOpenSettings` instead of dispatching `launchBatteryOptimizationIntent`.
 
 ---
 
-## 3. Progressive 3-Stage Just-in-Time Architecture
+## 3. User Scope Grounding (ATT-1250)
 
-The state machine executes progressively when the athlete taps **Start Tracking** (`handleStartClick`):
+* **In-Scope Goals**:
+  1. Restore direct platform intent invocation for Battery Optimization (`ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`).
+  2. Restore direct platform permission dispatch for Background Location (`ACCESS_BACKGROUND_LOCATION` via `bgLocationLauncher`) without premature routing to `ACTION_APPLICATION_DETAILS_SETTINGS`.
+  3. Decouple `isPermanentlyDenied` so each rationale step independently evaluates its own permission state.
+  4. Ensure `ACTION_APPLICATION_DETAILS_SETTINGS` is strictly retained only as an exceptional fallback for truly permanently denied foreground permissions or restricted OEM ROMs (complying with Rule 21).
+  5. Update and pass all contract and unit tests.
 
-```
-+-----------------------------------------------------------------------------------+
-| Athlete taps Start Tracking (ControlTrackingButton)                               |
-+-----------------------------------------------------------------------------------+
-                                         |
-                                         v
-+-----------------------------------------------------------------------------------+
-| Stage A: Foreground Permissions Check                                             |
-|   - ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION                                  |
-|   - BLUETOOTH_CONNECT, BLUETOOTH_SCAN (API 31+)                                   |
-|   - POST_NOTIFICATIONS (API 33+)                                                  |
-|   If missing -> Show PermissionRationaleSheet(Type.FOREGROUND)                    |
-|                 -> Launch Foreground Permission Request                           |
-+-----------------------------------------------------------------------------------+
-                                         | (Granted)
-                                         v
-+-----------------------------------------------------------------------------------+
-| Stage B: Background Location Check (API 29+)                                      |
-|   - ContextCompat.checkSelfPermission(ACCESS_BACKGROUND_LOCATION)                    |
-|   If missing -> Show PermissionRationaleSheet(Type.BACKGROUND_LOCATION)           |
-|                 Explains athletic necessity of "Allow all the time"               |
-|                 -> If API 30+: Launch dedicated background permission contract    |
-|                    or direct to Settings if permanently denied                    |
-+-----------------------------------------------------------------------------------+
-                                         | (Granted or Acknowledged/Skipped)
-                                         v
-+-----------------------------------------------------------------------------------+
-| Stage C: Battery Optimization Exemption Check                                     |
-|   - PowerManager.isIgnoringBatteryOptimizations(packageName)                      |
-|   If false -> Show PermissionRationaleSheet(Type.BATTERY_OPTIMIZATION)            |
-|               Explains prevention of OS service kills in jersey pocket            |
-|               -> Launch ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS with fail-safe|
-+-----------------------------------------------------------------------------------+
-                                         | (Complete or Acknowledged/Skipped)
-                                         v
-+-----------------------------------------------------------------------------------+
-| Stage D: onStart() -> TrackerService Begins Active Recording                      |
-+-----------------------------------------------------------------------------------+
-```
+* **Out-of-Scope Non-Goals (Scope Bounding)**:
+  - Do not re-introduce cold-start modal dialogs in `MainActivityWithNavigation.onCreate()` (violates AC-1 and zero-friction start).
+  - Do not alter the 3-step progressive sequence (`FOREGROUND` -> `BACKGROUND_LOCATION` -> `BATTERY_OPTIMIZATION` -> `onStart()`).
+  - Do not alter `TrackerService` foreground service lifecycle or battery saver wake-up hooks.
 
 ---
 
-## 4. Lifecycle Synchronization & Deterministic State Management
+## 4. Requirement Archaeology & Chesterton's Fence Audit
 
-### 4.1 Reactive `onResume()` State Polling
-* In `ControlTrackingScreen.kt`, a `DisposableEffect(lifecycleOwner)` registers a `LifecycleEventObserver`.
-* On `Lifecycle.Event.ON_RESUME`:
-  1. Re-evaluates foreground location permission: `checkHasLocation()`.
-  2. Re-evaluates background location permission: `checkHasBackgroundLocation()`.
-  3. Re-evaluates battery optimization status: `checkIsIgnoringBatteryOptimizations()`.
-  4. Dynamically updates UI warning badges on `ControlTrackingButton` (amber warning badge displayed if foreground or background location is missing).
-  5. Clears stale rationale states if the athlete returned from system settings having granted permissions.
-
-### 4.2 Configuration Change Resilience
-* All step states (`RationaleStep.FOREGROUND`, `RationaleStep.BACKGROUND`, `RationaleStep.BATTERY_OPTIMIZATION`, `RationaleStep.NONE`) are retained across configuration changes (e.g. screen rotation while the sheet is visible) via `rememberSaveable`.
+* **Original Requirement ID & Target**: `REQ-PRI-003` (Contextual Just-in-Time Permission Flow)
+* **Historical Origin & Commit Trace**: Commit `5aa2b5a2` (ATT-2075 initial), refined in commit `6a6c7569` (progressive 3-stage JIT setup cascade).
+* **Root Reason for Existing Formulation**: `REQ-PRI-003` was designed to eliminate cold-start popups and introduce Material 3 educational sheets explaining athletic value (jersey pocket tracking, BLE sensors, background service life).
+* **Preservation of Core Invariants**: Retaining the educational rationale sheets while fixing the button dispatch actions strictly aligns with Rule 21 and preserves the cold-start decoupling invariant (`REQ-STB-008`).
 
 ---
 
-## 5. Chesterton's Fence Archaeology (`REQ-PRO-022`)
+## 5. Architectural Strategy & High-Level Solution
 
-### Requirement Archaeology & Chesterton's Fence Audit
-
-1. **Original Requirement ID & Target**:
-   * Refines `REQ-PRI-003` (*Modernized Contextual Just-in-Time Permission Flow*) and legacy `REQ-STB-002` (*Uninterrupted Foreground Service Execution*).
-2. **Historical Origin & Commit Trace**:
-   * Sprint `2026-40.14` (`ATT-2075`, commit `df8eb38b`).
-   * Legacy background location dialog originally introduced in Sprint `2026-40.2` (`ATT-1151`, `MainActivityWithNavigation.kt`).
-3. **Root Reason for Existing Formulation**:
-   * `REQ-PRI-003` correctly removed cold-start popups to allow free exploration of the app. However, it grouped all permissions into a single launcher step that could only ask for foreground permissions due to Android platform constraints.
-4. **Preservation of Core Invariants**:
-   * **Zero-Friction Cold Start**: Opening the app must NEVER display blocking permission dialogs.
-   * **Graceful Refusal**: If the athlete refuses background location or battery optimization, the app must not crash, enter infinite loops, or hard-lock the UI; it must allow tracking with appropriate warnings.
-   * **9-Language Parity**: All rationales and prompts must use localized resources across all 9 supported locales.
-
----
-
-## 6. User Scope Grounding (`ATT-1250`)
-
-### In-Scope:
-* Implementing the progressive Just-in-Time state machine in `ControlTrackingScreen.kt` for Foreground Location -> Background Location -> Battery Optimization.
-* Enhancing `PermissionRationaleSheet.kt` to support content variants:
-  * Foreground Rationale (Location, BLE, Notifications).
-  * Background Location Rationale ("Allow all the time" / "Immer zulassen").
-  * Battery Optimization Rationale ("Unrestricted" / "Nicht eingeschränkt").
-* Adding dedicated permission launchers and intent triggers with fail-safe fallback for background location and battery optimization.
-* Re-evaluating permission and battery states on `ON_RESUME` to keep the UI warning badge accurate.
-* Comprehensive unit and contract tests in `ControlTrackingPermissionTest.kt` and `PermissionRationaleSheetContractTest.kt`.
-
-### Out-of-Scope:
-* Modifying `TrackerService.java` internal GPS location polling logic.
-* Changing workout database schemas or export formats.
-* Modifying other screens (History, Routes, Equipment, Settings).
+### 5.1 Step-Specific Action Handlers
+In `ControlTrackingScreen.kt` and `PermissionRationaleSheet.kt`:
+1. **Decouple Action Logic per Step**:
+   - `RationaleType.FOREGROUND`:
+     - If permanently denied: `openAppSettings()` (unavoidable since OS disables system dialog).
+     - Otherwise: `permissionLauncher.launch(permissionsToRequest)`.
+   - `RationaleType.BACKGROUND_LOCATION`:
+     - Primary button MUST ALWAYS trigger `bgLocationLauncher.launch(ACCESS_BACKGROUND_LOCATION)`. The Android OS manages the direct transition to the Location Permission screen.
+     - Only if the athlete previously saw the OS prompt and permanently denied it does the secondary fallback apply.
+   - `RationaleType.BATTERY_OPTIMIZATION`:
+     - Primary button MUST ALWAYS trigger `launchBatteryOptimizationIntent(context)`. It is never treated as permanently denied.
+2. **Proper Tracking of Permission Request History**:
+   - Maintain a preference/state flag (`hasRequestedPermissionsBefore`) so `isPermanentlyDenied` is only evaluated when `!shouldShowRequestPermissionRationale` occurs *after* at least one user interaction, preventing first-launch false positives.
 
 ---
 
-## 7. Risk Assessment & Invariants
+## 6. System Invariants & Risk Assessment
 
-* **Invariant 1 (Cold Start Cleanliness)**: `MainActivityWithNavigation.onCreate()` remains completely free of modal permission or battery dialogs.
-* **Invariant 2 (Android 11+ Platform Compliance)**: Background location is NEVER requested in the same call as foreground location.
-* **Invariant 3 (Crash Immunity & OEM Fallback)**: `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` wrapped in 3-tier try-catch cascading to `ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS` and `ACTION_APPLICATION_DETAILS_SETTINGS`.
-* **Invariant 4 (Localization Parity)**: 100% parity across all 9 languages (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+* **Core Invariants**:
+  1. Rule 21 compliance: Direct platform intents over generic settings.
+  2. Rule 19 compliance: `fixVersions` remains unset until final acceptance.
+  3. Android 11+ two-step cascade preserved: Background location never requested simultaneously with foreground location.
+  4. 100% clean-room test suite pass rate (`./gradlew testDebugUnitTest`).
+  5. 9-language localization parity maintained across all locales.
+
+* **Risk Rating**: **LOW**
+  - The architectural state machine and UI sheets are already in place and tested.
+  - The fix cleanly recalibrates the intent dispatch logic to point directly to platform dialogs/subscreens as requested by the user.

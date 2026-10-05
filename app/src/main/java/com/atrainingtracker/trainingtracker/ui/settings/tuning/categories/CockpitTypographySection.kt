@@ -30,13 +30,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitTypography
 
 /**
- * Cockpit typography tuning category composable (REQ-UI-262).
- * Encapsulates font family dropdown (constrained to 360dp max height) and font weight picker.
+ * Cockpit typography & tile design tuning category composable (REQ-UI-262, REQ-UI-258).
+ * Encapsulates font family dropdown, font weight picker, and cockpit tile visual variant selector.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,7 +45,9 @@ fun CockpitTypographySection(
     cockpitFontFamily: CockpitFontFamily,
     onFontFamilyChange: (CockpitFontFamily) -> Unit,
     cockpitFontWeight: CockpitFontWeight,
-    onFontWeightChange: (CockpitFontWeight) -> Unit
+    onFontWeightChange: (CockpitFontWeight) -> Unit,
+    sensorFieldVariant: SensorFieldVariant = SensorFieldVariant.CLASSIC_SEAMLESS,
+    onSensorFieldVariantChange: (SensorFieldVariant) -> Unit = {}
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -136,6 +139,55 @@ fun CockpitTypographySection(
                         },
                         modifier = Modifier.weight(1f)
                     )
+                }
+            }
+        }
+
+        // Cockpit Tile Design & Grid Style Selector (REQ-UI-258)
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.tuning_sensor_field_variant_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            var variantExpanded by remember { mutableStateOf(false) }
+
+            ExposedDropdownMenuBox(
+                expanded = variantExpanded,
+                onExpandedChange = { variantExpanded = !variantExpanded }
+            ) {
+                OutlinedTextField(
+                    value = stringResource(sensorFieldVariant.titleResId),
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = variantExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
+                )
+                ExposedDropdownMenu(
+                    expanded = variantExpanded,
+                    onDismissRequest = { variantExpanded = false },
+                    modifier = Modifier.heightIn(max = 360.dp)
+                ) {
+                    SensorFieldVariant.values().forEach { variant ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = stringResource(variant.titleResId),
+                                    fontWeight = if (sensorFieldVariant == variant) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            onClick = {
+                                onSensorFieldVariantChange(variant)
+                                variantExpanded = false
+                            }
+                        )
+                    }
                 }
             }
         }

@@ -394,6 +394,8 @@
     <string name="equipment_tab_sensor_matrix">Matriz de sensores</string>
     <string name="equipment_matrix_no_sensors">Nenhum sensor emparelhado encontrado. Emparelhe os sensores primeiro nas Definições.</string>
     <string name="equipment_matrix_no_equipment">Nenhum equipamento encontrado. Adicione bicicletas ou sapatos primeiro.</string>
+    <string name="equipment_matrix_no_bike_sensors">Nenhum sensor de bicicleta compatível encontrado.</string>
+    <string name="equipment_matrix_no_shoe_sensors">Nenhum sensor de calçado compatível encontrado.</string>
 
     <string name="SD_card_not_available">Cartão SD não disponível.</string>
 
@@ -1307,6 +1309,10 @@
     <string name="workout_name_ride_from">Pedal a partir de %1$s</string>
     <string name="workout_name_activity_from">Atividade a partir de %1$s</string>
     <string name="workout_name_round_trip">Circuito a partir de %1$s</string>
+    <string name="workout_name_run_from_with_distance">Corrida a partir de %1$s (%2$s)</string>
+    <string name="workout_name_ride_from_with_distance">Pedal a partir de %1$s (%2$s)</string>
+    <string name="workout_name_activity_from_with_distance">Atividade a partir de %1$s (%2$s)</string>
+    <string name="workout_name_round_trip_with_distance">Circuito a partir de %1$s (%2$s)</string>
     <string name="workout_name_run_from_to">Corrida de %1$s a %2$s</string>
     <string name="workout_name_ride_from_to">Pedal de %1$s a %2$s</string>
     <string name="workout_name_activity_from_to">Atividade de %1$s a %2$s</string>
@@ -1390,6 +1396,12 @@
     <string name="tuning_weight_semi_bold">Seminegrito</string>
     <string name="tuning_weight_bold">Negrito</string>
     <string name="tuning_cockpit_preview_title">Pré-visualização ao vivo</string>
+    <!-- Sensor Field Tile Variants & Styling (ATT-2058 / REQ-UI-258) -->
+    <string name="tuning_sensor_field_variant_title">Design de blocos e grelha</string>
+    <string name="sensor_field_variant_v0">Grelha clássica contínua</string>
+    <string name="sensor_field_variant_v1">Blocos desportivos com contorno</string>
+    <string name="sensor_field_variant_v2">Cartões desportivos em relevo</string>
+    <string name="sensor_field_variant_v3">Cápsulas de realce suave</string>
     <string name="tuning_default_format">Padrão: %1$s</string>
     <string name="reset_to_defaults">Restaurar padrões</string>
     <string name="reset_to_defaults_success">Configurações de ajuste restauradas para os padrões de fábrica.</string>
@@ -1463,15 +1475,18 @@
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">Treino interrompido</string>
+    <string name="unfinished_workout_title_battery">Treino interrompido: Otimização da bateria</string>
+    <string name="unfinished_workout_title_memory">Treino interrompido: Memória insuficiente</string>
+    <string name="unfinished_workout_title_permission">Treino interrompido: Permissão revogada</string>
     <string name="kill_reason_battery_title">Encerrado pela otimização de bateria</string>
-    <string name="kill_reason_battery_stage1">Bem, quem não ouve conselhos… 😉 Mas sentimos muito pelos seus quilômetros perdidos! O Android encerrou a gravação em segundo plano devido à otimização de bateria.</string>
-    <string name="kill_reason_battery_stage1_strava">E como você sabe: \'If it\'s not on Strava, it didn\'t happen\'… duplamente amargo! 🙈</string>
-    <string name="kill_reason_battery_stage2">De novo não… Já é o 2º encerramento! De quantos quilômetros perdidos você precisa como prova? Desative a otimização de bateria para o aTrainingTracker.</string>
-    <string name="kill_reason_battery_stage3">Três vezes é demais… Atleta mais resistente a conselhos do mês! 🏆 O sistema continuará encerrando seu treino até que você configure a exceção.</string>
+    <string name="kill_reason_battery_stage1">O Android interrompeu a gravação em segundo plano porque a otimização da bateria está ativada para esta aplicação. Para garantir o registo contínuo dos seus quilómetros e elevação, desative a otimização da bateria para o aTrainingTracker.</string>
+    <string name="kill_reason_battery_stage1_strava">Sabemos como a telemetria de treino completa é importante para as suas atividades no Strava.</string>
+    <string name="kill_reason_battery_stage2">A gravação foi novamente interrompida pela gestão de bateria do sistema. Sem excluir a aplicação, o Android continuará a parar as gravações em segundo plano. Reserve um momento para desativar a otimização da bateria.</string>
+    <string name="kill_reason_battery_stage3">Foram detetadas interrupções repetidas em segundo plano. As versões modernas do Android encerram estritamente os serviços em segundo plano que não estejam isentos. Toque no botão abaixo para isentar o aTrainingTracker e proteger os seus treinos.</string>
     <string name="kill_reason_low_memory">A gravação foi interrompida pelo Android devido à falta de memória RAM (ex.: câmera ou navegação 3D em primeiro plano). Seus dados até esse momento foram salvos.</string>
     <string name="kill_reason_permission_revoked">A gravação foi interrompida porque as permissões de localização ou notificação foram revogadas durante o treino.</string>
     <string name="action_disable_battery_optimization">Desativar otimização de bateria</string>
-    <string name="battery_optimization_exempt_celebration">Finalmente! Caminho livre para seus dados de treino 🎉</string>
+    <string name="battery_optimization_exempt_celebration">Gravação sem restrições ativa para os seus dados de treino</string>
 
     <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
     <string name="import_fit_title">Importar ficheiros FIT</string>
@@ -1562,4 +1577,46 @@
     <string name="turn_cue_countdown_distance_summary">Distância de pré-aviso antes das curvas (metros)</string>
     <string name="off_route_corridor_threshold_title">Tolerância de desvio de rota</string>
     <string name="off_route_corridor_threshold_summary">Desvio máximo antes do aviso de saída de rota (metros)</string>
+
+    <!-- Return Navigation & Take Me Home (ATT-1953) -->
+    <string name="take_me_home_title">Levar para casa</string>
+    <string name="take_me_home_desc">Orientação de regresso por rotas conhecidas</string>
+    <string name="nav_remaining_dist">Restante</string>
+    <string name="nav_remaining_climb">Subida</string>
+    <string name="nav_eta_label">Chegada</string>
+    <string name="nav_destination_home">Casa</string>
+    <string name="nav_stop_return">Parar regresso</string>
+    <string name="nav_route_reverse">Regressar pela rota</string>
+
+    <!-- Corridor Grouping & Differentiating Thumbnail Zoom (ATT-1954) -->
+    <string name="gateway_all">Todos</string>
+    <string name="gateway_north">Norte</string>
+    <string name="gateway_northeast">Nordeste</string>
+    <string name="gateway_east">Leste</string>
+    <string name="gateway_southeast">Sudeste</string>
+    <string name="gateway_south">Sul</string>
+    <string name="gateway_southwest">Sudoeste</string>
+    <string name="gateway_west">Oeste</string>
+    <string name="gateway_northwest">Noroeste</string>
+    <string name="gateway_unknown">Outros</string>
+    <string name="pref_corridor_grouping_title">Agrupamento de rotas por corredor</string>
+    <string name="pref_corridor_grouping_desc">Agrupa rotas na lista por sua direção de partida e corredor</string>
+    <string name="pref_focused_thumbnail_title">Zoom de miniatura focado</string>
+    <string name="pref_focused_thumbnail_desc">Aplica zoom às miniaturas de rotas no loop central característico em vez de corredores comuns de entrada/saída</string>
+    <string name="fork_alert_title">Bifurcação à frente</string>
+    <string name="fork_approaching_in_m">a %1$d m</string>
+    <string name="fork_direction_left">Esquerda</string>
+    <string name="fork_direction_straight">Em frente</string>
+    <string name="fork_direction_right">Direita</string>
+    <string name="fork_dismiss">Dispensar</string>
+    <string name="fork_select_hint">Toque para selecionar</string>
+
+    <!-- Modernized Post-Workout Low Sensor Battery Alerting (ATT-2192) -->
+    <string name="notification_channel_name__sensor_battery">Bateria do sensor</string>
+    <string name="notification_channel_description__sensor_battery">Alertas quando o nível da bateria do sensor estiver baixo</string>
+    <string name="sensor_battery_notification_title_1">Bateria do sensor fraca</string>
+    <string name="sensor_battery_notification_title_many">Várias baterias de sensores fracas</string>
+    <string name="sensor_battery_snackbar_single">⚠️ %1$s: Bateria fraca (%2$d%%)</string>
+    <string name="sensor_battery_snackbar_many">⚠️ %1$d sensores: Bateria fraca (%2$s)</string>
+    <string name="sensor_battery_action_view_sensors">Ver sensores</string>
 </resources>

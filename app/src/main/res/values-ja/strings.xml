@@ -394,6 +394,8 @@
     <string name="equipment_tab_sensor_matrix">センサーマトリックス</string>
     <string name="equipment_matrix_no_sensors">ペアリングされたセンサーが見つかりません。設定で最初にセンサーをペアリングしてください。</string>
     <string name="equipment_matrix_no_equipment">ギアが見つかりません。最初にバイクやシューズを追加してください。</string>
+    <string name="equipment_matrix_no_bike_sensors">互換性のあるバイクセンサーが見つかりません。</string>
+    <string name="equipment_matrix_no_shoe_sensors">互換性のあるシューズセンサーが見つかりません。</string>
 
     <string name="SD_card_not_available">SDカードが利用できません。</string>
 
@@ -1291,6 +1293,10 @@
     <string name="workout_name_ride_from">%1$s からのライド</string>
     <string name="workout_name_activity_from">%1$s からのアクティビティ</string>
     <string name="workout_name_round_trip">%1$s からの周回</string>
+    <string name="workout_name_run_from_with_distance">%1$s からのラン (%2$s)</string>
+    <string name="workout_name_ride_from_with_distance">%1$s からのライド (%2$s)</string>
+    <string name="workout_name_activity_from_with_distance">%1$s からのアクティビティ (%2$s)</string>
+    <string name="workout_name_round_trip_with_distance">%1$s からの周回 (%2$s)</string>
     <string name="workout_name_run_from_to">%1$s から %2$s へのラン</string>
     <string name="workout_name_ride_from_to">%1$s から %2$s へのライド</string>
     <string name="workout_name_activity_from_to">%1$s から %2$s へのアクティビティ</string>
@@ -1370,6 +1376,12 @@
     <string name="tuning_weight_semi_bold">中太</string>
     <string name="tuning_weight_bold">太字</string>
     <string name="tuning_cockpit_preview_title">ライブプレビュー</string>
+    <!-- Sensor Field Tile Variants & Styling (ATT-2058 / REQ-UI-258) -->
+    <string name="tuning_sensor_field_variant_title">タイルデザインとグリッドスタイル</string>
+    <string name="sensor_field_variant_v0">クラシック・シームレスグリッド</string>
+    <string name="sensor_field_variant_v1">モダン・アウトラインスポーツタイル</string>
+    <string name="sensor_field_variant_v2">立体スポーツカード</string>
+    <string name="sensor_field_variant_v3">ソフトアクセント・カプセル</string>
     <string name="tuning_default_format">デフォルト: %1$s</string>
     <string name="reset_to_defaults">デフォルトに戻す</string>
     <string name="reset_to_defaults_success">チューニング設定が工場出荷時のデフォルトに戻りました。</string>
@@ -1443,15 +1455,18 @@
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">トレーニングが中断されました</string>
+    <string name="unfinished_workout_title_battery">ワークアウト中断: バッテリー最適化</string>
+    <string name="unfinished_workout_title_memory">ワークアウト中断: メモリ不足</string>
+    <string name="unfinished_workout_title_permission">ワークアウト中断: 権限の取り消し</string>
     <string name="kill_reason_battery_title">バッテリー最適化により停止しました</string>
-    <string name="kill_reason_battery_stage1">忠告を聞かないと… 😉 でも失われた距離は本当に残念です！バッテリー最適化が有効なため、Androidがバックグラウンド記録を停止しました。</string>
-    <string name="kill_reason_battery_stage1_strava">ご存知の通り、「Stravaになければ起こらなかったのと同じ」… 悔しさ倍増です！ 🙈</string>
-    <string name="kill_reason_battery_stage2">またですか… これで2回目の中断です！何キロ失えば納得しますか？aTrainingTrackerのバッテリー最適化を解除してください。</string>
-    <string name="kill_reason_battery_stage3">二度あることは三度ある… 今月の最も頑固なアスリート賞！🏆 例外を設定するまで、OSは記録を強制終了し続けます。</string>
+    <string name="kill_reason_battery_stage1">バッテリー最適化が有効になっているため、Androidがバックグラウンド記録を中断しました。走行距離と標高を確実に記録するために、aTrainingTrackerのバッテリー最適化を無効にしてください。</string>
+    <string name="kill_reason_battery_stage1_strava">Stravaのアクティビティにとって完全なトレーニングデータがいかに重要であるかを理解しています。</string>
+    <string name="kill_reason_battery_stage2">システムのバッテリー管理によって記録が再び中断されました。例外設定を行わないと、Androidは長時間のワークアウト中にバックグラウンド記録を停止し続けます。バッテリー最適化の解除をお願いします。</string>
+    <string name="kill_reason_battery_stage3">バックグラウンドでの中断が繰り返し検出されました。最新のAndroidでは、バッテリー制限から除外されていないサービスは強制終了されます。下のボタンをタップしてaTrainingTrackerを除外設定し、ワークアウトを保護してください。</string>
     <string name="kill_reason_low_memory">メモリ不足（カメラや3Dナビなど高負荷アプリの使用）のため、Androidにより記録が停止されました。それまでのデータは保存されています。</string>
     <string name="kill_reason_permission_revoked">トレーニング中に位置情報または通知の権限が取り消されたため、記録が中断されました。</string>
     <string name="action_disable_battery_optimization">バッテリー最適化を解除</string>
-    <string name="battery_optimization_exempt_celebration">ついに完了！トレーニングデータを制限なく記録できます 🎉</string>
+    <string name="battery_optimization_exempt_celebration">トレーニングデータの無制限記録が有効になりました</string>
 
     <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
     <string name="import_fit_title">FITファイルをインポート</string>
@@ -1542,4 +1557,46 @@
     <string name="turn_cue_countdown_distance_summary">曲がり角の手前での事前警告距離（メートル）</string>
     <string name="off_route_corridor_threshold_title">コースアウト判定閾値</string>
     <string name="off_route_corridor_threshold_summary">警告を発するまでの最大逸脱距離（メートル）</string>
+
+    <!-- Return Navigation & Take Me Home (ATT-1953) -->
+    <string name="take_me_home_title">家に戻る</string>
+    <string name="take_me_home_desc">よく走るルートに沿った帰り道案内</string>
+    <string name="nav_remaining_dist">残り</string>
+    <string name="nav_remaining_climb">獲得標高</string>
+    <string name="nav_eta_label">到着予想</string>
+    <string name="nav_destination_home">自宅</string>
+    <string name="nav_stop_return">帰り道終了</string>
+    <string name="nav_route_reverse">ルートを逆走して戻る</string>
+
+    <!-- Corridor Grouping & Differentiating Thumbnail Zoom (ATT-1954) -->
+    <string name="gateway_all">すべて</string>
+    <string name="gateway_north">北</string>
+    <string name="gateway_northeast">北東</string>
+    <string name="gateway_east">東</string>
+    <string name="gateway_southeast">南東</string>
+    <string name="gateway_south">南</string>
+    <string name="gateway_southwest">南西</string>
+    <string name="gateway_west">西</string>
+    <string name="gateway_northwest">北西</string>
+    <string name="gateway_unknown">その他</string>
+    <string name="pref_corridor_grouping_title">回廊ベースのルートグループ化</string>
+    <string name="pref_corridor_grouping_desc">リスト内のルートを出発方向と回廊ごとにグループ化します</string>
+    <string name="pref_focused_thumbnail_title">フォーカスされたサムネイルズーム</string>
+    <string name="pref_focused_thumbnail_desc">ルートサムネイルを共通の出入り回廊ではなく、特徴的な中央ループにズームします</string>
+    <string name="fork_alert_title">分岐接近</string>
+    <string name="fork_approaching_in_m">%1$d m先</string>
+    <string name="fork_direction_left">左</string>
+    <string name="fork_direction_straight">直進</string>
+    <string name="fork_direction_right">右</string>
+    <string name="fork_dismiss">閉じる</string>
+    <string name="fork_select_hint">タップして選択</string>
+
+    <!-- Modernized Post-Workout Low Sensor Battery Alerting (ATT-2192) -->
+    <string name="notification_channel_name__sensor_battery">センサーのバッテリー</string>
+    <string name="notification_channel_description__sensor_battery">センサーのバッテリー残量が少なくなったときのアラート</string>
+    <string name="sensor_battery_notification_title_1">センサーのバッテリー残量低下</string>
+    <string name="sensor_battery_notification_title_many">複数のセンサーのバッテリー残量低下</string>
+    <string name="sensor_battery_snackbar_single">⚠️ %1$s: バッテリー残量低下 (%2$d%%)</string>
+    <string name="sensor_battery_snackbar_many">⚠️ %1$d 個のセンサー: バッテリー残量低下 (%2$s)</string>
+    <string name="sensor_battery_action_view_sensors">センサーを見る</string>
 </resources>

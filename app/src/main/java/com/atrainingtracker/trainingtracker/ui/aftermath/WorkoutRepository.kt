@@ -779,27 +779,29 @@ class WorkoutRepository private constructor(private val application: Application
                     val totalCount = c.count
 
                     while (!c.isAfterLast) {
-                        // 1. Gather IDs, names, and cluster IDs for the next chunk
-                        val chunkIds = mutableListOf<Long>()
-                        val chunkNames = mutableListOf<String>()
-                        val chunkClusterIds = mutableSetOf<Long>()
-                        val currentChunkStartPos = c.position
-                        
+                        // 1. Gather raw snapshots for the next chunk in a single forward-only pass (ATT-2309 / REQ-STB-013)
+                        val snapshots = mutableListOf<WorkoutDataMapper.RawCursorSnapshot>()
                         var i = 0
                         while (i < batchSize && !c.isAfterLast) {
-                            chunkIds.add(c.getLong(c.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID)))
-                            c.getString(c.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME))?.let {
-                                chunkNames.add(it)
-                            }
-                            val clusterId = c.getLong(c.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID))
-                            if (clusterId != -1L) {
-                                chunkClusterIds.add(clusterId)
+                            try {
+                                val snapshot = mapper.readCursorSnapshot(c)
+                                snapshots.add(snapshot)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "loadAllWorkouts: error reading row at position ${c.position}, skipping", e)
                             }
                             c.moveToNext()
                             i++
                         }
 
+                        if (snapshots.isEmpty()) {
+                            continue
+                        }
+
                         // 2. Fetch Metadata for the chunk in vectorized queries (ATT-359/388)
+                        val chunkIds = snapshots.map { it.workoutId }
+                        val chunkNames = snapshots.mapNotNull { it.fileBaseName }
+                        val chunkClusterIds = snapshots.mapNotNull { if (it.clusterId != -1L) it.clusterId else null }.toSet()
+
                         val extremaList = summariesManager.getExtremaForWorkouts(chunkIds)
                         val stravaDataMap = stravaUploadDbHelper.getStravaActivityDataForWorkouts(chunkNames)
                         val clusterNamesMap = WorkoutClusterDatabaseManager.getInstance(application).getClusterNamesForIds(chunkClusterIds)
@@ -812,11 +814,9 @@ class WorkoutRepository private constructor(private val application: Application
                             laps = lapsMap
                         )
 
-                        // 3. Map the chunk
-                        c.moveToPosition(currentChunkStartPos)
-                        var j = 0
-                        while (j < batchSize && !c.isAfterLast) {
-                            val workoutData = mapper.fromCursor(c, batchMetadata)
+                        // 3. Map the chunk in memory without cursor seeking (ATT-2309)
+                        for (snapshot in snapshots) {
+                            val workoutData = mapper.fromSnapshot(snapshot, batchMetadata)
 
                             // Add Export Statuses (Fast from memory-only providers if possible)
                             val exportStatuses: MutableList<ExportStatusGroupData> = mutableListOf()
@@ -829,8 +829,6 @@ class WorkoutRepository private constructor(private val application: Application
 
                             allLoadedWorkouts.add(workoutData.copy(exportStatuses = exportStatuses))
                             processedCount++
-                            c.moveToNext()
-                            j++
                         }
 
                         // 4. PROGRESSIVE UI PUMP (ATT-346 Style)
