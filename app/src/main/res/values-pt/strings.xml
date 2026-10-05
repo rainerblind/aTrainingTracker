@@ -1408,8 +1408,8 @@
     <string name="tuning_cat_sensors_gps">Sensores, GPS e filtragem</string>
     <string name="tuning_cat_workout_masks_cards">Cartões e detalhes de treino</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 cartões</string>
-    <string name="tuning_matrix_col_list">Na lista</string>
-    <string name="tuning_matrix_col_details">Nos detalhes</string>
+    <string name="tuning_matrix_col_list">Lista</string>
+    <string name="tuning_matrix_col_details">Detalhes</string>
     <string name="tuning_matrix_feature">Elemento</string>
     <string name="tuning_summary_matrix_format">%1$d/8 na lista, %2$d/8 nos detalhes</string>
     <string name="map_splitter_content_description">Barra divisora do mapa e telemetria. Arraste verticalmente para redimensionar, toque duas vezes para redefinir.</string>

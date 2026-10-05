@@ -1601,8 +1601,8 @@
     <string name="tuning_cat_sensors_gps">Sensors, GPS &amp; Filtering</string>
     <string name="tuning_cat_workout_masks_cards">Workout Cards &amp; Details</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 Cards</string>
-    <string name="tuning_matrix_col_list">In List</string>
-    <string name="tuning_matrix_col_details">In Details</string>
+    <string name="tuning_matrix_col_list">List</string>
+    <string name="tuning_matrix_col_details">Details</string>
     <string name="tuning_matrix_feature">Feature</string>
     <string name="tuning_summary_matrix_format">%1$d/8 List, %2$d/8 Details</string>
     <string name="map_splitter_content_description">Map and telemetry splitter bar. Drag vertically to resize, double-tap to reset.</string>
