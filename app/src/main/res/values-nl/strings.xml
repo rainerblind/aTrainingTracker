@@ -1408,8 +1408,8 @@
     <string name="tuning_cat_sensors_gps">Sensoren, gps en filtering</string>
     <string name="tuning_cat_workout_masks_cards">Workout-kaarten en details</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 kaarten</string>
-    <string name="tuning_matrix_col_list">In lijst</string>
-    <string name="tuning_matrix_col_details">In details</string>
+    <string name="tuning_matrix_col_list">Lijst</string>
+    <string name="tuning_matrix_col_details">Details</string>
     <string name="tuning_matrix_feature">Onderdeel</string>
     <string name="tuning_summary_matrix_format">%1$d/8 in lijst, %2$d/8 in details</string>
     <string name="map_splitter_content_description">Verdeellijn voor kaart en telemetrie. Sleep verticaal om het formaat te wijzigen, dubbeltik om te herstellen.</string>
