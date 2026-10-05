@@ -266,4 +266,84 @@ class WorkoutDataSourceMappingTest {
         assertEquals(WorkoutSource.TRACKED, invalidData.source)
         assertEquals(WorkoutSource.TRACKED, invalidData.headerData.source)
     }
+
+    @Test
+    fun testWorkoutDataMapper_readCursorSnapshot_mapsValidSources() {
+        val tcxCursor = createMockCursor("TCX")
+        val tcxSnapshot = mapper.readCursorSnapshot(tcxCursor)
+        assertEquals(WorkoutSource.TCX, tcxSnapshot.source)
+
+        val gpxCursor = createMockCursor("GPX")
+        val gpxSnapshot = mapper.readCursorSnapshot(gpxCursor)
+        assertEquals(WorkoutSource.GPX, gpxSnapshot.source)
+
+        val fitCursor = createMockCursor("FIT")
+        val fitSnapshot = mapper.readCursorSnapshot(fitCursor)
+        assertEquals(WorkoutSource.FIT, fitSnapshot.source)
+
+        val trackedCursor = createMockCursor("TRACKED")
+        val trackedSnapshot = mapper.readCursorSnapshot(trackedCursor)
+        assertEquals(WorkoutSource.TRACKED, trackedSnapshot.source)
+    }
+
+    @Test
+    fun testWorkoutDataMapper_readCursorSnapshot_fallsBackToTrackedForNullOrInvalid() {
+        val nullCursor = createMockCursor(null)
+        val nullSnapshot = mapper.readCursorSnapshot(nullCursor)
+        assertEquals(WorkoutSource.TRACKED, nullSnapshot.source)
+
+        val invalidCursor = createMockCursor("UNKNOWN_SOURCE")
+        val invalidSnapshot = mapper.readCursorSnapshot(invalidCursor)
+        assertEquals(WorkoutSource.TRACKED, invalidSnapshot.source)
+    }
+
+    @Test
+    fun testWorkoutDataMapper_fromSnapshot_and_fromCursorBatch_mapsValidSources() {
+        val emptyBatch = WorkoutDataMapper.BatchMetadata(
+            extrema = emptyMap(),
+            stravaData = emptyMap(),
+            clusterNames = emptyMap(),
+            laps = emptyMap()
+        )
+
+        for (sourceName in listOf("TCX", "GPX", "FIT", "TRACKED")) {
+            val expectedSource = WorkoutSource.fromString(sourceName)
+            val cursor = createMockCursor(sourceName)
+
+            // Test fromCursor(cursor, batch)
+            val batchData = mapper.fromCursor(cursor, emptyBatch)
+            assertEquals(expectedSource, batchData.source)
+            assertEquals(expectedSource, batchData.headerData.source)
+
+            // Test fromSnapshot(snapshot, batch)
+            val snapshot = mapper.readCursorSnapshot(cursor)
+            val snapshotData = mapper.fromSnapshot(snapshot, emptyBatch)
+            assertEquals(expectedSource, snapshotData.source)
+            assertEquals(expectedSource, snapshotData.headerData.source)
+        }
+    }
+
+    @Test
+    fun testWorkoutDataMapper_fromSnapshot_and_fromCursorBatch_fallsBackToTrackedForNullOrInvalid() {
+        val emptyBatch = WorkoutDataMapper.BatchMetadata(
+            extrema = emptyMap(),
+            stravaData = emptyMap(),
+            clusterNames = emptyMap(),
+            laps = emptyMap()
+        )
+
+        for (invalidValue in listOf(null, "UNKNOWN_SOURCE", "")) {
+            val cursor = createMockCursor(invalidValue)
+
+            val batchData = mapper.fromCursor(cursor, emptyBatch)
+            assertEquals(WorkoutSource.TRACKED, batchData.source)
+            assertEquals(WorkoutSource.TRACKED, batchData.headerData.source)
+
+            val snapshot = mapper.readCursorSnapshot(cursor)
+            val snapshotData = mapper.fromSnapshot(snapshot, emptyBatch)
+            assertEquals(WorkoutSource.TRACKED, snapshotData.source)
+            assertEquals(WorkoutSource.TRACKED, snapshotData.headerData.source)
+        }
+    }
 }
+
