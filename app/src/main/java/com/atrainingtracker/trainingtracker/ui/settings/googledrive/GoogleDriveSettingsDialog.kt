@@ -34,12 +34,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthErrorResolver
 import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthManager
 import com.atrainingtracker.trainingtracker.migration.BackupWorker
 import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
 import com.google.android.gms.common.api.ApiException
 import kotlinx.coroutines.launch
 import java.util.Date
@@ -52,7 +52,8 @@ import java.util.Date
  * - Integrates native Google Play Services Sign-In activity result launcher.
  * - Enforces least-privilege OAuth scope (drive.file) with real Bearer token acquisition.
  * - Provides interactive toggles for automated workout export, database backup, and Wi-Fi only restriction.
- * - Displays last sync timestamp, status, and error states.
+ * - Displays last sync timestamp, status, and localized error states.
+ * - Conditionally suppresses synchronization switches when disconnected, displaying an informative connect prompt.
  * - Integrates standard [AppDialogActions.SaveCancel] to stage preference changes transactionally.
  *
  * @param onDismiss Callback invoked to dismiss the modal bottom sheet dialog.
@@ -71,13 +72,13 @@ fun GoogleDriveSettingsDialog(
     var uploadBackup by remember { mutableStateOf(TrainingApplication.uploadBackupToGoogleDrive()) }
     var wifiOnly by remember { mutableStateOf(TrainingApplication.uploadToGoogleDriveOnlyOnWifi()) }
     var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var errorMessageResId by remember { mutableStateOf<Int?>(null) }
 
     val signInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         isLoading = true
-        errorMessage = null
+        errorMessageResId = null
         val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
         try {
             val account = task.getResult(ApiException::class.java)
@@ -90,21 +91,16 @@ fun GoogleDriveSettingsDialog(
                         isLoading = false
                     }.onFailure { ex ->
                         isLoading = false
-                        errorMessage = ex.localizedMessage ?: "Failed to acquire Google Drive authorization token"
+                        errorMessageResId = GoogleDriveAuthErrorResolver.resolveErrorMessageResId(ex)
                     }
                 }
             } else {
                 isLoading = false
-                errorMessage = "Google Sign-In returned null account"
-            }
-        } catch (e: ApiException) {
-            isLoading = false
-            if (e.statusCode != GoogleSignInStatusCodes.SIGN_IN_CANCELLED) {
-                errorMessage = "Google Sign-In failed (status ${e.statusCode})"
+                errorMessageResId = R.string.google_drive_error_generic
             }
         } catch (e: Exception) {
             isLoading = false
-            errorMessage = e.localizedMessage ?: "Authentication failed"
+            errorMessageResId = GoogleDriveAuthErrorResolver.resolveErrorMessageResId(e)
         }
     }
 
@@ -148,9 +144,9 @@ fun GoogleDriveSettingsDialog(
                 )
             }
 
-            if (errorMessage != null) {
+            if (errorMessageResId != null) {
                 Text(
-                    text = errorMessage!!,
+                    text = stringResource(errorMessageResId!!),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(horizontal = 4.dp)
@@ -162,14 +158,14 @@ fun GoogleDriveSettingsDialog(
                 isConnected = isConnected,
                 accountEmail = accountEmail,
                 onConnectClick = {
-                    errorMessage = null
+                    errorMessageResId = null
                     val client = GoogleDriveAuthManager.getClient(context)
                     signInLauncher.launch(client.signInIntent)
                 },
                 onDisconnectClick = {
                     coroutineScope.launch {
                         isLoading = true
-                        errorMessage = null
+                        errorMessageResId = null
                         GoogleDriveAuthManager.disconnect(context)
                         isConnected = false
                         accountEmail = null
@@ -178,103 +174,112 @@ fun GoogleDriveSettingsDialog(
                 }
             )
 
-            HorizontalDivider()
+            if (isConnected) {
+                HorizontalDivider()
 
-            // Synchronizations Configuration
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Upload Workouts Toggle
-                Row(
+                // Synchronizations Configuration
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(end = 16.dp)
+                    // Upload Workouts Toggle
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            text = stringResource(R.string.upload_workouts_to_google_drive),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = stringResource(R.string.upload_workouts_to_google_drive_summary),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 16.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.upload_workouts_to_google_drive),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = stringResource(R.string.upload_workouts_to_google_drive_summary),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = uploadWorkouts,
+                            onCheckedChange = { uploadWorkouts = it },
+                            modifier = Modifier.scale(0.8f)
                         )
                     }
-                    Switch(
-                        checked = uploadWorkouts,
-                        onCheckedChange = { uploadWorkouts = it },
-                        modifier = Modifier.scale(0.8f)
-                    )
-                }
 
-                // Upload Backup Toggle
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(end = 16.dp)
+                    // Upload Backup Toggle
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            text = stringResource(R.string.upload_backup_to_google_drive),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = stringResource(R.string.upload_backup_to_google_drive_summary),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 16.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.upload_backup_to_google_drive),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = stringResource(R.string.upload_backup_to_google_drive_summary),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = uploadBackup,
+                            onCheckedChange = { uploadBackup = it },
+                            modifier = Modifier.scale(0.8f)
                         )
                     }
-                    Switch(
-                        checked = uploadBackup,
-                        onCheckedChange = { uploadBackup = it },
-                        modifier = Modifier.scale(0.8f)
-                    )
-                }
 
-                // Wi-Fi Only Toggle
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(end = 16.dp)
+                    // Wi-Fi Only Toggle
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            text = stringResource(R.string.google_drive_only_wifi),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = stringResource(R.string.google_drive_only_wifi_summary),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 16.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.google_drive_only_wifi),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = stringResource(R.string.google_drive_only_wifi_summary),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = wifiOnly,
+                            onCheckedChange = { wifiOnly = it },
+                            modifier = Modifier.scale(0.8f)
                         )
                     }
-                    Switch(
-                        checked = wifiOnly,
-                        onCheckedChange = { wifiOnly = it },
-                        modifier = Modifier.scale(0.8f)
+
+                    // Last Sync Status
+                    Text(
+                        text = lastSyncText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp)
                     )
                 }
-
-                // Last Sync Status
+            } else {
                 Text(
-                    text = lastSyncText,
-                    style = MaterialTheme.typography.bodySmall,
+                    text = stringResource(R.string.google_drive_connect_prompt),
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp)
+                    modifier = Modifier.padding(horizontal = 4.dp)
                 )
             }
         }

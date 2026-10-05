@@ -1526,6 +1526,10 @@
     <string name="google_drive_never_synced">Jeszcze nie zsynchronizowano</string>
     <string name="restore_from_google_drive">Przywróć z Dysku Google</string>
     <string name="upload_to_google_drive">Utwórz kopię zapasową na Dysku Google</string>
+    <string name="google_drive_error_developer_config">Błąd konfiguracji logowania Google (status 10): Sprawdź rejestrację klienta OAuth (nazwa pakietu com.atrainingtracker.debug i odcisk palca SHA-1) w Google Cloud Console.</string>
+    <string name="google_drive_error_network">Brak połączenia z Internetem lub błąd sieci podczas logowania Google.</string>
+    <string name="google_drive_error_generic">Logowanie Google nie powiodło się. Spróbuj ponownie.</string>
+    <string name="google_drive_connect_prompt">Połącz konto Google, aby automatycznie eksportować treningi i synchronizować kopie zapasowe bazy danych z Google Drive.</string>
     <string name="gpx_enriching_elevation">Pobieranie danych wysokości…</string>
     <string name="gpx_elevation_enriched">Dane wysokości dodane pomyślnie</string>
     <string name="gpx_elevation_enrichment_failed">Nie udało się pobrać wysokości, zaimportowano trasę 2D</string>
