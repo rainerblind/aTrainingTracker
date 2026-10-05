@@ -10,6 +10,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
+import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.trainingtracker.MyUnits
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -214,5 +215,81 @@ class ElevationProfileZoomMathTest {
             totalDist = totalDist
         )
         assertEquals(10_000.0, clampedEnd, 0.001)
+    }
+
+    @Test
+    fun calculateAdaptiveDistanceStep_calibratesMidRangeAndImperialSteps() {
+        // Metric: 1.47km segment should return 250m step (REQ-UI-272 / ATT-2385)
+        assertEquals(250f, ElevationProfileZoomMath.calculateAdaptiveDistanceStep(1_470.0, MyUnits.METRIC), 0.1f)
+        assertEquals(250f, ElevationProfileZoomMath.calculateAdaptiveDistanceStep(1_000.0, MyUnits.METRIC), 0.1f)
+        assertEquals(250f, ElevationProfileZoomMath.calculateAdaptiveDistanceStep(801.0, MyUnits.METRIC), 0.1f)
+
+        // Imperial steps: > 0.5mi returns 0.25mi
+        val meterPerMile = BANALService.METER_PER_MILE
+        assertEquals((0.25f * meterPerMile).toFloat(), ElevationProfileZoomMath.calculateAdaptiveDistanceStep(0.8 * meterPerMile, MyUnits.IMPERIAL), 0.1f)
+        assertEquals((0.5f * meterPerMile).toFloat(), ElevationProfileZoomMath.calculateAdaptiveDistanceStep(1.5 * meterPerMile, MyUnits.IMPERIAL), 0.1f)
+    }
+
+    @Test
+    fun shouldRenderTickLabel_evaluatesBoundaryAndSpacingClearance() {
+        // Normal case: label satisfies start, end, and spacing clearance
+        assertTrue(
+            ElevationProfileZoomMath.shouldRenderTickLabel(
+                labelLeft = 80f,
+                labelRight = 120f,
+                lastDrawnRightX = 40f,
+                startClearanceThreshold = 50f,
+                endClearanceThreshold = 300f,
+                minSpacing = 24f
+            )
+        )
+
+        // Start clearance violation: labelLeft < startClearanceThreshold
+        assertFalse(
+            ElevationProfileZoomMath.shouldRenderTickLabel(
+                labelLeft = 45f,
+                labelRight = 85f,
+                lastDrawnRightX = -1f,
+                startClearanceThreshold = 50f,
+                endClearanceThreshold = 300f,
+                minSpacing = 24f
+            )
+        )
+
+        // Previous label spacing violation: labelLeft - lastDrawnRightX < minSpacing
+        assertFalse(
+            ElevationProfileZoomMath.shouldRenderTickLabel(
+                labelLeft = 60f,
+                labelRight = 100f,
+                lastDrawnRightX = 50f,
+                startClearanceThreshold = 20f,
+                endClearanceThreshold = 300f,
+                minSpacing = 24f
+            )
+        )
+
+        // End clearance violation: labelRight > endClearanceThreshold
+        assertFalse(
+            ElevationProfileZoomMath.shouldRenderTickLabel(
+                labelLeft = 280f,
+                labelRight = 320f,
+                lastDrawnRightX = 200f,
+                startClearanceThreshold = 20f,
+                endClearanceThreshold = 300f,
+                minSpacing = 24f
+            )
+        )
+
+        // First label when zoom = 1.0 (lastDrawnRightX = -1f): passes spacing automatically if start clearance satisfied
+        assertTrue(
+            ElevationProfileZoomMath.shouldRenderTickLabel(
+                labelLeft = 30f,
+                labelRight = 70f,
+                lastDrawnRightX = -1f,
+                startClearanceThreshold = 24f,
+                endClearanceThreshold = 300f,
+                minSpacing = 24f
+            )
+        )
     }
 }
