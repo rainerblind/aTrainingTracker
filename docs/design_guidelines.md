@@ -132,6 +132,7 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 ### 5.4 Color
 * Surfaces, text and accents come from `MaterialTheme.colorScheme` so that Light, Dark and **AMOLED** themes all render correctly. Verify new UI in all three.
 * Domain semantics come from `TTColor` (zones, routes, start/end points, branding). Add a new `TTColor` entry instead of an inline `Color(0x…)`.
+* **Route & Navigation Domain Tints**: Route geometry and trajectories on the map use green tones (`TTColor.RouteSelected`, `TTColor.RouteActiveNavigation`). Consequently, interactive UI elements, cards, and buttons specifically associated with route selection or navigation (e.g. the Route Selection button on the Control Tracking screen in ATT-2458) should incorporate a subtle green touch (e.g. subtle green border accent, tinted icon, or gentle container tint) to establish an intuitive semantic connection with the map's green route visualization, while keeping the effect minimal and harmonious with the theme.
 * Never hardcode `Color.White` / `Color.Black` for text or backgrounds in normal app UI (cockpit tiles follow `CockpitThemeMode`).
 
 ### 5.5 Typography & Icons
