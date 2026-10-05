@@ -49,6 +49,17 @@ BUILD SUCCESSFUL in [X]s
 <!-- If applicable: physical device verification on Pixel 10 (Android 16), Logcat inspection, UI rendering. -->
 <!-- If purely process/documentation/tooling: state "Pure process/tooling enhancement; zero APK runtime bytecode changes; verified via automated test suite." -->
 
+### Visual Consistency (Rule 23 — mandatory if UI is added or changed)
+<!-- Side-by-side on-device screenshots: new/changed UI vs. reference screen from the plan's "UI Consistency" section. Write "No UI changes." if not applicable. -->
+
+| New / Changed UI | Reference Screen (`...`) |
+| :---: | :---: |
+| ![new](img/[TICKET_KEY]_new_light.png) | ![reference](img/[TICKET_KEY]_ref_light.png) |
+| ![new dark](img/[TICKET_KEY]_new_dark.png) | ![reference dark](img/[TICKET_KEY]_ref_dark.png) |
+
+* **Checked against `docs/design_guidelines.md` §5**: shapes ☐ spacing ☐ colors/themes ☐ typography/icons ☐ placement ☐
+* **Deviations & justification**: None / `...`
+
 ---
 
 ## 5. Invariant & Governance Verification

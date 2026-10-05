@@ -115,3 +115,14 @@ These rules are strictly binding on all AI assistants and agent instances operat
 ## 21. Specific Direct Platform Intents Over Generic App Settings
 * **Rule**: User prompts for system permissions, battery optimization, or hardware settings must target the most specific direct intent (e.g. direct system permission request, `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`). Navigating to generic Application Details Settings (`ACTION_APPLICATION_DETAILS_SETTINGS`) is only permissible as a last-resort fallback when direct intents are unavailable or permissions permanently blocked.
 
+## 22. Human Prerequisite Detection During Sprint Planning
+* **Rule**: Tickets requiring actions that only the human can perform (e.g. Google Cloud Console / OAuth client registration, SHA-1 fingerprints, API keys, Play Console settings, third-party accounts, special test hardware or outdoor rides) MUST be detected during Ceremony 1 (Sprint-Start Screening) (`"Tickets that need actions by me should be detected during the sprint planning."`).
+* Each required human action is listed in the ticket description under a `Human Prerequisites` section and agreed with the human before the ticket moves to `Analysis`.
+* Origin: Sprint 2026-40.16, ATT-1306 — Google Sign-In failed on device (status 10 / DEVELOPER_ERROR) because no OAuth client was registered; the gap surfaced only in the Joint Review.
+
+## 23. UI Design Consistency ("Look Like the Rest of the App")
+* **Rule**: Every ticket that adds or changes UI MUST follow `docs/design_guidelines.md` (in particular Section 5 *Visual Consistency Baseline*).
+* **Stage 3 (Plan)**: The plan MUST contain a `UI Consistency` section naming the closest existing reference screen/component, the reused components and theme tokens, and an explicit justification for any new one-off style (shape, color, icon set, branding, layout pattern).
+* **Stage 5 (Verification)**: The walkthrough MUST include on-device screenshots (Pixel 10) of the new/changed UI placed next to a screenshot of the reference screen, in Light and Dark/AMOLED theme where relevant. Visible mismatches must be fixed before `Final Review (Human)`.
+* Origin: Sprint 2026-40.16 — ATT-1835, ATT-1953, ATT-2058 were functionally OK but did not look/feel like the rest of the app (follow-ups ATT-2456 … ATT-2462).
+

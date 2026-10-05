@@ -45,6 +45,7 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
 3. **Ticket-by-Ticket Walkthrough with the Human User**:
    For each ticket in sequence:
    * **Present Summary & Context**: Present the ticket key, title, and current description to the user.
+   * **Human Prerequisite Detection (Rule 22)**: Explicitly check whether the ticket depends on actions only the human can perform (e.g. Google Cloud Console / OAuth client registration, SHA-1 fingerprints, API keys, Play Console settings, third-party accounts, test hardware/sensors, outdoor rides). If so, name each action to the user, record them in the ticket description under a `Human Prerequisites` section, and agree whether they are completed before development starts (`"Tickets that need actions by me should be detected during the sprint planning."` — Retro 2026-40.16, ATT-1306).
    * **Screening Evaluation**:
      * *Case A: Clean & Unambiguous*: If the ticket description clearly articulates the goal, scope, and expected outcome, confirm with the user and advance the ticket to `Analysis`:
        ```bash
