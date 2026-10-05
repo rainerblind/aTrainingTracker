@@ -1524,6 +1524,10 @@
     <string name="google_drive_never_synced">Nog niet gesynchroniseerd</string>
     <string name="restore_from_google_drive">Herstellen vanaf Google Drive</string>
     <string name="upload_to_google_drive">Back-up maken naar Google Drive</string>
+    <string name="google_drive_error_developer_config">Configuratiefout voor Google Sign-In (status 10): Controleer de OAuth-clientregistratie (pakketnaam com.atrainingtracker.debug en SHA-1-vingerafdruk) in Google Cloud Console.</string>
+    <string name="google_drive_error_network">Geen internetverbinding of netwerkfout tijdens Google Sign-In.</string>
+    <string name="google_drive_error_generic">Inloggen met Google mislukt. Probeer het opnieuw.</string>
+    <string name="google_drive_connect_prompt">Verbind uw Google-account om trainingen en databaseback-ups automatisch te synchroniseren met Google Drive.</string>
     <string name="gpx_enriching_elevation">Hoogtegegevens ophalen…</string>
     <string name="gpx_elevation_enriched">Hoogtegegevens succesvol toegevoegd</string>
     <string name="gpx_elevation_enrichment_failed">Hoogte ophalen mislukt, 2D-route geïmporteerd</string>

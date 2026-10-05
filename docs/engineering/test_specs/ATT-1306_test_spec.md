@@ -1,50 +1,38 @@
 # Stage 2 Test Specification: ATT-1306 - Google Drive Integration for Automated Workout Export and Backup Synchronization
 
 **Ticket**: [ATT-1306](https://rainerblind.atlassian.net/browse/ATT-1306)  
-**Sub-task**: [ATT-2407](https://rainerblind.atlassian.net/browse/ATT-2407) (`[Req & Test Spec]`)  
+**Sub-task**: [ATT-2474](https://rainerblind.atlassian.net/browse/ATT-2474) (`[Req & Test Spec]`)  
 **Parent Epic**: [ATT-162](https://rainerblind.atlassian.net/browse/ATT-162) (*Cloud integration*)  
 **Target Release**: `V4.9.40`  
-**Active Sprint**: `Sprint 2026-40.16`  
+**Active Sprint**: `Sprint 2026-41.1`  
 **Branch**: `feature/ATT-1306`  
 **Author**: AI Agent 1 (Implementer)  
-**Date**: 2026-10-04  
+**Date**: 2026-10-05  
 
 ---
 
 ## 1. Overview & Verification Strategy
 
-This test specification defines the verification procedures for `REQ-DAT-020` under ticket [ATT-1306](https://rainerblind.atlassian.net/browse/ATT-1306) (Rework Cycle 2).
+This test specification defines the verification procedures for `REQ-DAT-020` under ticket [ATT-1306](https://rainerblind.atlassian.net/browse/ATT-1306) (Rework Cycle 3).
 
-During the physical Google Pixel 10 evaluation of Cycle 1, the PO rejected the mock manual text-input dialog for email/token and dummy fallback token (`"gdrive_oauth_token"`). Cycle 2 mandates authentic, native Google Sign-In via Google Play Services (`com.google.android.gms:play-services-auth:21.3.0`) and genuine OAuth2 Bearer token retrieval via `GoogleAuthUtil.getToken(...)` on `Dispatchers.IO` with least-privilege `drive.file` scope.
+During the physical Google Pixel 10 evaluation of Sprint 2026-40.16 Joint Review, tapping "Mit Google Drive verbinden" resulted in "Google Sign-In failed (status 10)" (`DEVELOPER_ERROR`) due to missing Google Cloud Console OAuth client registration for `com.atrainingtracker.debug` and its debug SHA-1 fingerprint. Additionally, review findings noted:
+1. Raw English error messages displayed in German UI without actionable guidance.
+2. Synchronization switches (auto-export, auto-backup, wifi-only) displayed as active/ON even when not authenticated with Google Drive.
 
-The verification strategy ensures that:
-1. **Native Google Sign-In & Verified OAuth2 Token Retrieval (`GoogleDriveAuthManager`, `TrainingApplication`)**:
-   - `GoogleDriveAuthManager` configures `GoogleSignInOptions` requesting strictly `Scope("https://www.googleapis.com/auth/drive.file")` and athlete email.
-   - `GoogleAuthUtil.getToken(context, account, "oauth2:https://www.googleapis.com/auth/drive.file")` executes on `Dispatchers.IO` and yields a verified Bearer token.
-   - Manual text input dialogs for credentials or tokens are completely eliminated.
-   - Credentials and `uploadToGoogleDrive = true` are stored IF AND ONLY IF Google Play Services authentication and token retrieval succeed.
-   - Disconnecting executes `signOut()`, `revokeAccess()`, `GoogleAuthUtil.clearToken`, and wipes credentials cleanly.
-   - Unlinked safety: reading tokens when unlinked returns `null` safely without `NullPointerException`.
-2. **Google Drive REST Client (`GoogleDriveClient`)**:
-   - Interacts with Google Drive API v3 using lightweight `OkHttp 5.5.0` without heavy GMS Drive dependencies.
-   - Enforces the least-privilege `https://www.googleapis.com/auth/drive.file` OAuth scope.
-   - Resolves and creates folder hierarchies (`aTrainingTracker/Workouts/` and `aTrainingTracker/Backups/`) idempotently.
-   - Handles multipart upload, file overwriting, and streaming downloads with full resilience.
-3. **Automated Workout Export (`GoogleDriveUploader`, `ExportManager`)**:
-   - `GoogleDriveUploader` extends `BaseExporter` parallel to `DropboxUploader.java`.
-   - `ExportType.GOOGLE_DRIVE` supports standard export formats (`CSV`, `GC`, `GPX`, `TCX`, `FIT`).
-   - WorkManager jobs respect the configurable Wi-Fi only constraint (`NetworkType.UNMETERED` vs `NetworkType.CONNECTED`).
-4. **Database Backup & Restore (`GoogleDriveBackupManager`, `BackupWorker`, `BackupRestoreViewModel`)**:
-   - Periodic background backups upload `aTrainingTracker_backup.attbackup` to `aTrainingTracker/Backups/`.
-   - Manual backup and restore operations execute smoothly via `BackupRestoreViewModel`.
-   - Google Drive and Dropbox operate completely independently without mutual interference.
-5. **Settings Dialog & Navigation Architecture (`GoogleDriveSettingsDialog`)**:
-   - Modal bottom sheet complies with `AppBottomSheetContent` and `AppDialogActions.SaveCancel`.
-   - Tapping "Verbinden" launches the native Google Sign-In activity result contract instead of any text input dialog.
-   - Navigation drawer item `R.id.drawer_google_drive` and `SettingsBottomSheetType.GOOGLE_DRIVE` dispatch accurately.
-6. **Localization & Full Suite Regression**:
-   - 100% translation and plural parity across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
-   - Zero regressions across the existing test suite (`./gradlew testDebugUnitTest`).
+Cycle 3 mandates:
+1. **Localized Error Presentation & Status 10 Diagnostic**:
+   - Status 10 (`CommonStatusCodes.DEVELOPER_ERROR`): Map to dedicated localized message explaining that the Google Cloud Console OAuth client configuration (package name `com.atrainingtracker.debug` / debug SHA-1) is required.
+   - Network failure: Map to localized network connectivity message.
+   - Generic failure: Map to localized generic failure prompt.
+   - Zero raw unmapped exception strings displayed to athletes.
+2. **Conditional Disconnected State in `GoogleDriveSettingsDialog.kt`**:
+   - While `isConnected == false`, synchronization toggles (workouts, backup, wifi-only) are conditionally hidden or deactivated, and an onboarding hint (`google_drive_connect_prompt`) is displayed.
+3. **Native Google Play Services Sign-In & Verified OAuth2 Token Retrieval**:
+   - Preserves all authentic `play-services-auth` and `GoogleAuthUtil.getToken(...)` logic on `Dispatchers.IO` with least-privilege `drive.file` scope.
+4. **9-Language Localization Parity**:
+   - Full translation parity across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+5. **Clean-Room Regression Suite**:
+   - Zero regressions across existing unit test suite (`./gradlew testDebugUnitTest`).
 
 ---
 
@@ -52,8 +40,8 @@ The verification strategy ensures that:
 
 ### Requirement Archaeology & Chesterton's Fence Audit
 1. **Original Requirement ID & Target**: `REQ-DAT-020` (*Google Drive Integration for Automated Workout Export and Database Backup*), targeting `GoogleDriveClient.kt`, `GoogleDriveUploader.kt`, `GoogleDriveBackupManager.kt`, `GoogleDriveSettingsDialog.kt`, `GoogleDriveAuthManager.kt`, `ExportManager.java`, `BackupWorker.kt`, `BackupRestoreViewModel.kt`.
-2. **Historical Origin & Commit Trace**: Introduced in `ATT-1306` (commit `931bf45d`) during Sprint 2026-40.14. Evaluated on physical Google Pixel 10 during Sprint 2026-40.15 Joint Review where mock text input dialog was rejected.
-3. **Root Reason for Existing Formulation**: Initial cycle implemented the REST transport and export pipelines, but relied on a mock manual text-input dialog for email/auth token with a dummy fallback token (`"gdrive_oauth_token"`), failing production validation.
+2. **Historical Origin & Commit Trace**: Introduced in `ATT-1306` (commit `931bf45d`) during Sprint 2026-40.14. Evaluated on physical Google Pixel 10 during Sprint 2026-40.15 and Sprint 2026-40.16 Joint Reviews.
+3. **Root Reason for Existing Formulation**: Initial cycle implemented the REST transport and export pipelines, but relied on mock text input dialogs. Cycle 2 implemented real Google Play Services authentication with OAuth2 token exchange. Cycle 3 refines UI error presentation, status 10 developer diagnostics, and conditional suppression of sync toggles when disconnected.
 4. **Preservation of Core Invariants**: 
    - Least-privilege OAuth scope `https://www.googleapis.com/auth/drive.file` is strictly enforced.
    - Unlinked safety (reading credentials when unlinked returns `null` safely without `NullPointerException`) is preserved.
@@ -71,7 +59,7 @@ The verification strategy ensures that:
 | `REQ-DAT-020` (4: Backup & Restore Manager) | `TST-DAT-015` (Group 4) | `GoogleDriveBackupManagerTest.kt` | Coroutines / Unit Test | Specified |
 | `REQ-DAT-020` (5: ExportManager & Wi-Fi Constraints) | `TST-DAT-015` (Group 5) | `ExportManagerGoogleDriveTest.kt` | Unit / WorkManager Test | Specified |
 | `REQ-DAT-020` (6: BackupWorker & ViewModel) | `TST-DAT-015` (Group 6) | `BackupWorkerGoogleDriveTest.kt`, `BackupRestoreViewModelGoogleDriveTest.kt` | Coroutines / ViewModel Test | Specified |
-| `REQ-DAT-020` (7: UI Dialog & Native Launcher) | `TST-DAT-015` (Group 7) | `ModalBottomSheetDialogsIntegrityTest.kt`, `NavRoutesGoogleDriveTest.kt` | Reflection & Unit Test | Specified |
+| `REQ-DAT-020` (7: UI Dialog, Error Mapping & Disconnected State) | `TST-DAT-015` (Group 7) | `ModalBottomSheetDialogsIntegrityTest.kt`, `NavRoutesGoogleDriveTest.kt`, `GoogleDriveAuthErrorMappingTest.kt` | Reflection & Unit Test | Specified |
 | `REQ-DAT-020` (8: Localization Parity) | `TST-DAT-015` (Group 8) | `TranslationParityTest.kt` | JUnit 4 Resource Test | Specified |
 | `REQ-ALL` (Regression Invariant) | `TST-DAT-015` (Group 9) | Full `./gradlew testDebugUnitTest` | Clean-Room CI Suite | Specified |
 
@@ -152,21 +140,28 @@ The verification strategy ensures that:
   3. `testBackupRestoreViewModel_uploadAndRestoreGoogleDrive`:
      - Verifies `uploadToGoogleDrive` and `restoreFromGoogleDrive` dispatch loading and success/error states.
 
-### Group 7: UI Dialog & Navigation Contracts
-* **Test Class**: `com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest`
+### Group 7: UI Dialog, Error Mapping & Disconnected State
+* **Test Class**: `com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest` & `com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthErrorMappingTest`
 * **Test Cases**:
   1. `testGoogleDriveSettingsDialog_existsAndExposesComposableAndFragment`:
      - Uses reflection to verify `GoogleDriveSettingsDialog` composable function exists and is public.
      - Verifies `GoogleDriveSettingsDialogFragment` extends `AppBottomSheetDialogFragment`.
   2. `testNavRoutes_drawerGoogleDriveMapping`:
      - Asserts `NavRoutes.toSettingsBottomSheetType(R.id.drawer_google_drive)` returns `SettingsBottomSheetType.GOOGLE_DRIVE`.
+  3. `testResolveSignInErrorMessage_status10DeveloperError`:
+     - Verifies status code 10 (`CommonStatusCodes.DEVELOPER_ERROR`) resolves to localized string explaining developer/Google Cloud Console setup requirement.
+  4. `testResolveSignInErrorMessage_networkAndGenericErrors`:
+     - Verifies network errors resolve to localized network message and unknown status codes resolve to localized generic failure.
+  5. `testDisconnectedState_syncTogglesSuppressed`:
+     - Verifies when `isConnected == false`, sync toggles are conditionally suppressed/inactive and informative onboarding prompt is shown.
 
 ### Group 8: Localization Parity
 * **Test Class**: `com.atrainingtracker.trainingtracker.ui.translations.TranslationParityTest`
 * **Test Cases**:
   1. `testGoogleDriveStrings_definedAcrossAll9Locales`:
-     - Verifies all new string keys and plural resources exist in `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`.
+     - Verifies all new string keys and plural resources (`google_drive_error_developer_config`, `google_drive_error_network`, `google_drive_error_generic`, `google_drive_connect_prompt`, etc.) exist in `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`.
 
 ### Group 9: Full Suite Clean-Room Regression
 * **Command**: `./gradlew testDebugUnitTest`
 * **Criteria**: 100% pass rate, 0 failures, 0 regressions.
+

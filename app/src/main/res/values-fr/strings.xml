@@ -1525,6 +1525,10 @@
     <string name="google_drive_never_synced">Pas encore synchronisé</string>
     <string name="restore_from_google_drive">Restaurer depuis Google Drive</string>
     <string name="upload_to_google_drive">Sauvegarder sur Google Drive</string>
+    <string name="google_drive_error_developer_config">Erreur de configuration Google Sign-In (état 10) : Veuillez vérifier l\'enregistrement du client OAuth (nom de package com.atrainingtracker.debug et empreinte SHA-1) dans Google Cloud Console.</string>
+    <string name="google_drive_error_network">Aucune connexion Internet ou erreur réseau lors de la connexion Google.</string>
+    <string name="google_drive_error_generic">Échec de la connexion Google. Veuillez réessayer.</string>
+    <string name="google_drive_connect_prompt">Connectez votre compte Google pour exporter automatiquement vos entraînements et synchroniser vos sauvegardes vers Google Drive.</string>
     <string name="gpx_enriching_elevation">Récupération des données d\'altitude…</string>
     <string name="gpx_elevation_enriched">Données d\'altitude ajoutées avec succès</string>
     <string name="gpx_elevation_enrichment_failed">Échec de récupération d\'altitude, tracé 2D importé</string>

@@ -1611,6 +1611,10 @@
     <string name="google_drive_never_synced">Bisher keine Synchronisierung</string>
     <string name="restore_from_google_drive">Aus Google Drive wiederherstellen</string>
     <string name="upload_to_google_drive">In Google Drive sichern</string>
+    <string name="google_drive_error_developer_config">Google Sign-In Konfigurationsfehler (Status 10): Bitte prüfen Sie die OAuth-Client-Registrierung (Paketname com.atrainingtracker.debug und SHA-1-Fingerabdruck) in der Google Cloud Console.</string>
+    <string name="google_drive_error_network">Keine Internetverbindung oder Netzwerkfehler beim Google Sign-In.</string>
+    <string name="google_drive_error_generic">Google Sign-In fehlgeschlagen. Bitte versuchen Sie es erneut.</string>
+    <string name="google_drive_connect_prompt">Verbinden Sie Ihr Google-Konto, um abgeschlossene Workouts und Datenbank-Backups automatisch in Google Drive zu sichern.</string>
     <string name="gpx_enriching_elevation">Höhendaten werden abgerufen…</string>
     <string name="gpx_elevation_enriched">Höhendaten erfolgreich hinzugefügt</string>
     <string name="gpx_elevation_enrichment_failed">Höhendaten konnten nicht abgerufen werden, 2D-Route importiert</string>

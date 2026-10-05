@@ -1504,6 +1504,10 @@
     <string name="google_drive_never_synced">まだ同期されていません</string>
     <string name="restore_from_google_drive">Google ドライブから復元</string>
     <string name="upload_to_google_drive">Google ドライブにバックアップ</string>
+    <string name="google_drive_error_developer_config">Google サインイン設定エラー (ステータス 10): Google Cloud Console で OAuth クライアント登録 (パッケージ名 com.atrainingtracker.debug および SHA-1 フィンガープリント) を確認してください。</string>
+    <string name="google_drive_error_network">Google サインイン中にインターネット接続がないか、ネットワークエラーが発生しました。</string>
+    <string name="google_drive_error_generic">Google サインインに失敗しました。もう一度お試しください。</string>
+    <string name="google_drive_connect_prompt">Google アカウントを接続して、ワークアウトのエクスポートとデータベースのバックアップを Google ドライブに自動同期します。</string>
     <string name="gpx_enriching_elevation">標高データを取得中…</string>
     <string name="gpx_elevation_enriched">標高データを正常に追加しました</string>
     <string name="gpx_elevation_enrichment_failed">標高の取得に失敗しました。2Dルートをインポートしました</string>
