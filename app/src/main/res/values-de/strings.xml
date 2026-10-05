@@ -408,6 +408,8 @@
     <string name="equipment_tab_sensor_matrix">Sensor-Matrix</string>
     <string name="equipment_matrix_no_sensors">Keine gekoppelten Sensoren gefunden. Koppeln Sie zuerst Sensoren in den Einstellungen.</string>
     <string name="equipment_matrix_no_equipment">Keine Ausrüstung gefunden. Fügen Sie zuerst Räder oder Schuhe hinzu.</string>
+    <string name="equipment_matrix_no_bike_sensors">Keine kompatiblen Rad-Sensoren gefunden.</string>
+    <string name="equipment_matrix_no_shoe_sensors">Keine kompatiblen Schuh-Sensoren gefunden.</string>
 
 
     <!-- dialogs -->

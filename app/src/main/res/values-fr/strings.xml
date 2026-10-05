@@ -394,6 +394,8 @@
     <string name="equipment_tab_sensor_matrix">Matrice de capteurs</string>
     <string name="equipment_matrix_no_sensors">Aucun capteur jumelé trouvé. Associez d\'abord des capteurs dans les Paramètres.</string>
     <string name="equipment_matrix_no_equipment">Aucun équipement trouvé. Ajoutez d\'abord des vélos ou des chaussures.</string>
+    <string name="equipment_matrix_no_bike_sensors">Aucun capteur vélo compatible trouvé.</string>
+    <string name="equipment_matrix_no_shoe_sensors">Aucun capteur chaussure compatible trouvé.</string>
 
     <string name="SD_card_not_available">La carte SD n\'est pas disponible.</string>
 

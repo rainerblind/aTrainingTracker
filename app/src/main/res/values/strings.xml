@@ -497,6 +497,8 @@
     <string name="equipment_tab_sensor_matrix">Sensor Matrix</string>
     <string name="equipment_matrix_no_sensors">No paired sensors found. Pair external sensors first in Settings.</string>
     <string name="equipment_matrix_no_equipment">No equipment found. Add bikes or shoes first.</string>
+    <string name="equipment_matrix_no_bike_sensors">No compatible bike sensors found.</string>
+    <string name="equipment_matrix_no_shoe_sensors">No compatible shoe sensors found.</string>
 
     <!-- dialogs -->
     <string name="SD_card_not_available">Sorry, the SD Card is not available.</string>

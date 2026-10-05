@@ -92,8 +92,19 @@ class EquipmentViewModel @JvmOverloads constructor(
     private val _allRemoteSensors = MutableStateFlow<List<DevicesDatabaseManager.SimpleSensorInfo>>(emptyList())
     val allRemoteSensors: StateFlow<List<DevicesDatabaseManager.SimpleSensorInfo>> = _allRemoteSensors
 
-    val bikeSensors = dbDevicesHelper.getSensorsForSportType(BSportType.BIKE)
-    val runSensors = dbDevicesHelper.getSensorsForSportType(BSportType.RUN)
+    private val _bikeSensors = MutableStateFlow<List<DevicesDatabaseManager.SimpleSensorInfo>>(emptyList())
+    val bikeSensors: StateFlow<List<DevicesDatabaseManager.SimpleSensorInfo>> = _bikeSensors
+
+    private val _shoeSensors = MutableStateFlow<List<DevicesDatabaseManager.SimpleSensorInfo>>(emptyList())
+    val shoeSensors: StateFlow<List<DevicesDatabaseManager.SimpleSensorInfo>> = _shoeSensors
+
+    val runSensors: StateFlow<List<DevicesDatabaseManager.SimpleSensorInfo>> = _shoeSensors
+
+    val bikeSensorsList: List<DevicesDatabaseManager.SimpleSensorInfo>
+        get() = _bikeSensors.value.ifEmpty { dbDevicesHelper.getSensorsForSportType(BSportType.BIKE) }
+
+    val runSensorsList: List<DevicesDatabaseManager.SimpleSensorInfo>
+        get() = _shoeSensors.value.ifEmpty { dbDevicesHelper.getSensorsForSportType(BSportType.RUN) }
 
     val bikeSportTypes = dbSportHelper.getSportTypes(BSportType.BIKE)
     val runSportTypes = dbSportHelper.getSportTypes(BSportType.RUN)
@@ -190,7 +201,14 @@ class EquipmentViewModel @JvmOverloads constructor(
 
             _bikes.value = fetchItems(BSportType.BIKE)
             _shoes.value = fetchItems(BSportType.RUN)
-            _allRemoteSensors.value = dbDevicesHelper.allRemoteSensors
+            val remoteSensors = dbDevicesHelper.allRemoteSensors
+            _allRemoteSensors.value = remoteSensors
+            _bikeSensors.value = remoteSensors.filter {
+                DevicesDatabaseManager.isBikeSensor(it.deviceType) || DevicesDatabaseManager.isSharedSensor(it.deviceType)
+            }
+            _shoeSensors.value = remoteSensors.filter {
+                DevicesDatabaseManager.isRunSensor(it.deviceType) || DevicesDatabaseManager.isSharedSensor(it.deviceType)
+            }
         }
     }
 
