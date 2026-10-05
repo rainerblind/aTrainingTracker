@@ -394,6 +394,8 @@
     <string name="equipment_tab_sensor_matrix">Matrice sensori</string>
     <string name="equipment_matrix_no_sensors">Nessun sensore associato trovato. Associa prima i sensori nelle Impostazioni.</string>
     <string name="equipment_matrix_no_equipment">Nessun equipaggiamento trovato. Aggiungi prima bici o scarpe.</string>
+    <string name="equipment_matrix_no_bike_sensors">Nessun sensore bici compatibile trovato.</string>
+    <string name="equipment_matrix_no_shoe_sensors">Nessun sensore scarpa compatibile trovato.</string>
 
     <string name="SD_card_not_available">Scheda SD non disponibile.</string>
 

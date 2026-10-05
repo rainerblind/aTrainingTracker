@@ -130,6 +130,29 @@ class EquipmentViewModelMatrixTest {
     }
 
     @Test
+    fun testSportPartitionedSensors_emitsFilteredSensors() {
+        val sensors = listOf(
+            SimpleSensorInfo(10L, "Garmin HRM-Dual", com.atrainingtracker.banalservice.devices.DeviceType.HRM),
+            SimpleSensorInfo(20L, "Stages Power", com.atrainingtracker.banalservice.devices.DeviceType.BIKE_POWER),
+            SimpleSensorInfo(30L, "Stryd Footpod", com.atrainingtracker.banalservice.devices.DeviceType.RUN_SPEED),
+            SimpleSensorInfo(40L, "Tempe", com.atrainingtracker.banalservice.devices.DeviceType.ENVIRONMENT)
+        )
+        every { mockDevicesManager.allRemoteSensors } returns sensors
+        every { mockDbHelper.getEquipmentItems(any<BSportType>()) } returns emptyList()
+
+        val viewModel = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Bike sensors: HRM (shared), Stages Power (bike), Tempe (shared) -> 3 items
+        assertEquals(3, viewModel.bikeSensors.value.size)
+        assertEquals(listOf(10L, 20L, 40L), viewModel.bikeSensors.value.map { it.id })
+
+        // Shoe sensors: HRM (shared), Stryd Footpod (run), Tempe (shared) -> 3 items
+        assertEquals(3, viewModel.shoeSensors.value.size)
+        assertEquals(listOf(10L, 30L, 40L), viewModel.shoeSensors.value.map { it.id })
+    }
+
+    @Test
     fun testSetSensorLink_invokesDbHelperAndReloadsEquipment() {
         val bike = EquipmentDbHelper.EquipmentData(
             1L, "Trek Emonda", BSportType.BIKE, 3, null, null, false

@@ -394,6 +394,8 @@
     <string name="equipment_tab_sensor_matrix">Matriz de sensores</string>
     <string name="equipment_matrix_no_sensors">Nenhum sensor emparelhado encontrado. Emparelhe os sensores primeiro nas Definições.</string>
     <string name="equipment_matrix_no_equipment">Nenhum equipamento encontrado. Adicione bicicletas ou sapatos primeiro.</string>
+    <string name="equipment_matrix_no_bike_sensors">Nenhum sensor de bicicleta compatível encontrado.</string>
+    <string name="equipment_matrix_no_shoe_sensors">Nenhum sensor de calçado compatível encontrado.</string>
 
     <string name="SD_card_not_available">Cartão SD não disponível.</string>
 

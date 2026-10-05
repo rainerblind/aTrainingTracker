@@ -930,6 +930,8 @@
     <string name="equipment_tab_sensor_matrix">Macierz czujników</string>
     <string name="equipment_matrix_no_sensors">Nie znaleziono sparowanych czujników. Najpierw sparuj czujniki w Ustawieniach.</string>
     <string name="equipment_matrix_no_equipment">Nie znaleziono sprzętu. Najpierw dodaj rowery lub buty.</string>
+    <string name="equipment_matrix_no_bike_sensors">Nie znaleziono zgodnych czujników rowerowych.</string>
+    <string name="equipment_matrix_no_shoe_sensors">Nie znaleziono zgodnych czujników butów.</string>
     <string name="equipment_none">- brak -</string>
     <string name="equipment_type_bike">Rowery</string>
     <string name="equipment_type_shoe">Buty</string>

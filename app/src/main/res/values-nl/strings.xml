@@ -394,6 +394,8 @@
     <string name="equipment_tab_sensor_matrix">Sensormatrix</string>
     <string name="equipment_matrix_no_sensors">Geen gekoppelde sensoren gevonden. Koppel eerst sensoren in Instellingen.</string>
     <string name="equipment_matrix_no_equipment">Geen uitrusting gevonden. Voeg eerst fietsen of schoenen toe.</string>
+    <string name="equipment_matrix_no_bike_sensors">Geen compatibele fietssensoren gevonden.</string>
+    <string name="equipment_matrix_no_shoe_sensors">Geen compatibele schoensensoren gevonden.</string>
 
     <string name="SD_card_not_available">SD-kaart niet beschikbaar.</string>
 
