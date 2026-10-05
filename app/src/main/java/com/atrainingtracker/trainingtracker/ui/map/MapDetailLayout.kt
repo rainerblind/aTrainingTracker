@@ -588,77 +588,118 @@ fun MapDetailLayout(
                 .padding(top = currentTopPaddingDp)
         ) {
             if (showMap && hasLowerSection) {
-                BoxWithConstraints(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                val density = LocalDensity.current
-                val totalHeightPx = constraints.maxHeight.toFloat()
-                val dividerHeightPx = with(density) { SplitPaneMath.DIVIDER_TOUCH_HEIGHT.toPx() }
-                val toolbarHeightPx = if (hasZoomToolbar) with(density) { GlobalTelemetryZoomToolbarDefaults.TOOLBAR_HEIGHT.toPx() } else 0f
-                val minMapHeightPx = with(density) { SplitPaneMath.MIN_MAP_HEIGHT.toPx() }
-                val minLowerHeightPx = with(density) { SplitPaneMath.MIN_LOWER_HEIGHT.toPx() }
-
-                val availableHeightPx = SplitPaneMath.calculateAvailableHeight(totalHeightPx, dividerHeightPx + toolbarHeightPx)
-                val minFraction = SplitPaneMath.calculateMinFraction(minMapHeightPx, availableHeightPx)
-                val maxFraction = SplitPaneMath.calculateMaxFraction(minLowerHeightPx, availableHeightPx, minFraction)
-
-                Column(modifier = Modifier.fillMaxSize()) {
-                    mapBox(
-                        Modifier
-                            .weight(splitFraction)
-                            .heightIn(min = SplitPaneMath.MIN_MAP_HEIGHT)
-                            .fillMaxWidth()
-                    )
-
-                    // INTERACTIVE DRAGGABLE SPLITTER (REQ-UI-223 / ATT-1890)
-                    SplitPaneDivider(
-                        onDelta = { delta ->
-                            splitFraction = SplitPaneMath.updateFraction(
-                                currentFraction = splitFraction,
-                                deltaPx = delta,
-                                availableHeightPx = availableHeightPx,
-                                minFraction = minFraction,
-                                maxFraction = maxFraction
-                            )
-                        },
-                        onReset = {
-                            splitFraction = SplitPaneMath.DEFAULT_SPLIT_FRACTION
-                        }
-                    )
-
-                    // PERSISTENT STICKY LOWER VIEWPORT CONTAINER (REQ-UI-246 / ATT-2113)
-                    Box(
-                        modifier = Modifier
-                            .weight(1f - splitFraction)
-                            .fillMaxWidth()
+                if (hasScrollableContent) {
+                    BoxWithConstraints(
+                        modifier = Modifier.fillMaxSize()
                     ) {
+                        val density = LocalDensity.current
+                        val totalHeightPx = constraints.maxHeight.toFloat()
+                        val dividerHeightPx = with(density) { SplitPaneMath.DIVIDER_TOUCH_HEIGHT.toPx() }
+                        val toolbarHeightPx = if (hasZoomToolbar) with(density) { GlobalTelemetryZoomToolbarDefaults.TOOLBAR_HEIGHT.toPx() } else 0f
+                        val minMapHeightPx = with(density) { SplitPaneMath.MIN_MAP_HEIGHT.toPx() }
+                        val minLowerHeightPx = with(density) { SplitPaneMath.MIN_LOWER_HEIGHT.toPx() }
+
+                        val availableHeightPx = SplitPaneMath.calculateAvailableHeight(totalHeightPx, dividerHeightPx + toolbarHeightPx)
+                        val minFraction = SplitPaneMath.calculateMinFraction(minMapHeightPx, availableHeightPx)
+                        val maxFraction = SplitPaneMath.calculateMaxFraction(minLowerHeightPx, availableHeightPx, minFraction)
+
                         Column(modifier = Modifier.fillMaxSize()) {
-                            if (hasZoomToolbar) {
-                                GlobalTelemetryZoomToolbar(
-                                    zoomScale = profileZoomScale,
-                                    startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
-                                    totalSpan = totalSpan,
-                                    onZoomChanged = { z, s ->
-                                        profileZoomScale = z
-                                        viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
-                                    },
-                                    isPanMode = isPanMode,
-                                    onPanModeToggle = { isPanMode = !isPanMode },
-                                    modifier = Modifier.fillMaxWidth()
+                            mapBox(
+                                Modifier
+                                    .weight(splitFraction)
+                                    .heightIn(min = SplitPaneMath.MIN_MAP_HEIGHT)
+                                    .fillMaxWidth()
+                            )
+
+                            // INTERACTIVE DRAGGABLE SPLITTER (REQ-UI-223 / ATT-1890)
+                            SplitPaneDivider(
+                                onDelta = { delta ->
+                                    splitFraction = SplitPaneMath.updateFraction(
+                                        currentFraction = splitFraction,
+                                        deltaPx = delta,
+                                        availableHeightPx = availableHeightPx,
+                                        minFraction = minFraction,
+                                        maxFraction = maxFraction
+                                    )
+                                },
+                                onReset = {
+                                    splitFraction = SplitPaneMath.DEFAULT_SPLIT_FRACTION
+                                }
+                            )
+
+                            // PERSISTENT STICKY LOWER VIEWPORT CONTAINER (REQ-UI-246 / ATT-2113)
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f - splitFraction)
+                                    .fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.fillMaxSize()) {
+                                    if (hasZoomToolbar) {
+                                        GlobalTelemetryZoomToolbar(
+                                            zoomScale = profileZoomScale,
+                                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
+                                            totalSpan = totalSpan,
+                                            onZoomChanged = { z, s ->
+                                                profileZoomScale = z
+                                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
+                                            },
+                                            isPanMode = isPanMode,
+                                            onPanModeToggle = { isPanMode = !isPanMode },
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                    lowerColumn(
+                                        Modifier
+                                            .weight(1f)
+                                            .fillMaxWidth()
+                                            .verticalScroll(rememberScrollState())
+                                    )
+                                }
+                                scrubbingOverlay()
+                            }
+                        }
+                    }
+                } else {
+                    // Route & Segment Details: Dynamically maximized map + bottom-anchored intrinsic elevation profile (REQ-UI-273 / ATT-2386)
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        mapBox(
+                            Modifier
+                                .weight(1f)
+                                .heightIn(min = SplitPaneMath.MIN_MAP_HEIGHT)
+                                .fillMaxWidth()
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight()
+                        ) {
+                            Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
+                                if (hasZoomToolbar) {
+                                    GlobalTelemetryZoomToolbar(
+                                        zoomScale = profileZoomScale,
+                                        startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
+                                        totalSpan = totalSpan,
+                                        onZoomChanged = { z, s ->
+                                            profileZoomScale = z
+                                            viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
+                                        },
+                                        isPanMode = isPanMode,
+                                        onPanModeToggle = { isPanMode = !isPanMode },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                                lowerColumn(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .wrapContentHeight()
                                 )
                             }
-                            lowerColumn(
-                                Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth()
-                                    .verticalScroll(rememberScrollState())
-                            )
+                            scrubbingOverlay()
                         }
-                        scrubbingOverlay()
                     }
                 }
-            }
-        } else {
+            } else {
             // When hasLowerSection is false (Heatmap / Empty map), or when showMap is false (LiveSegmentSheet / Trackless)
             if (showMap) {
                 mapBox(
