@@ -593,14 +593,22 @@ fun ElevationProfile(
                 val endLabelWidth = highlightPaint.measureText(endLabel)
                 canvas.nativeCanvas.drawText(endLabel, width - endLabelWidth, height + 45f, highlightPaint)
 
-                if (currentZoomScale > 1.01f) {
+                val minSpacingPx = 24.dp.toPx()
+                val startLabelWidth = if (currentZoomScale > 1.01f) {
                     val startLabel = if (isTimeDomain) {
                         ElevationProfileZoomMath.formatTimeTick(currentStartDist.toLong())
                     } else {
                         distanceFormatter.format_with_units(currentStartDist)
                     }
                     canvas.nativeCanvas.drawText(startLabel, 0f, height + 45f, highlightPaint)
+                    highlightPaint.measureText(startLabel)
+                } else {
+                    0f
                 }
+
+                val startClearanceThreshold = if (currentZoomScale > 1.01f) startLabelWidth + minSpacingPx else minSpacingPx
+                val endClearanceThreshold = width - endLabelWidth - minSpacingPx
+                var lastDrawnRightX = if (currentZoomScale > 1.01f) startLabelWidth else -1f
 
                 if (isTimeDomain) {
                     val adaptiveTimeStep = ElevationProfileZoomMath.calculateAdaptiveTimeStep(visibleSpan).toDouble()
@@ -610,11 +618,22 @@ fun ElevationProfile(
                     }
                     while (currentT < currentStartDist + visibleSpan) {
                         val x = ElevationProfileZoomMath.distanceToCanvasX(currentT, currentStartDist, visibleSpan, width)
-                        if (x > 60f && (width - x) > (endLabelWidth + 50f)) {
+                        val label = ElevationProfileZoomMath.formatTimeTick(currentT.toLong())
+                        val lWidth = textPaint.measureText(label)
+                        val labelLeft = x - (lWidth / 2f)
+                        val labelRight = x + (lWidth / 2f)
+                        if (ElevationProfileZoomMath.shouldRenderTickLabel(
+                                labelLeft = labelLeft,
+                                labelRight = labelRight,
+                                lastDrawnRightX = lastDrawnRightX,
+                                startClearanceThreshold = startClearanceThreshold,
+                                endClearanceThreshold = endClearanceThreshold,
+                                minSpacing = minSpacingPx
+                            )
+                        ) {
                             canvas.nativeCanvas.drawLine(x, height, x, height - 10f, textPaint)
-                            val label = ElevationProfileZoomMath.formatTimeTick(currentT.toLong())
-                            val lWidth = textPaint.measureText(label)
-                            canvas.nativeCanvas.drawText(label, x - (lWidth / 2), height + 45f, textPaint)
+                            canvas.nativeCanvas.drawText(label, labelLeft, height + 45f, textPaint)
+                            lastDrawnRightX = labelRight
                         }
                         currentT += adaptiveTimeStep
                     }
@@ -626,19 +645,30 @@ fun ElevationProfile(
                     }
                     while (currentD < currentStartDist + visibleSpan) {
                         val x = ElevationProfileZoomMath.distanceToCanvasX(currentD, currentStartDist, visibleSpan, width)
-                        if (x > 60f && (width - x) > (endLabelWidth + 50f)) {
+                        val label = if (unit == MyUnits.METRIC) {
+                            if (visibleSpan < 1500) "${currentD.toInt()}m"
+                            else if (currentD % 1000.0 != 0.0) String.format(Locale.getDefault(), "%.1f", currentD / 1000.0)
+                            else "${(currentD / 1000.0).toInt()}"
+                        } else {
+                            val miles = currentD / BANALService.METER_PER_MILE
+                            if (miles % 1.0 != 0.0) String.format(Locale.getDefault(), "%.1f", miles)
+                            else "${miles.toInt()}"
+                        }
+                        val lWidth = textPaint.measureText(label)
+                        val labelLeft = x - (lWidth / 2f)
+                        val labelRight = x + (lWidth / 2f)
+                        if (ElevationProfileZoomMath.shouldRenderTickLabel(
+                                labelLeft = labelLeft,
+                                labelRight = labelRight,
+                                lastDrawnRightX = lastDrawnRightX,
+                                startClearanceThreshold = startClearanceThreshold,
+                                endClearanceThreshold = endClearanceThreshold,
+                                minSpacing = minSpacingPx
+                            )
+                        ) {
                             canvas.nativeCanvas.drawLine(x, height, x, height - 10f, textPaint)
-                            val label = if (unit == MyUnits.METRIC) {
-                                if (visibleSpan < 1500) "${currentD.toInt()}m"
-                                else if (currentD % 1000.0 != 0.0) String.format(Locale.getDefault(), "%.1f", currentD / 1000.0)
-                                else "${(currentD / 1000.0).toInt()}"
-                            } else {
-                                val miles = currentD / BANALService.METER_PER_MILE
-                                if (miles % 1.0 != 0.0) String.format(Locale.getDefault(), "%.1f", miles)
-                                else "${miles.toInt()}"
-                            }
-                            val lWidth = textPaint.measureText(label)
-                            canvas.nativeCanvas.drawText(label, x - (lWidth / 2), height + 45f, textPaint)
+                            canvas.nativeCanvas.drawText(label, labelLeft, height + 45f, textPaint)
+                            lastDrawnRightX = labelRight
                         }
                         currentD += adaptiveDistStep
                     }
