@@ -30,7 +30,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -46,7 +46,7 @@ import java.lang.reflect.Field
 @OptIn(ExperimentalCoroutinesApi::class)
 class TrackingViewsRepositoryTest {
 
-    private val testDispatcher = StandardTestDispatcher()
+    private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var mockContext: Context
     private lateinit var mockViewsDbManager: TrackingViewsDatabaseManager
     private lateinit var mockDevicesDbManager: DevicesDatabaseManager
