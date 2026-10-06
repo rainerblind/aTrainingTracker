@@ -98,4 +98,16 @@ class ReturnNavigationHudContractTest {
         assertEquals("3.5 km", state.formattedRemainingDistance)
         assertEquals("+45 m", state.formattedRemainingClimb)
     }
+
+    @Test
+    fun returnNavigationHud_doesNotContainEmojiAndUsesDesignTokens() {
+        val hudFile = java.io.File("src/main/java/com/atrainingtracker/trainingtracker/ui/routes/ReturnNavigationHud.kt")
+        val content = hudFile.readText()
+
+        assertFalse("ReturnNavigationHud must not contain raw house emoji", content.contains("🏠"))
+        assertTrue("ReturnNavigationHud must use RoundedCornerShape(12.dp)", content.contains("RoundedCornerShape(12.dp)"))
+        assertTrue("ReturnNavigationHud must use TTColor.RouteSelected accent", content.contains("TTColor.RouteSelected"))
+        assertTrue("ReturnNavigationHud must use localized nav_stop_return description", content.contains("R.string.nav_stop_return"))
+    }
 }
+

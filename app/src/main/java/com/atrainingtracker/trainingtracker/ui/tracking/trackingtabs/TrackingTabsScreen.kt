@@ -708,11 +708,17 @@ fun TrackingTabsScreen(
                 }
             }
 
-            // Modal Bottom Sheet for Route Selector (REQ-UI-279, REQ-UI-280 / ATT-2459)
+            // Modal Bottom Sheet for Route Selector (REQ-UI-279, REQ-UI-280, REQ-UI-282 / ATT-2459, ATT-2462)
             if (showRouteSelectorSheet) {
+                val isMidRide = trackingMode == TrackingMode.TRACKING || trackingMode == TrackingMode.PAUSED
                 RouteSelectorModalBottomSheet(
                     viewModel = routeSelectorViewModel,
-                    onDismiss = { showRouteSelectorSheet = false }
+                    onDismiss = { showRouteSelectorSheet = false },
+                    isMidRide = isMidRide,
+                    onTakeMeHome = {
+                        returnNavRepo.startTakeMeHome()
+                        showRouteSelectorSheet = false
+                    }
                 )
             }
         }
