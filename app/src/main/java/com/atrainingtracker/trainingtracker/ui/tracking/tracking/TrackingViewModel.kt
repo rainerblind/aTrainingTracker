@@ -68,6 +68,9 @@ data class TrackingScreenState(
     val showMap: Boolean = false,
     val showLiveSegments: Boolean = false,
     val showElevationProfile: Boolean = false,
+    val showLiveClimbs: Boolean = true,
+    val showNavigationHints: Boolean = true,
+    val showLapButton: Boolean = true,
     val fields: List<SensorFieldState> = emptyList(),
     val pathPoints: List<com.atrainingtracker.trainingtracker.ui.map.PathPoint> = emptyList(),
     
@@ -305,6 +308,9 @@ class TrackingViewModel(
                     showMap = viewInfo?.showMap ?: false,
                     showLiveSegments =  viewInfo?.showLiveSegments ?: false,
                     showElevationProfile = viewInfo?.showElevationProfile ?: false,
+                    showLiveClimbs = viewInfo?.showLiveClimbs ?: true,
+                    showNavigationHints = viewInfo?.showNavigationHints ?: true,
+                    showLapButton = viewInfo?.showLapButton ?: true,
                     pathPoints = livePathPoints,
                     zoomFocus = MapZoomFocus.FOLLOW_ME,
                     userSpeed = banalServiceRepository.currentSpeed.value?.toFloat() ?: 0f,
@@ -465,6 +471,42 @@ class TrackingViewModel(
         }
         viewModelScope.launch {
             trackingViewsRepository.deleteSensorField(sensorFieldId)
+        }
+    }
+
+    fun onUpdateShowMap(show: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowMap(viewId, show)
+        }
+    }
+
+    fun onUpdateShowElevationProfile(show: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowElevationProfile(viewId, show)
+        }
+    }
+
+    fun onUpdateShowLiveSegments(show: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowLiveSegments(viewId, show)
+        }
+    }
+
+    fun onUpdateShowLiveClimbs(show: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowLiveClimbs(viewId, show)
+        }
+    }
+
+    fun onUpdateShowNavigationHints(show: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowNavigationHints(viewId, show)
+        }
+    }
+
+    fun onUpdateShowLapButton(show: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowLapButton(viewId, show)
         }
     }
 

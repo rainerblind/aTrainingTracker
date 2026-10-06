@@ -325,6 +325,10 @@
     <string name="config_tracking__show_map">Mapa</string>
     <string name="config_tracking__showLiveSegments">Live Segments</string>
     <string name="config_tracking__showLapButton">Przycisk okr.</string>
+    <string name="config_tracking__show_navigation_hints">Wskazówki nawigacyjne</string>
+    <string name="config_tracking__show_live_climbs">Podjazdy na żywo</string>
+    <string name="config_tracking__wysiwyg_active">Aktywny</string>
+    <string name="config_tracking__wysiwyg_hidden">Ukryty</string>
     <string name="add_view_before">dodaj widok przed</string>
     <string name="delete_view">usuń widok</string>
     <string name="add_view_after">dodaj widok po</string>

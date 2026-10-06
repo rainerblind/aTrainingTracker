@@ -583,6 +583,10 @@
     <string name="config_tracking__show_map">Carte</string>
     <string name="config_tracking__showLiveSegments">Segments Live</string>
     <string name="config_tracking__showLapButton">Bouton tour</string>
+    <string name="config_tracking__show_navigation_hints">Indications de direction</string>
+    <string name="config_tracking__show_live_climbs">Montées en direct</string>
+    <string name="config_tracking__wysiwyg_active">Actif</string>
+    <string name="config_tracking__wysiwyg_hidden">Masqué</string>
     <string name="add_view_before">ajouter vue avant</string>
     <string name="delete_view">supprimer vue</string>
     <string name="add_view_after">ajouter vue après</string>
