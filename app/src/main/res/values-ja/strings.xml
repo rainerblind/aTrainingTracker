@@ -1625,4 +1625,10 @@
     <string name="sensor_battery_snackbar_single">⚠️ %1$s: バッテリー残量低下 (%2$d%%)</string>
     <string name="sensor_battery_snackbar_many">⚠️ %1$d 個のセンサー: バッテリー残量低下 (%2$s)</string>
     <string name="sensor_battery_action_view_sensors">センサーを見る</string>
+
+    <!-- Sensor Pairing Relocation (ATT-2189) -->
+    <string name="devices_pair_sensor">センサーをペアリング</string>
+    <string name="devices_pair_protocol_title">プロトコルを選択</string>
+    <string name="devices_pair_protocol_ant">ANT+ センサー</string>
+    <string name="devices_pair_protocol_ble">Bluetooth LE センサー</string>
 </resources>

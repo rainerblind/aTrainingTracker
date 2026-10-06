@@ -1647,4 +1647,10 @@
     <string name="sensor_battery_snackbar_single">⚠️ %1$s: Batería baja (%2$d%%)</string>
     <string name="sensor_battery_snackbar_many">⚠️ %1$d sensores: Batería baja (%2$s)</string>
     <string name="sensor_battery_action_view_sensors">Ver sensores</string>
+
+    <!-- Sensor Pairing Relocation (ATT-2189) -->
+    <string name="devices_pair_sensor">Vincular sensor</string>
+    <string name="devices_pair_protocol_title">Seleccionar protocolo</string>
+    <string name="devices_pair_protocol_ant">Sensor ANT+</string>
+    <string name="devices_pair_protocol_ble">Sensor Bluetooth LE</string>
 </resources>

@@ -24,6 +24,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -44,6 +45,8 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.helpers.UIHelper
+import com.atrainingtracker.banalservice.ui.devices.DeviceTypeSelectionDialog
+import com.atrainingtracker.banalservice.ui.devices.PairingProtocolBottomSheet
 import com.atrainingtracker.banalservice.ui.devices.devicelist.*
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialog
@@ -66,6 +69,8 @@ fun DevicesTabbedScreen(
     var showDeleteConfirmFor by remember { mutableStateOf<DeviceUiData?>(null) }
     var editingDeviceId by remember { mutableStateOf<Long?>(null) }
     var menuExpanded by remember { mutableStateOf(false) }
+    var showProtocolSheet by remember { mutableStateOf(false) }
+    var selectedPairingProtocol by remember { mutableStateOf<Protocol?>(null) }
 
     val density = LocalDensity.current
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -218,12 +223,54 @@ fun DevicesTabbedScreen(
                             }
                         }
                     }
+
+                    // --- PAIRING FAB (ATT-2189) ---
+                    FloatingActionButton(
+                        onClick = { showProtocolSheet = true },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp)
+                            .navigationBarsPadding(),
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = stringResource(R.string.devices_pair_sensor)
+                        )
+                    }
                 }
                 
                 // Keep searching active while displaying tabs
                 DisposableEffect(Unit) {
                     tabViewModel.startSearching()
                     onDispose { tabViewModel.stopSearching() }
+                }
+
+                // Pairing Protocol Bottom Sheet (ATT-2189)
+                if (showProtocolSheet) {
+                    PairingProtocolBottomSheet(
+                        onProtocolSelected = { selectedProtocol ->
+                            showProtocolSheet = false
+                            selectedPairingProtocol = selectedProtocol
+                        },
+                        onDismiss = { showProtocolSheet = false }
+                    )
+                }
+
+                // Device Type Selection for Pairing (ATT-2189)
+                selectedPairingProtocol?.let { protocolToPair ->
+                    DeviceTypeSelectionDialog(
+                        protocol = protocolToPair,
+                        onSelected = { chosenDeviceType ->
+                            selectedPairingProtocol = null
+                            tabViewModel.updateFilters(protocolToPair, chosenDeviceType)
+                            scope.launch {
+                                pagerState.animateScrollToPage(0)
+                            }
+                        },
+                        onDismiss = { selectedPairingProtocol = null }
+                    )
                 }
             }
             else -> {
