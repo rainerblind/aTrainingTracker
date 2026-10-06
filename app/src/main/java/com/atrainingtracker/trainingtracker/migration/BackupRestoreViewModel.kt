@@ -48,7 +48,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
     sealed class UiState {
         object Idle : UiState()
         data class Loading(val message: String? = null) : UiState()
-        data class Success(val message: String) : UiState()
+        data class Success(val message: String, val importedWorkoutId: Long? = null) : UiState()
         data class Error(val message: String) : UiState()
         data class Progress(val current: Int, val total: Int, val name: String) : UiState()
         data class MappingRequired(val uri: Uri, val analysis: ImportEngine.AnalysisResult) : UiState()
@@ -389,13 +389,14 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
                 tempFile.outputStream().use { output -> input.copyTo(output) }
             }
             val fileExt = if (fileName.contains('.')) fileName.substringAfterLast('.').lowercase() else format.lowercase()
-            val success = when (fileExt) {
-                "tcx" -> LegacyImportEngine.importFromTcx(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
-                "gpx" -> LegacyImportEngine.importFromGpx(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
-                "fit" -> LegacyImportEngine.importFromFit(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
-                else -> false
+            val result = when (fileExt) {
+                "tcx" -> LegacyImportEngine.importFromTcxResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
+                "gpx" -> LegacyImportEngine.importFromGpxResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
+                "fit" -> LegacyImportEngine.importFromFitResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
+                else -> LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.FAILED)
             }
-            Log.i("BackupRestoreVM", "importLegacyFile execution result: fileExt=$fileExt, success=$success")
+            val success = result.status == LegacyImportEngine.ImportStatus.SUCCESS
+            Log.i("BackupRestoreVM", "importLegacyFile execution result: fileExt=$fileExt, success=$success, workoutId=${result.workoutId}")
             tempFile.delete()
             if (success) {
                 // ATT-909 / REQ-MIG-026: Post-import reactive reconciliation
@@ -407,7 +408,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
                 } catch (e: Exception) {
                     Log.w("BackupRestoreVM", "Post-import reconciliation failed: ${e.message}")
                 }
-                _uiState.value = UiState.Success("Successfully imported workout from ${fileExt.uppercase()} file.")
+                _uiState.value = UiState.Success("Successfully imported workout from ${fileExt.uppercase()} file.", result.workoutId)
             } else {
                 _uiState.value = UiState.Error("Failed to import workout. It might already exist or the file format is invalid.")
             }
@@ -429,6 +430,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             var importedCount = 0
             var skippedCount = 0
             var failedCount = 0
+            var lastImportedWorkoutId: Long? = null
 
             _uiState.value = UiState.Loading(context.getString(R.string.import_fit_progress, 0, totalFiles))
 
@@ -452,15 +454,20 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
                         tempFile.outputStream().use { output -> input.copyTo(output) }
                     }
 
-                    val status = LegacyImportEngine.importFromFitInternal(
+                    val result = LegacyImportEngine.importFromFitResult(
                         context,
                         tempFile,
                         createLegacyListener(),
                         uploadToStravaOnImport
                     )
 
-                    when (status) {
-                        LegacyImportEngine.ImportStatus.SUCCESS -> importedCount++
+                    when (result.status) {
+                        LegacyImportEngine.ImportStatus.SUCCESS -> {
+                            importedCount++
+                            if (result.workoutId != null) {
+                                lastImportedWorkoutId = result.workoutId
+                            }
+                        }
                         LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED -> skippedCount++
                         LegacyImportEngine.ImportStatus.FAILED -> failedCount++
                     }
@@ -490,7 +497,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             }
 
             if (importedCount > 0 || skippedCount > 0) {
-                _uiState.value = UiState.Success(resultMsg)
+                _uiState.value = UiState.Success(resultMsg, if (importedCount > 0) lastImportedWorkoutId else null)
             } else {
                 _uiState.value = UiState.Error(resultMsg)
             }

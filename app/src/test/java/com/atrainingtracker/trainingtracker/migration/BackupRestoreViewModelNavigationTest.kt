@@ -28,12 +28,12 @@ import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -41,11 +41,11 @@ import java.io.ByteArrayInputStream
 import java.io.File
 
 /**
- * Unit tests verifying batch ingestion logic, duplicate skipping reporting, and UI state
- * transitions in [BackupRestoreViewModel] for FIT workouts (REQ-DAT-019, TST-DAT-014).
+ * Unit tests verifying that [BackupRestoreViewModel.UiState.Success] correctly captures
+ * and propagates the imported workout ID for UI navigation (ATT-2337 / REQ-MIG-032 / TST-MIG-029).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-class BackupRestoreViewModelFitTest {
+class BackupRestoreViewModelNavigationTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var mockApp: Application
@@ -88,7 +88,7 @@ class BackupRestoreViewModelFitTest {
         every { TrainingApplication.useAltitudePosForClustering() } returns false
 
         every { mockContext.contentResolver } returns mockContentResolver
-        val tempDir = File(System.getProperty("java.io.tmpdir"), "fit_vm_test")
+        val tempDir = File(System.getProperty("java.io.tmpdir"), "nav_vm_test")
         tempDir.mkdirs()
         every { mockContext.cacheDir } returns tempDir
 
@@ -100,35 +100,55 @@ class BackupRestoreViewModelFitTest {
             val formatArgs = args[1] as Array<*>
             "Successfully imported ${formatArgs[0]} workouts (${formatArgs[1]} duplicates skipped)."
         }
-        every { mockContext.getString(R.string.import_fit_summary_with_errors, *anyVararg()) } answers {
-            val formatArgs = args[1] as Array<*>
-            "Imported ${formatArgs[0]} workouts, ${formatArgs[1]} duplicates skipped, ${formatArgs[2]} failed."
-        }
     }
 
     @After
     fun tearDown() {
-        Dispatchers.resetMain()
         unmockkAll()
+        Dispatchers.resetMain()
     }
 
     @Test
-    fun importFitFiles_processesMultipleUris_andEmitsSuccessSummary() = runTest(testDispatcher) {
-        val uri1 = mockk<Uri>()
-        val uri2 = mockk<Uri>()
-        val uris = listOf(uri1, uri2)
+    fun uiStateSuccess_defaultsImportedWorkoutIdToNull() {
+        val state = BackupRestoreViewModel.UiState.Success("Done")
+        assertEquals("Done", state.message)
+        assertNull(state.importedWorkoutId)
+    }
 
-        every { mockContentResolver.openInputStream(uri1) } answers { ByteArrayInputStream(byteArrayOf(1, 2, 3)) }
-        every { mockContentResolver.openInputStream(uri2) } answers { ByteArrayInputStream(byteArrayOf(4, 5, 6)) }
+    @Test
+    fun importFitFiles_whenWorkoutImported_emitsSuccessWithWorkoutId() = runTest(testDispatcher) {
+        val uri = mockk<Uri>()
+        val uris = listOf(uri)
+
+        every { mockContentResolver.openInputStream(uri) } answers { ByteArrayInputStream(byteArrayOf(1, 2, 3)) }
         every { mockContentResolver.query(any(), any(), any(), any(), any()) } returns null
 
         mockkObject(LegacyImportEngine)
         coEvery {
-            LegacyImportEngine.importFromFitResult(mockContext, match { it.name.contains("_0.fit") }, any(), any())
-        } returns LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.SUCCESS, 101L)
+            LegacyImportEngine.importFromFitResult(mockContext, any(), any(), any())
+        } returns LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.SUCCESS, 777L)
 
+        val viewModel = BackupRestoreViewModel(mockApp)
+        val job = viewModel.importFitFiles(mockContext, uris, testDispatcher)
+        job.join()
+
+        val state = viewModel.uiState.value
+        assertTrue("State should be Success but was $state", state is BackupRestoreViewModel.UiState.Success)
+        val successState = state as BackupRestoreViewModel.UiState.Success
+        assertEquals(777L, successState.importedWorkoutId)
+    }
+
+    @Test
+    fun importFitFiles_whenOnlyDuplicatesSkipped_emitsSuccessWithNullWorkoutId() = runTest(testDispatcher) {
+        val uri = mockk<Uri>()
+        val uris = listOf(uri)
+
+        every { mockContentResolver.openInputStream(uri) } answers { ByteArrayInputStream(byteArrayOf(1, 2, 3)) }
+        every { mockContentResolver.query(any(), any(), any(), any(), any()) } returns null
+
+        mockkObject(LegacyImportEngine)
         coEvery {
-            LegacyImportEngine.importFromFitResult(mockContext, match { it.name.contains("_1.fit") }, any(), any())
+            LegacyImportEngine.importFromFitResult(mockContext, any(), any(), any())
         } returns LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED)
 
         val viewModel = BackupRestoreViewModel(mockApp)
@@ -138,32 +158,6 @@ class BackupRestoreViewModelFitTest {
         val state = viewModel.uiState.value
         assertTrue("State should be Success but was $state", state is BackupRestoreViewModel.UiState.Success)
         val successState = state as BackupRestoreViewModel.UiState.Success
-        val msg = successState.message
-        assertTrue(msg.contains("1 workouts"))
-        assertTrue(msg.contains("1 duplicates skipped"))
-        assertEquals(101L, successState.importedWorkoutId)
-    }
-
-    @Test
-    fun importFitFiles_withFailure_emitsSummaryWithErrors() = runTest(testDispatcher) {
-        val uri1 = mockk<Uri>()
-        val uris = listOf(uri1)
-
-        every { mockContentResolver.openInputStream(uri1) } answers { ByteArrayInputStream(byteArrayOf(1, 2, 3)) }
-        every { mockContentResolver.query(any(), any(), any(), any(), any()) } returns null
-
-        mockkObject(LegacyImportEngine)
-        coEvery {
-            LegacyImportEngine.importFromFitResult(mockContext, any(), any(), any())
-        } returns LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.FAILED)
-
-        val viewModel = BackupRestoreViewModel(mockApp)
-        val job = viewModel.importFitFiles(mockContext, uris, testDispatcher)
-        job.join()
-
-        val state = viewModel.uiState.value
-        assertTrue("State should be Error when 0 imported but was $state", state is BackupRestoreViewModel.UiState.Error)
-        val msg = (state as BackupRestoreViewModel.UiState.Error).message
-        assertTrue(msg.contains("1 failed"))
+        assertNull(successState.importedWorkoutId)
     }
 }

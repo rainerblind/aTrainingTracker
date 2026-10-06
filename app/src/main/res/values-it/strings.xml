@@ -1476,6 +1476,7 @@
     <string name="permission_rationale_open_settings">Apri impostazioni</string>
     <string name="permission_rationale_settings_explanation">L\'autorizzazione alla posizione è stata negata. Senza accesso alla posizione, la registrazione del percorso GPS non è disponibile. Puoi concedere l\'autorizzazione nelle impostazioni dell\'app.</string>
     <string name="permission_rationale_precise_location_explanation">La posizione precisa (GPS) è necessaria per la registrazione dell\'allenamento. La posizione approssimativa non registra distanza, velocità, percorso o altitudine. Seleziona \'Precisa\' nelle autorizzazioni.</string>
+    <string name="action_view_workout">Visualizza</string>
     <string name="permission_warning_badge_desc">Autorizzazione di posizione mancante</string>
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->

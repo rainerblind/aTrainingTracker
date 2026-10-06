@@ -461,6 +461,16 @@ class MainActivityWithNavigation :
 
             WorkoutNavigationEvents.resetCluster()
         }
+
+        WorkoutNavigationEvents.navigateToWorkoutLiveData.observe(this) { workoutId: Long? ->
+            if (workoutId == null || workoutId <= 0) return@observe
+
+            if (mSelectedFragmentId != R.id.drawer_workouts) {
+                mSelectedFragmentId = R.id.drawer_workouts
+                mDrawerController.selectedItemId = mSelectedFragmentId
+                navigateToDrawerItem(R.id.drawer_workouts)
+            }
+        }
     }
 
     private fun getPermissions(): List<String> {
