@@ -1556,6 +1556,7 @@
     <string name="gpx_elevation_enriched">Dati di altitudine aggiunti con successo</string>
     <string name="gpx_elevation_enrichment_failed">Recupero altitudine fallito, tracciato 2D importato</string>
     <string name="waypoint_type_bench">Panchina / Sosta</string>
+    <string name="waypoint_type_shelter">Rifugio</string>
     <string name="waypoint_type_water">Fonte d\'acqua</string>
     <string name="waypoint_type_summit">Vetta / Passo</string>
     <string name="waypoint_type_food">Ristoro / Bar</string>

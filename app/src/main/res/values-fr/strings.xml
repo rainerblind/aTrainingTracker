@@ -1557,6 +1557,7 @@
     <string name="gpx_elevation_enriched">Données d\'altitude ajoutées avec succès</string>
     <string name="gpx_elevation_enrichment_failed">Échec de récupération d\'altitude, tracé 2D importé</string>
     <string name="waypoint_type_bench">Banc / Repos</string>
+    <string name="waypoint_type_shelter">Abri / Refuge</string>
     <string name="waypoint_type_water">Point d\'eau</string>
     <string name="waypoint_type_summit">Sommet / Col</string>
     <string name="waypoint_type_food">Restauration / Café</string>

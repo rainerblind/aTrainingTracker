@@ -1558,6 +1558,7 @@
     <string name="gpx_elevation_enriched">Datos de elevación añadidos con éxito</string>
     <string name="gpx_elevation_enrichment_failed">Error al obtener elevación, ruta 2D importada</string>
     <string name="waypoint_type_bench">Banco / Descanso</string>
+    <string name="waypoint_type_shelter">Refugio</string>
     <string name="waypoint_type_water">Fuente de agua</string>
     <string name="waypoint_type_summit">Cima / Puerto</string>
     <string name="waypoint_type_food">Comida / Cafetería</string>

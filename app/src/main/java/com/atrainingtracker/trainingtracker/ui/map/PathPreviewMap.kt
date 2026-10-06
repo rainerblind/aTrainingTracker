@@ -122,6 +122,13 @@ fun PathPreviewMap(
                     )
                 }
 
+                if (path is MapRoute && path.waypoints.isNotEmpty()) {
+                    RouteWaypointsLayer(
+                        waypoints = path.waypoints,
+                        context = context
+                    )
+                }
+
                 // Auto-zoom to fit the segment whenever pathPoints change
                 LaunchedEffect(path, actualStart, actualEnd, actualApex, isMapLoaded, targetBounds) {
                     if (isMapLoaded && path.latLngs.isNotEmpty()) {

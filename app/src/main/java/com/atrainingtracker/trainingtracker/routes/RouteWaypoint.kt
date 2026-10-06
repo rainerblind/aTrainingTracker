@@ -45,6 +45,7 @@ enum class WaypointType(
     @StringRes val displayNameResId: Int
 ) {
     POI_BENCH(WaypointCategory.LANDMARK, R.drawable.ic_poi_bench, R.string.waypoint_type_bench),
+    POI_SHELTER(WaypointCategory.LANDMARK, R.drawable.ic_poi_shelter, R.string.waypoint_type_shelter),
     POI_WATER(WaypointCategory.LANDMARK, R.drawable.ic_poi_water, R.string.waypoint_type_water),
     POI_SUMMIT(WaypointCategory.LANDMARK, R.drawable.ic_poi_summit, R.string.waypoint_type_summit),
     POI_FOOD(WaypointCategory.LANDMARK, R.drawable.ic_poi_food, R.string.waypoint_type_food),
@@ -62,11 +63,13 @@ enum class WaypointType(
          */
         fun fromGpx(sym: String?, type: String?, name: String?, desc: String? = null): WaypointType {
             val text = "${sym ?: ""} ${type ?: ""} ${name ?: ""} ${desc ?: ""}".lowercase()
+            val hasKreuz = text.contains("gipfelkreuz") || (text.contains("kreuz") && !text.contains("kreuzung"))
             return when {
                 text.contains("water") || text.contains("wasser") || text.contains("quelle") || text.contains("fountain") || text.contains("trinkwasser") -> POI_WATER
-                text.contains("bench") || text.contains("bank") || text.contains("rast") || text.contains("picnic") || text.contains("picknick") || text.contains("sitzgelegenheit") || text.contains("unterstand") -> POI_BENCH
-                text.contains("summit") || text.contains("gipfel") || text.contains("peak") || text.contains("pass") || text.contains("kreuz") -> POI_SUMMIT
-                text.contains("food") || text.contains("cafe") || text.contains("café") || text.contains("restaurant") || text.contains("bäcker") || text.contains("bakery") || text.contains("essen") || text.contains("gasthof") || text.contains("hütte") || text.contains("grillplatz") || text.contains("schutzhütte") -> POI_FOOD
+                text.contains("unterstand") || text.contains("schutzhütte") || text.contains("schutzhuette") || text.contains("shelter") || text.contains("refuge") || text.contains("biwak") || text.contains("bivouac") -> POI_SHELTER
+                text.contains("bench") || text.contains("bank") || text.contains("rast") || text.contains("picnic") || text.contains("picknick") || text.contains("sitzgelegenheit") -> POI_BENCH
+                text.contains("summit") || text.contains("gipfel") || text.contains("peak") || text.contains("pass") || hasKreuz -> POI_SUMMIT
+                text.contains("food") || text.contains("cafe") || text.contains("café") || text.contains("restaurant") || text.contains("bäcker") || text.contains("bakery") || text.contains("essen") || text.contains("gasthof") || text.contains("hütte") || text.contains("grillplatz") -> POI_FOOD
                 text.contains("danger") || text.contains("gefahr") || text.contains("hazard") || text.contains("caution") || text.contains("warnung") -> POI_DANGER
                 text.contains("view") || text.contains("aussicht") || text.contains("panorama") || text.contains("lookout") || text.contains("blick") -> POI_VIEWPOINT
                 text.contains("first aid") || text.contains("erste hilfe") || text.contains("hospital") || text.contains("arzt") -> POI_FIRST_AID
@@ -84,6 +87,7 @@ enum class WaypointType(
             return when (pointType?.trim()?.lowercase()) {
                 "water" -> POI_WATER
                 "food" -> POI_FOOD
+                "shelter" -> POI_SHELTER
                 "summit" -> POI_SUMMIT
                 "valley" -> POI_VIEWPOINT
                 "danger" -> POI_DANGER
