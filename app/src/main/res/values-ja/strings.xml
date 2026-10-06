@@ -1514,6 +1514,8 @@
     <string name="google_drive_error_network">Google サインイン中にインターネット接続がないか、ネットワークエラーが発生しました。</string>
     <string name="google_drive_error_generic">Google サインインに失敗しました。もう一度お試しください。</string>
     <string name="google_drive_connect_prompt">Google アカウントを接続して、ワークアウトのエクスポートとデータベースのバックアップを Google ドライブに自動同期します。</string>
+    <string name="scan_google_drive">Google ドライブをスキャン</string>
+    <string name="legacy_import__downloading_google_drive">Google ドライブから %1$s をダウンロード中…</string>
     <string name="gpx_enriching_elevation">標高データを取得中…</string>
     <string name="gpx_elevation_enriched">標高データを正常に追加しました</string>
     <string name="gpx_elevation_enrichment_failed">標高の取得に失敗しました。2Dルートをインポートしました</string>
