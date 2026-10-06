@@ -165,32 +165,40 @@ class RouteSelectorViewModelTest {
     }
 
     @Test
-    fun testFilterTabLengthSortsByDistance() = runTest {
+    fun testInitialStateRanksByRecencyWhenLocationIsNull() = runTest {
         allRoutesFlow.value = sampleRoutes()
         val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, SharingStarted.Eagerly)
         advanceUntilIdle()
 
-        viewModel.setFilterTab(RouteFilterTab.LENGTH)
-        advanceUntilIdle()
-
         val state = viewModel.uiState.value
-        assertEquals(RouteFilterTab.LENGTH, state.selectedTab)
         assertEquals(2, state.routes.size)
-        assertEquals(1L, state.routes[0].summary.id) // 2000m < 25000m
+        // With null location, RouteProximityRanker sorts by syncedAt descending (5000L > 1000L)
+        assertEquals(2L, state.routes[0].summary.id)
+        assertEquals(1L, state.routes[1].summary.id)
     }
 
     @Test
-    fun testFilterTabRecentSortsBySyncedAtDescending() = runTest {
+    fun testLocationChangeTriggersProximityReRanking() = runTest {
         allRoutesFlow.value = sampleRoutes()
         val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, SharingStarted.Eagerly)
         advanceUntilIdle()
 
-        viewModel.setFilterTab(RouteFilterTab.RECENT)
+        // Athlete near Route 1 start point (48.137, 11.576)
+        val loc = mockk<Location>(relaxed = true)
+        every { loc.latitude } returns 48.13705
+        every { loc.longitude } returns 11.57605
+        every { loc.bearing } returns 38f
+        every { loc.hasBearing() } returns true
+        every { loc.speed } returns 4f
+
+        viewModel.onLocationChanged(loc)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals(RouteFilterTab.RECENT, state.selectedTab)
-        assertEquals(2L, state.routes[0].summary.id) // 5000L > 1000L
+        assertEquals(2, state.routes.size)
+        // Route 1 is in-radius (Tier 1), ranks first despite lower syncedAt
+        assertEquals(1L, state.routes[0].summary.id)
+        assertEquals(2L, state.routes[1].summary.id)
     }
 
     @Test
@@ -263,20 +271,7 @@ class RouteSelectorViewModelTest {
     }
 
     @Test
-    fun testAdaptiveFilterChips_whenFewerThan5Routes_hidesFilterChips() = runTest {
-        // Given 2 routes (< 5)
-        allRoutesFlow.value = sampleRoutes()
-        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, SharingStarted.Eagerly)
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        assertEquals(2, state.totalRouteCount)
-        assertEquals(false, state.showFilterTabs)
-    }
-
-    @Test
-    fun testAdaptiveFilterChips_when5OrMoreRoutes_displaysFilterChips() = runTest {
-        // Given 5 routes (>= 5)
+    fun testUiStateExposesTotalRouteCountWithoutFilterTabs() = runTest {
         val fiveRoutes = (1..5).map { id ->
             RouteWithPath(
                 summary = RouteSummary(
@@ -299,6 +294,6 @@ class RouteSelectorViewModelTest {
 
         val state = viewModel.uiState.value
         assertEquals(5, state.totalRouteCount)
-        assertEquals(true, state.showFilterTabs)
+        assertEquals(5, state.routes.size)
     }
 }
