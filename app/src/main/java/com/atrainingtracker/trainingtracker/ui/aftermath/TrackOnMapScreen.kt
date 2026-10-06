@@ -51,6 +51,7 @@ import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.WorkoutDescription
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
 import com.atrainingtracker.trainingtracker.ui.components.strava.StravaActivitySection
+import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatus
 
 @Composable
 fun TrackOnMapScreen(
@@ -444,6 +445,13 @@ fun TrackOnMapScreen(
                                 }
                             }
                         }
+                        WorkoutSectionType.EXPORT_STATUS -> {
+                            if (activeDetailPrefs.showExportStatus) {
+                                ExportStatus(
+                                    exportStatuses = workoutData.exportStatuses
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -452,26 +460,58 @@ fun TrackOnMapScreen(
             if (analyticsContent != null) {
                 analyticsContent()
             } else {
-                if (activeDetailPrefs.showZoneAnalysis && postMapSections.contains(WorkoutSectionType.ZONES)) {
-                    hrZoneDistribution?.let { distribution ->
-                        HeartRateZoneDistributionCard(
-                            distribution = distribution,
-                            displayMode = hrZoneDisplayMode,
-                            onDisplayModeChange = { hrZoneDisplayMode = it },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                        )
-                    }
-                    powerZoneDistribution?.let { distribution ->
-                        PowerZoneDistributionCard(
-                            distribution = distribution,
-                            displayMode = powerZoneDisplayMode,
-                            onDisplayModeChange = { powerZoneDisplayMode = it },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                        )
+                postMapSections.forEach { section ->
+                    when (section) {
+                        WorkoutSectionType.ZONES -> {
+                            if (activeDetailPrefs.showZoneAnalysis) {
+                                hrZoneDistribution?.let { distribution ->
+                                    HeartRateZoneDistributionCard(
+                                        distribution = distribution,
+                                        displayMode = hrZoneDisplayMode,
+                                        onDisplayModeChange = { hrZoneDisplayMode = it },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                                    )
+                                }
+                                powerZoneDistribution?.let { distribution ->
+                                    PowerZoneDistributionCard(
+                                        distribution = distribution,
+                                        displayMode = powerZoneDisplayMode,
+                                        onDisplayModeChange = { powerZoneDisplayMode = it },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+                        WorkoutSectionType.LAPS -> {
+                            if (activeDetailPrefs.showLaps) {
+                                splitChartData?.let { splits ->
+                                    LapSplitVisualizerCard(
+                                        splitData = splits,
+                                        selectedLapNr = selectedLapNr,
+                                        onLapClick = { tappedLapNr ->
+                                            selectedLapNr = if (selectedLapNr == tappedLapNr) null else tappedLapNr
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+                        WorkoutSectionType.EXPORT_STATUS -> {
+                            if (activeDetailPrefs.showExportStatus) {
+                                ExportStatus(
+                                    exportStatuses = workoutData.exportStatuses
+                                )
+                            }
+                        }
+                        else -> {
+                            // DESCRIPTION, EXTREMA, MAP, ELEVATION, CHARTS, STRAVA are rendered in metadataContent or MapDetailLayout
+                        }
                     }
                 }
             }

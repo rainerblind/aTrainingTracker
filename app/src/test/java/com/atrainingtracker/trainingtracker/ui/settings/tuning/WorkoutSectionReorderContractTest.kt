@@ -57,7 +57,7 @@ class WorkoutSectionReorderContractTest {
         val afterMoveUp = moveSection(initialOrder, 1, 0)
         assertEquals(WorkoutSectionType.EXTREMA, afterMoveUp[0])
         assertEquals(WorkoutSectionType.DESCRIPTION, afterMoveUp[1])
-        assertEquals(8, afterMoveUp.size)
+        assertEquals(9, afterMoveUp.size)
 
         // 2. Move Down on first element (EXTREMA at index 0 -> index 1)
         val afterMoveDown = moveSection(afterMoveUp, 0, 1)
@@ -72,7 +72,7 @@ class WorkoutSectionReorderContractTest {
         val invalidUp = moveSection(order, 0, -1)
         assertEquals(order, invalidUp)
 
-        // Last item can NOT move down (targetIndex 8 is out of bounds)
+        // Last item can NOT move down (targetIndex 9 is out of bounds)
         val invalidDown = moveSection(order, order.size - 1, order.size)
         assertEquals(order, invalidDown)
     }
@@ -120,5 +120,40 @@ class WorkoutSectionReorderContractTest {
             "Must persist workoutSectionsOrder in onSave",
             content.contains("setWorkoutSectionsOrder")
         )
+
+        // 5. Must support EXPORT_STATUS row in WorkoutMasksAndCardsSection
+        assertTrue(
+            "WorkoutMasksAndCardsSection must support EXPORT_STATUS",
+            content.contains("WorkoutSectionType.EXPORT_STATUS")
+        )
+    }
+
+    @Test
+    fun testWorkoutSummaryAndTrackOnMap_exportStatusContract() {
+        val summaryFile = File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummary.kt")
+        if (summaryFile.exists()) {
+            val content = summaryFile.readText()
+            assertTrue(
+                "WorkoutSummary.kt must handle WorkoutSectionType.EXPORT_STATUS inside loop",
+                content.contains("WorkoutSectionType.EXPORT_STATUS ->")
+            )
+            assertTrue(
+                "WorkoutSummary.kt must check preferences.showExportStatus",
+                content.contains("preferences.showExportStatus")
+            )
+        }
+
+        val trackFile = File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/TrackOnMapScreen.kt")
+        if (trackFile.exists()) {
+            val content = trackFile.readText()
+            assertTrue(
+                "TrackOnMapScreen.kt must handle WorkoutSectionType.EXPORT_STATUS",
+                content.contains("WorkoutSectionType.EXPORT_STATUS ->")
+            )
+            assertTrue(
+                "TrackOnMapScreen.kt must check activeDetailPrefs.showExportStatus",
+                content.contains("activeDetailPrefs.showExportStatus")
+            )
+        }
     }
 }
