@@ -120,16 +120,16 @@ class MapDetailLayoutScrubSynchronizationTest {
         val content = file.readText()
 
         assertTrue(
-            "MapDetailLayout must remember touchedScrubPoint state",
-            content.contains("var touchedScrubPoint by remember { mutableStateOf<PathPoint?>(null) }")
+            "MapDetailLayout must hoist activeScrubPoint remembering across selectedDistance, activeScrubPath, and isTrackless",
+            content.contains("val activeScrubPoint = remember(selectedDistance, activeScrubPath, isTrackless)")
         )
         assertTrue(
             "MapDetailLayout must forward activeScrubPoint to ATrainingTrackerMap",
             content.contains("activeScrubPoint = activeScrubPoint,")
         )
         assertTrue(
-            "MapDetailLayout must wire onPointSelected on ElevationProfile",
-            content.contains("onPointSelected = { touchedScrubPoint = it },")
+            "MapDetailLayout must retain onDistanceSelected synchronization across charts",
+            content.contains("onDistanceSelected = { selectedDistance = it }")
         )
     }
 }

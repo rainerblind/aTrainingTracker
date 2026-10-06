@@ -120,7 +120,6 @@ fun MapDetailLayout(
 
     var isSharing by remember { mutableStateOf(false) }
     var selectedDistance by remember { mutableStateOf<Double?>(null) }
-    var touchedScrubPoint by remember { mutableStateOf<PathPoint?>(null) }
     var profileZoomScale by remember(activeScrubPath) { mutableFloatStateOf(1.0f) }
     var viewportStartFraction by remember(activeScrubPath) { mutableDoubleStateOf(0.0) }
     var isPanMode by remember(activeScrubPath) { mutableStateOf(false) }
@@ -156,11 +155,10 @@ fun MapDetailLayout(
         TelemetryZoneMath.loadPowerThresholds(context)
     }
 
-    val activeScrubPoint = remember(selectedDistance, touchedScrubPoint, activeScrubPath, isTrackless) {
-        if (touchedScrubPoint != null) {
-            touchedScrubPoint
-        } else if (selectedDistance != null && !activeScrubPath.isNullOrEmpty()) {
+    val activeScrubPoint = remember(selectedDistance, activeScrubPath, isTrackless) {
+        if (selectedDistance != null && !activeScrubPath.isNullOrEmpty()) {
             TelemetryMetricUtils.findNearestPoint(activeScrubPath, selectedDistance!!, isTimeDomain = isTrackless)
+                ?: TelemetryMetricUtils.findNearestPoint(activeScrubPath, selectedDistance!!, isTimeDomain = true)
         } else null
     }
 
@@ -323,11 +321,7 @@ fun MapDetailLayout(
                                         currentDistance = selectedDistance,
                                         minAltitudeOverride = minAltitudeOverride,
                                         maxAltitudeOverride = maxAltitudeOverride,
-                                        onDistanceSelected = {
-                                            selectedDistance = it
-                                            if (it == null) touchedScrubPoint = null
-                                        },
-                                        onPointSelected = { touchedScrubPoint = it },
+                                        onDistanceSelected = { selectedDistance = it },
                                         showZoomControls = showZoomControls,
                                         xAxisDomain = tuningConfig.elevationXAxisDomain,
                                         bSportType = bSportType,
@@ -363,11 +357,7 @@ fun MapDetailLayout(
                                             pathPoints = path,
                                             metricType = if (isRunning) TelemetryMetricType.PACE else TelemetryMetricType.SPEED,
                                             currentDistance = selectedDistance,
-                                            onDistanceSelected = {
-                                                selectedDistance = it
-                                                if (it == null) touchedScrubPoint = null
-                                            },
-                                            onPointSelected = { touchedScrubPoint = it },
+                                            onDistanceSelected = { selectedDistance = it },
                                             xAxisDomain = activeTelemetryDomain,
                                             bSportType = bSportType,
                                             zoomScale = profileZoomScale,
@@ -413,11 +403,7 @@ fun MapDetailLayout(
                                             pathPoints = path,
                                             metricType = TelemetryMetricType.HEART_RATE,
                                             currentDistance = selectedDistance,
-                                            onDistanceSelected = {
-                                                selectedDistance = it
-                                                if (it == null) touchedScrubPoint = null
-                                            },
-                                            onPointSelected = { touchedScrubPoint = it },
+                                            onDistanceSelected = { selectedDistance = it },
                                             xAxisDomain = activeTelemetryDomain,
                                             bSportType = bSportType,
                                             zoomScale = profileZoomScale,
@@ -465,11 +451,7 @@ fun MapDetailLayout(
                                             pathPoints = path,
                                             metricType = TelemetryMetricType.POWER,
                                             currentDistance = selectedDistance,
-                                            onDistanceSelected = {
-                                                selectedDistance = it
-                                                if (it == null) touchedScrubPoint = null
-                                            },
-                                            onPointSelected = { touchedScrubPoint = it },
+                                            onDistanceSelected = { selectedDistance = it },
                                             xAxisDomain = activeTelemetryDomain,
                                             bSportType = bSportType,
                                             zoomScale = profileZoomScale,
