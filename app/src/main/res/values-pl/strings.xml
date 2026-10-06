@@ -1408,6 +1408,16 @@
     <string name="sensor_field_variant_v1">Nowoczesne kafelki sportowe z obramowaniem</string>
     <string name="sensor_field_variant_v2">Wypukłe karty sportowe</string>
     <string name="sensor_field_variant_v3">Kapsuły z miękkim akcentem</string>
+    <!-- Cockpit Tile Granular Geometry & Border Contrast (ATT-2456 / REQ-UI-276) -->
+    <string name="tuning_sensor_field_corner_radius_title">Promień narożników</string>
+    <string name="tuning_sensor_field_corner_radius_desc">Zaokrąglenie narożników kafelków kokpitu</string>
+    <string name="tuning_sensor_field_corner_radius_default">Domyślnie: 0 dp (Klasyczny bezszwowy)</string>
+    <string name="tuning_sensor_field_border_thickness_title">Grubość obramowania</string>
+    <string name="tuning_sensor_field_border_thickness_desc">Grubość obrysu kafelków (0 dp = bez obramowania)</string>
+    <string name="tuning_sensor_field_border_thickness_default">Domyślnie: 1.0 dp</string>
+    <string name="tuning_sensor_field_border_contrast_title">Kontrast obramowania</string>
+    <string name="tuning_sensor_field_border_contrast_desc">Kontrast kolorów obramowania (subtelny do maksymalnego biały/czarny)</string>
+    <string name="tuning_sensor_field_border_contrast_default">Domyślnie: Subtelny (0%)</string>
     <string name="tuning_default_format">Domyślnie: %1$s</string>
     <string name="reset_to_defaults">Przywróć domyślne</string>
     <string name="reset_to_defaults_success">Przywrócono domyślne ustawienia dostrajania.</string>

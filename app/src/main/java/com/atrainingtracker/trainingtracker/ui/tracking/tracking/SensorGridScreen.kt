@@ -69,6 +69,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -173,8 +174,26 @@ fun SensorGridScreen(
     }
     val isDefaultStyling = gridSpacing == 0.dp && fieldShape == RectangleShape
     val effectiveSpacing = if (isDefaultStyling) activeVariantStyle.gridSpacing else gridSpacing
-    val effectiveShape = if (isDefaultStyling) activeVariantStyle.shape else fieldShape
+    val effectiveShape = if (isDefaultStyling) {
+        if (tuningConfig.sensorFieldCornerRadius > 0f) {
+            SensorFieldStyle.resolveShape(tuningConfig.sensorFieldCornerRadius.dp)
+        } else {
+            activeVariantStyle.shape
+        }
+    } else fieldShape
     val effectiveElevation = if (isDefaultStyling) activeVariantStyle.elevation else fieldElevation
+    val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val effectiveBorder = remember(
+        tuningConfig.sensorFieldBorderThickness,
+        tuningConfig.sensorFieldBorderContrast,
+        isDarkTheme
+    ) {
+        SensorFieldStyle.resolveBorder(
+            borderThickness = tuningConfig.sensorFieldBorderThickness.dp,
+            borderContrast = tuningConfig.sensorFieldBorderContrast,
+            isDarkTheme = isDarkTheme
+        )
+    }
 
     val cockpitTypography = remember(tuningConfig.cockpitFontFamily, tuningConfig.cockpitFontWeight) {
         CockpitTypography.resolveConfig(
@@ -425,6 +444,11 @@ fun SensorGridScreen(
                                     isSelectedForMove = isSelected,
                                     shape = effectiveShape,
                                     cardElevation = effectiveElevation,
+                                    border = if (isSelected) {
+                                        BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                                    } else {
+                                        effectiveBorder
+                                    },
                                     onStartMove = { gridActions.onSelectFieldForMove(fieldState) },
                                     onEdit = {
                                         if (screenMode == ScreenMode.CONFIGURATION && selectedFieldForMove != null) {

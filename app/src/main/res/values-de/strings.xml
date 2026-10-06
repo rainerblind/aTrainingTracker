@@ -1493,6 +1493,16 @@
     <string name="sensor_field_variant_v1">Moderne Sportkacheln (Outline)</string>
     <string name="sensor_field_variant_v2">Erhabene Sportkarten (Elevation)</string>
     <string name="sensor_field_variant_v3">Soft-Akzent Kapseln</string>
+    <!-- Cockpit Tile Granular Geometry & Border Contrast (ATT-2456 / REQ-UI-276) -->
+    <string name="tuning_sensor_field_corner_radius_title">Ecken-Radius</string>
+    <string name="tuning_sensor_field_corner_radius_desc">Abrundung der Kachelecken für das Cockpit</string>
+    <string name="tuning_sensor_field_corner_radius_default">Standard: 0 dp (Klassisch nahtlos)</string>
+    <string name="tuning_sensor_field_border_thickness_title">Rahmen-Stärke</string>
+    <string name="tuning_sensor_field_border_thickness_desc">Stärke der Kachel-Umrandung (0 dp = rahmenlos)</string>
+    <string name="tuning_sensor_field_border_thickness_default">Standard: 1.0 dp</string>
+    <string name="tuning_sensor_field_border_contrast_title">Rahmen-Kontrast</string>
+    <string name="tuning_sensor_field_border_contrast_desc">Farbkontrast der Umrandung (subtil bis maximal weiß/schwarz)</string>
+    <string name="tuning_sensor_field_border_contrast_default">Standard: Subtil (0%)</string>
     <string name="tuning_default_format">Standard: %1$s</string>
     <string name="reset_to_defaults">Auf Werkseinstellungen zurücksetzen</string>
     <string name="reset_to_defaults_success">Abstimmungseinstellungen auf Werkseinstellungen zurückgesetzt.</string>

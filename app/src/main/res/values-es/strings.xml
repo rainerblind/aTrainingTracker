@@ -1408,6 +1408,16 @@
     <string name="sensor_field_variant_v1">Fichas deportivas contorneadas</string>
     <string name="sensor_field_variant_v2">Tarjetas deportivas elevadas</string>
     <string name="sensor_field_variant_v3">Cápsulas de acento suave</string>
+    <!-- Cockpit Tile Granular Geometry & Border Contrast (ATT-2456 / REQ-UI-276) -->
+    <string name="tuning_sensor_field_corner_radius_title">Radio de las esquinas</string>
+    <string name="tuning_sensor_field_corner_radius_desc">Redondeo de las esquinas de las casillas del cuadro de mandos</string>
+    <string name="tuning_sensor_field_corner_radius_default">Predeterminado: 0 dp (Clásico continuo)</string>
+    <string name="tuning_sensor_field_border_thickness_title">Grosor del borde</string>
+    <string name="tuning_sensor_field_border_thickness_desc">Grosor del trazo del borde de las casillas (0 dp = sin borde)</string>
+    <string name="tuning_sensor_field_border_thickness_default">Predeterminado: 1.0 dp</string>
+    <string name="tuning_sensor_field_border_contrast_title">Contraste del borde</string>
+    <string name="tuning_sensor_field_border_contrast_desc">Contraste de color del borde (sutil a blanco/negro máximo)</string>
+    <string name="tuning_sensor_field_border_contrast_default">Predeterminado: Sutil (0%)</string>
     <string name="tuning_default_format">Predeterminado: %1$s</string>
     <string name="reset_to_defaults">Restablecer valores predeterminados</string>
     <string name="reset_to_defaults_success">Ajustes restablecidos a los valores predeterminados de fábrica.</string>

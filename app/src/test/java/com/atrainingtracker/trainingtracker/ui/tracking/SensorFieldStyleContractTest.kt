@@ -18,10 +18,13 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -49,6 +52,8 @@ class SensorFieldStyleContractTest {
         assertEquals("Baseline gridSpacing must be 0.dp", 0.dp, baseline.gridSpacing)
         assertEquals("Baseline elevation must be 0.dp", 0.dp, baseline.defaultElevation)
         assertEquals("Baseline cornerRadius must be 0.dp", 0.dp, baseline.cornerRadius)
+        assertEquals("Baseline borderThickness must be 1.0.dp", 1.0.dp, baseline.borderThickness)
+        assertEquals("Baseline borderContrast must be 0.0f", 0.0f, baseline.borderContrast, 0.001f)
     }
 
     @Test
@@ -56,15 +61,19 @@ class SensorFieldStyleContractTest {
         val v1 = SensorFieldStyle.Variant1_OutlinedTiles
         assertEquals("Variant 1 gridSpacing must be 4.dp", 4.dp, v1.gridSpacing)
         assertEquals("Variant 1 elevation must be 0.dp", 0.dp, v1.defaultElevation)
-        assertEquals("Variant 1 cornerRadius must be 6.dp", 6.dp, v1.cornerRadius)
+        assertEquals("Variant 1 cornerRadius must be 8.dp", 8.dp, v1.cornerRadius)
+        assertEquals("Variant 1 borderThickness must be 2.0.dp", 2.0.dp, v1.borderThickness)
+        assertEquals("Variant 1 borderContrast must be 0.5f", 0.5f, v1.borderContrast, 0.001f)
     }
 
     @Test
     fun testVariant2_elevatedCardsMetrics() {
         val v2 = SensorFieldStyle.Variant2_ElevatedCards
         assertEquals("Variant 2 gridSpacing must be 6.dp", 6.dp, v2.gridSpacing)
-        assertEquals("Variant 2 elevation must be 2.dp", 2.dp, v2.defaultElevation)
-        assertEquals("Variant 2 cornerRadius must be 8.dp", 8.dp, v2.cornerRadius)
+        assertEquals("Variant 2 elevation must be 3.dp", 3.dp, v2.defaultElevation)
+        assertEquals("Variant 2 cornerRadius must be 10.dp", 10.dp, v2.cornerRadius)
+        assertEquals("Variant 2 borderThickness must be 0.0.dp", 0.0.dp, v2.borderThickness)
+        assertEquals("Variant 2 borderContrast must be 0.0f", 0.0f, v2.borderContrast, 0.001f)
     }
 
     @Test
@@ -72,7 +81,49 @@ class SensorFieldStyleContractTest {
         val v3 = SensorFieldStyle.Variant3_Capsules
         assertEquals("Variant 3 gridSpacing must be 8.dp", 8.dp, v3.gridSpacing)
         assertEquals("Variant 3 elevation must be 1.dp", 1.dp, v3.defaultElevation)
-        assertEquals("Variant 3 cornerRadius must be 12.dp", 12.dp, v3.cornerRadius)
+        assertEquals("Variant 3 cornerRadius must be 16.dp", 16.dp, v3.cornerRadius)
+        assertEquals("Variant 3 borderThickness must be 1.5.dp", 1.5.dp, v3.borderThickness)
+        assertEquals("Variant 3 borderContrast must be 0.7f", 0.7f, v3.borderContrast, 0.001f)
+    }
+
+    @Test
+    fun testResolveShape_mapsZeroToRectangleAndPositiveToRoundedCorner() {
+        assertEquals("0.dp must resolve to RectangleShape", RectangleShape, SensorFieldStyle.resolveShape(0.dp))
+        assertEquals("negative dp must resolve to RectangleShape", RectangleShape, SensorFieldStyle.resolveShape((-2).dp))
+        val rounded = SensorFieldStyle.resolveShape(8.dp)
+        assertTrue("8.dp must resolve to RoundedCornerShape", rounded is RoundedCornerShape)
+    }
+
+    @Test
+    fun testResolveBorder_borderlessWhenZeroOrNegative() {
+        assertNull("0.dp border thickness must return null", SensorFieldStyle.resolveBorder(0.dp, 0.5f, isDarkTheme = true))
+        assertNull("negative border thickness must return null", SensorFieldStyle.resolveBorder((-1).dp, 0.5f, isDarkTheme = false))
+    }
+
+    @Test
+    fun testResolveBorder_moveSelectionOverrides() {
+        val border = SensorFieldStyle.resolveBorder(0.dp, 0f, isDarkTheme = true, isSelectedForMove = true)
+        assertNotNull("Move selection must produce non-null border even if thickness was 0", border)
+        assertEquals(2.dp, border!!.width)
+        assertEquals(Color(0xFF2196F3), border.brush.let {
+            // solid color brush
+            (it as androidx.compose.ui.graphics.SolidColor).value
+        })
+    }
+
+    @Test
+    fun testResolveBorder_themeContrastInterpolation() {
+        // Dark theme: contrast 0 -> 0xFF383838, contrast 1 -> Color.White
+        val darkSubtle = SensorFieldStyle.resolveBorder(1.dp, 0.0f, isDarkTheme = true)!!
+        val darkMax = SensorFieldStyle.resolveBorder(1.dp, 1.0f, isDarkTheme = true)!!
+        assertEquals(Color(0xFF383838), (darkSubtle.brush as androidx.compose.ui.graphics.SolidColor).value)
+        assertEquals(Color.White, (darkMax.brush as androidx.compose.ui.graphics.SolidColor).value)
+
+        // Light theme: contrast 0 -> 0xFFD6D6D6, contrast 1 -> Color.Black
+        val lightSubtle = SensorFieldStyle.resolveBorder(1.dp, 0.0f, isDarkTheme = false)!!
+        val lightMax = SensorFieldStyle.resolveBorder(1.dp, 1.0f, isDarkTheme = false)!!
+        assertEquals(Color(0xFFD6D6D6), (lightSubtle.brush as androidx.compose.ui.graphics.SolidColor).value)
+        assertEquals(Color.Black, (lightMax.brush as androidx.compose.ui.graphics.SolidColor).value)
     }
 
     @Test
@@ -174,6 +225,20 @@ class SensorFieldStyleContractTest {
         assertTrue(
             "Row must conditionally apply spacedBy(effectiveSpacing)",
             content.contains("if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Start")
+        )
+
+        // 4. Granular shape and border resolution (ATT-2456 / REQ-UI-276)
+        assertTrue(
+            "SensorGridScreen must resolve effectiveShape using SensorFieldStyle.resolveShape",
+            content.contains("SensorFieldStyle.resolveShape(tuningConfig.sensorFieldCornerRadius.dp)")
+        )
+        assertTrue(
+            "SensorGridScreen must resolve effectiveBorder using SensorFieldStyle.resolveBorder",
+            content.contains("SensorFieldStyle.resolveBorder(")
+        )
+        assertTrue(
+            "SensorGridScreen must pass border with move selection override to SensorFieldView",
+            content.contains("border = if (isSelected)")
         )
     }
 }

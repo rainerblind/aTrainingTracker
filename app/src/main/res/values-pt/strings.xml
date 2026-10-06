@@ -1406,6 +1406,16 @@
     <string name="sensor_field_variant_v1">Blocos desportivos com contorno</string>
     <string name="sensor_field_variant_v2">Cartões desportivos em relevo</string>
     <string name="sensor_field_variant_v3">Cápsulas de realce suave</string>
+    <!-- Cockpit Tile Granular Geometry & Border Contrast (ATT-2456 / REQ-UI-276) -->
+    <string name="tuning_sensor_field_corner_radius_title">Raio dos cantos</string>
+    <string name="tuning_sensor_field_corner_radius_desc">Arredondamento dos cantos dos blocos do painel</string>
+    <string name="tuning_sensor_field_corner_radius_default">Padrão: 0 dp (Clássico sem emendas)</string>
+    <string name="tuning_sensor_field_border_thickness_title">Espessura da borda</string>
+    <string name="tuning_sensor_field_border_thickness_desc">Espessura do traço da borda dos blocos (0 dp = sem borda)</string>
+    <string name="tuning_sensor_field_border_thickness_default">Padrão: 1.0 dp</string>
+    <string name="tuning_sensor_field_border_contrast_title">Contraste da borda</string>
+    <string name="tuning_sensor_field_border_contrast_desc">Contraste de cor da borda (sutil a branco/preto máximo)</string>
+    <string name="tuning_sensor_field_border_contrast_default">Padrão: Sutil (0%)</string>
     <string name="tuning_default_format">Padrão: %1$s</string>
     <string name="reset_to_defaults">Restaurar padrões</string>
     <string name="reset_to_defaults_success">Configurações de ajuste restauradas para os padrões de fábrica.</string>

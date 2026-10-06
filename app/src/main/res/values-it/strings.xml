@@ -1406,6 +1406,16 @@
     <string name="sensor_field_variant_v1">Riquadri sportivi sagomati</string>
     <string name="sensor_field_variant_v2">Schede sportive in rilievo</string>
     <string name="sensor_field_variant_v3">Capsule accento morbido</string>
+    <!-- Cockpit Tile Granular Geometry & Border Contrast (ATT-2456 / REQ-UI-276) -->
+    <string name="tuning_sensor_field_corner_radius_title">Raggio degli angoli</string>
+    <string name="tuning_sensor_field_corner_radius_desc">Arrotondamento degli angoli dei riquadri della dashboard</string>
+    <string name="tuning_sensor_field_corner_radius_default">Predefinito: 0 dp (Classico continuo)</string>
+    <string name="tuning_sensor_field_border_thickness_title">Spessore del bordo</string>
+    <string name="tuning_sensor_field_border_thickness_desc">Spessore del tratto del bordo dei riquadri (0 dp = senza bordo)</string>
+    <string name="tuning_sensor_field_border_thickness_default">Predefinito: 1.0 dp</string>
+    <string name="tuning_sensor_field_border_contrast_title">Contrasto del bordo</string>
+    <string name="tuning_sensor_field_border_contrast_desc">Contrasto di colore del bordo (da sottile a massimo bianco/nero)</string>
+    <string name="tuning_sensor_field_border_contrast_default">Predefinito: Sottile (0%)</string>
     <string name="tuning_default_format">Predefinito: %1$s</string>
     <string name="reset_to_defaults">Ripristina impostazioni predefinite</string>
     <string name="reset_to_defaults_success">Impostazioni di regolazione ripristinate ai valori di fabbrica.</string>
