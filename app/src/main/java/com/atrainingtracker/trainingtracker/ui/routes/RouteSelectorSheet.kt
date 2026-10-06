@@ -287,7 +287,7 @@ fun ActiveRouteBanner(
                 onClick = onStopRoute,
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
             ) {
-                Text(stringResource(id = R.string.route_action_stop))
+                Text(stringResource(id = R.string.route_action_clear))
             }
         }
     }

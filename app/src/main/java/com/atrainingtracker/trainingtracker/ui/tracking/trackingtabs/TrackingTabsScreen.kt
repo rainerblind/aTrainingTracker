@@ -88,6 +88,12 @@ import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlT
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModel
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorStatus
 import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingTabGridContent
+import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
+import com.atrainingtracker.trainingtracker.routes.ReturnNavigationRepository
+import com.atrainingtracker.trainingtracker.ui.components.RouteSelectionButton
+import com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorModalBottomSheet
+import com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModel
+import android.location.Location
 import kotlinx.coroutines.launch
 
 private const val TAG = "TrackingTabsScreen"
@@ -168,6 +174,33 @@ fun TrackingTabsScreen(
     val selectingProtocol by controlViewModel.selectingProtocol.collectAsState()
     val hasPairedRemoteDevices by controlViewModel.hasPairedRemoteDevices.collectAsState()
     val locationCalibrationStatus by trackingTabsViewModel.locationCalibrationStatus.collectAsState()
+
+    // Route Selection and Navigation state for Control Tracking screen (REQ-UI-279 / ATT-2458)
+    val routesRepo = remember { RoutesRepository.getInstance(context) }
+    val routeSelectorViewModel: RouteSelectorViewModel = viewModel(
+        factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return RouteSelectorViewModel(routesRepo) as T
+            }
+        }
+    )
+    val routeSelectorUiState by routeSelectorViewModel.uiState.collectAsState()
+    var showRouteSelectorSheet by remember { mutableStateOf(false) }
+
+    val returnNavRepo = remember { ReturnNavigationRepository.getInstance(context) }
+    val returnNavState by returnNavRepo.navigationState.collectAsState()
+
+    val currentLatLng by controlViewModel.banalServiceRepository.currentLocation.collectAsState()
+    LaunchedEffect(currentLatLng) {
+        currentLatLng?.let { latLng ->
+            val location = Location("GPS").apply {
+                latitude = latLng.latitude
+                longitude = latLng.longitude
+            }
+            routeSelectorViewModel.onLocationChanged(location)
+        }
+    }
 
     // Battery Saver Telemetry & Event Subscriptions
     val tuningDataStore = remember { com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore(context) }
@@ -624,7 +657,15 @@ fun TrackingTabsScreen(
                             onDeviceTypeSelected = { controlViewModel.onDeviceTypeSelected(it) },
                             onCancelDeviceTypeSelection = { controlViewModel.onCancelDeviceTypeSelection() },
                             showResearchButton = hasPairedRemoteDevices,
-                            locationCalibrationStatus = locationCalibrationStatus
+                            locationCalibrationStatus = locationCalibrationStatus,
+                            bottomContent = {
+                                RouteSelectionButton(
+                                    activeRoute = routeSelectorUiState.activeRoute,
+                                    returnNavState = returnNavState,
+                                    onClick = { showRouteSelectorSheet = true },
+                                    onClearRoute = { routeSelectorViewModel.clearRoute() }
+                                )
+                            }
                         )
                     } else {
                         val viewIndex =
@@ -664,6 +705,17 @@ fun TrackingTabsScreen(
                         onClick = { trackingTabsViewModel.onLapButtonClick() }
                     )
                 }
+            }
+
+            // Modal Bottom Sheet for Route Selector (REQ-UI-279 / ATT-2458)
+            if (showRouteSelectorSheet) {
+                RouteSelectorModalBottomSheet(
+                    viewModel = routeSelectorViewModel,
+                    onTakeMeHome = {
+                        returnNavRepo.startTakeMeHome()
+                    },
+                    onDismiss = { showRouteSelectorSheet = false }
+                )
             }
         }
     }

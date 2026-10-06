@@ -608,6 +608,17 @@ def update_issue_summary(issue_key, summary, role="agent1"):
     jira_request(url, method="PUT", payload=payload, role=role)
     print(f"Summary updated for {issue_key}.")
 
+def set_parent(issue_key, parent_key, role="agent1"):
+    config = get_config()
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}"
+    payload = {
+        "fields": {
+            "parent": {"key": parent_key}
+        }
+    }
+    jira_request(url, method="PUT", payload=payload, role=role)
+    print(f"Parent of {issue_key} updated to {parent_key}.")
+
 def create_subtask(parent_key, summary, description, role="coordinator", add_to_sprint=False, fix_version=None):
     if fix_version:
         print("Error: Sub-tasks must not get a solution ('Lösungsversion') assigned! (Governance mandate)", file=sys.stderr)
@@ -761,6 +772,8 @@ if __name__ == "__main__":
         update_issue_description(remaining_argv[1], remaining_argv[2], role=active_role)
     elif cmd == "update-summary" and len(remaining_argv) == 3:
         update_issue_summary(remaining_argv[1], remaining_argv[2], role=active_role)
+    elif cmd == "set-parent" and len(remaining_argv) == 3:
+        set_parent(remaining_argv[1], remaining_argv[2], role=active_role)
     elif cmd == "assign" and len(remaining_argv) == 3:
         assign_issue(remaining_argv[1], remaining_argv[2], role=active_role)
     elif cmd == "create-subtask" and len(remaining_argv) >= 4:

@@ -126,6 +126,10 @@ class RouteSelectorViewModel(
         routesRepository.setActiveNavigatedRoute(null)
     }
 
+    fun clearRoute() {
+        stopRoute()
+    }
+
     fun onLocationChanged(location: Location) {
         _lastLocation.value = location
         val activeRouteId = routesRepository.activeNavigatedRouteId.value

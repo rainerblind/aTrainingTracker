@@ -1514,7 +1514,10 @@
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
     <string name="route_select_title">Selecionar rota</string>
     <string name="route_action_select">Selecionar rota</string>
+    <string name="route_action_select_desc">Escolher a partir de ficheiro ou histórico</string>
     <string name="route_action_stop">Parar rota</string>
+    <string name="route_action_clear">Limpar rota</string>
+    <string name="route_metrics_format">%1$s • %2$s</string>
     <string name="route_auto_detect_title">Deteção de rota</string>
     <string name="route_auto_detect_prompt">Está a seguir \'%1$s\'?</string>
     <string name="route_auto_detect_activate">Ativar</string>

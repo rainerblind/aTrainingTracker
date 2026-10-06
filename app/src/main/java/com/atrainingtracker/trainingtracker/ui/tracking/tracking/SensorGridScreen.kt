@@ -42,6 +42,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DirectionsRun
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Navigation
@@ -103,7 +104,6 @@ import com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbSheet
 import com.atrainingtracker.trainingtracker.ui.routes.AutoDetectedRouteBanner
 import com.atrainingtracker.trainingtracker.ui.routes.ForkDecisionCard
 import com.atrainingtracker.trainingtracker.ui.routes.ReturnNavigationHud
-import com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModel
 import com.atrainingtracker.trainingtracker.ui.routes.TurnPromptBanner
 import com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheet
@@ -225,7 +225,6 @@ fun SensorGridScreen(
         RouteSelectorViewModel(routesRepo)
     }
     val routeSelectorUiState by actualRouteSelectorViewModel.uiState.collectAsState()
-    var showRouteSelectorSheet by remember { mutableStateOf(false) }
 
     val currentLatLng by currentLocationFlow.collectAsState()
     LaunchedEffect(currentLatLng, state.userBearing, state.userSpeed) {
@@ -381,16 +380,6 @@ fun SensorGridScreen(
                         }
                     )
                 }
-            }
-
-            // Quick Route Selector Action Button / Chip (REQ-MAP-024 / ATT-1835)
-            if (screenMode == ScreenMode.TRACKING) {
-                RouteActionChipRow(
-                    activeRoute = routeSelectorUiState.activeRoute,
-                    returnNavState = returnNavState,
-                    onClick = { showRouteSelectorSheet = true },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                )
             }
 
             // 1. The Sensor Grid (Scrollable)
@@ -595,16 +584,6 @@ fun SensorGridScreen(
         }
     }
 
-    // Modal Bottom Sheet for Quick Route Selector (REQ-MAP-024 / ATT-1835)
-    if (showRouteSelectorSheet) {
-        RouteSelectorModalBottomSheet(
-            viewModel = actualRouteSelectorViewModel,
-            onTakeMeHome = {
-                returnNavRepo.startTakeMeHome()
-            },
-            onDismiss = { showRouteSelectorSheet = false }
-        )
-    }
     }
 }
 
@@ -726,76 +705,6 @@ private fun ColAdder(onClick: () -> Unit) {
         )
     }
 }
-
-/**
- * 1-Tap Quick Route Action Chip displayed in the Cockpit HUD (REQ-MAP-024 / ATT-1835).
- */
-@Composable
-fun RouteActionChipRow(
-    activeRoute: RouteWithPath?,
-    returnNavState: ReturnNavigationState? = null,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(8.dp),
-        color = if (activeRoute != null) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-        tonalElevation = 1.dp,
-        modifier = modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_route),
-                    contentDescription = null,
-                    tint = if (activeRoute != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                if (activeRoute != null) {
-                    Text(
-                        text = "✓ ${activeRoute.summary.name}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                } else {
-                    Text(
-                        text = stringResource(id = R.string.route_action_select),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            val statusText = if (returnNavState != null && returnNavState.hasRemainingMetrics) {
-                "${returnNavState.formattedRemainingDistance} (${returnNavState.formattedClockTime})"
-            } else if (activeRoute != null) {
-                stringResource(id = R.string.route_select_title)
-            } else {
-                stringResource(id = R.string.route_action_select)
-            }
-            Text(
-                text = statusText,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-    }
-}
-
-
 
 val dummyLocationFlow = kotlinx.coroutines.flow.MutableStateFlow(
     com.google.android.gms.maps.model.LatLng(48.8566, 2.3522) // Paris, for example

@@ -26,10 +26,14 @@ import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
- * Localization verification test for Pick & Place sensor tile reordering strings (REQ-UI-200, TST-UI-154.5).
- * Validates 9-locale parity for move_tile_banner_instruction and move_tile_cancel.
+ * Localization parity test for branded Route Selection button strings (REQ-UI-279.5, TST-UI-239.3, ATT-2458):
+ * Validates 9-locale parity for:
+ * 1. route_action_select
+ * 2. route_action_select_desc
+ * 3. route_action_clear
+ * 4. route_metrics_format
  */
-class SensorGridLocalizationTest {
+class RouteSelectionLocalizationTest {
 
     private val locales = listOf("", "-de", "-es", "-fr", "-it", "-ja", "-nl", "-pl", "-pt")
 
@@ -59,55 +63,36 @@ class SensorGridLocalizationTest {
         return null
     }
 
-    @Test
-    fun testMoveTileBannerInstructionParityAcrossAllLocales() {
+    private fun verifyKeyAcrossAllLocales(key: String) {
         val resDir = findResDir()
-
         for (suffix in locales) {
             val dirName = if (suffix.isEmpty()) "values" else "values$suffix"
             val stringsFile = File(resDir, "$dirName/strings.xml")
             assertTrue("Expected strings.xml to exist in $dirName", stringsFile.exists())
 
-            val instruction = parseStringResource(stringsFile, "move_tile_banner_instruction")
-            assertNotNull("Missing move_tile_banner_instruction in $dirName", instruction)
-            assertTrue(
-                "move_tile_banner_instruction in $dirName must not be blank",
-                instruction!!.isNotBlank()
-            )
+            val value = parseStringResource(stringsFile, key)
+            assertNotNull("Missing string '$key' in $dirName", value)
+            assertTrue("String '$key' in $dirName must not be blank", value!!.isNotBlank())
         }
     }
 
     @Test
-    fun testMoveTileCancelParityAcrossAllLocales() {
-        val resDir = findResDir()
-
-        for (suffix in locales) {
-            val dirName = if (suffix.isEmpty()) "values" else "values$suffix"
-            val stringsFile = File(resDir, "$dirName/strings.xml")
-            val cancel = parseStringResource(stringsFile, "move_tile_cancel")
-            assertNotNull("Missing move_tile_cancel in $dirName", cancel)
-            assertTrue(
-                "move_tile_cancel in $dirName must not be blank",
-                cancel!!.isNotBlank()
-            )
-        }
+    fun testRouteActionSelectParityAcrossAllLocales() {
+        verifyKeyAcrossAllLocales("route_action_select")
     }
 
     @Test
     fun testRouteActionSelectDescParityAcrossAllLocales() {
-        val resDir = findResDir()
+        verifyKeyAcrossAllLocales("route_action_select_desc")
+    }
 
-        for (suffix in locales) {
-            val dirName = if (suffix.isEmpty()) "values" else "values$suffix"
-            val stringsFile = File(resDir, "$dirName/strings.xml")
-            assertTrue("Expected strings.xml to exist in $dirName", stringsFile.exists())
+    @Test
+    fun testRouteActionClearParityAcrossAllLocales() {
+        verifyKeyAcrossAllLocales("route_action_clear")
+    }
 
-            val desc = parseStringResource(stringsFile, "route_action_select_desc")
-            assertNotNull("Missing route_action_select_desc in $dirName", desc)
-            assertTrue(
-                "route_action_select_desc in $dirName must not be blank",
-                desc!!.isNotBlank()
-            )
-        }
+    @Test
+    fun testRouteMetricsFormatParityAcrossAllLocales() {
+        verifyKeyAcrossAllLocales("route_metrics_format")
     }
 }
