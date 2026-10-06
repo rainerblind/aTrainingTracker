@@ -1496,6 +1496,7 @@
     <string name="route_action_select">ルートを選択</string>
     <string name="route_action_select_desc">ファイルまたは履歴から選択</string>
     <string name="route_action_stop">ルートを終了</string>
+    <string name="route_action_clear">ルートをクリア</string>
     <string name="route_auto_detect_title">ルート検出</string>
     <string name="route_auto_detect_prompt">「%1$s」を走行中ですか？</string>
     <string name="route_auto_detect_activate">有効化</string>

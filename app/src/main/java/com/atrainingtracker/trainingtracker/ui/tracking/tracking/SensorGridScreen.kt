@@ -42,6 +42,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DirectionsRun
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Navigation
@@ -383,12 +384,13 @@ fun SensorGridScreen(
                 }
             }
 
-            // Quick Route Selector Action Button / Chip (REQ-MAP-024 / ATT-1835)
+            // Quick Route Selector Action Button / Chip (REQ-MAP-024 / ATT-1835 / ATT-2338)
             if (screenMode == ScreenMode.TRACKING) {
                 RouteActionChipRow(
                     activeRoute = routeSelectorUiState.activeRoute,
                     returnNavState = returnNavState,
                     onClick = { showRouteSelectorSheet = true },
+                    onClearRoute = { actualRouteSelectorViewModel.clearRoute() },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                 )
             }
@@ -735,6 +737,7 @@ fun RouteActionChipRow(
     activeRoute: RouteWithPath?,
     returnNavState: ReturnNavigationState? = null,
     onClick: () -> Unit,
+    onClearRoute: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -789,17 +792,34 @@ fun RouteActionChipRow(
             }
             val statusText = if (returnNavState != null && returnNavState.hasRemainingMetrics) {
                 "${returnNavState.formattedRemainingDistance} (${returnNavState.formattedClockTime})"
-            } else if (activeRoute != null) {
+            } else if (activeRoute != null && onClearRoute == null) {
                 stringResource(id = R.string.route_select_title)
             } else {
                 null
             }
-            if (statusText != null) {
-                Text(
-                    text = statusText,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                if (statusText != null) {
+                    Text(
+                        text = statusText,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                if (activeRoute != null && onClearRoute != null) {
+                    IconButton(
+                        onClick = onClearRoute,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringResource(id = R.string.route_action_clear),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
             }
         }
     }

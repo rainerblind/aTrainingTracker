@@ -129,4 +129,23 @@ class SensorGridScreenRouteIntegrationTest {
             content.contains("onLocationChanged(location)")
         )
     }
+
+    @Test
+    fun testSensorGridScreen_integratesClearRouteAction() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "SensorGridScreen must pass onClearRoute to RouteActionChipRow",
+            content.contains("onClearRoute = { actualRouteSelectorViewModel.clearRoute() }")
+        )
+        assertTrue(
+            "RouteActionChipRow must declare onClearRoute parameter",
+            content.contains("onClearRoute: (() -> Unit)? = null")
+        )
+        assertTrue(
+            "RouteActionChipRow must use route_action_clear string resource",
+            content.contains("R.string.route_action_clear")
+        )
+    }
 }

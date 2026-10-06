@@ -1709,6 +1709,7 @@
     <string name="route_action_select">Select Route</string>
     <string name="route_action_select_desc">Choose from file or history</string>
     <string name="route_action_stop">Stop Route</string>
+    <string name="route_action_clear">Clear route</string>
     <string name="route_auto_detect_title">Route Detection</string>
     <string name="route_auto_detect_prompt">Are you following \'%1$s\'?</string>
     <string name="route_auto_detect_activate">Activate</string>

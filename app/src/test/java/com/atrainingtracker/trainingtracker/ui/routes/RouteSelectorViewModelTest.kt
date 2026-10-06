@@ -155,6 +155,16 @@ class RouteSelectorViewModelTest {
     }
 
     @Test
+    fun testClearRouteClearsActiveNavigation() = runTest {
+        allRoutesFlow.value = sampleRoutes()
+        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, SharingStarted.Eagerly)
+        advanceUntilIdle()
+
+        viewModel.clearRoute()
+        verify { mockRepository.setActiveNavigatedRoute(null) }
+    }
+
+    @Test
     fun testFilterTabLengthSortsByDistance() = runTest {
         allRoutesFlow.value = sampleRoutes()
         val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, SharingStarted.Eagerly)

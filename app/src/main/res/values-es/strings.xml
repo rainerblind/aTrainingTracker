@@ -1518,6 +1518,7 @@
     <string name="route_action_select">Seleccionar ruta</string>
     <string name="route_action_select_desc">Elegir desde archivo o historial</string>
     <string name="route_action_stop">Finalizar ruta</string>
+    <string name="route_action_clear">Quitar ruta</string>
     <string name="route_auto_detect_title">Detección de ruta</string>
     <string name="route_auto_detect_prompt">¿Estás siguiendo \'%1$s\'?</string>
     <string name="route_auto_detect_activate">Activar</string>
