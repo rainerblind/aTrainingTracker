@@ -27,6 +27,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
+import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.routes.RouteWaypoint
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
@@ -241,6 +242,7 @@ data class MapRoute(
     override val maxLng: Double? = null,
     val isActiveNavigation: Boolean = false,
     val waypoints: List<RouteWaypoint> = emptyList(),
+    val climbs: List<Climb> = emptyList(),
     override val onClick: ((Long) -> Unit)? = null
 ) : MappablePath {
     override val latLngs: List<LatLng> by lazy { path.map { it.latLng } }
@@ -304,7 +306,8 @@ fun RouteWithPath.toMapRoute(isActiveNavigation: Boolean = false): MapRoute {
         maxLat = this.summary.maxLat,
         maxLng = this.summary.maxLng,
         isActiveNavigation = isActiveNavigation,
-        waypoints = this.waypoints
+        waypoints = this.waypoints,
+        climbs = this.climbs
     )
 }
 

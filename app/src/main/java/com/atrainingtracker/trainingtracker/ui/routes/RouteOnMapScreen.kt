@@ -55,6 +55,14 @@ import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import com.atrainingtracker.trainingtracker.climbs.Climb
+import com.atrainingtracker.trainingtracker.ui.climbs.ClimbCategoryChip
+import com.atrainingtracker.trainingtracker.ui.climbs.getClimbCategoryColors
+import kotlin.math.roundToInt
+
 @Composable
 fun RouteOnMapScreen(
     route: MapRoute?,
@@ -80,6 +88,15 @@ fun RouteOnMapScreen(
         }
     }
 
+    val climbs = route?.climbs ?: emptyList()
+
+    val climbMarkers = remember(climbs) {
+        climbs.map { climb ->
+            val (bgColor, _, _) = getClimbCategoryColors(climb.category)
+            createSensorMarker(context, R.drawable.ic_ascent, bgColor)
+        }
+    }
+
     val routeBounds = remember(routeSummary) {
         if (routeSummary?.minLat != null && routeSummary.maxLat != null && routeSummary.minLng != null && routeSummary.maxLng != null) {
             com.google.android.gms.maps.model.LatLngBounds(
@@ -96,41 +113,154 @@ fun RouteOnMapScreen(
         activeScrubPath = route?.path,
         useStatusBarsPadding = useStatusBarsPadding,
         showMap = showMap,
+        climbs = climbs,
         onHeaderHeightMeasured = onHeaderHeightMeasured,
         header = {
             routeSummary?.let {
                 RouteSummaryHeader(
                     summary = it,
                     modifier = Modifier.fillMaxWidth(),
+                    climbs = climbs,
                     onToggleSelection = onToggleSelection,
                     showSwitch = true // Snapshot handled by MapDetailLayout
                 )
             }
         },
+        analyticsContent = if (climbs.isNotEmpty()) {
+            {
+                RouteClimbsBreakdownSection(climbs = climbs)
+            }
+        } else null,
         mapContent = {
             if (route != null) {
                 routes(listOf(route))
                 
                 // Add unified Start and End markers (SCRUM-185)
+                val allMarkers = mutableListOf<LocationMarker>()
                 if (route.path.isNotEmpty() && startMarker != null && endMarker != null) {
-                    markers(listOf(
+                    allMarkers.add(
                         LocationMarker(
                             position = route.path.first().latLng,
                             iconResId = R.drawable.control_start,
                             title = "Start",
                             iconDescriptor = startMarker
-                        ),
+                        )
+                    )
+                    allMarkers.add(
                         LocationMarker(
                             position = route.path.last().latLng,
                             iconResId = R.drawable.control_stop,
                             title = "End",
                             iconDescriptor = endMarker
                         )
-                    ))
+                    )
+                }
+
+                // Add climb start markers (REQ-UI-274)
+                climbs.forEachIndexed { idx, climb ->
+                    val descriptor = climbMarkers.getOrNull(idx)
+                    if (descriptor != null) {
+                        allMarkers.add(
+                            LocationMarker(
+                                position = climb.startLatLng,
+                                iconResId = R.drawable.ic_ascent,
+                                title = climb.name,
+                                iconDescriptor = descriptor
+                            )
+                        )
+                    }
+                }
+
+                if (allMarkers.isNotEmpty()) {
+                    markers(allMarkers)
                 }
             }
             contextualPaths(backgroundPaths, sameSportAlpha = TTAlpha.Medium)
         },
         modifier = modifier
     )
+}
+
+@Composable
+fun RouteClimbsBreakdownSection(
+    climbs: List<Climb>,
+    modifier: Modifier = Modifier
+) {
+    val formatters = com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter.current
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.routes_climbs_section_title, climbs.size),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        climbs.forEachIndexed { index, climb ->
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            ClimbCategoryChip(category = climb.category)
+                            Text(
+                                text = climb.name.ifBlank { stringResource(R.string.climb_route_counter, index + 1, climbs.size) },
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+
+                    // Metrics Row: Start at km, Length, Elevation gain, Avg grade
+                    val startDistMeters = climb.pathPoints.firstOrNull()?.distance ?: 0.0
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(R.string.routes_climb_start_at, formatters.distance.format_with_units(startDistMeters) ?: "${(startDistMeters / 1000.0).roundToInt()} km"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "▲ +${formatters.altitude.format_with_units(climb.elevationGainMeters) ?: "${climb.elevationGainMeters.roundToInt()} m"}",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = stringResource(R.string.routes_climb_avg_grade, climb.avgGradePercent),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+    }
 }

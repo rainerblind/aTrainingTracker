@@ -1561,6 +1561,10 @@
     <string name="climb_category_cat3">Kat 3</string>
     <string name="climb_category_cat4">Kat 4</string>
     <string name="climb_category_uc">UC</string>
+    <string name="routes_climb_count">%d Podjazdów</string>
+    <string name="routes_climbs_section_title">Podjazdy (%d)</string>
+    <string name="routes_climb_start_at">Start na %s</string>
+    <string name="routes_climb_avg_grade">Śr. %1$.1f%%</string>
     <string name="tuning_show_live_climbs_title">Podjazdy na żywo (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Pokazuj kokpit podjazdu w czasie rzeczywistym na trasach i podczas swobodnej jazdy</string>
 

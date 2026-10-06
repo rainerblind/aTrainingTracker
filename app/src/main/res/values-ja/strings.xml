@@ -1539,6 +1539,10 @@
     <string name="climb_category_cat3">カテゴリー 3</string>
     <string name="climb_category_cat4">カテゴリー 4</string>
     <string name="climb_category_uc">UC</string>
+    <string name="routes_climb_count">%d 登坂</string>
+    <string name="routes_climbs_section_title">登坂 (%d)</string>
+    <string name="routes_climb_start_at">%s 地点から開始</string>
+    <string name="routes_climb_avg_grade">平均 %1$.1f%%</string>
     <string name="tuning_show_live_climbs_title">ライブクライム (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">ルートおよびフリー走行中にリアルタイム登坂コックピットを表示</string>
 

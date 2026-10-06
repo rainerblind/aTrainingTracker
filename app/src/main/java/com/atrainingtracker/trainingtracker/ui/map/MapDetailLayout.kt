@@ -42,6 +42,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
@@ -102,7 +103,8 @@ fun MapDetailLayout(
     hrZoneDistribution: ZoneDistributionData? = null,
     powerZoneDistribution: ZoneDistributionData? = null,
     hrZoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.FIVE_ZONES,
-    powerZoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.FIVE_ZONES
+    powerZoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.FIVE_ZONES,
+    climbs: List<Climb> = emptyList()
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -331,6 +333,7 @@ fun MapDetailLayout(
                                         showScrubbingBadge = false,
                                         hrZoneThresholds = hrThresholds,
                                         powerZoneThresholds = powerThresholds,
+                                        climbs = climbs,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }

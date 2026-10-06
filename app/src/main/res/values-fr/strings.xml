@@ -1560,6 +1560,10 @@
     <string name="climb_category_cat3">Cat 3</string>
     <string name="climb_category_cat4">Cat 4</string>
     <string name="climb_category_uc">UC</string>
+    <string name="routes_climb_count">%d Montées</string>
+    <string name="routes_climbs_section_title">Montées (%d)</string>
+    <string name="routes_climb_start_at">Début à %s</string>
+    <string name="routes_climb_avg_grade">Moy. %1$.1f%%</string>
     <string name="tuning_show_live_climbs_title">Montées en direct (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Afficher le cockpit de montée en temps réel sur les parcours et en conduite libre</string>
 
