@@ -1423,6 +1423,9 @@
     <string name="reset_to_defaults_success">Przywrócono domyślne ustawienia dostrajania.</string>
     <string name="tuning_cat_sensors_gps">Czujniki, GPS i filtrowanie</string>
     <string name="tuning_cat_workout_masks_cards">Karty i szczegóły treningu</string>
+    <string name="tuning_cat_navigation">Nawigacja</string>
+    <string name="tuning_route_selection_radius_title">Promień wyboru trasy</string>
+    <string name="tuning_route_selection_radius_desc">Maksymalna odległość do punktu początkowego trasy przy wyborze tras w pobliżu</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 kart</string>
     <string name="tuning_matrix_col_list">Lista</string>
     <string name="tuning_matrix_col_details">Szczegóły</string>

@@ -1421,6 +1421,9 @@
     <string name="reset_to_defaults_success">Configurações de ajuste restauradas para os padrões de fábrica.</string>
     <string name="tuning_cat_sensors_gps">Sensores, GPS e filtragem</string>
     <string name="tuning_cat_workout_masks_cards">Cartões e detalhes de treino</string>
+    <string name="tuning_cat_navigation">Navegação</string>
+    <string name="tuning_route_selection_radius_title">Raio de seleção de rota</string>
+    <string name="tuning_route_selection_radius_desc">Distância máxima até o ponto de partida para seleção de rotas próximas</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 cartões</string>
     <string name="tuning_matrix_col_list">Lista</string>
     <string name="tuning_matrix_col_details">Detalhes</string>

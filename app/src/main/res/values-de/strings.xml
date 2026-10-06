@@ -1508,6 +1508,9 @@
     <string name="reset_to_defaults_success">Abstimmungseinstellungen auf Werkseinstellungen zurückgesetzt.</string>
     <string name="tuning_cat_sensors_gps">Sensoren, GPS &amp; Filter</string>
     <string name="tuning_cat_workout_masks_cards">Trainingsliste &amp; Details</string>
+    <string name="tuning_cat_navigation">Navigation</string>
+    <string name="tuning_route_selection_radius_title">Routenauswahl-Radius</string>
+    <string name="tuning_route_selection_radius_desc">Maximale Entfernung zum Routenstartpunkt für die Routenauswahl</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 Karten</string>
     <string name="tuning_matrix_col_list">Liste</string>
     <string name="tuning_matrix_col_details">Details</string>

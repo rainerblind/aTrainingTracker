@@ -57,7 +57,8 @@ enum class TuningSection {
     BATTERY_SAVER,
     SENSORS_GPS,
     AFTERMATH_ANALYSIS,
-    WORKOUT_MASKS_CARDS
+    WORKOUT_MASKS_CARDS,
+    NAVIGATION
 }
 
 /**
@@ -100,6 +101,10 @@ object TuningSubtitleFormatter {
         val flatStr = String.format(Locale.getDefault(), "%.1f%%", flatSlope)
         val steepStr = String.format(Locale.getDefault(), "%.1f%%", steepSlope)
         return "$fullPercent% / $mediumPercent%, Flat: $flatStr, Steep: $steepStr"
+    }
+
+    fun formatNavigationSubtitle(radiusKm: Float): String {
+        return String.format(Locale.getDefault(), "%.1f km", radiusKm)
     }
 
     fun formatSensorsGpsSubtitle(

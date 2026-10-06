@@ -52,7 +52,8 @@ class AdvancedTuningModularityTest {
             "categories/AmoledBatterySaverSection.kt",
             "categories/SensorsGpsFilterSection.kt",
             "categories/AftermathAnalysisSection.kt",
-            "categories/WorkoutMasksAndCardsSection.kt"
+            "categories/WorkoutMasksAndCardsSection.kt",
+            "categories/NavigationSection.kt"
         )
 
         for (relPath in expectedFiles) {

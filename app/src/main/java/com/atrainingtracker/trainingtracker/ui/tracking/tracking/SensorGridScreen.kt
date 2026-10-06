@@ -222,7 +222,7 @@ fun SensorGridScreen(
 
     val routesRepo = remember { RoutesRepository.getInstance(context) }
     val actualRouteSelectorViewModel = routeSelectorViewModel ?: remember {
-        RouteSelectorViewModel(routesRepo)
+        RouteSelectorViewModel(routesRepo, tuningPreferencesDataStore = tuningDataStore)
     }
     val routeSelectorUiState by actualRouteSelectorViewModel.uiState.collectAsState()
 

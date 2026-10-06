@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Tune
@@ -51,13 +52,14 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AftermathAnalysisSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AmoledBatterySaverSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.CockpitTypographySection
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.NavigationSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.WorkoutMasksAndCardsSection
 import kotlinx.coroutines.launch
 
 /**
  * Advanced Tuning and Settings dialog structured into modular, collapsible
- * Material 3 accordion subsections with live active-value summary subtitles (REQ-UI-222, REQ-UI-262).
+ * Material 3 accordion subsections with live active-value summary subtitles (REQ-UI-222, REQ-UI-262, REQ-UI-281).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,28 +95,20 @@ fun AdvancedTuningDialog(
     var sensorFieldCornerRadius by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_CORNER_RADIUS) }
     var sensorFieldBorderThickness by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS) }
     var sensorFieldBorderContrast by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST) }
+    var routeSelectionRadiusKm by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }
     var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
-
     var workoutDetailPrefs by remember { mutableStateOf(WorkoutDetailPreferences()) }
     var isDetailPrefsInitialized by remember { mutableStateOf(false) }
-
     var workoutSectionsOrder by remember { mutableStateOf(WorkoutSectionType.DEFAULT_ORDER) }
     var isSectionsOrderInitialized by remember { mutableStateOf(false) }
 
     // Multi-section expansion state tracked across configuration changes via string identifiers
-    // Initially all sections are collapsed (emptySet) providing a clean, compact overview (ATT-1957)
     var expandedSections by rememberSaveable { mutableStateOf(emptySet<String>()) }
-
     fun isSectionExpanded(section: TuningSection): Boolean = expandedSections.contains(section.name)
-
     fun toggleSection(section: TuningSection) {
-        expandedSections = if (expandedSections.contains(section.name)) {
-            expandedSections - section.name
-        } else {
-            expandedSections + section.name
-        }
+        expandedSections = if (expandedSections.contains(section.name)) expandedSections - section.name else expandedSections + section.name
     }
 
     LaunchedEffect(persistedWorkoutCardPrefs) {
@@ -124,7 +118,6 @@ fun AdvancedTuningDialog(
             isAftermathPrefsInitialized = true
         }
     }
-
     LaunchedEffect(persistedWorkoutDetailPrefs) {
         val detailPrefs = persistedWorkoutDetailPrefs
         if (!isDetailPrefsInitialized && detailPrefs != null) {
@@ -132,7 +125,6 @@ fun AdvancedTuningDialog(
             isDetailPrefsInitialized = true
         }
     }
-
     LaunchedEffect(persistedWorkoutSectionsOrder) {
         val order = persistedWorkoutSectionsOrder
         if (!isSectionsOrderInitialized && order != null) {
@@ -140,7 +132,6 @@ fun AdvancedTuningDialog(
             isSectionsOrderInitialized = true
         }
     }
-
     LaunchedEffect(persistedConfig) {
         elevationXAxisDomain = persistedConfig.elevationXAxisDomain
         telemetryXAxisDomain = persistedConfig.telemetryXAxisDomain
@@ -160,6 +151,7 @@ fun AdvancedTuningDialog(
         altitudeWindowSec = persistedConfig.altitudeFilterWindowSec
         slopeMinSpeed = persistedConfig.slopeMinSpeedMps
         paceCeilingMinKm = persistedConfig.paceCeilingMinKm
+        routeSelectionRadiusKm = persistedConfig.routeSelectionRadiusKm
     }
 
     AppBottomSheetContent(
@@ -187,7 +179,8 @@ fun AdvancedTuningDialog(
                         gpsAccuracyThresholdMeters = gpsAccuracy,
                         altitudeFilterWindowSec = altitudeWindowSec,
                         slopeMinSpeedMps = slopeMinSpeed,
-                        paceCeilingMinKm = paceCeilingMinKm
+                        paceCeilingMinKm = paceCeilingMinKm,
+                        routeSelectionRadiusKm = routeSelectionRadiusKm
                     )
                     scope.launch {
                         tuningDataStore.saveTuningConfig(newConfig)
@@ -209,15 +202,11 @@ fun AdvancedTuningDialog(
         ) {
             // Advisory Warning Notice
             Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
-                ),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(12.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.Top
                 ) {
@@ -252,12 +241,9 @@ fun AdvancedTuningDialog(
                 onToggle = { toggleSection(TuningSection.COCKPIT_TYPOGRAPHY) }
             ) {
                 CockpitTypographySection(
-                    cockpitFontFamily = cockpitFontFamily,
-                    onFontFamilyChange = { cockpitFontFamily = it },
-                    cockpitFontWeight = cockpitFontWeight,
-                    onFontWeightChange = { cockpitFontWeight = it },
-                    sensorFieldVariant = sensorFieldVariant,
-                    onSensorFieldVariantChange = { sensorFieldVariant = it },
+                    cockpitFontFamily = cockpitFontFamily, onFontFamilyChange = { cockpitFontFamily = it },
+                    cockpitFontWeight = cockpitFontWeight, onFontWeightChange = { cockpitFontWeight = it },
+                    sensorFieldVariant = sensorFieldVariant, onSensorFieldVariantChange = { sensorFieldVariant = it },
                     sensorFieldCornerRadius = sensorFieldCornerRadius, onCornerRadiusChange = { sensorFieldCornerRadius = it },
                     sensorFieldBorderThickness = sensorFieldBorderThickness, onBorderThicknessChange = { sensorFieldBorderThickness = it },
                     sensorFieldBorderContrast = sensorFieldBorderContrast, onBorderContrastChange = { sensorFieldBorderContrast = it }
@@ -273,18 +259,12 @@ fun AdvancedTuningDialog(
                 onToggle = { toggleSection(TuningSection.BATTERY_SAVER) }
             ) {
                 AmoledBatterySaverSection(
-                    fullDimFactor = fullDimFactor,
-                    onFullDimChange = { fullDimFactor = it },
-                    mediumDimFactor = mediumDimFactor,
-                    onMediumDimChange = { mediumDimFactor = it },
-                    slopeFlat = slopeFlat,
-                    onSlopeFlatChange = { slopeFlat = it },
-                    slopeSteep = slopeSteep,
-                    onSlopeSteepChange = { slopeSteep = it },
-                    wakeupSec = wakeupSec,
-                    onWakeupSecChange = { wakeupSec = it },
-                    downwardDelaySec = downwardDelaySec,
-                    onDownwardDelayChange = { downwardDelaySec = it }
+                    fullDimFactor = fullDimFactor, onFullDimChange = { fullDimFactor = it },
+                    mediumDimFactor = mediumDimFactor, onMediumDimChange = { mediumDimFactor = it },
+                    slopeFlat = slopeFlat, onSlopeFlatChange = { slopeFlat = it },
+                    slopeSteep = slopeSteep, onSlopeSteepChange = { slopeSteep = it },
+                    wakeupSec = wakeupSec, onWakeupSecChange = { wakeupSec = it },
+                    downwardDelaySec = downwardDelaySec, onDownwardDelayChange = { downwardDelaySec = it }
                 )
             }
 
@@ -297,12 +277,9 @@ fun AdvancedTuningDialog(
                 onToggle = { toggleSection(TuningSection.SENSORS_GPS) }
             ) {
                 SensorsGpsFilterSection(
-                    gpsAccuracy = gpsAccuracy,
-                    onGpsAccuracyChange = { gpsAccuracy = it },
-                    altitudeWindowSec = altitudeWindowSec,
-                    onAltitudeWindowChange = { altitudeWindowSec = it },
-                    slopeMinSpeed = slopeMinSpeed,
-                    onSlopeMinSpeedChange = { slopeMinSpeed = it }
+                    gpsAccuracy = gpsAccuracy, onGpsAccuracyChange = { gpsAccuracy = it },
+                    altitudeWindowSec = altitudeWindowSec, onAltitudeWindowChange = { altitudeWindowSec = it },
+                    slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it }
                 )
             }
 
@@ -315,12 +292,9 @@ fun AdvancedTuningDialog(
                 onToggle = { toggleSection(TuningSection.AFTERMATH_ANALYSIS) }
             ) {
                 AftermathAnalysisSection(
-                    elevationXAxisDomain = elevationXAxisDomain,
-                    onElevationDomainChange = { elevationXAxisDomain = it },
-                    telemetryXAxisDomain = telemetryXAxisDomain,
-                    onTelemetryDomainChange = { telemetryXAxisDomain = it },
-                    paceCeilingMinKm = paceCeilingMinKm,
-                    onPaceCeilingChange = { paceCeilingMinKm = it }
+                    elevationXAxisDomain = elevationXAxisDomain, onElevationDomainChange = { elevationXAxisDomain = it },
+                    telemetryXAxisDomain = telemetryXAxisDomain, onTelemetryDomainChange = { telemetryXAxisDomain = it },
+                    paceCeilingMinKm = paceCeilingMinKm, onPaceCeilingChange = { paceCeilingMinKm = it }
                 )
             }
 
@@ -333,12 +307,23 @@ fun AdvancedTuningDialog(
                 onToggle = { toggleSection(TuningSection.WORKOUT_MASKS_CARDS) }
             ) {
                 WorkoutMasksAndCardsSection(
-                    workoutCardPrefs = workoutCardPrefs,
-                    onWorkoutCardPrefsChange = { workoutCardPrefs = it },
-                    workoutDetailPrefs = workoutDetailPrefs,
-                    onWorkoutDetailPrefsChange = { workoutDetailPrefs = it },
-                    workoutSectionsOrder = workoutSectionsOrder,
-                    onWorkoutSectionsOrderChange = { workoutSectionsOrder = it }
+                    workoutCardPrefs = workoutCardPrefs, onWorkoutCardPrefsChange = { workoutCardPrefs = it },
+                    workoutDetailPrefs = workoutDetailPrefs, onWorkoutDetailPrefsChange = { workoutDetailPrefs = it },
+                    workoutSectionsOrder = workoutSectionsOrder, onWorkoutSectionsOrderChange = { workoutSectionsOrder = it }
+                )
+            }
+
+            // Section 6: Navigation
+            TuningAccordionSection(
+                icon = Icons.Default.Navigation,
+                title = stringResource(R.string.tuning_cat_navigation),
+                subtitle = TuningSubtitleFormatter.formatNavigationSubtitle(routeSelectionRadiusKm),
+                isExpanded = isSectionExpanded(TuningSection.NAVIGATION),
+                onToggle = { toggleSection(TuningSection.NAVIGATION) }
+            ) {
+                NavigationSection(
+                    routeSelectionRadiusKm = routeSelectionRadiusKm,
+                    onRadiusChange = { routeSelectionRadiusKm = it }
                 )
             }
 
@@ -370,21 +355,14 @@ fun AdvancedTuningDialog(
                         altitudeWindowSec = TuningPreferencesDefaults.ALTITUDE_FILTER_WINDOW_SEC
                         slopeMinSpeed = TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS
                         paceCeilingMinKm = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM
+                        routeSelectionRadiusKm = TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM
                         onSettingsChanged?.invoke()
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.reset_to_defaults_success),
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(context, context.getString(R.string.reset_to_defaults_success), Toast.LENGTH_SHORT).show()
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(
-                    imageVector = Icons.Default.RestartAlt,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
+                Icon(imageVector = Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource(R.string.reset_to_defaults))
             }
