@@ -1536,6 +1536,8 @@
     <string name="google_drive_error_network">Brak połączenia z Internetem lub błąd sieci podczas logowania Google.</string>
     <string name="google_drive_error_generic">Logowanie Google nie powiodło się. Spróbuj ponownie.</string>
     <string name="google_drive_connect_prompt">Połącz konto Google, aby automatycznie eksportować treningi i synchronizować kopie zapasowe bazy danych z Google Drive.</string>
+    <string name="scan_google_drive">Skanuj Dysk Google</string>
+    <string name="legacy_import__downloading_google_drive">Pobieranie %1$s z Dysku Google…</string>
     <string name="gpx_enriching_elevation">Pobieranie danych wysokości…</string>
     <string name="gpx_elevation_enriched">Dane wysokości dodane pomyślnie</string>
     <string name="gpx_elevation_enrichment_failed">Nie udało się pobrać wysokości, zaimportowano trasę 2D</string>

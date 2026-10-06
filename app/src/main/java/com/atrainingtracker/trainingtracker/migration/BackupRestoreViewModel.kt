@@ -551,6 +551,57 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
+    fun bulkRecoverGoogleDriveData(
+        context: Context,
+        format: String = "all",
+        dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
+    ): kotlinx.coroutines.Job {
+        saveClusteringTolerances()
+        return viewModelScope.launch(dispatcher) {
+            val token = TrainingApplication.getGoogleDriveAuthToken()
+            if (token.isNullOrBlank() || !TrainingApplication.uploadToGoogleDrive()) {
+                _uiState.value = UiState.Error(context.getString(R.string.google_drive_disconnected_status))
+                return@launch
+            }
+            _uiState.value = UiState.Loading("Initializing Google Drive recovery...")
+            val result = LegacyImportEngine.bulkRecoverFromGoogleDrive(context, format, createLegacyListener(), uploadToStravaOnImport)
+            val app = getApplication<Application>()
+            val message = if (result.failedCount > 0) {
+                app.getString(
+                    R.string.legacy_import__finished_with_failed,
+                    result.importedCount,
+                    result.skippedCount,
+                    result.failedCount,
+                    result.totalScanned
+                )
+            } else if (result.skippedCount > 0) {
+                app.getString(
+                    R.string.legacy_import__finished_with_skipped,
+                    result.importedCount,
+                    result.skippedCount,
+                    result.totalScanned
+                )
+            } else {
+                app.getString(
+                    R.string.legacy_import__finished_all_new,
+                    result.importedCount,
+                    result.totalScanned
+                )
+            }
+            if (result.importedCount > 0) {
+                // REQ-MIG-034: Post-recovery reactive reconciliation
+                try {
+                    WorkoutRepository.getInstance(app).loadAllWorkouts()
+                    PeriodsRepository.getInstance(app).syncPeriodsIfDiscrepancy()
+                    WorkoutClusterRepository.getInstance(app).refreshClusters()
+                } catch (e: Exception) {
+                    Log.w("BackupRestoreVM", "Post-bulk recovery reconciliation failed: ${e.message}")
+                }
+            }
+            _uiState.value = UiState.Success(message)
+        }
+    }
+
     private fun createLegacyListener() = object : LegacyImportEngine.ProgressListener {
         override fun onProgress(current: Int, total: Int, name: String) {
             _uiState.value = UiState.Progress(current, total, name)

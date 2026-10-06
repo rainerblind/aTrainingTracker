@@ -1727,6 +1727,8 @@
     <string name="google_drive_error_network">No internet connection or network error during Google Sign-In.</string>
     <string name="google_drive_error_generic">Google Sign-In failed. Please try again.</string>
     <string name="google_drive_connect_prompt">Connect your Google account to automatically export workouts and synchronize database backups to Google Drive.</string>
+    <string name="scan_google_drive">Scan Google Drive</string>
+    <string name="legacy_import__downloading_google_drive">Downloading %1$s from Google Drive…</string>
     <string name="gpx_enriching_elevation">Fetching elevation data…</string>
     <string name="gpx_elevation_enriched">Elevation data successfully added</string>
     <string name="gpx_elevation_enrichment_failed">Elevation lookup failed, imported 2D route</string>
