@@ -109,21 +109,15 @@ class RouteSelectorSheetTest {
     }
 
     @Test
-    fun testRouteSelectorContent_doesNotRenderTakeMeHomeCard() {
+    fun testRouteSelectorContent_doesNotRenderTakeMeHomeCardUnconditionally() {
         val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteSelectorSheet.kt")
         val content = file.readText()
 
-        assertFalse(
-            "RouteSelectorSheet must NOT contain onTakeMeHome (REQ-UI-280 / ATT-2459)",
-            content.contains("onTakeMeHome")
-        )
-        assertFalse(
-            "RouteSelectorSheet must NOT reference ic_nav_home (REQ-UI-280 / ATT-2459)",
-            content.contains("ic_nav_home")
-        )
-        assertFalse(
-            "RouteSelectorSheet must NOT reference take_me_home_title (REQ-UI-280 / ATT-2459)",
-            content.contains("take_me_home_title")
+        // Unconditional Take Me Home card is prohibited at workout start (REQ-UI-280 / ATT-2459)
+        // Mid-ride entry point is conditionally gated by isMidRide (REQ-UI-282 / ATT-2462)
+        assertTrue(
+            "RouteSelectorSheet must guard Take Me Home card with isMidRide (REQ-UI-282 / ATT-2462)",
+            content.contains("if (isMidRide && onTakeMeHome != null)")
         )
     }
 }

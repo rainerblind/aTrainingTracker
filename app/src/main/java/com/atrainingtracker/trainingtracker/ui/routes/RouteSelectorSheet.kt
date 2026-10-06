@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.routes
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -34,10 +35,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -54,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import java.util.Locale
 
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -62,7 +67,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 
 /**
- * Modal Bottom Sheet presenting the Quick Route Selector (REQ-MAP-024, REQ-UI-280 / ATT-2459).
+ * Modal Bottom Sheet presenting the Quick Route Selector (REQ-MAP-024, REQ-UI-280, REQ-UI-282 / ATT-2459, ATT-2462).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,6 +75,8 @@ fun RouteSelectorModalBottomSheet(
     viewModel: RouteSelectorViewModel,
     onDismiss: () -> Unit,
     onRouteSelected: (Long) -> Unit = {},
+    isMidRide: Boolean = false,
+    onTakeMeHome: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -85,18 +92,27 @@ fun RouteSelectorModalBottomSheet(
             onRouteSelected = { routeId ->
                 onRouteSelected(routeId)
                 onDismiss()
+            },
+            isMidRide = isMidRide,
+            onTakeMeHome = onTakeMeHome?.let { action ->
+                {
+                    action()
+                    onDismiss()
+                }
             }
         )
     }
 }
 
 /**
- * Bottom Sheet content for Quick Route Selector and Route Auto Detection (REQ-MAP-024, REQ-UI-280 / ATT-2459).
+ * Bottom Sheet content for Quick Route Selector and Route Auto Detection (REQ-MAP-024, REQ-UI-280, REQ-UI-282 / ATT-2459, ATT-2462).
  */
 @Composable
 fun RouteSelectorContent(
     viewModel: RouteSelectorViewModel,
     onRouteSelected: (Long) -> Unit,
+    isMidRide: Boolean = false,
+    onTakeMeHome: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -113,6 +129,14 @@ fun RouteSelectorContent(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 8.dp)
         )
+
+        // Mid-Ride Heimweg Card (REQ-UI-282 / ATT-2462)
+        if (isMidRide && onTakeMeHome != null) {
+            MidRideHeimwegCard(
+                onTakeMeHome = onTakeMeHome,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
 
         // Active Route Banner
         AnimatedVisibility(visible = uiState.activeRoute != null) {
@@ -328,3 +352,64 @@ private fun formatDistanceAndElevation(distanceMeters: Double, elevationMeters: 
     val km = distanceMeters / 1000.0
     return String.format(Locale.getDefault(), "%.1f km  •  +%.0f m", km, elevationMeters)
 }
+
+/**
+ * Mid-ride quick action card offering return navigation ("Take Me Home")
+ * when opening the route selector during an active or paused workout (REQ-UI-282 / ATT-2462).
+ */
+@Composable
+fun MidRideHeimwegCard(
+    onTakeMeHome: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onTakeMeHome),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, TTColor.RouteSelected.copy(alpha = 0.35f)),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(TTColor.RouteSelected.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Home,
+                    contentDescription = null,
+                    tint = TTColor.RouteSelected,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(id = R.string.take_me_home_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = stringResource(id = R.string.take_me_home_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
