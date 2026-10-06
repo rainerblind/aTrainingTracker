@@ -151,17 +151,17 @@ object RouteDivergenceDetector {
 
         // Approach bearing: vector along shared corridor approaching the fork point
         val approachPtBefore = pointAtDistance(refRoute.path, (junctionDist - 30.0).coerceAtLeast(0.0))
-        val approachBearing = if (RouteCorridorClassifier.haversineDistanceMeters(
+        val approachBearing = if (GeoUtils.haversineDistanceMeters(
                 approachPtBefore.latitude, approachPtBefore.longitude,
                 divergencePoint.latitude, divergencePoint.longitude
             ) > 5.0
         ) {
-            RouteCorridorClassifier.calculateInitialBearing(
+            GeoUtils.calculateInitialBearing(
                 approachPtBefore.latitude, approachPtBefore.longitude,
                 divergencePoint.latitude, divergencePoint.longitude
             )
         } else {
-            RouteCorridorClassifier.calculateInitialBearing(
+            GeoUtils.calculateInitialBearing(
                 currentPos.latitude, currentPos.longitude,
                 divergencePoint.latitude, divergencePoint.longitude
             )
@@ -172,7 +172,7 @@ object RouteDivergenceDetector {
             val branchLookaheadDist = (routeProj.distanceAlongRouteMeters + 40.0).coerceAtMost(route.path.last().distance)
             val branchPtAfter = pointAtDistance(route.path, branchLookaheadDist)
 
-            val branchBearing = RouteCorridorClassifier.calculateInitialBearing(
+            val branchBearing = GeoUtils.calculateInitialBearing(
                 divergencePoint.latitude, divergencePoint.longitude,
                 branchPtAfter.latitude, branchPtAfter.longitude
             )

@@ -1627,21 +1627,6 @@
     <string name="nav_stop_return">Zakończ powrót</string>
     <string name="nav_route_reverse">Powrót tą samą trasą</string>
 
-    <!-- Corridor Grouping & Differentiating Thumbnail Zoom (ATT-1954) -->
-    <string name="gateway_all">Wszystkie</string>
-    <string name="gateway_north">Północ</string>
-    <string name="gateway_northeast">Północny wschód</string>
-    <string name="gateway_east">Wschód</string>
-    <string name="gateway_southeast">Południowy wschód</string>
-    <string name="gateway_south">Południe</string>
-    <string name="gateway_southwest">Południowy zachód</string>
-    <string name="gateway_west">Zachód</string>
-    <string name="gateway_northwest">Północny zachód</string>
-    <string name="gateway_unknown">Inne</string>
-    <string name="pref_corridor_grouping_title">Grupowanie tras na podstawie korytarzy</string>
-    <string name="pref_corridor_grouping_desc">Grupuje trasy na liście według ich kierunku wyjazdu i korytarza</string>
-    <string name="pref_focused_thumbnail_title">Skupione powiększenie miniatury</string>
-    <string name="pref_focused_thumbnail_desc">Powiększa miniatury tras na charakterystyczną środkową pętlę zamiast wspólnych korytarzy wjazdowych/wyjazdowych</string>
     <string name="fork_alert_title">Rozwidlenie przed Tobą</string>
     <string name="fork_approaching_in_m">za %1$d m</string>
     <string name="fork_direction_left">Lewo</string>
