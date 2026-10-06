@@ -1,7 +1,7 @@
 # Stage 2: Requirement & Test Specification - ATT-2458: Relocate Route Selection Button from Cockpit Sensor Grid Tabs to Exclusively Control Tracking Screen
 
 **Ticket**: [ATT-2458](https://atrainingtracker.atlassian.net/browse/ATT-2458)  
-**Sub-task**: [ATT-2525](https://atrainingtracker.atlassian.net/browse/ATT-2525) (`[Req & Test Spec]`)  
+**Sub-task**: [ATT-2561](https://atrainingtracker.atlassian.net/browse/ATT-2561) (`[Req & Test Spec]`)  
 **Parent Epic**: [ATT-66](https://atrainingtracker.atlassian.net/browse/ATT-66) (*Improve Routes*)  
 **Target Release**: `V4.9.39`  
 **Active Sprint**: `2026-41.1`  
