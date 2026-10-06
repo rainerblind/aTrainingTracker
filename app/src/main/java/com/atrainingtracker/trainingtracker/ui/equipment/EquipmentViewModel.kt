@@ -203,12 +203,18 @@ class EquipmentViewModel @JvmOverloads constructor(
             _shoes.value = fetchItems(BSportType.RUN)
             val remoteSensors = dbDevicesHelper.allRemoteSensors
             _allRemoteSensors.value = remoteSensors
-            _bikeSensors.value = remoteSensors.filter {
-                DevicesDatabaseManager.isBikeSensor(it.deviceType) || DevicesDatabaseManager.isSharedSensor(it.deviceType)
-            }
-            _shoeSensors.value = remoteSensors.filter {
-                DevicesDatabaseManager.isRunSensor(it.deviceType) || DevicesDatabaseManager.isSharedSensor(it.deviceType)
-            }
+            _bikeSensors.value = EquipmentSensorOrdering.sortSensors(
+                remoteSensors.filter {
+                    DevicesDatabaseManager.isBikeSensor(it.deviceType) || DevicesDatabaseManager.isSharedSensor(it.deviceType)
+                },
+                BSportType.BIKE
+            )
+            _shoeSensors.value = EquipmentSensorOrdering.sortSensors(
+                remoteSensors.filter {
+                    DevicesDatabaseManager.isRunSensor(it.deviceType) || DevicesDatabaseManager.isSharedSensor(it.deviceType)
+                },
+                BSportType.RUN
+            )
         }
     }
 

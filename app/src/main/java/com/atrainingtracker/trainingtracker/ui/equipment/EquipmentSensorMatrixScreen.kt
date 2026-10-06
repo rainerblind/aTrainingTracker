@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.SimpleSensorInfo
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
@@ -87,17 +88,23 @@ fun EquipmentSensorMatrixScreen(
     val effectiveBikeSensors = if (bikeSensors.isNotEmpty()) {
         bikeSensors
     } else {
-        sensors.filter {
-            DevicesDatabaseManager.isBikeSensor(it.deviceType) || DevicesDatabaseManager.isSharedSensor(it.deviceType)
-        }
+        EquipmentSensorOrdering.sortSensors(
+            sensors.filter {
+                DevicesDatabaseManager.isBikeSensor(it.deviceType) || DevicesDatabaseManager.isSharedSensor(it.deviceType)
+            },
+            BSportType.BIKE
+        )
     }
 
     val effectiveShoeSensors = if (shoeSensors.isNotEmpty()) {
         shoeSensors
     } else {
-        sensors.filter {
-            DevicesDatabaseManager.isRunSensor(it.deviceType) || DevicesDatabaseManager.isSharedSensor(it.deviceType)
-        }
+        EquipmentSensorOrdering.sortSensors(
+            sensors.filter {
+                DevicesDatabaseManager.isRunSensor(it.deviceType) || DevicesDatabaseManager.isSharedSensor(it.deviceType)
+            },
+            BSportType.RUN
+        )
     }
 
     val density = LocalDensity.current

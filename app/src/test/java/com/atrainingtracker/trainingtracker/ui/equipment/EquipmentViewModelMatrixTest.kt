@@ -143,13 +143,13 @@ class EquipmentViewModelMatrixTest {
         val viewModel = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
 
-        // Bike sensors: HRM (shared), Stages Power (bike), Tempe (shared) -> 3 items
+        // Bike sensors: Stages Power (bike power), HRM (shared), Tempe (shared) -> 3 items ordered by precedence
         assertEquals(3, viewModel.bikeSensors.value.size)
-        assertEquals(listOf(10L, 20L, 40L), viewModel.bikeSensors.value.map { it.id })
+        assertEquals(listOf(20L, 10L, 40L), viewModel.bikeSensors.value.map { it.id })
 
-        // Shoe sensors: HRM (shared), Stryd Footpod (run), Tempe (shared) -> 3 items
+        // Shoe sensors: Stryd Footpod (run speed), HRM (shared), Tempe (shared) -> 3 items ordered by precedence
         assertEquals(3, viewModel.shoeSensors.value.size)
-        assertEquals(listOf(10L, 30L, 40L), viewModel.shoeSensors.value.map { it.id })
+        assertEquals(listOf(30L, 10L, 40L), viewModel.shoeSensors.value.map { it.id })
     }
 
     @Test
