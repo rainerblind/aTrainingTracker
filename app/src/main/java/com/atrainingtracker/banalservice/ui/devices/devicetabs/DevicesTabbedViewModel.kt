@@ -108,6 +108,10 @@ class DevicesTabbedViewModel(
         val targetType = newDeviceType ?: DeviceType.ALL
         savedStateHandle[BANALService.DEVICE_TYPE] = targetType.name
         _uiState.value = UiState.DisplayingTabs(targetType)
+        if (isSearching) {
+            banalServiceRepository.stopSearchingForNewDevices()
+            banalServiceRepository.startSearchingForNewDevices(protocol, targetType)
+        }
     }
 
     /**

@@ -1646,4 +1646,10 @@
     <string name="sensor_battery_snackbar_single">⚠️ %1$s : Batterie faible (%2$d%%)</string>
     <string name="sensor_battery_snackbar_many">⚠️ %1$d capteurs : Batterie faible (%2$s)</string>
     <string name="sensor_battery_action_view_sensors">Voir les capteurs</string>
+
+    <!-- Sensor Pairing Relocation (ATT-2189) -->
+    <string name="devices_pair_sensor">Associer un capteur</string>
+    <string name="devices_pair_protocol_title">Sélectionner le protocole</string>
+    <string name="devices_pair_protocol_ant">Capteur ANT+</string>
+    <string name="devices_pair_protocol_ble">Capteur Bluetooth LE</string>
 </resources>

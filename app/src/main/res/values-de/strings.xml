@@ -1732,4 +1732,10 @@
     <string name="sensor_battery_snackbar_single">⚠️ %1$s: Akku schwach (%2$d%%)</string>
     <string name="sensor_battery_snackbar_many">⚠️ %1$d Sensoren: Akku schwach (%2$s)</string>
     <string name="sensor_battery_action_view_sensors">Zu Sensoren</string>
+
+    <!-- Sensor Pairing Relocation (ATT-2189) -->
+    <string name="devices_pair_sensor">Sensor koppeln</string>
+    <string name="devices_pair_protocol_title">Übertragungsprotokoll wählen</string>
+    <string name="devices_pair_protocol_ant">ANT+ Sensor</string>
+    <string name="devices_pair_protocol_ble">Bluetooth LE Sensor</string>
 </resources>

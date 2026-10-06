@@ -1838,6 +1838,12 @@
     <string name="sensor_battery_snackbar_single">⚠️ %1$s: Low battery (%2$d%%)</string>
     <string name="sensor_battery_snackbar_many">⚠️ %1$d sensors: Low battery (%2$s)</string>
     <string name="sensor_battery_action_view_sensors">View Sensors</string>
+
+    <!-- Sensor Pairing Relocation (ATT-2189) -->
+    <string name="devices_pair_sensor">Pair sensor</string>
+    <string name="devices_pair_protocol_title">Select protocol</string>
+    <string name="devices_pair_protocol_ant">ANT+ Sensor</string>
+    <string name="devices_pair_protocol_ble">Bluetooth LE Sensor</string>
 </resources>
 
 

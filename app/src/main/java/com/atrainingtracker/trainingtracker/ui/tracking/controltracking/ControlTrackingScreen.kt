@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -59,8 +60,8 @@ fun ControlTrackingScreen(
     searchingFor: String?,
     devices: List<RemoteDeviceUIData>,
     currentSport: BSportType,
-    isAntSupported: Boolean,
-    isBluetoothSupported: Boolean,
+    isAntSupported: Boolean = false,
+    isBluetoothSupported: Boolean = false,
     onSearch: () -> Unit,
     onDeviceClick: (RemoteDeviceUIData) -> Unit,
     onSportSelected: (BSportType) -> Unit,
@@ -68,13 +69,14 @@ fun ControlTrackingScreen(
     onPause: () -> Unit,
     onResume: () -> Unit,
     onStop: () -> Unit,
-    onPairingClicked: (Protocol) -> Unit,
-    selectingProtocol: Protocol?,
-    onDeviceTypeSelected: (DeviceType) -> Unit,
-    onCancelDeviceTypeSelection: () -> Unit,
+    onPairingClicked: (Protocol) -> Unit = {},
+    selectingProtocol: Protocol? = null,
+    onDeviceTypeSelected: (DeviceType) -> Unit = {},
+    onCancelDeviceTypeSelection: () -> Unit = {},
     showResearchButton: Boolean = true,
     locationCalibrationStatus: com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.LocationCalibrationStatus? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    bottomContent: @Composable ColumnScope.() -> Unit = {}
 ) {
     val context = LocalContext.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -320,12 +322,8 @@ fun ControlTrackingScreen(
         // Pushes the main control buttons to the center
         Spacer(modifier = Modifier.weight(1f))
 
-        // Pairing Buttons
-        PairingButtons(
-            isAntSupported = isAntSupported,
-            isBluetoothSupported = isBluetoothSupported,
-            onPairingClicked = onPairingClicked
-        )
+        // Flexible bottom content slot (e.g. Route Selection in ATT-2458)
+        bottomContent()
     }
 
     // Material 3 Permission Rationale Sheet (REQ-PRI-003, ATT-2075)
