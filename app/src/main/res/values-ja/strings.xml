@@ -1360,7 +1360,7 @@
     <string name="tuning_pace_ceiling_desc">ペースグラフのGPS異常値を抑制します。この上限を超える速度はクランプされます。</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
-    <string name="tuning_cat_cockpit_typography">コックピットのフォント</string>
+    <string name="tuning_cat_cockpit_typography">コックピットとタイル</string>
     <string name="tuning_cockpit_font_family_title">フォントファミリー</string>
     <string name="tuning_font_system_default">システムデフォルト</string>
     <string name="tuning_font_seven_segment">7セグメントデジタル</string>
