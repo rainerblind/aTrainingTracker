@@ -1428,6 +1428,10 @@
     <string name="cluster_start_location">Start: %s</string>
     <string name="known_location_routes_header">Lieblingsstrecken ab hier (%d):</string>
     <string name="filter_by_start_location">Nach Startort filtern</string>
+    <string name="known_locations_home_base">Heim-Basis</string>
+    <string name="known_locations_home_badge">Heim-Basis</string>
+    <string name="known_locations_set_home">Als Heim-Basis festlegen</string>
+    <string name="known_locations_remove_home">Heim-Basis aufheben</string>
 
     <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
     <string name="drawer__expert_settings">Experten-Einstellungen</string>

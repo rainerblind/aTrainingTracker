@@ -47,6 +47,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -214,6 +215,8 @@ fun KnownLocationsScreen(
             onShowWorkouts = onShowWorkouts,
             onSelectCluster = onSelectCluster,
             onShowRoutes = onShowRoutes,
+            onSetHome = { item -> viewModel.setHomeLocation(item.id) },
+            onClearHome = { viewModel.clearHomeLocation() },
             onDelete = { locationPendingDeletion = it },
             modifier = Modifier.fillMaxSize()
         )
@@ -225,8 +228,8 @@ fun KnownLocationsScreen(
             location = itemToEdit,
             isMetric = uiState.isMetric,
             showMap = uiState.showMapInEditDialog,
-            onConfirm = { id, name, altitude, radius, source ->
-                viewModel.updateLocation(id, name, altitude, radius, source)
+            onConfirm = { id, name, altitude, radius, source, isHome ->
+                viewModel.updateLocation(id, name, altitude, radius, source, isHome)
             },
             onDismiss = { viewModel.dismissEditDialog() }
         )
@@ -257,6 +260,8 @@ private fun KnownLocationsListContent(
     onShowWorkouts: (KnownLocationItem) -> Unit = { },
     onSelectCluster: (Long) -> Unit = { },
     onShowRoutes: (KnownLocationItem) -> Unit = { },
+    onSetHome: (KnownLocationItem) -> Unit = { },
+    onClearHome: () -> Unit = { },
     onDelete: (KnownLocationItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -318,6 +323,8 @@ private fun KnownLocationsListContent(
                     onShowWorkouts = { onShowWorkouts(item) },
                     onSelectCluster = onSelectCluster,
                     onShowRoutes = { onShowRoutes(item) },
+                    onSetHome = { onSetHome(item) },
+                    onClearHome = onClearHome,
                     onDelete = { onDelete(item) }
                 )
             }
@@ -462,6 +469,8 @@ private fun KnownLocationCard(
     onShowWorkouts: () -> Unit = {},
     onSelectCluster: (Long) -> Unit = {},
     onShowRoutes: () -> Unit = {},
+    onSetHome: () -> Unit = {},
+    onClearHome: () -> Unit = {},
     onDelete: () -> Unit,
     initialShowContextMenu: Boolean = false
 ) {
@@ -492,8 +501,19 @@ private fun KnownLocationCard(
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.weight(1f, fill = false)
                     )
+                    if (item.isHome) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Icon(
+                            imageVector = Icons.Default.Home,
+                            contentDescription = stringResource(R.string.known_locations_home_base),
+                            modifier = Modifier
+                                .size(20.dp)
+                                .testTag("location_home_icon_${item.id}"),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
 
                 Row(
@@ -528,6 +548,36 @@ private fun KnownLocationCard(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
+                            // Dedicated Home Base Badge (REQ-MAP-034)
+                            if (item.isHome) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
+                                    modifier = Modifier.testTag("location_home_badge_${item.id}")
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Home,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(13.dp),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.known_locations_home_badge),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                }
+                            }
+
                             // Number of Starts (Interactive Drill-Down Touch Target)
                             Surface(
                                 onClick = onShowWorkouts,
@@ -623,6 +673,38 @@ private fun KnownLocationCard(
                 expanded = showContextMenu,
                 onDismissRequest = { showContextMenu = false }
             ) {
+                if (item.isHome) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.known_locations_remove_home)) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Home,
+                                contentDescription = null
+                            )
+                        },
+                        onClick = {
+                            showContextMenu = false
+                            onClearHome()
+                        },
+                        modifier = Modifier.testTag("location_clear_home_action_${item.id}")
+                    )
+                } else {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.known_locations_set_home)) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Home,
+                                contentDescription = null
+                            )
+                        },
+                        onClick = {
+                            showContextMenu = false
+                            onSetHome()
+                        },
+                        modifier = Modifier.testTag("location_set_home_action_${item.id}")
+                    )
+                }
+
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.delete)) },
                     leadingIcon = {

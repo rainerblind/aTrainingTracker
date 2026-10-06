@@ -261,6 +261,42 @@ class KnownLocationsViewModel @JvmOverloads constructor(
     }
 
     /**
+     * Commits edited location changes including custom geofence radius and home base status (REQ-MAP-034).
+     */
+    fun updateLocation(id: Long, name: String, altitude: Double, radius: Int, source: ElevationSource, isHome: Boolean) {
+        viewModelScope.launch {
+            repository.updateLocation(id, name, altitude, radius, source)
+            if (isHome) {
+                repository.setHomeLocation(id)
+            } else {
+                val current = repository.locationsFlow.value.firstOrNull { it.id == id }
+                if (current?.isHome == true) {
+                    repository.clearHomeLocation()
+                }
+            }
+            dismissEditDialog()
+        }
+    }
+
+    /**
+     * Atomically sets the specified location as the designated home base (REQ-MAP-034).
+     */
+    fun setHomeLocation(id: Long) {
+        viewModelScope.launch {
+            repository.setHomeLocation(id)
+        }
+    }
+
+    /**
+     * Clears the designated home base across all locations (REQ-MAP-034).
+     */
+    fun clearHomeLocation() {
+        viewModelScope.launch {
+            repository.clearHomeLocation()
+        }
+    }
+
+    /**
      * Deletes a known location.
      */
     fun deleteLocation(id: Long) {

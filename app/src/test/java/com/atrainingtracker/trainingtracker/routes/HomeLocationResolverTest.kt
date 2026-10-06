@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.routes
 
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.MyLocation
+import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
@@ -27,40 +28,44 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
+/**
+ * Unit test verifying HomeLocationResolver behavior and false positive prevention (REQ-MAP-034, TST-MAP-036.2).
+ */
 class HomeLocationResolverTest {
 
     @Test
-    fun resolveHome_withExplicitNameHausOrHome_returnsNamedLocation() {
+    fun resolveHome_withDesignatedHomeLocation_returnsDesignatedLocation() {
         val manager = mockk<KnownLocationsDatabaseManager>()
-        val loc1 = MyLocation(1L, 48.5, 9.2, "Parkplatz Trailhead", 350.0, 200, 15)
-        val loc2 = MyLocation(2L, 48.6, 9.3, "Zu Hause", 420.0, 200, 5)
-        val loc3 = MyLocation(3L, 48.7, 9.4, "Büro", 300.0, 200, 2)
+        val loc1 = MyLocation(1L, 48.5, 9.2, "Gasthaus Hirsch", 350.0, 200, 50, false, ElevationSource.LEGACY_RAW, false)
+        val loc2 = MyLocation(2L, 48.6, 9.3, "Mein Apartment", 420.0, 200, 5, true, ElevationSource.MANUAL_USER, true)
+        val loc3 = MyLocation(3L, 48.7, 9.4, "Büro", 300.0, 200, 10, false, ElevationSource.LEGACY_RAW, false)
 
         every { manager.allLocations } returns listOf(loc1, loc2, loc3)
 
         val resolved = HomeLocationResolver.resolveHomeLocation(manager)
         assertNotNull(resolved)
         assertEquals(2L, resolved?.id)
-        assertEquals("Zu Hause", resolved?.name)
+        assertEquals("Mein Apartment", resolved?.name)
         assertEquals(420.0, resolved?.altitude ?: 0.0, 0.001)
     }
 
     @Test
-    fun resolveHome_withEnglishHomeKeyword_returnsNamedLocation() {
+    fun resolveHome_withoutDesignatedHome_eliminatesSubstringFalsePositives_returnsHighestHitCount() {
         val manager = mockk<KnownLocationsDatabaseManager>()
-        val loc1 = MyLocation(1L, 48.5, 9.2, "Coffee Shop", 350.0, 200, 10)
-        val loc2 = MyLocation(2L, 48.6, 9.3, "My Home Base", 450.0, 200, 1)
+        val loc1 = MyLocation(1L, 48.5, 9.2, "Rathausplatz", 350.0, 200, 5, false, ElevationSource.LEGACY_RAW, false)
+        val loc2 = MyLocation(2L, 48.6, 9.3, "Trailhead Parkplatz", 450.0, 200, 28, false, ElevationSource.LEGACY_RAW, false)
+        val loc3 = MyLocation(3L, 48.7, 9.4, "Gasthaus Krone", 400.0, 200, 2, false, ElevationSource.LEGACY_RAW, false)
 
-        every { manager.allLocations } returns listOf(loc1, loc2)
+        every { manager.allLocations } returns listOf(loc1, loc2, loc3)
 
         val resolved = HomeLocationResolver.resolveHomeLocation(manager)
         assertNotNull(resolved)
         assertEquals(2L, resolved?.id)
-        assertEquals("My Home Base", resolved?.name)
+        assertEquals("Trailhead Parkplatz", resolved?.name)
     }
 
     @Test
-    fun resolveHome_withoutExplicitName_returnsLocationWithHighestHitCount() {
+    fun resolveHome_withoutDesignatedHome_returnsLocationWithHighestHitCount() {
         val manager = mockk<KnownLocationsDatabaseManager>()
         val loc1 = MyLocation(10L, 48.5, 9.2, "Start Spot A", 350.0, 200, 4)
         val loc2 = MyLocation(20L, 48.6, 9.3, "Start Spot B", 420.0, 200, 42)
@@ -72,6 +77,20 @@ class HomeLocationResolverTest {
         assertNotNull(resolved)
         assertEquals(20L, resolved?.id)
         assertEquals("Start Spot B", resolved?.name)
+    }
+
+    @Test
+    fun resolveHome_withoutDesignatedHome_whenHitCountsAreZero_fallsBackToFirstLocation() {
+        val manager = mockk<KnownLocationsDatabaseManager>()
+        val loc1 = MyLocation(100L, 48.5, 9.2, "First Fallback", 350.0, 200, 0)
+        val loc2 = MyLocation(200L, 48.6, 9.3, "Second Fallback", 420.0, 200, 0)
+
+        every { manager.allLocations } returns listOf(loc1, loc2)
+
+        val resolved = HomeLocationResolver.resolveHomeLocation(manager)
+        assertNotNull(resolved)
+        assertEquals(100L, resolved?.id)
+        assertEquals("First Fallback", resolved?.name)
     }
 
     @Test
