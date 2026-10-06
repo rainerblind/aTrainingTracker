@@ -707,13 +707,10 @@ fun TrackingTabsScreen(
                 }
             }
 
-            // Modal Bottom Sheet for Route Selector (REQ-UI-279 / ATT-2458)
+            // Modal Bottom Sheet for Route Selector (REQ-UI-279, REQ-UI-280 / ATT-2459)
             if (showRouteSelectorSheet) {
                 RouteSelectorModalBottomSheet(
                     viewModel = routeSelectorViewModel,
-                    onTakeMeHome = {
-                        returnNavRepo.startTakeMeHome()
-                    },
                     onDismiss = { showRouteSelectorSheet = false }
                 )
             }
