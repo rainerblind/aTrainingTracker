@@ -90,8 +90,7 @@ fun EquipmentTabsScreen(
 
     val tabs = listOf(
         stringResource(R.string.equipment_type_bike),
-        stringResource(R.string.equipment_type_shoe),
-        stringResource(R.string.equipment_tab_sensor_matrix)
+        stringResource(R.string.equipment_type_shoe)
     )
     val pagerState = rememberPagerState(
         initialPage = initialTab,
@@ -147,20 +146,6 @@ fun EquipmentTabsScreen(
                             headerHeightPx = appBarMaxHeightPx.toFloat()
                         )
                     }
-                    2 -> {
-                        EquipmentSensorMatrixScreen(
-                            bikes = bikes,
-                            shoes = shoes,
-                            bikeSensors = bikeSensors,
-                            shoeSensors = shoeSensors,
-                            sensors = allSensors,
-                            onToggleLink = { equipmentId, sensorId, isLinked ->
-                                viewModel.setSensorLink(equipmentId, sensorId, isLinked)
-                            },
-                            appBarOffsetPx = connection.appBarOffset,
-                            headerHeightPx = appBarMaxHeightPx.toFloat()
-                        )
-                    }
                 }
             }
 
@@ -202,17 +187,15 @@ fun EquipmentTabsScreen(
             }
 
             // 3. THE FLOATING ACTION BUTTON
-            // Rendered only on Bikes (0) and Shoes (1) tabs; suppressed on Sensor Matrix (2)
-            if (pagerState.currentPage != 2) {
-                FloatingActionButton(
-                    onClick = { isAddingNew = true },
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(16.dp)
-                        .navigationBarsPadding() // Ensure it stays above nav bar
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.text_new))
-                }
+            // Rendered on both Bikes (0) and Shoes (1) tabs
+            FloatingActionButton(
+                onClick = { isAddingNew = true },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+                    .navigationBarsPadding() // Ensure it stays above nav bar
+            ) {
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.text_new))
             }
         }
     }

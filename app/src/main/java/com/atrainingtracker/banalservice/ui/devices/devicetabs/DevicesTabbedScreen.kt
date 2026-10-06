@@ -50,6 +50,9 @@ import com.atrainingtracker.banalservice.ui.devices.PairingProtocolBottomSheet
 import com.atrainingtracker.banalservice.ui.devices.devicelist.*
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialog
+import androidx.compose.foundation.rememberScrollState
+import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSportSensorMatrix
+import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModel
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
@@ -58,6 +61,7 @@ import kotlinx.coroutines.launch
 fun DevicesTabbedScreen(
     tabViewModel: DevicesTabbedViewModel,
     listViewModel: DeviceListViewModel = viewModel(),
+    equipmentViewModel: EquipmentViewModel = viewModel(),
     initialTab: Int = 0,
     onCheckAntInstallation: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -80,9 +84,18 @@ fun DevicesTabbedScreen(
         CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
     }
 
+    val bikes by equipmentViewModel.bikes.collectAsState()
+    val shoes by equipmentViewModel.shoes.collectAsState()
+    val bikeSensors by equipmentViewModel.bikeSensors.collectAsState()
+    val shoeSensors by equipmentViewModel.shoeSensors.collectAsState()
+
     val availableListState = rememberLazyListState()
     val pairedListState = rememberLazyListState()
     val allKnownListState = rememberLazyListState()
+    val bikesListState = rememberLazyListState()
+    val shoesListState = rememberLazyListState()
+    val bikesHorizontalScrollState = rememberScrollState()
+    val shoesHorizontalScrollState = rememberScrollState()
 
     Surface(modifier = modifier.fillMaxSize()) {
         when (val state = uiState) {
@@ -95,8 +108,15 @@ fun DevicesTabbedScreen(
                         DeviceFilterSpec(DeviceFilterType.ALL_KNOWN, protocol, deviceType)
                     )
                 }
+                val tabTitles = listOf(
+                    stringResource(R.string.devices_tab_available),
+                    stringResource(R.string.devices_tab_paired),
+                    stringResource(R.string.devices_tab_known),
+                    stringResource(R.string.devices_tab_bikes),
+                    stringResource(R.string.devices_tab_shoes)
+                )
                 
-                val pagerState = rememberPagerState(initialPage = initialTab) { tabs.size }
+                val pagerState = rememberPagerState(initialPage = initialTab) { tabTitles.size }
                 val scope = rememberCoroutineScope()
 
                 Box(Modifier.nestedScroll(connection)) {
@@ -107,21 +127,66 @@ fun DevicesTabbedScreen(
                         verticalAlignment = Alignment.Top,
                         beyondViewportPageCount = 2
                     ) { page ->
-                        val scrollState = when (page) {
-                            0 -> availableListState
-                            1 -> pairedListState
-                            else -> allKnownListState
+                        when (page) {
+                            0 -> DeviceListScreen(
+                                viewModel = listViewModel,
+                                filterSpec = tabs[0],
+                                isSearchingForNewDevices = isSearchingForNewDevices,
+                                onDeviceSelected = { editingDeviceId = it },
+                                onDeleteDevice = { showDeleteConfirmFor = it },
+                                scrollState = availableListState,
+                                appBarOffsetPx = connection.appBarOffset,
+                                headerHeightPx = appBarMaxHeightPx.toFloat()
+                            )
+                            1 -> DeviceListScreen(
+                                viewModel = listViewModel,
+                                filterSpec = tabs[1],
+                                isSearchingForNewDevices = false,
+                                onDeviceSelected = { editingDeviceId = it },
+                                onDeleteDevice = { showDeleteConfirmFor = it },
+                                scrollState = pairedListState,
+                                appBarOffsetPx = connection.appBarOffset,
+                                headerHeightPx = appBarMaxHeightPx.toFloat()
+                            )
+                            2 -> DeviceListScreen(
+                                viewModel = listViewModel,
+                                filterSpec = tabs[2],
+                                isSearchingForNewDevices = false,
+                                onDeviceSelected = { editingDeviceId = it },
+                                onDeleteDevice = { showDeleteConfirmFor = it },
+                                scrollState = allKnownListState,
+                                appBarOffsetPx = connection.appBarOffset,
+                                headerHeightPx = appBarMaxHeightPx.toFloat()
+                            )
+                            3 -> EquipmentSportSensorMatrix(
+                                items = bikes,
+                                sensors = bikeSensors,
+                                isBike = true,
+                                onToggleLink = { eqId, sId, isLinked ->
+                                    equipmentViewModel.setSensorLink(eqId, sId, isLinked)
+                                },
+                                appBarOffsetPx = connection.appBarOffset,
+                                headerHeightPx = appBarMaxHeightPx.toFloat(),
+                                scrollState = bikesListState,
+                                horizontalScrollState = bikesHorizontalScrollState,
+                                emptyEquipmentMessage = stringResource(R.string.equipment_no_bikes),
+                                emptySensorsMessage = stringResource(R.string.equipment_matrix_no_bike_sensors)
+                            )
+                            4 -> EquipmentSportSensorMatrix(
+                                items = shoes,
+                                sensors = shoeSensors,
+                                isBike = false,
+                                onToggleLink = { eqId, sId, isLinked ->
+                                    equipmentViewModel.setSensorLink(eqId, sId, isLinked)
+                                },
+                                appBarOffsetPx = connection.appBarOffset,
+                                headerHeightPx = appBarMaxHeightPx.toFloat(),
+                                scrollState = shoesListState,
+                                horizontalScrollState = shoesHorizontalScrollState,
+                                emptyEquipmentMessage = stringResource(R.string.equipment_no_shoes),
+                                emptySensorsMessage = stringResource(R.string.equipment_matrix_no_shoe_sensors)
+                            )
                         }
-                        DeviceListScreen(
-                            viewModel = listViewModel,
-                            filterSpec = tabs[page],
-                            isSearchingForNewDevices = if (page == 0) isSearchingForNewDevices else false,
-                            onDeviceSelected = { editingDeviceId = it },
-                            onDeleteDevice = { showDeleteConfirmFor = it },
-                            scrollState = scrollState,
-                            appBarOffsetPx = connection.appBarOffset,
-                            headerHeightPx = appBarMaxHeightPx.toFloat()
-                        )
                     }
 
                     // --- HEADER ---
@@ -211,12 +276,12 @@ fun DevicesTabbedScreen(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                                 divider = {}
                             ) {
-                                tabs.forEachIndexed { index, spec ->
+                                tabTitles.forEachIndexed { index, title ->
                                     Tab(
                                         selected = pagerState.currentPage == index,
                                         onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
                                         text = {
-                                            Text(getTabTitle(spec))
+                                            Text(title)
                                         }
                                     )
                                 }

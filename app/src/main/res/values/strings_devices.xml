@@ -35,6 +35,8 @@
     <string name="devices_tab_available">Connected</string>
     <string name="devices_tab_paired">Paired</string>
     <string name="devices_tab_known">Known</string>
+    <string name="devices_tab_bikes">Bikes</string>
+    <string name="devices_tab_shoes">Shoes</string>
     <string name="devices_sensors_title">Sensors</string>
     <string name="devices_available">connected</string>
     <string name="devices_not_connected">not connected</string>

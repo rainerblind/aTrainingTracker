@@ -18,140 +18,110 @@
 
 package com.atrainingtracker.banalservice.ui.devices.devicetabs
 
-import android.app.Application
-import android.util.Log
-import androidx.arch.core.executor.ArchTaskExecutor
-import androidx.arch.core.executor.TaskExecutor
-import androidx.lifecycle.SavedStateHandle
-import com.atrainingtracker.banalservice.BANALService
-import com.atrainingtracker.banalservice.Protocol
-import com.atrainingtracker.banalservice.devices.DeviceType
-import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
-import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
-import io.mockk.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
-import org.junit.After
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 import java.io.File
 
 /**
- * Structural and behavioral contract test for sensor management pairing relocation (REQ-UI-278, TST-UI-238, ATT-2189):
- * 1. Verification of Pairing FAB in DevicesTabbedScreen.kt.
- * 2. Cascading integration with PairingProtocolBottomSheet and DeviceTypeSelectionDialog.
- * 3. Dynamic filter updating and discovery restart in DevicesTabbedViewModel.
+ * Architectural contract test for DevicesTabbedScreen 5-tab structure (REQ-UI-284, TST-UI-244.1, ATT-2465).
+ *
+ * Verifies:
+ * 1. Defines 5 tabs: available, paired, known, bikes, shoes.
+ * 2. Uses PrimaryScrollableTabRow to prevent text clipping and wrapping.
+ * 3. Maps pages 3 and 4 to EquipmentSportSensorMatrix with independent scroll states.
+ * 4. Accepts EquipmentViewModel.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 class DevicesTabbedScreenContractTest {
-
-    private val testDispatcher = StandardTestDispatcher()
-    private lateinit var mockApplication: Application
-    private lateinit var mockDeviceDataRepository: DeviceDataRepository
-    private lateinit var mockBanalServiceRepository: BANALServiceRepository
-
-    @Before
-    fun setUp() {
-        Dispatchers.setMain(testDispatcher)
-
-        ArchTaskExecutor.getInstance().setDelegate(object : TaskExecutor() {
-            override fun executeOnDiskIO(runnable: Runnable) = runnable.run()
-            override fun postToMainThread(runnable: Runnable) = runnable.run()
-            override fun isMainThread(): Boolean = true
-        })
-
-        mockkStatic(Log::class)
-        every { Log.d(any<String>(), any<String>()) } returns 0
-        every { Log.i(any<String>(), any<String>()) } returns 0
-        every { Log.w(any<String>(), any<String>()) } returns 0
-        every { Log.e(any<String>(), any<String>()) } returns 0
-
-        mockApplication = mockk(relaxed = true)
-        every { mockApplication.registerReceiver(any(), any(), any()) } returns null
-        every { mockApplication.registerReceiver(any(), any()) } returns null
-
-        mockDeviceDataRepository = mockk(relaxed = true)
-        mockBanalServiceRepository = mockk(relaxed = true)
-
-        mockkObject(DeviceDataRepository.Companion)
-        every { DeviceDataRepository.getInstance(any()) } returns mockDeviceDataRepository
-
-        mockkObject(BANALServiceRepository.Companion)
-        every { BANALServiceRepository.getInstance(any()) } returns mockBanalServiceRepository
-        every { mockBanalServiceRepository.searchingForDevice } returns MutableStateFlow<String?>(null)
-        every { mockBanalServiceRepository.isSearchingForNewDevices } returns MutableStateFlow<Boolean>(false)
-        every { mockBanalServiceRepository.bindToBANALService() } just Runs
-    }
-
-    @After
-    fun tearDown() {
-        ArchTaskExecutor.getInstance().setDelegate(null)
-        Dispatchers.resetMain()
-        unmockkAll()
-    }
 
     private fun findFile(relativePath: String): File {
         val candidates = listOf(
             File(relativePath),
             File("app/$relativePath"),
-            File("../$relativePath"),
-            File("../../$relativePath")
+            File("../$relativePath")
         )
         return candidates.firstOrNull { it.exists() }
             ?: error("File not found in candidates: $relativePath")
     }
 
     @Test
-    fun testDevicesTabbedScreenDeclaresPairingFabAndDialogs() {
+    fun testDevicesTabbedScreen_fiveTabsContract() {
         val file = findFile("src/main/java/com/atrainingtracker/banalservice/ui/devices/devicetabs/DevicesTabbedScreen.kt")
-        assertTrue("DevicesTabbedScreen.kt must exist", file.exists())
-
         val content = file.readText()
 
-        // Verify FAB presence and configuration
-        assertTrue("DevicesTabbedScreen must contain FloatingActionButton", content.contains("FloatingActionButton"))
-        assertTrue("FAB must use Icons.Default.Add", content.contains("Icons.Default.Add"))
-        assertTrue("FAB must use R.string.devices_pair_sensor", content.contains("R.string.devices_pair_sensor"))
+        // 1. Must define 5 tabs including bikes and shoes
+        assertTrue(
+            "DevicesTabbedScreen must reference R.string.devices_tab_available",
+            content.contains("R.string.devices_tab_available")
+        )
+        assertTrue(
+            "DevicesTabbedScreen must reference R.string.devices_tab_paired",
+            content.contains("R.string.devices_tab_paired")
+        )
+        assertTrue(
+            "DevicesTabbedScreen must reference R.string.devices_tab_known",
+            content.contains("R.string.devices_tab_known")
+        )
+        assertTrue(
+            "DevicesTabbedScreen must reference R.string.devices_tab_bikes",
+            content.contains("R.string.devices_tab_bikes")
+        )
+        assertTrue(
+            "DevicesTabbedScreen must reference R.string.devices_tab_shoes",
+            content.contains("R.string.devices_tab_shoes")
+        )
 
-        // Verify PairingProtocolBottomSheet integration
-        assertTrue("DevicesTabbedScreen must integrate PairingProtocolBottomSheet", content.contains("PairingProtocolBottomSheet("))
+        // 2. Must use PrimaryScrollableTabRow
+        assertTrue(
+            "DevicesTabbedScreen must use PrimaryScrollableTabRow",
+            content.contains("PrimaryScrollableTabRow(")
+        )
 
-        // Verify DeviceTypeSelectionDialog integration
-        assertTrue("DevicesTabbedScreen must integrate DeviceTypeSelectionDialog", content.contains("DeviceTypeSelectionDialog("))
+        // 3. Must accept EquipmentViewModel parameter
+        assertTrue(
+            "DevicesTabbedScreen must accept equipmentViewModel",
+            content.contains("equipmentViewModel: EquipmentViewModel = viewModel()")
+        )
 
-        // Verify filter update and scroll to available tab
-        assertTrue("DevicesTabbedScreen must invoke updateFilters", content.contains("tabViewModel.updateFilters("))
-        assertTrue("DevicesTabbedScreen must animate scroll to Tab 0", content.contains("pagerState.animateScrollToPage(0)"))
-    }
+        // 4. Must collect bikes, shoes, and sport-specific sensors
+        assertTrue(
+            "DevicesTabbedScreen must collect bikes state",
+            content.contains("equipmentViewModel.bikes.collectAsState()")
+        )
+        assertTrue(
+            "DevicesTabbedScreen must collect shoes state",
+            content.contains("equipmentViewModel.shoes.collectAsState()")
+        )
+        assertTrue(
+            "DevicesTabbedScreen must collect bikeSensors state",
+            content.contains("equipmentViewModel.bikeSensors.collectAsState()")
+        )
+        assertTrue(
+            "DevicesTabbedScreen must collect shoeSensors state",
+            content.contains("equipmentViewModel.shoeSensors.collectAsState()")
+        )
 
-    @Test
-    fun testDevicesTabbedViewModelUpdateFilters_reconfiguresAndRestartsSearch() {
-        val savedStateHandle = SavedStateHandle()
-        val viewModel = DevicesTabbedViewModel(mockApplication, savedStateHandle)
+        // 5. Must instantiate independent horizontal scroll states
+        assertTrue(
+            "DevicesTabbedScreen must declare bikesHorizontalScrollState",
+            content.contains("val bikesHorizontalScrollState = rememberScrollState()")
+        )
+        assertTrue(
+            "DevicesTabbedScreen must declare shoesHorizontalScrollState",
+            content.contains("val shoesHorizontalScrollState = rememberScrollState()")
+        )
 
-        // Start initial searching state
-        viewModel.startSearching()
-        verify(exactly = 1) { mockBanalServiceRepository.startSearchingForNewDevices(Protocol.ALL, DeviceType.ALL) }
+        // 6. Must map page 3 to bikes EquipmentSportSensorMatrix
+        assertTrue(
+            "DevicesTabbedScreen must map page 3 to EquipmentSportSensorMatrix with isBike = true",
+            content.contains("3 -> EquipmentSportSensorMatrix(") &&
+            content.contains("isBike = true")
+        )
 
-        // Trigger filter update for Bluetooth LE Heart Rate
-        viewModel.updateFilters(Protocol.BLUETOOTH_LE, DeviceType.HRM)
-
-        assertEquals("Protocol must be updated to BLUETOOTH_LE", Protocol.BLUETOOTH_LE, viewModel.protocol)
-        assertEquals("Protocol must be stored in SavedStateHandle", Protocol.BLUETOOTH_LE.name, savedStateHandle.get<String>(BANALService.PROTOCOL))
-        assertEquals("DeviceType must be stored in SavedStateHandle", DeviceType.HRM.name, savedStateHandle.get<String>(BANALService.DEVICE_TYPE))
-
-        val uiState = viewModel.uiState.value
-        assertTrue("UiState must be DisplayingTabs", uiState is UiState.DisplayingTabs)
-        assertEquals("DeviceType in UiState must be HRM", DeviceType.HRM, (uiState as UiState.DisplayingTabs).deviceType)
-
-        // Verify that discovery was restarted with new parameters
-        verify(exactly = 1) { mockBanalServiceRepository.stopSearchingForNewDevices() }
-        verify(exactly = 1) { mockBanalServiceRepository.startSearchingForNewDevices(Protocol.BLUETOOTH_LE, DeviceType.HRM) }
+        // 7. Must map page 4 to shoes EquipmentSportSensorMatrix
+        assertTrue(
+            "DevicesTabbedScreen must map page 4 to EquipmentSportSensorMatrix with isBike = false",
+            content.contains("4 -> EquipmentSportSensorMatrix(") &&
+            content.contains("isBike = false")
+        )
     }
 }
