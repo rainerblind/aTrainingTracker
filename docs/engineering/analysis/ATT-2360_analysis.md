@@ -66,12 +66,55 @@ This legacy configuration pattern exhibits several critical architectural and UX
 ### In-Scope Objectives
 1. **SQLite Database Schema Migration (`DB_VERSION = 12`)**:
    - Add `SHOW_LIVE_CLIMBS` (`ShowLiveClimbs`, `INTEGER DEFAULT 1`) and `SHOW_NAVIGATION_HINTS` (`ShowNavigationHints`, `INTEGER DEFAULT 1`) to `VIEWS_TABLE` in `TrackingViewsDatabaseManager.java`.
-   - Implement seamless upgrade in `onUpgrade` for `oldVersion < 12`.
-   - Add DAO update methods `updateShowLiveClimbs(long viewId, boolean showLiveClimbs)` and `updateShowNavigationHints(long viewId, boolean showNavigationHints)`.
-2. **Repository & State Model Parity**:
-   - Extend `TrackingViewInfo` with `val showLiveClimbs: Boolean` and `val showNavigationHints: Boolean`.
+   - Implement defensive migration in `onUpgrade` for `oldVersion < 12`:
+     ```java
+     if (oldVersion < 12) {
+         Log.i(TAG, "Upgrading database from version 11 to 12: Adding ShowLiveClimbs and ShowNavigationHints");
+         try {
+             addColumn(db, VIEWS_TABLE, SHOW_LIVE_CLIMBS, "int DEFAULT 1");
+         } catch (Exception e) {
+             Log.w(TAG, "Column " + SHOW_LIVE_CLIMBS + " might already exist.", e);
+         }
+         try {
+             addColumn(db, VIEWS_TABLE, SHOW_NAVIGATION_HINTS, "int DEFAULT 1");
+         } catch (Exception e) {
+             Log.w(TAG, "Column " + SHOW_NAVIGATION_HINTS + " might already exist.", e);
+         }
+         // Ensure existing rows are explicitly initialized to 1 (true) to prevent feature loss
+         db.execSQL("UPDATE " + VIEWS_TABLE + " SET " + SHOW_LIVE_CLIMBS + " = 1 WHERE " + SHOW_LIVE_CLIMBS + " IS NULL");
+         db.execSQL("UPDATE " + VIEWS_TABLE + " SET " + SHOW_NAVIGATION_HINTS + " = 1 WHERE " + SHOW_NAVIGATION_HINTS + " IS NULL");
+     }
+     ```
+   - In `CREATE_VIEWS_TABLE_V12`, include `SHOW_LIVE_CLIMBS + " int, " + SHOW_NAVIGATION_HINTS + " int)"`.
+   - Add DAO update methods:
+     - `updateShowLiveClimbs(long viewId, boolean showLiveClimbs)`
+     - `updateShowNavigationHints(long viewId, boolean showNavigationHints)`
+2. **Repository & State Model Parity with Backward-Compatible Defaults**:
+   - Extend `TrackingViewInfo` in `TrackingViewsRepository.kt`:
+     ```kotlin
+     data class TrackingViewInfo(
+         val tabViewId: Long,
+         val name: String,
+         val showMap: Boolean,
+         val showLapButton: Boolean,
+         val showLiveSegments: Boolean,
+         val showElevationProfile: Boolean,
+         val showLiveClimbs: Boolean = true,
+         val showNavigationHints: Boolean = true
+     )
+     ```
    - Add repository update methods `updateShowLiveClimbs` and `updateShowNavigationHints` in `TrackingViewsRepository.kt`.
-   - Propagate flags into `TrackingScreenState` (`TrackingViewModel.kt`).
+   - Propagate both flags into `TrackingScreenState` (`TrackingViewModel.kt`):
+     ```kotlin
+     data class TrackingScreenState(
+         val showMap: Boolean = false,
+         val showLiveSegments: Boolean = false,
+         val showElevationProfile: Boolean = false,
+         val showLiveClimbs: Boolean = true,
+         val showNavigationHints: Boolean = true,
+         ...
+     )
+     ```
 3. **WYSIWYG Cockpit Editor in `SensorGridScreen.kt`**:
    - **Top HUD Section**: Render an interactive WYSIWYG toggle block for **Turn-by-Turn Navigation Prompts** (`ShowNavigationHints`).
    - **Center Section**: Maintain full sensor matrix grid editing, with interactive toggle cards for **Embedded Map** (`ShowMap`) and **Elevation Profile** (`ShowElevationProfile`) below the grid.
@@ -83,6 +126,12 @@ This legacy configuration pattern exhibits several critical architectural and UX
 5. **Runtime Cockpit Gating in `SensorGridScreen.kt`**:
    - Gate `TurnPromptBanner` by `state.showNavigationHints && tuningConfig.turnPromptsEnabled`.
    - Gate `LiveClimbSheet` by `state.showLiveClimbs && tuningConfig.showLiveClimbs && activeLiveClimb != null`.
+
+### Call-Site Audit Verification
+A forensic workspace audit was conducted to verify whether any other rendering containers or activity modes instantiate navigation prompts or live climbs:
+- `TurnPromptBanner` call sites: Only called in `SensorGridScreen.kt` (lines 295–298).
+- `LiveClimbSheet` call sites: Only called in `SensorGridScreen.kt` (lines 242–245).
+- All tracking tabs, cockpit layouts, and tablet configurations funnel exclusively through `SensorGridScreen.kt`. Updating `SensorGridScreen.kt` provides 100% complete coverage across the entire application runtime.
 
 ### Explicitly Out-of-Scope Items
 - Modifying global turn-by-turn navigation or climb detection algorithms (`TurnByTurnNavigationRepository`, `ClimbDetector`).
@@ -102,7 +151,7 @@ This legacy configuration pattern exhibits several critical architectural and UX
 3. **Root Reason for Existing Formulation**:
    - Checkboxes in `TrackingTabConfigHeader` were an MVP implementation to quickly expose database booleans when migrating from classic Android XML views. Spatial WYSIWYG layout was deferred until both Live Climbs (`ATT-1281`) and Turn-by-Turn Navigation (`ATT-1450`) were fully stabilized.
 4. **Preservation of Core Invariants**:
-   - All existing tab configuration data is preserved with default `true` values on schema upgrade.
+   - All existing tab configuration data is preserved with default `true` (`1`) values on schema upgrade to prevent feature regression.
    - Sensor field layout, tile movement/swapping, and telemetry streaming remain 100% untouched.
    - ScreenMode transition state machine (`TRACKING` $\leftrightarrow$ `CONFIGURATION` $\leftrightarrow$ `PREVIEW`) is fully preserved.
 
@@ -127,8 +176,8 @@ This legacy configuration pattern exhibits several critical architectural and UX
 ## 6. Risk Assessment & Verification Strategy
 
 1. **SQLite Database Migration Risk**:
-   - Risk: Existing databases fail on upgrade or throw `SQLiteException` if columns already exist.
-   - Mitigation: Use defensive `try/catch` and `addColumn` pattern identical to `DB_VERSION = 10`. Update unit tests in `TrackingViewsDatabaseManagerTest` and `TrackingViewsRepositoryTest`.
+   - Risk: Existing databases fail on upgrade or throw `SQLiteException` if columns already exist, or null/false values disable existing user features.
+   - Mitigation: Use defensive `try/catch` wrapping each `addColumn` statement, followed by explicit SQL `UPDATE` setting `ShowLiveClimbs = 1` and `ShowNavigationHints = 1` where null. Update unit tests in `TrackingViewsDatabaseManagerTest` and `TrackingViewsRepositoryTest`.
 2. **UI Touch Target & Ergonomics**:
    - Risk: Interactive toggles in configuration mode interfere with sensor tile editing or row/col adders.
    - Mitigation: Keep spatial toggles outside the sensor grid bounds (top banner, below-grid blocks, and bottom dock). Ensure touch targets satisfy $\ge 48\times 48\text{ dp}$ Material 3 standards.
