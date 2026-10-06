@@ -36,14 +36,15 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
-// Data class for holding tab info, can be moved to a more common location later.
 data class TrackingViewInfo(
     val tabViewId: Long,
     val name: String,
     val showMap: Boolean,
     val showLapButton: Boolean,
     val showLiveSegments: Boolean,
-    val showElevationProfile: Boolean
+    val showElevationProfile: Boolean,
+    val showLiveClimbs: Boolean = true,
+    val showNavigationHints: Boolean = true
 )
 
 
@@ -121,7 +122,9 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MAP,
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LAP_BUTTON,
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE,
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_CLIMBS,
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS
             ),
             "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID}=?",
             arrayOf(tabViewId.toString()),
@@ -136,7 +139,11 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 val showLapButton = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LAP_BUTTON)) == 1
                 val showLiveSegments = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS)) == 1
                 val showElevationProfile = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE)) == 1
-                return TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments, showElevationProfile)
+                val liveClimbsIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_CLIMBS)
+                val showLiveClimbs = if (liveClimbsIndex != -1) it.getInt(liveClimbsIndex) == 1 else true
+                val navHintsIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS)
+                val showNavigationHints = if (navHintsIndex != -1) it.getInt(navHintsIndex) == 1 else true
+                return TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments, showElevationProfile, showLiveClimbs, showNavigationHints)
             }
         }
         return null
@@ -168,7 +175,9 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MAP,
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LAP_BUTTON,
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE,
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_CLIMBS,
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS
             ),
             "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.ACTIVITY_TYPE}=?",
             arrayOf(activityType.name),
@@ -186,8 +195,12 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                     val showLapButton = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LAP_BUTTON)) == 1
                     val showLiveSegments = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS)) == 1
                     val showElevationProfile = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE)) == 1
+                    val liveClimbsIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_CLIMBS)
+                    val showLiveClimbs = if (liveClimbsIndex != -1) it.getInt(liveClimbsIndex) == 1 else true
+                    val navHintsIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS)
+                    val showNavigationHints = if (navHintsIndex != -1) it.getInt(navHintsIndex) == 1 else true
 
-                    viewList.add(TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments, showElevationProfile))
+                    viewList.add(TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments, showElevationProfile, showLiveClimbs, showNavigationHints))
                 } while (it.moveToNext())
             }
         }
@@ -481,6 +494,28 @@ class TrackingViewsRepository private constructor(private val context: Context) 
     suspend fun updateShowElevationProfile(tabViewId: Long, showElevationProfile: Boolean) {
         withContext(Dispatchers.IO) {
             viewsDbManager.updateShowElevationProfile(tabViewId, showElevationProfile)
+        }
+
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+    suspend fun updateShowLiveClimbs(tabViewId: Long, showLiveClimbs: Boolean) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.updateShowLiveClimbs(tabViewId, showLiveClimbs)
+        }
+
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+    suspend fun updateShowNavigationHints(tabViewId: Long, showNavigationHints: Boolean) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.updateShowNavigationHints(tabViewId, showNavigationHints)
         }
 
         // trigger recreation of UI

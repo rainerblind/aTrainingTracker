@@ -584,6 +584,10 @@
     <string name="config_tracking__show_map">Kaart</string>
     <string name="config_tracking__showLiveSegments">Live Segmenten</string>
     <string name="config_tracking__showLapButton">Ronde-knop</string>
+    <string name="config_tracking__show_navigation_hints">Aanwijzingen</string>
+    <string name="config_tracking__show_live_climbs">Live beklimmingen</string>
+    <string name="config_tracking__wysiwyg_active">Actief</string>
+    <string name="config_tracking__wysiwyg_hidden">Verborgen</string>
     <string name="add_view_before">weergave ervoor</string>
     <string name="delete_view">weergave verwijderen</string>
     <string name="add_view_after">weergave erna</string>

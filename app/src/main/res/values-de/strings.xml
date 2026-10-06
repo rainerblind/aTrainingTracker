@@ -621,6 +621,10 @@
     <string name="config_tracking__show_map">Karte</string>
     <string name="config_tracking__showLiveSegments">Live Segments</string>
     <string name="config_tracking__showLapButton">Lap Knopf</string>
+    <string name="config_tracking__show_navigation_hints">Abbiegehinweise</string>
+    <string name="config_tracking__show_live_climbs">Live-Anstiege</string>
+    <string name="config_tracking__wysiwyg_active">Aktiv</string>
+    <string name="config_tracking__wysiwyg_hidden">Ausgeblendet</string>
     <string name="add_view_before">neu</string>
     <string name="delete_view">entfernen</string>
     <string name="add_view_after">neu</string>

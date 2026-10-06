@@ -737,6 +737,10 @@
     <string name="config_tracking__showLiveSegments">Live Segments</string>
     <string name="config_tracking__showElevationProfile">Elevation Profile</string>
     <string name="config_tracking__showLapButton">Lap Button</string>
+    <string name="config_tracking__show_navigation_hints">Turn Prompts</string>
+    <string name="config_tracking__show_live_climbs">Live Climbs</string>
+    <string name="config_tracking__wysiwyg_active">Active</string>
+    <string name="config_tracking__wysiwyg_hidden">Hidden</string>
     <string name="add_view_before">add view</string>
     <string name="delete_view">delete view</string>
     <string name="add_view_after">add view</string>

@@ -20,7 +20,6 @@ package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,7 +29,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -60,10 +58,6 @@ fun TrackingTabConfigHeader(
     onUpdateTabName: (Long, String) -> Unit,
     onAddTabRelative: (Long, Boolean) -> Unit,
     onDeleteTab: (Long) -> Unit,
-    onUpdateShowMap: (Long, Boolean) -> Unit,
-    onUpdateShowLiveSegments: (Long, Boolean) -> Unit,
-    onUpdateShowElevationProfile: (Long, Boolean) -> Unit,
-    onUpdateShowLapButton: (Long, Boolean) -> Unit,
     onToggleMode: () -> Unit,
 ) {
     // Local state for the text field to ensure smooth typing
@@ -141,59 +135,6 @@ fun TrackingTabConfigHeader(
                     )
                 }
             }
-
-            Spacer(Modifier.height(4.dp))
-
-            // Row 3: Settings (The checkboxes)
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                ConfigCheckbox(
-                    label = stringResource(R.string.config_tracking__show_map),
-                    checked = viewInfo.showMap,
-                    onCheckedChange = { onUpdateShowMap(viewInfo.tabViewId, it) }
-                )
-                ConfigCheckbox(
-                    label = stringResource(R.string.config_tracking__showElevationProfile),
-                    checked = viewInfo.showElevationProfile,
-                    onCheckedChange = { onUpdateShowElevationProfile(viewInfo.tabViewId, it) }
-                )
-                ConfigCheckbox(
-                    label = stringResource(R.string.config_tracking__showLiveSegments),
-                    checked = viewInfo.showLiveSegments,
-                    onCheckedChange = {
-                        onUpdateShowLiveSegments(
-                            viewInfo.tabViewId,
-                            it
-                        )
-                    }
-                )
-                ConfigCheckbox(
-                    label = stringResource(R.string.config_tracking__showLapButton),
-                    checked = viewInfo.showLapButton,
-                    onCheckedChange = { onUpdateShowLapButton(viewInfo.tabViewId, it) }
-                )
-            }
         }
-    }
-}
-
-/**
- * Helper to keep the Checkbox logic clean (matching Classic implementation)
- */
-@Composable
-private fun ConfigCheckbox(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(
-            checked = checked,
-            onCheckedChange = onCheckedChange
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            maxLines = 1
-        )
     }
 }
