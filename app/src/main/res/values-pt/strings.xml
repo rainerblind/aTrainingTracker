@@ -1380,7 +1380,7 @@
     <string name="tuning_pace_ceiling_desc">Filtra anomalias de GPS no gráfico de ritmo. Valores mais rápidos que este limite são limitados.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
-    <string name="tuning_cat_cockpit_typography">Tipografia do cockpit</string>
+    <string name="tuning_cat_cockpit_typography">Cockpit e blocos</string>
     <string name="tuning_cockpit_font_family_title">Família da fonte</string>
     <string name="tuning_font_system_default">Padrão do sistema</string>
     <string name="tuning_font_seven_segment">Digital de 7 segmentos</string>

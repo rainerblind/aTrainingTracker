@@ -1381,7 +1381,7 @@
     <string name="tuning_pace_ceiling_desc">Filtre les anomalies GPS sur le graphique d\'allure. Les allures plus rapides que ce seuil sont écrêtées.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
-    <string name="tuning_cat_cockpit_typography">Typographie du cockpit</string>
+    <string name="tuning_cat_cockpit_typography">Cockpit et tuiles</string>
     <string name="tuning_cockpit_font_family_title">Police de caractères</string>
     <string name="tuning_font_system_default">Système par défaut</string>
     <string name="tuning_font_seven_segment">Digital 7 segments</string>

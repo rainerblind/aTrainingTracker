@@ -1380,7 +1380,7 @@
     <string name="tuning_pace_ceiling_desc">Filtert GPS-uitschieters in de tempografiek. Waarden sneller dan deze grens worden afgekapt.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
-    <string name="tuning_cat_cockpit_typography">Cockpit-typografie</string>
+    <string name="tuning_cat_cockpit_typography">Cockpit en tegels</string>
     <string name="tuning_cockpit_font_family_title">Lettertype</string>
     <string name="tuning_font_system_default">Systeemstandaard</string>
     <string name="tuning_font_seven_segment">7-segment digitaal</string>

@@ -1467,7 +1467,7 @@
     <string name="tuning_pace_ceiling_desc">Filtert GPS-Ausreißer im Tempo-Diagramm. Werte schneller als diese Grenze werden abgeschnitten.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
-    <string name="tuning_cat_cockpit_typography">Cockpit-Typografie</string>
+    <string name="tuning_cat_cockpit_typography">Cockpit &amp; Kacheln</string>
     <string name="tuning_cockpit_font_family_title">Schriftart</string>
     <string name="tuning_font_system_default">Systemstandard</string>
     <string name="tuning_font_seven_segment">7-Segment-Digital</string>

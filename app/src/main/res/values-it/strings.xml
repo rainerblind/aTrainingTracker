@@ -1380,7 +1380,7 @@
     <string name="tuning_pace_ceiling_desc">Filtra i picchi GPS nel grafico del passo. Le andature più veloci di questo limite vengono tagliate.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
-    <string name="tuning_cat_cockpit_typography">Tipografia cockpit</string>
+    <string name="tuning_cat_cockpit_typography">Cockpit e riquadri</string>
     <string name="tuning_cockpit_font_family_title">Famiglia di caratteri</string>
     <string name="tuning_font_system_default">Predefinito di sistema</string>
     <string name="tuning_font_seven_segment">Digitale a 7 segmenti</string>
