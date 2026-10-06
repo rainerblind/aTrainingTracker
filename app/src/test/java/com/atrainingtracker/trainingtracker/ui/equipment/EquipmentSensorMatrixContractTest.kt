@@ -167,4 +167,21 @@ class EquipmentSensorMatrixContractTest {
             }
         }
     }
+
+    @Test
+    fun testEquipmentSensorOrderingContract_screenAndDialogMustApplyPrioritizedOrdering() {
+        val matrixFile = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/equipment/EquipmentSensorMatrixScreen.kt")
+        val matrixContent = matrixFile.readText()
+        assertTrue(
+            "EquipmentSensorMatrixScreen must apply EquipmentSensorOrdering.sortSensors in fallback path",
+            matrixContent.contains("EquipmentSensorOrdering.sortSensors")
+        )
+
+        val dialogFile = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/equipment/EditEquipmentDialog.kt")
+        val dialogContent = dialogFile.readText()
+        assertTrue(
+            "EditEquipmentDialog must apply EquipmentSensorOrdering.sortSensors for compatible sensors",
+            dialogContent.contains("EquipmentSensorOrdering.sortSensors")
+        )
+    }
 }
