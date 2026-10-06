@@ -1336,6 +1336,10 @@
     <string name="cluster_start_location">Start: %s</string>
     <string name="known_location_routes_header">Trasy stąd (%d):</string>
     <string name="filter_by_start_location">Filtruj wg miejsca startu</string>
+    <string name="known_locations_home_base">Baza domowa</string>
+    <string name="known_locations_home_badge">Baza domowa</string>
+    <string name="known_locations_set_home">Ustaw jako bazę domową</string>
+    <string name="known_locations_remove_home">Usuń bazę domową</string>
     <plurals name="known_locations_routes">
         <item quantity="one">%1$d trasa</item>
         <item quantity="few">%1$d trasy</item>

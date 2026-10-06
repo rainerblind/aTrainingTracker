@@ -1336,6 +1336,10 @@
     <string name="cluster_start_location">Início: %s</string>
     <string name="known_location_routes_header">Rotas a partir daqui (%d):</string>
     <string name="filter_by_start_location">Filtrar por local de início</string>
+    <string name="known_locations_home_base">Base principal</string>
+    <string name="known_locations_home_badge">Base principal</string>
+    <string name="known_locations_set_home">Definir como base principal</string>
+    <string name="known_locations_remove_home">Remover base principal</string>
     <plurals name="known_locations_routes">
         <item quantity="one">%1$d rota</item>
         <item quantity="other">%1$d rotas</item>

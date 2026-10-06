@@ -60,7 +60,8 @@ data class KnownLocationItem(
     val latLng: LatLng,
     val hitCount: Int,
     val isLocked: Boolean,
-    val source: ElevationSource
+    val source: ElevationSource,
+    val isHome: Boolean = false
 )
 
 /**
@@ -134,7 +135,8 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
                 latLng = loc.latLng,
                 hitCount = loc.hitCount,
                 isLocked = loc.isLocked,
-                source = loc.source
+                source = loc.source,
+                isHome = loc.isHome
             )
         }
         _locations.value = items
@@ -177,6 +179,22 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
      */
     open suspend fun deleteLocation(id: Long) = withContext(dbDispatcher) {
         databaseManager.deleteId(id)
+        loadLocations()
+    }
+
+    /**
+     * Atomically sets the designated home location for return navigation (REQ-MAP-034).
+     */
+    open suspend fun setHomeLocation(id: Long) = withContext(dbDispatcher) {
+        databaseManager.setHomeLocation(id)
+        loadLocations()
+    }
+
+    /**
+     * Clears the designated home location across all saved locations (REQ-MAP-034).
+     */
+    open suspend fun clearHomeLocation() = withContext(dbDispatcher) {
+        databaseManager.clearHomeLocation()
         loadLocations()
     }
 

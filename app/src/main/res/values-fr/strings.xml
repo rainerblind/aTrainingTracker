@@ -1342,6 +1342,10 @@
     <string name="cluster_start_location">Départ : %s</string>
     <string name="known_location_routes_header">Itinéraires au départ d\'ici (%d) :</string>
     <string name="filter_by_start_location">Filtrer par lieu de départ</string>
+    <string name="known_locations_home_base">Base de départ</string>
+    <string name="known_locations_home_badge">Base de départ</string>
+    <string name="known_locations_set_home">Définir comme base de départ</string>
+    <string name="known_locations_remove_home">Supprimer la base de départ</string>
 
     <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
     <string name="drawer__expert_settings">Paramètres d\'expert</string>
