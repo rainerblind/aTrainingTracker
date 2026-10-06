@@ -87,15 +87,18 @@ class WorkoutSummaryDynamicOrderContractTest {
             WorkoutSectionType.MAP,
             WorkoutSectionType.ELEVATION,
             WorkoutSectionType.LAPS,
+            WorkoutSectionType.EXPORT_STATUS,
             WorkoutSectionType.STRAVA,
             WorkoutSectionType.DESCRIPTION,
             WorkoutSectionType.EXTREMA
         )
 
         val prefs = WorkoutCardSectionPreferences(
+            showLaps = true,
             showElevationProfile = true,
             showTelemetryCharts = true,
-            showZoneAnalysis = true
+            showZoneAnalysis = true,
+            showExportStatus = true
         )
         val renderedSections = mutableListOf<WorkoutSectionType>()
 
@@ -109,6 +112,7 @@ class WorkoutSummaryDynamicOrderContractTest {
                 WorkoutSectionType.ELEVATION -> prefs.showElevationProfile
                 WorkoutSectionType.CHARTS -> prefs.showTelemetryCharts
                 WorkoutSectionType.ZONES -> prefs.showZoneAnalysis
+                WorkoutSectionType.EXPORT_STATUS -> prefs.showExportStatus
             }
             if (isEnabled) {
                 renderedSections.add(type)

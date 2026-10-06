@@ -206,6 +206,14 @@ fun WorkoutMasksAndCardsSection(
                     detailChecked = workoutDetailPrefs.showZoneAnalysis,
                     onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showZoneAnalysis = it)) }
                 )
+                WorkoutSectionType.EXPORT_STATUS -> MatrixFeatureRow(
+                    sectionType = type,
+                    titleRes = R.string.export_status,
+                    listChecked = workoutCardPrefs.showExportStatus,
+                    onListChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showExportStatus = it)) },
+                    detailChecked = workoutDetailPrefs.showExportStatus,
+                    onDetailChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showExportStatus = it)) }
+                )
             }
         }
 

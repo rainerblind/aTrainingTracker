@@ -51,19 +51,20 @@ class TrackOnMapScreenSectionSlottingContractTest {
         val defaultOrder = WorkoutSectionType.DEFAULT_ORDER
         val (preMap, postMap) = partitionSections(defaultOrder)
 
-        // Default: [DESCRIPTION, EXTREMA, LAPS, STRAVA] before MAP
+        // Default: [DESCRIPTION, EXTREMA] before MAP (REQ-UI-285)
         assertEquals(listOf(
             WorkoutSectionType.DESCRIPTION,
-            WorkoutSectionType.EXTREMA,
-            WorkoutSectionType.LAPS,
-            WorkoutSectionType.STRAVA
+            WorkoutSectionType.EXTREMA
         ), preMap)
 
-        // Default: [ELEVATION, CHARTS, ZONES] after MAP
+        // Default: [ELEVATION, CHARTS, ZONES, LAPS, EXPORT_STATUS, STRAVA] after MAP (REQ-UI-285)
         assertEquals(listOf(
             WorkoutSectionType.ELEVATION,
             WorkoutSectionType.CHARTS,
-            WorkoutSectionType.ZONES
+            WorkoutSectionType.ZONES,
+            WorkoutSectionType.LAPS,
+            WorkoutSectionType.EXPORT_STATUS,
+            WorkoutSectionType.STRAVA
         ), postMap)
     }
 
