@@ -79,6 +79,10 @@ class SensorGridScreenRouteIntegrationTest {
             "RouteActionChipRow must use R.string.route_action_select",
             content.contains("R.string.route_action_select")
         )
+        assertTrue(
+            "RouteActionChipRow must use R.string.route_action_select_desc for subtitle",
+            content.contains("R.string.route_action_select_desc")
+        )
     }
 
     @Test

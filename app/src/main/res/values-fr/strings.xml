@@ -1515,6 +1515,7 @@
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
     <string name="route_select_title">Sélectionner un itinéraire</string>
     <string name="route_action_select">Sélectionner un itinéraire</string>
+    <string name="route_action_select_desc">Choisir depuis un fichier ou l\'historique</string>
     <string name="route_action_stop">Arrêter l\'itinéraire</string>
     <string name="route_auto_detect_title">Détection d\'itinéraire</string>
     <string name="route_auto_detect_prompt">Suivez-vous \'%1$s\' ?</string>

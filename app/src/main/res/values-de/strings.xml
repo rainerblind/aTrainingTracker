@@ -1601,6 +1601,7 @@
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
     <string name="route_select_title">Route wählen</string>
     <string name="route_action_select">Route wählen</string>
+    <string name="route_action_select_desc">Aus Datei oder Verlauf wählen</string>
     <string name="route_action_stop">Route beenden</string>
     <string name="route_auto_detect_title">Routenerkennung</string>
     <string name="route_auto_detect_prompt">Befindest du dich auf \'%1$s\'?</string>

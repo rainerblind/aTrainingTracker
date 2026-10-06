@@ -772,11 +772,19 @@ fun RouteActionChipRow(
                         overflow = TextOverflow.Ellipsis
                     )
                 } else {
-                    Text(
-                        text = stringResource(id = R.string.route_action_select),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Column {
+                        Text(
+                            text = stringResource(id = R.string.route_action_select),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = stringResource(id = R.string.route_action_select_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+                        )
+                    }
                 }
             }
             val statusText = if (returnNavState != null && returnNavState.hasRemainingMetrics) {
@@ -784,13 +792,15 @@ fun RouteActionChipRow(
             } else if (activeRoute != null) {
                 stringResource(id = R.string.route_select_title)
             } else {
-                stringResource(id = R.string.route_action_select)
+                null
             }
-            Text(
-                text = statusText,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
+            if (statusText != null) {
+                Text(
+                    text = statusText,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
         }
     }
 }
