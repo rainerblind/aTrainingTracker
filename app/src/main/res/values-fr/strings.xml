@@ -1407,6 +1407,16 @@
     <string name="sensor_field_variant_v1">Tuiles sportives avec contour</string>
     <string name="sensor_field_variant_v2">Cartes sportives en relief</string>
     <string name="sensor_field_variant_v3">Capsules d\'accent doux</string>
+    <!-- Cockpit Tile Granular Geometry & Border Contrast (ATT-2456 / REQ-UI-276) -->
+    <string name="tuning_sensor_field_corner_radius_title">Rayon des coins</string>
+    <string name="tuning_sensor_field_corner_radius_desc">Arrondi des coins des tuiles du cockpit</string>
+    <string name="tuning_sensor_field_corner_radius_default">Par défaut: 0 dp (Classique sans coupure)</string>
+    <string name="tuning_sensor_field_border_thickness_title">Épaisseur de la bordure</string>
+    <string name="tuning_sensor_field_border_thickness_desc">Épaisseur du trait de bordure des tuiles (0 dp = sans bordure)</string>
+    <string name="tuning_sensor_field_border_thickness_default">Par défaut: 1.0 dp</string>
+    <string name="tuning_sensor_field_border_contrast_title">Contraste de la bordure</string>
+    <string name="tuning_sensor_field_border_contrast_desc">Contraste de couleur de la bordure (subtil à blanc/noir maximal)</string>
+    <string name="tuning_sensor_field_border_contrast_default">Par défaut: Subtil (0%)</string>
     <string name="tuning_default_format">Par défaut : %1$s</string>
     <string name="reset_to_defaults">Rétablir les paramètres par défaut</string>
     <string name="reset_to_defaults_success">Paramètres de réglage rétablis aux valeurs d\'usine par défaut.</string>

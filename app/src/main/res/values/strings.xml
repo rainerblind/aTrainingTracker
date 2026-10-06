@@ -1599,6 +1599,16 @@
     <string name="sensor_field_variant_v1">Modern Outlined Sport Tiles</string>
     <string name="sensor_field_variant_v2">Elevated Sports Cards</string>
     <string name="sensor_field_variant_v3">Soft Accent Capsules</string>
+    <!-- Cockpit Tile Granular Geometry & Border Contrast (ATT-2456 / REQ-UI-276) -->
+    <string name="tuning_sensor_field_corner_radius_title">Corner Radius</string>
+    <string name="tuning_sensor_field_corner_radius_desc">Corner rounding of cockpit telemetry tiles</string>
+    <string name="tuning_sensor_field_corner_radius_default">Default: 0 dp (Classic Seamless)</string>
+    <string name="tuning_sensor_field_border_thickness_title">Border Thickness</string>
+    <string name="tuning_sensor_field_border_thickness_desc">Outline stroke width of tiles (0 dp = borderless)</string>
+    <string name="tuning_sensor_field_border_thickness_default">Default: 1.0 dp</string>
+    <string name="tuning_sensor_field_border_contrast_title">Border Contrast</string>
+    <string name="tuning_sensor_field_border_contrast_desc">Color contrast of outline (subtle to maximum white/black)</string>
+    <string name="tuning_sensor_field_border_contrast_default">Default: Subtle (0%)</string>
     <string name="tuning_default_format">Default: %1$s</string>
     <string name="reset_to_defaults">Reset to Defaults</string>
     <string name="reset_to_defaults_success">Tuning preferences restored to factory defaults.</string>

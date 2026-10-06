@@ -1406,6 +1406,16 @@
     <string name="sensor_field_variant_v1">Moderne sporttegels met rand</string>
     <string name="sensor_field_variant_v2">Verheven sportkaarten</string>
     <string name="sensor_field_variant_v3">Zachte accentcapsules</string>
+    <!-- Cockpit Tile Granular Geometry & Border Contrast (ATT-2456 / REQ-UI-276) -->
+    <string name="tuning_sensor_field_corner_radius_title">Hoekradius</string>
+    <string name="tuning_sensor_field_corner_radius_desc">Afronding van de tegelhoeken voor de cockpit</string>
+    <string name="tuning_sensor_field_corner_radius_default">Standaard: 0 dp (Klassiek naadloos)</string>
+    <string name="tuning_sensor_field_border_thickness_title">Randdikte</string>
+    <string name="tuning_sensor_field_border_thickness_desc">Lijndikte van de tegelrand (0 dp = randloos)</string>
+    <string name="tuning_sensor_field_border_thickness_default">Standaard: 1.0 dp</string>
+    <string name="tuning_sensor_field_border_contrast_title">Randcontrast</string>
+    <string name="tuning_sensor_field_border_contrast_desc">Kleurcontrast van de rand (subtiel tot maximaal wit/zwart)</string>
+    <string name="tuning_sensor_field_border_contrast_default">Standaard: Subtiel (0%)</string>
     <string name="tuning_default_format">Standaard: %1$s</string>
     <string name="reset_to_defaults">Fabrieksinstellingen herstellen</string>
     <string name="reset_to_defaults_success">Afstemmingsinstellingen hersteld naar fabrieksinstellingen.</string>

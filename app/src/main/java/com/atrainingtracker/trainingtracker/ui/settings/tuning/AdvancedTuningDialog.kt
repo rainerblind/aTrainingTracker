@@ -90,6 +90,9 @@ fun AdvancedTuningDialog(
     var cockpitFontFamily by remember { mutableStateOf(TuningPreferencesDefaults.COCKPIT_FONT_FAMILY) }
     var cockpitFontWeight by remember { mutableStateOf(TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT) }
     var sensorFieldVariant by remember { mutableStateOf(TuningPreferencesDefaults.SENSOR_FIELD_VARIANT) }
+    var sensorFieldCornerRadius by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_CORNER_RADIUS) }
+    var sensorFieldBorderThickness by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS) }
+    var sensorFieldBorderContrast by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }
     var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
@@ -144,6 +147,9 @@ fun AdvancedTuningDialog(
         cockpitFontFamily = persistedConfig.cockpitFontFamily
         cockpitFontWeight = persistedConfig.cockpitFontWeight
         sensorFieldVariant = persistedConfig.sensorFieldVariant
+        sensorFieldCornerRadius = persistedConfig.sensorFieldCornerRadius
+        sensorFieldBorderThickness = persistedConfig.sensorFieldBorderThickness
+        sensorFieldBorderContrast = persistedConfig.sensorFieldBorderContrast
         fullDimFactor = persistedConfig.fullDimFactor
         mediumDimFactor = persistedConfig.mediumDimFactor
         slopeFlat = persistedConfig.slopeFlatThreshold
@@ -169,6 +175,9 @@ fun AdvancedTuningDialog(
                         cockpitFontFamily = cockpitFontFamily,
                         cockpitFontWeight = cockpitFontWeight,
                         sensorFieldVariant = sensorFieldVariant,
+                        sensorFieldCornerRadius = sensorFieldCornerRadius,
+                        sensorFieldBorderThickness = sensorFieldBorderThickness,
+                        sensorFieldBorderContrast = sensorFieldBorderContrast,
                         fullDimFactor = fullDimFactor,
                         mediumDimFactor = mediumDimFactor,
                         slopeFlatThreshold = slopeFlat,
@@ -248,7 +257,10 @@ fun AdvancedTuningDialog(
                     cockpitFontWeight = cockpitFontWeight,
                     onFontWeightChange = { cockpitFontWeight = it },
                     sensorFieldVariant = sensorFieldVariant,
-                    onSensorFieldVariantChange = { sensorFieldVariant = it }
+                    onSensorFieldVariantChange = { sensorFieldVariant = it },
+                    sensorFieldCornerRadius = sensorFieldCornerRadius, onCornerRadiusChange = { sensorFieldCornerRadius = it },
+                    sensorFieldBorderThickness = sensorFieldBorderThickness, onBorderThicknessChange = { sensorFieldBorderThickness = it },
+                    sensorFieldBorderContrast = sensorFieldBorderContrast, onBorderContrastChange = { sensorFieldBorderContrast = it }
                 )
             }
 

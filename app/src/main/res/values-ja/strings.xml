@@ -1386,6 +1386,16 @@
     <string name="sensor_field_variant_v1">モダン・アウトラインスポーツタイル</string>
     <string name="sensor_field_variant_v2">立体スポーツカード</string>
     <string name="sensor_field_variant_v3">ソフトアクセント・カプセル</string>
+    <!-- Cockpit Tile Granular Geometry & Border Contrast (ATT-2456 / REQ-UI-276) -->
+    <string name="tuning_sensor_field_corner_radius_title">角の半径</string>
+    <string name="tuning_sensor_field_corner_radius_desc">コックピットタイルの角の丸み</string>
+    <string name="tuning_sensor_field_corner_radius_default">デフォルト: 0 dp (クラシックシームレス)</string>
+    <string name="tuning_sensor_field_border_thickness_title">枠線の太さ</string>
+    <string name="tuning_sensor_field_border_thickness_desc">タイルの枠線の太さ (0 dp = 枠線なし)</string>
+    <string name="tuning_sensor_field_border_thickness_default">デフォルト: 1.0 dp</string>
+    <string name="tuning_sensor_field_border_contrast_title">枠線のコントラスト</string>
+    <string name="tuning_sensor_field_border_contrast_desc">枠線のカラーコントラスト (控えめから最大白/黒まで)</string>
+    <string name="tuning_sensor_field_border_contrast_default">デフォルト: 控えめ (0%)</string>
     <string name="tuning_default_format">デフォルト: %1$s</string>
     <string name="reset_to_defaults">デフォルトに戻す</string>
     <string name="reset_to_defaults_success">チューニング設定が工場出荷時のデフォルトに戻りました。</string>
