@@ -33,6 +33,8 @@ class TuningConfigTest {
         assertEquals(50.0f, TuningPreferencesDefaults.GPS_ACCURACY_THRESHOLD_M, 0.001f)
         assertEquals(21, config.altitudeFilterWindowSec)
         assertEquals(0.5f, config.slopeMinSpeedMps, 0.001f)
+        assertEquals(1.0f, config.routeSelectionRadiusKm, 0.001f)
+        assertEquals(1.0f, TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM, 0.001f)
     }
 
     @Test
@@ -41,6 +43,9 @@ class TuningConfigTest {
         assertEquals(0.50f, TuningPreferencesDefaults.MAX_FULL_DIM_FACTOR, 0.001f)
         assertEquals(0.20f, TuningPreferencesDefaults.MIN_MEDIUM_DIM_FACTOR, 0.001f)
         assertEquals(0.90f, TuningPreferencesDefaults.MAX_MEDIUM_DIM_FACTOR, 0.001f)
+
+        assertEquals(0.5f, TuningPreferencesDefaults.MIN_ROUTE_SELECTION_RADIUS_KM, 0.001f)
+        assertEquals(10.0f, TuningPreferencesDefaults.MAX_ROUTE_SELECTION_RADIUS_KM, 0.001f)
 
         assertEquals(0.0f, TuningPreferencesDefaults.MIN_SLOPE_FLAT, 0.001f)
         assertEquals(5.0f, TuningPreferencesDefaults.MAX_SLOPE_FLAT, 0.001f)

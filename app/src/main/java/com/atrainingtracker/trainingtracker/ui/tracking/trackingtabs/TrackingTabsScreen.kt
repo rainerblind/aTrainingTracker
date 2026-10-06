@@ -175,13 +175,19 @@ fun TrackingTabsScreen(
     val hasPairedRemoteDevices by controlViewModel.hasPairedRemoteDevices.collectAsState()
     val locationCalibrationStatus by trackingTabsViewModel.locationCalibrationStatus.collectAsState()
 
-    // Route Selection and Navigation state for Control Tracking screen (REQ-UI-279 / ATT-2458)
+    // Battery Saver Telemetry & Event Subscriptions
+    val tuningDataStore = remember { com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore(context) }
+    val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(
+        initial = com.atrainingtracker.trainingtracker.settings.TuningConfig()
+    )
+
+    // Route Selection and Navigation state for Control Tracking screen (REQ-UI-279 / ATT-2458, REQ-UI-281 / ATT-2460)
     val routesRepo = remember { RoutesRepository.getInstance(context) }
     val routeSelectorViewModel: RouteSelectorViewModel = viewModel(
         factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return RouteSelectorViewModel(routesRepo) as T
+                return RouteSelectorViewModel(routesRepo, tuningPreferencesDataStore = tuningDataStore) as T
             }
         }
     )
@@ -201,12 +207,6 @@ fun TrackingTabsScreen(
             routeSelectorViewModel.onLocationChanged(location)
         }
     }
-
-    // Battery Saver Telemetry & Event Subscriptions
-    val tuningDataStore = remember { com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore(context) }
-    val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(
-        initial = com.atrainingtracker.trainingtracker.settings.TuningConfig()
-    )
 
     LaunchedEffect(tuningConfig) {
         batterySaverController.updateTuningConfig(
@@ -661,6 +661,7 @@ fun TrackingTabsScreen(
                             bottomContent = {
                                 RouteSelectionButton(
                                     activeRoute = routeSelectorUiState.activeRoute,
+                                    isDimmed = routeSelectorUiState.activeRoute == null && routeSelectorUiState.routes.isEmpty(),
                                     returnNavState = returnNavState,
                                     onClick = { showRouteSelectorSheet = true },
                                     onClearRoute = { routeSelectorViewModel.clearRoute() }

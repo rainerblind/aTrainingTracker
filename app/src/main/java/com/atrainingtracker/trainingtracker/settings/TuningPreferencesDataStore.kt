@@ -111,6 +111,10 @@ object TuningPreferencesDefaults {
     const val SENSOR_FIELD_BORDER_CONTRAST = 0.0f
     const val MIN_SENSOR_FIELD_BORDER_CONTRAST = 0.0f
     const val MAX_SENSOR_FIELD_BORDER_CONTRAST = 1.0f
+
+    const val DEFAULT_ROUTE_SELECTION_RADIUS_KM = 1.0f
+    const val MIN_ROUTE_SELECTION_RADIUS_KM = 0.5f
+    const val MAX_ROUTE_SELECTION_RADIUS_KM = 10.0f
 }
 
 /**
@@ -143,7 +147,8 @@ data class TuningConfig(
     val focusedThumbnailZoomEnabled: Boolean = TuningPreferencesDefaults.FOCUSED_THUMBNAIL_ZOOM_ENABLED,
     val sensorFieldCornerRadius: Float = TuningPreferencesDefaults.SENSOR_FIELD_CORNER_RADIUS,
     val sensorFieldBorderThickness: Float = TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS,
-    val sensorFieldBorderContrast: Float = TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST
+    val sensorFieldBorderContrast: Float = TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST,
+    val routeSelectionRadiusKm: Float = TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM
 ) {
     @Deprecated("Use elevationXAxisDomain or telemetryXAxisDomain", ReplaceWith("elevationXAxisDomain"))
     val profileXAxisDomain: ProfileXAxisDomain
@@ -219,6 +224,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_SENSOR_FIELD_CORNER_RADIUS: Preferences.Key<Float> = floatPreferencesKey("tuning_sensor_field_corner_radius")
         val KEY_SENSOR_FIELD_BORDER_THICKNESS: Preferences.Key<Float> = floatPreferencesKey("tuning_sensor_field_border_thickness")
         val KEY_SENSOR_FIELD_BORDER_CONTRAST: Preferences.Key<Float> = floatPreferencesKey("tuning_sensor_field_border_contrast")
+        val KEY_ROUTE_SELECTION_RADIUS_KM: Preferences.Key<Float> = floatPreferencesKey("tuning_route_selection_radius_km")
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -248,7 +254,8 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_FOCUSED_THUMBNAIL_ZOOM_ENABLED,
             KEY_SENSOR_FIELD_CORNER_RADIUS,
             KEY_SENSOR_FIELD_BORDER_THICKNESS,
-            KEY_SENSOR_FIELD_BORDER_CONTRAST
+            KEY_SENSOR_FIELD_BORDER_CONTRAST,
+            KEY_ROUTE_SELECTION_RADIUS_KM
         )
     }
 
@@ -377,6 +384,12 @@ class TuningPreferencesDataStore(private val context: Context) {
             TuningPreferencesDefaults.MAX_SENSOR_FIELD_BORDER_CONTRAST
         )
 
+        val rawRadiusKm = prefs[KEY_ROUTE_SELECTION_RADIUS_KM] ?: TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM
+        val clampedRadiusKm = rawRadiusKm.coerceIn(
+            TuningPreferencesDefaults.MIN_ROUTE_SELECTION_RADIUS_KM,
+            TuningPreferencesDefaults.MAX_ROUTE_SELECTION_RADIUS_KM
+        )
+
         TuningConfig(
             elevationXAxisDomain = elevationDomain,
             telemetryXAxisDomain = telemetryDomain,
@@ -404,7 +417,8 @@ class TuningPreferencesDataStore(private val context: Context) {
             focusedThumbnailZoomEnabled = focusedThumbnailZoomEnabled,
             sensorFieldCornerRadius = clampedCornerRadius,
             sensorFieldBorderThickness = clampedBorderThickness,
-            sensorFieldBorderContrast = clampedBorderContrast
+            sensorFieldBorderContrast = clampedBorderContrast,
+            routeSelectionRadiusKm = clampedRadiusKm
         )
     }
 
@@ -461,6 +475,10 @@ class TuningPreferencesDataStore(private val context: Context) {
             TuningPreferencesDefaults.MIN_SENSOR_FIELD_BORDER_CONTRAST,
             TuningPreferencesDefaults.MAX_SENSOR_FIELD_BORDER_CONTRAST
         )
+        val clampedRadiusKm = config.routeSelectionRadiusKm.coerceIn(
+            TuningPreferencesDefaults.MIN_ROUTE_SELECTION_RADIUS_KM,
+            TuningPreferencesDefaults.MAX_ROUTE_SELECTION_RADIUS_KM
+        )
 
         context.dataStore.edit { prefs ->
             prefs[KEY_ELEVATION_X_AXIS_DOMAIN] = config.elevationXAxisDomain.name
@@ -497,6 +515,7 @@ class TuningPreferencesDataStore(private val context: Context) {
             prefs[KEY_SENSOR_FIELD_CORNER_RADIUS] = clampedCornerRadius
             prefs[KEY_SENSOR_FIELD_BORDER_THICKNESS] = clampedBorderThickness
             prefs[KEY_SENSOR_FIELD_BORDER_CONTRAST] = clampedBorderContrast
+            prefs[KEY_ROUTE_SELECTION_RADIUS_KM] = clampedRadiusKm
         }
     }
 
@@ -521,6 +540,16 @@ class TuningPreferencesDataStore(private val context: Context) {
     suspend fun updateSensorFieldVariant(variant: SensorFieldVariant) {
         context.dataStore.edit { prefs ->
             prefs[KEY_SENSOR_FIELD_VARIANT] = variant.name
+        }
+    }
+
+    suspend fun updateRouteSelectionRadiusKm(radiusKm: Float) {
+        val clamped = radiusKm.coerceIn(
+            TuningPreferencesDefaults.MIN_ROUTE_SELECTION_RADIUS_KM,
+            TuningPreferencesDefaults.MAX_ROUTE_SELECTION_RADIUS_KM
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_ROUTE_SELECTION_RADIUS_KM] = clamped
         }
     }
 

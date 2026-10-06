@@ -42,6 +42,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -57,7 +58,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import java.util.Locale
 
 /**
- * Branded route selection entry point button for the Control Tracking screen (REQ-UI-279 / ATT-2458).
+ * Branded route selection entry point button for the Control Tracking screen (REQ-UI-279 / ATT-2458, REQ-UI-281 / ATT-2460).
  *
  * Adheres strictly to Rule 23 design tokens and Section 5.4 green domain semantic accent guidelines:
  * - 12.dp rounded corners
@@ -66,12 +67,14 @@ import java.util.Locale
  * - Inactive state displaying title, descriptive subtitle, and forward chevron
  * - Active state displaying active route name ("✓ <Route Name>"), distance + elevation metrics,
  *   and a quick-clear close button
+ * - Dimmed state (0.45f alpha) when no route qualifies or is imported (REQ-UI-281)
  */
 @Composable
 fun RouteSelectionButton(
     activeRoute: RouteWithPath?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    isDimmed: Boolean = false,
     returnNavState: ReturnNavigationState? = null,
     onClearRoute: (() -> Unit)? = null
 ) {
@@ -81,7 +84,9 @@ fun RouteSelectionButton(
         border = BorderStroke(1.dp, TTColor.RouteSelected.copy(alpha = 0.35f)),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         tonalElevation = 1.dp,
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .alpha(if (isDimmed) 0.45f else 1.0f)
     ) {
         Row(
             modifier = Modifier

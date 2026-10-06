@@ -1401,6 +1401,9 @@
     <string name="reset_to_defaults_success">チューニング設定が工場出荷時のデフォルトに戻りました。</string>
     <string name="tuning_cat_sensors_gps">センサー、GPS、フィルター</string>
     <string name="tuning_cat_workout_masks_cards">ワークアウトカードと詳細</string>
+    <string name="tuning_cat_navigation">ナビゲーション</string>
+    <string name="tuning_route_selection_radius_title">ルート選択半径</string>
+    <string name="tuning_route_selection_radius_desc">近くのルート選択のためのルート開始地点までの最大距離</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 カード</string>
     <string name="tuning_matrix_col_list">一覧</string>
     <string name="tuning_matrix_col_details">詳細</string>

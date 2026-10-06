@@ -1422,6 +1422,9 @@
     <string name="reset_to_defaults_success">Paramètres de réglage rétablis aux valeurs d\'usine par défaut.</string>
     <string name="tuning_cat_sensors_gps">Capteurs, GPS et filtrage</string>
     <string name="tuning_cat_workout_masks_cards">Cartes et détails d\'entraînement</string>
+    <string name="tuning_cat_navigation">Navigation</string>
+    <string name="tuning_route_selection_radius_title">Rayon de sélection d\'itinéraire</string>
+    <string name="tuning_route_selection_radius_desc">Distance maximale au point de départ pour la sélection d\'itinéraires proches</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 cartes</string>
     <string name="tuning_matrix_col_list">Liste</string>
     <string name="tuning_matrix_col_details">Détails</string>

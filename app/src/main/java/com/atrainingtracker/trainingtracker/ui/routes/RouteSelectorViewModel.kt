@@ -25,15 +25,20 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.routes.RouteAutoDetector
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.google.android.gms.maps.model.LatLng
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 /**
- * UI State for Quick Route Selector sheet (REQ-MAP-024, REQ-UI-280 / ATT-2459).
+ * UI State for Quick Route Selector sheet (REQ-MAP-024, REQ-UI-280 / ATT-2459, REQ-UI-281 / ATT-2460).
  */
 data class RouteSelectorUiState(
     val routes: List<RouteWithPath> = emptyList(),
@@ -44,32 +49,42 @@ data class RouteSelectorUiState(
 )
 
 /**
- * ViewModel managing state and user actions for Quick Route Selector & Route Auto Detection (REQ-UI-280 / ATT-2459).
+ * ViewModel managing state and user actions for Quick Route Selector & Route Auto Detection (REQ-UI-280, REQ-UI-281).
  */
 class RouteSelectorViewModel(
     private val routesRepository: RoutesRepository,
     private val autoDetector: RouteAutoDetector = RouteAutoDetector(),
+    private val tuningPreferencesDataStore: TuningPreferencesDataStore? = null,
     sharingStarted: SharingStarted = SharingStarted.WhileSubscribed(5000)
 ) : ViewModel() {
 
+    constructor(
+        routesRepository: RoutesRepository,
+        autoDetector: RouteAutoDetector,
+        sharingStarted: SharingStarted
+    ) : this(routesRepository, autoDetector, null, sharingStarted)
+
     private val _lastLocation = MutableStateFlow<Location?>(null)
     private val _autoDetectedCandidate = MutableStateFlow<RouteWithPath?>(null)
+
+    private val radiusFlow: Flow<Float> = tuningPreferencesDataStore?.tuningConfigFlow
+        ?.map { it.routeSelectionRadiusKm * 1000.0f }
+        ?: flowOf(TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM * 1000.0f)
 
     val uiState: StateFlow<RouteSelectorUiState> = combine(
         routesRepository.allRoutes,
         routesRepository.activeNavigatedRouteId,
         _lastLocation,
-        _autoDetectedCandidate
-    ) { allRoutes, activeRouteId, location, candidate ->
+        _autoDetectedCandidate,
+        radiusFlow
+    ) { allRoutes, activeRouteId, location, candidate, radiusMeters ->
         val activeRoute = allRoutes.find { it.summary.id == activeRouteId }
 
         val currentLatLng = location?.let { LatLng(it.latitude, it.longitude) }
-        val currentBearing = if (location != null && location.hasBearing()) location.bearing else null
-        val rankedRoutes = RouteProximityRanker.rankRoutes(
+        val rankedRoutes = RouteProximityRanker.filterAndRankRoutes(
             routes = allRoutes,
             currentLocation = currentLatLng,
-            currentBearing = currentBearing,
-            activeSport = null
+            radiusMeters = radiusMeters
         )
 
         RouteSelectorUiState(
