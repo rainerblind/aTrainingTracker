@@ -241,15 +241,19 @@ public class BANALService
         return DeviceManager.isSearchingForARemoteDevice();
     }
 
-    /* unused
     public static DeviceManager getDeviceManager() {
         return cDeviceManager;
     }
 
-    public static MySensorManager getSensorManager() {
-        return cSensorManager;
+    /**
+     * Lazily initializes GPS and Fused location devices when ACCESS_FINE_LOCATION
+     * permission is granted during an active service session (REQ-PRI-004, ATT-2357).
+     */
+    public static void checkOrInitializeLocationDevices() {
+        if (cDeviceManager != null) {
+            cDeviceManager.checkOrInitializeLocationDevices();
+        }
     }
-    */
 
     public static List<MySensor> getSensorList(SensorType sensorType) {
         return cDeviceManager.getSensorList(sensorType);

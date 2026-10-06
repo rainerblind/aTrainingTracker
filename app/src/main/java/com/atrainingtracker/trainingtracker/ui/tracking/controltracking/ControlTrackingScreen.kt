@@ -83,11 +83,18 @@ fun ControlTrackingScreen(
         androidx.core.content.ContextCompat.checkSelfPermission(
             context,
             android.Manifest.permission.ACCESS_FINE_LOCATION
-        ) == android.content.pm.PackageManager.PERMISSION_GRANTED ||
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
+    val checkIsCoarseOnly = {
         androidx.core.content.ContextCompat.checkSelfPermission(
             context,
             android.Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED &&
+        androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.ACCESS_FINE_LOCATION
+        ) != android.content.pm.PackageManager.PERMISSION_GRANTED
     }
 
     val checkHasBackgroundLocation = {
@@ -112,6 +119,9 @@ fun ControlTrackingScreen(
 
     var hasLocationPermission by remember {
         mutableStateOf(checkHasLocation())
+    }
+    var isCoarseOnly by remember {
+        mutableStateOf(checkIsCoarseOnly())
     }
 
     var rationaleStep by androidx.compose.runtime.saveable.rememberSaveable {
@@ -150,11 +160,11 @@ fun ControlTrackingScreen(
         val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
         prefs.edit().putBoolean("pref_has_requested_foreground_perms", true).apply()
         val fineGranted = results[android.Manifest.permission.ACCESS_FINE_LOCATION] == true
-        val coarseGranted = results[android.Manifest.permission.ACCESS_COARSE_LOCATION] == true
-        val granted = fineGranted || coarseGranted
-        hasLocationPermission = granted
-        if (granted) {
+        hasLocationPermission = fineGranted
+        isCoarseOnly = checkIsCoarseOnly()
+        if (fineGranted) {
             isPermanentlyDenied = false
+            com.atrainingtracker.banalservice.BANALService.checkOrInitializeLocationDevices()
             proceedAfterPermissions()
         } else {
             val activity = context as? android.app.Activity
@@ -199,6 +209,10 @@ fun ControlTrackingScreen(
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 val permitted = checkHasLocation()
                 hasLocationPermission = permitted
+                isCoarseOnly = checkIsCoarseOnly()
+                if (permitted) {
+                    com.atrainingtracker.banalservice.BANALService.checkOrInitializeLocationDevices()
+                }
                 if (permitted && rationaleStep == RationaleStep.FOREGROUND) {
                     isPermanentlyDenied = false
                     proceedAfterPermissions()
@@ -222,6 +236,7 @@ fun ControlTrackingScreen(
             val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
             val hasRequestedForeground = prefs.getBoolean("pref_has_requested_foreground_perms", false)
             val activity = context as? android.app.Activity
+            isCoarseOnly = checkIsCoarseOnly()
             if (activity != null && hasRequestedForeground) {
                 val showRationale = androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(
                     activity,
@@ -348,6 +363,7 @@ fun ControlTrackingScreen(
         PermissionRationaleSheet(
             rationaleType = rationaleType,
             isPermanentlyDenied = isPermanentlyDenied,
+            isCoarseOnly = isCoarseOnly,
             onContinue = {
                 when (rationaleStep) {
                     RationaleStep.FOREGROUND -> {

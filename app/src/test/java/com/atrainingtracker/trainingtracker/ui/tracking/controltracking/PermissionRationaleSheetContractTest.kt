@@ -79,6 +79,7 @@ class PermissionRationaleSheetContractTest {
         assertTrue(R.string.permission_rationale_not_now != 0)
         assertTrue(R.string.permission_rationale_open_settings != 0)
         assertTrue(R.string.permission_rationale_settings_explanation != 0)
+        assertTrue(R.string.permission_rationale_precise_location_explanation != 0)
         assertTrue(R.string.permission_warning_badge_desc != 0)
 
         // Background location & battery optimization strings
@@ -124,6 +125,7 @@ class PermissionRationaleSheetContractTest {
 
         val keysToCheck = listOf(
             "permission_rationale_title",
+            "permission_rationale_precise_location_explanation",
             "background_location_permission_title",
             "background_location_permission_text",
             "battery_optimization_title",

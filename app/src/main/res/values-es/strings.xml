@@ -1477,6 +1477,7 @@
     <string name="permission_rationale_not_now">Ahora no</string>
     <string name="permission_rationale_open_settings">Abrir ajustes</string>
     <string name="permission_rationale_settings_explanation">Se denegó el permiso de ubicación. Sin acceso a la ubicación, no se pueden registrar rutas ni puntos GPS. Puedes conceder el permiso en los Ajustes de la aplicación.</string>
+    <string name="permission_rationale_precise_location_explanation">La ubicación precisa (GPS) es obligatoria para el seguimiento del entrenamiento. La ubicación aproximada no puede registrar distancia, velocidad, ruta o elevación. Seleccione \'Precisa\' en los permisos.</string>
     <string name="permission_warning_badge_desc">Falta el permiso de ubicación</string>
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
