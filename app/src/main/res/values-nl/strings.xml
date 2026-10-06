@@ -1559,6 +1559,10 @@
     <string name="climb_category_cat3">Cat 3</string>
     <string name="climb_category_cat4">Cat 4</string>
     <string name="climb_category_uc">UC</string>
+    <string name="routes_climb_count">%d Beklimmingen</string>
+    <string name="routes_climbs_section_title">Beklimmingen (%d)</string>
+    <string name="routes_climb_start_at">Start bij %s</string>
+    <string name="routes_climb_avg_grade">Gem. %1$.1f%%</string>
     <string name="tuning_show_live_climbs_title">Live beklimmingen (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Toon realtime klimcockpit tijdens routes en vrij rijden</string>
 

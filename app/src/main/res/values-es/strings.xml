@@ -1561,6 +1561,10 @@
     <string name="climb_category_cat3">Cat 3</string>
     <string name="climb_category_cat4">Cat 4</string>
     <string name="climb_category_uc">UC</string>
+    <string name="routes_climb_count">%d Subidas</string>
+    <string name="routes_climbs_section_title">Subidas (%d)</string>
+    <string name="routes_climb_start_at">Inicio en %s</string>
+    <string name="routes_climb_avg_grade">Media %1$.1f%%</string>
     <string name="tuning_show_live_climbs_title">Subidas en vivo (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Mostrar panel de subida en tiempo real durante rutas y recorrido libre</string>
 

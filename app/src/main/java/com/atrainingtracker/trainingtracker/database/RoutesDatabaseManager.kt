@@ -27,6 +27,7 @@ import android.util.Log
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.routes.RouteWaypoint
 import com.atrainingtracker.trainingtracker.routes.WaypointType
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
@@ -73,7 +74,8 @@ enum class RouteSource(
 data class RouteWithPath(
     val summary: RouteSummary,
     val path: List<PathPoint>,
-    val waypoints: List<RouteWaypoint> = emptyList()
+    val waypoints: List<RouteWaypoint> = emptyList(),
+    val climbs: List<Climb> = emptyList()
 )
 
 

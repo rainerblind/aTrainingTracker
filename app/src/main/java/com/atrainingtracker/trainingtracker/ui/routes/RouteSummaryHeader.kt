@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
@@ -49,6 +50,7 @@ fun RouteSummaryHeader(
     summary: RouteSummary,
     onToggleSelection: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    climbs: List<Climb> = emptyList(),
     onEditClick: (() -> Unit)? = null,
     showSwitch: Boolean = true,
     switchScale: Float = 0.7f
@@ -134,6 +136,14 @@ fun RouteSummaryHeader(
                         value = formatters.altitude.format_with_units(summary.elevationGain),
                         isPrimary = true
                     )
+
+                    if (climbs.isNotEmpty()) {
+                        MetricItem(
+                            iconRes = R.drawable.ic_ascent,
+                            value = stringResource(R.string.routes_climb_count, climbs.size),
+                            isPrimary = true
+                        )
+                    }
                 }
             }
 
