@@ -153,13 +153,15 @@ object LegacyImportEngine {
         val possiblePaths = when (format.lowercase()) {
             "tcx" -> listOf("/TCX", "/apps/Workouts/TCX")
             "gpx" -> listOf("/GPX", "/apps/Workouts/GPX")
-            else -> listOf("/TCX", "/apps/Workouts/TCX", "/GPX", "/apps/Workouts/GPX")
+            "fit" -> listOf("/FIT", "/apps/Workouts/FIT", "/Workouts/FIT")
+            else -> listOf("/TCX", "/apps/Workouts/TCX", "/GPX", "/apps/Workouts/GPX", "/FIT", "/apps/Workouts/FIT", "/Workouts/FIT")
         }
 
         val targetExtensions = when (format.lowercase()) {
             "tcx" -> listOf(".tcx")
             "gpx" -> listOf(".gpx")
-            else -> listOf(".tcx", ".gpx")
+            "fit" -> listOf(".fit")
+            else -> listOf(".tcx", ".gpx", ".fit")
         }
 
         val allEntries = mutableListOf<com.dropbox.core.v2.files.Metadata>()
@@ -238,9 +240,11 @@ object LegacyImportEngine {
                                 val status = when (ext) {
                                     "tcx" -> importFromTcxInternal(context, tempFile, listener, uploadToStrava)
                                     "gpx" -> importFromGpxInternal(context, tempFile, listener, uploadToStrava)
+                                    "fit" -> importFromFitInternal(context, tempFile, listener, uploadToStrava)
                                     else -> when (format.lowercase()) {
                                         "tcx" -> importFromTcxInternal(context, tempFile, listener, uploadToStrava)
                                         "gpx" -> importFromGpxInternal(context, tempFile, listener, uploadToStrava)
+                                        "fit" -> importFromFitInternal(context, tempFile, listener, uploadToStrava)
                                         else -> ImportStatus.FAILED
                                     }
                                 }
